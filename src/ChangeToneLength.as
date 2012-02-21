@@ -1,6 +1,6 @@
 package {
 	public class ChangeToneLength extends Change {
-		private var bar: Bar;
+		private var bar: BarPattern;
 		private var tone: Tone;
 		private var oldStart: int;
 		private var newStart: int;
@@ -8,7 +8,7 @@ package {
 		private var newEnd: int;
 		private var oldPins: Array;
 		private var newPins: Array;
-		public function ChangeToneLength(bar: Bar, tone: Tone, newStart: int, newEnd: int) {
+		public function ChangeToneLength(bar: BarPattern, tone: Tone, newStart: int, newEnd: int) {
 			super(false);
 			this.bar = bar;
 			this.tone = tone;

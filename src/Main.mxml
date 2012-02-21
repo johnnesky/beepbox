@@ -21,16 +21,8 @@
 		import mx.collections.ArrayCollection;
 		import mx.controls.Alert;
 		
-		public static const WIDTH: Number = 512;
-		public static const HEIGHT: Number = 512;
-		
 		[Bindable]
 		private var doc: Document = new Document();
-		
-		[Bindable]
-		private var scaleNames: ArrayCollection;
-		[Bindable]
-		private var keyNames: ArrayCollection;
 		
 		/*
 		public function Main() {
@@ -39,12 +31,6 @@
 		*/
 		
 		public function init(): void {
-			Piano.playDocument(doc);
-			scaleNames = new ArrayCollection(Music.scaleNames);
-			scaleDropDown.selectedIndex = doc.scale;
-			keyNames = new ArrayCollection(Music.keyNames);
-			keyDropDown.selectedIndex = doc.key;
-			
 			/*
 			stage.scaleMode = StageScaleMode.NO_SCALE;
 			stage.align = StageAlign.TOP; // top-centered
@@ -87,21 +73,9 @@
 		
 		private function onKeyReleased(event: KeyboardEvent): void {
 		}
-		
-		private function onSetScale(): void {
-			doc.history.record(new ChangeScale(doc, scaleDropDown.selectedIndex));
-		}
-		
-		private function onSetKey(): void {
-			doc.history.record(new ChangeKey(doc, keyDropDown.selectedIndex));
-		}
 	]]></fx:Script>
 	
-	<s:HGroup width="100%">
-		<s:DropDownList id="scaleDropDown" dataProvider="{scaleNames}" change="onSetScale()"/>
-		<s:DropDownList id="keyDropDown" dataProvider="{keyNames}" change="onSetKey()"/>
-	</s:HGroup>
-	<BarEditor doc="{doc}" bottom="0"/>
+	<SongEditor doc="{doc}"/>
 	
 	<!--
 	<mx:UIComponent id="container"/>
