@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"
-                xmlns:s="library://ns.adobe.com/flex/spark"
-				xmlns="*"
-                layout="absolute"
-                width="512"
-                height="512"
-                backgroundColor="0x000000"
-				horizontalScrollPolicy="off" verticalScrollPolicy="off"
-                frameRate="60"
-                applicationComplete="init()">
-	<mx:Script><![CDATA[
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+               xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns="*"
+               width="512"
+               height="640"
+               backgroundColor="0x000000"
+               frameRate="60"
+               applicationComplete="init()">
+	<fx:Script><![CDATA[
 		import flash.desktop.*;
 		import flash.display.*;
 		import flash.events.*;
@@ -23,11 +21,16 @@
 		import mx.collections.ArrayCollection;
 		import mx.controls.Alert;
 		
-		public static const WIDTH: Number = 640;
-		public static const HEIGHT: Number = 480;
+		public static const WIDTH: Number = 512;
+		public static const HEIGHT: Number = 512;
 		
 		[Bindable]
 		private var doc: Document = new Document();
+		
+		[Bindable]
+		private var scaleNames: ArrayCollection;
+		[Bindable]
+		private var keyNames: ArrayCollection;
 		
 		/*
 		public function Main() {
@@ -36,7 +39,11 @@
 		*/
 		
 		public function init(): void {
-			Piano.playBar(doc.bar);
+			Piano.playDocument(doc);
+			scaleNames = new ArrayCollection(Music.scaleNames);
+			scaleDropDown.selectedIndex = doc.scale;
+			keyNames = new ArrayCollection(Music.keyNames);
+			keyDropDown.selectedIndex = doc.key;
 			
 			/*
 			stage.scaleMode = StageScaleMode.NO_SCALE;
@@ -80,9 +87,21 @@
 		
 		private function onKeyReleased(event: KeyboardEvent): void {
 		}
-	]]></mx:Script>
+		
+		private function onSetScale(): void {
+			doc.history.record(new ChangeScale(doc, scaleDropDown.selectedIndex));
+		}
+		
+		private function onSetKey(): void {
+			doc.history.record(new ChangeKey(doc, keyDropDown.selectedIndex));
+		}
+	]]></fx:Script>
 	
-	<BarEditor doc="{doc}"/>
+	<s:HGroup width="100%">
+		<s:DropDownList id="scaleDropDown" dataProvider="{scaleNames}" change="onSetScale()"/>
+		<s:DropDownList id="keyDropDown" dataProvider="{keyNames}" change="onSetKey()"/>
+	</s:HGroup>
+	<BarEditor doc="{doc}" bottom="0"/>
 	
 	<!--
 	<mx:UIComponent id="container"/>
@@ -104,4 +123,4 @@
 		<s:TextArea id="textArea" width="{WIDTH}" height="100%" editable="true" selectable="true"/>
 	</s:VGroup>
 	-->
-</mx:Application>
+</s:Application>
