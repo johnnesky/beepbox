@@ -1,5 +1,5 @@
 package {
-	public class ChangeHistory {
+	public class ChangeHistory extends Model {
 		private var changes: Array;
 		private var recentChange: Change;
 		private var index: int;
@@ -8,6 +8,7 @@ package {
 			changes = [];
 			index = 0;
 			recentChange = null;
+			changed();
 		}
 		
 		public function canUndo(): Boolean {
@@ -24,6 +25,7 @@ package {
 			index++;
 			changes.length = index;
 			recentChange = change;
+			changed();
 		}
 		
 		public function undo(): void {
@@ -32,6 +34,7 @@ package {
 			var change: Change = changes[index];
 			change.undo();
 			recentChange = null;
+			changed();
 		}
 		
 		public function redo(): void {
@@ -39,6 +42,7 @@ package {
 			var change: Change = changes[index];
 			change.redo();
 			index++;
+			changed();
 		}
 		
 		public function getRecentChange(): Change {
