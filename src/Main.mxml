@@ -3,7 +3,7 @@
                xmlns:s="library://ns.adobe.com/flex/spark"
 			   xmlns="*"
                width="675"
-               height="680"
+               height="645"
                backgroundColor="0x000000"
                frameRate="60"
                applicationComplete="init()">
@@ -24,6 +24,8 @@
 		[Bindable]
 		private var doc: Document = new Document();
 		
+		private var prevHash: String = null;
+		
 		/*
 		public function Main() {
 			init();
@@ -41,7 +43,9 @@
 			stage.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
 			stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed);
 			stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased);
-			doc.watch(onUpdated);
+			doc.history.watch(onUpdated);
+			
+			ExternalInterface.addCallback("hashUpdatedExternally", hashUpdatedExternally);
 		}
 		
 		private function onEnterFrame(event: Event): void {
@@ -62,17 +66,38 @@
 		}
 		
 		private function onUpdated(): void {
-			fragment.text = doc.toString();
+			var hash: String = doc.toString();
+			if (prevHash == null) {
+				prevHash = hash;
+			} else if (prevHash != hash) {
+				prevHash = hash;
+				//fragment.text = hash;
+				trace("a");
+				ExternalInterface.call("documentUpdated", hash);
+				trace("b");
+			}
 		}
-		
+		/*
 		private function onFragmentPaste(): void {
 			fragment.text = Clipboard.generalClipboard.getData(ClipboardFormats.TEXT_FORMAT) as String;
 			doc.history.record(new ChangeSong(doc, fragment.text));
 		}
+		*/
+		private function hashUpdatedExternally(myhash: String): void {
+				trace("c");
+			if (prevHash != myhash) {
+				prevHash = myhash;
+				//fragment.text = myhash;
+				doc.history.record(new ChangeSong(doc, prevHash));
+			}
+				trace("d");
+		}
 	]]></fx:Script>
 	
 	<s:VGroup width="100%">
+		<!--
 		<s:TextInput id="fragment" width="100%" editable="false" selectable="true" paste="onFragmentPaste(); fragment.selectAll()" focusIn="fragment.selectAll()"/>
+		-->
 		<SongEditor doc="{doc}"/>
 	</s:VGroup>
 </s:Application>
