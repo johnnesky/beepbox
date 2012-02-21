@@ -3,7 +3,7 @@
                 xmlns:s="library://ns.adobe.com/flex/spark"
 				xmlns="*"
                 layout="absolute"
-                width="1024"
+                width="512"
                 height="512"
                 backgroundColor="0x000000"
 				horizontalScrollPolicy="off" verticalScrollPolicy="off"
@@ -20,60 +20,295 @@
 		
 		import mx.collections.ArrayCollection;
 		
-		public const beatWidth: Number = 32;
+		public const beatWidth: Number = 16;
 		public const pitchHeight: Number = 32;
 		
 		[Bindable]
-		public var bar: Bar;
+		public var doc: Document;
 		
-		private var painting: Boolean;
-		private var mouseDown: Boolean;
+		private var preview: Sprite;
+		private var playhead: Sprite;
+		private var mouseDown: Boolean = false;
+		private var mouseOver: Boolean = true;
+		private var mouseDragging: Boolean = false;
+		private var length: int = 4;
+		private var mouseXStart: Number = 0;
+		private var mouseYStart: Number = 0;
+		private var dragChange: Change = null;
+		private var cursor: Object = {};
 		
 		public function init():void {
 			addEventListener(Event.ENTER_FRAME, onEnterFrame);
 			addEventListener(MouseEvent.MOUSE_DOWN, onMousePressed);
 			addEventListener(MouseEvent.MOUSE_MOVE, onMouseMoved);
 			addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
+			preview = new Sprite();
+			container.addChild(preview);
+			playhead = new Sprite();
+			container.addChild(playhead);
+			updateCursorStatus();
 			render();
+			doc.bar.watch(render);
+		}
+		
+		private function updateCursorStatus(): Object {
+			cursor.beat     = int(mouseX / beatWidth);
+			cursor.pitch    = Bar.numPitches - int(mouseY / pitchHeight) - 1;
+			cursor.prevTone = null;
+			cursor.curTone  = null;
+			cursor.nextTone = null;
+			cursor.note     = null;
+			cursor.curIndex = 0;
+			cursor.start    = 0;
+			cursor.end      = 0;
+			for each (var tone: Tone in doc.bar.tones) {
+				if (tone.end <= cursor.beat) {
+					cursor.prevTone = tone;
+					cursor.curIndex++;
+				} else if (tone.start <= cursor.beat && tone.end > cursor.beat) {
+					cursor.curTone = tone;
+				} else if (tone.start > cursor.beat) {
+					cursor.nextTone = tone;
+					break;
+				}
+			}
+			if (cursor.curTone != null) {
+				cursor.start = cursor.curTone.start;
+				cursor.end   = cursor.curTone.end;
+				for each (var note: Note in cursor.curTone.notes) {
+					if (note.pins[0].pitch == cursor.pitch) {
+						cursor.note = note;
+						break;
+					}
+				}
+			} else {
+				var quadBeats: int = cursor.beat >> 2;
+				var modLength: int = length % 4;
+				if (modLength == 0) {
+					cursor.start = quadBeats * 4;
+				} else if (length >= 2) {
+					var modBeat: int = cursor.beat % 4;
+					cursor.start = quadBeats * 4;
+					if (modLength == 2) {
+						if (modBeat >= 2) {
+							cursor.start += 4 - modLength;
+						}
+					} else {
+						if (modBeat == 3) {
+							cursor.start += 4 - modLength;
+						}
+					}
+				} else {
+					cursor.start = cursor.beat;
+				}
+				cursor.end = cursor.start + length;
+				if (cursor.prevTone != null && cursor.start < cursor.prevTone.end) {
+					cursor.start = cursor.prevTone.end;
+				}
+				if (cursor.nextTone != null && cursor.end   > cursor.nextTone.start) {
+					cursor.end   = cursor.nextTone.start;
+				}
+				if (cursor.end > Bar.numBeats) {
+					cursor.end = Bar.numBeats;
+				}
+			}
+			return cursor;
 		}
 		
 		private function onEnterFrame(event: Event): void {
-			
+			playhead.graphics.clear();
+			playhead.graphics.lineStyle(4, 0xffffff);
+			playhead.graphics.moveTo(Piano.playhead * beatWidth, 0);
+			playhead.graphics.lineTo(Piano.playhead * beatWidth, Bar.numPitches * pitchHeight);
+			playhead.graphics.lineStyle();
 		}
 		
 		private function onMousePressed(event: Event): void {
-			var i: int = mouseX / beatWidth;
-			var j: int = Bar.numPitches - int(mouseY / pitchHeight) - 1;
-			painting = !bar.notes[i][j];
-			bar.notes[i][j] = painting;
-			render();
 			mouseDown = true;
+			mouseXStart = mouseX;
+			mouseYStart = mouseY;
+			updateCursorStatus();
+			updatePreview();
 		}
 		
 		private function onMouseMoved(event: Event): void {
-			if (!mouseDown) return;
-			var i: int = mouseX / beatWidth;
-			var j: int = Bar.numPitches - int(mouseY / pitchHeight) - 1;
-			bar.notes[i][j] = painting;
-			render();
+			if (mouseDown) {
+				if (!mouseDragging) {
+					var dx: Number = mouseX - mouseXStart;
+					var dy: Number = mouseY - mouseYStart;
+					if (Math.sqrt(dx * dx + dy * dy) > 5) {
+						mouseDragging = true;
+					}
+				}
+				
+				if (mouseDragging) {
+					if (dragChange != null) {
+						dragChange.undo();
+						dragChange = null;
+					}
+					
+					var sequence: ChangeSequence = new ChangeSequence();
+					
+					if (cursor.curTone == null) {
+						var currentBeat: int = mouseX / beatWidth;
+						var backwards: Boolean;
+						var directLength: int;
+						if (currentBeat < cursor.start) {
+							backwards = true;
+							directLength = cursor.start - currentBeat;
+						} else {
+							backwards = false;
+							directLength = currentBeat - cursor.start + 1;
+						}
+						
+						length = 1;
+						for each (var blessedLength: int in [1, 2, 3, 4, 6, 8, 12, 16, 24, 32]) {
+							if (blessedLength <= directLength) {
+								length = blessedLength;
+							}
+						}
+						
+						if (length < directLength) {
+							// See if I can find a better match by snapping to an existing tone...
+						}
+						
+						var start: int;
+						var end: int;
+						if (backwards) {
+							end = cursor.start;
+							start = end - length;
+						} else {
+							start = cursor.start;
+							end = start + length;
+						}
+						
+						for (var i: int = 0; i < doc.bar.tones.length;) {
+							var tone: Tone = doc.bar.tones[i];
+							if (tone.end <= start) {
+								i++;
+							} else if (tone.start >= end) {
+								break;
+							} else if (tone.start < start) {
+								sequence.append(new ChangeToneLength(doc.bar, tone, tone.start, start));
+								i++;
+							} else if (tone.end > end) {
+								sequence.append(new ChangeToneLength(doc.bar, tone, end, tone.end));
+								i++;
+							} else {
+								sequence.append(new ChangeToneAdded(doc.bar, tone, i, true));
+							}
+						}
+						
+						sequence.append(new ChangeToneAdded(doc.bar, new Tone(cursor.pitch, start, end), cursor.curIndex));
+						dragChange = sequence;
+					} else if (cursor.note == null) {
+					} else {
+					}
+				}
+			} else {
+				updateCursorStatus();
+				updatePreview();
+			}
 		}
 		
 		private function onMouseReleased(event: Event): void {
+			if (mouseDragging) {
+				if (dragChange != null) {
+					doc.history.record(dragChange);
+					dragChange = null;
+				}
+			} else if (mouseDown) {
+				if (cursor.curTone == null) {
+					doc.history.record(new ChangeToneAdded(doc.bar, new Tone(cursor.pitch, cursor.start, cursor.end), cursor.curIndex));
+				} else {
+					if (cursor.note == null) {
+						var note: Note = new Note(cursor.pitch, cursor.end - cursor.start);
+						var sequence: ChangeSequence = new ChangeSequence();
+						if (cursor.curTone.notes.length == 2) {
+							sequence.append(new ChangeNoteAdded(doc.bar, cursor.curTone, cursor.curTone.notes[0], 0, true));
+						}
+						sequence.append(new ChangeNoteAdded(doc.bar, cursor.curTone, note, cursor.curTone.notes.length));
+						doc.history.record(sequence);
+					} else {
+						if (cursor.curTone.notes.length == 1) {
+							doc.history.record(new ChangeToneAdded(doc.bar, cursor.curTone, cursor.curIndex, true));
+						} else {
+							doc.history.record(new ChangeNoteAdded(doc.bar, cursor.curTone, cursor.note, cursor.curTone.notes.indexOf(cursor.note), true));
+						}
+					}
+				}
+			}
+			
 			mouseDown = false;
+			mouseDragging = false;
+			updateCursorStatus();
+			render();
+		}
+		
+		private function updatePreview(): void {
+			preview.graphics.clear();
+			if (!mouseOver || mouseDown) return;
+			
+			if (cursor.note == null) {
+				preview.graphics.lineStyle(2, 0x999999);
+				preview.graphics.drawRect(cursor.start * beatWidth + 2, pitchHeight * (Bar.numPitches - cursor.pitch - 1) + 2, (cursor.end - cursor.start) * beatWidth - 4, pitchHeight - 4);
+				preview.graphics.lineStyle();
+			}
 		}
 		
 		private function render(): void {
+			var bar: Bar = doc.bar;
 			container.graphics.clear();
 			container.graphics.beginFill(0);
 			container.graphics.drawRect(0, 0, beatWidth * Bar.numBeats, pitchHeight * Bar.numPitches);
 			container.graphics.endFill();
+			
+			container.graphics.beginFill(0x444444);
 			for (var j: int = 0; j < Bar.numPitches; j++) {
-				for (var i: int = 0; i < Bar.numBeats; i++) {
-					container.graphics.beginFill(bar.notes[i][j] ? 0x777777 : 0x444444);
-					container.graphics.drawRect(beatWidth * i + 1, pitchHeight * (Bar.numPitches - j - 1) - 1, beatWidth - 2, pitchHeight - 2);
+				for (var k: int = 0; k < Bar.numBeats / 4; k++) {
+					container.graphics.drawRect(beatWidth * k * 4 + 1, pitchHeight * (Bar.numPitches - j - 1) + 1, beatWidth * 4 - 2, pitchHeight - 2);
+				}
+			}
+			container.graphics.endFill();
+			
+			for each (var tone: Tone in bar.tones) {
+				for each (var note: Note in tone.notes) {
+					container.graphics.beginFill(0x999999);
+					
+					var prevPin: NotePin;
+					var nextPin: NotePin = note.pins[0];
+					
+					for (var i: int = 1; i < note.pins.length; i++) {
+						prevPin = nextPin;
+						nextPin = note.pins[i];
+						var leftSide: Number = beatWidth * (tone.start + prevPin.time) + (i == 1 ? 1 : 0);
+						var rightSide: Number = beatWidth * (tone.start + nextPin.time) - (i == note.pins.length - 1 ? 1 : 0);
+						container.graphics.moveTo(
+							leftSide,
+							pitchHeight * (Bar.numPitches - prevPin.pitch - 1) + 1
+						);
+						container.graphics.lineTo(
+							rightSide,
+							pitchHeight * (Bar.numPitches - nextPin.pitch - 1) + 1
+						);
+						container.graphics.lineTo(
+							rightSide,
+							pitchHeight * (Bar.numPitches - nextPin.pitch) - 1
+						);
+						container.graphics.lineTo(
+							leftSide,
+							pitchHeight * (Bar.numPitches - prevPin.pitch) - 1
+						);
+						container.graphics.lineTo(
+							leftSide,
+							pitchHeight * (Bar.numPitches - prevPin.pitch - 1) + 1
+						);
+					}
 					container.graphics.endFill();
 				}
 			}
+			
+			updatePreview();
 		}
 		
 	]]></mx:Script>

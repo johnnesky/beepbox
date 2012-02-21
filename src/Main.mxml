@@ -3,7 +3,7 @@
                 xmlns:s="library://ns.adobe.com/flex/spark"
 				xmlns="*"
                 layout="absolute"
-                width="1024"
+                width="512"
                 height="512"
                 backgroundColor="0x000000"
 				horizontalScrollPolicy="off" verticalScrollPolicy="off"
@@ -27,7 +27,7 @@
 		public static const HEIGHT: Number = 480;
 		
 		[Bindable]
-		private var bar: Bar = new Bar();
+		private var doc: Document = new Document();
 		
 		/*
 		public function Main() {
@@ -35,23 +35,23 @@
 		}
 		*/
 		
-		public function init():void {
-			Piano.playBar(bar);
+		public function init(): void {
+			Piano.playBar(doc.bar);
 			
 			/*
 			stage.scaleMode = StageScaleMode.NO_SCALE;
 			stage.align = StageAlign.TOP; // top-centered
+			*/
 			stage.focus = stage;
 			stage.addEventListener(Event.ENTER_FRAME, onEnterFrame);
 			stage.addEventListener(MouseEvent.MOUSE_DOWN, onMousePressed);
 			stage.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
-			stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed, true);
-			stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased, true);
-			render();
-			*/
+			stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed);
+			stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased);
 		}
-		/*
+		
 		private function onEnterFrame(event: Event): void {
+			Model.updateAll();
 		}
 		
 		private function onMousePressed(event: MouseEvent): void {
@@ -61,28 +61,29 @@
 		}
 		
 		private function onKeyPressed(event: KeyboardEvent): void {
-			//trace(event.keyCode, String.fromCharCode(event.charCode));
+			trace(event.keyCode, String.fromCharCode(event.charCode));
+			
+			//if (event.ctrlKey)
+			switch (event.keyCode) {
+				case 90: // z
+					if (event.shiftKey) {
+						doc.history.redo();
+					} else {
+						doc.history.undo();
+					}
+					break;
+				case 89: // y
+					doc.history.redo();
+					break;
+			}
 		}
 		
 		private function onKeyReleased(event: KeyboardEvent): void {
 		}
-		
-		private function onSliderChange(): void {
-			//Music.jumpTo(slider.value);
-		}
-		
-		private function render(): void {
-			container.graphics.clear();
-			container.graphics.beginFill(0xffffff);
-			container.graphics.drawRect(0,0,WIDTH, HEIGHT);
-			container.graphics.endFill();
-		}
-		
-		private function onSliderResize(): void {
-			render();
-		}
-		*/
 	]]></mx:Script>
+	
+	<BarEditor doc="{doc}"/>
+	
 	<!--
 	<mx:UIComponent id="container"/>
 	
@@ -103,5 +104,4 @@
 		<s:TextArea id="textArea" width="{WIDTH}" height="100%" editable="true" selectable="true"/>
 	</s:VGroup>
 	-->
-	<BarEditor bar="{bar}"/>
 </mx:Application>
