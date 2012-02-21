@@ -2,8 +2,8 @@
 <s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
                xmlns:s="library://ns.adobe.com/flex/spark"
 			   xmlns="*"
-               width="512"
-               height="700"
+               width="675"
+               height="680"
                backgroundColor="0x000000"
                frameRate="60"
                applicationComplete="init()">
@@ -55,21 +55,7 @@
 		}
 		
 		private function onKeyPressed(event: KeyboardEvent): void {
-			trace(event.keyCode, String.fromCharCode(event.charCode));
-			
-			//if (event.ctrlKey)
-			switch (event.keyCode) {
-				case 90: // z
-					if (event.shiftKey) {
-						doc.history.redo();
-					} else {
-						doc.history.undo();
-					}
-					break;
-				case 89: // y
-					doc.history.redo();
-					break;
-			}
+			//trace(event.keyCode, String.fromCharCode(event.charCode));
 		}
 		
 		private function onKeyReleased(event: KeyboardEvent): void {
@@ -79,34 +65,14 @@
 			fragment.text = doc.toString();
 		}
 		
-		private function onFragmentEnter(): void {
-			doc.history.record(new ChangeFragment(doc, fragment.text));
+		private function onFragmentPaste(): void {
+			fragment.text = Clipboard.generalClipboard.getData(ClipboardFormats.TEXT_FORMAT) as String;
+			doc.history.record(new ChangeSong(doc, fragment.text));
 		}
 	]]></fx:Script>
 	
 	<s:VGroup width="100%">
-		<s:TextInput id="fragment" width="100%" editable="true" selectable="true" enter="onFragmentEnter()"/>
+		<s:TextInput id="fragment" width="100%" editable="false" selectable="true" paste="onFragmentPaste(); fragment.selectAll()" focusIn="fragment.selectAll()"/>
 		<SongEditor doc="{doc}"/>
 	</s:VGroup>
-	
-	<!--
-	<mx:UIComponent id="container"/>
-	
-	<s:VGroup id="vgroup" width="{WIDTH}" height="{HEIGHT}">
-		<s:HGroup width="100%">
-			<s:TextArea width="70%" id="urlArea" height="30" editable="true" selectable="true" text="http://"/>
-			<s:Button width="30%" label="load MP3" click=""/>
-		</s:HGroup>
-		<s:BorderContainer id="loading" height="10" backgroundColor="0x00ff00" borderColor="0xB7BABC" borderStyle="solid" borderVisible="true"/>
-		<s:HGroup width="100%" id="sliderGroup">
-			<mx:Label id="inSeconds" width="40"/>
-			<mx:HSlider id="slider" change="onSliderChange()" width="100%"/>
-			<mx:Label id="outSeconds" width="40"/>
-		</s:HGroup>
-		<s:HGroup width="100%">
-			<s:DropDownList id="fontSize" dataProvider="{null}" selectedItem="16" change=""/>
-		</s:HGroup>
-		<s:TextArea id="textArea" width="{WIDTH}" height="100%" editable="true" selectable="true"/>
-	</s:VGroup>
-	-->
 </s:Application>

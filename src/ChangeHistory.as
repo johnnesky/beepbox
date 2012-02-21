@@ -10,6 +10,14 @@ package {
 			recentChange = null;
 		}
 		
+		public function canUndo(): Boolean {
+			return index > 0;
+		}
+		
+		public function canRedo(): Boolean {
+			return index < changes.length;
+		}
+		
 		public function record(change: Change): void {
 			if (change.isNoop()) return;
 			changes[index] = change;

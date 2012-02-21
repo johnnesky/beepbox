@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+           xmlns:s="library://ns.adobe.com/flex/spark"
+           xmlns="*"
+           width="32"
+           height="481"
+           backgroundColor="0x000000"
+           creationComplete="init()"
+           addedToStage="onAddedToStage()">
+	<mx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		
+		import mx.collections.ArrayCollection;
+		
+		public var noteHeight: Number;
+		public var noteCount: int;
+		
+		[Bindable]
+		public var doc: Document;
+		
+		[Embed(source="assets/BlackKey.png")]
+		private static const BlackKey: Class;
+		[Embed(source="assets/BlackKeyDisabled.png")]
+		private static const BlackKeyDisabled: Class;
+		[Embed(source="assets/WhiteKey.png")]
+		private static const WhiteKey: Class;
+		[Embed(source="assets/WhiteKeyDisabled.png")]
+		private static const WhiteKeyDisabled: Class;
+		[Embed(source="assets/Drum.png")]
+		private static const Drum: Class;
+		
+		private var preview: Sprite;
+		private var mouseDown: Boolean = false;
+		private var mouseOver: Boolean = false;
+		private var labels: Array;
+		private var keys: Array;
+		private var cursorNote: int;
+		
+		public function init():void {
+			keys = [];
+			labels = [];
+			for (var i: int = 0; i < Music.noteCount; i++) {
+				var format: TextFormat = new TextFormat();
+				format.align = TextFormatAlign.CENTER;
+				format.bold = true;
+				format.font = "Arial";
+				format.size = 11;
+				var text: TextField = new TextField();
+				text.width = 20;
+				text.x = 13;
+				text.height = 20;
+				text.y = 13 * (Music.noteCount - i - 1) - 2;
+				text.wordWrap = true;
+				text.type = TextFieldType.DYNAMIC;
+				text.selectable = false;
+				text.mouseEnabled = false;
+				text.defaultTextFormat = format;
+				container.addChild(text);
+				labels.push(text);
+			}
+			preview = new Sprite();
+			container.addChild(preview);
+			doc.watch(documentChanged);
+			documentChanged();
+		}
+		
+		private function onAddedToStage(): void {
+			addEventListener(MouseEvent.MOUSE_DOWN, onMousePressed);
+			stage.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMoved);
+			stage.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
+			addEventListener(MouseEvent.ROLL_OVER, onMouseOver);
+			addEventListener(MouseEvent.ROLL_OUT, onMouseOut);
+		}
+		
+		private function updateCursorNote(): void {
+			var scale: Array = Music.scaleFlags[doc.scale];
+			
+			var mouseNote: Number = Math.max(0, Math.min(noteCount-1, noteCount - (mouseY / noteHeight)));
+			if (scale[int(mouseNote) % 12] || doc.channel == 3) {
+				cursorNote = int(mouseNote);
+			} else {
+				var topNote: int = int(mouseNote) + 1;
+				var bottomNote: int = int(mouseNote) - 1;
+				while (scale[topNote % 12] == false) {
+					topNote++;
+				}
+				while (scale[(bottomNote) % 12] == false) {
+					bottomNote--;
+				}
+				var topRange: Number = topNote;
+				var bottomRange: Number = bottomNote + 1;
+				if (topNote % 12 == 0 || topNote % 12 == 7) {
+					topRange -= 0.5;
+				}
+				if (bottomNote % 12 == 0 || bottomNote % 12 == 7) {
+					bottomRange += 0.5;
+				}
+				cursorNote = mouseNote - bottomRange > topRange - mouseNote ? topNote : bottomNote;
+			}
+		}
+		
+		private function onMouseOver(event: Event): void {
+			mouseOver = true;
+		}
+		
+		private function onMouseOut(event: Event): void {
+			mouseOver = false;
+		}
+		
+		private function onMousePressed(event: Event): void {
+			mouseDown = true;
+			doc.synth.pianoPressed = true;
+			updatePreview();
+		}
+		
+		private function onMouseMoved(event: Event): void {
+			updateCursorNote()
+			doc.synth.pianoNote = cursorNote;
+			updatePreview();
+		}
+		
+		private function onMouseReleased(event: Event): void {
+			mouseDown = false;
+			doc.synth.pianoPressed = false;
+			updatePreview();
+		}
+		
+		private function updatePreview(): void {
+			preview.graphics.clear();
+			if (!mouseOver || mouseDown) return;
+			preview.graphics.lineStyle(2, 0xffffff);
+			preview.graphics.drawRect(1, noteHeight * (noteCount - cursorNote - 1) + 1, width - 2, noteHeight - 2);
+			preview.graphics.lineStyle();
+		}
+		
+		private function documentChanged(): void {
+			noteHeight = doc.channel == 3 ? 43 : 13;
+			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
+			render();
+		}
+		
+		private function render(): void {
+			container.graphics.clear();
+			container.graphics.beginFill(0x000000);
+			container.graphics.drawRect(0, 0, width, height);
+			container.graphics.endFill();
+			
+			var key: Bitmap;
+			for each (key in keys) {
+				container.removeChild(key);
+			}
+			keys = [];
+			
+			if (!doc.showLetters) return;
+			
+			if (doc.channel == 3) {
+				for (var i: int = 0; i < Music.noteCount; i++) {
+					labels[i].text = "";
+				}
+			}
+			for (var j: int = 0; j < noteCount; j++) {
+				var noteNameIndex: int = (j + Music.keyTransposes[doc.key]) % 12;
+				if (doc.channel == 3) {
+					key = new Drum();
+					key.scaleX = key.scaleY = 1.0 - ( j / noteCount ) * 0.35;
+					key.x = 16.0 - key.width / 2.0;
+					key.y = 21.5 - key.height / 2.0;
+					key.smoothing = true;
+					var brightness: Number = 1.0 + ((j - noteCount / 2.0) / noteCount) * 0.5;
+		            key.transform.colorTransform = new ColorTransform(brightness, brightness, brightness);
+				} else if (Music.scaleFlags[doc.scale][j%12] == false) {
+					labels[j].text = "";
+					key = Music.pianoScaleFlags[noteNameIndex] ? new WhiteKeyDisabled() : new BlackKeyDisabled();
+				} else {
+					labels[j].text = Music.noteNames[noteNameIndex];
+					labels[j].textColor = Music.pianoScaleFlags[noteNameIndex] ? 0x000000 : 0xffffff;
+					key = Music.pianoScaleFlags[noteNameIndex] ? new WhiteKey() : new BlackKey();
+				}
+				key.y += noteHeight * (noteCount - j - 1);
+				container.addChildAt(key, 0);
+				keys.push(key);
+				
+				/*
+				var color: int = 0x444444;
+				if (doc.channel != 3) {
+					if (j%12 == 0) color = 0x886644;
+					if (j%12 == 7 && doc.showFifth) color = 0x446688;
+				}
+				container.graphics.beginFill(color);
+				for (var k: int = 0; k < doc.beats; k++) {
+					container.graphics.drawRect(partWidth * k * doc.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.parts - 2, noteHeight - 2);
+				}
+				container.graphics.endFill();
+				*/
+			}
+			updatePreview();
+		}
+	]]></mx:Script>
+	<mx:UIComponent id="container"/>
+</mx:Canvas>
