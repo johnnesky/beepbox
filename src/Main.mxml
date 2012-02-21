@@ -3,7 +3,7 @@
                xmlns:s="library://ns.adobe.com/flex/spark"
 			   xmlns="*"
                width="512"
-               height="640"
+               height="700"
                backgroundColor="0x000000"
                frameRate="60"
                applicationComplete="init()">
@@ -41,6 +41,7 @@
 			stage.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
 			stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed);
 			stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased);
+			doc.watch(onUpdated);
 		}
 		
 		private function onEnterFrame(event: Event): void {
@@ -73,9 +74,20 @@
 		
 		private function onKeyReleased(event: KeyboardEvent): void {
 		}
+		
+		private function onUpdated(): void {
+			fragment.text = doc.toString();
+		}
+		
+		private function onFragmentEnter(): void {
+			doc.history.record(new ChangeFragment(doc, fragment.text));
+		}
 	]]></fx:Script>
 	
-	<SongEditor doc="{doc}"/>
+	<s:VGroup width="100%">
+		<s:TextInput id="fragment" width="100%" editable="true" selectable="true" enter="onFragmentEnter()"/>
+		<SongEditor doc="{doc}"/>
+	</s:VGroup>
 	
 	<!--
 	<mx:UIComponent id="container"/>

@@ -14,12 +14,12 @@ package {
 		
 		protected override function doForwards(): void {
 			bar.tones.splice(index, 0, tone);
-			bar.changed();
+			bar.doc.changed();
 		}
 		
 		protected override function doBackwards(): void {
 			bar.tones.splice(index, 1);
-			bar.changed();
+			bar.doc.changed();
 		}
 	}
 }
