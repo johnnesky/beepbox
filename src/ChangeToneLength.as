@@ -25,16 +25,17 @@ package {
 			
 			if (oldStart > newStart) {
 				newPins[0].time = 0;
-			} else if (oldStart < newStart) {
+			}
+			if (oldEnd < newEnd) {
+				newPins[newPins.length - 1].time = newEnd - newStart;
+			}
+			if (oldStart < newStart) {
 				while (newPins[1].time <= 0) {
 					newPins.shift();
 				}
 				newPins[0].time = 0;
 			}
-			
-			if (oldEnd < newEnd) {
-				newPins[newPins.length - 1].time = newEnd - newStart;
-			} else if (oldEnd > newEnd) {
+			if (oldEnd > newEnd) {
 				while (newPins[newPins.length-2].time >= newEnd - newStart) {
 					newPins.pop();
 				}
@@ -50,14 +51,14 @@ package {
 			tone.pins = newPins;
 			tone.start = newStart;
 			tone.end = newEnd;
-			bar.changed();
+			bar.doc.changed();
 		}
 		
 		protected override function doBackwards(): void {
 			tone.pins = oldPins;
 			tone.start = oldStart;
 			tone.end = oldEnd;
-			bar.changed();
+			bar.doc.changed();
 		}
 	}
 }

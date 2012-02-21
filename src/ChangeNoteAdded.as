@@ -16,12 +16,12 @@ package {
 		
 		protected override function doForwards(): void {
 			tone.notes.splice(index, 0, note);
-			bar.changed();
+			bar.doc.changed();
 		}
 		
 		protected override function doBackwards(): void {
 			tone.notes.splice(index, 1);
-			bar.changed();
+			bar.doc.changed();
 		}
 	}
 }

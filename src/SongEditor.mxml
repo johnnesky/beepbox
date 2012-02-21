@@ -3,7 +3,7 @@
            xmlns:s="library://ns.adobe.com/flex/spark"
            xmlns="*"
            width="512"
-           height="640"
+           height="670"
            backgroundColor="0x000000"
            creationComplete="init()"
            addedToStage="onAddedToStage()">
@@ -27,14 +27,31 @@
 		private var keyNames: ArrayCollection;
 		[Bindable]
 		private var tempoNames: ArrayCollection;
+		[Bindable]
+		private var beatNames: ArrayCollection;
+		[Bindable]
+		private var partNames: ArrayCollection;
+		[Bindable]
+		private var waveNames: ArrayCollection;
 		
 		public function init():void {
 			scaleNames = new ArrayCollection(Music.scaleNames);
-			scaleDropDown.selectedIndex = doc.scale;
 			keyNames = new ArrayCollection(Music.keyNames);
-			keyDropDown.selectedIndex = doc.key;
 			tempoNames = new ArrayCollection(Music.tempoNames);
+			beatNames = new ArrayCollection(Music.beatNames);
+			partNames = new ArrayCollection(Music.partNames);
+			waveNames = new ArrayCollection(Music.waveNames);
+			doc.watch(onUpdated);
+			onUpdated();
+		}
+		
+		private function onUpdated(): void {
+			scaleDropDown.selectedIndex = doc.scale;
+			keyDropDown.selectedIndex = doc.key;
 			tempoDropDown.selectedIndex = doc.tempo;
+			beatDropDown.selectedIndex = Music.beatCounts.indexOf(doc.beats);
+			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.parts);
+			waveDropDown.selectedIndex = doc.channelWaves[doc.channel];
 		}
 		
 		private function onAddedToStage(): void {
@@ -70,6 +87,7 @@
 				doc.synth.paused = true;
 				doc.synth.playhead = 0.0;
 				doc.synth.beat = 0;
+				doc.synth.part = 0;
 				doc.synth.arpeggio = 0;
 				doc.synth.arpeggioSamples = 0;
 				playButton.label = "play";
@@ -77,21 +95,45 @@
 		}
 		
 		private function onSetScale(): void {
-			doc.history.record(new ChangeScale(doc, scaleDropDown.selectedIndex));
+			var scale: int = scaleDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeScale) doc.history.undo();
+			doc.history.record(new ChangeScale(doc, scale));
 		}
 		
 		private function onSetKey(): void {
-			doc.history.record(new ChangeKey(doc, keyDropDown.selectedIndex));
+			var key: int = keyDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeKey) doc.history.undo();
+			doc.history.record(new ChangeKey(doc, key));
 		}
 		
 		private function onSetTempo(): void {
-			doc.history.record(new ChangeTempo(doc, tempoDropDown.selectedIndex));
+			var tempo: int = tempoDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeTempo) doc.history.undo();
+			doc.history.record(new ChangeTempo(doc, tempo));
+		}
+		
+		private function onSetBeats(): void {
+			var beats: int = Music.beatCounts[beatDropDown.selectedIndex];
+			//if (doc.history.getRecentChange() is ChangeBeats) doc.history.undo();
+			doc.history.record(new ChangeBeats(doc, beats));
+		}
+		
+		private function onSetParts(): void {
+			var parts: int = Music.partCounts[partDropDown.selectedIndex];
+			//if (doc.history.getRecentChange() is ChangeParts) doc.history.undo();
+			doc.history.record(new ChangeParts(doc, parts));
+		}
+		
+		private function onSetWave(): void {
+			var wave: int = waveDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeWave) doc.history.undo();
+			doc.history.record(new ChangeWave(doc, wave));
 		}
 	]]></mx:Script>
 	
 	<s:VGroup width="100%">
 		<s:HGroup width="100%">
-			<s:Button id="playButton" label="pause" click="togglePlay()" width="55"/>
+			<s:Button id="playButton" label="pause" click="togglePlay()" width="60"/>
 			<s:DropDownList id="scaleDropDown" dataProvider="{scaleNames}" width="85" change="onSetScale()" close="stage.focus = stage">
 				<s:layout> <s:VerticalLayout requestedRowCount="{scaleNames.length}" horizontalAlign="justify"/> </s:layout>
 			</s:DropDownList>
@@ -101,9 +143,20 @@
 			<s:DropDownList id="tempoDropDown" dataProvider="{tempoNames}" width="75" change="onSetTempo()" close="stage.focus = stage">
 				<s:layout> <s:VerticalLayout requestedRowCount="{tempoNames.length}" horizontalAlign="justify"/> </s:layout>
 			</s:DropDownList>
+			<s:DropDownList id="beatDropDown" dataProvider="{beatNames}" width="80" change="onSetBeats()" close="stage.focus = stage">
+				<s:layout> <s:VerticalLayout requestedRowCount="{beatNames.length}" horizontalAlign="justify"/> </s:layout>
+			</s:DropDownList>
+			<s:DropDownList id="partDropDown" dataProvider="{partNames}" width="75" change="onSetParts()" close="stage.focus = stage">
+				<s:layout> <s:VerticalLayout requestedRowCount="{partNames.length}" horizontalAlign="justify"/> </s:layout>
+			</s:DropDownList>
 		</s:HGroup>
 		<LoopEditor doc="{doc}"/>
 		<TrackEditor doc="{doc}"/>
+		<s:HGroup width="100%">
+			<s:DropDownList id="waveDropDown" dataProvider="{waveNames}" width="110" change="onSetWave()" close="stage.focus = stage">
+				<s:layout> <s:VerticalLayout requestedRowCount="{waveNames.length}" horizontalAlign="justify"/> </s:layout>
+			</s:DropDownList>
+		</s:HGroup>
 		<BarEditor doc="{doc}" bottom="0"/>
 	</s:VGroup>
 </mx:Canvas>

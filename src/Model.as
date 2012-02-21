@@ -20,8 +20,8 @@ package {
 		
 		public function changed(): void {
 			if (dirty == false) {
-				waitingForFrame.push(this);
 				dirty = true;
+				waitingForFrame.push(this);
 				/*for each (var parentModel: Model in parentModels) {
 					parentModel.changed();
 				}*/
@@ -29,14 +29,14 @@ package {
 		}
 		
 		private function update(): void {
-			for each (var watcher: Function in watchers) {
+			dirty = false;
+			for each (var watcher: Function in watchers.concat()) {
 				watcher();
 			}
-			dirty = false;
 		}
 		
 		public static function updateAll(): void {
-			for each (var model: Model in waitingForFrame) {
+			for each (var model: Model in waitingForFrame.concat()) {
 				model.update();
 			}
 			waitingForFrame.length = 0;

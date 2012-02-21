@@ -63,7 +63,6 @@
 			container.addChild(playhead);
 			render();
 			doc.watch(documentChanged);
-			pattern.watch(render);
 		}
 		
 		private function onAddedToStage(): void {
@@ -80,7 +79,7 @@
 		private function onEnterFrame(event: Event): void {
 			playhead.graphics.clear();
 			playhead.graphics.lineStyle(4, 0xffffff);
-			var pos: Number = barWidth * (doc.synth.bar + doc.synth.playhead / Music.beatsPerBar);
+			var pos: Number = barWidth * (doc.synth.bar + doc.synth.playhead);
 			playhead.graphics.moveTo(pos, 0);
 			playhead.graphics.lineTo(pos, height);
 			playhead.graphics.lineStyle();
@@ -151,6 +150,7 @@
 		
 		private function onMousePressed(event: Event): void {
 			var channel: int = mouseY / channelHeight;
+			if (channel >= Music.numChannels) channel = Music.numChannels - 1;
 			var bar: int = mouseX / barWidth;
 			if (doc.channel == channel && doc.bar == bar) {
 				setBarPattern((doc.channelBars[channel][bar] + 1) % doc.channelPatterns[channel].length);
@@ -171,6 +171,7 @@
 			if (!mouseOver) return;
 			
 			var channel: int = mouseY / channelHeight;
+			if (channel >= Music.numChannels) channel = Music.numChannels - 1;
 			var bar: int = mouseX / barWidth;
 			preview.graphics.lineStyle(2, 0xffffff);
 			preview.graphics.drawRect(barWidth * bar + 1, channelHeight * channel + 1, barWidth - 2, channelHeight - 2);
@@ -178,9 +179,7 @@
 		}
 		
 		private function documentChanged(): void {
-			pattern.unwatch(render);
 			pattern = doc.getBarPattern(doc.channel, doc.bar);
-			pattern.watch(render);
 			render();
 		}
 		
