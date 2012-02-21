@@ -2,9 +2,9 @@ package {
 	public class ChangeNoteAdded extends Change {
 		private var bar: Bar;
 		private var tone: Tone;
-		private var note: Note;
+		private var note: int;
 		private var index: int;
-		public function ChangeNoteAdded(bar: Bar, tone: Tone, note: Note, index: int, deletion: Boolean = false) {
+		public function ChangeNoteAdded(bar: Bar, tone: Tone, note: int, index: int, deletion: Boolean = false) {
 			super(deletion);
 			this.bar = bar;
 			this.tone = tone;

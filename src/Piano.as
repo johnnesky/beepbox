@@ -6,11 +6,11 @@ package {
 	public class Piano {
 		public static var playhead: Number;
 		
-		public static function frequencyFromPitchIndex(pitchIndex: int): Number {
-			return 440.0 * Math.pow(2.0, (pitchIndex - 69.0) / 12.0);
+		public static function frequencyFromPitch(pitch: int): Number {
+			return 440.0 * Math.pow(2.0, (pitch - 69.0) / 12.0);
 		}
 		
-		public static function playBar(bar: Bar): void {
+		public static function playDocument(document: Document): void {
 			const samplesPerSecond: int = 44100;
 			const sampleTime: Number = 1.0 / samplesPerSecond;
 			const beatsPerMinute: Number = 120.0 * 4.0;
@@ -18,6 +18,7 @@ package {
 			const samplesPerBeat: int = samplesPerSecond / beatsPerSecond;
 			const arpeggioPerSecond: Number = beatsPerSecond * 2.0;
 			const samplesPerArpeggio: int = samplesPerSecond / arpeggioPerSecond;
+			const globalVolume: Number = 0.25;
 			
 			var period: Number = 0.0;
 			var beat: int = 0;
@@ -29,6 +30,7 @@ package {
 			function onSampleData(event: SampleDataEvent): void {
 				var totalSamples: int = 2048;
 				
+				var bar: Bar = document.bar;
 				var tone: Tone = null;
 				var toneIndex: int = 0;
 				for (i = 0; i < bar.tones.length; i++) {
@@ -53,6 +55,22 @@ package {
 					beatSamples -= samples1;
 					
 					if (tone != null) {
+						var startPin: TonePin = null;
+						var endPin: TonePin = null;
+						for each (var pin: TonePin in tone.pins) {
+							if (pin.time + tone.start <= beat) {
+								startPin = pin;
+							} else {
+								endPin = pin;
+								break;
+							}
+						}
+						var startTime:     int = tone.start + startPin.time - beat;
+						var endTime:       int = tone.start + endPin.time - beat;
+						var startRatio:    Number = (1.0 - (beatSamples + samples1 - samples2) / samplesPerBeat - startTime) / (endTime - startTime);
+						var endRatio:      Number = (1.0 - (beatSamples + samples1) / samplesPerBeat - startTime) / (endTime - startTime);
+						var startInterval: Number = startPin.interval * (1.0 - startRatio) + endPin.interval * startRatio;
+						var endInterval:   Number = startPin.interval * (1.0 - endRatio)   + endPin.interval * endRatio;
 						while (samples1 > 0) {
 							var samples2: int;
 							if (arpeggioSamples <= samples1) {
@@ -63,30 +81,15 @@ package {
 							samples1 -= samples2;
 							arpeggioSamples -= samples2;
 							
-							var note: Note = null;
+							var pitch: int = Music.lowC + Music.keyTransposes[document.key];
 							if (tone.notes.length == 2) {
-								note = tone.notes[arpeggio];
+								pitch += tone.notes[arpeggio];
 							} else {
-								note = tone.notes[0];
+								pitch += tone.notes[0];
 							}
-							var startPin: NotePin = null;
-							var endPin: NotePin = null;
-							for each (var pin: NotePin in note.pins) {
-								if (pin.time + tone.start <= beat) {
-									startPin = pin;
-								} else {
-									endPin = pin;
-									break;
-								}
-							}
-							var startTime: int = tone.start + startPin.time - beat;
-							var endTime:   int = tone.start + endPin.time - beat;
-							var startRatio: Number = (1.0 - (beatSamples + samples1 - samples2) / samplesPerBeat - startTime) / (endTime - startTime);
-							var endRatio:   Number = (1.0 - (beatSamples + samples1) / samplesPerBeat - startTime) / (endTime - startTime);
-							var startPitch: Number = Bar.pitches[startPin.pitch] * (1.0 - startRatio) + Bar.pitches[endPin.pitch] * startRatio;
-							var endPitch:   Number = Bar.pitches[startPin.pitch] * (1.0 - endRatio)   + Bar.pitches[endPin.pitch] * endRatio;
-							var startFreq: Number = 440.0 * Math.pow(2.0, (startPitch - 69.0) / 12.0);
-							var endFreq:   Number = 440.0 * Math.pow(2.0, (endPitch - 69.0) / 12.0);
+							
+							var startFreq: Number = 440.0 * Math.pow(2.0, (pitch + startInterval - 69.0) / 12.0);
+							var endFreq:   Number = 440.0 * Math.pow(2.0, (pitch + endInterval - 69.0) / 12.0);
 							var frequency: Number = startFreq;
 							var freqDelta: Number = (endFreq - startFreq) / samples2;
 							
@@ -95,8 +98,8 @@ package {
 								while (period >= 1.0) period -= 1.0;
 								var sample: Number = period > 0.5 ? 1.0 : -1.0;
 								//var sample: Number = period < 0.5 ? -1 + period * 4.0 : 3.0 - period * 4.0;
-								event.data.writeFloat(sample);
-								event.data.writeFloat(sample);
+								event.data.writeFloat(sample * globalVolume);
+								event.data.writeFloat(sample * globalVolume);
 								samples2--;
 								frequency += freqDelta;
 							}
