@@ -1,6 +1,6 @@
 package {
 	public class ChangeToneTruncate extends ChangeSequence {
-		public function ChangeToneTruncate(bar: Bar, start: int, end: int, skipTone: Tone = null) {
+		public function ChangeToneTruncate(bar: BarPattern, start: int, end: int, skipTone: Tone = null) {
 			var i: int = 0;
 			while (i < bar.tones.length) {
 				var tone: Tone = bar.tones[i];

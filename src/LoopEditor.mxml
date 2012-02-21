@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+           xmlns:s="library://ns.adobe.com/flex/spark"
+           xmlns="*"
+           width="512"
+           height="20"
+           backgroundColor="0x000000"
+           creationComplete="init()"
+           addedToStage="onAddedToStage()">
+	<mx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		
+		import mx.collections.ArrayCollection;
+		
+		private const barWidth: Number = 32;
+		
+		private const startMode:   int = 0;
+		private const endMode:     int = 1;
+		private const bothMode:    int = 2;
+		
+		[Bindable]
+		public var doc: Document;
+		
+		private var preview: Sprite;
+		private var change: ChangeLoop;
+		private var cursor: Object = {};
+		private var mouseDown: Boolean = false;
+		private var mouseOver: Boolean = false;
+		
+		public function init(): void {
+			preview = new Sprite();
+			container.addChild(preview);
+			updateCursorStatus();
+			render();
+			doc.watch(documentChanged);
+		}
+		
+		private function onAddedToStage(): void {
+			addEventListener(MouseEvent.MOUSE_DOWN, onMousePressed);
+			stage.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMoved);
+			stage.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
+			addEventListener(MouseEvent.ROLL_OVER, onMouseOver);
+			addEventListener(MouseEvent.ROLL_OUT, onMouseOut);
+			stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed);
+			stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased);
+		}
+		
+		private function updateCursorStatus(): void {
+			var bar: Number = mouseX / barWidth;
+			cursor.startBar = bar;
+			
+			if (bar > doc.loopStart - 0.25 && bar < doc.loopStart + doc.loopLength + 0.25) {
+				if (bar - doc.loopStart < doc.loopLength * 0.5) {
+					cursor.mode = startMode;
+				} else {
+					cursor.mode = endMode;
+				}
+			} else {
+				cursor.mode = bothMode;
+			}
+		}
+		
+		private function findEndPoints(middle: Number): Object {
+			var start: int = Math.round(middle - doc.loopLength / 2);
+			var end: int = start + doc.loopLength;
+			if (start < 0) {
+				end -= start;
+				start = 0;
+			}
+			if (end > Music.numBars) {
+				start -= end - Music.numBars;
+				end = Music.numBars;
+			}
+			return {start: start, length: end - start};
+		}
+		
+		private function onKeyPressed(event: KeyboardEvent): void {
+			//if (event.ctrlKey)
+			/*
+			switch (event.keyCode) {
+				case 38: // up
+					setChannelBar((doc.channel + 2) % 3, doc.bar);
+					break;
+			}
+			*/
+		}
+		
+		private function onKeyReleased(event: KeyboardEvent): void {
+		}
+		
+		private function onMouseOver(event: Event): void {
+			mouseOver = true;
+		}
+		
+		private function onMouseOut(event: Event): void {
+			mouseOver = false;
+		}
+		
+		private function onMousePressed(event: Event): void {
+			mouseDown = true;
+			updateCursorStatus();
+			updatePreview();
+			onMouseMoved(event);
+		}
+		
+		private function onMouseMoved(event: Event): void {
+			if (mouseDown) {
+				if (change != null) change.undo();
+				change = null;
+				
+				var bar: Number = mouseX / barWidth;
+				var start: int;
+				var end: int;
+				var temp: int;
+				if (cursor.mode == startMode) {
+					start = doc.loopStart + Math.round(bar - cursor.startBar);
+					end = doc.loopStart + doc.loopLength;
+					if (start == end) {
+						start = end - 1;
+					} else if (start > end) {
+						temp = start;
+						start = end;
+						end = temp;
+					}
+					if (start < 0) start = 0;
+					if (end >= Music.numBars) end = Music.numBars;
+					change = new ChangeLoop(doc, start, end - start);
+				} else if (cursor.mode == endMode) {
+					start = doc.loopStart;
+					end = doc.loopStart + doc.loopLength + Math.round(bar - cursor.startBar);
+					if (end == start) {
+						end = start + 1;
+					} else if (end < start) {
+						temp = start;
+						start = end;
+						end = temp;
+					}
+					if (start < 0) start = 0;
+					if (end >= Music.numBars) end = Music.numBars;
+					change = new ChangeLoop(doc, start, end - start);
+				} else if (cursor.mode == bothMode) {
+					var endPoints: Object = findEndPoints(bar);
+					change = new ChangeLoop(doc, endPoints.start, endPoints.length);
+				}
+			} else {
+				updateCursorStatus();
+				updatePreview();
+			}
+		}
+		
+		private function onMouseReleased(event: Event): void {
+			if (mouseDown) {
+				if (change != null) {
+					//if (doc.history.getRecentChange() is ChangeLoop) doc.history.undo();
+					doc.history.record(change);
+					change = null;
+				}
+			}
+			
+			mouseDown = false;
+			updateCursorStatus();
+			render();
+		}
+		
+		private function updatePreview(): void {
+			preview.graphics.clear();
+			if (!mouseOver || mouseDown) return;
+			
+			if (cursor.mode == startMode) {
+				preview.graphics.lineStyle(2, 0xffffff);
+				preview.graphics.drawCircle(doc.loopStart * barWidth + height / 2, height / 2, height / 2 - 1);
+				preview.graphics.lineStyle();
+			} else if (cursor.mode == endMode) {
+				preview.graphics.lineStyle(2, 0xffffff);
+				preview.graphics.drawCircle((doc.loopStart + doc.loopLength) * barWidth - height / 2, height / 2, height / 2 - 1);
+				preview.graphics.lineStyle();
+			} else if (cursor.mode == bothMode) {
+				preview.graphics.lineStyle(2, 0xffffff);
+				var endPoints: Object = findEndPoints(cursor.startBar);
+				preview.graphics.drawRect(endPoints.start * barWidth + 1, 1, endPoints.length * barWidth - 2, height - 2);
+				preview.graphics.lineStyle();
+			}
+		}
+		
+		private function documentChanged(): void {
+			render();
+		}
+		
+		private function render(): void {
+			container.graphics.clear();
+			
+			container.graphics.beginFill(0x7744ff);
+			container.graphics.drawRect(doc.loopStart * barWidth + 1, 1, doc.loopLength * barWidth - 2, height - 2);
+			container.graphics.endFill();
+			
+			updatePreview();
+		}
+	]]></mx:Script>
+	<mx:UIComponent id="container" width="{width}" height="{height}"/>
+</mx:Canvas>

@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+           xmlns:s="library://ns.adobe.com/flex/spark"
+           xmlns="*"
+           width="512"
+           height="96"
+           backgroundColor="0x000000"
+           creationComplete="init()"
+           addedToStage="onAddedToStage()">
+	<mx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		
+		import mx.collections.ArrayCollection;
+		
+		private const barWidth: Number = 32;
+		private const channelHeight: Number = 32;
+		
+		[Bindable]
+		public var doc: Document;
+		
+		private var playhead: Sprite;
+		private var pattern: BarPattern;
+		private var labels: Array;
+		private var preview: Sprite;
+		private var mouseOver: Boolean = false;
+		
+		public function init(): void {
+			pattern = doc.getBarPattern(doc.channel, doc.bar);
+			labels = [];
+			for (var j: int = 0; j < Music.numChannels; j++) {
+				var channelLabels: Array = [];
+				labels.push(channelLabels);
+				for (var i: int = 0; i < Music.numBars; i++) {
+					var format: TextFormat = new TextFormat();
+					format.align = TextFormatAlign.CENTER;
+					format.bold = true;
+					format.font = "Arial";
+					format.size = 20;
+					var text: TextField = new TextField();
+					text.width = barWidth;
+					text.x = barWidth * i;
+					text.height = channelHeight;
+					text.y = channelHeight * j + 4;
+					text.wordWrap = true;
+					text.type = TextFieldType.DYNAMIC;
+					text.textColor = 0xffffff;
+					text.selectable = false;
+					text.mouseEnabled = false;
+					text.defaultTextFormat = format;
+					container.addChild(text);
+					channelLabels.push(text);
+				}
+			}
+			preview = new Sprite();
+			container.addChild(preview);
+			playhead = new Sprite();
+			container.addChild(playhead);
+			render();
+			doc.watch(documentChanged);
+			pattern.watch(render);
+		}
+		
+		private function onAddedToStage(): void {
+			addEventListener(Event.ENTER_FRAME, onEnterFrame);
+			addEventListener(MouseEvent.MOUSE_DOWN, onMousePressed);
+			stage.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMoved);
+			stage.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
+			addEventListener(MouseEvent.ROLL_OVER, onMouseOver);
+			addEventListener(MouseEvent.ROLL_OUT, onMouseOut);
+			stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed);
+			stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased);
+		}
+		
+		private function onEnterFrame(event: Event): void {
+			playhead.graphics.clear();
+			playhead.graphics.lineStyle(4, 0xffffff);
+			var pos: Number = barWidth * (doc.synth.bar + doc.synth.playhead / Music.beatsPerBar);
+			playhead.graphics.moveTo(pos, 0);
+			playhead.graphics.lineTo(pos, height);
+			playhead.graphics.lineStyle();
+		}
+		
+		private function setChannelBar(channel: int, bar: int): void {
+			if (doc.history.getRecentChange() is ChangeChannelBar) doc.history.undo();
+			doc.history.record(new ChangeChannelBar(doc, channel, bar));
+		}
+		
+		private function setBarPattern(pattern: int): void {
+			if (doc.history.getRecentChange() is ChangeBarPattern) doc.history.undo();
+			doc.history.record(new ChangeBarPattern(doc, pattern));
+		}
+		
+		private function onKeyPressed(event: KeyboardEvent): void {
+			//if (event.ctrlKey)
+			switch (event.keyCode) {
+				case 38: // up
+					setChannelBar((doc.channel + 2) % 3, doc.bar);
+					break;
+				case 40: // down
+					setChannelBar((doc.channel + 1) % 3, doc.bar);
+					break;
+				case 37: // left
+					setChannelBar(doc.channel, (doc.bar + 15) % 16);
+					break;
+				case 39: // right
+					setChannelBar(doc.channel, (doc.bar + 1) % 16);
+					break;
+				case 49: // 1
+					setBarPattern(0);
+					break;
+				case 50: // 2
+					setBarPattern(1);
+					break;
+				case 51: // 3
+					setBarPattern(2);
+					break;
+				case 52: // 4
+					setBarPattern(3);
+					break;
+				case 53: // 5
+					setBarPattern(4);
+					break;
+				case 54: // 6
+					setBarPattern(5);
+					break;
+				case 55: // 7
+					setBarPattern(6);
+					break;
+				case 56: // 8
+					setBarPattern(7);
+					break;
+			}
+		}
+		
+		private function onKeyReleased(event: KeyboardEvent): void {
+		}
+		
+		private function onMouseOver(event: Event): void {
+			mouseOver = true;
+		}
+		
+		private function onMouseOut(event: Event): void {
+			mouseOver = false;
+		}
+		
+		private function onMousePressed(event: Event): void {
+			var channel: int = mouseY / channelHeight;
+			var bar: int = mouseX / barWidth;
+			if (doc.channel == channel && doc.bar == bar) {
+				setBarPattern((doc.channelBars[channel][bar] + 1) % doc.channelPatterns[channel].length);
+			} else {
+				setChannelBar(channel, bar);
+			}
+		}
+		
+		private function onMouseMoved(event: Event): void {
+			updatePreview();
+		}
+		
+		private function onMouseReleased(event: Event): void {
+		}
+		
+		private function updatePreview(): void {
+			preview.graphics.clear();
+			if (!mouseOver) return;
+			
+			var channel: int = mouseY / channelHeight;
+			var bar: int = mouseX / barWidth;
+			preview.graphics.lineStyle(2, 0xffffff);
+			preview.graphics.drawRect(barWidth * bar + 1, channelHeight * channel + 1, barWidth - 2, channelHeight - 2);
+			preview.graphics.lineStyle();
+		}
+		
+		private function documentChanged(): void {
+			pattern.unwatch(render);
+			pattern = doc.getBarPattern(doc.channel, doc.bar);
+			pattern.watch(render);
+			render();
+		}
+		
+		private function render(): void {
+			container.graphics.clear();
+			
+			container.graphics.beginFill(0);
+			container.graphics.drawRect(0, 0, width, height);
+			container.graphics.endFill();
+			
+			for (var j: int = 0; j < Music.numChannels; j++) {
+				var channelColor: int;
+				var channelDim: int;
+				if (j == 0) {channelColor = 0x44ff44; channelDim = 0x449944;}
+				if (j == 1) {channelColor = 0xffff44; channelDim = 0x777744;}
+				if (j == 2) {channelColor = 0xff8844; channelDim = 0xaa4444;}
+				for (var i: int = 0; i < Music.numBars; i++) {
+					var selected: Boolean = (i == doc.bar && j == doc.channel);
+					container.graphics.beginFill(selected ? channelColor : 0x444444);
+					container.graphics.drawRect(barWidth * i + 1, channelHeight * j + 1, barWidth - 2, channelHeight - 2);
+					container.graphics.endFill();
+					
+					var text: TextField = labels[j][i];
+					text.textColor = selected ? 0x000000 : (doc.getBarPattern(j,i).tones.length == 0 ? channelDim : channelColor);
+					text.text = String(doc.channelBars[j][i] + 1);
+				}
+			}
+			
+			updatePreview();
+		}
+	]]></mx:Script>
+	<mx:UIComponent id="container" width="{width}" height="{height}"/>
+</mx:Canvas>

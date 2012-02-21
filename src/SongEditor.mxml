@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+           xmlns:s="library://ns.adobe.com/flex/spark"
+           xmlns="*"
+           width="512"
+           height="640"
+           backgroundColor="0x000000"
+           creationComplete="init()"
+           addedToStage="onAddedToStage()">
+	<mx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		
+		import mx.collections.ArrayCollection;
+		
+		[Bindable]
+		public var doc: Document;
+		
+		[Bindable]
+		private var scaleNames: ArrayCollection;
+		[Bindable]
+		private var keyNames: ArrayCollection;
+		[Bindable]
+		private var tempoNames: ArrayCollection;
+		
+		public function init():void {
+			scaleNames = new ArrayCollection(Music.scaleNames);
+			scaleDropDown.selectedIndex = doc.scale;
+			keyNames = new ArrayCollection(Music.keyNames);
+			keyDropDown.selectedIndex = doc.key;
+			tempoNames = new ArrayCollection(Music.tempoNames);
+			tempoDropDown.selectedIndex = doc.tempo;
+		}
+		
+		private function onAddedToStage(): void {
+			stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed);
+			stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased);
+		}
+		
+		private function onKeyPressed(event: KeyboardEvent): void {
+			//if (event.ctrlKey)
+			switch (event.keyCode) {
+				case 32: // space
+					togglePlay();
+					break;
+				case 219: // left brace
+					doc.synth.bar--;
+					if (doc.synth.bar < 0) doc.synth.bar = Music.numBars - 1;
+					break;
+				case 221: // right brace
+					doc.synth.bar++;
+					if (doc.synth.bar == Music.numBars) doc.synth.bar = 0;
+					break;
+			}
+		}
+		
+		private function onKeyReleased(event: KeyboardEvent): void {
+		}
+		
+		private function togglePlay(): void {
+			if (doc.synth.paused) {
+				doc.synth.paused = false;
+				playButton.label = "pause";
+			} else {
+				doc.synth.paused = true;
+				doc.synth.playhead = 0.0;
+				doc.synth.beat = 0;
+				doc.synth.arpeggio = 0;
+				doc.synth.arpeggioSamples = 0;
+				playButton.label = "play";
+			}
+		}
+		
+		private function onSetScale(): void {
+			doc.history.record(new ChangeScale(doc, scaleDropDown.selectedIndex));
+		}
+		
+		private function onSetKey(): void {
+			doc.history.record(new ChangeKey(doc, keyDropDown.selectedIndex));
+		}
+		
+		private function onSetTempo(): void {
+			doc.history.record(new ChangeTempo(doc, tempoDropDown.selectedIndex));
+		}
+	]]></mx:Script>
+	
+	<s:VGroup width="100%">
+		<s:HGroup width="100%">
+			<s:Button id="playButton" label="pause" click="togglePlay()" width="55"/>
+			<s:DropDownList id="scaleDropDown" dataProvider="{scaleNames}" width="85" change="onSetScale()" close="stage.focus = stage">
+				<s:layout> <s:VerticalLayout requestedRowCount="{scaleNames.length}" horizontalAlign="justify"/> </s:layout>
+			</s:DropDownList>
+			<s:DropDownList id="keyDropDown" dataProvider="{keyNames}" width="55" change="onSetKey()" close="stage.focus = stage">
+				<s:layout> <s:VerticalLayout requestedRowCount="{keyNames.length}" horizontalAlign="justify"/> </s:layout>
+			</s:DropDownList>
+			<s:DropDownList id="tempoDropDown" dataProvider="{tempoNames}" width="75" change="onSetTempo()" close="stage.focus = stage">
+				<s:layout> <s:VerticalLayout requestedRowCount="{tempoNames.length}" horizontalAlign="justify"/> </s:layout>
+			</s:DropDownList>
+		</s:HGroup>
+		<LoopEditor doc="{doc}"/>
+		<TrackEditor doc="{doc}"/>
+		<BarEditor doc="{doc}" bottom="0"/>
+	</s:VGroup>
+</mx:Canvas>
