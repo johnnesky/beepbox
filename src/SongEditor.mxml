@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+<s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
            xmlns:s="library://ns.adobe.com/flex/spark"
            xmlns="*"
-           width="512"
-           height="670"
+           width="675"
+           height="680"
            backgroundColor="0x000000"
+           borderVisible="false"
+           borderWeight="0"
            creationComplete="init()"
            addedToStage="onAddedToStage()">
-	<mx:Script><![CDATA[
+	<fx:Script><![CDATA[
 		import flash.display.*;
 		import flash.events.*;
 		import flash.geom.*;
@@ -43,6 +45,12 @@
 			waveNames = new ArrayCollection(Music.waveNames);
 			doc.watch(onUpdated);
 			onUpdated();
+			
+			editorBox.addEventListener(MouseEvent.MOUSE_DOWN, refocusStage);
+		}
+		
+		private function refocusStage(event: Event): void {
+			stage.focus = stage;
 		}
 		
 		private function onUpdated(): void {
@@ -51,7 +59,19 @@
 			tempoDropDown.selectedIndex = doc.tempo;
 			beatDropDown.selectedIndex = Music.beatCounts.indexOf(doc.beats);
 			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.parts);
-			waveDropDown.selectedIndex = doc.channelWaves[doc.channel];
+			showLetters.selected = doc.showLetters;
+			showFifth.selected = doc.showFifth;
+			showChannels.selected = doc.showChannels;
+			if (doc.channel == 3) {
+				channelSettings.visible = false;
+			} else {
+				channelSettings.visible = true;
+				waveDropDown.selectedIndex = doc.channelWaves[doc.channel];
+			}
+			currentState = doc.showLetters ? "showPiano" : "hidePiano";
+			barEditor.width = doc.showLetters ? 480 : 512;
+			undoButton.enabled = doc.history.canUndo();
+			redoButton.enabled = doc.history.canRedo();
 		}
 		
 		private function onAddedToStage(): void {
@@ -65,13 +85,25 @@
 				case 32: // space
 					togglePlay();
 					break;
+				case 90: // z
+					if (event.shiftKey) {
+						doc.history.redo();
+					} else {
+						doc.history.undo();
+					}
+					break;
+				case 89: // y
+					doc.history.redo();
+					break;
 				case 219: // left brace
 					doc.synth.bar--;
 					if (doc.synth.bar < 0) doc.synth.bar = Music.numBars - 1;
+					if (doc.synth.bar < doc.loopStart || doc.synth.bar >= doc.loopStart + doc.loopLength) doc.synth.bar = doc.loopStart;
 					break;
 				case 221: // right brace
 					doc.synth.bar++;
 					if (doc.synth.bar == Music.numBars) doc.synth.bar = 0;
+					if (doc.synth.bar < doc.loopStart || doc.synth.bar >= doc.loopStart + doc.loopLength) doc.synth.bar = doc.loopStart;
 					break;
 			}
 		}
@@ -82,7 +114,7 @@
 		private function togglePlay(): void {
 			if (doc.synth.paused) {
 				doc.synth.paused = false;
-				playButton.label = "pause";
+				playButton.label = "Pause Playback";
 			} else {
 				doc.synth.paused = true;
 				doc.synth.playhead = 0.0;
@@ -90,8 +122,92 @@
 				doc.synth.part = 0;
 				doc.synth.arpeggio = 0;
 				doc.synth.arpeggioSamples = 0;
-				playButton.label = "play";
+				playButton.label = "Resume Playback";
 			}
+		}
+		
+		private function cleanSlate(): void {
+			doc.history.record(new ChangeSong(doc, null));
+		}
+		
+		private function export(): void {
+			var wasPlaying: Boolean = !doc.synth.paused;
+			if (wasPlaying) togglePlay();
+			
+			var sampleFrames: int = doc.synth.getSamplesPerArpeggio() * 4 * doc.parts * doc.beats * Music.numBars;
+			var recordedSamples: ByteArray = new ByteArray();
+			var timer: int = getTimer();
+			new Synth(doc).synthesize(recordedSamples, sampleFrames, false);
+			trace("export timer", getTimer() - timer);
+			
+			var srcChannelCount: int = 2;
+			var wavChannelCount: int = 1;
+			var sampleRate: int = 44100;
+			var bytesPerSample: int = 2;
+			var bitsPerSample: int = 8 * bytesPerSample;
+			var sampleCount: int = wavChannelCount * sampleFrames;
+
+			var data: ByteArray = new ByteArray();
+			data.endian = Endian.LITTLE_ENDIAN;
+			data.writeUTFBytes("RIFF");
+			data.writeInt(36 + sampleCount * bytesPerSample); // size of remaining file
+			data.writeUTFBytes("WAVEfmt ");
+			data.writeInt(0x00000010); // size of following header
+			data.writeShort(0x0001); // not compressed
+			data.writeShort(wavChannelCount); // channel count
+			data.writeInt(sampleRate); // sample rate
+			data.writeInt(sampleRate * bytesPerSample * wavChannelCount); // bytes per second
+			data.writeShort(bytesPerSample); // sample rate
+			data.writeShort(bitsPerSample); // sample rate
+			data.writeUTFBytes("data");
+			data.writeInt(sampleCount * bytesPerSample);
+			
+			var stride: int;
+			var repeat: int;
+			if (srcChannelCount == wavChannelCount) {
+				stride = 1;
+				repeat = 1;
+			} else {
+				stride = srcChannelCount;
+				repeat = wavChannelCount;
+			}
+			
+			var i: int;
+			var j: int;
+			var k: int;
+			var val: int;
+			recordedSamples.position = 0;
+			if (bytesPerSample > 1) {
+				// usually samples are signed. 
+				for (i = 0; i < sampleFrames; i++) {
+					for (j = 0; j < stride; j++) {
+						val = recordedSamples.readFloat() * ((1 << (bitsPerSample - 1)) - 1);
+					}
+					for (k = 0; k < repeat; k++) {
+						if (bytesPerSample == 2) {
+							data.writeShort(val);
+						} else if (bytesPerSample == 4) {
+							data.writeInt(val);
+						} else {
+							throw new Error("unsupported sample size");
+						}
+					}
+				}
+			} else {
+				// 8 bit samples are a special case: they are unsigned.
+				for (i = 0; i < sampleFrames; i++) {
+					for (j = 0; j < stride; j++) {
+						val = recordedSamples.readFloat() * 127 + 128;
+					}
+					for (k = 0; k < repeat; k++) {
+						data.writeByte(val > 255 ? 255 : (val < 0 ? 0 : val));
+					}
+				}
+			}
+			
+			new FileReference().save(data, "song.wav");
+			
+			if (wasPlaying) togglePlay();
 		}
 		
 		private function onSetScale(): void {
@@ -129,34 +245,102 @@
 			//if (doc.history.getRecentChange() is ChangeWave) doc.history.undo();
 			doc.history.record(new ChangeWave(doc, wave));
 		}
-	]]></mx:Script>
+		
+		private function toggleLetters(): void {
+			var selected: Boolean = showLetters.selected;
+			//if (doc.history.getRecentChange() is ChangeShowLetters) doc.history.undo();
+			doc.history.record(new ChangeShowLetters(doc));
+		}
+		
+		private function toggleFifth(): void {
+			var selected: Boolean = showFifth.selected;
+			//if (doc.history.getRecentChange() is ChangeShowFifth) doc.history.undo();
+			doc.history.record(new ChangeShowFifth(doc));
+		}
+		
+		private function toggleChannels(): void {
+			var selected: Boolean = showChannels.selected;
+			//if (doc.history.getRecentChange() is ChangeShowChannels) doc.history.undo();
+			doc.history.record(new ChangeShowChannels(doc));
+		}
+	]]></fx:Script>
 	
-	<s:VGroup width="100%">
-		<s:HGroup width="100%">
-			<s:Button id="playButton" label="pause" click="togglePlay()" width="60"/>
-			<s:DropDownList id="scaleDropDown" dataProvider="{scaleNames}" width="85" change="onSetScale()" close="stage.focus = stage">
-				<s:layout> <s:VerticalLayout requestedRowCount="{scaleNames.length}" horizontalAlign="justify"/> </s:layout>
-			</s:DropDownList>
-			<s:DropDownList id="keyDropDown" dataProvider="{keyNames}" width="55" change="onSetKey()" close="stage.focus = stage">
-				<s:layout> <s:VerticalLayout requestedRowCount="{keyNames.length}" horizontalAlign="justify"/> </s:layout>
-			</s:DropDownList>
-			<s:DropDownList id="tempoDropDown" dataProvider="{tempoNames}" width="75" change="onSetTempo()" close="stage.focus = stage">
-				<s:layout> <s:VerticalLayout requestedRowCount="{tempoNames.length}" horizontalAlign="justify"/> </s:layout>
-			</s:DropDownList>
-			<s:DropDownList id="beatDropDown" dataProvider="{beatNames}" width="80" change="onSetBeats()" close="stage.focus = stage">
-				<s:layout> <s:VerticalLayout requestedRowCount="{beatNames.length}" horizontalAlign="justify"/> </s:layout>
-			</s:DropDownList>
-			<s:DropDownList id="partDropDown" dataProvider="{partNames}" width="75" change="onSetParts()" close="stage.focus = stage">
-				<s:layout> <s:VerticalLayout requestedRowCount="{partNames.length}" horizontalAlign="justify"/> </s:layout>
-			</s:DropDownList>
-		</s:HGroup>
-		<LoopEditor doc="{doc}"/>
-		<TrackEditor doc="{doc}"/>
-		<s:HGroup width="100%">
-			<s:DropDownList id="waveDropDown" dataProvider="{waveNames}" width="110" change="onSetWave()" close="stage.focus = stage">
-				<s:layout> <s:VerticalLayout requestedRowCount="{waveNames.length}" horizontalAlign="justify"/> </s:layout>
-			</s:DropDownList>
-		</s:HGroup>
-		<BarEditor doc="{doc}" bottom="0"/>
-	</s:VGroup>
-</mx:Canvas>
+	<s:states>
+		<s:State name="hidePiano"/>
+		<s:State name="showPiano"/>
+	</s:states>
+	
+	<s:HGroup width="100%">
+		<s:VGroup width="512" id="editorBox">
+			<s:HGroup width="512" height="481" gap="0">
+				<Piano id="piano" doc="{doc}" includeIn="showPiano"/>
+				<BarEditor id="barEditor" doc="{doc}"/>
+			</s:HGroup>
+			<TrackEditor doc="{doc}"/>
+			<LoopEditor doc="{doc}"/>
+		</s:VGroup>
+		<s:VGroup width="100%">
+			<s:VGroup id="songSettings" height="481" width="100%">
+				<s:Button id="exportButton" label="Save as .wav file" click="export(); stage.focus = stage" width="100%"/>
+				<s:Button id="cleanButton" label="Clean slate" click="cleanSlate(); stage.focus = stage" width="100%"/>
+				<s:HGroup width="100%" verticalAlign="middle">
+					<s:Button id="undoButton" label="Undo" enabled="false" click="doc.history.undo(); stage.focus = stage" width="50%"/>
+					<s:Button id="redoButton" label="Redo" enabled="false" click="doc.history.redo(); stage.focus = stage" width="50%"/>
+				</s:HGroup>
+				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>
+				<s:Spacer height="5"/>
+				<s:Label text="Preferences:" color="0xffffff"/>
+				<s:CheckBox id="showLetters" label="Show Piano" color="0xbbbbbb" change="toggleLetters(); stage.focus = stage"/>
+				<s:CheckBox id="showFifth" label="Highlight 'Fifth' Notes" color="0xbbbbbb" change="toggleFifth(); stage.focus = stage"/>
+				<s:CheckBox id="showChannels" label="Show All Channels" color="0xbbbbbb" change="toggleChannels(); stage.focus = stage"/>
+				<s:Spacer height="5"/>
+				<s:Label text="Song Settings:" color="0xffffff"/>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Scale:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="scaleDropDown" dataProvider="{scaleNames}" width="85" change="onSetScale()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{scaleNames.length}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Key:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="keyDropDown" dataProvider="{keyNames}" width="55" change="onSetKey()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{keyNames.length}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Tempo:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="tempoDropDown" dataProvider="{tempoNames}" width="75" change="onSetTempo()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{tempoNames.length}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Beats per bar:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="beatDropDown" dataProvider="{beatNames}" width="80" change="onSetBeats()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{beatNames.length}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Beat divisions:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="partDropDown" dataProvider="{partNames}" width="75" change="onSetParts()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{partNames.length}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+			</s:VGroup>
+			<s:VGroup id="channelSettings" height="100%" width="100%">
+				<s:Label text="Channel Settings:" color="0xffffff"/>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Wave:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="waveDropDown" dataProvider="{waveNames}" width="110" change="onSetWave()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{6}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+			</s:VGroup>
+		</s:VGroup>
+	</s:HGroup>
+</s:BorderContainer>

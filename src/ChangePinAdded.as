@@ -1,26 +1,26 @@
 package {
-	public class ChangeNoteAdded extends Change {
+	public class ChangePinAdded extends Change {
 		private var pattern: BarPattern;
 		private var tone: Tone;
-		private var note: int;
+		private var pin: TonePin;
 		private var index: int;
-		public function ChangeNoteAdded(pattern: BarPattern, tone: Tone, note: int, index: int, deletion: Boolean = false) {
+		public function ChangePinAdded(pattern: BarPattern, tone: Tone, pin: TonePin, index: int, deletion: Boolean = false) {
 			super(deletion);
 			this.pattern = pattern;
 			this.tone = tone;
-			this.note = note;
+			this.pin = pin;
 			this.index = index;
 			didSomething();
 			redo();
 		}
 		
 		protected override function doForwards(): void {
-			tone.notes.splice(index, 0, note);
+			tone.pins.splice(index, 0, pin);
 			pattern.doc.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			tone.notes.splice(index, 1);
+			tone.pins.splice(index, 1);
 			pattern.doc.changed();
 		}
 	}

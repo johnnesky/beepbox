@@ -20,7 +20,7 @@ package {
 			newPins = [];
 			
 			for each (var oldPin: TonePin in tone.pins) {
-				newPins.push(new TonePin(oldPin.interval, oldPin.time + oldStart - newStart));
+				newPins.push(new TonePin(oldPin.interval, oldPin.time + oldStart - newStart, oldPin.volume));
 			}
 			
 			if (oldStart > newStart) {
