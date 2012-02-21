@@ -1,0 +1,21 @@
+application: beepbox-synth
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+
+- url: /BeepBox\.swf
+  static_files: BeepBox.swf
+  upload: BeepBox\.swf
+
+- url: /favicon\.ico
+  static_files: favicon.ico
+  upload: favicon\.ico
+
+- url: /
+  static_files: index.html
+  upload: index\.html
+
+- url: .*
+  script: main.py

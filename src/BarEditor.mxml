@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"
+                xmlns:s="library://ns.adobe.com/flex/spark"
+				xmlns="*"
+                layout="absolute"
+                width="1024"
+                height="512"
+                backgroundColor="0x000000"
+				horizontalScrollPolicy="off" verticalScrollPolicy="off"
+                frameRate="60"
+                creationComplete="init()">
+	<mx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		
+		import mx.collections.ArrayCollection;
+		
+		public const beatWidth: Number = 32;
+		public const pitchHeight: Number = 32;
+		
+		[Bindable]
+		public var bar: Bar;
+		
+		private var painting: Boolean;
+		private var mouseDown: Boolean;
+		
+		public function init():void {
+			addEventListener(Event.ENTER_FRAME, onEnterFrame);
+			addEventListener(MouseEvent.MOUSE_DOWN, onMousePressed);
+			addEventListener(MouseEvent.MOUSE_MOVE, onMouseMoved);
+			addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
+			render();
+		}
+		
+		private function onEnterFrame(event: Event): void {
+			
+		}
+		
+		private function onMousePressed(event: Event): void {
+			var i: int = mouseX / beatWidth;
+			var j: int = Bar.numPitches - int(mouseY / pitchHeight) - 1;
+			painting = !bar.notes[i][j];
+			bar.notes[i][j] = painting;
+			render();
+			mouseDown = true;
+		}
+		
+		private function onMouseMoved(event: Event): void {
+			if (!mouseDown) return;
+			var i: int = mouseX / beatWidth;
+			var j: int = Bar.numPitches - int(mouseY / pitchHeight) - 1;
+			bar.notes[i][j] = painting;
+			render();
+		}
+		
+		private function onMouseReleased(event: Event): void {
+			mouseDown = false;
+		}
+		
+		private function render(): void {
+			container.graphics.clear();
+			container.graphics.beginFill(0);
+			container.graphics.drawRect(0, 0, beatWidth * Bar.numBeats, pitchHeight * Bar.numPitches);
+			container.graphics.endFill();
+			for (var j: int = 0; j < Bar.numPitches; j++) {
+				for (var i: int = 0; i < Bar.numBeats; i++) {
+					container.graphics.beginFill(bar.notes[i][j] ? 0x777777 : 0x444444);
+					container.graphics.drawRect(beatWidth * i + 1, pitchHeight * (Bar.numPitches - j - 1) - 1, beatWidth - 2, pitchHeight - 2);
+					container.graphics.endFill();
+				}
+			}
+		}
+		
+	]]></mx:Script>
+	<mx:UIComponent id="container"/>
+</mx:Application>

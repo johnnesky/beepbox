@@ -1,0 +1,92 @@
+√ create tone
+√ delete tone
+√ adjust start/end of new tone
+√ adjust pitch of new note
+√ adjust start/end of existing tone
+√ add note to tone for arpeggio
+√ set scale constraint
+√ allow deleting existing notes off the scale
+√ set key
+√ 3 channels
+√ detect when the song stops and restart it. force stop the old SoundChannel for sanity.
+√ separate song editing from Main.mxml, put in SongEditor.mxml
+√ create Track.mxml, which shows the pattern number of each bar, the playhead
+√ 8 patterns for lead, 4 for harmony and bass, assign with number keys
+√ 16 bars
+√ select channel with up and down arrows
+√ select bar with left and right arrows
+√ custom looping
+√ pausing with space, skipping bars with []
+√ tempo dropdown: fast, med, slow
+√ save, load
+√ beat count, part count
+√ show the pitch letters: C, C#, D, etc
+√ show ghosts of the notes in the other channels
+√ waveform choices
+√ bitcrushing the triangle wave
+√ noise channel
+√ Export to WAV
+√ rearrange and hide panels to emphasize important features for beginners. flags for showing fifth, other channels, note names
+√ illustrate loop area better
+√ allow up to 8 patterns in all channels?
+√ when you hover over a selected pattern/channel, instead of the box preview, show a triangle up or down depending on where your mouse is. the other triangle is hollowed out.
+√ fix wrap around clipping bug on export
+√ fix focus bug: spacebar reexports song!
+√ The start of a tone can always snap to an existing tone end.
+√ Be more lenient about starting at beats 2 and 3.
+√ when bending pitch, multiply over each sample instead of adding.
+√ copy length to default when editing length of notes. 
+√ sawtooth!
+√ piano along left side to preview notes? replace "show letters"
+√ instead of conditionally reseting the period, try period -= int(period). benchmark!
+√ pressing [] shouldn't escape the loop
+√ button for export, clean slate, undo/redo, pause
+√ replace ChangeFragment with ChangeSong, preserve pattern objects for undo history
+√ compress bar data: 2 bars per character.
+√ compress tone shapes
+√ compress/decompress notes. confirm drums work. empirically optimize prev note count.
+√ decompress tone shapes
+√ get a domain name!
+√ put song in url fragment
+√ to save on file size, get rid of that flex text field at the top. 
+√ put on website!
+√ set up some basic html
+- new waves
+- offline version? as3 lib?
+- source control?
+- publish source?
+- save "preferences" to localSharedObject or cookie... cookie is more portable?
+- new preferences: follow playhead, autoplay?
+- update the playhead at the start of the callback, rather than at the end. 
+- pausing should actually stop SampleDataEvents
+- think about equalizing some more. the low drums are very quiet! :/
+- 5 parts per beat?
+- rapid document/fragment changes cause undefined state
+- right click to copy/paste.
+- move the playhead graphic gradually toward the next position. 
+- make some button to bookmark the song in your browser
+- think about making a non-editing embeddable player, in an iframe?
+- Dim the column occupied by a tone. 
+- shift channel octaves
+- volume pins, correctly moving pins when swingifying
+- create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
+- drums get custom lowpass based on change rate?
+- maybe one of the styles should be a lowpass decay for karplus strong?
+- Do I want to perform dynamic range compression? 
+- don't cut the wave until after it completes a period?
+- for chorus, have two periods at multiples of the main freq. jitter on arpeggio slices
+- if I want to support pure sine wave tones, I'll need wave sample interpolation.
+- If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
+- preload some common tone shapes into the recentShape list
+- drag from channel to notes to copy pattern into new pattern
+- tremelo/vibrato choices
+- envelope/delay choices
+- a flag: "patterns share settings" or "unify channel settings" or whatever
+- stretching triangle into a sawtooth?
+- to the left of the instrument dropdowns, put a color coded label for "lead", "bass", etc
+- visual feedback when a note is played, predict where the playhead should be...
+- MP3? OGG?
+- Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
+- adjust pitch of existing note (double click)
+- compress save format such that all strings are valid
+- shade notes closer to crimson when more dissonant, sides of bar consider adjacent bars
