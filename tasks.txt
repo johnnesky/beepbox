@@ -54,10 +54,11 @@
 √ new waves
 √ source control
 √ karplus strong filter + decay
-- add copyright disclaimer to page
 - as3 lib?
+- separate main file for offline.
+- add copyright disclaimer to page
 - right click to copy/paste. offline version? 
-- publish source?
+- link to source in html
 - save "preferences" to localSharedObject or cookie... cookie is more portable?
 - new preferences: follow playhead, autoplay?
 - pausing should actually stop SampleDataEvents
