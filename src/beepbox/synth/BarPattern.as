@@ -1,4 +1,4 @@
-package {
+package beepbox.synth {
 	public class BarPattern {
 		public var tones: Array;
 		public function BarPattern() {

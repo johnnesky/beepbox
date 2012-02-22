@@ -1,4 +1,4 @@
-package {
+package beepbox.synth {
 	
 	import flash.events.SampleDataEvent;
 	import flash.events.TimerEvent;

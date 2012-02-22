@@ -1,4 +1,4 @@
-package {
+package beepbox.synth {
 	public class Song {
 		private static const latestVersion: int = 2;
 		
