@@ -31,7 +31,7 @@
 		private var mouseOver: Boolean = false;
 		
 		public function init(): void {
-			pattern = doc.getBarPattern(doc.channel, doc.bar);
+			pattern = doc.song.getBarPattern(doc.channel, doc.bar);
 			labels = [];
 			for (var j: int = 0; j < Music.numChannels; j++) {
 				var channelLabels: Array = [];
@@ -153,8 +153,8 @@
 			var bar: int = Math.min(Music.numBars-1, Math.max(0, mouseX / barWidth));
 			if (doc.channel == channel && doc.bar == bar) {
 				var up: Boolean = (mouseY % channelHeight) < channelHeight / 2;
-				var patternCount: int = doc.channelPatterns[channel].length;
-				setBarPattern((doc.channelBars[channel][bar] + (up ? 1 : patternCount - 1)) % patternCount);
+				var patternCount: int = doc.song.channelPatterns[channel].length;
+				setBarPattern((doc.song.channelBars[channel][bar] + (up ? 1 : patternCount - 1)) % patternCount);
 			} else {
 				setChannelBar(channel, bar);
 			}
@@ -203,7 +203,7 @@
 		}
 		
 		private function documentChanged(): void {
-			pattern = doc.getBarPattern(doc.channel, doc.bar);
+			pattern = doc.song.getBarPattern(doc.channel, doc.bar);
 			render();
 		}
 		
@@ -224,8 +224,8 @@
 					container.graphics.endFill();
 					
 					var text: TextField = labels[j][i];
-					text.textColor = selected ? 0x000000 : (doc.getBarPattern(j,i).tones.length == 0 ? channelDim : channelColor);
-					text.text = String(doc.channelBars[j][i] + 1);
+					text.textColor = selected ? 0x000000 : (doc.song.getBarPattern(j,i).tones.length == 0 ? channelDim : channelColor);
+					text.text = String(doc.song.channelBars[j][i] + 1);
 				}
 			}
 			

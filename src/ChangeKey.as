@@ -6,7 +6,7 @@ package {
 		public function ChangeKey(document: Document, key: int) {
 			super(false);
 			this.document = document;
-			oldKey = document.key;
+			oldKey = document.song.key;
 			newKey = key;
 			if (oldKey != newKey) {
 				didSomething();
@@ -15,12 +15,12 @@ package {
 		}
 		
 		protected override function doForwards(): void {
-			document.key = newKey;
+			document.song.key = newKey;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.key = oldKey;
+			document.song.key = oldKey;
 			document.changed();
 		}
 	}

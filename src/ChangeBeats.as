@@ -7,18 +7,18 @@ package {
 		public function ChangeBeats(document: Document, beats: int) {
 			super(false);
 			this.document = document;
-			oldBeats = document.beats;
+			oldBeats = document.song.beats;
 			newBeats = beats;
 			if (oldBeats != newBeats) {
 				if (oldBeats > newBeats) {
 					sequence = new ChangeSequence();
 					for (var i: int = 0; i < Music.numChannels; i++) {
-						for (var j: int = 0; j < document.channelPatterns[i].length; j++) {
-							sequence.append(new ChangeToneTruncate(document.channelPatterns[i][j], newBeats * document.parts, oldBeats * document.parts));
+						for (var j: int = 0; j < document.song.channelPatterns[i].length; j++) {
+							sequence.append(new ChangeToneTruncate(document, document.song.channelPatterns[i][j], newBeats * document.song.parts, oldBeats * document.song.parts));
 						}
 					}
 				}
-				document.beats = newBeats;
+				document.song.beats = newBeats;
 				document.changed();
 				didSomething();
 			}
@@ -26,12 +26,12 @@ package {
 		
 		protected override function doForwards(): void {
 			if (sequence != null) sequence.redo();
-			document.beats = newBeats;
+			document.song.beats = newBeats;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.beats = oldBeats;
+			document.song.beats = oldBeats;
 			if (sequence != null) sequence.undo();
 			document.changed();
 		}

@@ -8,28 +8,29 @@ package {
 		public function ChangeSong(document: Document, song: String) {
 			super(false);
 			this.document = document;
-			oldSong = document.toString();
-			oldPatterns = document.channelPatterns;
+			oldSong = document.song.toString();
+			oldPatterns = document.song.channelPatterns;
 			if (song != null) {
 				newSong = song;
-				document.fromString(newSong, false);
+				document.song.fromString(newSong, false);
 			} else {
-				document.initToDefault(false);
-				newSong = document.toString();
+				document.song.initToDefault(false);
+				newSong = document.song.toString();
 			}
-			newPatterns = document.channelPatterns;
+			newPatterns = document.song.channelPatterns;
+			document.changed();
 			didSomething();
 		}
 		
 		protected override function doForwards(): void {
-			document.fromString(newSong, true);
-			document.channelPatterns = newPatterns;
+			document.song.fromString(newSong, true);
+			document.song.channelPatterns = newPatterns;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.fromString(oldSong, true);
-			document.channelPatterns = oldPatterns;
+			document.song.fromString(oldSong, true);
+			document.song.channelPatterns = oldPatterns;
 			document.changed();
 		}
 	}

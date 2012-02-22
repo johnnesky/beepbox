@@ -79,7 +79,7 @@
 		}
 		
 		private function updateCursorNote(): void {
-			var scale: Array = Music.scaleFlags[doc.scale];
+			var scale: Array = Music.scaleFlags[doc.song.scale];
 			
 			var mouseNote: Number = Math.max(0, Math.min(noteCount-1, noteCount - (mouseY / noteHeight)));
 			if (scale[int(mouseNote) % 12] || doc.channel == 3) {
@@ -116,6 +116,7 @@
 		private function onMousePressed(event: Event): void {
 			mouseDown = true;
 			doc.synth.pianoPressed = true;
+			doc.synth.pianoChannel = doc.channel;
 			updatePreview();
 		}
 		
@@ -165,7 +166,7 @@
 				}
 			}
 			for (var j: int = 0; j < noteCount; j++) {
-				var noteNameIndex: int = (j + Music.keyTransposes[doc.key]) % 12;
+				var noteNameIndex: int = (j + Music.keyTransposes[doc.song.key]) % 12;
 				if (doc.channel == 3) {
 					key = new Drum();
 					key.scaleX = key.scaleY = 1.0 - ( j / noteCount ) * 0.35;
@@ -174,7 +175,7 @@
 					key.smoothing = true;
 					var brightness: Number = 1.0 + ((j - noteCount / 2.0) / noteCount) * 0.5;
 		            key.transform.colorTransform = new ColorTransform(brightness, brightness, brightness);
-				} else if (Music.scaleFlags[doc.scale][j%12] == false) {
+				} else if (Music.scaleFlags[doc.song.scale][j%12] == false) {
 					labels[j].text = "";
 					key = Music.pianoScaleFlags[noteNameIndex] ? new WhiteKeyDisabled() : new BlackKeyDisabled();
 				} else {
@@ -193,8 +194,8 @@
 					if (j%12 == 7 && doc.showFifth) color = 0x446688;
 				}
 				container.graphics.beginFill(color);
-				for (var k: int = 0; k < doc.beats; k++) {
-					container.graphics.drawRect(partWidth * k * doc.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.parts - 2, noteHeight - 2);
+				for (var k: int = 0; k < doc.song.beats; k++) {
+					container.graphics.drawRect(partWidth * k * doc.song.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.song.parts - 2, noteHeight - 2);
 				}
 				container.graphics.endFill();
 				*/

@@ -6,7 +6,7 @@ package {
 		public function ChangeTempo(document: Document, tempo: int) {
 			super(false);
 			this.document = document;
-			oldTempo = document.tempo;
+			oldTempo = document.song.tempo;
 			newTempo = tempo;
 			if (oldTempo != newTempo) {
 				didSomething();
@@ -15,12 +15,12 @@ package {
 		}
 		
 		protected override function doForwards(): void {
-			document.tempo = newTempo;
+			document.song.tempo = newTempo;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.tempo = oldTempo;
+			document.song.tempo = oldTempo;
 			document.changed();
 		}
 	}

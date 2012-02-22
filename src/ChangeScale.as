@@ -6,7 +6,7 @@ package {
 		public function ChangeScale(document: Document, scale: int) {
 			super(false);
 			this.document = document;
-			oldScale = document.scale;
+			oldScale = document.song.scale;
 			newScale = scale;
 			if (oldScale != newScale) {
 				didSomething();
@@ -15,12 +15,12 @@ package {
 		}
 		
 		protected override function doForwards(): void {
-			document.scale = newScale;
+			document.song.scale = newScale;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.scale = oldScale;
+			document.song.scale = oldScale;
 			document.changed();
 		}
 	}

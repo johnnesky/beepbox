@@ -18,6 +18,7 @@ package {
 		public var paused: Boolean = true;
 		public var pianoPressed: Boolean = false;
 		public var pianoNote: int = 0;
+		public var pianoChannel: int = 0;
 		private const waves: Vector.<Vector.<Number>> = new <Vector.<Number>> [
 			new <Number>[1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0],
 			new <Number>[1.0, -1.0],
@@ -34,25 +35,28 @@ package {
 			//new <Number>[1.0, -1.0, 0.0, 0.0, 0.0, 0.0],
 			//new <Number>[Math.sin(Math.PI * 0.0 / 64.0), Math.sin(Math.PI * 1.0 / 64.0), Math.sin(Math.PI * 2.0 / 64.0), Math.sin(Math.PI * 3.0 / 64.0), Math.sin(Math.PI * 4.0 / 64.0), Math.sin(Math.PI * 5.0 / 64.0), Math.sin(Math.PI * 6.0 / 64.0), Math.sin(Math.PI * 7.0 / 64.0), Math.sin(Math.PI * 8.0 / 64.0), Math.sin(Math.PI * 9.0 / 64.0), Math.sin(Math.PI * 10.0 / 64.0), Math.sin(Math.PI * 11.0 / 64.0), Math.sin(Math.PI * 12.0 / 64.0), Math.sin(Math.PI * 13.0 / 64.0), Math.sin(Math.PI * 14.0 / 64.0), Math.sin(Math.PI * 15.0 / 64.0), Math.sin(Math.PI * 16.0 / 64.0), Math.sin(Math.PI * 17.0 / 64.0), Math.sin(Math.PI * 18.0 / 64.0), Math.sin(Math.PI * 19.0 / 64.0), Math.sin(Math.PI * 20.0 / 64.0), Math.sin(Math.PI * 21.0 / 64.0), Math.sin(Math.PI * 22.0 / 64.0), Math.sin(Math.PI * 23.0 / 64.0), Math.sin(Math.PI * 24.0 / 64.0), Math.sin(Math.PI * 25.0 / 64.0), Math.sin(Math.PI * 26.0 / 64.0), Math.sin(Math.PI * 27.0 / 64.0), Math.sin(Math.PI * 28.0 / 64.0), Math.sin(Math.PI * 29.0 / 64.0), Math.sin(Math.PI * 30.0 / 64.0), Math.sin(Math.PI * 31.0 / 64.0), Math.sin(Math.PI * 32.0 / 64.0), Math.sin(Math.PI * 33.0 / 64.0), Math.sin(Math.PI * 34.0 / 64.0), Math.sin(Math.PI * 35.0 / 64.0), Math.sin(Math.PI * 36.0 / 64.0), Math.sin(Math.PI * 37.0 / 64.0), Math.sin(Math.PI * 38.0 / 64.0), Math.sin(Math.PI * 39.0 / 64.0), Math.sin(Math.PI * 40.0 / 64.0), Math.sin(Math.PI * 41.0 / 64.0), Math.sin(Math.PI * 42.0 / 64.0), Math.sin(Math.PI * 43.0 / 64.0), Math.sin(Math.PI * 44.0 / 64.0), Math.sin(Math.PI * 45.0 / 64.0), Math.sin(Math.PI * 46.0 / 64.0), Math.sin(Math.PI * 47.0 / 64.0), Math.sin(Math.PI * 48.0 / 64.0), Math.sin(Math.PI * 49.0 / 64.0), Math.sin(Math.PI * 50.0 / 64.0), Math.sin(Math.PI * 51.0 / 64.0), Math.sin(Math.PI * 52.0 / 64.0), Math.sin(Math.PI * 53.0 / 64.0), Math.sin(Math.PI * 54.0 / 64.0), Math.sin(Math.PI * 55.0 / 64.0), Math.sin(Math.PI * 56.0 / 64.0), Math.sin(Math.PI * 57.0 / 64.0), Math.sin(Math.PI * 58.0 / 64.0), Math.sin(Math.PI * 59.0 / 64.0), Math.sin(Math.PI * 60.0 / 64.0), Math.sin(Math.PI * 61.0 / 64.0), Math.sin(Math.PI * 62.0 / 64.0), Math.sin(Math.PI * 63.0 / 64.0), Math.sin(Math.PI * 64.0 / 64.0), Math.sin(Math.PI * 65.0 / 64.0), Math.sin(Math.PI * 66.0 / 64.0), Math.sin(Math.PI * 67.0 / 64.0), Math.sin(Math.PI * 68.0 / 64.0), Math.sin(Math.PI * 69.0 / 64.0), Math.sin(Math.PI * 70.0 / 64.0), Math.sin(Math.PI * 71.0 / 64.0), Math.sin(Math.PI * 72.0 / 64.0), Math.sin(Math.PI * 73.0 / 64.0), Math.sin(Math.PI * 74.0 / 64.0), Math.sin(Math.PI * 75.0 / 64.0), Math.sin(Math.PI * 76.0 / 64.0), Math.sin(Math.PI * 77.0 / 64.0), Math.sin(Math.PI * 78.0 / 64.0), Math.sin(Math.PI * 79.0 / 64.0), Math.sin(Math.PI * 80.0 / 64.0), Math.sin(Math.PI * 81.0 / 64.0), Math.sin(Math.PI * 82.0 / 64.0), Math.sin(Math.PI * 83.0 / 64.0), Math.sin(Math.PI * 84.0 / 64.0), Math.sin(Math.PI * 85.0 / 64.0), Math.sin(Math.PI * 86.0 / 64.0), Math.sin(Math.PI * 87.0 / 64.0), Math.sin(Math.PI * 88.0 / 64.0), Math.sin(Math.PI * 89.0 / 64.0), Math.sin(Math.PI * 90.0 / 64.0), Math.sin(Math.PI * 91.0 / 64.0), Math.sin(Math.PI * 92.0 / 64.0), Math.sin(Math.PI * 93.0 / 64.0), Math.sin(Math.PI * 94.0 / 64.0), Math.sin(Math.PI * 95.0 / 64.0), Math.sin(Math.PI * 96.0 / 64.0), Math.sin(Math.PI * 97.0 / 64.0), Math.sin(Math.PI * 98.0 / 64.0), Math.sin(Math.PI * 99.0 / 64.0), Math.sin(Math.PI * 100.0 / 64.0), Math.sin(Math.PI * 101.0 / 64.0), Math.sin(Math.PI * 102.0 / 64.0), Math.sin(Math.PI * 103.0 / 64.0), Math.sin(Math.PI * 104.0 / 64.0), Math.sin(Math.PI * 105.0 / 64.0), Math.sin(Math.PI * 106.0 / 64.0), Math.sin(Math.PI * 107.0 / 64.0), Math.sin(Math.PI * 108.0 / 64.0), Math.sin(Math.PI * 109.0 / 64.0), Math.sin(Math.PI * 110.0 / 64.0), Math.sin(Math.PI * 111.0 / 64.0), Math.sin(Math.PI * 112.0 / 64.0), Math.sin(Math.PI * 113.0 / 64.0), Math.sin(Math.PI * 114.0 / 64.0), Math.sin(Math.PI * 115.0 / 64.0), Math.sin(Math.PI * 116.0 / 64.0), Math.sin(Math.PI * 117.0 / 64.0), Math.sin(Math.PI * 118.0 / 64.0), Math.sin(Math.PI * 119.0 / 64.0), Math.sin(Math.PI * 120.0 / 64.0), Math.sin(Math.PI * 121.0 / 64.0), Math.sin(Math.PI * 122.0 / 64.0), Math.sin(Math.PI * 123.0 / 64.0), Math.sin(Math.PI * 124.0 / 64.0), Math.sin(Math.PI * 125.0 / 64.0), Math.sin(Math.PI * 126.0 / 64.0), Math.sin(Math.PI * 127.0 / 64.0), ],
 		];
-		private var prevSample: Number = 0.0;
 		private var leadPeriod: Number = 0.0;
+		private var leadPrevSample: Number = 0.0;
 		private var harmonyPeriod: Number = 0.0;
+		private var harmonyPrevSample: Number = 0.0;
 		private var bassPeriod: Number = 0.0;
+		private var bassPrevSample: Number = 0.0;
 		private var drumPeriod: Number = 0.0;
+		private var drumPrevSample: Number = 0.0;
 		private var drumBuffer: int = 1;
 		private var stillGoing: Boolean = false;
-		private var doc: Document;
+		private var song: Song;
 		
 		public function getSamplesPerArpeggio(): int {
-			var beatsPerMinute: Number = 120.0 * Math.pow(2.0, (-1.0 + doc.tempo) / 3.0);
+			var beatsPerMinute: Number = 120.0 * Math.pow(2.0, (-1.0 + song.tempo) / 3.0);
 			var beatsPerSecond: Number = beatsPerMinute / 60.0;
-			var partsPerSecond: Number = beatsPerSecond * doc.parts;
+			var partsPerSecond: Number = beatsPerSecond * song.parts;
 			var arpeggioPerSecond: Number = partsPerSecond * 4.0;
 			return samplesPerSecond / arpeggioPerSecond;
 		}
 		
-		public function Synth(doc: Document) {
-			this.doc = doc;
+		public function Synth(song: Song) {
+			this.song = song;
 			waves.fixed = true;
 			for each (var wave: Vector.<Number> in waves) {
 				wave.fixed = true;
@@ -63,34 +67,45 @@ package {
 			const sampleTime: Number = 1.0 / samplesPerSecond;
 			const samplesPerArpeggio: int = getSamplesPerArpeggio();
 			
-			const maxLeadVolume:    Number = Music.channelVolumes[0] * Music.waveVolumes[doc.channelWaves[0]];
-			const maxHarmonyVolume: Number = Music.channelVolumes[1] * Music.waveVolumes[doc.channelWaves[1]];
-			const maxBassVolume:    Number = Music.channelVolumes[2] * Music.waveVolumes[doc.channelWaves[2]];
+			const maxLeadVolume:    Number = Music.channelVolumes[0] * Music.waveVolumes[song.channelWaves[0]];
+			const maxHarmonyVolume: Number = Music.channelVolumes[1] * Music.waveVolumes[song.channelWaves[1]];
+			const maxBassVolume:    Number = Music.channelVolumes[2] * Music.waveVolumes[song.channelWaves[2]];
 			const maxDrumVolume:    Number = Music.channelVolumes[3];
 			
-			const leadWave: Vector.<Number> = waves[doc.channelWaves[0]];
-			const harmonyWave: Vector.<Number> = waves[doc.channelWaves[1]];
-			const bassWave: Vector.<Number> = waves[doc.channelWaves[2]];
+			const leadWave: Vector.<Number> = waves[song.channelWaves[0]];
+			const harmonyWave: Vector.<Number> = waves[song.channelWaves[1]];
+			const bassWave: Vector.<Number> = waves[song.channelWaves[2]];
 			
 			const leadWaveLength: int = leadWave.length;
 			const harmonyWaveLength: int = harmonyWave.length;
 			const bassWaveLength: int = bassWave.length;
+			
+			const leadFilterBase: Number = Math.pow(2, -Music.filterValues[song.channelFilters[0]]);
+			const harmonyFilterBase: Number = Math.pow(2, -Music.filterValues[song.channelFilters[1]]);
+			const bassFilterBase: Number = Math.pow(2, -Music.filterValues[song.channelFilters[2]]);
+			const drumFilter: Number = 0.2;
+			
+			const leadFilterScale: Number = Math.pow(2, -Music.filterDecayValues[song.channelFilterDecays[0]] / samplesPerSecond);
+			const harmonyFilterScale: Number = Math.pow(2, -Music.filterDecayValues[song.channelFilterDecays[1]] / samplesPerSecond);
+			const bassFilterScale: Number = Math.pow(2, -Music.filterDecayValues[song.channelFilterDecays[2]] / samplesPerSecond);
+			
+			//pow( self->channels[i].lowPassScale, time )
 			
 			var i: int;
 			
 			if (arpeggioSamples == 0 || arpeggioSamples > samplesPerArpeggio) {
 				arpeggioSamples = samplesPerArpeggio;
 			}
-			if (part >= doc.parts) {
+			if (part >= song.parts) {
 				beat++;
 				part = 0;
 				arpeggio = 0;
 				arpeggioSamples = samplesPerArpeggio;
 			}
-			if (beat >= doc.beats) {
+			if (beat >= song.beats) {
 				bar++;
-				if (loop && (bar < doc.loopStart || bar >= doc.loopStart + doc.loopLength)) {
-					bar = doc.loopStart;
+				if (loop && (bar < song.loopStart || bar >= song.loopStart + song.loopLength)) {
+					bar = song.loopStart;
 				}
 				beat = 0;
 				part = 0;
@@ -112,22 +127,25 @@ package {
 				var leadPeriodDeltaScale: Number;
 				var leadVolume: Number;
 				var leadVolumeDelta: Number;
+				var leadFilter: Number;
 				var harmonyPeriodDelta: Number;
 				var harmonyPeriodDeltaScale: Number;
 				var harmonyVolume: Number;
 				var harmonyVolumeDelta: Number;
+				var harmonyFilter: Number;
 				var bassPeriodDelta: Number;
 				var bassPeriodDeltaScale: Number;
 				var bassVolume: Number;
 				var bassVolumeDelta: Number;
+				var bassFilter: Number;
 				var drumPeriodDelta: Number;
 				var drumPeriodDeltaScale: Number;
 				var drumVolume: Number;
 				var drumVolumeDelta: Number;
-				var time: int = part + beat * doc.parts;
+				var time: int = part + beat * song.parts;
 				
 				for (var channel: int = 0; channel < 4; channel++) {
-					var pattern: BarPattern = doc.getBarPattern(channel, bar);
+					var pattern: BarPattern = song.getBarPattern(channel, bar);
 					var tone: Tone = null;
 					for (i = 0; i < pattern.tones.length; i++) {
 						if (pattern.tones[i].end <= time) {
@@ -141,22 +159,26 @@ package {
 					}
 					
 					var channelRoot: int = Music.channelRoots[channel];
-					var pitch: int = channel == 3 ? 0 : Music.keyTransposes[doc.key];
+					var pitch: int = channel == 3 ? 0 : Music.keyTransposes[song.key];
 					var intervalScale: int = channel == 3 ? Music.drumInterval : 1;
 					var periodDelta: Number;
 					var periodDeltaScale: Number;
 					var volume: Number;
 					var volumeDelta: Number;
-					if (pianoPressed && channel == doc.channel) {
+					var filter: Number;
+					var filterScale: Number;
+					if (pianoPressed && channel == pianoChannel) {
 						periodDelta = frequencyFromPitch(pitch + channelRoot + pianoNote * intervalScale) * sampleTime;
 						periodDeltaScale = 1.0;
 						volume = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + pianoNote) / 48.0);
 						volumeDelta = 0.0;
+						filter = 1.0;
 					} else if (tone == null) {
 						periodDelta = 0.0;
 						periodDeltaScale = 0.0;
 						volume = 0.0;
 						volumeDelta = 0.0;
+						filter = 1.0;
 					} else {
 						if (tone.notes.length == 2) {
 							pitch += tone.notes[arpeggio >> 1];
@@ -197,6 +219,9 @@ package {
 						periodDeltaScale = Math.pow(freqScale, 1.0 / samples);
 						volume = startVol;
 						volumeDelta = (endVol - startVol) / samples;
+						
+						var timeSinceStart: Number = (((time - tone.start) * 4.0 + arpeggio + 1.0) * samplesPerArpeggio - arpeggioSamples) / samplesPerSecond;
+						filter = channel == 3 ? 1.0 : Math.pow(2, -Music.filterDecayValues[song.channelFilterDecays[channel]] * timeSinceStart);
 					}
 					
 					if (channel == 0) {
@@ -204,18 +229,21 @@ package {
 						leadPeriodDeltaScale = periodDeltaScale;
 						leadVolume = volume * maxLeadVolume;
 						leadVolumeDelta = volumeDelta * maxLeadVolume;
+						leadFilter = filter * leadFilterBase;
 						if (leadVolume == 0.0) leadPeriod = 0.0;
 					} else if (channel == 1) {
 						harmonyPeriodDelta = periodDelta;
 						harmonyPeriodDeltaScale = periodDeltaScale;
 						harmonyVolume = volume * maxHarmonyVolume;
 						harmonyVolumeDelta = volumeDelta * maxHarmonyVolume;
+						harmonyFilter = filter * harmonyFilterBase;
 						if (harmonyVolume == 0.0) harmonyPeriod = 0.0;
 					} else if (channel == 2) {
 						bassPeriodDelta = periodDelta;
 						bassPeriodDeltaScale = periodDeltaScale;
 						bassVolume = volume * maxBassVolume;
 						bassVolumeDelta = volumeDelta * maxBassVolume;
+						bassFilter = filter * bassFilterBase;
 						if (bassVolume == 0.0) bassPeriod = 0.0;
 					} else if (channel == 3) {
 						drumPeriodDelta = periodDelta;
@@ -229,25 +257,31 @@ package {
 				while (samples > 0) {
 					var sample: Number = 0.0;
 					
-					sample += leadWave[int(leadPeriod * leadWaveLength)] * leadVolume;
+					leadPrevSample += (leadWave[int(leadPeriod * leadWaveLength)] * leadVolume - leadPrevSample) * leadFilter;
 					leadVolume += leadVolumeDelta;
 					leadPeriod += leadPeriodDelta;
 					leadPeriodDelta *= leadPeriodDeltaScale;
 					leadPeriod -= int(leadPeriod);
+					leadFilter *= leadFilterScale;
+					sample += leadPrevSample;
 					
-					sample += harmonyWave[int(harmonyPeriod * harmonyWaveLength)] * harmonyVolume;
+					harmonyPrevSample += (harmonyWave[int(harmonyPeriod * harmonyWaveLength)] * harmonyVolume - harmonyPrevSample) * harmonyFilter;
 					harmonyVolume += harmonyVolumeDelta;
 					harmonyPeriod += harmonyPeriodDelta;
 					harmonyPeriodDelta *= harmonyPeriodDeltaScale;
 					harmonyPeriod -= int(harmonyPeriod);
+					harmonyFilter *= harmonyFilterScale;
+					sample += harmonyPrevSample;
 					
-					sample += bassWave[int(bassPeriod * bassWaveLength)] * bassVolume;
+					bassPrevSample += (bassWave[int(bassPeriod * bassWaveLength)] * bassVolume - bassPrevSample) * bassFilter;
 					bassVolume += bassVolumeDelta;
 					bassPeriod += bassPeriodDelta;
 					bassPeriodDelta *= bassPeriodDeltaScale;
 					bassPeriod -= int(bassPeriod);
+					bassFilter *= bassFilterScale;
+					sample += bassPrevSample;
 					
-					sample += drumBuffer & 1 ? drumVolume : -drumVolume;
+					drumPrevSample += ((2.0 * (drumBuffer & 1) - 1.0) * drumVolume - drumPrevSample) * drumFilter;
 					drumVolume += drumVolumeDelta;
 					drumPeriod += drumPeriodDelta;
 					drumPeriodDelta *= drumPeriodDeltaScale;
@@ -259,9 +293,7 @@ package {
 						}
 						drumBuffer = newBuffer;
 					}
-					
-					sample = prevSample + (sample - prevSample) * 0.2;
-					prevSample = sample;
+					sample += drumPrevSample;
 					
 					data.writeFloat(sample);
 					data.writeFloat(sample);
@@ -274,14 +306,14 @@ package {
 					if (arpeggio == 4) {
 						arpeggio = 0;
 						part++;
-						if (part == doc.parts) {
+						if (part == song.parts) {
 							part = 0;
 							beat++;
-							if (beat == doc.beats) {
+							if (beat == song.beats) {
 								beat = 0;
 								bar++;
-								if (loop && (bar < doc.loopStart || bar >= doc.loopStart + doc.loopLength)) {
-									bar = doc.loopStart;
+								if (loop && (bar < song.loopStart || bar >= song.loopStart + song.loopLength)) {
+									bar = song.loopStart;
 								}
 							}
 						}
@@ -289,11 +321,11 @@ package {
 				}
 			}
 			
-			playhead = (((arpeggio + 1.0 - arpeggioSamples / samplesPerArpeggio) / 4.0 + part) / doc.parts + beat) / doc.beats;
+			playhead = (((arpeggio + 1.0 - arpeggioSamples / samplesPerArpeggio) / 4.0 + part) / song.parts + beat) / song.beats;
 		}
 		
 		public function play(): void {
-			bar = doc.loopStart;
+			bar = song.loopStart;
 			paused = false;
 			
 			function onSampleData(event: SampleDataEvent): void {

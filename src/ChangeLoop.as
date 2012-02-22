@@ -8,9 +8,9 @@ package {
 		public function ChangeLoop(document: Document, start: int, length: int) {
 			super(false);
 			this.document = document;
-			oldStart = document.loopStart;
+			oldStart = document.song.loopStart;
 			newStart = start;
-			oldLength = document.loopLength;
+			oldLength = document.song.loopLength;
 			newLength = length;
 			if (oldStart != newStart || oldLength != newLength) {
 				didSomething();
@@ -19,14 +19,14 @@ package {
 		}
 		
 		protected override function doForwards(): void {
-			document.loopStart = newStart;
-			document.loopLength = newLength;
+			document.song.loopStart = newStart;
+			document.song.loopLength = newLength;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.loopStart = oldStart;
-			document.loopLength = oldLength;
+			document.song.loopStart = oldStart;
+			document.song.loopLength = oldLength;
 			document.changed();
 		}
 	}

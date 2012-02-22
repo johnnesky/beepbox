@@ -1,5 +1,6 @@
 package {
 	public class ChangeToneLength extends Change {
+		private var document: Document;
 		private var bar: BarPattern;
 		private var tone: Tone;
 		private var oldStart: int;
@@ -8,8 +9,9 @@ package {
 		private var newEnd: int;
 		private var oldPins: Array;
 		private var newPins: Array;
-		public function ChangeToneLength(bar: BarPattern, tone: Tone, newStart: int, newEnd: int) {
+		public function ChangeToneLength(document: Document, bar: BarPattern, tone: Tone, newStart: int, newEnd: int) {
 			super(false);
+			this.document = document;
 			this.bar = bar;
 			this.tone = tone;
 			oldStart = tone.start;
@@ -44,21 +46,20 @@ package {
 			
 			doForwards();
 			didSomething();
-			redo();
 		}
 		
 		protected override function doForwards(): void {
 			tone.pins = newPins;
 			tone.start = newStart;
 			tone.end = newEnd;
-			bar.doc.changed();
+			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
 			tone.pins = oldPins;
 			tone.start = oldStart;
 			tone.end = oldEnd;
-			bar.doc.changed();
+			document.changed();
 		}
 	}
 }
