@@ -18,6 +18,8 @@
 		
 		import mx.collections.ArrayCollection;
 		
+		import beepbox.synth.*;
+		
 		private const barWidth: Number = 32;
 		private const channelHeight: Number = 32;
 		

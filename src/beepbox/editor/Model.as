@@ -1,4 +1,5 @@
-package {
+package beepbox.editor {
+	
 	public class Model {
 		private static const waitingForFrame: Array = [];
 		private const watchers: Array = [];

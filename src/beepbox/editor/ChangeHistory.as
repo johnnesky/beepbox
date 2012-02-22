@@ -1,4 +1,5 @@
-package {
+package beepbox.editor {
+	
 	public class ChangeHistory extends Model {
 		private var changes: Array;
 		private var recentChange: Change;

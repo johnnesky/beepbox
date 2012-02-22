@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class ChangeKey extends Change {
 		private var document: Document;
 		private var oldKey: int;

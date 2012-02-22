@@ -17,6 +17,8 @@
 		
 		import mx.collections.ArrayCollection;
 		
+		import beepbox.synth.*;
+		
 		public var partWidth: Number;
 		public var noteHeight: Number;
 		public var noteCount: int;

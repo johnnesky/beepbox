@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class ChangeToneTruncate extends ChangeSequence {
 		public function ChangeToneTruncate(document: Document, bar: BarPattern, start: int, end: int, skipTone: Tone = null) {
 			var i: int = 0;

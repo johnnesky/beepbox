@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class Document extends Model {
 		private static const latestVersion: int = 2;
 		

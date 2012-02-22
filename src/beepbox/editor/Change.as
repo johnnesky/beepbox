@@ -1,4 +1,5 @@
-package {
+package beepbox.editor {
+	
 	public class Change {
 		private var reversed: Boolean;
 		private var noop: Boolean;
