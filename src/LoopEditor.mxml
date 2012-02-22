@@ -55,8 +55,8 @@
 			var bar: Number = mouseX / barWidth;
 			cursor.startBar = bar;
 			
-			if (bar > doc.loopStart - 0.25 && bar < doc.loopStart + doc.loopLength + 0.25) {
-				if (bar - doc.loopStart < doc.loopLength * 0.5) {
+			if (bar > doc.song.loopStart - 0.25 && bar < doc.song.loopStart + doc.song.loopLength + 0.25) {
+				if (bar - doc.song.loopStart < doc.song.loopLength * 0.5) {
 					cursor.mode = startMode;
 				} else {
 					cursor.mode = endMode;
@@ -67,8 +67,8 @@
 		}
 		
 		private function findEndPoints(middle: Number): Object {
-			var start: int = Math.round(middle - doc.loopLength / 2);
-			var end: int = start + doc.loopLength;
+			var start: int = Math.round(middle - doc.song.loopLength / 2);
+			var end: int = start + doc.song.loopLength;
 			if (start < 0) {
 				end -= start;
 				start = 0;
@@ -119,8 +119,8 @@
 				var end: int;
 				var temp: int;
 				if (cursor.mode == startMode) {
-					start = doc.loopStart + Math.round(bar - cursor.startBar);
-					end = doc.loopStart + doc.loopLength;
+					start = doc.song.loopStart + Math.round(bar - cursor.startBar);
+					end = doc.song.loopStart + doc.song.loopLength;
 					if (start == end) {
 						start = end - 1;
 					} else if (start > end) {
@@ -132,8 +132,8 @@
 					if (end >= Music.numBars) end = Music.numBars;
 					change = new ChangeLoop(doc, start, end - start);
 				} else if (cursor.mode == endMode) {
-					start = doc.loopStart;
-					end = doc.loopStart + doc.loopLength + Math.round(bar - cursor.startBar);
+					start = doc.song.loopStart;
+					end = doc.song.loopStart + doc.song.loopLength + Math.round(bar - cursor.startBar);
 					if (end == start) {
 						end = start + 1;
 					} else if (end < start) {
@@ -175,11 +175,11 @@
 			var radius: int = height / 2;
 			if (cursor.mode == startMode) {
 				preview.graphics.beginFill(0xffffff);
-				preview.graphics.drawCircle(doc.loopStart * barWidth + radius, radius, radius - 4);
+				preview.graphics.drawCircle(doc.song.loopStart * barWidth + radius, radius, radius - 4);
 				preview.graphics.endFill();
 			} else if (cursor.mode == endMode) {
 				preview.graphics.beginFill(0xffffff);
-				preview.graphics.drawCircle((doc.loopStart + doc.loopLength) * barWidth - radius, radius, radius - 4);
+				preview.graphics.drawCircle((doc.song.loopStart + doc.song.loopLength) * barWidth - radius, radius, radius - 4);
 				preview.graphics.endFill();
 			} else if (cursor.mode == bothMode) {
 				var endPoints: Object = findEndPoints(cursor.startBar);
@@ -204,22 +204,22 @@
 			
 			var radius: int = height / 2;
 			container.graphics.beginFill(0x7744ff);
-			container.graphics.drawCircle(doc.loopStart * barWidth + radius, radius, radius);
+			container.graphics.drawCircle(doc.song.loopStart * barWidth + radius, radius, radius);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x7744ff);
-			container.graphics.drawRect(doc.loopStart * barWidth + radius, 0, doc.loopLength * barWidth - height, height);
+			container.graphics.drawRect(doc.song.loopStart * barWidth + radius, 0, doc.song.loopLength * barWidth - height, height);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x7744ff);
-			container.graphics.drawCircle((doc.loopStart + doc.loopLength) * barWidth - radius, radius, radius);
+			container.graphics.drawCircle((doc.song.loopStart + doc.song.loopLength) * barWidth - radius, radius, radius);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x000000);
-			container.graphics.drawCircle(doc.loopStart * barWidth + radius, radius, radius - 4);
+			container.graphics.drawCircle(doc.song.loopStart * barWidth + radius, radius, radius - 4);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x000000);
-			container.graphics.drawRect(doc.loopStart * barWidth + radius, 4, doc.loopLength * barWidth - height, height - 8);
+			container.graphics.drawRect(doc.song.loopStart * barWidth + radius, 4, doc.song.loopLength * barWidth - height, height - 8);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x000000);
-			container.graphics.drawCircle((doc.loopStart + doc.loopLength) * barWidth - radius, radius, radius - 4);
+			container.graphics.drawCircle((doc.song.loopStart + doc.song.loopLength) * barWidth - radius, radius, radius - 4);
 			container.graphics.endFill();
 			
 			updatePreview();

@@ -1,6 +1,6 @@
 package {
 	public class ChangeRhythm extends ChangeSequence {
-		public function ChangeRhythm(bar: BarPattern, oldParts: int, newParts: int) {
+		public function ChangeRhythm(document: Document, bar: BarPattern, oldParts: int, newParts: int) {
 			var difference: int = Math.abs(newParts - oldParts);
 			var i: int = 0;
 			while (i < bar.tones.length) {
@@ -18,13 +18,13 @@ package {
 				var start: int = beat * newParts + part;
 				if (newParts < oldParts) {
 					if (buffer == tone.end - tone.start) {
-						append(new ChangeToneAdded(bar, tone, i, true));
+						append(new ChangeToneAdded(document, bar, tone, i, true));
 					} else {
-						append(new ChangeToneLength(bar, tone, start, start + tone.end - tone.start - buffer));
+						append(new ChangeToneLength(document, bar, tone, start, start + tone.end - tone.start - buffer));
 						i++;
 					}
 				} else {
-					append(new ChangeToneLength(bar, tone, start, start + tone.end - tone.start + buffer));
+					append(new ChangeToneLength(document, bar, tone, start, start + tone.end - tone.start + buffer));
 					i++;
 				}
 			}

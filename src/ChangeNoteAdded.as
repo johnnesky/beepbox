@@ -1,11 +1,13 @@
 package {
 	public class ChangeNoteAdded extends Change {
+		private var document: Document;
 		private var pattern: BarPattern;
 		private var tone: Tone;
 		private var note: int;
 		private var index: int;
-		public function ChangeNoteAdded(pattern: BarPattern, tone: Tone, note: int, index: int, deletion: Boolean = false) {
+		public function ChangeNoteAdded(document: Document, pattern: BarPattern, tone: Tone, note: int, index: int, deletion: Boolean = false) {
 			super(deletion);
+			this.document = document;
 			this.pattern = pattern;
 			this.tone = tone;
 			this.note = note;
@@ -16,12 +18,12 @@ package {
 		
 		protected override function doForwards(): void {
 			tone.notes.splice(index, 0, note);
-			pattern.doc.changed();
+			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
 			tone.notes.splice(index, 1);
-			pattern.doc.changed();
+			document.changed();
 		}
 	}
 }

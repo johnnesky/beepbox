@@ -51,19 +51,22 @@
 √ to save on file size, get rid of that flex text field at the top. 
 √ put on website!
 √ set up some basic html
-- new waves
-- offline version? as3 lib?
-- source control?
+√ new waves
+√ source control
+√ karplus strong filter + decay
+- add copyright disclaimer to page
+- as3 lib?
+- right click to copy/paste. offline version? 
 - publish source?
 - save "preferences" to localSharedObject or cookie... cookie is more portable?
 - new preferences: follow playhead, autoplay?
-- update the playhead at the start of the callback, rather than at the end. 
 - pausing should actually stop SampleDataEvents
+- move the playhead graphic gradually toward the next position. 
 - think about equalizing some more. the low drums are very quiet! :/
+- use highpass to center output.
+- piano should still play when song is paused
 - 5 parts per beat?
 - rapid document/fragment changes cause undefined state
-- right click to copy/paste.
-- move the playhead graphic gradually toward the next position. 
 - make some button to bookmark the song in your browser
 - think about making a non-editing embeddable player, in an iframe?
 - Dim the column occupied by a tone. 
@@ -71,22 +74,17 @@
 - volume pins, correctly moving pins when swingifying
 - create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
 - drums get custom lowpass based on change rate?
-- maybe one of the styles should be a lowpass decay for karplus strong?
 - Do I want to perform dynamic range compression? 
-- don't cut the wave until after it completes a period?
-- for chorus, have two periods at multiples of the main freq. jitter on arpeggio slices
-- if I want to support pure sine wave tones, I'll need wave sample interpolation.
+- don't cut the wave gain until after it completes a period?
+- for chorus, have two periods at multiples of the main freq. jitter on arpeggio slices?
 - If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
 - preload some common tone shapes into the recentShape list
-- drag from channel to notes to copy pattern into new pattern
+- octave scrolling
+- copy paste patterns, octave transposing
 - tremelo/vibrato choices
 - envelope/delay choices
 - a flag: "patterns share settings" or "unify channel settings" or whatever
-- stretching triangle into a sawtooth?
-- to the left of the instrument dropdowns, put a color coded label for "lead", "bass", etc
 - visual feedback when a note is played, predict where the playhead should be...
-- MP3? OGG?
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
 - adjust pitch of existing note (double click)
-- compress save format such that all strings are valid
-- shade notes closer to crimson when more dissonant, sides of bar consider adjacent bars
+- MP3? OGG?

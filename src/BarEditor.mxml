@@ -66,9 +66,9 @@
 		
 		private function updateCursorStatus(): void {
 			cursor = new BarCursorStatus();
-			cursor.part    = int(Math.max(0, Math.min(doc.beats * doc.parts - 1, mouseX / partWidth)));
+			cursor.part    = int(Math.max(0, Math.min(doc.song.beats * doc.song.parts - 1, mouseX / partWidth)));
 			
-			var scale: Array = Music.scaleFlags[doc.scale];
+			var scale: Array = Music.scaleFlags[doc.song.scale];
 			var i: int;
 			
 			for each (var tone: Tone in pattern.tones) {
@@ -128,31 +128,31 @@
 				
 				cursor.nearEnd = (mouseX / partWidth - cursor.start) / (cursor.end - cursor.start) > 0.5;
 			} else {
-				var quadBeats: int = cursor.part / doc.parts;
-				var modLength: int = defaultLength % doc.parts;
-				var modMouse: int = cursor.part % doc.parts;
+				var quadBeats: int = cursor.part / doc.song.parts;
+				var modLength: int = defaultLength % doc.song.parts;
+				var modMouse: int = cursor.part % doc.song.parts;
 				if (defaultLength == 1) {
 					cursor.start = cursor.part;
 				} else if (modLength == 0) {
-					cursor.start = quadBeats * doc.parts;
-					if (doc.parts >> 1 == doc.parts / 2 && modMouse > doc.parts / 2 && defaultLength == doc.parts) {
-						cursor.start += doc.parts / 2;
+					cursor.start = quadBeats * doc.song.parts;
+					if (doc.song.parts >> 1 == doc.song.parts / 2 && modMouse > doc.song.parts / 2 && defaultLength == doc.song.parts) {
+						cursor.start += doc.song.parts / 2;
 					}
 				} else {
-					cursor.start = quadBeats * doc.parts;
-					if (modLength == doc.parts / 2) {
-						if (modMouse >= doc.parts / 2) {
-							cursor.start += doc.parts - modLength;
+					cursor.start = quadBeats * doc.song.parts;
+					if (modLength == doc.song.parts / 2) {
+						if (modMouse >= doc.song.parts / 2) {
+							cursor.start += doc.song.parts - modLength;
 						}
 					} else {
-						if (modMouse > doc.parts / 2) {
-							cursor.start += doc.parts - modLength;
+						if (modMouse > doc.song.parts / 2) {
+							cursor.start += doc.song.parts - modLength;
 						}
 					}
 				}
 				cursor.end = cursor.start + defaultLength;
 				var forceStart: int = 0;
-				var forceEnd: int = doc.beats * doc.parts;
+				var forceEnd: int = doc.song.beats * doc.song.parts;
 				if (cursor.prevTone != null) {
 					forceStart = cursor.prevTone.end;
 				}
@@ -178,7 +178,7 @@
 		private function onEnterFrame(event: Event): void {
 			playhead.graphics.clear();
 			if (doc.synth.paused) return;
-			if (doc.getBarPattern(doc.channel, doc.synth.bar) != pattern) return;
+			if (doc.song.getBarPattern(doc.channel, doc.synth.bar) != pattern) return;
 			playhead.graphics.lineStyle(4, 0xffffff);
 			playhead.graphics.moveTo(doc.synth.playhead * width, 0);
 			playhead.graphics.lineTo(doc.synth.playhead * width, height);
@@ -239,12 +239,12 @@
 						
 						defaultLength = 1;
 						//for each (var blessedLength: int in [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 36, ]) {
-						for (i = 0; i <= doc.beats * doc.parts; i++) {
+						for (i = 0; i <= doc.song.beats * doc.song.parts; i++) {
 							if (i >= 5 &&
-							    i % doc.parts != 0 &&
-							    i != doc.parts * 3.0 / 2.0 &&
-							    i != doc.parts * 4.0 / 3.0 &&
-							    i != doc.parts * 5.0 / 3.0)
+							    i % doc.song.parts != 0 &&
+							    i != doc.song.parts * 3.0 / 2.0 &&
+							    i != doc.song.parts * 4.0 / 3.0 &&
+							    i != doc.song.parts * 5.0 / 3.0)
 							{
 								continue;
 							}
@@ -277,13 +277,13 @@
 							end = start + defaultLength;
 						}
 						if (start < 0) start = 0;
-						if (end > doc.beats * doc.parts) end = doc.beats * doc.parts;
+						if (end > doc.song.beats * doc.song.parts) end = doc.song.beats * doc.song.parts;
 						
 						defaultVolume = int((mouseYStart - mouseY) / 30.0) + 3;
 						if (defaultVolume < 0) defaultVolume = 0;
 						if (defaultVolume > 3) defaultVolume = 3;
 						
-						sequence.append(new ChangeToneTruncate(pattern, start, end));
+						sequence.append(new ChangeToneTruncate(doc, pattern, start, end));
 						i = 0;
 						while (i < pattern.tones.length) {
 							var tone: Tone = pattern.tones[i];
@@ -292,19 +292,19 @@
 							}
 							i++;
 						}
-						sequence.append(new ChangeToneAdded(pattern, new Tone(cursor.note, start, end, defaultVolume, doc.channel == 3), i));
+						sequence.append(new ChangeToneAdded(doc, pattern, new Tone(cursor.note, start, end, defaultVolume, doc.channel == 3), i));
 					} else if (!mouseVertical) {
 						var shift: int = Math.round((mouseX - mouseXStart) / partWidth);
 						start = cursor.curTone.start + (cursor.nearEnd ? 0 : shift);
 						end = cursor.curTone.end + (cursor.nearEnd ? shift : 0);
 						if (start < 0) start = 0;
-						if (end > doc.beats * doc.parts) end = doc.beats * doc.parts;
+						if (end > doc.song.beats * doc.song.parts) end = doc.song.beats * doc.song.parts;
 						
 						if (start >= end) {
-							sequence.append(new ChangeToneAdded(pattern, cursor.curTone, cursor.curIndex, true));
+							sequence.append(new ChangeToneAdded(doc, pattern, cursor.curTone, cursor.curIndex, true));
 						} else {
-							sequence.append(new ChangeToneTruncate(pattern, start, end, cursor.curTone));
-							sequence.append(new ChangeToneLength(pattern, cursor.curTone, start, end));
+							sequence.append(new ChangeToneTruncate(doc, pattern, start, end, cursor.curTone));
+							sequence.append(new ChangeToneLength(doc, pattern, cursor.curTone, start, end));
 							defaultLength = end - start;
 						}
 					} else if (cursor.noteIndex == -1) {
@@ -312,7 +312,7 @@
 					} else {
 						
 						
-						//sequence.append(new ChangePinAdded(pattern, cursor.curTone, pin, cursor.curIndex));
+						//sequence.append(new ChangePinAdded(doc, pattern, cursor.curTone, pin, cursor.curIndex));
 					}
 					dragChange = sequence;
 				}
@@ -332,20 +332,20 @@
 				}
 			} else if (mouseDown) {
 				if (cursor.curTone == null) {
-					doc.history.record(new ChangeToneAdded(pattern, new Tone(cursor.note, cursor.start, cursor.end, defaultVolume, doc.channel == 3), cursor.curIndex));
+					doc.history.record(new ChangeToneAdded(doc, pattern, new Tone(cursor.note, cursor.start, cursor.end, defaultVolume, doc.channel == 3), cursor.curIndex));
 				} else {
 					if (cursor.noteIndex == -1) {
 						var sequence: ChangeSequence = new ChangeSequence();
 						if (cursor.curTone.notes.length == 4) {
-							sequence.append(new ChangeNoteAdded(pattern, cursor.curTone, cursor.curTone.notes[0], 0, true));
+							sequence.append(new ChangeNoteAdded(doc, pattern, cursor.curTone, cursor.curTone.notes[0], 0, true));
 						}
-						sequence.append(new ChangeNoteAdded(pattern, cursor.curTone, cursor.note, cursor.curTone.notes.length));
+						sequence.append(new ChangeNoteAdded(doc, pattern, cursor.curTone, cursor.note, cursor.curTone.notes.length));
 						doc.history.record(sequence);
 					} else {
 						if (cursor.curTone.notes.length == 1) {
-							doc.history.record(new ChangeToneAdded(pattern, cursor.curTone, cursor.curIndex, true));
+							doc.history.record(new ChangeToneAdded(doc, pattern, cursor.curTone, cursor.curIndex, true));
 						} else {
-							doc.history.record(new ChangeNoteAdded(pattern, cursor.curTone, cursor.note, cursor.curTone.notes.indexOf(cursor.note), true));
+							doc.history.record(new ChangeNoteAdded(doc, pattern, cursor.curTone, cursor.note, cursor.curTone.notes.indexOf(cursor.note), true));
 						}
 					}
 				}
@@ -373,8 +373,8 @@
 		}
 		
 		private function documentChanged(): void {
-			pattern = doc.getBarPattern(doc.channel, doc.bar);
-			partWidth = (doc.showLetters ? 480 : 512) / (doc.beats * doc.parts);
+			pattern = doc.song.getBarPattern(doc.channel, doc.bar);
+			partWidth = (doc.showLetters ? 480 : 512) / (doc.song.beats * doc.song.parts);
 			noteHeight = doc.channel == 3 ? 43 : 13;
 			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
 			render();
@@ -383,11 +383,11 @@
 		private function render(): void {
 			container.graphics.clear();
 			container.graphics.beginFill(0);
-			container.graphics.drawRect(0, 0, partWidth * doc.beats * doc.parts, noteHeight * noteCount);
+			container.graphics.drawRect(0, 0, partWidth * doc.song.beats * doc.song.parts, noteHeight * noteCount);
 			container.graphics.endFill();
 			
 			for (var j: int = 0; j < noteCount; j++) {
-				if (doc.channel != 3 && Music.scaleFlags[doc.scale][j%12] == false) {
+				if (doc.channel != 3 && Music.scaleFlags[doc.song.scale][j%12] == false) {
 					continue;
 				}
 				var color: int = 0x444444;
@@ -396,8 +396,8 @@
 					if (j%12 == 7 && doc.showFifth) color = 0x446688;
 				}
 				container.graphics.beginFill(color);
-				for (var k: int = 0; k < doc.beats; k++) {
-					container.graphics.drawRect(partWidth * k * doc.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.parts - 2, noteHeight - 2);
+				for (var k: int = 0; k < doc.song.beats; k++) {
+					container.graphics.drawRect(partWidth * k * doc.song.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.song.parts - 2, noteHeight - 2);
 				}
 				container.graphics.endFill();
 			}
@@ -407,7 +407,7 @@
 			if (doc.channel != 3 && doc.showChannels) {
 				for (var channel: int = 2; channel >= 0; channel--) {
 					if (channel == doc.channel) continue;
-					for each (tone in doc.getBarPattern(channel, doc.bar).tones) {
+					for each (tone in doc.song.getBarPattern(channel, doc.bar).tones) {
 						for each (note in tone.notes) {
 							container.graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][channel]);
 							drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false);

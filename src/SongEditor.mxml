@@ -35,6 +35,10 @@
 		private var partNames: ArrayCollection;
 		[Bindable]
 		private var waveNames: ArrayCollection;
+		[Bindable]
+		private var filterNames: ArrayCollection;
+		[Bindable]
+		private var filterDecayNames: ArrayCollection;
 		
 		public function init():void {
 			scaleNames = new ArrayCollection(Music.scaleNames);
@@ -43,6 +47,8 @@
 			beatNames = new ArrayCollection(Music.beatNames);
 			partNames = new ArrayCollection(Music.partNames);
 			waveNames = new ArrayCollection(Music.waveNames);
+			filterNames = new ArrayCollection(Music.filterNames);
+			filterDecayNames = new ArrayCollection(Music.filterDecayNames);
 			doc.watch(onUpdated);
 			onUpdated();
 			
@@ -54,11 +60,11 @@
 		}
 		
 		private function onUpdated(): void {
-			scaleDropDown.selectedIndex = doc.scale;
-			keyDropDown.selectedIndex = doc.key;
-			tempoDropDown.selectedIndex = doc.tempo;
-			beatDropDown.selectedIndex = Music.beatCounts.indexOf(doc.beats);
-			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.parts);
+			scaleDropDown.selectedIndex = doc.song.scale;
+			keyDropDown.selectedIndex = doc.song.key;
+			tempoDropDown.selectedIndex = doc.song.tempo;
+			beatDropDown.selectedIndex = Music.beatCounts.indexOf(doc.song.beats);
+			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
 			showLetters.selected = doc.showLetters;
 			showFifth.selected = doc.showFifth;
 			showChannels.selected = doc.showChannels;
@@ -66,7 +72,9 @@
 				channelSettings.visible = false;
 			} else {
 				channelSettings.visible = true;
-				waveDropDown.selectedIndex = doc.channelWaves[doc.channel];
+				waveDropDown.selectedIndex = doc.song.channelWaves[doc.channel];
+				filterDropDown.selectedIndex = doc.song.channelFilters[doc.channel];
+				filterDecayDropDown.selectedIndex = doc.song.channelFilterDecays[doc.channel];
 			}
 			currentState = doc.showLetters ? "showPiano" : "hidePiano";
 			barEditor.width = doc.showLetters ? 480 : 512;
@@ -98,12 +106,12 @@
 				case 219: // left brace
 					doc.synth.bar--;
 					if (doc.synth.bar < 0) doc.synth.bar = Music.numBars - 1;
-					if (doc.synth.bar < doc.loopStart || doc.synth.bar >= doc.loopStart + doc.loopLength) doc.synth.bar = doc.loopStart;
+					if (doc.synth.bar < doc.song.loopStart || doc.synth.bar >= doc.song.loopStart + doc.song.loopLength) doc.synth.bar = doc.song.loopStart;
 					break;
 				case 221: // right brace
 					doc.synth.bar++;
 					if (doc.synth.bar == Music.numBars) doc.synth.bar = 0;
-					if (doc.synth.bar < doc.loopStart || doc.synth.bar >= doc.loopStart + doc.loopLength) doc.synth.bar = doc.loopStart;
+					if (doc.synth.bar < doc.song.loopStart || doc.synth.bar >= doc.song.loopStart + doc.song.loopLength) doc.synth.bar = doc.song.loopStart;
 					break;
 			}
 		}
@@ -134,10 +142,10 @@
 			var wasPlaying: Boolean = !doc.synth.paused;
 			if (wasPlaying) togglePlay();
 			
-			var sampleFrames: int = doc.synth.getSamplesPerArpeggio() * 4 * doc.parts * doc.beats * Music.numBars;
+			var sampleFrames: int = doc.synth.getSamplesPerArpeggio() * 4 * doc.song.parts * doc.song.beats * Music.numBars;
 			var recordedSamples: ByteArray = new ByteArray();
 			var timer: int = getTimer();
-			new Synth(doc).synthesize(recordedSamples, sampleFrames, false);
+			new Synth(doc.song).synthesize(recordedSamples, sampleFrames, false);
 			trace("export timer", getTimer() - timer);
 			
 			var srcChannelCount: int = 2;
@@ -246,6 +254,18 @@
 			doc.history.record(new ChangeWave(doc, wave));
 		}
 		
+		private function onSetFilter(): void {
+			var filter: int = filterDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeFilter) doc.history.undo();
+			doc.history.record(new ChangeFilter(doc, filter));
+		}
+		
+		private function onSetFilterDecay(): void {
+			var filterDecay: int = filterDecayDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeFilterDecay) doc.history.undo();
+			doc.history.record(new ChangeFilterDecay(doc, filterDecay));
+		}
+		
 		private function toggleLetters(): void {
 			var selected: Boolean = showLetters.selected;
 			//if (doc.history.getRecentChange() is ChangeShowLetters) doc.history.undo();
@@ -337,6 +357,20 @@
 					<s:Label text="Wave:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="waveDropDown" dataProvider="{waveNames}" width="110" change="onSetWave()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{6}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Filter Base:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="75" change="onSetFilter()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{6}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Filter Decay:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="filterDecayDropDown" dataProvider="{filterDecayNames}" width="75" change="onSetFilterDecay()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{6}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
