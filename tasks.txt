@@ -67,6 +67,7 @@
 - use highpass to center output.
 - piano should still play when song is paused
 - 5 parts per beat?
+- asynchronous wav export
 - rapid document/fragment changes cause undefined state
 - make some button to bookmark the song in your browser
 - think about making a non-editing embeddable player, in an iframe?

@@ -1,4 +1,4 @@
-package {
+package beepbox.synth {
 	public class Tone {
 		public var notes: Array;
 		public var pins: Array;
