@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class ChangeRhythm extends ChangeSequence {
 		public function ChangeRhythm(document: Document, bar: BarPattern, oldParts: int, newParts: int) {
 			var difference: int = Math.abs(newParts - oldParts);

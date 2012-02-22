@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class ChangeChannelBar extends Change {
 		private var document: Document;
 		private var oldChannel: int;

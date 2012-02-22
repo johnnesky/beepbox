@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
            xmlns:s="library://ns.adobe.com/flex/spark"
-           xmlns="*"
+           xmlns="beepbox.editor.*"
            width="675"
            height="645"
            backgroundColor="0x000000"
@@ -19,6 +19,8 @@
 		import flash.utils.*;
 		
 		import mx.collections.ArrayCollection;
+		
+		import beepbox.synth.*;
 		
 		[Bindable]
 		public var doc: Document;

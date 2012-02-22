@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class ChangeFilterDecay extends Change {
 		private var document: Document;
 		private var oldFilterDecay: int;

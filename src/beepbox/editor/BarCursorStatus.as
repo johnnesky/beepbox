@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class BarCursorStatus {
 		public var prevTone:  Tone = null;
 		public var curTone:   Tone = null;

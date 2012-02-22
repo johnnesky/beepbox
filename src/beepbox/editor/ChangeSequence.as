@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class ChangeSequence extends Change {
 		private var changes: Array;
 		public function ChangeSequence(changes: Array = null) {

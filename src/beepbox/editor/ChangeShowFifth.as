@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class ChangeShowFifth extends Change {
 		private var document: Document;
 		public function ChangeShowFifth(document: Document) {

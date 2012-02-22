@@ -60,6 +60,7 @@
 - right click to copy/paste. offline version? 
 - link to source in html
 - save "preferences" to localSharedObject or cookie... cookie is more portable?
+- changing preferences doesn't need to be undoable but should update display.
 - new preferences: follow playhead, autoplay?
 - pausing should actually stop SampleDataEvents
 - move the playhead graphic gradually toward the next position. 

@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class ChangeShowLetters extends Change {
 		private var document: Document;
 		public function ChangeShowLetters(document: Document) {

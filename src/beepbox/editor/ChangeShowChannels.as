@@ -1,4 +1,6 @@
-package {
+package beepbox.editor {
+	import beepbox.synth.*;
+	
 	public class ChangeShowChannels extends Change {
 		private var document: Document;
 		public function ChangeShowChannels(document: Document) {
