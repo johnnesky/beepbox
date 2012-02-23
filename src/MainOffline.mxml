@@ -3,7 +3,7 @@
                xmlns:s="library://ns.adobe.com/flex/spark"
 			   xmlns="beepbox.editor.*"
                width="675"
-               height="645"
+               height="680"
                backgroundColor="0x000000"
                frameRate="60"
                applicationComplete="init()">
@@ -22,6 +22,7 @@
 		import mx.controls.Alert;
 		
 		import beepbox.synth.*;
+		import beepbox.editor.*;
 		
 		[Bindable]
 		private var doc: Document = new Document();
@@ -46,8 +47,6 @@
 			stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed);
 			stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased);
 			doc.history.watch(onUpdated);
-			
-			ExternalInterface.addCallback("hashUpdatedExternally", hashUpdatedExternally);
 		}
 		
 		private function onEnterFrame(event: Event): void {
@@ -73,33 +72,25 @@
 				prevHash = hash;
 			} else if (prevHash != hash) {
 				prevHash = hash;
-				//fragment.text = hash;
-				trace("a");
-				ExternalInterface.call("documentUpdated", hash);
-				trace("b");
+				fragment.text = hash;
 			}
 		}
-		/*
+		
 		private function onFragmentPaste(): void {
 			fragment.text = Clipboard.generalClipboard.getData(ClipboardFormats.TEXT_FORMAT) as String;
 			doc.history.record(new ChangeSong(doc, fragment.text));
 		}
-		*/
+		
 		private function hashUpdatedExternally(myhash: String): void {
-				trace("c");
 			if (prevHash != myhash) {
 				prevHash = myhash;
-				//fragment.text = myhash;
-				doc.history.record(new ChangeSong(doc, prevHash));
+				fragment.text = myhash;
 			}
-				trace("d");
 		}
 	]]></fx:Script>
 	
 	<s:VGroup width="100%">
-		<!--
 		<s:TextInput id="fragment" width="100%" editable="false" selectable="true" paste="onFragmentPaste(); fragment.selectAll()" focusIn="fragment.selectAll()"/>
-		-->
 		<SongEditor doc="{doc}"/>
 	</s:VGroup>
 </s:Application>
