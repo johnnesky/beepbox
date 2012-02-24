@@ -179,11 +179,12 @@
 		
 		private function onEnterFrame(event: Event): void {
 			playhead.graphics.clear();
-			if (doc.synth.paused) return;
-			if (doc.song.getBarPattern(doc.channel, doc.synth.bar) != pattern) return;
+			if (!doc.synth.playing) return;
+			if (doc.song.getBarPattern(doc.channel, int(doc.synth.playhead)) != pattern) return;
+			var modPlayhead: Number = doc.synth.playhead - int(doc.synth.playhead);
 			playhead.graphics.lineStyle(4, 0xffffff);
-			playhead.graphics.moveTo(doc.synth.playhead * width, 0);
-			playhead.graphics.lineTo(doc.synth.playhead * width, height);
+			playhead.graphics.moveTo(modPlayhead * width, 0);
+			playhead.graphics.lineTo(modPlayhead * width, height);
 			playhead.graphics.lineStyle();
 		}
 		
