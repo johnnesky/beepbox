@@ -93,6 +93,7 @@
 			//if (event.ctrlKey)
 			switch (event.keyCode) {
 				case 32: // space
+					stage.focus = stage;
 					togglePlay();
 					break;
 				case 90: // z
@@ -123,15 +124,11 @@
 		
 		private function togglePlay(): void {
 			if (doc.synth.paused) {
-				doc.synth.paused = false;
+				doc.synth.unpause();
 				playButton.label = "Pause Playback";
 			} else {
-				doc.synth.paused = true;
-				doc.synth.playhead = 0.0;
-				doc.synth.beat = 0;
-				doc.synth.part = 0;
-				doc.synth.arpeggio = 0;
-				doc.synth.arpeggioSamples = 0;
+				doc.synth.pause();
+				doc.synth.snapToLastBar();
 				playButton.label = "Resume Playback";
 			}
 		}
@@ -144,11 +141,11 @@
 			var wasPlaying: Boolean = !doc.synth.paused;
 			if (wasPlaying) togglePlay();
 			
-			var sampleFrames: int = doc.synth.getSamplesPerArpeggio() * 4 * doc.song.parts * doc.song.beats * Music.numBars;
+			var sampleFrames: int = doc.synth.getTotalSamples();
 			var recordedSamples: ByteArray = new ByteArray();
 			var timer: int = getTimer();
 			new Synth(doc.song).synthesize(recordedSamples, sampleFrames, false);
-			trace("export timer", getTimer() - timer);
+			//trace("export timer", getTimer() - timer);
 			
 			var srcChannelCount: int = 2;
 			var wavChannelCount: int = 1;
@@ -269,21 +266,21 @@
 		}
 		
 		private function toggleLetters(): void {
-			var selected: Boolean = showLetters.selected;
-			//if (doc.history.getRecentChange() is ChangeShowLetters) doc.history.undo();
-			doc.history.record(new ChangeShowLetters(doc));
+			doc.showLetters = !doc.showLetters;
+			doc.changed();
+			doc.savePreferences();
 		}
 		
 		private function toggleFifth(): void {
-			var selected: Boolean = showFifth.selected;
-			//if (doc.history.getRecentChange() is ChangeShowFifth) doc.history.undo();
-			doc.history.record(new ChangeShowFifth(doc));
+			doc.showFifth = !doc.showFifth;
+			doc.changed();
+			doc.savePreferences();
 		}
 		
 		private function toggleChannels(): void {
-			var selected: Boolean = showChannels.selected;
-			//if (doc.history.getRecentChange() is ChangeShowChannels) doc.history.undo();
-			doc.history.record(new ChangeShowChannels(doc));
+			doc.showChannels = !doc.showChannels;
+			doc.changed();
+			doc.savePreferences();
 		}
 	]]></fx:Script>
 	
@@ -303,13 +300,13 @@
 		</s:VGroup>
 		<s:VGroup width="100%">
 			<s:VGroup id="songSettings" height="481" width="100%">
-				<s:Button id="exportButton" label="Save as .wav file" click="export(); stage.focus = stage" width="100%"/>
+				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>
 				<s:Button id="cleanButton" label="Clean slate" click="cleanSlate(); stage.focus = stage" width="100%"/>
+				<s:Button id="exportButton" label="Save as .wav file" click="export(); stage.focus = stage" width="100%"/>
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Button id="undoButton" label="Undo" enabled="false" click="doc.history.undo(); stage.focus = stage" width="50%"/>
 					<s:Button id="redoButton" label="Redo" enabled="false" click="doc.history.redo(); stage.focus = stage" width="50%"/>
 				</s:HGroup>
-				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>
 				<s:Spacer height="5"/>
 				<s:Label text="Preferences:" color="0xffffff"/>
 				<s:CheckBox id="showLetters" label="Show Piano" color="0xbbbbbb" change="toggleLetters(); stage.focus = stage"/>

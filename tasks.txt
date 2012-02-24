@@ -54,39 +54,52 @@
 √ new waves
 √ source control
 √ karplus strong filter + decay
-- separate main file for offline.
-- as3 lib?
-- add copyright disclaimer to page
-- link to source in html
-- save "preferences" to localSharedObject
-- changing preferences doesn't need to be undoable but should update display.
-- new preferences: follow playhead, autoplay?
+√ separate main file for offline.
+√ take focus from "save as wav" button after clicking it!
+√ changing preferences doesn't need to be undoable but should update display.
+√ save "preferences" to localSharedObject
+
+TIMBRE AND CRITICAL:
 - pausing should actually stop SampleDataEvents
-- move the playhead graphic gradually toward the next position. 
-- think about equalizing some more. the low drums are very quiet! :/
-- use highpass to center output.
-- piano should still play when song is paused
-- 5 parts per beat?
-- asynchronous wav export
-- rapid document/fragment changes cause undefined state
-- make some button to bookmark the song in your browser
-- think about making a non-editing embeddable player, in an iframe?
-- Dim the column occupied by a tone. 
-- shift channel octaves
-- volume pins, correctly moving pins when swingifying
-- create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
-- drums get custom lowpass based on change rate?
-- Do I want to perform dynamic range compression? 
-- don't cut the wave gain until after it completes a period?
+- as3 lib usage example
+- new preferences: follow playhead, autoplay on load?
 - for chorus, have two periods at multiples of the main freq. jitter on arpeggio slices?
-- If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
-- preload some common tone shapes into the recentShape list
+- tremelo/vibrato choices
+
+PUBLISHING:
+- create public version number
+- link to source in html
+- add copyright disclaimer to page
+
+MORE FEATURES:
+- asynchronous wav export
+- web interface to share songs so that other visitors can see them. let users enter a name and a "password", which can just be an email address, which is used to generate a "retro" gravatar identicon. 
+- rapid note fadeout at end. 
+- ADSR
 - octave scrolling
 - copy paste patterns, octave transposing
-- tremelo/vibrato choices
-- envelope/delay choices
+- use highpass to center output.
+- volume pins, correctly moving pins when swingifying
+- create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
 - a flag: "patterns share settings" or "unify channel settings" or whatever
-- visual feedback when a note is played, predict where the playhead should be...
+- custom bar count and pattern count for advanced users. 
+
+POLISH:
+- save most recent song to localSO so that it doesn't accidentally get lost when window closes
+- don't autoplay until URL fragment has been passed through
+- drums get custom lowpass based on change rate?
+- Do I want to perform dynamic range compression? 
+- think about equalizing some more. the low drums are very quiet! :/
+- reset period to 0 at start of every note
+- piano should still play when song is paused
+- If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
+- move the playhead graphic gradually toward the next position. 
+- visual feedback when a note is played
+- make a non-editing embeddable player, in an iframe, with playhead tracking and all channels and no highlighting.
+- 5 parts per beat?
+- rapid document/fragment changes cause undefined state
+- make some button to bookmark the song in your browser
+- Dim the column occupied by a tone?
+- preload some common tone shapes into the recentShape list
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
-- adjust pitch of existing note (double click)
-- MP3? OGG?
+
