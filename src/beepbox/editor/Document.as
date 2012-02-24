@@ -1,4 +1,6 @@
 package beepbox.editor {
+	import flash.net.SharedObject;
+	
 	import beepbox.synth.*;
 	
 	public class Document extends Model {
@@ -13,6 +15,8 @@ package beepbox.editor {
 		public var showChannels: Boolean;
 		public var song: Song;
 		
+		private var localSO: SharedObject;
+		
 		public function Document() {
 			channel = 0;
 			bar = 0;
@@ -23,6 +27,25 @@ package beepbox.editor {
 			song = new Song();
 			synth = new Synth(song);
 			synth.play();
+			
+			try {
+				localSO = SharedObject.getLocal("preferences");
+			} catch(e: Error) {}
+			
+			if (localSO != null) {
+				showFifth = localSO.data.showFifth;
+				showLetters = localSO.data.showLetters;
+				showChannels = localSO.data.showChannels;
+			}
+		}
+		
+		public function savePreferences(): void {
+			if (localSO != null) {
+				localSO.data.showFifth = showFifth;
+				localSO.data.showLetters = showLetters;
+				localSO.data.showChannels = showChannels;
+				localSO.flush();
+			}
 		}
 	}
 }

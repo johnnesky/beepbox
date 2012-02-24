@@ -25,10 +25,10 @@ package beepbox.synth {
 			new <Number>[1.0, -1.0, -1.0, -1.0],
 			new <Number>[1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
 			new <Number>[1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0],
-			new <Number>[1.0, 0.8, 0.6, 0.4, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2],
+			new <Number>[0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2, ],
 			new <Number>[1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0],
 			new <Number>[1.0, -1.0, 1.0, -1.0, 1.0, 0.0],
-			new <Number>[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, ],
+			new <Number>[0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2, ],
 		];
 		private var leadPeriod: Number = 0.0;
 		private var leadPrevSample: Number = 0.0;
@@ -42,20 +42,72 @@ package beepbox.synth {
 		private var stillGoing: Boolean = false;
 		private var song: Song;
 		
-		public function getSamplesPerArpeggio(): int {
-			var beatsPerMinute: Number = 120.0 * Math.pow(2.0, (-1.0 + song.tempo) / 3.0);
-			var beatsPerSecond: Number = beatsPerMinute / 60.0;
-			var partsPerSecond: Number = beatsPerSecond * song.parts;
-			var arpeggioPerSecond: Number = partsPerSecond * 4.0;
-			return samplesPerSecond / arpeggioPerSecond;
-		}
-		
 		public function Synth(song: Song) {
 			this.song = song;
 			waves.fixed = true;
 			for each (var wave: Vector.<Number> in waves) {
 				wave.fixed = true;
 			}
+		}
+		
+		public function play(): void {
+			bar = song.loopStart;
+			paused = false;
+			
+			function onSampleData(event: SampleDataEvent): void {
+				if (paused) {
+					for (var i: int = 0; i < 4096; i++) {
+						event.data.writeFloat(0.0);
+						event.data.writeFloat(0.0);
+					}
+				} else {
+					synthesize(event.data, 4096, true);
+				}
+				stillGoing = true;
+			}
+			
+			var soundChannel: SoundChannel;
+			
+			function checkSound(event: TimerEvent): void {
+				if (!stillGoing) {
+					if (soundChannel != null) {
+						soundChannel.stop();
+					}
+					var sound: Sound = new Sound();
+					sound.addEventListener(SampleDataEvent.SAMPLE_DATA, onSampleData, false, 0, true);
+					soundChannel = sound.play();
+				} else {
+					stillGoing = false;
+				}
+			}
+			
+			var timer: Timer = new Timer(200, 0);
+			timer.addEventListener(TimerEvent.TIMER, checkSound);
+			timer.start();
+		}
+		
+		public function pause(): void {
+			paused = true;
+		}
+		
+		public function unpause(): void {
+			paused = false;
+		}
+		
+		public function snapToLastBar(): void {
+			playhead = 0.0;
+			beat = 0;
+			part = 0;
+			arpeggio = 0;
+			arpeggioSamples = 0;
+		}
+		
+		public function getTotalSamples(): int {
+			return getSamplesPerArpeggio() * 4 * song.parts * song.beats * Music.numBars;
+		}
+		
+		public function getTotalSeconds(): Number {
+			return getTotalSamples() / samplesPerSecond;
 		}
 		
 		public function synthesize(data: ByteArray, totalSamples: int, loop: Boolean): void {
@@ -319,48 +371,20 @@ package beepbox.synth {
 			playhead = (((arpeggio + 1.0 - arpeggioSamples / samplesPerArpeggio) / 4.0 + part) / song.parts + beat) / song.beats;
 		}
 		
-		public function play(): void {
-			bar = song.loopStart;
-			paused = false;
-			
-			function onSampleData(event: SampleDataEvent): void {
-				if (paused) {
-					for (var i: int = 0; i < 4096; i++) {
-						event.data.writeFloat(0.0);
-						event.data.writeFloat(0.0);
-					}
-				} else {
-					synthesize(event.data, 4096, true);
-				}
-				stillGoing = true;
-			}
-			
-			var soundChannel: SoundChannel;
-			
-			function checkSound(event: TimerEvent): void {
-				if (!stillGoing) {
-					if (soundChannel != null) {
-						soundChannel.stop();
-					}
-					var sound: Sound = new Sound();
-					sound.addEventListener(SampleDataEvent.SAMPLE_DATA, onSampleData, false, 0, true);
-					soundChannel = sound.play();
-				} else {
-					stillGoing = false;
-				}
-			}
-			
-			var timer: Timer = new Timer(200, 0);
-			timer.addEventListener(TimerEvent.TIMER, checkSound);
-			timer.start();
-		}
-		
 		private function frequencyFromPitch(pitch: int): Number {
 			return 440.0 * Math.pow(2.0, (pitch - 69.0) / 12.0);
 		}
 		
 		private function volumeConversion(volume: Number): Number {
 			return Math.pow(volume / 3.0, 1.5);
+		}
+		
+		private function getSamplesPerArpeggio(): int {
+			var beatsPerMinute: Number = 120.0 * Math.pow(2.0, (-1.0 + song.tempo) / 3.0);
+			var beatsPerSecond: Number = beatsPerMinute / 60.0;
+			var partsPerSecond: Number = beatsPerSecond * song.parts;
+			var arpeggioPerSecond: Number = partsPerSecond * 4.0;
+			return samplesPerSecond / arpeggioPerSecond;
 		}
 	}
 }

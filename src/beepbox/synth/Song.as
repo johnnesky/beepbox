@@ -17,11 +17,15 @@ package beepbox.synth {
 		
 		private static const sixtyfour: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
 		
-		public function Song() {
-			initToDefault(false);
+		public function Song(string: String = null) {
+			if (string != null) {
+				fromString(string, false);
+			} else {
+				initToDefault(false);
+			}
 		}
 		
-		public function initToDefault(skipPatterns: Boolean): void {
+		public function initToDefault(skipPatterns: Boolean = false): void {
 			if (!skipPatterns) {
 				channelPatterns = [
 					[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
@@ -192,7 +196,7 @@ package beepbox.synth {
 			return result;
 		}
 		
-		public function fromString(compressed: String, skipPatterns: Boolean): void {
+		public function fromString(compressed: String, skipPatterns: Boolean = false): void {
 			initToDefault(skipPatterns);
 			if (compressed == null || compressed.length == 0) return;
 			if (compressed.charAt(0) == "#") compressed = compressed.substring(1);
