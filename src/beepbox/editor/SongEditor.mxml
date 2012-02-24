@@ -107,14 +107,10 @@
 					doc.history.redo();
 					break;
 				case 219: // left brace
-					doc.synth.bar--;
-					if (doc.synth.bar < 0) doc.synth.bar = Music.numBars - 1;
-					if (doc.synth.bar < doc.song.loopStart || doc.synth.bar >= doc.song.loopStart + doc.song.loopLength) doc.synth.bar = doc.song.loopStart;
+					doc.synth.prevBar();
 					break;
 				case 221: // right brace
-					doc.synth.bar++;
-					if (doc.synth.bar == Music.numBars) doc.synth.bar = 0;
-					if (doc.synth.bar < doc.song.loopStart || doc.synth.bar >= doc.song.loopStart + doc.song.loopLength) doc.synth.bar = doc.song.loopStart;
+					doc.synth.nextBar();
 					break;
 			}
 		}
@@ -123,13 +119,13 @@
 		}
 		
 		private function togglePlay(): void {
-			if (doc.synth.paused) {
-				doc.synth.unpause();
-				playButton.label = "Pause Playback";
-			} else {
+			if (doc.synth.playing) {
 				doc.synth.pause();
-				doc.synth.snapToLastBar();
+				doc.synth.snapToBar();
 				playButton.label = "Resume Playback";
+			} else {
+				doc.synth.play();
+				playButton.label = "Pause Playback";
 			}
 		}
 		
@@ -138,7 +134,7 @@
 		}
 		
 		private function export(): void {
-			var wasPlaying: Boolean = !doc.synth.paused;
+			var wasPlaying: Boolean = doc.synth.playing;
 			if (wasPlaying) togglePlay();
 			
 			var sampleFrames: int = doc.synth.getTotalSamples();

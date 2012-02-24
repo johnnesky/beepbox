@@ -9,16 +9,19 @@ package beepbox.synth {
 	
 	public class Synth {
 		public const samplesPerSecond: int = 44100;
-		public var playhead: Number = 0.0;
-		public var bar: int = 0;
-		public var beat: int = 0;
-		public var part: int = 0;
-		public var arpeggio: int = 0;
-		public var arpeggioSamples: int = 0;
-		public var paused: Boolean = true;
+		
+		public var song: Song = null;
 		public var pianoPressed: Boolean = false;
 		public var pianoNote: int = 0;
 		public var pianoChannel: int = 0;
+		
+		private var _playhead: Number = 0.0;
+		private var bar: int = 0;
+		private var beat: int = 0;
+		private var part: int = 0;
+		private var arpeggio: int = 0;
+		private var arpeggioSamples: int = 0;
+		private var paused: Boolean = true;
 		private const waves: Vector.<Vector.<Number>> = new <Vector.<Number>> [
 			new <Number>[1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0],
 			new <Number>[1.0, -1.0],
@@ -40,66 +43,70 @@ package beepbox.synth {
 		private var drumPrevSample: Number = 0.0;
 		private var drumBuffer: int = 1;
 		private var stillGoing: Boolean = false;
-		private var song: Song;
+		private var sound: Sound = new Sound();
+		private var soundChannel: SoundChannel = null;
+		private var timer: Timer = new Timer(200, 0);
+		
+		public function get playing(): Boolean {
+			return !paused;
+		}
+		
+		public function get playhead(): Number {
+			return _playhead;
+		}
 		
 		public function Synth(song: Song) {
-			this.song = song;
 			waves.fixed = true;
 			for each (var wave: Vector.<Number> in waves) {
 				wave.fixed = true;
 			}
+			
+			this.song = song;
+			bar = song.loopStart;
+			sound.addEventListener(SampleDataEvent.SAMPLE_DATA, onSampleData, false, 0, true);
+			timer.addEventListener(TimerEvent.TIMER, checkSound);
 		}
 		
 		public function play(): void {
-			bar = song.loopStart;
+			if (!paused) return;
 			paused = false;
-			
-			function onSampleData(event: SampleDataEvent): void {
-				if (paused) {
-					for (var i: int = 0; i < 4096; i++) {
-						event.data.writeFloat(0.0);
-						event.data.writeFloat(0.0);
-					}
-				} else {
-					synthesize(event.data, 4096, true);
-				}
-				stillGoing = true;
-			}
-			
-			var soundChannel: SoundChannel;
-			
-			function checkSound(event: TimerEvent): void {
-				if (!stillGoing) {
-					if (soundChannel != null) {
-						soundChannel.stop();
-					}
-					var sound: Sound = new Sound();
-					sound.addEventListener(SampleDataEvent.SAMPLE_DATA, onSampleData, false, 0, true);
-					soundChannel = sound.play();
-				} else {
-					stillGoing = false;
-				}
-			}
-			
-			var timer: Timer = new Timer(200, 0);
-			timer.addEventListener(TimerEvent.TIMER, checkSound);
+			soundChannel = sound.play();
 			timer.start();
+			stillGoing = true;
 		}
 		
 		public function pause(): void {
+			if (paused) return;
 			paused = true;
+			soundChannel.stop();
+			soundChannel = null;
+			timer.stop();
+			stillGoing = false;
 		}
 		
-		public function unpause(): void {
-			paused = false;
+		public function snapToStart(): void {
+			bar = 0;
+			snapToBar();
 		}
 		
-		public function snapToLastBar(): void {
-			playhead = 0.0;
+		public function snapToBar(): void {
+			_playhead = bar;
 			beat = 0;
 			part = 0;
 			arpeggio = 0;
 			arpeggioSamples = 0;
+		}
+		
+		public function nextBar(): void {
+			bar++;
+			if (bar == Music.numBars) bar = 0;
+			if (bar < song.loopStart || bar >= song.loopStart + song.loopLength) bar = song.loopStart;
+		}
+		
+		public function prevBar(): void {
+			bar--;
+			if (bar < 0) bar = Music.numBars - 1;
+			if (bar < song.loopStart || bar >= song.loopStart + song.loopLength) bar = song.loopStart;
 		}
 		
 		public function getTotalSamples(): int {
@@ -108,6 +115,32 @@ package beepbox.synth {
 		
 		public function getTotalSeconds(): Number {
 			return getTotalSamples() / samplesPerSecond;
+		}
+		
+		private function onSampleData(event: SampleDataEvent): void {
+			if (paused) {
+				return;
+				/*
+				for (var i: int = 0; i < 4096; i++) {
+					event.data.writeFloat(0.0);
+					event.data.writeFloat(0.0);
+				}
+				*/
+			} else {
+				synthesize(event.data, 4096, true);
+			}
+			stillGoing = true;
+		}
+		
+		private function checkSound(event: TimerEvent): void {
+			if (!stillGoing) {
+				if (soundChannel != null) {
+					soundChannel.stop();
+				}
+				soundChannel = sound.play();
+			} else {
+				stillGoing = false;
+			}
 		}
 		
 		public function synthesize(data: ByteArray, totalSamples: int, loop: Boolean): void {
@@ -368,7 +401,7 @@ package beepbox.synth {
 				}
 			}
 			
-			playhead = (((arpeggio + 1.0 - arpeggioSamples / samplesPerArpeggio) / 4.0 + part) / song.parts + beat) / song.beats;
+			_playhead = (((arpeggio + 1.0 - arpeggioSamples / samplesPerArpeggio) / 4.0 + part) / song.parts + beat) / song.beats + bar;
 		}
 		
 		private function frequencyFromPitch(pitch: int): Number {

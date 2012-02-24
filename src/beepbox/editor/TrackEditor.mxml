@@ -81,7 +81,7 @@
 		private function onEnterFrame(event: Event): void {
 			playhead.graphics.clear();
 			playhead.graphics.lineStyle(4, 0xffffff);
-			var pos: Number = barWidth * (doc.synth.bar + doc.synth.playhead);
+			var pos: Number = barWidth * doc.synth.playhead;
 			playhead.graphics.moveTo(pos, 0);
 			playhead.graphics.lineTo(pos, height);
 			playhead.graphics.lineStyle();

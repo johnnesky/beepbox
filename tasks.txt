@@ -58,9 +58,9 @@
 √ take focus from "save as wav" button after clicking it!
 √ changing preferences doesn't need to be undoable but should update display.
 √ save "preferences" to localSharedObject
+√ pausing should actually stop SampleDataEvents
 
 TIMBRE AND CRITICAL:
-- pausing should actually stop SampleDataEvents
 - as3 lib usage example
 - new preferences: follow playhead, autoplay on load?
 - for chorus, have two periods at multiples of the main freq. jitter on arpeggio slices?
