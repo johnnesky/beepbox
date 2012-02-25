@@ -59,9 +59,9 @@
 √ changing preferences doesn't need to be undoable but should update display.
 √ save "preferences" to localSharedObject
 √ pausing should actually stop SampleDataEvents
+√ as3 lib usage example
 
 TIMBRE AND CRITICAL:
-- as3 lib usage example
 - new preferences: follow playhead, autoplay on load?
 - for chorus, have two periods at multiples of the main freq. jitter on arpeggio slices?
 - tremelo/vibrato choices
@@ -70,6 +70,7 @@ PUBLISHING:
 - create public version number
 - link to source in html
 - add copyright disclaimer to page
+- link to twitter
 
 MORE FEATURES:
 - asynchronous wav export
@@ -102,4 +103,5 @@ POLISH:
 - Dim the column occupied by a tone?
 - preload some common tone shapes into the recentShape list
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
+- Get in touch with wonderfl about supporting beepbox
 

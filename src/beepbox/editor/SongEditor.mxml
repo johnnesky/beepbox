@@ -137,7 +137,7 @@
 			var wasPlaying: Boolean = doc.synth.playing;
 			if (wasPlaying) togglePlay();
 			
-			var sampleFrames: int = doc.synth.getTotalSamples();
+			var sampleFrames: int = doc.synth.totalSamples;
 			var recordedSamples: ByteArray = new ByteArray();
 			var timer: int = getTimer();
 			new Synth(doc.song).synthesize(recordedSamples, sampleFrames, false);
