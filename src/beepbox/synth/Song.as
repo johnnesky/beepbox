@@ -70,7 +70,7 @@ package beepbox.synth {
 			for each (channel in [0, 1, 2]) {
 				result += "w" + sixtyfour[channel] + sixtyfour[channelWaves[channel]];
 			}
-			
+			/*
 			for each (channel in [0, 1, 2]) {
 				result += "f" + sixtyfour[channel] + sixtyfour[channelFilters[channel]];
 			}
@@ -78,7 +78,7 @@ package beepbox.synth {
 			for each (channel in [0, 1, 2]) {
 				result += "d" + sixtyfour[channel] + sixtyfour[channelFilterDecays[channel]];
 			}
-			
+			*/
 			for each (channel in [0, 1, 2, 3]) {
 				result += "b" + sixtyfour[channel] + sixtyfour[channelBars[channel].length];
 				bits = new BitField();
@@ -240,7 +240,7 @@ package beepbox.synth {
 						channelWaves[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
 						if (channelWaves[channel] >= Music.waveNames.length) channelWaves[channel] = Music.waveNames.length - 1;
 					}
-				} else if (command == "f") {
+				/*} else if (command == "f") {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					channelFilters[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					if (channelFilters[channel] >= Music.filterNames.length) channelFilters[channel] = Music.filterNames.length - 1;
@@ -248,7 +248,7 @@ package beepbox.synth {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					channelFilterDecays[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					if (channelFilterDecays[channel] >= Music.filterDecayNames.length) channelFilterDecays[channel] = Music.filterDecayNames.length - 1;
-				} else if (command == "b") {
+				*/} else if (command == "b") {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					var barCount: int = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					if (sixBitsPerBar) {

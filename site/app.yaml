@@ -5,9 +5,13 @@ api_version: 1
 
 handlers:
 
-- url: /BeepBox\.swf
-  static_files: BeepBox.swf
-  upload: BeepBox\.swf
+- url: /BeepBoxOnline\.swf
+  static_files: BeepBoxOnline.swf
+  upload: BeepBoxOnline\.swf
+
+- url: /BeepBoxOffline\.swf
+  static_files: BeepBoxOffline.swf
+  upload: BeepBoxOffline\.swf
 
 - url: /favicon\.ico
   static_files: favicon.ico

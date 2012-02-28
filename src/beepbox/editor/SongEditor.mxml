@@ -285,7 +285,7 @@
 		<s:State name="showPiano"/>
 	</s:states>
 	
-	<s:HGroup width="100%">
+	<s:HGroup width="100%" height="100%">
 		<s:VGroup width="512" id="editorBox">
 			<s:HGroup width="512" height="481" gap="0">
 				<Piano id="piano" doc="{doc}" includeIn="showPiano"/>
@@ -294,7 +294,7 @@
 			<TrackEditor doc="{doc}"/>
 			<LoopEditor doc="{doc}"/>
 		</s:VGroup>
-		<s:VGroup width="100%">
+		<s:VGroup width="100%" horizontalAlign="right" height="100%">
 			<s:VGroup id="songSettings" height="481" width="100%">
 				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>
 				<s:Button id="cleanButton" label="Clean slate" click="cleanSlate(); stage.focus = stage" width="100%"/>
@@ -352,17 +352,17 @@
 					<s:Label text="Wave:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="waveDropDown" dataProvider="{waveNames}" width="110" change="onSetWave()" close="stage.focus = stage" right="0">
-						<s:layout> <s:VerticalLayout requestedRowCount="{6}" horizontalAlign="justify"/> </s:layout>
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+				<s:HGroup width="100%" gap="0" verticalAlign="middle" visible="false">
 					<s:Label text="Filter Base:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="75" change="onSetFilter()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{6}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+				<s:HGroup width="100%" gap="0" verticalAlign="middle" visible="false">
 					<s:Label text="Filter Decay:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="filterDecayDropDown" dataProvider="{filterDecayNames}" width="75" change="onSetFilterDecay()" close="stage.focus = stage" right="0">
@@ -370,6 +370,7 @@
 					</s:DropDownList>
 				</s:HGroup>
 			</s:VGroup>
+			<s:Label text="Beep Box version 1.0" color="0xbbbbbb" right="0"/>
 		</s:VGroup>
 	</s:HGroup>
 </s:BorderContainer>

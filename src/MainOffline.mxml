@@ -3,7 +3,7 @@
                xmlns:s="library://ns.adobe.com/flex/spark"
 			   xmlns="beepbox.editor.*"
                width="675"
-               height="680"
+               height="675"
                backgroundColor="0x000000"
                frameRate="60"
                applicationComplete="init()">
