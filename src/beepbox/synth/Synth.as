@@ -183,14 +183,14 @@ package beepbox.synth {
 			const harmonyWaveLength: int = harmonyWave.length;
 			const bassWaveLength: int = bassWave.length;
 			
-			const leadFilterBase: Number = Math.pow(2, -Music.filterValues[song.channelFilters[0]]);
-			const harmonyFilterBase: Number = Math.pow(2, -Music.filterValues[song.channelFilters[1]]);
-			const bassFilterBase: Number = Math.pow(2, -Music.filterValues[song.channelFilters[2]]);
+			const leadFilterBase: Number = Math.pow(2, -Music.filterBases[song.channelFilters[0]]);
+			const harmonyFilterBase: Number = Math.pow(2, -Music.filterBases[song.channelFilters[1]]);
+			const bassFilterBase: Number = Math.pow(2, -Music.filterBases[song.channelFilters[2]]);
 			const drumFilter: Number = 0.2;
 			
-			const leadFilterScale: Number = Math.pow(2, -Music.filterDecayValues[song.channelFilterDecays[0]] / samplesPerSecond);
-			const harmonyFilterScale: Number = Math.pow(2, -Music.filterDecayValues[song.channelFilterDecays[1]] / samplesPerSecond);
-			const bassFilterScale: Number = Math.pow(2, -Music.filterDecayValues[song.channelFilterDecays[2]] / samplesPerSecond);
+			const leadFilterScale: Number = Math.pow(2, -Music.filterDecays[song.channelFilters[0]] / samplesPerSecond);
+			const harmonyFilterScale: Number = Math.pow(2, -Music.filterDecays[song.channelFilters[1]] / samplesPerSecond);
+			const bassFilterScale: Number = Math.pow(2, -Music.filterDecays[song.channelFilters[2]] / samplesPerSecond);
 			
 			//pow( self->channels[i].lowPassScale, time )
 			
@@ -322,7 +322,7 @@ package beepbox.synth {
 						volumeDelta = (endVol - startVol) / samples;
 						
 						var timeSinceStart: Number = (((time - tone.start) * 4.0 + arpeggio + 1.0) * samplesPerArpeggio - arpeggioSamples) / samplesPerSecond;
-						filter = channel == 3 ? 1.0 : Math.pow(2, -Music.filterDecayValues[song.channelFilterDecays[channel]] * timeSinceStart);
+						filter = channel == 3 ? 1.0 : Math.pow(2, -Music.filterDecays[song.channelFilters[channel]] * timeSinceStart);
 					}
 					
 					if (channel == 0) {
