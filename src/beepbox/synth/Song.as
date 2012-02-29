@@ -13,7 +13,6 @@ package beepbox.synth {
 		public var channelBars: Array;
 		public var channelWaves: Array;
 		public var channelFilters: Array;
-		public var channelFilterDecays: Array;
 		
 		private static const sixtyfour: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
 		
@@ -41,8 +40,7 @@ package beepbox.synth {
 				[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 			];
 			channelWaves = [1,1,1];
-			channelFilters = [1,1,1];
-			channelFilterDecays = [0,0,0];
+			channelFilters = [0,0,0];
 			scale = 0;
 			key = Music.keyNames.length - 1;
 			loopStart = 0;
@@ -70,15 +68,11 @@ package beepbox.synth {
 			for each (channel in [0, 1, 2]) {
 				result += "w" + sixtyfour[channel] + sixtyfour[channelWaves[channel]];
 			}
-			/*
+			
 			for each (channel in [0, 1, 2]) {
 				result += "f" + sixtyfour[channel] + sixtyfour[channelFilters[channel]];
 			}
 			
-			for each (channel in [0, 1, 2]) {
-				result += "d" + sixtyfour[channel] + sixtyfour[channelFilterDecays[channel]];
-			}
-			*/
 			for each (channel in [0, 1, 2, 3]) {
 				result += "b" + sixtyfour[channel] + sixtyfour[channelBars[channel].length];
 				bits = new BitField();
@@ -240,15 +234,11 @@ package beepbox.synth {
 						channelWaves[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
 						if (channelWaves[channel] >= Music.waveNames.length) channelWaves[channel] = Music.waveNames.length - 1;
 					}
-				/*} else if (command == "f") {
+				} else if (command == "f") {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					channelFilters[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					if (channelFilters[channel] >= Music.filterNames.length) channelFilters[channel] = Music.filterNames.length - 1;
-				} else if (command == "d") {
-					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
-					channelFilterDecays[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
-					if (channelFilterDecays[channel] >= Music.filterDecayNames.length) channelFilterDecays[channel] = Music.filterDecayNames.length - 1;
-				*/} else if (command == "b") {
+				} else if (command == "b") {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					var barCount: int = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					if (sixBitsPerBar) {

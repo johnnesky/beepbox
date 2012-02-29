@@ -39,8 +39,6 @@
 		private var waveNames: ArrayCollection;
 		[Bindable]
 		private var filterNames: ArrayCollection;
-		[Bindable]
-		private var filterDecayNames: ArrayCollection;
 		
 		public function init():void {
 			scaleNames = new ArrayCollection(Music.scaleNames);
@@ -50,7 +48,6 @@
 			partNames = new ArrayCollection(Music.partNames);
 			waveNames = new ArrayCollection(Music.waveNames);
 			filterNames = new ArrayCollection(Music.filterNames);
-			filterDecayNames = new ArrayCollection(Music.filterDecayNames);
 			doc.watch(onUpdated);
 			onUpdated();
 			
@@ -76,7 +73,6 @@
 				channelSettings.visible = true;
 				waveDropDown.selectedIndex = doc.song.channelWaves[doc.channel];
 				filterDropDown.selectedIndex = doc.song.channelFilters[doc.channel];
-				filterDecayDropDown.selectedIndex = doc.song.channelFilterDecays[doc.channel];
 			}
 			currentState = doc.showLetters ? "showPiano" : "hidePiano";
 			barEditor.width = doc.showLetters ? 480 : 512;
@@ -255,12 +251,6 @@
 			doc.history.record(new ChangeFilter(doc, filter));
 		}
 		
-		private function onSetFilterDecay(): void {
-			var filterDecay: int = filterDecayDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeFilterDecay) doc.history.undo();
-			doc.history.record(new ChangeFilterDecay(doc, filterDecay));
-		}
-		
 		private function toggleLetters(): void {
 			doc.showLetters = !doc.showLetters;
 			doc.changed();
@@ -355,17 +345,10 @@
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle" visible="false">
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Filter Base:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="75" change="onSetFilter()" close="stage.focus = stage" right="0">
-						<s:layout> <s:VerticalLayout requestedRowCount="{6}" horizontalAlign="justify"/> </s:layout>
-					</s:DropDownList>
-				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle" visible="false">
-					<s:Label text="Filter Decay:" color="0xbbbbbb"/>
-					<s:Spacer width="100%"/>
-					<s:DropDownList id="filterDecayDropDown" dataProvider="{filterDecayNames}" width="75" change="onSetFilterDecay()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{6}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
