@@ -64,15 +64,10 @@
 √ create README
 √ create public version number
 √ reenable filter in one drop down menu
+√ tremelo/vibrato choices
+√ for chorus, have two periods at multiples of the main freq. jitter on arpeggio slices?
 
 NEXT VERSION:
-- options for timing offset
-- rapid note fadeout at end. 
-- when tone ends reset period
-- options for attack duration
-- for chorus, have two periods at multiples of the main freq. jitter on arpeggio slices?
-- tremelo/vibrato choices
-- use highpass to center output.
 - volume pins, correctly moving pins when swingifying
 - create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
 - add license to code
@@ -85,6 +80,10 @@ NEXT VERSION:
 - mute button per channel
 
 MORE FEATURES:
+- options for timing offset
+- rapid note fadeout at end. 
+- when tone ends reset period
+- options for attack duration
 - asynchronous wav export
 - web interface to share songs so that other visitors can see them. let users enter a name and a "password", which can just be an email address, which is used to generate a "retro" gravatar identicon. 
 - octave scrolling
@@ -93,6 +92,8 @@ MORE FEATURES:
 - custom bar count and pattern count for advanced users. 
 
 POLISH:
+- use highpass to center output.
+- optimize those Math functions in Synth
 - a way to convert a byte array to a first class Flash Sound object. 
 - new preferences: follow playhead, autoplay on load?
 - save most recent song to localSO so that it doesn't accidentally get lost when window closes
