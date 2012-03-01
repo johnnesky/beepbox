@@ -70,9 +70,9 @@
 √ add license to code
 √ link to source in html
 √ link to offline version
+√ add copyright disclaimer to page
 
 NEXT VERSION:
-- add copyright disclaimer to page
 - link to twitter
 - donation button
 
