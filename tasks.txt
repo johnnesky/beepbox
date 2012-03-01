@@ -66,20 +66,19 @@
 √ reenable filter in one drop down menu
 √ tremelo/vibrato choices
 √ for chorus, have two periods at multiples of the main freq. jitter on arpeggio slices?
+√ volume options per channel
+√ add license to code
+√ link to source in html
+√ link to offline version
 
 NEXT VERSION:
-- volume pins, correctly moving pins when swingifying
-- create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
-- add license to code
-- link to source in html
-- link to offline version
 - add copyright disclaimer to page
 - link to twitter
 - donation button
-- volume sliders per channel like the humble bundle distribution sliders... on second thought this auto balancing doesn't work well on a per-pattern basis. nevermind?
-- mute button per channel
 
 MORE FEATURES:
+- volume pins, correctly moving pins when swingifying
+- create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
 - options for timing offset
 - rapid note fadeout at end. 
 - when tone ends reset period
