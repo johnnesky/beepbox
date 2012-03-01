@@ -76,7 +76,7 @@ NEXT VERSION:
 - add copyright disclaimer to page
 - link to twitter
 - donation button
-- volume sliders per channel like the humble bundle distribution sliders... on second thought this doesn't work well on a per-pattern basis. nevermind?
+- volume sliders per channel like the humble bundle distribution sliders... on second thought this auto balancing doesn't work well on a per-pattern basis. nevermind?
 - mute button per channel
 
 MORE FEATURES:
