@@ -9,6 +9,21 @@ package beepbox.synth {
 	
 	public class Synth {
 		public const samplesPerSecond: int = 44100;
+		private const effectDuration: Number = 0.15;
+		private const effectAngle: Number = Math.PI * 2.0 / (effectDuration * samplesPerSecond);
+		private const effectYMult: Number = 2.0 * Math.cos( effectAngle );
+		private const vibratoDepth: Number = Math.pow( 2.0, 0.4 / 12.0 ) - 1.0;
+		private const waves: Vector.<Vector.<Number>> = new <Vector.<Number>> [
+			new <Number>[1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0],
+			new <Number>[1.0, -1.0],
+			new <Number>[1.0, -1.0, -1.0, -1.0],
+			new <Number>[1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
+			new <Number>[1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0],
+			new <Number>[0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2, ],
+			new <Number>[1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0],
+			new <Number>[1.0, -1.0, 1.0, -1.0, 1.0, 0.0],
+			new <Number>[0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2, ],
+		];
 		
 		public var song: Song = null;
 		public var pianoPressed: Boolean = false;
@@ -22,22 +37,14 @@ package beepbox.synth {
 		private var arpeggio: int = 0;
 		private var arpeggioSamples: int = 0;
 		private var paused: Boolean = true;
-		private const waves: Vector.<Vector.<Number>> = new <Vector.<Number>> [
-			new <Number>[1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0],
-			new <Number>[1.0, -1.0],
-			new <Number>[1.0, -1.0, -1.0, -1.0],
-			new <Number>[1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
-			new <Number>[1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0],
-			new <Number>[0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2, ],
-			new <Number>[1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0],
-			new <Number>[1.0, -1.0, 1.0, -1.0, 1.0, 0.0],
-			new <Number>[0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2, ],
-		];
-		private var leadPeriod: Number = 0.0;
+		private var leadPeriodA: Number = 0.0;
+		private var leadPeriodB: Number = 0.0;
 		private var leadPrevSample: Number = 0.0;
-		private var harmonyPeriod: Number = 0.0;
+		private var harmonyPeriodA: Number = 0.0;
+		private var harmonyPeriodB: Number = 0.0;
 		private var harmonyPrevSample: Number = 0.0;
-		private var bassPeriod: Number = 0.0;
+		private var bassPeriodA: Number = 0.0;
+		private var bassPeriodB: Number = 0.0;
 		private var bassPrevSample: Number = 0.0;
 		private var drumPeriod: Number = 0.0;
 		private var drumPrevSample: Number = 0.0;
@@ -46,6 +53,7 @@ package beepbox.synth {
 		private var sound: Sound = new Sound();
 		private var soundChannel: SoundChannel = null;
 		private var timer: Timer = new Timer(200, 0);
+		private var effectPeriod: Number = 0.0;
 		
 		public function get playing(): Boolean {
 			return !paused;
@@ -118,6 +126,7 @@ package beepbox.synth {
 			part = 0;
 			arpeggio = 0;
 			arpeggioSamples = 0;
+			effectPeriod = 0.0;
 		}
 		
 		public function nextBar(): void {
@@ -170,29 +179,38 @@ package beepbox.synth {
 			const sampleTime: Number = 1.0 / samplesPerSecond;
 			const samplesPerArpeggio: int = getSamplesPerArpeggio();
 			
-			const maxLeadVolume:    Number = Music.channelVolumes[0] * Music.waveVolumes[song.channelWaves[0]];
-			const maxHarmonyVolume: Number = Music.channelVolumes[1] * Music.waveVolumes[song.channelWaves[1]];
-			const maxBassVolume:    Number = Music.channelVolumes[2] * Music.waveVolumes[song.channelWaves[2]];
+			const maxLeadVolume:    Number = Music.channelVolumes[0] * Music.waveVolumes[song.channelWaves[0]] * Music.filterVolumes[song.channelFilters[0]] * 0.5;
+			const maxHarmonyVolume: Number = Music.channelVolumes[1] * Music.waveVolumes[song.channelWaves[1]] * Music.filterVolumes[song.channelFilters[1]] * 0.5;
+			const maxBassVolume:    Number = Music.channelVolumes[2] * Music.waveVolumes[song.channelWaves[2]] * Music.filterVolumes[song.channelFilters[2]] * 0.5;
 			const maxDrumVolume:    Number = Music.channelVolumes[3];
 			
-			const leadWave: Vector.<Number> = waves[song.channelWaves[0]];
+			const leadWave:    Vector.<Number> = waves[song.channelWaves[0]];
 			const harmonyWave: Vector.<Number> = waves[song.channelWaves[1]];
-			const bassWave: Vector.<Number> = waves[song.channelWaves[2]];
+			const bassWave:    Vector.<Number> = waves[song.channelWaves[2]];
 			
-			const leadWaveLength: int = leadWave.length;
+			const leadWaveLength:    int = leadWave.length;
 			const harmonyWaveLength: int = harmonyWave.length;
-			const bassWaveLength: int = bassWave.length;
+			const bassWaveLength:    int = bassWave.length;
 			
-			const leadFilterBase: Number = Math.pow(2, -Music.filterBases[song.channelFilters[0]]);
+			const leadFilterBase:    Number = Math.pow(2, -Music.filterBases[song.channelFilters[0]]);
 			const harmonyFilterBase: Number = Math.pow(2, -Music.filterBases[song.channelFilters[1]]);
-			const bassFilterBase: Number = Math.pow(2, -Music.filterBases[song.channelFilters[2]]);
+			const bassFilterBase:    Number = Math.pow(2, -Music.filterBases[song.channelFilters[2]]);
 			const drumFilter: Number = 0.2;
 			
-			const leadFilterScale: Number = Math.pow(2, -Music.filterDecays[song.channelFilters[0]] / samplesPerSecond);
+			const leadFilterScale:    Number = Math.pow(2, -Music.filterDecays[song.channelFilters[0]] / samplesPerSecond);
 			const harmonyFilterScale: Number = Math.pow(2, -Music.filterDecays[song.channelFilters[1]] / samplesPerSecond);
-			const bassFilterScale: Number = Math.pow(2, -Music.filterDecays[song.channelFilters[2]] / samplesPerSecond);
+			const bassFilterScale:    Number = Math.pow(2, -Music.filterDecays[song.channelFilters[2]] / samplesPerSecond);
 			
-			//pow( self->channels[i].lowPassScale, time )
+			const leadTremeloScale:    Number = song.channelEffects[0] == 3 ? 0.5 : (song.channelEffects[0] == 4 ? 0.25 : 0.0);
+			const harmonyTremeloScale: Number = song.channelEffects[1] == 3 ? 0.5 : (song.channelEffects[1] == 4 ? 0.25 : 0.0);
+			const bassTremeloScale:    Number = song.channelEffects[2] == 3 ? 0.5 : (song.channelEffects[2] == 4 ? 0.25 : 0.0);
+			
+			const leadChorusA:    Number = Math.pow( 2.0, Music.chorusValues[song.channelChorus[0]] / 12.0 );
+			const harmonyChorusA: Number = Math.pow( 2.0, Music.chorusValues[song.channelChorus[1]] / 12.0 );
+			const bassChorusA:    Number = Math.pow( 2.0, Music.chorusValues[song.channelChorus[2]] / 12.0 );
+			const leadChorusB:    Number = Math.pow( 2.0, -Music.chorusValues[song.channelChorus[0]] / 12.0 );
+			const harmonyChorusB: Number = Math.pow( 2.0, -Music.chorusValues[song.channelChorus[1]] / 12.0 );
+			const bassChorusB:    Number = Math.pow( 2.0, -Music.chorusValues[song.channelChorus[2]] / 12.0 );
 			
 			if (arpeggioSamples == 0 || arpeggioSamples > samplesPerArpeggio) {
 				arpeggioSamples = samplesPerArpeggio;
@@ -229,16 +247,19 @@ package beepbox.synth {
 				var leadVolume: Number;
 				var leadVolumeDelta: Number;
 				var leadFilter: Number;
+				var leadVibratoScale: Number;
 				var harmonyPeriodDelta: Number;
 				var harmonyPeriodDeltaScale: Number;
 				var harmonyVolume: Number;
 				var harmonyVolumeDelta: Number;
 				var harmonyFilter: Number;
+				var harmonyVibratoScale: Number;
 				var bassPeriodDelta: Number;
 				var bassPeriodDeltaScale: Number;
 				var bassVolume: Number;
 				var bassVolumeDelta: Number;
 				var bassFilter: Number;
+				var bassVibratoScale: Number;
 				var drumPeriodDelta: Number;
 				var drumPeriodDeltaScale: Number;
 				var drumVolume: Number;
@@ -267,19 +288,21 @@ package beepbox.synth {
 					var volume: Number;
 					var volumeDelta: Number;
 					var filter: Number;
-					var filterScale: Number;
+					var vibratoScale: Number;
 					if (pianoPressed && channel == pianoChannel) {
 						periodDelta = frequencyFromPitch(pitch + channelRoot + pianoNote * intervalScale) * sampleTime;
 						periodDeltaScale = 1.0;
 						volume = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + pianoNote) / 48.0);
 						volumeDelta = 0.0;
 						filter = 1.0;
+						vibratoScale = 0.0;
 					} else if (tone == null) {
 						periodDelta = 0.0;
 						periodDeltaScale = 0.0;
 						volume = 0.0;
 						volumeDelta = 0.0;
 						filter = 1.0;
+						vibratoScale = 0.0;
 					} else {
 						if (tone.notes.length == 2) {
 							pitch += tone.notes[arpeggio >> 1];
@@ -323,6 +346,8 @@ package beepbox.synth {
 						
 						var timeSinceStart: Number = (((time - tone.start) * 4.0 + arpeggio + 1.0) * samplesPerArpeggio - arpeggioSamples) / samplesPerSecond;
 						filter = channel == 3 ? 1.0 : Math.pow(2, -Music.filterDecays[song.channelFilters[channel]] * timeSinceStart);
+						
+						vibratoScale = (song.channelEffects[channel] == 2 && time - tone.start >= 3) ? vibratoDepth : (song.channelEffects[channel] == 1 ? vibratoDepth : 0.0);
 					}
 					
 					if (channel == 0) {
@@ -331,21 +356,33 @@ package beepbox.synth {
 						leadVolume = volume * maxLeadVolume;
 						leadVolumeDelta = volumeDelta * maxLeadVolume;
 						leadFilter = filter * leadFilterBase;
-						if (leadVolume == 0.0) leadPeriod = 0.0;
+						leadVibratoScale = vibratoScale;
+						if (leadVolume == 0.0) {
+							leadPeriodA = 0.0;
+							leadPeriodB = 0.0;
+						}
 					} else if (channel == 1) {
 						harmonyPeriodDelta = periodDelta;
 						harmonyPeriodDeltaScale = periodDeltaScale;
 						harmonyVolume = volume * maxHarmonyVolume;
 						harmonyVolumeDelta = volumeDelta * maxHarmonyVolume;
 						harmonyFilter = filter * harmonyFilterBase;
-						if (harmonyVolume == 0.0) harmonyPeriod = 0.0;
+						harmonyVibratoScale = vibratoScale;
+						if (harmonyVolume == 0.0) {
+							harmonyPeriodA = 0.0;
+							harmonyPeriodB = 0.0;
+						}
 					} else if (channel == 2) {
 						bassPeriodDelta = periodDelta;
 						bassPeriodDeltaScale = periodDeltaScale;
 						bassVolume = volume * maxBassVolume;
 						bassVolumeDelta = volumeDelta * maxBassVolume;
 						bassFilter = filter * bassFilterBase;
-						if (bassVolume == 0.0) bassPeriod = 0.0;
+						bassVibratoScale = vibratoScale;
+						if (bassVolume == 0.0) {
+							bassPeriodA = 0.0;
+							bassPeriodB = 0.0;
+						}
 					} else if (channel == 3) {
 						drumPeriodDelta = periodDelta;
 						drumPeriodDeltaScale = periodDeltaScale;
@@ -355,30 +392,48 @@ package beepbox.synth {
 					}
 				}
 				
+				var effectY:     Number = Math.sin( effectPeriod );
+				var prevEffectY: Number = Math.sin( effectPeriod - effectAngle );
+				
 				while (samples > 0) {
 					var sample: Number = 0.0;
+					var leadVibrato:    Number = 1.0 + leadVibratoScale    * effectY;
+					var harmonyVibrato: Number = 1.0 + harmonyVibratoScale * effectY;
+					var bassVibrato:    Number = 1.0 + bassVibratoScale    * effectY;
+					var leadTremelo:    Number = 1.0 + leadTremeloScale    * (effectY - 1.0);
+					var harmonyTremelo: Number = 1.0 + harmonyTremeloScale * (effectY - 1.0);
+					var bassTremelo:    Number = 1.0 + bassTremeloScale    * (effectY - 1.0);
+					var temp: Number = effectY;
+					effectY = effectYMult * effectY - prevEffectY;
+					prevEffectY = temp;
 					
-					leadPrevSample += (leadWave[int(leadPeriod * leadWaveLength)] * leadVolume - leadPrevSample) * leadFilter;
+					leadPrevSample += ((leadWave[int(leadPeriodA * leadWaveLength)] + leadWave[int(leadPeriodB * leadWaveLength)]) * leadVolume * leadTremelo - leadPrevSample) * leadFilter;
 					leadVolume += leadVolumeDelta;
-					leadPeriod += leadPeriodDelta;
+					leadPeriodA += leadPeriodDelta * leadVibrato * leadChorusA;
+					leadPeriodB += leadPeriodDelta * leadVibrato * leadChorusB;
 					leadPeriodDelta *= leadPeriodDeltaScale;
-					leadPeriod -= int(leadPeriod);
+					leadPeriodA -= int(leadPeriodA);
+					leadPeriodB -= int(leadPeriodB);
 					leadFilter *= leadFilterScale;
 					sample += leadPrevSample;
 					
-					harmonyPrevSample += (harmonyWave[int(harmonyPeriod * harmonyWaveLength)] * harmonyVolume - harmonyPrevSample) * harmonyFilter;
+					harmonyPrevSample += ((harmonyWave[int(harmonyPeriodA * harmonyWaveLength)] + harmonyWave[int(harmonyPeriodB * harmonyWaveLength)]) * harmonyVolume * harmonyTremelo - harmonyPrevSample) * harmonyFilter;
 					harmonyVolume += harmonyVolumeDelta;
-					harmonyPeriod += harmonyPeriodDelta;
+					harmonyPeriodA += harmonyPeriodDelta * bassVibrato * harmonyChorusA;
+					harmonyPeriodB += harmonyPeriodDelta * bassVibrato * harmonyChorusB;
 					harmonyPeriodDelta *= harmonyPeriodDeltaScale;
-					harmonyPeriod -= int(harmonyPeriod);
+					harmonyPeriodA -= int(harmonyPeriodA);
+					harmonyPeriodB -= int(harmonyPeriodB);
 					harmonyFilter *= harmonyFilterScale;
 					sample += harmonyPrevSample;
 					
-					bassPrevSample += (bassWave[int(bassPeriod * bassWaveLength)] * bassVolume - bassPrevSample) * bassFilter;
+					bassPrevSample += ((bassWave[int(bassPeriodA * bassWaveLength)] + bassWave[int(bassPeriodB * bassWaveLength)]) * bassVolume * bassTremelo - bassPrevSample) * bassFilter;
 					bassVolume += bassVolumeDelta;
-					bassPeriod += bassPeriodDelta;
+					bassPeriodA += bassPeriodDelta * bassVibrato * bassChorusA;
+					bassPeriodB += bassPeriodDelta * bassVibrato * bassChorusB;
 					bassPeriodDelta *= bassPeriodDeltaScale;
-					bassPeriod -= int(bassPeriod);
+					bassPeriodA -= int(bassPeriodA);
+					bassPeriodB -= int(bassPeriodB);
 					bassFilter *= bassFilterScale;
 					sample += bassPrevSample;
 					
@@ -400,7 +455,12 @@ package beepbox.synth {
 					data.writeFloat(sample);
 					samples--;
 				}
-					
+				
+				if ( effectYMult * effectY - prevEffectY > prevEffectY )
+					effectPeriod = Math.asin( effectY );
+				else
+					effectPeriod = Math.PI - Math.asin( effectY );
+				
 				if (arpeggioSamples == 0) {
 					arpeggio++;
 					arpeggioSamples = samplesPerArpeggio;
@@ -412,6 +472,7 @@ package beepbox.synth {
 							beat++;
 							if (beat == song.beats) {
 								beat = 0;
+								effectPeriod = 0.0;
 								bar++;
 								if (loop && (bar < song.loopStart || bar >= song.loopStart + song.loopLength)) {
 									bar = song.loopStart;

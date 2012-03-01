@@ -39,6 +39,10 @@
 		private var waveNames: ArrayCollection;
 		[Bindable]
 		private var filterNames: ArrayCollection;
+		[Bindable]
+		private var effectNames: ArrayCollection;
+		[Bindable]
+		private var chorusNames: ArrayCollection;
 		
 		public function init():void {
 			scaleNames = new ArrayCollection(Music.scaleNames);
@@ -48,6 +52,8 @@
 			partNames = new ArrayCollection(Music.partNames);
 			waveNames = new ArrayCollection(Music.waveNames);
 			filterNames = new ArrayCollection(Music.filterNames);
+			effectNames = new ArrayCollection(Music.effectNames);
+			chorusNames = new ArrayCollection(Music.chorusNames);
 			doc.watch(onUpdated);
 			onUpdated();
 			
@@ -73,6 +79,8 @@
 				channelSettings.visible = true;
 				waveDropDown.selectedIndex = doc.song.channelWaves[doc.channel];
 				filterDropDown.selectedIndex = doc.song.channelFilters[doc.channel];
+				effectDropDown.selectedIndex = doc.song.channelEffects[doc.channel];
+				chorusDropDown.selectedIndex = doc.song.channelChorus[doc.channel];
 			}
 			currentState = doc.showLetters ? "showPiano" : "hidePiano";
 			barEditor.width = doc.showLetters ? 480 : 512;
@@ -137,7 +145,7 @@
 			var recordedSamples: ByteArray = new ByteArray();
 			var timer: int = getTimer();
 			new Synth(doc.song).synthesize(recordedSamples, sampleFrames, false);
-			//trace("export timer", getTimer() - timer);
+			trace("export timer", getTimer() - timer);
 			
 			var srcChannelCount: int = 2;
 			var wavChannelCount: int = 1;
@@ -251,6 +259,18 @@
 			doc.history.record(new ChangeFilter(doc, filter));
 		}
 		
+		private function onSetEffect(): void {
+			var effect: int = effectDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeEffect) doc.history.undo();
+			doc.history.record(new ChangeEffect(doc, effect));
+		}
+		
+		private function onSetChorus(): void {
+			var chorus: int = chorusDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeChorus) doc.history.undo();
+			doc.history.record(new ChangeChorus(doc, chorus));
+		}
+		
 		private function toggleLetters(): void {
 			doc.showLetters = !doc.showLetters;
 			doc.changed();
@@ -346,10 +366,24 @@
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
-					<s:Label text="Filter Base:" color="0xbbbbbb"/>
+					<s:Label text="Effect:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="75" change="onSetFilter()" close="stage.focus = stage" right="0">
-						<s:layout> <s:VerticalLayout requestedRowCount="{6}" horizontalAlign="justify"/> </s:layout>
+					<s:DropDownList id="effectDropDown" dataProvider="{effectNames}" width="110" change="onSetEffect()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Chorus:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="chorusDropDown" dataProvider="{chorusNames}" width="110" change="onSetChorus()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Filter:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="110" change="onSetFilter()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 			</s:VGroup>

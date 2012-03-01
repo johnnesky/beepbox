@@ -13,6 +13,8 @@ package beepbox.synth {
 		public var channelBars: Array;
 		public var channelWaves: Array;
 		public var channelFilters: Array;
+		public var channelEffects: Array;
+		public var channelChorus: Array;
 		
 		private static const sixtyfour: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
 		
@@ -41,6 +43,8 @@ package beepbox.synth {
 			];
 			channelWaves = [1,1,1];
 			channelFilters = [0,0,0];
+			channelEffects = [0,0,0];
+			channelChorus  = [0,0,0];
 			scale = 0;
 			key = Music.keyNames.length - 1;
 			loopStart = 0;
@@ -71,6 +75,14 @@ package beepbox.synth {
 			
 			for each (channel in [0, 1, 2]) {
 				result += "f" + sixtyfour[channel] + sixtyfour[channelFilters[channel]];
+			}
+			
+			for each (channel in [0, 1, 2]) {
+				result += "c" + sixtyfour[channel] + sixtyfour[channelEffects[channel]];
+			}
+			
+			for each (channel in [0, 1, 2]) {
+				result += "h" + sixtyfour[channel] + sixtyfour[channelChorus[channel]];
 			}
 			
 			for each (channel in [0, 1, 2, 3]) {
@@ -238,6 +250,14 @@ package beepbox.synth {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					channelFilters[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					if (channelFilters[channel] >= Music.filterNames.length) channelFilters[channel] = Music.filterNames.length - 1;
+				} else if (command == "c") {
+					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
+					channelEffects[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
+					if (channelEffects[channel] >= Music.effectNames.length) channelEffects[channel] = Music.effectNames.length - 1;
+				} else if (command == "h") {
+					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
+					channelChorus[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
+					if (channelChorus[channel] >= Music.chorusNames.length) channelChorus[channel] = Music.chorusNames.length - 1;
 				} else if (command == "b") {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					var barCount: int = sixtyfour.indexOf(compressed.charAt(charIndex++));
