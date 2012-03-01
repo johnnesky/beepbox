@@ -152,19 +152,27 @@ package beepbox.synth {
 		}
 		
 		public function nextBar(): void {
+			var oldBar: int = bar;
 			bar++;
-			if (bar == Music.numBars) bar = 0;
-			if (song != null) {
-				if (bar < song.loopStart || bar >= song.loopStart + song.loopLength) bar = song.loopStart;
+			if (bar == Music.numBars) {
+				bar = 0;
 			}
+			if (song != null && bar < song.loopStart || bar >= song.loopStart + song.loopLength) {
+				bar = song.loopStart;
+			}
+			_playhead += bar - oldBar;
 		}
 		
 		public function prevBar(): void {
+			var oldBar: int = bar;
 			bar--;
-			if (bar < 0) bar = Music.numBars - 1;
-			if (song != null) {
-				if (bar < song.loopStart || bar >= song.loopStart + song.loopLength) bar = song.loopStart;
+			if (bar < 0) {
+				bar = Music.numBars - 1;
 			}
+			if (song != null && bar < song.loopStart || bar >= song.loopStart + song.loopLength) {
+				bar = song.loopStart + song.loopLength - 1;
+			}
+			_playhead += bar - oldBar;
 		}
 		
 		private function onSampleData(event: SampleDataEvent): void {
@@ -441,8 +449,8 @@ package beepbox.synth {
 					
 					harmonyPrevSample += ((harmonyWave[int(harmonyPeriodA * harmonyWaveLength)] + harmonyWave[int(harmonyPeriodB * harmonyWaveLength)]) * harmonyVolume * harmonyTremelo - harmonyPrevSample) * harmonyFilter;
 					harmonyVolume += harmonyVolumeDelta;
-					harmonyPeriodA += harmonyPeriodDelta * bassVibrato * harmonyChorusA;
-					harmonyPeriodB += harmonyPeriodDelta * bassVibrato * harmonyChorusB;
+					harmonyPeriodA += harmonyPeriodDelta * harmonyVibrato * harmonyChorusA;
+					harmonyPeriodB += harmonyPeriodDelta * harmonyVibrato * harmonyChorusB;
 					harmonyPeriodDelta *= harmonyPeriodDeltaScale;
 					harmonyPeriodA -= int(harmonyPeriodA);
 					harmonyPeriodB -= int(harmonyPeriodB);
