@@ -88,7 +88,8 @@ MORE FEATURES:
 - octave scrolling
 - copy paste patterns, octave transposing
 - a flag: "patterns share settings" or "unify channel settings" or whatever
-- custom bar count and pattern count for advanced users. 
+- extend bar count and pattern count for advanced users. 
+- transpose an entire bar, see lower norfair song...
 
 POLISH:
 - use highpass to center output.
