@@ -71,10 +71,10 @@
 √ link to source in html
 √ link to offline version
 √ add copyright disclaimer to page
+√ link to twitter
+√ donation button
 
 NEXT VERSION:
-- link to twitter
-- donation button
 
 MORE FEATURES:
 - volume pins, correctly moving pins when swingifying
