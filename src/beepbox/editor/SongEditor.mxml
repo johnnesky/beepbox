@@ -43,6 +43,8 @@
 		private var effectNames: ArrayCollection;
 		[Bindable]
 		private var chorusNames: ArrayCollection;
+		[Bindable]
+		private var volumeNames: ArrayCollection;
 		
 		public function init():void {
 			scaleNames = new ArrayCollection(Music.scaleNames);
@@ -54,6 +56,7 @@
 			filterNames = new ArrayCollection(Music.filterNames);
 			effectNames = new ArrayCollection(Music.effectNames);
 			chorusNames = new ArrayCollection(Music.chorusNames);
+			volumeNames = new ArrayCollection(Music.volumeNames);
 			doc.watch(onUpdated);
 			onUpdated();
 			
@@ -75,12 +78,15 @@
 			showChannels.selected = doc.showChannels;
 			if (doc.channel == 3) {
 				channelSettings.visible = false;
+				channelSettingsLabel.visible = false;
 			} else {
 				channelSettings.visible = true;
+				channelSettingsLabel.visible = true;
 				waveDropDown.selectedIndex = doc.song.channelWaves[doc.channel];
 				filterDropDown.selectedIndex = doc.song.channelFilters[doc.channel];
 				effectDropDown.selectedIndex = doc.song.channelEffects[doc.channel];
 				chorusDropDown.selectedIndex = doc.song.channelChorus[doc.channel];
+				volumeDropDown.selectedIndex = doc.song.channelVolumes[doc.channel];
 			}
 			currentState = doc.showLetters ? "showPiano" : "hidePiano";
 			barEditor.width = doc.showLetters ? 480 : 512;
@@ -271,6 +277,12 @@
 			doc.history.record(new ChangeChorus(doc, chorus));
 		}
 		
+		private function onSetVolume(): void {
+			var volume: int = volumeDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeVolume) doc.history.undo();
+			doc.history.record(new ChangeVolume(doc, volume));
+		}
+		
 		private function toggleLetters(): void {
 			doc.showLetters = !doc.showLetters;
 			doc.changed();
@@ -304,8 +316,13 @@
 			<TrackEditor doc="{doc}"/>
 			<LoopEditor doc="{doc}"/>
 		</s:VGroup>
-		<s:VGroup width="100%" horizontalAlign="right" height="100%">
+		<s:VGroup width="100%" height="100%">
 			<s:VGroup id="songSettings" height="481" width="100%">
+				<s:HGroup width="100%" verticalAlign="middle">
+					<s:Spacer width="50%"/>
+					<s:Label text="Beep Box version 1.0" color="0xbbbbbb" right="0"/>
+					<s:Spacer width="50%"/>
+				</s:HGroup>
 				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>
 				<s:Button id="cleanButton" label="Clean slate" click="cleanSlate(); stage.focus = stage" width="100%"/>
 				<s:Button id="exportButton" label="Save as .wav file" click="export(); stage.focus = stage" width="100%"/>
@@ -355,9 +372,17 @@
 						<s:layout> <s:VerticalLayout requestedRowCount="{partNames.length}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
+				<s:Spacer height="100%"/>
+				<s:Label id="channelSettingsLabel" text="Channel Settings:" color="0xffffff"/>
 			</s:VGroup>
 			<s:VGroup id="channelSettings" height="100%" width="100%">
-				<s:Label text="Channel Settings:" color="0xffffff"/>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Volume:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="volumeDropDown" dataProvider="{volumeNames}" width="110" change="onSetVolume()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Wave:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
@@ -387,7 +412,6 @@
 					</s:DropDownList>
 				</s:HGroup>
 			</s:VGroup>
-			<s:Label text="Beep Box version 1.0" color="0xbbbbbb" right="0"/>
 		</s:VGroup>
 	</s:HGroup>
 </s:BorderContainer>
