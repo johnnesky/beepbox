@@ -22,7 +22,7 @@ SOFTWARE.
 
 package beepbox.synth {
 	public class Song {
-		private static const latestVersion: int = 2;
+		private static const latestVersion: int = 3;
 		
 		public var scale: int;
 		public var key: int;
@@ -243,6 +243,7 @@ package beepbox.synth {
 			var combinedWaveInfo: Boolean = version < 2;
 			var sixBitsPerBar: Boolean = version < 2;
 			var oldPatternFormat: Boolean = version < 2;
+			var beforeThree: Boolean = version < 3;
 			while (charIndex < compressed.length) {
 				var command: String = compressed.charAt(charIndex++);
 				var bits: BitField;
@@ -251,6 +252,7 @@ package beepbox.synth {
 				var j: int;
 				if (command == "s") {
 					scale = sixtyfour.indexOf(compressed.charAt(charIndex++));
+					if (beforeThree && scale == 10) scale = 11;
 				} else if (command == "k") {
 					key = sixtyfour.indexOf(compressed.charAt(charIndex++));
 				} else if (command == "l") {
@@ -282,6 +284,8 @@ package beepbox.synth {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					channelEffects[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					if (channelEffects[channel] >= Music.effectNames.length) channelEffects[channel] = Music.effectNames.length - 1;
+					if (beforeThree && channelEffects[channel] == 1) channelEffects[channel] = 3;
+					else if (beforeThree && channelEffects[channel] == 3) channelEffects[channel] = 5;
 				} else if (command == "h") {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					channelChorus[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
