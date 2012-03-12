@@ -157,6 +157,8 @@ SOFTWARE.
 		}
 		
 		private function updatePreview(): void {
+			if (preview == null) return;
+			
 			preview.graphics.clear();
 			if (!mouseOver || mouseDown) return;
 			preview.graphics.lineStyle(2, 0xffffff);
@@ -171,6 +173,8 @@ SOFTWARE.
 		}
 		
 		private function render(): void {
+			if (preview == null) return;
+			
 			container.graphics.clear();
 			container.graphics.beginFill(0x000000);
 			container.graphics.drawRect(0, 0, width, height);
@@ -210,19 +214,6 @@ SOFTWARE.
 				key.y += noteHeight * (noteCount - j - 1);
 				container.addChildAt(key, 0);
 				keys.push(key);
-				
-				/*
-				var color: int = 0x444444;
-				if (doc.channel != 3) {
-					if (j%12 == 0) color = 0x886644;
-					if (j%12 == 7 && doc.showFifth) color = 0x446688;
-				}
-				container.graphics.beginFill(color);
-				for (var k: int = 0; k < doc.song.beats; k++) {
-					container.graphics.drawRect(partWidth * k * doc.song.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.song.parts - 2, noteHeight - 2);
-				}
-				container.graphics.endFill();
-				*/
 			}
 			updatePreview();
 		}
