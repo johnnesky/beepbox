@@ -65,6 +65,7 @@ SOFTWARE.
 		private var dragChange: Change = null;
 		private var cursor: BarCursorStatus = new BarCursorStatus();
 		private var pattern: BarPattern;
+		private var playheadX: Number = 0.0;
 		
 		public function init():void {
 			preview = new Sprite();
@@ -204,9 +205,14 @@ SOFTWARE.
 			if (!doc.synth.playing) return;
 			if (doc.song.getBarPattern(doc.channel, int(doc.synth.playhead)) != pattern) return;
 			var modPlayhead: Number = doc.synth.playhead - int(doc.synth.playhead);
+			if (Math.abs(modPlayhead - playheadX) > 0.1) {
+				playheadX = modPlayhead;
+			} else {
+				playheadX += (modPlayhead - playheadX) * 0.2;
+			}
 			playhead.graphics.lineStyle(4, 0xffffff);
-			playhead.graphics.moveTo(modPlayhead * width, 0);
-			playhead.graphics.lineTo(modPlayhead * width, height);
+			playhead.graphics.moveTo(playheadX * width, 0);
+			playhead.graphics.lineTo(playheadX * width, height);
 			playhead.graphics.lineStyle();
 		}
 		
