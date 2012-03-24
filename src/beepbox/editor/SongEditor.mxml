@@ -342,7 +342,7 @@ SOFTWARE.
 			<s:VGroup id="songSettings" height="481" width="100%">
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Spacer width="50%"/>
-					<s:Label text="Beep Box version 1.0" color="0xbbbbbb" right="0"/>
+					<s:Label text="Beep Box version 1.0.1" color="0xbbbbbb" right="0"/>
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>

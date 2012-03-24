@@ -365,33 +365,40 @@ package beepbox.synth {
 								break;
 							}
 						}
-						var startTime:     int = (tone.start + startPin.time - time) * 4 - arpeggio;
-						var endTime:       int = (tone.start + endPin.time - time) * 4 - arpeggio;
-						var startRatio:    Number = (1.0 - (arpeggioSamples + samples) / samplesPerArpeggio - startTime) / (endTime - startTime);
-						var endRatio:      Number = (1.0 - (arpeggioSamples) / samplesPerArpeggio - startTime) / (endTime - startTime);
-						var startInterval: Number = startPin.interval * (1.0 - startRatio) + endPin.interval * startRatio;
-						var endInterval:   Number = startPin.interval * (1.0 - endRatio  ) + endPin.interval * endRatio;
+						
+						var toneStart: int = tone.start * 4;
+						var toneEnd:   int = tone.end   * 4;
+						var pinStart: int  = (tone.start + startPin.time) * 4;
+						var pinEnd:   int  = (tone.start + endPin.time  ) * 4;
+						var arpeggioStart: int = time * 4 + arpeggio;
+						var arpeggioEnd:   int = time * 4 + arpeggio + 1;
+						var arpeggioRatioStart: Number = (arpeggioStart - pinStart) / (pinEnd - pinStart);
+						var arpeggioRatioEnd:   Number = (arpeggioEnd   - pinStart) / (pinEnd - pinStart);
+						var arpeggioVolumeStart: Number = startPin.volume * (1.0 - arpeggioRatioStart) + endPin.volume * arpeggioRatioStart;
+						var arpeggioVolumeEnd:   Number = startPin.volume * (1.0 - arpeggioRatioEnd)   + endPin.volume * arpeggioRatioEnd;
+						//if (arpeggioStart == toneStart) arpeggioVolumeStart = 0.0;
+						if (arpeggioEnd == toneEnd) arpeggioVolumeEnd = 0.0;
+						var arpeggioIntervalStart: Number = startPin.interval * (1.0 - arpeggioRatioStart) + endPin.interval * arpeggioRatioStart;
+						var arpeggioIntervalEnd:   Number = startPin.interval * (1.0 - arpeggioRatioEnd)   + endPin.interval * arpeggioRatioEnd;
+						var startRatio: Number = 1.0 - (arpeggioSamples + samples) / samplesPerArpeggio;
+						var endRatio:   Number = 1.0 - (arpeggioSamples)           / samplesPerArpeggio;
+						var startInterval: Number = arpeggioIntervalStart * (1.0 - startRatio) + arpeggioIntervalEnd * startRatio;
+						var endInterval:   Number = arpeggioIntervalStart * (1.0 - endRatio)   + arpeggioIntervalEnd * endRatio;
 						var startFreq: Number = frequencyFromPitch(pitch + channelRoot + startInterval);
 						var endFreq:   Number = frequencyFromPitch(pitch + channelRoot + endInterval);
-						var startVol:  Number = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + startInterval) / 48.0);
-						var endVol:    Number = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + endInterval) / 48.0);
-						startVol *= volumeConversion(startPin.volume * (1.0 - startRatio) + endPin.volume * startRatio);
-						endVol   *= volumeConversion(startPin.volume * (1.0 - endRatio)   + endPin.volume * endRatio);
-						var frequency: Number = startFreq;
+						var startVol: Number = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + startInterval) / 48.0);
+						var endVol:   Number = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + endInterval) / 48.0);
+						startVol *= volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);
+						endVol   *= volumeConversion(arpeggioVolumeStart * (1.0 - endRatio)   + arpeggioVolumeEnd * endRatio);
 						var freqScale: Number = endFreq / startFreq;
-						periodDelta = frequency * sampleTime;
+						periodDelta = startFreq * sampleTime;
 						periodDeltaScale = Math.pow(freqScale, 1.0 / samples);
 						volume = startVol;
 						volumeDelta = (endVol - startVol) / samples;
-						
-						var timeSinceStart: Number = (((time - tone.start) * 4.0 + arpeggio + 1.0) * samplesPerArpeggio - arpeggioSamples - samples) / samplesPerSecond;
+						var timeSinceStart: Number = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / samplesPerSecond;
+						if (timeSinceStart == 0.0) resetPeriod = true;
 						filter = channel == 3 ? 1.0 : Math.pow(2, -Music.filterDecays[song.channelFilters[channel]] * timeSinceStart);
-						
-						vibratoScale = (song.channelEffects[channel] == 2 && time - tone.start < 3) ? 0.0 : Math.pow( 2.0, Music.effectVibratos[song.channelEffects[0]] / 12.0 ) - 1.0;
-						
-						if (timeSinceStart == 0.0 && Music.filterDecays[song.channelFilters[channel]] > 0.0) {
-							resetPeriod = true;
-						}
+						vibratoScale = (song.channelEffects[channel] == 2 && time - tone.start < 3) ? 0.0 : Math.pow( 2.0, Music.effectVibratos[song.channelEffects[channel]] / 12.0 ) - 1.0;
 					}
 					
 					if (channel == 0) {
@@ -438,8 +445,8 @@ package beepbox.synth {
 					}
 				}
 				
-				var effectY:     Number = Math.sin( effectPeriod );
-				var prevEffectY: Number = Math.sin( effectPeriod - effectAngle );
+				var effectY:     Number = Math.sin(effectPeriod);
+				var prevEffectY: Number = Math.sin(effectPeriod - effectAngle);
 				
 				while (samples > 0) {
 					var sample: Number = 0.0;

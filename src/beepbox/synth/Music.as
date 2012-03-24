@@ -23,7 +23,7 @@ SOFTWARE.
 package beepbox.synth {
 	public class Music {
 		// C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
-		public static const scaleNames: Array = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "gypsy :)", "gypsy :(", "mystic", "expert"];
+		public static const scaleNames: Array = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "gypsy :)", "gypsy :(", "enigma", "expert"];
 		public static const scaleFlags: Array = [
 			[ true, false,  true, false,  true, false, false,  true, false,  true, false, false],
 			[ true, false, false,  true, false,  true, false,  true, false, false,  true, false],
@@ -51,7 +51,7 @@ package beepbox.synth {
 		public static const noteNames: Array = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 		public static const waveNames: Array = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
 		public static const waveVolumes: Array = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
-		public static const filterNames: Array = ["flat sharp", "flat soft", "decay sharp", "decay soft"];
+		public static const filterNames: Array = ["sustain sharp", "sustain soft", "decay sharp", "decay soft"];
 		public static const filterBases: Array = [2.0, 5.0, 1.0, 4.0];
 		public static const filterDecays: Array = [0.0, 0.0, 10.0, 4.0];
 		public static const filterVolumes: Array = [0.4, 1.0, 0.5, 1.0];

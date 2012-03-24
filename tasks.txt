@@ -81,12 +81,14 @@
 √ whole tone scale
 √ increment format number, port settings from old version
 √ center waves on average amplitude to avoid pops after lowpass
+√ move the playhead graphic gradually toward the next position. 
+√ always fade out volume over last arpeggio
 
 NEXT VERSION:
-- figure out how to deal with pops transitioning between decaying tones. fade out volume over last arpeggio?
+- attack: hard, soft, slide. don't reset period when sliding!
 - volume pins, correctly moving pins when swingifying
 - create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
-- envelope: hard, soft, slide. don't reset period when sliding?
+- octave scroll bar, with preference option to disable it
 - optimize those Math functions in Synth
 - don't autoplay until URL fragment has been passed through
 - drums get custom lowpass based on change rate?
@@ -94,9 +96,10 @@ NEXT VERSION:
 - Do I want to perform dynamic range compression? 
 
 MORE FEATURES:
+- snap to tone edges from other channels, to help making NES style harmonies. 
+- new song setting: distortion, nonlinear mixing of channels...
 - save most recent song to localSO so that it doesn't accidentally get lost when window closes
 - options for timing offset
-- octave scrolling
 - asynchronous wav export
 - extend bar count and pattern count for advanced users. 
 - copy paste patterns
@@ -105,17 +108,16 @@ MORE FEATURES:
 - new preferences: follow playhead, autoplay on load?
 - piano should still play when song is paused
 - If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
-- move the playhead graphic gradually toward the next position. 
 - visual feedback when a note is played
 - make a non-editing embeddable player, in an iframe, with playhead tracking and all channels and no highlighting.
 - 5 parts per beat?
 - rapid document/fragment changes cause undefined state
 - make some button to bookmark the song in your browser
 - MIDI export
-- automatic flash projector for offline version without causing the vvvvvv/machinarium file type issue.
-- Dim the column occupied by a tone?
-- preload some common tone shapes into the recentShape list
+- Dim the column occupied by a tone to communicate mono voice?
+- preload some common tone shapes into the recentShape list. increment format number.
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
 - Get in touch with wonderfl about supporting beepbox
+- a facebook app to put songs in your profile
 - web interface to share songs so that other visitors can see them. let users enter a name and a "password", which can just be an email address, which is used to generate a "retro" gravatar identicon. 
-
+- automatic flash projector for offline version without causing the vvvvvv/machinarium file type issue.
