@@ -35,6 +35,7 @@ package beepbox.synth {
 		public var channelBars: Array;
 		public var channelWaves: Array;
 		public var channelFilters: Array;
+		public var channelAttacks: Array;
 		public var channelEffects: Array;
 		public var channelChorus: Array;
 		public var channelVolumes: Array;
@@ -66,6 +67,7 @@ package beepbox.synth {
 			];
 			channelWaves = [1,1,1];
 			channelFilters = [0,0,0];
+			channelAttacks = [0,0,0];
 			channelEffects = [0,0,0];
 			channelChorus  = [0,0,0];
 			channelVolumes = [0,0,0];
@@ -99,6 +101,10 @@ package beepbox.synth {
 			
 			for each (channel in [0, 1, 2]) {
 				result += "f" + sixtyfour[channel] + sixtyfour[channelFilters[channel]];
+			}
+			
+			for each (channel in [0, 1, 2]) {
+				result += "d" + sixtyfour[channel] + sixtyfour[channelAttacks[channel]];
 			}
 			
 			for each (channel in [0, 1, 2]) {
@@ -280,6 +286,10 @@ package beepbox.synth {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					channelFilters[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					if (channelFilters[channel] >= Music.filterNames.length) channelFilters[channel] = Music.filterNames.length - 1;
+				} else if (command == "d") {
+					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
+					channelAttacks[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
+					if (channelAttacks[channel] >= Music.attackNames.length) channelAttacks[channel] = Music.attackNames.length - 1;
 				} else if (command == "c") {
 					channel = sixtyfour.indexOf(compressed.charAt(charIndex++));
 					channelEffects[channel] = sixtyfour.indexOf(compressed.charAt(charIndex++));
