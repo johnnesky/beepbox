@@ -55,6 +55,7 @@ package beepbox.synth {
 		public static const filterBases: Array = [2.0, 5.0, 1.0, 4.0];
 		public static const filterDecays: Array = [0.0, 0.0, 10.0, 4.0];
 		public static const filterVolumes: Array = [0.4, 1.0, 0.5, 1.0];
+		public static const attackNames: Array = ["sudden", "rise", "slide"];
 		public static const effectNames: Array = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
 		public static const effectVibratos: Array = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
 		public static const effectTremelos: Array = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];

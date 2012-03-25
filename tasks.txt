@@ -83,12 +83,13 @@
 √ center waves on average amplitude to avoid pops after lowpass
 √ move the playhead graphic gradually toward the next position. 
 √ always fade out volume over last arpeggio
+√ attack: hard, soft, slide. don't reset period when sliding!
 
 NEXT VERSION:
-- attack: hard, soft, slide. don't reset period when sliding!
+- octave scroll bar, with preference option to disable it
+- Dim the column occupied by a tone to communicate mono voice?
 - volume pins, correctly moving pins when swingifying
 - create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
-- octave scroll bar, with preference option to disable it
 - optimize those Math functions in Synth
 - don't autoplay until URL fragment has been passed through
 - drums get custom lowpass based on change rate?
@@ -96,6 +97,7 @@ NEXT VERSION:
 - Do I want to perform dynamic range compression? 
 
 MORE FEATURES:
+- illustrate arpeggio texture on tones with multiple notes
 - snap to tone edges from other channels, to help making NES style harmonies. 
 - new song setting: distortion, nonlinear mixing of channels...
 - save most recent song to localSO so that it doesn't accidentally get lost when window closes
@@ -114,7 +116,6 @@ MORE FEATURES:
 - rapid document/fragment changes cause undefined state
 - make some button to bookmark the song in your browser
 - MIDI export
-- Dim the column occupied by a tone to communicate mono voice?
 - preload some common tone shapes into the recentShape list. increment format number.
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
 - Get in touch with wonderfl about supporting beepbox

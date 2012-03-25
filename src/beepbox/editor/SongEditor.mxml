@@ -62,6 +62,8 @@ SOFTWARE.
 		[Bindable]
 		private var filterNames: ArrayCollection;
 		[Bindable]
+		private var attackNames: ArrayCollection;
+		[Bindable]
 		private var effectNames: ArrayCollection;
 		[Bindable]
 		private var chorusNames: ArrayCollection;
@@ -76,6 +78,7 @@ SOFTWARE.
 			partNames = new ArrayCollection(Music.partNames);
 			waveNames = new ArrayCollection(Music.waveNames);
 			filterNames = new ArrayCollection(Music.filterNames);
+			attackNames = new ArrayCollection(Music.attackNames);
 			effectNames = new ArrayCollection(Music.effectNames);
 			chorusNames = new ArrayCollection(Music.chorusNames);
 			volumeNames = new ArrayCollection(Music.volumeNames);
@@ -106,6 +109,7 @@ SOFTWARE.
 				channelSettingsLabel.visible = true;
 				waveDropDown.selectedIndex = doc.song.channelWaves[doc.channel];
 				filterDropDown.selectedIndex = doc.song.channelFilters[doc.channel];
+				attackDropDown.selectedIndex = doc.song.channelAttacks[doc.channel];
 				effectDropDown.selectedIndex = doc.song.channelEffects[doc.channel];
 				chorusDropDown.selectedIndex = doc.song.channelChorus[doc.channel];
 				volumeDropDown.selectedIndex = doc.song.channelVolumes[doc.channel];
@@ -287,6 +291,12 @@ SOFTWARE.
 			doc.history.record(new ChangeFilter(doc, filter));
 		}
 		
+		private function onSetAttack(): void {
+			var attack: int = attackDropDown.selectedIndex;
+			//if (doc.history.getRecentChange() is ChangeAttack) doc.history.undo();
+			doc.history.record(new ChangeAttack(doc, attack));
+		}
+		
 		private function onSetEffect(): void {
 			var effect: int = effectDropDown.selectedIndex;
 			//if (doc.history.getRecentChange() is ChangeEffect) doc.history.undo();
@@ -399,13 +409,6 @@ SOFTWARE.
 			</s:VGroup>
 			<s:VGroup id="channelSettings" height="100%" width="100%">
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
-					<s:Label text="Volume:" color="0xbbbbbb"/>
-					<s:Spacer width="100%"/>
-					<s:DropDownList id="volumeDropDown" dataProvider="{volumeNames}" width="110" change="onSetVolume()" close="stage.focus = stage" right="0">
-						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
-					</s:DropDownList>
-				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Wave:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="waveDropDown" dataProvider="{waveNames}" width="110" change="onSetWave()" close="stage.focus = stage" right="0">
@@ -413,9 +416,23 @@ SOFTWARE.
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
-					<s:Label text="Effect:" color="0xbbbbbb"/>
+					<s:Label text="Volume:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="effectDropDown" dataProvider="{effectNames}" width="110" change="onSetEffect()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="volumeDropDown" dataProvider="{volumeNames}" width="110" change="onSetVolume()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Attack:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="attackDropDown" dataProvider="{attackNames}" width="110" change="onSetAttack()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Filter:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="110" change="onSetFilter()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
@@ -427,9 +444,9 @@ SOFTWARE.
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
-					<s:Label text="Filter:" color="0xbbbbbb"/>
+					<s:Label text="Effect:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="110" change="onSetFilter()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="effectDropDown" dataProvider="{effectNames}" width="110" change="onSetEffect()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
