@@ -89,27 +89,30 @@
 √ bring back the old constant volume option, and make it the default for songs loaded with the old format.
 √ widen the window to allow the "envelope" label
 √ copy paste patterns
+√ put the edit buttons in one menu. undo, copy/paste, clean slate, etc
+√ copy and paste keyboard commands
 
 NEXT VERSION:
 - perform dynamic range compression
 - global volume control
 - drum volume control
-- buttons to transpose up and down to the next valid note
 - medium sustain filter, slower sharp filter...
 - dedicated silent 0 pattern
 - rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
-- tones that fade out completely don't slide
 - wider beats/bar range, indicate recommended number 8 somehow?
 - tooltips
 - clip rect on pattern editor
 - Dim the column occupied by a tone to communicate mono voice?
 - volume pins, correctly moving pins when swingifying
 - create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
+- buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
+- tones that fade out completely shouldn't slide
 - optimize those Math functions in Synth
 - don't autoplay until URL fragment has been passed through
 - drums get custom lowpass based on change rate? rebalance volume range too. base is too quiet, cymbal too loud.
 - think about equalizing some more. the low drums are very quiet! :/
 - make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
+- adjust drop down menu widths to fit the size of their contents, mostly so that they're not all the same size, to give you an extra visual cue to find the menu you're looking for
 
 MORE FEATURES:
 - double number of beat divisions
