@@ -35,6 +35,7 @@ package beepbox.editor {
 		public var showFifth: Boolean;
 		public var showLetters: Boolean;
 		public var showChannels: Boolean;
+		public var showScrollBar: Boolean;
 		public var song: Song;
 		
 		private var localSO: SharedObject;
@@ -45,6 +46,7 @@ package beepbox.editor {
 			showFifth = false;
 			showLetters = false;
 			showChannels = false;
+			showScrollBar = false;
 			history = new ChangeHistory();
 			song = new Song();
 			synth = new Synth(song);
@@ -55,9 +57,10 @@ package beepbox.editor {
 			} catch(e: Error) {}
 			
 			if (localSO != null) {
-				showFifth = localSO.data.showFifth;
-				showLetters = localSO.data.showLetters;
-				showChannels = localSO.data.showChannels;
+				showFifth = localSO.data.showFifth == undefined ? false : localSO.data.showFifth;
+				showLetters = localSO.data.showLetters == undefined ? false : localSO.data.showLetters;
+				showChannels = localSO.data.showChannels == undefined ? false : localSO.data.showChannels;
+				showScrollBar = localSO.data.showScrollBar == undefined ? false : localSO.data.showScrollBar;
 			}
 		}
 		
@@ -66,6 +69,7 @@ package beepbox.editor {
 				localSO.data.showFifth = showFifth;
 				localSO.data.showLetters = showLetters;
 				localSO.data.showChannels = showChannels;
+				localSO.data.showScrollBar = showScrollBar;
 				localSO.flush();
 			}
 		}
