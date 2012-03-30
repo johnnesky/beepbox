@@ -70,7 +70,7 @@ package beepbox.synth {
 			];
 			channelWaves = [1,1,1];
 			channelFilters = [0,0,0];
-			channelAttacks = [0,0,0];
+			channelAttacks = [1,1,1];
 			channelEffects = [0,0,0];
 			channelChorus  = [0,0,0];
 			channelVolumes = [0,0,0];
@@ -258,6 +258,7 @@ package beepbox.synth {
 			if (version == -1 || version > latestVersion || version < oldestVersion) return;
 			var beforeThree: Boolean = version < 3;
 			var base64: Array = beforeThree ? oldBase64 : newBase64;
+			if (beforeThree) channelAttacks = [0,0,0];
 			while (charIndex < compressed.length) {
 				var command: String = compressed.charAt(charIndex++);
 				var bits: BitField;

@@ -381,16 +381,16 @@ package beepbox.synth {
 						var arpeggioRatioEnd:   Number = (arpeggioEnd   - pinStart) / (pinEnd - pinStart);
 						var arpeggioVolumeStart: Number = startPin.volume * (1.0 - arpeggioRatioStart) + endPin.volume * arpeggioRatioStart;
 						var arpeggioVolumeEnd:   Number = startPin.volume * (1.0 - arpeggioRatioEnd)   + endPin.volume * arpeggioRatioEnd;
-						//if (arpeggioStart == toneStart && (attack == 1 || (attack == 2 && prevTone == null))) arpeggioVolumeStart = 0.0;
-						//if (arpeggioEnd   == toneEnd   && attack != 0 && (attack != 2 || nextTone == null)) arpeggioVolumeEnd = 0.0;
 						var arpeggioIntervalStart: Number = startPin.interval * (1.0 - arpeggioRatioStart) + endPin.interval * arpeggioRatioStart;
 						var arpeggioIntervalEnd:   Number = startPin.interval * (1.0 - arpeggioRatioEnd)   + endPin.interval * arpeggioRatioEnd;
 						
 						var inhibitRestart: Boolean = false;
 						if (arpeggioStart == toneStart) {
-							if (attack == 1) {
-								arpeggioVolumeStart = 0.0;
+							if (attack == 0) {
+								inhibitRestart = true;
 							} else if (attack == 2) {
+								arpeggioVolumeStart = 0.0;
+							} else if (attack == 3) {
 								if (prevTone == null || prevTone.notes.length > 1 || tone.notes.length > 1) {
 									arpeggioVolumeStart = 0.0;
 								} else if (prevTone.notes[0] + prevTone.pins[prevTone.pins.length-1].interval == pitch) {
@@ -402,9 +402,9 @@ package beepbox.synth {
 							}
 						}
 						if (arpeggioEnd == toneEnd) {
-							if (attack == 0 || attack == 1) {
+							if (attack == 1 || attack == 2) {
 								arpeggioVolumeEnd = 0.0;
-							} else if (attack == 2) {
+							} else if (attack == 3) {
 								if (nextTone == null || nextTone.notes.length > 1 || tone.notes.length > 1) {
 									arpeggioVolumeEnd = 0.0;
 								} else if (nextTone.notes[0] == pitch + tone.pins[tone.pins.length-1].interval) {

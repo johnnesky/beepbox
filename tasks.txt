@@ -86,16 +86,18 @@
 √ attack: hard, soft, slide. don't reset period when sliding!
 √ octave scroll bar, with preference option to disable it
 √ load old songs with octave offset, default pitch... 
+√ bring back the old constant volume option, and make it the default for songs loaded with the old format.
+√ widen the window to allow the "envelope" label
+√ copy paste patterns
 
 NEXT VERSION:
-- bring back the old constant volume option, and make it the default for songs loaded with the old format.
+- perform dynamic range compression
 - global volume control
 - drum volume control
 - buttons to transpose up and down to the next valid note
-- copy paste patterns
 - medium sustain filter, slower sharp filter...
 - dedicated silent 0 pattern
-- rename barpattern to pattern, bareditor to patterneditor...
+- rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
 - tones that fade out completely don't slide
 - wider beats/bar range, indicate recommended number 8 somehow?
 - tooltips
@@ -107,7 +109,6 @@ NEXT VERSION:
 - don't autoplay until URL fragment has been passed through
 - drums get custom lowpass based on change rate? rebalance volume range too. base is too quiet, cymbal too loud.
 - think about equalizing some more. the low drums are very quiet! :/
-- Do I want to perform dynamic range compression? 
 - make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
 
 MORE FEATURES:

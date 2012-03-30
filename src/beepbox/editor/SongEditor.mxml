@@ -24,7 +24,7 @@ SOFTWARE.
 <s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
            xmlns:s="library://ns.adobe.com/flex/spark"
            xmlns="beepbox.editor.*"
-           width="675"
+           width="700"
            height="645"
            backgroundColor="0x000000"
            borderVisible="false"
@@ -69,6 +69,10 @@ SOFTWARE.
 		private var chorusNames: ArrayCollection;
 		[Bindable]
 		private var volumeNames: ArrayCollection;
+		
+		private var copyTones: Array;
+		private var copyBeats: int = 0;
+		private var copyParts: int = 0;
 		
 		public function init():void {
 			scaleNames = new ArrayCollection(Music.scaleNames);
@@ -119,6 +123,7 @@ SOFTWARE.
 			barEditor.width = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
 			undoButton.enabled = doc.history.canUndo();
 			redoButton.enabled = doc.history.canRedo();
+			pasteButton.enabled = copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts;
 		}
 		
 		private function onAddedToStage(): void {
@@ -164,6 +169,17 @@ SOFTWARE.
 				doc.synth.play();
 				playButton.label = "Pause Playback";
 			}
+		}
+		
+		private function copy(): void {
+			copyTones = doc.song.getBarPattern(doc.channel, doc.bar).cloneTones();
+			copyBeats = doc.song.beats;
+			copyParts = doc.song.parts;
+			pasteButton.enabled = true;
+		}
+		
+		private function paste(): void {
+			doc.history.record(new ChangePaste(doc, copyTones));
 		}
 		
 		private function cleanSlate(): void {
@@ -372,6 +388,10 @@ SOFTWARE.
 					<s:Button id="undoButton" label="Undo" enabled="false" click="doc.history.undo(); stage.focus = stage" width="50%"/>
 					<s:Button id="redoButton" label="Redo" enabled="false" click="doc.history.redo(); stage.focus = stage" width="50%"/>
 				</s:HGroup>
+				<s:HGroup width="100%" verticalAlign="middle">
+					<s:Button id="copyButton" label="Copy" enabled="true" click="copy(); stage.focus = stage" width="50%"/>
+					<s:Button id="pasteButton" label="Paste" enabled="false" click="paste(); stage.focus = stage" width="50%"/>
+				</s:HGroup>
 				<s:Spacer height="5"/>
 				<s:Label text="Preferences:" color="0xffffff"/>
 				<s:CheckBox id="showLetters" label="Show Piano" color="0xbbbbbb" change="toggleLetters(); stage.focus = stage"/>
@@ -383,35 +403,35 @@ SOFTWARE.
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Scale:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="scaleDropDown" dataProvider="{scaleNames}" width="85" change="onSetScale()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="scaleDropDown" dataProvider="{scaleNames}" width="90" change="onSetScale()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{scaleNames.length}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Key:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="keyDropDown" dataProvider="{keyNames}" width="55" change="onSetKey()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="keyDropDown" dataProvider="{keyNames}" width="90" change="onSetKey()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{keyNames.length}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Tempo:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="tempoDropDown" dataProvider="{tempoNames}" width="75" change="onSetTempo()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="tempoDropDown" dataProvider="{tempoNames}" width="90" change="onSetTempo()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{tempoNames.length}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Beats per bar:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="beatDropDown" dataProvider="{beatNames}" width="80" change="onSetBeats()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="beatDropDown" dataProvider="{beatNames}" width="90" change="onSetBeats()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{beatNames.length}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Beat divisions:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="partDropDown" dataProvider="{partNames}" width="75" change="onSetParts()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="partDropDown" dataProvider="{partNames}" width="90" change="onSetParts()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{partNames.length}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
@@ -420,44 +440,44 @@ SOFTWARE.
 			</s:VGroup>
 			<s:VGroup id="channelSettings" height="100%" width="100%">
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
-					<s:Label text="Wave:" color="0xbbbbbb"/>
-					<s:Spacer width="100%"/>
-					<s:DropDownList id="waveDropDown" dataProvider="{waveNames}" width="110" change="onSetWave()" close="stage.focus = stage" right="0">
-						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
-					</s:DropDownList>
-				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Volume:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="volumeDropDown" dataProvider="{volumeNames}" width="110" change="onSetVolume()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="volumeDropDown" dataProvider="{volumeNames}" width="120" change="onSetVolume()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
-					<s:Label text="Attack:" color="0xbbbbbb"/>
+					<s:Label text="Wave:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="attackDropDown" dataProvider="{attackNames}" width="110" change="onSetAttack()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="waveDropDown" dataProvider="{waveNames}" width="120" change="onSetWave()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Envelope:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="attackDropDown" dataProvider="{attackNames}" width="120" change="onSetAttack()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Filter:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="110" change="onSetFilter()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="120" change="onSetFilter()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Chorus:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="chorusDropDown" dataProvider="{chorusNames}" width="110" change="onSetChorus()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="chorusDropDown" dataProvider="{chorusNames}" width="120" change="onSetChorus()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Effect:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="effectDropDown" dataProvider="{effectNames}" width="110" change="onSetEffect()" close="stage.focus = stage" right="0">
+					<s:DropDownList id="effectDropDown" dataProvider="{effectNames}" width="120" change="onSetEffect()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>

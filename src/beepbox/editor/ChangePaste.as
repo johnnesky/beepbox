@@ -20,27 +20,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package beepbox.synth {
-	public class BarPattern {
-		public var tones: Array;
-		public function BarPattern() {
-			tones = [];
-			//tones = [new Tone(12, 0, 8)];
-			//tones[0].pins = [new TonePin(0, 0), new TonePin(0, 3), new TonePin(2, 4), new TonePin(2, 8)];
+package beepbox.editor {
+	import beepbox.synth.*;
+	
+	public class ChangePaste extends Change {
+		private var document: Document;
+		public var oldTones: Array;
+		public var newTones: Array;
+		public function ChangePaste(document: Document, tones: Array) {
+			super(false);
+			this.document = document;
+			
+			var pattern: BarPattern = document.song.getBarPattern(document.channel, document.bar);
+			oldTones = pattern.tones;
+			pattern.tones = tones;
+			pattern.tones = pattern.cloneTones();
+			newTones = pattern.tones;
+			document.changed();
+			didSomething();
 		}
 		
-		public function cloneTones(): Array {
-			var result: Array = [];
-			for each (var oldTone: Tone in tones) {
-				var newTone: Tone = new Tone(-1, oldTone.start, oldTone.end, 3);
-				newTone.notes = oldTone.notes.concat();
-				newTone.pins = [];
-				for each (var oldPin: TonePin in oldTone.pins) {
-					newTone.pins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
-				}
-				result.push(newTone);
-			}
-			return result;
+		protected override function doForwards(): void {
+			var pattern: BarPattern = document.song.getBarPattern(document.channel, document.bar);
+			pattern.tones = newTones;
+			document.changed();
+		}
+		
+		protected override function doBackwards(): void {
+			var pattern: BarPattern = document.song.getBarPattern(document.channel, document.bar);
+			pattern.tones = oldTones;
+			document.changed();
 		}
 	}
 }
