@@ -73,6 +73,7 @@ SOFTWARE.
 		private var volumeNames: ArrayCollection;
 		
 		private var editMenu: Menu;
+		private var optionsMenu: Menu;
 		private var copyTones: Array;
 		private var copyBeats: int = 0;
 		private var copyParts: int = 0;
@@ -105,10 +106,6 @@ SOFTWARE.
 			tempoDropDown.selectedIndex = doc.song.tempo;
 			beatDropDown.selectedIndex = Music.beatCounts.indexOf(doc.song.beats);
 			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
-			showLetters.selected = doc.showLetters;
-			showFifth.selected = doc.showFifth;
-			showChannels.selected = doc.showChannels;
-			showScrollBar.selected = doc.showScrollBar;
 			if (doc.channel == 3) {
 				channelSettings.visible = false;
 				channelSettingsLabel.visible = false;
@@ -338,30 +335,6 @@ SOFTWARE.
 			doc.history.record(new ChangeVolume(doc, volume));
 		}
 		
-		private function toggleLetters(): void {
-			doc.showLetters = !doc.showLetters;
-			doc.changed();
-			doc.savePreferences();
-		}
-		
-		private function toggleFifth(): void {
-			doc.showFifth = !doc.showFifth;
-			doc.changed();
-			doc.savePreferences();
-		}
-		
-		private function toggleChannels(): void {
-			doc.showChannels = !doc.showChannels;
-			doc.changed();
-			doc.savePreferences();
-		}
-		
-		private function toggleScrollBar(): void {
-			doc.showScrollBar = !doc.showScrollBar;
-			doc.changed();
-			doc.savePreferences();
-		}
-		
 		private function canPaste(): Boolean {
 			return copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts;
 		}
@@ -376,18 +349,13 @@ SOFTWARE.
 			editMenu.labelField = "@label";
 			editMenu.addEventListener(MenuEvent.ITEM_CLICK, editMenuHandler);
 		
-			// Calculate position of Menu in Application's coordinates. 
 			var point1:Point = new Point();
-			point1.x = editButton.x;
-			point1.y = editButton.y;
 			point1 = editButton.localToGlobal(point1);
 		
-			editMenu.show(point1.x, point1.y - 25);
+			editMenu.show(point1.x, point1.y + 20);
 		}
 		
-		// Event handler for the Menu control's change event.
 		private function editMenuHandler(event:MenuEvent):void  {
-			trace(event.item.@eventName, event);
 			switch (String(event.item.@eventName)) {
 				case "undo":
 					doc.history.undo();
@@ -408,6 +376,42 @@ SOFTWARE.
 					cleanSlate();
 					break;
 			}
+		}
+		
+		private function openOptionsMenu(): void {
+			var optionsNameSpace: Namespace =  new Namespace("beepbox.editor.*");
+			optionsMenuData.optionsNameSpace::menuitem.(@eventName == "showLetters")[0].@toggled = doc.showLetters;
+			optionsMenuData.optionsNameSpace::menuitem.(@eventName == "showFifth")[0].@toggled = doc.showFifth;
+			optionsMenuData.optionsNameSpace::menuitem.(@eventName == "showChannels")[0].@toggled = doc.showChannels;
+			optionsMenuData.optionsNameSpace::menuitem.(@eventName == "showScrollBar")[0].@toggled = doc.showScrollBar;
+			
+			optionsMenu = Menu.createMenu(this, optionsMenuData, false);
+			optionsMenu.labelField = "@label";
+			optionsMenu.addEventListener(MenuEvent.ITEM_CLICK, optionsMenuHandler);
+		
+			var point1:Point = new Point();
+			point1 = optionsButton.localToGlobal(point1);
+		
+			optionsMenu.show(point1.x, point1.y + 20);
+		}
+		
+		private function optionsMenuHandler(event:MenuEvent):void  {
+			switch (String(event.item.@eventName)) {
+				case "showLetters":
+					doc.showLetters = !doc.showLetters;
+					break;
+				case "showFifth":
+					doc.showFifth = !doc.showFifth;
+					break;
+				case "showChannels":
+					doc.showChannels = !doc.showChannels;
+					break;
+				case "showScrollBar":
+					doc.showScrollBar = !doc.showScrollBar;
+					break;
+			}
+			doc.changed();
+			doc.savePreferences();
 		}
 	]]></fx:Script>
 	
@@ -436,13 +440,8 @@ SOFTWARE.
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>
-				<s:Button id="editButton" label="Edit Menu" click="openEditMenu();" width="100%"/>
-				<s:Spacer height="5"/>
-				<s:Label text="Preferences:" color="0xffffff"/>
-				<s:CheckBox id="showLetters" label="Show Piano" color="0xbbbbbb" change="toggleLetters(); stage.focus = stage"/>
-				<s:CheckBox id="showFifth" label="Highlight 'Fifth' Notes" color="0xbbbbbb" change="toggleFifth(); stage.focus = stage"/>
-				<s:CheckBox id="showChannels" label="Show All Channels" color="0xbbbbbb" change="toggleChannels(); stage.focus = stage"/>
-				<s:CheckBox id="showScrollBar" label="Show Scroll Bar" color="0xbbbbbb" change="toggleScrollBar(); stage.focus = stage"/>
+				<s:Button id="editButton" label="Edit" click="openEditMenu();" width="100%"/>
+				<s:Button id="optionsButton" label="Options" click="openOptionsMenu();" width="100%"/>
 				<s:Spacer height="5"/>
 				<s:Label text="Song Settings:" color="0xffffff"/>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
@@ -539,6 +538,14 @@ SOFTWARE.
 				<menuitem label="Paste Pattern (V)" eventName="paste"/>
 				<menuitem label="Export to .wav File" eventName="export"/>
 				<menuitem label="Clean Slate" eventName="clean"/>
+			</root>
+		</fx:XML>
+		<fx:XML id="optionsMenuData">
+			<root>
+				<menuitem type="check" label="Show Piano" eventName="showLetters"/>
+				<menuitem type="check" label="Highlight 'Fifth' Notes" eventName="showFifth"/>
+				<menuitem type="check" label="Show All Channels" eventName="showChannels"/>
+				<menuitem type="check" label="Show Scroll Bar" eventName="showScrollBar"/>
 			</root>
 		</fx:XML>
 	</fx:Declarations>
