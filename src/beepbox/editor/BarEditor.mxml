@@ -66,6 +66,7 @@ SOFTWARE.
 		private var cursor: BarCursorStatus = new BarCursorStatus();
 		private var pattern: BarPattern;
 		private var playheadX: Number = 0.0;
+		private var octaveOffset: int = 0;
 		
 		public function init():void {
 			preview = new Sprite();
@@ -108,7 +109,7 @@ SOFTWARE.
 				}
 			}
 			
-			var mouseNote: Number = Math.max(0, Math.min(noteCount-1, noteCount - (mouseY / noteHeight)));
+			var mouseNote: Number = Math.max(0, Math.min(noteCount-1, noteCount - (mouseY / noteHeight))) + octaveOffset;
 			if (scale[int(mouseNote) % 12] || doc.channel == 3) {
 				cursor.note = int(mouseNote);
 			} else {
@@ -395,9 +396,9 @@ SOFTWARE.
 			//if (cursor.noteIndex == -1) {
 				preview.graphics.lineStyle(2, 0xffffff);
 				if (cursor.curTone == null) {
-					preview.graphics.drawRect(cursor.start * partWidth + 1, noteHeight * (noteCount - cursor.note - 1) - 1, (cursor.end - cursor.start) * partWidth - 2, noteHeight + 2);
+					preview.graphics.drawRect(cursor.start * partWidth + 1, noteHeight * (noteCount - cursor.note - 1 + octaveOffset) - 1, (cursor.end - cursor.start) * partWidth - 2, noteHeight + 2);
 				} else {
-					drawNote(preview.graphics, cursor.note, cursor.curTone.start, cursor.curTone.pins, noteHeight / 2 + 1, false);
+					drawNote(preview.graphics, cursor.note, cursor.curTone.start, cursor.curTone.pins, noteHeight / 2 + 1, false, octaveOffset);
 				}
 				preview.graphics.lineStyle();
 			//}
@@ -405,9 +406,10 @@ SOFTWARE.
 		
 		private function documentChanged(): void {
 			pattern = doc.song.getBarPattern(doc.channel, doc.bar);
-			partWidth = (doc.showLetters ? 480 : 512) / (doc.song.beats * doc.song.parts);
+			partWidth = (doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512)) / (doc.song.beats * doc.song.parts);
 			noteHeight = doc.channel == 3 ? 43 : 13;
 			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
+			octaveOffset = doc.song.channelOctaves[doc.channel] * 12;
 			render();
 		}
 		
@@ -441,7 +443,7 @@ SOFTWARE.
 					for each (tone in doc.song.getBarPattern(channel, doc.bar).tones) {
 						for each (note in tone.notes) {
 							container.graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][channel]);
-							drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false);
+							drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
 							container.graphics.endFill();
 						}
 					}
@@ -450,10 +452,10 @@ SOFTWARE.
 			for each (tone in pattern.tones) {
 				for each (note in tone.notes) {
 					container.graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][doc.channel]);
-					drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, false);
+					drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
 					container.graphics.endFill();
 					container.graphics.beginFill([0xccffcc, 0xffffcc, 0xffddcc, 0xeeeeee][doc.channel]);
-					drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, true);
+					drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
 					container.graphics.endFill();
 				}
 			}
@@ -461,7 +463,7 @@ SOFTWARE.
 			updatePreview();
 		}
 		
-		private function drawNote(graphics: Graphics, note: int, start: int, pins: Array, radius: int, showVolume: Boolean): void {
+		private function drawNote(graphics: Graphics, note: int, start: int, pins: Array, radius: int, showVolume: Boolean, offset: Number): void {
 			var prevPin: TonePin;
 			var nextPin: TonePin = pins[0];
 			
@@ -470,8 +472,8 @@ SOFTWARE.
 				nextPin = pins[i];
 				var leftSide:    Number = partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
 				var rightSide:   Number = partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
-				var leftHeight:  Number = noteHeight * (noteCount - (note + prevPin.interval) - 0.5);
-				var rightHeight: Number = noteHeight * (noteCount - (note + nextPin.interval) - 0.5);
+				var leftHeight:  Number = noteHeight * (noteCount - (note + prevPin.interval - offset) - 0.5);
+				var rightHeight: Number = noteHeight * (noteCount - (note + nextPin.interval - offset) - 0.5);
 				var leftVolume:  Number = showVolume ? prevPin.volume / 3.0 : 1.0;
 				var rightVolume: Number = showVolume ? nextPin.volume / 3.0 : 1.0;
 				graphics.moveTo(leftSide,  leftHeight  - radius * leftVolume);

@@ -40,9 +40,7 @@ package beepbox.synth {
 		];
 		public static const pianoScaleFlags: Array = [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true];
 		public static const keyNames: Array = ["B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C"];
-		public static const keyTransposes: Array = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
-		public static const channelNames: Array = ["lead", "harmony", "bass", "drums"];
-		public static const channelRoots: Array = [48, 36, 24, 69];
+		public static const keyTransposes: Array = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
 		public static const tempoNames: Array = ["slow", "steady", "fast", "hyper"];
 		public static const beatNames: Array = ["6 beats", "7 beats", "8 beats", "9 beats", "10 beats"];
 		public static const beatCounts: Array = [6, 7, 8, 9, 10];
@@ -63,7 +61,7 @@ package beepbox.synth {
 		public static const chorusValues: Array = [0.0, 0.02, 0.05, 0.1, 0.25];
 		public static const volumeNames: Array = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
 		public static const volumeValues: Array = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
-		public static const channelVolumes: Array = [0.259, 0.294, 0.329, 0.118];
+		public static const channelVolumes: Array = [0.3, 0.3, 0.3, 0.1];
 		public static const drumInterval: int = 6;
 		public static const numChannels: int = 4;
 		public static const numBars: int = 16;

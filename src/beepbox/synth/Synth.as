@@ -324,7 +324,7 @@ package beepbox.synth {
 					if (tone != null && prevTone != null && prevTone.end != tone.start) prevTone = null;
 					if (tone != null && nextTone != null && nextTone.start != tone.end) nextTone = null;
 					
-					var channelRoot: int = Music.channelRoots[channel] + (channel == 3 ? 0 : Music.keyTransposes[song.key]);
+					var channelRoot: int = channel == 3 ? 69 : Music.keyTransposes[song.key];
 					var intervalScale: int = channel == 3 ? Music.drumInterval : 1;
 					var periodDelta: Number;
 					var periodDeltaScale: Number;
@@ -419,8 +419,8 @@ package beepbox.synth {
 						var endRatio:   Number = 1.0 - (arpeggioSamples)           / samplesPerArpeggio;
 						var startInterval: Number = arpeggioIntervalStart * (1.0 - startRatio) + arpeggioIntervalEnd * startRatio;
 						var endInterval:   Number = arpeggioIntervalStart * (1.0 - endRatio)   + arpeggioIntervalEnd * endRatio;
-						var startFreq: Number = frequencyFromPitch(channelRoot + (pitch + startInterval));
-						var endFreq:   Number = frequencyFromPitch(channelRoot + (pitch + endInterval));
+						var startFreq: Number = frequencyFromPitch(channelRoot + (pitch + startInterval) * intervalScale);
+						var endFreq:   Number = frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
 						var startVol: Number = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + startInterval) / 48.0);
 						var endVol:   Number = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + endInterval) / 48.0);
 						startVol *= volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);

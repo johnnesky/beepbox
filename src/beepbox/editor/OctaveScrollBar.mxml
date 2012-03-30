@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (C) 2012 John Nesky
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+-->
+
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+           xmlns:s="library://ns.adobe.com/flex/spark"
+           xmlns="*"
+           width="20"
+           height="481"
+           backgroundColor="0x000000"
+           creationComplete="init()"
+           addedToStage="onAddedToStage()">
+	<mx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		
+		import mx.collections.ArrayCollection;
+		
+		import beepbox.synth.*;
+		
+		[Bindable]
+		public var doc: Document;
+		
+		private var preview: Sprite;
+		private var mouseDown: Boolean = false;
+		private var mouseOver: Boolean = false;
+		
+		private var rootHeight: Number = 4.0;
+		private var octaveCount: int = 7;
+		private var octaveHeight: int;
+		private var barHeight: Number;
+		private var dragging: Boolean = false;
+		private var dragStart: Number;
+		private var currentOctave: int;
+		private var barBottom: Number;
+		
+		public function init():void {
+			preview = new Sprite();
+			container.addChild(preview);
+			doc.watch(documentChanged);
+			documentChanged();
+		}
+		
+		private function onAddedToStage(): void {
+			addEventListener(MouseEvent.MOUSE_DOWN, onMousePressed);
+			stage.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMoved);
+			stage.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
+			addEventListener(MouseEvent.ROLL_OVER, onMouseOver);
+			addEventListener(MouseEvent.ROLL_OUT, onMouseOut);
+			
+			octaveHeight = (height - rootHeight) / octaveCount;
+			barHeight = (octaveHeight * 3 + rootHeight);
+		}
+		
+		private function onMouseOver(event: Event): void {
+			mouseOver = true;
+		}
+		
+		private function onMouseOut(event: Event): void {
+			mouseOver = false;
+		}
+		
+		private function onMousePressed(event: Event): void {
+			mouseDown = true;
+			if (doc.channel == 3) return;
+			updatePreview();
+			
+			if (mouseY >= barBottom - barHeight && mouseY <= barBottom) {
+				dragging = true;
+				dragStart = mouseY;
+			}
+		}
+		
+		private function onMouseMoved(event: Event): void {
+			if (doc.channel == 3) return;
+			if (doc.channel != 3 && dragging) {
+				while (mouseY - dragStart < -octaveHeight * 0.5) {
+					if (currentOctave < 4) {
+						doc.history.record(new ChangeOctave(doc, currentOctave + 1));
+						dragStart -= octaveHeight;
+					} else {
+						break;
+					}
+				}
+				while (mouseY - dragStart > octaveHeight * 0.5) {
+					if (currentOctave > 0) {
+						doc.history.record(new ChangeOctave(doc, currentOctave - 1));
+						dragStart += octaveHeight;
+					} else {
+						break;
+					}
+				}
+			}
+			
+			updatePreview();
+		}
+		
+		private function onMouseReleased(event: Event): void {
+			if (doc.channel != 3 && !dragging && mouseDown) {
+				if (mouseY < barBottom - barHeight * 0.5) {
+					if (currentOctave < 4) doc.history.record(new ChangeOctave(doc, currentOctave + 1));
+				} else {
+					if (currentOctave > 0) doc.history.record(new ChangeOctave(doc, currentOctave - 1));
+				}
+			}
+			mouseDown = false;
+			dragging = false;
+			updatePreview();
+		}
+		
+		private function updatePreview(): void {
+			if (preview == null) return;
+			if (doc.channel == 3) return;
+			
+			preview.graphics.clear();
+			if (!mouseOver || mouseDown) return;
+			
+			var center: Number = width * 0.5;
+			var base: Number = 20;
+			var tip: Number = 9;
+			var arrowWidth: Number = 6;
+			if (mouseY < barBottom - barHeight) {
+				preview.graphics.beginFill(0xffffff);
+				preview.graphics.moveTo(center, tip);
+				preview.graphics.lineTo(center + arrowWidth, base);
+				preview.graphics.lineTo(center - arrowWidth, base);
+				preview.graphics.lineTo(center, tip);
+				preview.graphics.endFill();
+			} else if (mouseY > barBottom) {
+				preview.graphics.beginFill(0xffffff);
+				preview.graphics.moveTo(center, height - tip);
+				preview.graphics.lineTo(center + arrowWidth, height - base);
+				preview.graphics.lineTo(center - arrowWidth, height - base);
+				preview.graphics.lineTo(center, height - tip);
+				preview.graphics.endFill();
+			} else {
+				preview.graphics.lineStyle(2, 0xffffff);
+				preview.graphics.drawRect(1, barBottom, width - 2, -barHeight);
+				preview.graphics.lineStyle();
+			}
+		}
+		
+		private function documentChanged(): void {
+			currentOctave = doc.song.channelOctaves[doc.channel];
+			barBottom = height - (octaveHeight * currentOctave);
+			render();
+		}
+		
+		private function render(): void {
+			if (preview == null) return;
+			
+			container.graphics.clear();
+			container.graphics.beginFill(0x000000);
+			container.graphics.drawRect(0, 0, width, height);
+			container.graphics.endFill();
+			
+			if (doc.channel == 3) return;
+			
+			container.graphics.beginFill(0x444444);
+			container.graphics.drawRect(2, barBottom, width - 4, -barHeight);
+			container.graphics.endFill();
+			
+			for (var i: int = 0; i <= octaveCount; i++) {
+				container.graphics.beginFill(0x886644);
+				container.graphics.drawRect(0, i * octaveHeight, width, rootHeight);
+				container.graphics.endFill();
+			}
+			
+			updatePreview();
+		}
+	]]></mx:Script>
+	<mx:UIComponent id="container"/>
+</mx:Canvas>

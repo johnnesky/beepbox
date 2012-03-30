@@ -23,16 +23,17 @@ SOFTWARE.
 package beepbox.synth {
 	public class BitField {
 		
-		private static const sixtyfour: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
-		
+		private var base64: Array;
 		private var bits: Array = [];
 		private var readIndex: int = 0;
 		
-		public function BitField() {}
+		public function BitField(base64: Array) {
+			this.base64 = base64;
+		}
 		
 		public function load(source: String): void {
 			for each (var char: String in source.split("")) {
-				var value: int = sixtyfour.indexOf(char);
+				var value: int = base64.indexOf(char);
 				bits.push((value & 0x20) != 0);
 				bits.push((value & 0x10) != 0);
 				bits.push((value & 0x08) != 0);
@@ -151,7 +152,7 @@ package beepbox.synth {
 				if (bits[i+3]) value += 0x04;
 				if (bits[i+4]) value += 0x02;
 				if (bits[i+5]) value += 0x01;
-				result += sixtyfour[value];
+				result += base64[value];
 				
 			}
 			return result;
