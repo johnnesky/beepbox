@@ -41,6 +41,8 @@ SOFTWARE.
 		import flash.utils.*;
 		
 		import mx.collections.ArrayCollection;
+		import mx.controls.Menu;
+		import mx.events.MenuEvent;
 		
 		import beepbox.synth.*;
 		
@@ -70,6 +72,7 @@ SOFTWARE.
 		[Bindable]
 		private var volumeNames: ArrayCollection;
 		
+		private var editMenu: Menu;
 		private var copyTones: Array;
 		private var copyBeats: int = 0;
 		private var copyParts: int = 0;
@@ -121,9 +124,6 @@ SOFTWARE.
 			}
 			currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
 			barEditor.width = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
-			undoButton.enabled = doc.history.canUndo();
-			redoButton.enabled = doc.history.canRedo();
-			pasteButton.enabled = copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts;
 		}
 		
 		private function onAddedToStage(): void {
@@ -147,6 +147,12 @@ SOFTWARE.
 					break;
 				case 89: // y
 					doc.history.redo();
+					break;
+				case 67: // c
+					copy();
+					break;
+				case 86: // v
+					paste();
 					break;
 				case 219: // left brace
 					doc.synth.prevBar();
@@ -175,10 +181,10 @@ SOFTWARE.
 			copyTones = doc.song.getBarPattern(doc.channel, doc.bar).cloneTones();
 			copyBeats = doc.song.beats;
 			copyParts = doc.song.parts;
-			pasteButton.enabled = true;
 		}
 		
 		private function paste(): void {
+			if (!canPaste()) return;
 			doc.history.record(new ChangePaste(doc, copyTones));
 		}
 		
@@ -355,6 +361,54 @@ SOFTWARE.
 			doc.changed();
 			doc.savePreferences();
 		}
+		
+		private function canPaste(): Boolean {
+			return copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts;
+		}
+		
+		private function openEditMenu(): void {
+			var editNameSpace: Namespace =  new Namespace("beepbox.editor.*");
+			editMenuData.editNameSpace::menuitem.(@eventName == "undo")[0].@enabled = doc.history.canUndo();
+			editMenuData.editNameSpace::menuitem.(@eventName == "redo")[0].@enabled = doc.history.canRedo();
+			editMenuData.editNameSpace::menuitem.(@eventName == "paste")[0].@enabled = canPaste();
+			
+			editMenu = Menu.createMenu(this, editMenuData, false);
+			editMenu.labelField = "@label";
+			editMenu.addEventListener(MenuEvent.ITEM_CLICK, editMenuHandler);
+		
+			// Calculate position of Menu in Application's coordinates. 
+			var point1:Point = new Point();
+			point1.x = editButton.x;
+			point1.y = editButton.y;
+			point1 = editButton.localToGlobal(point1);
+		
+			editMenu.show(point1.x, point1.y - 25);
+		}
+		
+		// Event handler for the Menu control's change event.
+		private function editMenuHandler(event:MenuEvent):void  {
+			trace(event.item.@eventName, event);
+			switch (String(event.item.@eventName)) {
+				case "undo":
+					doc.history.undo();
+					break;
+				case "redo":
+					doc.history.redo();
+					break;
+				case "copy":
+					copy();
+					break;
+				case "paste":
+					paste();
+					break;
+				case "export":
+					export();
+					break;
+				case "clean":
+					cleanSlate();
+					break;
+			}
+		}
 	]]></fx:Script>
 	
 	<s:states>
@@ -382,16 +436,7 @@ SOFTWARE.
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>
-				<s:Button id="cleanButton" label="Clean slate" click="cleanSlate(); stage.focus = stage" width="100%"/>
-				<s:Button id="exportButton" label="Save as .wav file" click="export(); stage.focus = stage" width="100%"/>
-				<s:HGroup width="100%" verticalAlign="middle">
-					<s:Button id="undoButton" label="Undo" enabled="false" click="doc.history.undo(); stage.focus = stage" width="50%"/>
-					<s:Button id="redoButton" label="Redo" enabled="false" click="doc.history.redo(); stage.focus = stage" width="50%"/>
-				</s:HGroup>
-				<s:HGroup width="100%" verticalAlign="middle">
-					<s:Button id="copyButton" label="Copy" enabled="true" click="copy(); stage.focus = stage" width="50%"/>
-					<s:Button id="pasteButton" label="Paste" enabled="false" click="paste(); stage.focus = stage" width="50%"/>
-				</s:HGroup>
+				<s:Button id="editButton" label="Edit Menu" click="openEditMenu();" width="100%"/>
 				<s:Spacer height="5"/>
 				<s:Label text="Preferences:" color="0xffffff"/>
 				<s:CheckBox id="showLetters" label="Show Piano" color="0xbbbbbb" change="toggleLetters(); stage.focus = stage"/>
@@ -484,4 +529,17 @@ SOFTWARE.
 			</s:VGroup>
 		</s:VGroup>
 	</s:HGroup>
+
+	<fx:Declarations>
+		<fx:XML id="editMenuData">
+			<root>
+				<menuitem label="Undo (Z)" eventName="undo"/>
+				<menuitem label="Redo (Y)" eventName="redo"/>
+				<menuitem label="Copy Pattern (C)" eventName="copy"/>
+				<menuitem label="Paste Pattern (V)" eventName="paste"/>
+				<menuitem label="Export to .wav File" eventName="export"/>
+				<menuitem label="Clean Slate" eventName="clean"/>
+			</root>
+		</fx:XML>
+	</fx:Declarations>
 </s:BorderContainer>
