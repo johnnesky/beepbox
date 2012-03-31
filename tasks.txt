@@ -91,16 +91,17 @@
 √ copy paste patterns
 √ put the edit buttons in one menu. undo, copy/paste, clean slate, etc
 √ copy and paste keyboard commands
+√ perform dynamic range compression, increase base volume
 
 NEXT VERSION:
-- perform dynamic range compression
 - global volume control
-- drum volume control
+- drum volume drop down menu
+- drums get custom lowpass based on change rate? rebalance volume range too. base is too quiet, cymbal too loud.
+- option: play on startup
 - medium sustain filter, slower sharp filter...
 - dedicated silent 0 pattern
 - rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
 - wider beats/bar range, indicate recommended number 8 somehow?
-- tooltips
 - clip rect on pattern editor
 - Dim the column occupied by a tone to communicate mono voice?
 - volume pins, correctly moving pins when swingifying
@@ -109,12 +110,12 @@ NEXT VERSION:
 - tones that fade out completely shouldn't slide
 - optimize those Math functions in Synth
 - don't autoplay until URL fragment has been passed through
-- drums get custom lowpass based on change rate? rebalance volume range too. base is too quiet, cymbal too loud.
-- think about equalizing some more. the low drums are very quiet! :/
 - make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
 - adjust drop down menu widths to fit the size of their contents, mostly so that they're not all the same size, to give you an extra visual cue to find the menu you're looking for
 
 MORE FEATURES:
+- distortion: light medium heavy, per channel distortion toggle
+- tooltips
 - double number of beat divisions
 - illustrate arpeggio texture on tones with multiple notes
 - phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
