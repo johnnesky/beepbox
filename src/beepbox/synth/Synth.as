@@ -34,6 +34,7 @@ package beepbox.synth {
 		private const effectDuration: Number = 0.14;
 		private const effectAngle: Number = Math.PI * 2.0 / (effectDuration * samplesPerSecond);
 		private const effectYMult: Number = 2.0 * Math.cos( effectAngle );
+		private const limitDecay: Number = 1.0 / (2.0 * samplesPerSecond);
 		private const waves: Vector.<Vector.<Number>> = new <Vector.<Number>> [
 			new <Number>[1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0],
 			new <Number>[1.0, -1.0],
@@ -70,11 +71,13 @@ package beepbox.synth {
 		private var drumPeriod: Number = 0.0;
 		private var drumSample: Number = 0.0;
 		private var drumBuffer: int = 1;
+		private var drumSignal: Number = 1.0;
 		private var stillGoing: Boolean = false;
 		private var sound: Sound = new Sound();
 		private var soundChannel: SoundChannel = null;
 		private var timer: Timer = new Timer(200, 0);
 		private var effectPeriod: Number = 0.0;
+		private var limit: Number = 0.0;
 		
 		public function get playing(): Boolean {
 			return !paused;
@@ -525,7 +528,7 @@ package beepbox.synth {
 					bassFilter *= bassFilterScale;
 					sample += bassSample;
 					
-					drumSample += ((2.0 * (drumBuffer & 1) - 1.0) * drumVolume - drumSample) * drumFilter;
+					drumSample += (drumSignal * drumVolume - drumSample) * drumFilter;
 					drumVolume += drumVolumeDelta;
 					drumPeriod += drumPeriodDelta;
 					drumPeriodDelta *= drumPeriodDeltaScale;
@@ -536,8 +539,14 @@ package beepbox.synth {
 							newBuffer += 1 << 14;
 						}
 						drumBuffer = newBuffer;
+						drumSignal = (2.0 * (drumBuffer & 1) - 1.0);
 					}
 					sample += drumSample;
+					
+					var abs: Number = sample < 0.0 ? -sample : sample;
+					limit -= limitDecay;
+					if (limit < abs) limit = abs;
+					sample /= limit * 0.75 + 0.25;
 					
 					data.writeFloat(sample);
 					data.writeFloat(sample);

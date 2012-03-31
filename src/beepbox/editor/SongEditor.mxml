@@ -440,8 +440,8 @@ SOFTWARE.
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>
-				<s:Button id="editButton" label="Edit" click="openEditMenu();" width="100%"/>
-				<s:Button id="optionsButton" label="Options" click="openOptionsMenu();" width="100%"/>
+				<s:Button id="editButton" label="Edit Menu" click="openEditMenu();" width="100%"/>
+				<s:Button id="optionsButton" label="Options Menu" click="openOptionsMenu();" width="100%"/>
 				<s:Spacer height="5"/>
 				<s:Label text="Song Settings:" color="0xffffff"/>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
