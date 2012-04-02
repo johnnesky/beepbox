@@ -121,6 +121,7 @@ SOFTWARE.
 			}
 			currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
 			barEditor.width = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
+			volumeSlider.value = doc.volume;
 		}
 		
 		private function onAddedToStage(): void {
@@ -167,10 +168,10 @@ SOFTWARE.
 			if (doc.synth.playing) {
 				doc.synth.pause();
 				doc.synth.snapToBar();
-				playButton.label = "Resume Playback";
+				playButton.label = "Resume";
 			} else {
 				doc.synth.play();
-				playButton.label = "Pause Playback";
+				playButton.label = "Pause";
 			}
 		}
 		
@@ -439,7 +440,10 @@ SOFTWARE.
 					<s:Label text="Beep Box version 1.0.1" color="0xbbbbbb" right="0"/>
 					<s:Spacer width="50%"/>
 				</s:HGroup>
-				<s:Button id="playButton" label="Pause Playback" click="togglePlay(); stage.focus = stage" width="100%"/>
+				<s:HGroup width="100%" verticalAlign="middle">
+					<s:Button id="playButton" label="Pause" click="togglePlay(); stage.focus = stage" width="100%"/>
+					<s:HSlider id="volumeSlider" minimum="0" maximum="100" value="50" stepSize="1" snapInterval="1" liveDragging="true" showDataTip="false" change="doc.setVolume(volumeSlider.value)"/>
+				</s:HGroup>
 				<s:Button id="editButton" label="Edit Menu" click="openEditMenu();" width="100%"/>
 				<s:Button id="optionsButton" label="Options Menu" click="openOptionsMenu();" width="100%"/>
 				<s:Spacer height="5"/>

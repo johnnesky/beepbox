@@ -92,11 +92,11 @@
 √ put the edit buttons in one menu. undo, copy/paste, clean slate, etc
 √ copy and paste keyboard commands
 √ perform dynamic range compression, increase base volume
+√ global volume control
 
 NEXT VERSION:
-- global volume control
 - drum volume drop down menu
-- drums get custom lowpass based on change rate? rebalance volume range too. base is too quiet, cymbal too loud.
+- drums get custom lowpass based on change rate? rebalance volume range too. bass is too quiet, cymbal too loud.
 - option: play on startup
 - medium sustain filter, slower sharp filter...
 - dedicated silent 0 pattern
@@ -114,6 +114,8 @@ NEXT VERSION:
 - adjust drop down menu widths to fit the size of their contents, mostly so that they're not all the same size, to give you an extra visual cue to find the menu you're looking for
 
 MORE FEATURES:
+- make play and volume controls prettier
+- convert pattern editor from mxml to a sprite
 - distortion: light medium heavy, per channel distortion toggle
 - tooltips
 - double number of beat divisions

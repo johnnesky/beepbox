@@ -36,6 +36,7 @@ package beepbox.editor {
 		public var showLetters: Boolean;
 		public var showChannels: Boolean;
 		public var showScrollBar: Boolean;
+		public var volume: int;
 		public var song: Song;
 		
 		private var localSO: SharedObject;
@@ -47,6 +48,7 @@ package beepbox.editor {
 			showLetters = false;
 			showChannels = false;
 			showScrollBar = false;
+			volume = 50;
 			history = new ChangeHistory();
 			song = new Song();
 			synth = new Synth(song);
@@ -57,11 +59,14 @@ package beepbox.editor {
 			} catch(e: Error) {}
 			
 			if (localSO != null) {
-				showFifth = localSO.data.showFifth == undefined ? false : localSO.data.showFifth;
-				showLetters = localSO.data.showLetters == undefined ? false : localSO.data.showLetters;
-				showChannels = localSO.data.showChannels == undefined ? false : localSO.data.showChannels;
-				showScrollBar = localSO.data.showScrollBar == undefined ? false : localSO.data.showScrollBar;
+				if (localSO.data.showFifth != undefined) showFifth = localSO.data.showFifth;
+				if (localSO.data.showLetters != undefined) showLetters = localSO.data.showLetters;
+				if (localSO.data.showChannels != undefined) showChannels = localSO.data.showChannels;
+				if (localSO.data.showScrollBar != undefined) showScrollBar = localSO.data.showScrollBar;
+				if (localSO.data.volume != undefined) volume = localSO.data.volume;
 			}
+			
+			synth.volume = volume / 50.0;
 		}
 		
 		public function savePreferences(): void {
@@ -70,8 +75,15 @@ package beepbox.editor {
 				localSO.data.showLetters = showLetters;
 				localSO.data.showChannels = showChannels;
 				localSO.data.showScrollBar = showScrollBar;
+				localSO.data.volume = volume;
 				localSO.flush();
 			}
+		}
+		
+		public function setVolume(val: int): void {
+			volume = val;
+			savePreferences();
+			synth.volume = volume / 50.0;
 		}
 	}
 }
