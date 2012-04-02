@@ -51,6 +51,7 @@ package beepbox.synth {
 		public var pianoPressed: Boolean = false;
 		public var pianoNote: int = 0;
 		public var pianoChannel: int = 0;
+		public var volume: Number = 1.0;
 		
 		private var _playhead: Number = 0.0;
 		private var bar: int = 0;
@@ -331,7 +332,7 @@ package beepbox.synth {
 					var intervalScale: int = channel == 3 ? Music.drumInterval : 1;
 					var periodDelta: Number;
 					var periodDeltaScale: Number;
-					var volume: Number;
+					var toneVolume: Number;
 					var volumeDelta: Number;
 					var filter: Number;
 					var vibratoScale: Number;
@@ -339,14 +340,14 @@ package beepbox.synth {
 					if (pianoPressed && channel == pianoChannel) {
 						periodDelta = frequencyFromPitch(pitch + channelRoot + pianoNote * intervalScale) * sampleTime;
 						periodDeltaScale = 1.0;
-						volume = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + pianoNote) / 48.0);
+						toneVolume = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + pianoNote) / 48.0);
 						volumeDelta = 0.0;
 						filter = 1.0;
 						vibratoScale = 0.0;
 					} else if (tone == null) {
 						periodDelta = 0.0;
 						periodDeltaScale = 0.0;
-						volume = 0.0;
+						toneVolume = 0.0;
 						volumeDelta = 0.0;
 						filter = 1.0;
 						vibratoScale = 0.0;
@@ -431,7 +432,7 @@ package beepbox.synth {
 						var freqScale: Number = endFreq / startFreq;
 						periodDelta = startFreq * sampleTime;
 						periodDeltaScale = Math.pow(freqScale, 1.0 / samples);
-						volume = startVol;
+						toneVolume = startVol;
 						volumeDelta = (endVol - startVol) / samples;
 						var timeSinceStart: Number = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / samplesPerSecond;
 						if (timeSinceStart == 0.0 && !inhibitRestart) resetPeriod = true;
@@ -442,7 +443,7 @@ package beepbox.synth {
 					if (channel == 0) {
 						leadPeriodDelta = periodDelta;
 						leadPeriodDeltaScale = periodDeltaScale;
-						leadVolume = volume * maxLeadVolume;
+						leadVolume = toneVolume * maxLeadVolume;
 						leadVolumeDelta = volumeDelta * maxLeadVolume;
 						leadFilter = filter * leadFilterBase;
 						leadVibratoScale = vibratoScale;
@@ -454,7 +455,7 @@ package beepbox.synth {
 					} else if (channel == 1) {
 						harmonyPeriodDelta = periodDelta;
 						harmonyPeriodDeltaScale = periodDeltaScale;
-						harmonyVolume = volume * maxHarmonyVolume;
+						harmonyVolume = toneVolume * maxHarmonyVolume;
 						harmonyVolumeDelta = volumeDelta * maxHarmonyVolume;
 						harmonyFilter = filter * harmonyFilterBase;
 						harmonyVibratoScale = vibratoScale;
@@ -466,7 +467,7 @@ package beepbox.synth {
 					} else if (channel == 2) {
 						bassPeriodDelta = periodDelta;
 						bassPeriodDeltaScale = periodDeltaScale;
-						bassVolume = volume * maxBassVolume;
+						bassVolume = toneVolume * maxBassVolume;
 						bassVolumeDelta = volumeDelta * maxBassVolume;
 						bassFilter = filter * bassFilterBase;
 						bassVibratoScale = vibratoScale;
@@ -478,7 +479,7 @@ package beepbox.synth {
 					} else if (channel == 3) {
 						drumPeriodDelta = periodDelta;
 						drumPeriodDeltaScale = periodDeltaScale;
-						drumVolume = volume * maxDrumVolume;
+						drumVolume = toneVolume * maxDrumVolume;
 						drumVolumeDelta = volumeDelta * maxDrumVolume;
 					}
 				}
@@ -547,7 +548,7 @@ package beepbox.synth {
 					limit -= limitDecay;
 					if (limit < abs) limit = abs;
 					sample /= limit * 0.75 + 0.25;
-					
+					sample *= volume;
 					data.writeFloat(sample);
 					data.writeFloat(sample);
 					samples--;
@@ -587,8 +588,8 @@ package beepbox.synth {
 			return 440.0 * Math.pow(2.0, (pitch - 69.0) / 12.0);
 		}
 		
-		private function volumeConversion(volume: Number): Number {
-			return Math.pow(volume / 3.0, 1.5);
+		private function volumeConversion(toneVolume: Number): Number {
+			return Math.pow(toneVolume / 3.0, 1.5);
 		}
 		
 		private function getSamplesPerArpeggio(): int {
