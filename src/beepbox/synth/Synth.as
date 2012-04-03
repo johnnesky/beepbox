@@ -218,10 +218,10 @@ package beepbox.synth {
 			const sampleTime: Number = 1.0 / samplesPerSecond;
 			const samplesPerArpeggio: int = getSamplesPerArpeggio();
 			
-			const maxLeadVolume:    Number = Music.channelVolumes[0] * Music.waveVolumes[song.channelWaves[0]] * Music.filterVolumes[song.channelFilters[0]] * 0.5 * (song.channelVolumes[0] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.channelVolumes[0]]));
-			const maxHarmonyVolume: Number = Music.channelVolumes[1] * Music.waveVolumes[song.channelWaves[1]] * Music.filterVolumes[song.channelFilters[1]] * 0.5 * (song.channelVolumes[1] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.channelVolumes[1]]));
-			const maxBassVolume:    Number = Music.channelVolumes[2] * Music.waveVolumes[song.channelWaves[2]] * Music.filterVolumes[song.channelFilters[2]] * 0.5 * (song.channelVolumes[2] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.channelVolumes[2]]));
-			const maxDrumVolume:    Number = Music.channelVolumes[3];
+			const maxLeadVolume:    Number = Music.channelVolumes[0] * (song.channelVolumes[0] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.channelVolumes[0]])) * Music.waveVolumes[song.channelWaves[0]] * Music.filterVolumes[song.channelFilters[0]] * 0.5;
+			const maxHarmonyVolume: Number = Music.channelVolumes[1] * (song.channelVolumes[1] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.channelVolumes[1]])) * Music.waveVolumes[song.channelWaves[1]] * Music.filterVolumes[song.channelFilters[1]] * 0.5;
+			const maxBassVolume:    Number = Music.channelVolumes[2] * (song.channelVolumes[2] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.channelVolumes[2]])) * Music.waveVolumes[song.channelWaves[2]] * Music.filterVolumes[song.channelFilters[2]] * 0.5;
+			const maxDrumVolume:    Number = Music.channelVolumes[3] * (song.channelVolumes[3] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.channelVolumes[3]]));
 			
 			const leadWave:    Vector.<Number> = waves[song.channelWaves[0]];
 			const harmonyWave: Vector.<Number> = waves[song.channelWaves[1]];

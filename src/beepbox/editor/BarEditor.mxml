@@ -405,11 +405,13 @@ SOFTWARE.
 		}
 		
 		private function documentChanged(): void {
+			width = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
 			pattern = doc.song.getBarPattern(doc.channel, doc.bar);
-			partWidth = (doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512)) / (doc.song.beats * doc.song.parts);
+			partWidth = width / (doc.song.beats * doc.song.parts);
 			noteHeight = doc.channel == 3 ? 43 : 13;
 			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
 			octaveOffset = doc.song.channelOctaves[doc.channel] * 12;
+			scrollRect = new Rectangle(0, 0, width, height);
 			render();
 		}
 		

@@ -68,12 +68,12 @@ package beepbox.synth {
 				[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 				[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 			];
-			channelWaves = [1,1,1];
+			channelVolumes = [0,0,0,0];
+			channelWaves   = [1,1,1];
 			channelFilters = [0,0,0];
 			channelAttacks = [1,1,1];
 			channelEffects = [0,0,0];
 			channelChorus  = [0,0,0];
-			channelVolumes = [0,0,0];
 			channelOctaves = [3,2,1];
 			scale = 0;
 			key = Music.keyNames.length - 1;
@@ -121,11 +121,11 @@ package beepbox.synth {
 			}
 			
 			for each (channel in [0, 1, 2]) {
-				result += "v" + base64[channel] + base64[channelVolumes[channel]];
+				result += "o" + base64[channel] + base64[channelOctaves[channel]];
 			}
 			
-			for each (channel in [0, 1, 2]) {
-				result += "o" + base64[channel] + base64[channelOctaves[channel]];
+			for each (channel in [0, 1, 2, 3]) {
+				result += "v" + base64[channel] + base64[channelVolumes[channel]];
 			}
 			
 			for each (channel in [0, 1, 2, 3]) {
