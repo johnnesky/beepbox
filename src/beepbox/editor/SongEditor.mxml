@@ -107,12 +107,18 @@ SOFTWARE.
 			beatDropDown.selectedIndex = Music.beatCounts.indexOf(doc.song.beats);
 			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
 			if (doc.channel == 3) {
-				channelSettings.visible = false;
-				channelSettingsLabel.visible = false;
+				waveDropDownGroup.visible   = false;
+				attackDropDownGroup.visible = false;
+				filterDropDownGroup.visible = false;
+				chorusDropDownGroup.visible = false;
+				effectDropDownGroup.visible = false;
 			} else {
-				channelSettings.visible = true;
-				channelSettingsLabel.visible = true;
-				waveDropDown.selectedIndex = doc.song.channelWaves[doc.channel];
+				waveDropDownGroup.visible   = true;
+				attackDropDownGroup.visible = true;
+				filterDropDownGroup.visible = true;
+				chorusDropDownGroup.visible = true;
+				effectDropDownGroup.visible = true;
+				waveDropDown.selectedIndex   = doc.song.channelWaves[doc.channel];
 				filterDropDown.selectedIndex = doc.song.channelFilters[doc.channel];
 				attackDropDown.selectedIndex = doc.song.channelAttacks[doc.channel];
 				effectDropDown.selectedIndex = doc.song.channelEffects[doc.channel];
@@ -470,59 +476,59 @@ SOFTWARE.
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
-					<s:Label text="Beats per bar:" color="0xbbbbbb"/>
-					<s:Spacer width="100%"/>
-					<s:DropDownList id="beatDropDown" dataProvider="{beatNames}" width="90" change="onSetBeats()" close="stage.focus = stage" right="0">
-						<s:layout> <s:VerticalLayout requestedRowCount="{beatNames.length}" horizontalAlign="justify"/> </s:layout>
-					</s:DropDownList>
-				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Beat divisions:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="partDropDown" dataProvider="{partNames}" width="90" change="onSetParts()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{partNames.length}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Beats per bar:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="beatDropDown" dataProvider="{beatNames}" width="90" change="onSetBeats()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{beatNames.length}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
 				<s:Spacer height="100%"/>
 				<s:Label id="channelSettingsLabel" text="Channel Settings:" color="0xffffff"/>
 			</s:VGroup>
 			<s:VGroup id="channelSettings" height="100%" width="100%">
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+				<s:HGroup id="volumeDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Volume:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="volumeDropDown" dataProvider="{volumeNames}" width="120" change="onSetVolume()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+				<s:HGroup id="waveDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Wave:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="waveDropDown" dataProvider="{waveNames}" width="120" change="onSetWave()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+				<s:HGroup id="attackDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Envelope:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="attackDropDown" dataProvider="{attackNames}" width="120" change="onSetAttack()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+				<s:HGroup id="filterDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Filter:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="filterDropDown" dataProvider="{filterNames}" width="120" change="onSetFilter()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+				<s:HGroup id="chorusDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Chorus:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="chorusDropDown" dataProvider="{chorusNames}" width="120" change="onSetChorus()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+				<s:HGroup id="effectDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Effect:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="effectDropDown" dataProvider="{effectNames}" width="120" change="onSetEffect()" close="stage.focus = stage" right="0">

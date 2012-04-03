@@ -48,7 +48,7 @@ package beepbox.editor {
 			showLetters = false;
 			showChannels = false;
 			showScrollBar = false;
-			volume = 50;
+			volume = 75;
 			history = new ChangeHistory();
 			song = new Song();
 			synth = new Synth(song);
@@ -66,7 +66,7 @@ package beepbox.editor {
 				if (localSO.data.volume != undefined) volume = localSO.data.volume;
 			}
 			
-			synth.volume = volume / 50.0;
+			synth.volume = calcVolume();
 		}
 		
 		public function savePreferences(): void {
@@ -80,10 +80,14 @@ package beepbox.editor {
 			}
 		}
 		
+		private function calcVolume(): Number {
+			return Math.min(1.0, Math.pow(volume / 50.0, 0.5)) * Math.pow(2.0, (volume - 75.0) / 25.0);
+		}
+		
 		public function setVolume(val: int): void {
 			volume = val;
 			savePreferences();
-			synth.volume = volume / 50.0;
+			synth.volume = calcVolume();
 		}
 	}
 }

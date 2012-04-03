@@ -42,9 +42,9 @@ package beepbox.synth {
 		public static const keyNames: Array = ["B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C"];
 		public static const keyTransposes: Array = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
 		public static const tempoNames: Array = ["slow", "steady", "fast", "hyper"];
-		public static const beatNames: Array = ["6 beats", "7 beats", "8 beats", "9 beats", "10 beats"];
+		public static const beatNames: Array = ["6", "7", "8 (standard)", "9", "10"];
 		public static const beatCounts: Array = [6, 7, 8, 9, 10];
-		public static const partNames: Array = ["3 parts", "4 parts"];
+		public static const partNames: Array = ["3", "4"];
 		public static const partCounts: Array = [3, 4];
 		public static const noteNames: Array = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 		public static const waveNames: Array = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
@@ -53,7 +53,7 @@ package beepbox.synth {
 		public static const filterBases: Array = [2.0, 5.0, 1.0, 4.0];
 		public static const filterDecays: Array = [0.0, 0.0, 10.0, 4.0];
 		public static const filterVolumes: Array = [0.4, 1.0, 0.5, 1.0];
-		public static const attackNames: Array = ["sudden", "smooth fall", "smooth rise+fall", "slide"];
+		public static const attackNames: Array = ["binary", "sudden", "smooth", "slide"];
 		public static const effectNames: Array = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
 		public static const effectVibratos: Array = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
 		public static const effectTremelos: Array = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
