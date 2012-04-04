@@ -244,12 +244,12 @@ package beepbox.synth {
 			const harmonyTremeloScale: Number = Music.effectTremelos[song.channelEffects[1]];
 			const bassTremeloScale:    Number = Music.effectTremelos[song.channelEffects[2]];
 			
-			const leadChorusA:    Number = Math.pow( 2.0, Music.chorusValues[song.channelChorus[0]] / 12.0 );
-			const harmonyChorusA: Number = Math.pow( 2.0, Music.chorusValues[song.channelChorus[1]] / 12.0 );
-			const bassChorusA:    Number = Math.pow( 2.0, Music.chorusValues[song.channelChorus[2]] / 12.0 );
-			const leadChorusB:    Number = Math.pow( 2.0, -Music.chorusValues[song.channelChorus[0]] / 12.0 );
-			const harmonyChorusB: Number = Math.pow( 2.0, -Music.chorusValues[song.channelChorus[1]] / 12.0 );
-			const bassChorusB:    Number = Math.pow( 2.0, -Music.chorusValues[song.channelChorus[2]] / 12.0 );
+			const leadChorusA:    Number = Math.pow( 2.0, (Music.chorusOffsets[song.channelChorus[0]] + Music.chorusValues[song.channelChorus[0]]) / 12.0 );
+			const harmonyChorusA: Number = Math.pow( 2.0, (Music.chorusOffsets[song.channelChorus[1]] + Music.chorusValues[song.channelChorus[1]]) / 12.0 );
+			const bassChorusA:    Number = Math.pow( 2.0, (Music.chorusOffsets[song.channelChorus[2]] + Music.chorusValues[song.channelChorus[2]]) / 12.0 );
+			const leadChorusB:    Number = Math.pow( 2.0, (Music.chorusOffsets[song.channelChorus[0]] - Music.chorusValues[song.channelChorus[0]]) / 12.0 );
+			const harmonyChorusB: Number = Math.pow( 2.0, (Music.chorusOffsets[song.channelChorus[1]] - Music.chorusValues[song.channelChorus[1]]) / 12.0 );
+			const bassChorusB:    Number = Math.pow( 2.0, (Music.chorusOffsets[song.channelChorus[2]] - Music.chorusValues[song.channelChorus[2]]) / 12.0 );
 			if (song.channelChorus[0] == 0) leadPeriodB = leadPeriodA;
 			if (song.channelChorus[1] == 0) harmonyPeriodB = harmonyPeriodA;
 			if (song.channelChorus[2] == 0) bassPeriodB = bassPeriodA;
