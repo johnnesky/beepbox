@@ -57,8 +57,9 @@ package beepbox.synth {
 		public static const effectNames: Array = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
 		public static const effectVibratos: Array = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
 		public static const effectTremelos: Array = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-		public static const chorusNames: Array = ["union", "shimmer", "choir", "honky tonk", "dissonant"];
-		public static const chorusValues: Array = [0.0, 0.02, 0.05, 0.1, 0.25];
+		public static const chorusNames: Array = ["union", "shimmer", "choir", "honky tonk", "dissonant", "fifths", "octaves"];
+		public static const chorusValues: Array = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6];
+		public static const chorusOffsets: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6];
 		public static const volumeNames: Array = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
 		public static const volumeValues: Array = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
 		public static const channelVolumes: Array = [0.3, 0.3, 0.3, 0.1];
