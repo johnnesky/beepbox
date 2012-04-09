@@ -97,13 +97,24 @@
 √ clip rect on pattern editor
 √ indicate recommended beats/bar 8 somehow
 √ fifths chorus option
+√ create pitch bend, triggered by vertical dragging. 
 
 NEXT VERSION:
-- volume pins, correctly moving pins when swingifying
-- create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
+= when adding arpeggio to a pitch bend, offset the arpeggio note by the current interval.
+- When the pitch bend changes the initial pitch, recalibrate all notes of the tone. 
+- don't let pitch bends escape the normal pitch range, especially with arpeggios. 
+- don't create new arpeggios overlapping old arpeggios on pitch bends. 
+- maybe disable mixing arpeggios and pitch bends outside of expert mode and enigma mode?
+- tweak hit detection on pitch bends so that it's a little tighter than a box
+- tweak rendering of pitch bends so that they don't become tiny threads. 
+- volume pins
+- copy the volume pin structure for future tones, on a per channel basis.
+- dragging horizontally should drag the pins, not just the tone endpoints. 
+- correctly move pins when swingifying, etc.
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
 - tones that fade out volume completely shouldn't slide to next tone
 - attack transitions that slide should let the decay filter smoothly rise again to better approximate strings/violin
+- group pattern count, bar count, and beats/bar into a modal window. 
 - Benchmark synthesized vs precomputed noise. Precomputed would allow you to select non chip tune style noise. 
 - can I make the "choir" option feel more natural?
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 

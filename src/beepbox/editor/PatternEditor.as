@@ -46,7 +46,7 @@ package beepbox.editor {
 		private var mouseDown: Boolean = false;
 		private var mouseOver: Boolean = false;
 		private var mouseDragging: Boolean = false;
-		private var mouseVertical: Boolean = false;
+		private var mouseHorizontal: Boolean = false;
 		private var defaultLength: int = 4;
 		private var defaultVolume: int = 3;
 		private var mouseXStart: Number = 0;
@@ -84,11 +84,11 @@ package beepbox.editor {
 		}
 		
 		private function updateCursorStatus(): void {
-			cursor = new BarCursorStatus();
-			cursor.part    = int(Math.max(0, Math.min(doc.song.beats * doc.song.parts - 1, mouseX / partWidth)));
-			
-			var scale: Array = Music.scaleFlags[doc.song.scale];
 			var i: int;
+			var j: int;
+			
+			cursor = new BarCursorStatus();
+			cursor.part = int(Math.max(0, Math.min(doc.song.beats * doc.song.parts - 1, mouseX / partWidth)));
 			
 			for each (var tone: Tone in pattern.tones) {
 				if (tone.end <= cursor.part) {
@@ -102,47 +102,31 @@ package beepbox.editor {
 				}
 			}
 			
-			var mouseNote: Number = Math.max(0, Math.min(noteCount-1, noteCount - (mouseY / noteHeight))) + octaveOffset;
-			if (scale[int(mouseNote) % 12] || doc.channel == 3) {
-				cursor.note = int(mouseNote);
-			} else {
-				var topNote: int = int(mouseNote) + 1;
-				var bottomNote: int = int(mouseNote) - 1;
-				while (scale[topNote % 12] == false) {
-					topNote++;
-				}
-				while (scale[(bottomNote) % 12] == false) {
-					bottomNote--;
-				}
-				var topRange: Number = topNote;
-				var bottomRange: Number = bottomNote + 1;
-				if (topNote % 12 == 0 || topNote % 12 == 7) {
-					topRange -= 0.5;
-				}
-				if (bottomNote % 12 == 0 || bottomNote % 12 == 7) {
-					bottomRange += 0.5;
-				}
-				cursor.note = mouseNote - bottomRange > topRange - mouseNote ? topNote : bottomNote;
-			}
+			var mousePitch: Number = findMousePitch(mouseY);
+			cursor.note = snapToNote(mousePitch);
 			
 			if (cursor.curTone != null) {
 				cursor.start = cursor.curTone.start;
 				cursor.end   = cursor.curTone.end;
 				
 				for (i = 0; i < cursor.curTone.notes.length; i++) {
-					if (cursor.curTone.notes[i] == int(mouseNote)) {
+					var prevPin: TonePin;
+					var nextPin: TonePin = cursor.curTone.pins[0];
+					for (j = 1; j < cursor.curTone.pins.length; j++) {
+						prevPin = nextPin;
+						nextPin = cursor.curTone.pins[j];
+						var leftSide:    Number = partWidth * (cursor.curTone.start + prevPin.time);
+						var rightSide:   Number = partWidth * (cursor.curTone.start + nextPin.time);
+						var leftPitch:  Number = cursor.curTone.notes[i] + prevPin.interval;
+						var rightPitch: Number = cursor.curTone.notes[i] + nextPin.interval;
+						if (mouseX < leftSide || mouseX > rightSide) continue;
+						if (Math.max(mousePitch, cursor.note) < Math.min(leftPitch, rightPitch) - 0.5) continue;
+						if (Math.min(mousePitch, cursor.note) > Math.max(leftPitch, rightPitch) + 0.5) continue;
 						cursor.noteIndex = i;
-						cursor.note = int(mouseNote);
+						cursor.note = cursor.curTone.notes[i];
 						break;
-					} else if (cursor.curTone.notes[i] == cursor.note) {
-						cursor.noteIndex = i;
 					}
-				}
-				
-				cursor.tonePart = Math.round(mouseX / partWidth) - cursor.start;
-				var shortestDistance: int = int.MAX_VALUE;
-				for (i = 0; i < cursor.curTone.pins.length; i++) {
-					
+					if (cursor.noteIndex != -1) break;
 				}
 				
 				cursor.nearEnd = (mouseX / partWidth - cursor.start) / (cursor.end - cursor.start) > 0.5;
@@ -194,6 +178,35 @@ package beepbox.editor {
 			}
 		}
 		
+		private function findMousePitch(pixelY: Number): Number {
+			return Math.max(0, Math.min(noteCount-1, noteCount - (pixelY / noteHeight))) + octaveOffset;
+		}
+		
+		private function snapToNote(guess: Number): int {
+			var scale: Array = Music.scaleFlags[doc.song.scale];
+			if (scale[int(guess) % 12] || doc.channel == 3) {
+				return int(guess);
+			} else {
+				var topNote: int = int(guess) + 1;
+				var bottomNote: int = int(guess) - 1;
+				while (scale[topNote % 12] == false) {
+					topNote++;
+				}
+				while (scale[(bottomNote) % 12] == false) {
+					bottomNote--;
+				}
+				var topRange: Number = topNote;
+				var bottomRange: Number = bottomNote + 1;
+				if (topNote % 12 == 0 || topNote % 12 == 7) {
+					topRange -= 0.5;
+				}
+				if (bottomNote % 12 == 0 || bottomNote % 12 == 7) {
+					bottomRange += 0.5;
+				}
+				return guess - bottomRange > topRange - guess ? topNote : bottomNote;
+			}
+		}
+		
 		private function onEnterFrame(event: Event): void {
 			playhead.graphics.clear();
 			if (!doc.synth.playing) return;
@@ -238,7 +251,7 @@ package beepbox.editor {
 					var dy: Number = mouseY - mouseYStart;
 					if (Math.sqrt(dx * dx + dy * dy) > 5) {
 						mouseDragging = true;
-						mouseVertical = Math.abs(dx) < Math.abs(dy);
+						mouseHorizontal = Math.abs(dx) >= Math.abs(dy);
 					}
 				}
 				
@@ -248,10 +261,10 @@ package beepbox.editor {
 						dragChange = null;
 					}
 					
+					var currentPart: int = mouseX / partWidth;
 					var sequence: ChangeSequence = new ChangeSequence();
 					
 					if (cursor.curTone == null) {
-						var currentPart: int = mouseX / partWidth;
 						var backwards: Boolean;
 						var directLength: int;
 						if (currentPart < cursor.start) {
@@ -318,7 +331,7 @@ package beepbox.editor {
 							i++;
 						}
 						sequence.append(new ChangeToneAdded(doc, pattern, new Tone(cursor.note, start, end, defaultVolume, doc.channel == 3), i));
-					} else if (!mouseVertical) {
+					} else if (mouseHorizontal) {
 						var shift: int = Math.round((mouseX - mouseXStart) / partWidth);
 						start = cursor.curTone.start + (cursor.nearEnd ? 0 : shift);
 						end = cursor.curTone.end + (cursor.nearEnd ? shift : 0);
@@ -333,11 +346,24 @@ package beepbox.editor {
 							defaultLength = end - start;
 						}
 					} else if (cursor.noteIndex == -1) {
-						// todo: pitch bend
+						// todo: volume bend
 					} else {
-						
-						
-						//sequence.append(new ChangePinAdded(doc, pattern, cursor.curTone, pin, cursor.curIndex));
+						var bendStart: int;
+						var bendEnd: int;
+						if (mouseX > mouseXStart) {
+							bendStart = cursor.part;
+							bendEnd   = currentPart + 1;
+							if (bendEnd > cursor.curTone.end) {
+								sequence.append(new ChangeToneTruncate(doc, pattern, cursor.curTone.start, bendEnd, cursor.curTone));
+							}
+						} else {
+							bendStart = cursor.part + 1;
+							bendEnd   = currentPart;
+							if (bendEnd < cursor.curTone.start) {
+								sequence.append(new ChangeToneTruncate(doc, pattern, bendEnd, cursor.curTone.end, cursor.curTone));
+							}
+						}
+						sequence.append(new ChangePitchBend(doc, pattern, cursor.curTone, bendStart, bendEnd, snapToNote(findMousePitch(mouseY))));
 					}
 					dragChange = sequence;
 				}
