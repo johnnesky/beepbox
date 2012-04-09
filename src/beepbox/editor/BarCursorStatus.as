@@ -34,7 +34,7 @@ package beepbox.editor {
 		public var end:       int  = 0;
 		public var part:      int  = 0;
 		public var tonePart:  int  = 0;
-		public var nearPin:   int  = 0;
+		//public var nearPin:   int  = 0;
 		public var nearEnd:   Boolean = false;
 	}
 }

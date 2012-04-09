@@ -633,7 +633,7 @@ package beepbox.synth {
 			_playhead = (((arpeggio + 1.0 - arpeggioSamples / samplesPerArpeggio) / 4.0 + part) / song.parts + beat) / song.beats + bar;
 		}
 		
-		private function frequencyFromPitch(pitch: int): Number {
+		private function frequencyFromPitch(pitch: Number): Number {
 			return 440.0 * Math.pow(2.0, (pitch - 69.0) / 12.0);
 		}
 		
