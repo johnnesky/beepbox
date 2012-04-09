@@ -96,10 +96,17 @@
 √ drum volume drop down menu
 √ clip rect on pattern editor
 √ indicate recommended beats/bar 8 somehow
+√ fifths chorus option
 
 NEXT VERSION:
-- fifths chorus option
+- volume pins, correctly moving pins when swingifying
+- create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
+- buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
+- tones that fade out volume completely shouldn't slide to next tone
+- attack transitions that slide should let the decay filter smoothly rise again to better approximate strings/violin
 - Benchmark synthesized vs precomputed noise. Precomputed would allow you to select non chip tune style noise. 
+- can I make the "choir" option feel more natural?
+- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - volume scaling from chorus effect: Synchronized waves are louder than waves that are almost but not quite the same frequency. Ratio: square root of two!
 - drums get custom lowpass based on change rate? rebalance volume range too. bass is too quiet, cymbal too loud.
 - option: autoplay on startup
@@ -107,10 +114,6 @@ NEXT VERSION:
 - medium sustain filter, slower sharp filter...
 - dedicated silent 0 pattern
 - Dim the column occupied by a tone to communicate mono voice?
-- volume pins, correctly moving pins when swingifying
-- create portamento/slide, triggered by vertical dragging. The closer you are to a tone endpoint, the more bias towards changing tone length rather than portamento. How do I deal with combining portamento and arpeggio? I guess portamento is disabled if there's already a second note, unless it's in expert mode or a whole octave from the first note. 
-- buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
-- tones that fade out completely shouldn't slide
 - make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
 
 MORE FEATURES:

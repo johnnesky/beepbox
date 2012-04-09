@@ -79,6 +79,14 @@ package beepbox.synth {
 		private var timer: Timer = new Timer(200, 0);
 		private var effectPeriod: Number = 0.0;
 		private var limit: Number = 0.0;
+		/*
+		private var reverbDelay1: Vector.<Number> = new Vector.<Number>();
+		private var reverbDelayIndex1: int = 0;
+		private var reverbDelay2: Vector.<Number> = new Vector.<Number>();
+		private var reverbDelayIndex2: int = 0;
+		private var reverbDelay3: Vector.<Number> = new Vector.<Number>();
+		private var reverbDelayIndex3: int = 0;
+		*/
 		
 		public function get playing(): Boolean {
 			return !paused;
@@ -102,11 +110,12 @@ package beepbox.synth {
 		}
 		
 		public function Synth(song: * = null) {
+			var i: int;
+			
 			waves.fixed = true;
 			for each (var wave: Vector.<Number> in waves) {
 				wave.fixed = true;
 				
-				var i: int;
 				var sum: Number = 0.0;
 				for (i = 0; i < wave.length; i++) sum += wave[i];
 				var average: Number = sum / wave.length;
@@ -119,6 +128,17 @@ package beepbox.synth {
 			if (song != null) {
 				setSong(song);
 			}
+			/*
+			reverbDelay1.length = 1024;
+			reverbDelay1.fixed = true;
+			for (i = 0; i < reverbDelay1.length; i++) reverbDelay1[i] = 0.0;
+			reverbDelay2.length = 1024;
+			reverbDelay2.fixed = true;
+			for (i = 0; i < reverbDelay2.length; i++) reverbDelay2[i] = 0.0;
+			reverbDelay3.length = 1024;
+			reverbDelay3.fixed = true;
+			for (i = 0; i < reverbDelay3.length; i++) reverbDelay3[i] = 0.0;
+			*/
 		}
 		
 		public function setSong(song: *): void {
@@ -543,6 +563,35 @@ package beepbox.synth {
 						drumSignal = (2.0 * (drumBuffer & 1) - 1.0);
 					}
 					sample += drumSample;
+					
+					/*
+					var g: Number = 0.9;
+					var reverbSample: Number;
+					
+					reverbSample = reverbDelay1[reverbDelayIndex1];
+					sample += reverbSample * g;
+					reverbDelay1[reverbDelayIndex1] = sample;
+					//reverbDelayIndex1 = (reverbDelayIndex1 + 1) & 0x3ff;
+					reverbDelayIndex1 = (reverbDelayIndex1 + 1) % 1021;
+					sample *= -g;
+					sample += reverbSample;
+					
+					reverbSample = reverbDelay2[reverbDelayIndex2];
+					sample += reverbSample * g;
+					reverbDelay2[reverbDelayIndex2] = sample;
+					//reverbDelayIndex2 = (reverbDelayIndex2 + 1) & 0x3ff;
+					reverbDelayIndex2 = (reverbDelayIndex2 + 1) % 317;
+					sample *= -g;
+					sample += reverbSample;
+					
+					reverbSample = reverbDelay3[reverbDelayIndex3];
+					sample += reverbSample * g;
+					reverbDelay3[reverbDelayIndex3] = sample;
+					//reverbDelayIndex3 = (reverbDelayIndex3 + 1) & 0x3ff;
+					reverbDelayIndex3 = (reverbDelayIndex3 + 1) % 89;
+					sample *= -g;
+					sample += reverbSample;
+					*/
 					
 					var abs: Number = sample < 0.0 ? -sample : sample;
 					limit -= limitDecay;
