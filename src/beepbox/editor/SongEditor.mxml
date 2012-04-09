@@ -22,15 +22,16 @@ SOFTWARE.
 -->
 
 <s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
-           xmlns:s="library://ns.adobe.com/flex/spark"
-           xmlns="beepbox.editor.*"
-           width="700"
-           height="645"
-           backgroundColor="0x000000"
-           borderVisible="false"
-           borderWeight="0"
-           creationComplete="init()"
-           addedToStage="onAddedToStage()">
+                   xmlns:mx="library://ns.adobe.com/flex/mx"
+                   xmlns:s="library://ns.adobe.com/flex/spark"
+                   xmlns="beepbox.editor.*"
+                   width="700"
+                   height="645"
+                   backgroundColor="0x000000"
+                   borderVisible="false"
+                   borderWeight="0"
+                   creationComplete="init()"
+                   addedToStage="onAddedToStage()">
 	<fx:Script><![CDATA[
 		import flash.display.*;
 		import flash.events.*;
@@ -72,6 +73,7 @@ SOFTWARE.
 		[Bindable]
 		private var volumeNames: ArrayCollection;
 		
+		private var patternEditor: PatternEditor;
 		private var editMenu: Menu;
 		private var optionsMenu: Menu;
 		private var copyTones: Array;
@@ -90,6 +92,8 @@ SOFTWARE.
 			effectNames = new ArrayCollection(Music.effectNames);
 			chorusNames = new ArrayCollection(Music.chorusNames);
 			volumeNames = new ArrayCollection(Music.volumeNames);
+			patternEditor = new PatternEditor(doc);
+			patternEditorContainer.addChild(patternEditor);
 			doc.watch(onUpdated);
 			onUpdated();
 			
@@ -126,7 +130,7 @@ SOFTWARE.
 				volumeDropDown.selectedIndex = doc.song.channelVolumes[doc.channel];
 			}
 			currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
-			barEditor.width = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
+			patternEditorContainer.width = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
 			volumeSlider.value = doc.volume;
 		}
 		
@@ -433,7 +437,7 @@ SOFTWARE.
 		<s:VGroup width="512" id="editorBox">
 			<s:HGroup width="512" height="481" gap="0">
 				<Piano id="piano" doc="{doc}" includeIn="showPiano, showPianoAndScrollBar"/>
-				<BarEditor id="barEditor" doc="{doc}"/>
+				<mx:UIComponent id="patternEditorContainer" width="100%" height="100%"/>
 				<OctaveScrollBar id="octaveScrollBar" doc="{doc}" includeIn="showScrollBar, showPianoAndScrollBar"/>
 			</s:HGroup>
 			<TrackEditor doc="{doc}"/>

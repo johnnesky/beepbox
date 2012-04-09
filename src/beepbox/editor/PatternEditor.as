@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+/*
 Copyright (C) 2012 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -19,28 +18,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 SOFTWARE.
--->
+*/
 
-<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
-           xmlns:s="library://ns.adobe.com/flex/spark"
-           xmlns="*"
-           height="481"
-           backgroundColor="0x000000"
-           creationComplete="init()"
-           addedToStage="onAddedToStage()">
-	<mx:Script><![CDATA[
-		import flash.display.*;
-		import flash.events.*;
-		import flash.geom.*;
-		import flash.media.*;
-		import flash.text.*;
-		import flash.ui.*;
-		import flash.utils.*;
-		
-		import mx.collections.ArrayCollection;
-		
-		import beepbox.synth.*;
-		
+package beepbox.editor {
+	import flash.display.*;
+	import flash.events.*;
+	import flash.geom.*;
+	import flash.media.*;
+	import flash.text.*;
+	import flash.ui.*;
+	import flash.utils.*;
+	
+	import beepbox.synth.*;
+	
+	public class PatternEditor extends Sprite {
+		public var editorWidth: Number;
+		public const editorHeight: Number = 481;
 		public var partWidth: Number;
 		public var noteHeight: Number;
 		public var noteCount: int;
@@ -68,26 +61,26 @@ SOFTWARE.
 		private var playheadX: Number = 0.0;
 		private var octaveOffset: int = 0;
 		
-		public function init():void {
+		public function PatternEditor(doc: Document): void {
+			this.doc = doc;
 			preview = new Sprite();
-			container.addChild(preview);
+			addChild(preview);
 			playhead = new Sprite();
-			container.addChild(playhead);
+			addChild(playhead);
 			doc.watch(documentChanged);
 			documentChanged();
 			updateCursorStatus();
 			updatePreview();
+			addEventListener(Event.ADDED_TO_STAGE, onAddedToStage);
 		}
 		
-		private function onAddedToStage(): void {
+		private function onAddedToStage(event: Event): void {
 			addEventListener(Event.ENTER_FRAME, onEnterFrame);
 			addEventListener(MouseEvent.MOUSE_DOWN, onMousePressed);
 			stage.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMoved);
 			stage.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
 			addEventListener(MouseEvent.ROLL_OVER, onMouseOver);
 			addEventListener(MouseEvent.ROLL_OUT, onMouseOut);
-			//stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed);
-			//stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased);
 		}
 		
 		private function updateCursorStatus(): void {
@@ -212,8 +205,8 @@ SOFTWARE.
 				playheadX += (modPlayhead - playheadX) * 0.2;
 			}
 			playhead.graphics.lineStyle(4, 0xffffff);
-			playhead.graphics.moveTo(playheadX * width, 0);
-			playhead.graphics.lineTo(playheadX * width, height);
+			playhead.graphics.moveTo(playheadX * editorWidth, 0);
+			playhead.graphics.lineTo(playheadX * editorWidth, editorHeight);
 			playhead.graphics.lineStyle();
 		}
 		
@@ -405,21 +398,21 @@ SOFTWARE.
 		}
 		
 		private function documentChanged(): void {
-			width = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
+			editorWidth = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
 			pattern = doc.song.getBarPattern(doc.channel, doc.bar);
-			partWidth = width / (doc.song.beats * doc.song.parts);
+			partWidth = editorWidth / (doc.song.beats * doc.song.parts);
 			noteHeight = doc.channel == 3 ? 43 : 13;
 			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
 			octaveOffset = doc.song.channelOctaves[doc.channel] * 12;
-			scrollRect = new Rectangle(0, 0, width, height);
+			scrollRect = new Rectangle(0, 0, editorWidth, editorHeight);
 			render();
 		}
 		
 		private function render(): void {
-			container.graphics.clear();
-			container.graphics.beginFill(0);
-			container.graphics.drawRect(0, 0, partWidth * doc.song.beats * doc.song.parts, noteHeight * noteCount);
-			container.graphics.endFill();
+			graphics.clear();
+			graphics.beginFill(0);
+			graphics.drawRect(0, 0, partWidth * doc.song.beats * doc.song.parts, noteHeight * noteCount);
+			graphics.endFill();
 			
 			for (var j: int = 0; j < noteCount; j++) {
 				if (doc.channel != 3 && Music.scaleFlags[doc.song.scale][j%12] == false) {
@@ -430,11 +423,11 @@ SOFTWARE.
 					if (j%12 == 0) color = 0x886644;
 					if (j%12 == 7 && doc.showFifth) color = 0x446688;
 				}
-				container.graphics.beginFill(color);
+				graphics.beginFill(color);
 				for (var k: int = 0; k < doc.song.beats; k++) {
-					container.graphics.drawRect(partWidth * k * doc.song.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.song.parts - 2, noteHeight - 2);
+					graphics.drawRect(partWidth * k * doc.song.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.song.parts - 2, noteHeight - 2);
 				}
-				container.graphics.endFill();
+				graphics.endFill();
 			}
 			
 			var tone: Tone;
@@ -444,21 +437,21 @@ SOFTWARE.
 					if (channel == doc.channel) continue;
 					for each (tone in doc.song.getBarPattern(channel, doc.bar).tones) {
 						for each (note in tone.notes) {
-							container.graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][channel]);
-							drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
-							container.graphics.endFill();
+							graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][channel]);
+							drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
+							graphics.endFill();
 						}
 					}
 				}
 			}
 			for each (tone in pattern.tones) {
 				for each (note in tone.notes) {
-					container.graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][doc.channel]);
-					drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
-					container.graphics.endFill();
-					container.graphics.beginFill([0xccffcc, 0xffffcc, 0xffddcc, 0xeeeeee][doc.channel]);
-					drawNote(container.graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
-					container.graphics.endFill();
+					graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][doc.channel]);
+					drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
+					graphics.endFill();
+					graphics.beginFill([0xccffcc, 0xffffcc, 0xffddcc, 0xeeeeee][doc.channel]);
+					drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
+					graphics.endFill();
 				}
 			}
 			
@@ -485,7 +478,5 @@ SOFTWARE.
 				graphics.lineTo(leftSide,  leftHeight  - radius * leftVolume);
 			}
 		}
-		
-	]]></mx:Script>
-	<mx:UIComponent id="container"/>
-</mx:Canvas>
+	}
+}
