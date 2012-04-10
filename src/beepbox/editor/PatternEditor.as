@@ -103,34 +103,51 @@ package beepbox.editor {
 			}
 			
 			var mousePitch: Number = findMousePitch(mouseY);
-			cursor.note = snapToNote(mousePitch);
 			
 			if (cursor.curTone != null) {
 				cursor.start = cursor.curTone.start;
 				cursor.end   = cursor.curTone.end;
 				
+				var interval: Number;
+				var error: Number;
+				var prevPin: TonePin;
+				var nextPin: TonePin = cursor.curTone.pins[0];
+				for (j = 1; j < cursor.curTone.pins.length; j++) {
+					prevPin = nextPin;
+					nextPin = cursor.curTone.pins[j];
+					var leftSide:    Number = partWidth * (cursor.curTone.start + prevPin.time);
+					var rightSide:   Number = partWidth * (cursor.curTone.start + nextPin.time);
+					if (mouseX > rightSide) continue;
+					if (mouseX < leftSide) throw new Error();
+					var intervalRatio: Number = (mouseX - leftSide) / (rightSide - leftSide);
+					var arc: Number = Math.sqrt(1.0 / Math.sqrt(4.0) - Math.pow(intervalRatio - 0.5, 2.0)) - 0.5;
+					var bendHeight: Number = Math.abs(nextPin.interval - prevPin.interval);
+					interval = prevPin.interval * (1.0 - intervalRatio) + nextPin.interval * intervalRatio;
+					error = arc * bendHeight + 0.5;
+					break;
+				}
+				
+				mousePitch -= interval;
+				cursor.note = snapToNote(mousePitch);
+				
+				var nearest: Number = Number.MAX_VALUE;
 				for (i = 0; i < cursor.curTone.notes.length; i++) {
-					var prevPin: TonePin;
-					var nextPin: TonePin = cursor.curTone.pins[0];
-					for (j = 1; j < cursor.curTone.pins.length; j++) {
-						prevPin = nextPin;
-						nextPin = cursor.curTone.pins[j];
-						var leftSide:    Number = partWidth * (cursor.curTone.start + prevPin.time);
-						var rightSide:   Number = partWidth * (cursor.curTone.start + nextPin.time);
-						var leftPitch:  Number = cursor.curTone.notes[i] + prevPin.interval;
-						var rightPitch: Number = cursor.curTone.notes[i] + nextPin.interval;
-						if (mouseX < leftSide || mouseX > rightSide) continue;
-						if (Math.max(mousePitch, cursor.note) < Math.min(leftPitch, rightPitch) - 0.5) continue;
-						if (Math.min(mousePitch, cursor.note) > Math.max(leftPitch, rightPitch) + 0.5) continue;
-						cursor.noteIndex = i;
-						cursor.note = cursor.curTone.notes[i];
-						break;
-					}
-					if (cursor.noteIndex != -1) break;
+					var distance: Number = Math.abs(cursor.curTone.notes[i] - mousePitch);
+					if (distance > error || distance > nearest) continue;
+					nearest = distance;
+					cursor.noteIndex = i;
+					cursor.note = cursor.curTone.notes[i];
+				}
+				
+				for (i = 0; i < cursor.curTone.notes.length; i++) {
+					if (cursor.curTone.notes[i] != cursor.note) continue;
+					cursor.noteIndex = i;
+					break;
 				}
 				
 				cursor.nearEnd = (mouseX / partWidth - cursor.start) / (cursor.end - cursor.start) > 0.5;
 			} else {
+				cursor.note = snapToNote(mousePitch);
 				var quadBeats: int = cursor.part / doc.song.parts;
 				var modLength: int = defaultLength % doc.song.parts;
 				var modMouse: int = cursor.part % doc.song.parts;
