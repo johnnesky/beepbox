@@ -530,24 +530,49 @@ package beepbox.editor {
 		}
 		
 		private function drawNote(graphics: Graphics, note: int, start: int, pins: Array, radius: int, showVolume: Boolean, offset: Number): void {
+			var i: int;
 			var prevPin: TonePin;
-			var nextPin: TonePin = pins[0];
-			
-			for (var i: int = 1; i < pins.length; i++) {
+			var nextPin: TonePin;
+			var prevSide:   Number;
+			var nextSide:   Number;
+			var prevHeight: Number;
+			var nextHeight: Number;
+			var prevVolume: Number;
+			var nextVolume: Number;
+			nextPin = pins[0];
+			graphics.moveTo(partWidth * (start + nextPin.time) + 1, noteToPixelHeight(note - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0));
+			for (i = 1; i < pins.length; i++) {
 				prevPin = nextPin;
 				nextPin = pins[i];
-				var leftSide:    Number = partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
-				var rightSide:   Number = partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
-				var leftHeight:  Number = noteHeight * (noteCount - (note + prevPin.interval - offset) - 0.5);
-				var rightHeight: Number = noteHeight * (noteCount - (note + nextPin.interval - offset) - 0.5);
-				var leftVolume:  Number = showVolume ? prevPin.volume / 3.0 : 1.0;
-				var rightVolume: Number = showVolume ? nextPin.volume / 3.0 : 1.0;
-				graphics.moveTo(leftSide,  leftHeight  - radius * leftVolume);
-				graphics.lineTo(rightSide, rightHeight - radius * rightVolume);
-				graphics.lineTo(rightSide, rightHeight + radius * rightVolume);
-				graphics.lineTo(leftSide,  leftHeight  + radius * leftVolume);
-				graphics.lineTo(leftSide,  leftHeight  - radius * leftVolume);
+				prevSide   = partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
+				nextSide   = partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
+				prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
+				nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
+				prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
+				nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
+				graphics.lineTo(prevSide, prevHeight - radius * prevVolume);
+				if (prevPin.interval > nextPin.interval) graphics.lineTo(prevSide + 1, prevHeight - radius * prevVolume);
+				if (prevPin.interval < nextPin.interval) graphics.lineTo(nextSide - 1, nextHeight - radius * nextVolume);
+				graphics.lineTo(nextSide, nextHeight - radius * nextVolume);
 			}
+			for (i = pins.length - 2; i >= 0; i--) {
+				prevPin = nextPin;
+				nextPin = pins[i];
+				prevSide   = partWidth * (start + prevPin.time) - (i == pins.length - 2 ? 1 : 0);
+				nextSide   = partWidth * (start + nextPin.time) + (i == 0 ? 1 : 0);
+				prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
+				nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
+				prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
+				nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
+				graphics.lineTo(prevSide, prevHeight + radius * prevVolume);
+				if (prevPin.interval < nextPin.interval) graphics.lineTo(prevSide - 1, prevHeight + radius * prevVolume);
+				if (prevPin.interval > nextPin.interval) graphics.lineTo(nextSide + 1, nextHeight + radius * nextVolume);
+				graphics.lineTo(nextSide, nextHeight + radius * nextVolume);
+			}
+		}
+		
+		private function noteToPixelHeight(note: int): Number {
+			return noteHeight * (noteCount - (note) - 0.5);
 		}
 	}
 }
