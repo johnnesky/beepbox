@@ -382,6 +382,26 @@ package beepbox.editor {
 						}
 					} else if (cursor.noteIndex == -1) {
 						// todo: volume bend
+						var bendPart: int = Math.round(Math.max(cursor.curTone.start, Math.min(cursor.curTone.end, mouseX / partWidth))) - cursor.curTone.start;
+						
+						var prevPin: TonePin;
+						var nextPin: TonePin = cursor.curTone.pins[0];
+						var bendVolume: int;
+						var bendInterval: int;
+						for (i = 1; i < cursor.curTone.pins.length; i++) {
+							prevPin = nextPin;
+							nextPin = cursor.curTone.pins[i];
+							if (bendPart > nextPin.time) continue;
+							if (bendPart < prevPin.time) throw new Error();
+							var volumeRatio: Number = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
+							bendVolume = prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + int((mouseYStart - mouseY) / 25.0) + 3;
+							if (bendVolume < 0) bendVolume = 0;
+							if (bendVolume > 3) bendVolume = 3;
+							bendInterval = snapToNote(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + cursor.curTone.notes[0], 0, Music.maxPitch) - cursor.curTone.notes[0];
+							break;
+						}
+						
+						sequence.append(new ChangeVolumeBend(doc, pattern, cursor.curTone, bendPart, bendVolume, bendInterval));
 					} else {
 						var bendStart: int;
 						var bendEnd: int;
