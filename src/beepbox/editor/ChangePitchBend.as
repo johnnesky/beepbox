@@ -53,8 +53,6 @@ package beepbox.editor {
 			bendEnd   -= newStart;
 			bendTo    -= tone.notes[noteIndex];
 			
-			//trace(oldPins.length, newPins.length, bendStart, bendEnd, bendTo);
-			
 			var offset: int = oldStart - newStart;
 			var setStart: Boolean = false;
 			var setEnd: Boolean   = false;
