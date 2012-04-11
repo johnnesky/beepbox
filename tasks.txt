@@ -101,10 +101,10 @@
 √ when adding arpeggio to a pitch bend, offset the arpeggio note by the current interval.
 √ don't create new arpeggios overlapping old arpeggios on pitch bends. 
 √ tweak hit detection on pitch bends so that it's a little tighter than a box
+√ When the pitch bend changes the initial pitch, recalibrate all notes of the tone. 
+√ don't let pitch bends escape the normal pitch range, especially with arpeggios. check both new arpeggios and new pitch bends.
 
 NEXT VERSION:
-- When the pitch bend changes the initial pitch, recalibrate all notes of the tone. 
-- don't let pitch bends escape the normal pitch range, especially with arpeggios. 
 - tweak rendering of pitch bends so that they don't become tiny threads. 
 - volume pins
 - copy the volume pin structure for future tones, on a per channel basis.

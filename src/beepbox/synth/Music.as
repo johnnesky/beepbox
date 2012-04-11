@@ -68,5 +68,6 @@ package beepbox.synth {
 		public static const numBars: int = 16;
 		public static const drumCount: int = 11;
 		public static const noteCount: int = 37;
+		public static const maxPitch: int = 84;
 	}
 }

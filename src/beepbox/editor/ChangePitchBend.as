@@ -33,7 +33,9 @@ package beepbox.editor {
 		private var newEnd: int;
 		private var oldPins: Array;
 		private var newPins: Array;
-		public function ChangePitchBend(document: Document, bar: BarPattern, tone: Tone, bendStart: int, bendEnd: int, bendTo: int) {
+		private var oldNotes: Array;
+		private var newNotes: Array;
+		public function ChangePitchBend(document: Document, bar: BarPattern, tone: Tone, bendStart: int, bendEnd: int, bendTo: int, noteIndex: int) {
 			super(false);
 			this.document = document;
 			this.bar = bar;
@@ -44,10 +46,12 @@ package beepbox.editor {
 			newEnd   = Math.max(tone.end,   bendEnd);
 			oldPins = tone.pins;
 			newPins = [];
+			oldNotes = tone.notes;
+			newNotes = [];
 			
 			bendStart -= newStart;
 			bendEnd   -= newStart;
-			bendTo    -= tone.notes[0];
+			bendTo    -= tone.notes[noteIndex];
 			
 			//trace(oldPins.length, newPins.length, bendStart, bendEnd, bendTo);
 			
@@ -125,12 +129,21 @@ package beepbox.editor {
 				}
 			}
 			
+			var firstInterval: int = newPins[0].interval;
+			for (i = 0; i < oldNotes.length; i++) {
+				newNotes[i] = oldNotes[i] + firstInterval;
+			}
+			for (i = 0; i < newPins.length; i++) {
+				newPins[i].interval -= firstInterval;
+			}
+			
 			doForwards();
 			didSomething();
 		}
 		
 		protected override function doForwards(): void {
 			tone.pins = newPins;
+			tone.notes = newNotes;
 			tone.start = newStart;
 			tone.end = newEnd;
 			document.changed();
@@ -138,6 +151,7 @@ package beepbox.editor {
 		
 		protected override function doBackwards(): void {
 			tone.pins = oldPins;
+			tone.notes = oldNotes;
 			tone.start = oldStart;
 			tone.end = oldEnd;
 			document.changed();

@@ -127,8 +127,15 @@ package beepbox.editor {
 					break;
 				}
 				
+				var minInterval: int = int.MAX_VALUE;
+				var maxInterval: int = int.MIN_VALUE;
+				for each (nextPin in cursor.curTone.pins) {
+					if (minInterval > nextPin.interval) minInterval = nextPin.interval;
+					if (maxInterval < nextPin.interval) maxInterval = nextPin.interval;
+				}
+				
 				mousePitch -= interval;
-				cursor.note = snapToNote(mousePitch);
+				cursor.note = snapToNote(mousePitch, -minInterval, Music.maxPitch - maxInterval);
 				
 				var nearest: Number = Number.MAX_VALUE;
 				for (i = 0; i < cursor.curTone.notes.length; i++) {
@@ -147,7 +154,7 @@ package beepbox.editor {
 				
 				cursor.nearEnd = (mouseX / partWidth - cursor.start) / (cursor.end - cursor.start) > 0.5;
 			} else {
-				cursor.note = snapToNote(mousePitch);
+				cursor.note = snapToNote(mousePitch, 0, Music.maxPitch);
 				var quadBeats: int = cursor.part / doc.song.parts;
 				var modLength: int = defaultLength % doc.song.parts;
 				var modMouse: int = cursor.part % doc.song.parts;
@@ -199,7 +206,9 @@ package beepbox.editor {
 			return Math.max(0, Math.min(noteCount-1, noteCount - (pixelY / noteHeight))) + octaveOffset;
 		}
 		
-		private function snapToNote(guess: Number): int {
+		private function snapToNote(guess: Number, min: int, max: int): int {
+			if (guess < min) guess = min;
+			if (guess > max) guess = max;
 			var scale: Array = Music.scaleFlags[doc.song.scale];
 			if (scale[int(guess) % 12] || doc.channel == 3) {
 				return int(guess);
@@ -211,6 +220,15 @@ package beepbox.editor {
 				}
 				while (scale[(bottomNote) % 12] == false) {
 					bottomNote--;
+				}
+				if (topNote > max) {
+					if (bottomNote < min) {
+						return min;
+					} else {
+						return bottomNote;
+					}
+				} else if (bottomNote < min) {
+					return topNote;
 				}
 				var topRange: Number = topNote;
 				var bottomRange: Number = bottomNote + 1;
@@ -380,7 +398,17 @@ package beepbox.editor {
 								sequence.append(new ChangeToneTruncate(doc, pattern, bendEnd, cursor.curTone.end, cursor.curTone));
 							}
 						}
-						sequence.append(new ChangePitchBend(doc, pattern, cursor.curTone, bendStart, bendEnd, snapToNote(findMousePitch(mouseY))));
+						
+						var minNote: int = int.MAX_VALUE;
+						var maxNote: int = int.MIN_VALUE;
+						for each (var note: int in cursor.curTone.notes) {
+							if (minNote > note) minNote = note;
+							if (maxNote < note) maxNote = note;
+						}
+						minNote -= cursor.curTone.notes[0];
+						maxNote -= cursor.curTone.notes[0];
+						var bendTo: int = snapToNote(findMousePitch(mouseY), -minNote, Music.maxPitch - maxNote);
+						sequence.append(new ChangePitchBend(doc, pattern, cursor.curTone, bendStart, bendEnd, bendTo, cursor.noteIndex));
 					}
 					dragChange = sequence;
 				}
