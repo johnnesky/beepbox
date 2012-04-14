@@ -88,6 +88,9 @@ package beepbox.editor {
 			var j: int;
 			
 			cursor = new BarCursorStatus();
+			
+			if (mouseOver == false || mouseX < 0 || mouseX > editorWidth) return;
+			
 			cursor.part = int(Math.max(0, Math.min(doc.song.beats * doc.song.parts - 1, mouseX / partWidth)));
 			
 			for each (var tone: Tone in pattern.tones) {
@@ -340,6 +343,7 @@ package beepbox.editor {
 						
 						if (defaultLength < directLength) {
 							// See if I can find a better match by snapping to an existing tone...
+							// E.G. in another channel
 						}
 						
 						if (backwards) {
@@ -394,7 +398,7 @@ package beepbox.editor {
 							if (bendPart > nextPin.time) continue;
 							if (bendPart < prevPin.time) throw new Error();
 							var volumeRatio: Number = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
-							bendVolume = prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + int((mouseYStart - mouseY) / 25.0) + 3;
+							bendVolume = prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((mouseYStart - mouseY) / 25.0);
 							if (bendVolume < 0) bendVolume = 0;
 							if (bendVolume > 3) bendVolume = 3;
 							bendInterval = snapToNote(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + cursor.curTone.notes[0], 0, Music.maxPitch) - cursor.curTone.notes[0];
@@ -408,15 +412,17 @@ package beepbox.editor {
 						if (mouseX > mouseXStart) {
 							bendStart = cursor.part;
 							bendEnd   = currentPart + 1;
-							if (bendEnd > cursor.curTone.end) {
-								sequence.append(new ChangeToneTruncate(doc, pattern, cursor.curTone.start, bendEnd, cursor.curTone));
-							}
 						} else {
 							bendStart = cursor.part + 1;
 							bendEnd   = currentPart;
-							if (bendEnd < cursor.curTone.start) {
-								sequence.append(new ChangeToneTruncate(doc, pattern, bendEnd, cursor.curTone.end, cursor.curTone));
-							}
+						}
+						if (bendEnd < 0) bendEnd = 0;
+						if (bendEnd > doc.song.beats * doc.song.parts) bendEnd = doc.song.beats * doc.song.parts;
+						if (bendEnd > cursor.curTone.end) {
+							sequence.append(new ChangeToneTruncate(doc, pattern, cursor.curTone.start, bendEnd, cursor.curTone));
+						}
+						if (bendEnd < cursor.curTone.start) {
+							sequence.append(new ChangeToneTruncate(doc, pattern, bendEnd, cursor.curTone.end, cursor.curTone));
 						}
 						
 						var minNote: int = int.MAX_VALUE;
