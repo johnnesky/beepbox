@@ -23,7 +23,7 @@ SOFTWARE.
 package beepbox.editor {
 	import beepbox.synth.*;
 	
-	public class BarCursorStatus {
+	public class PatternCursor {
 		public var valid:     Boolean = false;
 		public var prevTone:  Tone = null;
 		public var curTone:   Tone = null;

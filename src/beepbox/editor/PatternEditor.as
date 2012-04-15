@@ -62,7 +62,7 @@ package beepbox.editor {
 		//private var precise: Boolean = false;
 		//private var precisionX: Number = 0;
 		private var dragChange: Change = null;
-		private var cursor: BarCursorStatus = new BarCursorStatus();
+		private var cursor: PatternCursor = new PatternCursor();
 		private var pattern: BarPattern;
 		private var playheadX: Number = 0.0;
 		private var octaveOffset: int = 0;
@@ -93,7 +93,7 @@ package beepbox.editor {
 			var i: int;
 			var j: int;
 			
-			cursor = new BarCursorStatus();
+			cursor = new PatternCursor();
 			
 			if (mouseOver == false || mouseX < 0 || mouseX > editorWidth || mouseY < 0 || mouseY > editorHeight) return;
 			
