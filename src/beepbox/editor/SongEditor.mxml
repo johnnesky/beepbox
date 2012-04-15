@@ -198,6 +198,7 @@ SOFTWARE.
 		
 		private function cleanSlate(): void {
 			doc.history.record(new ChangeSong(doc, null));
+			patternEditor.resetCopiedPins();
 		}
 		
 		private function export(): void {

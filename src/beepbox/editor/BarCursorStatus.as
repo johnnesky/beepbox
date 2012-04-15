@@ -24,6 +24,7 @@ package beepbox.editor {
 	import beepbox.synth.*;
 	
 	public class BarCursorStatus {
+		public var valid:     Boolean = false;
 		public var prevTone:  Tone = null;
 		public var curTone:   Tone = null;
 		public var nextTone:  Tone = null;
@@ -36,5 +37,6 @@ package beepbox.editor {
 		public var tonePart:  int  = 0;
 		//public var nearPin:   int  = 0;
 		public var nearEnd:   Boolean = false;
+		public var pins:      Array = null;
 	}
 }
