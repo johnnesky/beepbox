@@ -107,11 +107,11 @@
 √ volume pins
 √ volume dragging doesn't seem to be relative to previous volume
 √ dragging pitch bend off the side of the editor causes instability
+√ copy the volume pin structure for future tones, on a per channel basis.
+√ disable volume control when creating new tones with horizontal dragging. 
+√ reset default tone shape when cleaning slate
 
 NEXT VERSION:
-- copy the volume pin structure for future tones, on a per channel basis.
-- reset default tone shape when cleaning slate
-- disable volume control when creating new tones with horizontal dragging. 
 - dragging horizontally should drag the pins, not just the tone endpoints. 
 - correctly move pins when swingifying, etc.
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
