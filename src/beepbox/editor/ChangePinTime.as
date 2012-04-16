@@ -23,25 +23,33 @@ SOFTWARE.
 package beepbox.editor {
 	import beepbox.synth.*;
 	
-	public class ChangeRhythm extends ChangeSequence {
-		public function ChangeRhythm(document: Document, bar: BarPattern, oldParts: int, newParts: int) {
-			var changeRhythm: Function;
-			if (oldParts == 4 && newParts == 3) changeRhythm = function(oldTime: int): int {
-				return Math.ceil(oldTime * 3.0 / 4.0);
-			}
-			if (oldParts == 3 && newParts == 4) changeRhythm = function(oldTime: int): int {
-				return Math.floor(oldTime * 4.0 / 3.0);
-			}
-			var i: int = 0;
-			while (i < bar.tones.length) {
-				var tone: Tone = bar.tones[i];
-				if (changeRhythm(tone.start) >= changeRhythm(tone.end)) {
-					append(new ChangeToneAdded(document, bar, tone, i, true));
-				} else {
-					append(new ChangeRhythmTone(document, tone, changeRhythm));
-					i++;
+	public class ChangePinTime extends ChangePins {
+		public function ChangePinTime(document: Document, tone: Tone, pinIndex: int, shiftedTime: int) {
+			var changePins: Function = function(): void {
+				shiftedTime -= oldStart;
+				var originalTime: int = oldPins[pinIndex].time;
+				var skipStart: int = Math.min(originalTime, shiftedTime);
+				var skipEnd: int = Math.max(originalTime, shiftedTime);
+				var setPin: Boolean = false;
+				for (var i: int = 0; i < oldPins.length; i++) {
+					var oldPin: TonePin = tone.pins[i];
+					var time: int = oldPin.time;
+					if (time < skipStart) {
+						newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
+					} else if (time > skipEnd) {
+						if (!setPin) {
+							newPins.push(new TonePin(oldPins[pinIndex].interval, shiftedTime, oldPins[pinIndex].volume));
+							setPin = true;
+						}
+						newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
+					}
+				}
+				if (!setPin) {
+					newPins.push(new TonePin(oldPins[pinIndex].interval, shiftedTime, oldPins[pinIndex].volume));
 				}
 			}
+			
+			super(document, tone, changePins);
 		}
 	}
 }

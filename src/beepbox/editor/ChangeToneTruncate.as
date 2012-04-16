@@ -35,10 +35,10 @@ package beepbox.editor {
 				} else if (tone.start >= end) {
 					break;
 				} else if (tone.start < start) {
-					append(new ChangeToneLength(document, bar, tone, tone.start, start));
+					append(new ChangeToneLength(document, tone, tone.start, start));
 					i++;
 				} else if (tone.end > end) {
-					append(new ChangeToneLength(document, bar, tone, end, tone.end));
+					append(new ChangeToneLength(document, tone, end, tone.end));
 					i++;
 				} else {
 					append(new ChangeToneAdded(document, bar, tone, i, true));
