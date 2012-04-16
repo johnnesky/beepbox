@@ -23,25 +23,15 @@ SOFTWARE.
 package beepbox.editor {
 	import beepbox.synth.*;
 	
-	public class ChangeRhythm extends ChangeSequence {
-		public function ChangeRhythm(document: Document, bar: BarPattern, oldParts: int, newParts: int) {
-			var changeRhythm: Function;
-			if (oldParts == 4 && newParts == 3) changeRhythm = function(oldTime: int): int {
-				return Math.ceil(oldTime * 3.0 / 4.0);
-			}
-			if (oldParts == 3 && newParts == 4) changeRhythm = function(oldTime: int): int {
-				return Math.floor(oldTime * 4.0 / 3.0);
-			}
-			var i: int = 0;
-			while (i < bar.tones.length) {
-				var tone: Tone = bar.tones[i];
-				if (changeRhythm(tone.start) >= changeRhythm(tone.end)) {
-					append(new ChangeToneAdded(document, bar, tone, i, true));
-				} else {
-					append(new ChangeRhythmTone(document, tone, changeRhythm));
-					i++;
+	public class ChangeRhythmTone extends ChangePins {
+		public function ChangeRhythmTone(document: Document, tone: Tone, changeRhythm: Function) {
+			var changePins: Function = function(): void {
+				for each (var oldPin: TonePin in oldPins) {
+					newPins.push(new TonePin(oldPin.interval, changeRhythm(oldPin.time + oldStart) - oldStart, oldPin.volume));
 				}
 			}
+			
+			super(document, tone, changePins);
 		}
 	}
 }

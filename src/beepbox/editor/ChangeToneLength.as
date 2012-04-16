@@ -23,67 +23,39 @@ SOFTWARE.
 package beepbox.editor {
 	import beepbox.synth.*;
 	
-	public class ChangeToneLength extends Change {
-		private var document: Document;
-		private var bar: BarPattern;
-		private var tone: Tone;
-		private var oldStart: int;
-		private var newStart: int;
-		private var oldEnd: int;
-		private var newEnd: int;
-		private var oldPins: Array;
-		private var newPins: Array;
-		public function ChangeToneLength(document: Document, bar: BarPattern, tone: Tone, newStart: int, newEnd: int) {
-			super(false);
-			this.document = document;
-			this.bar = bar;
-			this.tone = tone;
-			oldStart = tone.start;
-			oldEnd = tone.end;
-			this.newStart = newStart;
-			this.newEnd = newEnd;
-			oldPins = tone.pins;
-			newPins = [];
-			
-			for each (var oldPin: TonePin in tone.pins) {
-				newPins.push(new TonePin(oldPin.interval, oldPin.time + oldStart - newStart, oldPin.volume));
-			}
-			
-			if (oldStart > newStart) {
-				newPins[0].time = 0;
-			}
-			if (oldEnd < newEnd) {
-				newPins[newPins.length - 1].time = newEnd - newStart;
-			}
-			if (oldStart < newStart) {
-				while (newPins[1].time <= 0) {
-					newPins.shift();
+	public class ChangeToneLength extends ChangePins {
+		public function ChangeToneLength(document: Document, tone: Tone, truncStart: int, truncEnd: int) {
+			var changePins: Function = function(): void {
+				truncStart -= oldStart;
+				truncEnd   -= oldStart;
+				var setStart: Boolean = false;
+				var prevVolume: int = oldPins[0].volume;
+				var prevInterval: int = oldPins[0].interval;
+				var i: int;
+				for (i = 0; i < oldPins.length; i++) {
+					var oldPin: TonePin = oldPins[i];
+					if (oldPin.time < truncStart) {
+						prevVolume = oldPin.volume;
+						prevInterval = oldPin.interval;
+					} else if (oldPin.time <= truncEnd) {
+						if (oldPin.time > truncStart && !setStart) {
+							newPins.push(new TonePin(prevInterval, truncStart, prevVolume));
+						}
+						newPins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
+						setStart = true;
+						if (oldPin.time == truncEnd) {
+							return;
+						}
+					} else {
+						break;
+					} 
+					
 				}
-				newPins[0].time = 0;
-			}
-			if (oldEnd > newEnd) {
-				while (newPins[newPins.length-2].time >= newEnd - newStart) {
-					newPins.pop();
-				}
-				newPins[newPins.length-1].time = newEnd - newStart;
+				
+				newPins.push(new TonePin(oldPins[i].interval, truncEnd, oldPins[i].volume));
 			}
 			
-			doForwards();
-			didSomething();
-		}
-		
-		protected override function doForwards(): void {
-			tone.pins = newPins;
-			tone.start = newStart;
-			tone.end = newEnd;
-			document.changed();
-		}
-		
-		protected override function doBackwards(): void {
-			tone.pins = oldPins;
-			tone.start = oldStart;
-			tone.end = oldEnd;
-			document.changed();
+			super(document, tone, changePins);
 		}
 	}
 }

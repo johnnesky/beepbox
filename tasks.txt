@@ -110,13 +110,13 @@
 √ copy the volume pin structure for future tones, on a per channel basis.
 √ disable volume control when creating new tones with horizontal dragging. 
 √ reset default tone shape when cleaning slate
+√ dragging horizontally should drag the pins, not just the tone endpoints. 
+√ correctly move pins when swingifying, etc.
 
 NEXT VERSION:
-- dragging horizontally should drag the pins, not just the tone endpoints. 
-- correctly move pins when swingifying, etc.
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
 - tones that fade out volume completely shouldn't slide to next tone
-- attack transitions that slide should let the decay filter smoothly rise again to better approximate strings/violin
+- attack transitions that slide should let the decay filter smoothly rise again to better approximate strings/violin. also repeated notes shouldn't fade out automatically. 
 - group pattern count, bar count, and beats/bar into a modal window. 
 - Benchmark synthesized vs precomputed noise. Precomputed would allow you to select non chip tune style noise. 
 - can I make the "choir" option feel more natural?
