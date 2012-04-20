@@ -38,6 +38,7 @@ package beepbox.editor {
 		public var showScrollBar: Boolean;
 		public var volume: int;
 		public var song: Song;
+		public var barScrollPos: int;
 		
 		private var localSO: SharedObject;
 		
@@ -88,6 +89,10 @@ package beepbox.editor {
 			volume = val;
 			savePreferences();
 			synth.volume = calcVolume();
+		}
+		
+		public function getCurrentPattern(): BarPattern {
+			return song.getPattern(channel, bar);
 		}
 	}
 }

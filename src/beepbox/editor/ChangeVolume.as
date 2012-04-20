@@ -30,7 +30,7 @@ package beepbox.editor {
 		public function ChangeVolume(document: Document, volume: int) {
 			super(false);
 			this.document = document;
-			oldVolume = document.song.channelVolumes[document.channel];
+			oldVolume = document.song.instrumentVolumes[document.channel][document.getCurrentPattern().instrument];
 			newVolume = volume;
 			if (oldVolume != newVolume) {
 				didSomething();
@@ -39,12 +39,12 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			document.song.channelVolumes[document.channel] = newVolume;
+			document.song.instrumentVolumes[document.channel][document.getCurrentPattern().instrument] = newVolume;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.song.channelVolumes[document.channel] = oldVolume;
+			document.song.instrumentVolumes[document.channel][document.getCurrentPattern().instrument] = oldVolume;
 			document.changed();
 		}
 	}

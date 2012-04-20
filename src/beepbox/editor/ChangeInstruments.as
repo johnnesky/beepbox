@@ -23,36 +23,29 @@ SOFTWARE.
 package beepbox.editor {
 	import beepbox.synth.*;
 	
-	public class ChangeChannelBar extends Change {
+	public class ChangeInstruments extends Change {
 		private var document: Document;
-		private var oldChannel: int;
-		private var newChannel: int;
-		private var oldBar: int;
-		private var newBar: int;
-		public function ChangeChannelBar(document: Document, channel: int, bar: int) {
+		private var oldInstruments: int;
+		private var newInstruments: int;
+		public function ChangeInstruments(document: Document, instruments: int) {
 			super(false);
 			this.document = document;
-			oldChannel = document.channel;
-			newChannel = channel;
-			oldBar = document.bar;
-			newBar = bar;
-			doForwards();
-			if (oldChannel != newChannel || oldBar != newBar) {
+			oldInstruments = document.song.instruments;
+			newInstruments = instruments;
+			if (oldInstruments != newInstruments) {
+				// todo: adjust size of instrument arrays, make sure no references to invalid instruments
+				doForwards();
 				didSomething();
 			}
 		}
 		
 		protected override function doForwards(): void {
-			document.channel = newChannel;
-			document.bar = newBar;
-			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
+			document.song.instruments = newInstruments;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.channel = oldChannel;
-			document.bar = oldBar;
-			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
+			document.song.instruments = oldInstruments;
 			document.changed();
 		}
 	}

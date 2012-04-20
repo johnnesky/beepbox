@@ -24,8 +24,8 @@ SOFTWARE.
 <mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
            xmlns:s="library://ns.adobe.com/flex/spark"
            xmlns="*"
-           width="20"
-           height="481"
+           width="512"
+           height="20"
            backgroundColor="0x000000"
            creationComplete="init()"
            addedToStage="onAddedToStage()">
@@ -48,15 +48,10 @@ SOFTWARE.
 		private var preview: Sprite;
 		private var mouseDown: Boolean = false;
 		private var mouseOver: Boolean = false;
-		
-		private var rootHeight: Number = 4.0;
-		private var octaveCount: int = 7;
-		private var octaveHeight: int;
-		private var barHeight: Number;
 		private var dragging: Boolean = false;
 		private var dragStart: Number;
-		private var currentOctave: int;
-		private var barBottom: Number;
+		
+		private var barWidth: Number;
 		
 		public function init():void {
 			preview = new Sprite();
@@ -71,10 +66,6 @@ SOFTWARE.
 			stage.addEventListener(MouseEvent.MOUSE_UP, onMouseReleased);
 			addEventListener(MouseEvent.ROLL_OVER, onMouseOver);
 			addEventListener(MouseEvent.ROLL_OUT, onMouseOut);
-			
-			octaveHeight = (height - rootHeight) / octaveCount;
-			barHeight = (octaveHeight * 3 + rootHeight);
-			
 			documentChanged();
 		}
 		
@@ -88,45 +79,45 @@ SOFTWARE.
 		
 		private function onMousePressed(event: Event): void {
 			mouseDown = true;
-			if (doc.channel == 3) return;
 			updatePreview();
-			
-			if (mouseY >= barBottom - barHeight && mouseY <= barBottom) {
+			if (mouseX >= doc.barScrollPos * barWidth && mouseX <= (doc.barScrollPos + 16) * barWidth) {
 				dragging = true;
-				dragStart = mouseY;
+				dragStart = mouseX;
 			}
 		}
 		
 		private function onMouseMoved(event: Event): void {
-			if (doc.channel == 3) return;
 			if (dragging) {
-				while (mouseY - dragStart < -octaveHeight * 0.5) {
-					if (currentOctave < 4) {
-						doc.history.record(new ChangeOctave(doc, currentOctave + 1));
-						dragStart -= octaveHeight;
+				while (mouseX - dragStart < -barWidth * 0.5) {
+					if (doc.barScrollPos > 0) {
+						doc.barScrollPos--;
+						dragStart -= barWidth;
+						doc.changed();
 					} else {
 						break;
 					}
 				}
-				while (mouseY - dragStart > octaveHeight * 0.5) {
-					if (currentOctave > 0) {
-						doc.history.record(new ChangeOctave(doc, currentOctave - 1));
-						dragStart += octaveHeight;
+				while (mouseX - dragStart > barWidth * 0.5) {
+					if (doc.barScrollPos < doc.song.bars - 16) {
+						doc.barScrollPos++;
+						dragStart += barWidth;
+						doc.changed();
 					} else {
 						break;
 					}
 				}
 			}
-			
 			updatePreview();
 		}
 		
 		private function onMouseReleased(event: Event): void {
-			if (doc.channel != 3 && !dragging && mouseDown) {
-				if (mouseY < barBottom - barHeight * 0.5) {
-					if (currentOctave < 4) doc.history.record(new ChangeOctave(doc, currentOctave + 1));
+			if (!dragging && mouseDown) {
+				if (mouseX < (doc.barScrollPos + 8) * barWidth) {
+					if (doc.barScrollPos > 0) doc.barScrollPos--;
+					doc.changed();
 				} else {
-					if (currentOctave > 0) doc.history.record(new ChangeOctave(doc, currentOctave - 1));
+					if (doc.barScrollPos < doc.song.bars - 16) doc.barScrollPos++;
+					doc.changed();
 				}
 			}
 			mouseDown = false;
@@ -136,39 +127,37 @@ SOFTWARE.
 		
 		private function updatePreview(): void {
 			if (preview == null) return;
-			if (doc.channel == 3) return;
 			
 			preview.graphics.clear();
 			if (!mouseOver || mouseDown) return;
 			
-			var center: Number = width * 0.5;
+			var center: Number = height * 0.5;
 			var base: Number = 20;
 			var tip: Number = 9;
-			var arrowWidth: Number = 6;
-			if (mouseY < barBottom - barHeight) {
+			var arrowHeight: Number = 6;
+			if (mouseX < doc.barScrollPos * barWidth) {
 				preview.graphics.beginFill(0xffffff);
-				preview.graphics.moveTo(center, tip);
-				preview.graphics.lineTo(center + arrowWidth, base);
-				preview.graphics.lineTo(center - arrowWidth, base);
-				preview.graphics.lineTo(center, tip);
+				preview.graphics.moveTo(tip, center);
+				preview.graphics.lineTo(base, center + arrowHeight);
+				preview.graphics.lineTo(base, center - arrowHeight);
+				preview.graphics.lineTo(tip, center);
 				preview.graphics.endFill();
-			} else if (mouseY > barBottom) {
+			} else if (mouseX > (doc.barScrollPos + 16) * barWidth) {
 				preview.graphics.beginFill(0xffffff);
-				preview.graphics.moveTo(center, height - tip);
-				preview.graphics.lineTo(center + arrowWidth, height - base);
-				preview.graphics.lineTo(center - arrowWidth, height - base);
-				preview.graphics.lineTo(center, height - tip);
+				preview.graphics.moveTo(width - tip, center);
+				preview.graphics.lineTo(width - base, center + arrowHeight);
+				preview.graphics.lineTo(width - base, center - arrowHeight);
+				preview.graphics.lineTo(width - tip, center);
 				preview.graphics.endFill();
 			} else {
 				preview.graphics.lineStyle(2, 0xffffff);
-				preview.graphics.drawRect(1, barBottom, width - 2, -barHeight);
+				preview.graphics.drawRect(doc.barScrollPos * barWidth, 1, 16 * barWidth, height - 2);
 				preview.graphics.lineStyle();
 			}
 		}
 		
 		private function documentChanged(): void {
-			currentOctave = doc.song.channelOctaves[doc.channel];
-			barBottom = height - (octaveHeight * currentOctave);
+			barWidth = (width-1) / Math.max(16, doc.song.bars);
 			render();
 		}
 		
@@ -181,16 +170,17 @@ SOFTWARE.
 			container.graphics.drawRect(0, 0, width, height);
 			container.graphics.endFill();
 			
-			if (doc.channel != 3) {
-				container.graphics.beginFill(0x444444);
-				container.graphics.drawRect(2, barBottom, width - 4, -barHeight);
-				container.graphics.endFill();
-				
-				for (var i: int = 0; i <= octaveCount; i++) {
-					container.graphics.beginFill(0x886644);
-					container.graphics.drawRect(0, i * octaveHeight, width, rootHeight);
-					container.graphics.endFill();
-				}
+			container.graphics.beginFill(0x444444);
+			container.graphics.drawRect(barWidth * doc.barScrollPos, 2, barWidth * 16, height - 4);
+			container.graphics.endFill();
+			
+			for (var i: int = 0; i <= doc.song.bars; i++) {
+				var lineWidth: int = (i % 16 == 0) ? 2 : 0;
+				var lineHeight: int = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? height / 8 : height / 3);
+				container.graphics.lineStyle(lineWidth, 0x444444);
+				container.graphics.moveTo(i * barWidth, lineHeight);
+				container.graphics.lineTo(i * barWidth, height - lineHeight);
+				container.graphics.lineStyle();
 			}
 			
 			updatePreview();

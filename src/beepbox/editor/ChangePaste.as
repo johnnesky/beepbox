@@ -31,7 +31,7 @@ package beepbox.editor {
 			super(false);
 			this.document = document;
 			
-			var pattern: BarPattern = document.song.getBarPattern(document.channel, document.bar);
+			var pattern: BarPattern = document.getCurrentPattern();
 			oldTones = pattern.tones;
 			pattern.tones = tones;
 			pattern.tones = pattern.cloneTones();
@@ -41,13 +41,13 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			var pattern: BarPattern = document.song.getBarPattern(document.channel, document.bar);
+			var pattern: BarPattern = document.getCurrentPattern();
 			pattern.tones = newTones;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			var pattern: BarPattern = document.song.getBarPattern(document.channel, document.bar);
+			var pattern: BarPattern = document.getCurrentPattern();
 			pattern.tones = oldTones;
 			document.changed();
 		}

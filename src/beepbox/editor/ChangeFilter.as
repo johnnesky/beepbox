@@ -30,7 +30,7 @@ package beepbox.editor {
 		public function ChangeFilter(document: Document, filter: int) {
 			super(false);
 			this.document = document;
-			oldFilter = document.song.channelFilters[document.channel];
+			oldFilter = document.song.instrumentFilters[document.channel][document.getCurrentPattern().instrument];
 			newFilter = filter;
 			if (oldFilter != newFilter) {
 				didSomething();
@@ -39,12 +39,12 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			document.song.channelFilters[document.channel] = newFilter;
+			document.song.instrumentFilters[document.channel][document.getCurrentPattern().instrument] = newFilter;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.song.channelFilters[document.channel] = oldFilter;
+			document.song.instrumentFilters[document.channel][document.getCurrentPattern().instrument] = oldFilter;
 			document.changed();
 		}
 	}

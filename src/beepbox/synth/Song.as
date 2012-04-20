@@ -24,26 +24,28 @@ package beepbox.synth {
 	public class Song {
 		private static const oldestVersion: int = 2;
 		private static const latestVersion: int = 3;
+		private static const oldBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
+		private static const newBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","-","_",];
 		
 		public var scale: int;
 		public var key: int;
 		public var tempo: int;
 		public var beats: int;
+		public var bars: int;
+		public var patterns: int;
 		public var parts: int;
+		public var instruments: int;
 		public var loopStart: int;
 		public var loopLength: int;
 		public var channelPatterns: Array;
 		public var channelBars: Array;
-		public var channelWaves: Array;
-		public var channelFilters: Array;
-		public var channelAttacks: Array;
-		public var channelEffects: Array;
-		public var channelChorus: Array;
-		public var channelVolumes: Array;
 		public var channelOctaves: Array;
-		
-		private static const oldBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
-		private static const newBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","-","_",];
+		public var instrumentWaves: Array;
+		public var instrumentFilters: Array;
+		public var instrumentAttacks: Array;
+		public var instrumentEffects: Array;
+		public var instrumentChorus: Array;
+		public var instrumentVolumes: Array;
 		
 		public function Song(string: String = null) {
 			if (string != null) {
@@ -68,20 +70,23 @@ package beepbox.synth {
 				[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 				[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 			];
-			channelVolumes = [0,0,0,0];
-			channelWaves   = [1,1,1];
-			channelFilters = [0,0,0];
-			channelAttacks = [1,1,1];
-			channelEffects = [0,0,0];
-			channelChorus  = [0,0,0];
-			channelOctaves = [3,2,1];
+			channelOctaves = [3,2,1,0];
+			instrumentVolumes = [[0],[0],[0],[0]];
+			instrumentWaves   = [[1],[1],[1],[0]];
+			instrumentFilters = [[0],[0],[0],[0]];
+			instrumentAttacks = [[1],[1],[1],[1]];
+			instrumentEffects = [[0],[0],[0],[0]];
+			instrumentChorus  = [[0],[0],[0],[0]];
 			scale = 0;
 			key = Music.keyNames.length - 1;
 			loopStart = 0;
-			loopLength = Music.numBars;
+			loopLength = 16;
 			tempo = 1;
 			beats = 8;
+			bars = 16;
+			patterns = 8;
 			parts = 4;
+			instruments = 1;
 		}
 		
 		public function toString(): String {
@@ -97,49 +102,59 @@ package beepbox.synth {
 			result += "l" + base64[loopStart];
 			result += "e" + base64[loopLength];
 			result += "t" + base64[tempo];
-			result += "a" + base64[Music.beatCounts.indexOf(beats)];
+			result += "a" + base64[beats - 1];
+			result += "g" + base64[(bars - 1) >> 6] + base64[(bars - 1) & 0x3f];
+			result += "j" + base64[patterns - 1];
+			result += "i" + base64[instruments - 1];
 			result += "r" + base64[Music.partCounts.indexOf(parts)];
 			
-			for each (channel in [0, 1, 2]) {
-				result += "w" + base64[channel] + base64[channelWaves[channel]];
+			result += "w";
+			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+				result += base64[instrumentWaves[channel][i]];
 			}
 			
-			for each (channel in [0, 1, 2]) {
-				result += "f" + base64[channel] + base64[channelFilters[channel]];
+			result += "f";
+			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+				result += base64[instrumentFilters[channel][i]];
 			}
 			
-			for each (channel in [0, 1, 2]) {
-				result += "d" + base64[channel] + base64[channelAttacks[channel]];
+			result += "d";
+			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+				result += base64[instrumentAttacks[channel][i]];
 			}
 			
-			for each (channel in [0, 1, 2]) {
-				result += "c" + base64[channel] + base64[channelEffects[channel]];
+			result += "c";
+			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+				result += base64[instrumentEffects[channel][i]];
 			}
 			
-			for each (channel in [0, 1, 2]) {
-				result += "h" + base64[channel] + base64[channelChorus[channel]];
+			result += "h";
+			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+				result += base64[instrumentChorus[channel][i]];
 			}
 			
-			for each (channel in [0, 1, 2]) {
-				result += "o" + base64[channel] + base64[channelOctaves[channel]];
+			result += "v";
+			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+				result += base64[instrumentVolumes[channel][i]];
 			}
 			
-			for each (channel in [0, 1, 2, 3]) {
-				result += "v" + base64[channel] + base64[channelVolumes[channel]];
+			result += "o";
+			for (channel = 0; channel < Music.numChannels; channel++) {
+				result += base64[channelOctaves[channel]];
 			}
 			
-			for each (channel in [0, 1, 2, 3]) {
-				result += "b" + base64[channel] + base64[channelBars[channel].length];
-				bits = new BitField(base64);
-				for each (var b: int in channelBars[channel]) {
-					bits.write(3, b);
-				}
-				result += bits.toString();
+			result += "b";
+			bits = new BitField(base64);
+			var neededBits: int = 0;
+			while ((1 << neededBits) < patterns) neededBits++;
+			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < bars; i++) {
+				bits.write(neededBits, channelBars[channel][i]);
 			}
+			result += bits.toString();
 			
-			for each (channel in [0, 1, 2, 3]) {
-				result += "p" + base64[channel] + base64[channelPatterns[channel].length];
-				bits = new BitField(base64);
+			result += "p";
+			bits = new BitField(base64);
+			for (channel = 0; channel < Music.numChannels; channel++) {
 				var octaveOffset: int = channel == 3 ? 0 : channelOctaves[channel] * 12;
 				var lastNote: int = (channel == 3 ? 4 : 12) + octaveOffset;
 				var recentNotes: Array = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
@@ -239,12 +254,17 @@ package beepbox.synth {
 						bits.writePartDuration(beats * parts - curPart);
 					}
 				}
-				
-				var bitString: String = bits.toString();
-				result += base64[(bitString.length >> 6) & 63];
-				result += base64[bitString.length & 63];
-				result += bitString;
 			}
+			var bitString: String = bits.toString();
+			var stringLength: int = bitString.length;
+			var digits: String = "";
+			while (stringLength > 0) {
+				digits = base64[stringLength & 0x3f] + digits;
+				stringLength = stringLength >> 6;
+			}
+			result += base64[digits.length];
+			result += digits;
+			result += bitString;
 			
 			return result;
 		}
@@ -258,7 +278,7 @@ package beepbox.synth {
 			if (version == -1 || version > latestVersion || version < oldestVersion) return;
 			var beforeThree: Boolean = version < 3;
 			var base64: Array = beforeThree ? oldBase64 : newBase64;
-			if (beforeThree) channelAttacks = [0,0,0];
+			if (beforeThree) instrumentAttacks = [[0],[0],[0],[0]];
 			while (charIndex < compressed.length) {
 				var command: String = compressed.charAt(charIndex++);
 				var bits: BitField;
@@ -277,179 +297,268 @@ package beepbox.synth {
 				} else if (command == "t") {
 					tempo = base64.indexOf(compressed.charAt(charIndex++));
 				} else if (command == "a") {
-					beats = Music.beatCounts[base64.indexOf(compressed.charAt(charIndex++))];
+					if (beforeThree) {
+						beats = [6, 7, 8, 9, 10][base64.indexOf(compressed.charAt(charIndex++))];
+					} else {
+						beats = base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					}
+					beats = Math.max(Music.beatsMin, Math.min(Music.beatsMax, beats));
+				} else if (command == "g") {
+					bars = (base64.indexOf(compressed.charAt(charIndex++)) << 6) + base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					bars = Math.max(Music.barsMin, Math.min(Music.barsMax, bars));
+				} else if (command == "j") {
+					patterns = base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					patterns = Math.max(Music.patternsMin, Math.min(Music.patternsMax, patterns));
+				} else if (command == "i") {
+					instruments = base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					instruments = Math.max(Music.instrumentsMin, Math.min(Music.instrumentsMax, instruments));
 				} else if (command == "r") {
 					parts = Music.partCounts[base64.indexOf(compressed.charAt(charIndex++))];
 				} else if (command == "w") {
-					channel = base64.indexOf(compressed.charAt(charIndex++));
-					channelWaves[channel] = base64.indexOf(compressed.charAt(charIndex++));
-					if (channelWaves[channel] >= Music.waveNames.length) channelWaves[channel] = Music.waveNames.length - 1;
-				} else if (command == "f") {
-					channel = base64.indexOf(compressed.charAt(charIndex++));
-					channelFilters[channel] = base64.indexOf(compressed.charAt(charIndex++));
-					if (channelFilters[channel] >= Music.filterNames.length) channelFilters[channel] = Music.filterNames.length - 1;
-				} else if (command == "d") {
-					channel = base64.indexOf(compressed.charAt(charIndex++));
-					channelAttacks[channel] = base64.indexOf(compressed.charAt(charIndex++));
-					if (channelAttacks[channel] >= Music.attackNames.length) channelAttacks[channel] = Music.attackNames.length - 1;
-				} else if (command == "c") {
-					channel = base64.indexOf(compressed.charAt(charIndex++));
-					channelEffects[channel] = base64.indexOf(compressed.charAt(charIndex++));
-					if (channelEffects[channel] >= Music.effectNames.length) channelEffects[channel] = Music.effectNames.length - 1;
-					if (beforeThree && channelEffects[channel] == 1) channelEffects[channel] = 3;
-					else if (beforeThree && channelEffects[channel] == 3) channelEffects[channel] = 5;
-				} else if (command == "h") {
-					channel = base64.indexOf(compressed.charAt(charIndex++));
-					channelChorus[channel] = base64.indexOf(compressed.charAt(charIndex++));
-					if (channelChorus[channel] >= Music.chorusNames.length) channelChorus[channel] = Music.chorusNames.length - 1;
-				} else if (command == "v") {
-					channel = base64.indexOf(compressed.charAt(charIndex++));
-					channelVolumes[channel] = base64.indexOf(compressed.charAt(charIndex++));
-					if (channelVolumes[channel] >= Music.volumeNames.length) channelVolumes[channel] = Music.volumeNames.length - 1;
-				} else if (command == "o") {
-					channel = base64.indexOf(compressed.charAt(charIndex++));
-					channelOctaves[channel] = base64.indexOf(compressed.charAt(charIndex++));
-					if (channelOctaves[channel] > 4) channelOctaves[channel] = 4;
-				} else if (command == "b") {
-					channel = base64.indexOf(compressed.charAt(charIndex++));
-					var barCount: int = base64.indexOf(compressed.charAt(charIndex++));
-					var subStringLength: int = Math.ceil(barCount * 0.5);
-					bits = new BitField(base64);
-					bits.load(compressed.substr(charIndex, subStringLength));
-					charIndex += subStringLength;
-					for (i = 0; i < barCount; i++) {
-						channelBars[channel][i] = bits.read(3);
+					if (beforeThree) {
+						channel = base64.indexOf(compressed.charAt(charIndex++));
+						instrumentWaves[channel][0] = clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+					} else {
+						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+							instrumentWaves[channel][i] = clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						}
 					}
+				} else if (command == "f") {
+					if (beforeThree) {
+						channel = base64.indexOf(compressed.charAt(charIndex++));
+						instrumentFilters[channel][0] = clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+					} else {
+						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+							instrumentFilters[channel][i] = clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						}
+					}
+				} else if (command == "d") {
+					if (beforeThree) {
+						channel = base64.indexOf(compressed.charAt(charIndex++));
+						instrumentAttacks[channel][0] = clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+					} else {
+						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+							instrumentAttacks[channel][i] = clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						}
+					}
+				} else if (command == "c") {
+					if (beforeThree) {
+						channel = base64.indexOf(compressed.charAt(charIndex++));
+						instrumentEffects[channel][0] = clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						if (instrumentEffects[channel] == 1) instrumentEffects[channel] = 3;
+						else if (instrumentEffects[channel] == 3) instrumentEffects[channel] = 5;
+					} else {
+						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+							instrumentEffects[channel][i] = clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						}
+					}
+				} else if (command == "h") {
+					if (beforeThree) {
+						channel = base64.indexOf(compressed.charAt(charIndex++));
+						instrumentChorus[channel][0] = clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+					} else {
+						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+							instrumentChorus[channel][i] = clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						}
+					}
+				} else if (command == "v") {
+					if (beforeThree) {
+						channel = base64.indexOf(compressed.charAt(charIndex++));
+						instrumentVolumes[channel][0] = clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+					} else {
+						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
+							instrumentVolumes[channel][i] = clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						}
+					}
+				} else if (command == "o") {
+					if (beforeThree) {
+						channel = base64.indexOf(compressed.charAt(charIndex++));
+						channelOctaves[channel] = clip(0, 4, base64.indexOf(compressed.charAt(charIndex++)));
+					} else {
+						for (channel = 0; channel < Music.numChannels; channel++) {
+							channelOctaves[channel] = clip(0, 4, base64.indexOf(compressed.charAt(charIndex++)));
+						}
+					}
+				} else if (command == "b") {
+					var subStringLength: int;
+					if (beforeThree) {
+						channel = base64.indexOf(compressed.charAt(charIndex++));
+						var barCount: int = base64.indexOf(compressed.charAt(charIndex++));
+						subStringLength = Math.ceil(barCount * 0.5);
+						bits = new BitField(base64);
+						bits.load(compressed.substr(charIndex, subStringLength));
+						for (i = 0; i < barCount; i++) {
+							channelBars[channel][i] = bits.read(3);
+						}
+					} else {
+						var neededBits: int = 0;
+						while ((1 << neededBits) < patterns) neededBits++;
+						bits = new BitField(base64);
+						subStringLength = Math.ceil(Music.numChannels * bars * neededBits / 6);
+						bits.load(compressed.substr(charIndex, subStringLength));
+						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < bars; i++) {
+							channelBars[channel][i] = bits.read(neededBits);
+						}
+					}
+					charIndex += subStringLength;
 				} else if (command == "p") {
-					channel = base64.indexOf(compressed.charAt(charIndex++));
-					var patternCount: int = base64.indexOf(compressed.charAt(charIndex++));
+					var bitStringLength: int = 0;
+					if (beforeThree) {
+						channel = base64.indexOf(compressed.charAt(charIndex++));
+						var patternCount: int = base64.indexOf(compressed.charAt(charIndex++));
+						
+						bitStringLength = base64.indexOf(compressed.charAt(charIndex++));
+						bitStringLength = bitStringLength << 6;
+						bitStringLength += base64.indexOf(compressed.charAt(charIndex++));
+					} else {
+						channel = 0;
+						var bitStringLengthLength: int = base64.indexOf(compressed.charAt(charIndex++));
+						while (bitStringLengthLength > 0) {
+							bitStringLength = bitStringLength << 6;
+							bitStringLength += base64.indexOf(compressed.charAt(charIndex++));
+							bitStringLengthLength--;
+						}
+					}
 					
-					var bitStringLength: int = base64.indexOf(compressed.charAt(charIndex++));
-					bitStringLength = bitStringLength << 6;
-					bitStringLength += base64.indexOf(compressed.charAt(charIndex++));
 					bits = new BitField(base64);
 					bits.load(compressed.substr(charIndex, bitStringLength));
 					charIndex += bitStringLength;
 					
 					if (!skipPatterns) {
-						var octaveOffset: int = channel == 3 ? 0 : channelOctaves[channel] * 12;
-						var tone: Tone;
-						var pin: TonePin;
-						var lastNote: int = (channel == 3 ? 4 : 12) + octaveOffset;
-						var recentNotes: Array = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
-						var recentShapes: Array = [];
-						for (i = 0; i < recentNotes.length; i++) {
-							recentNotes[i] += octaveOffset;
-						}
-						for (i = 0; i < patternCount; i++) {
-							var curPart: int = 0;
-							var newTones: Array = [];
-							while (curPart < beats * parts) {
-								var useOldShape: Boolean = bits.read(1) == 1;
-								var newTone: Boolean = false;
-								var shapeIndex: int = 0;
-								if (useOldShape == 1) {
-									shapeIndex = bits.readLongTail(0, 0);
-								} else {
-									newTone = bits.read(1) == 1;
-								}
-								
-								if (!useOldShape && !newTone) {
-									var restLength: int = bits.readPartDuration();
-									curPart += restLength;
-								} else {
-									var shape: Object;
-									var pinObj: Object;
-									var note: int;
-									if (useOldShape) {
-										shape = recentShapes[shapeIndex];
-										recentShapes.splice(shapeIndex, 1);
-									} else {
-										shape = new Object();
-										
-										shape.noteCount = 1;
-										while (shape.noteCount < 4 && bits.read(1) == 1) shape.noteCount++;
-										
-										shape.pinCount = bits.readPinCount();
-										shape.initialVolume = bits.read(2);
-										
-										shape.pins = [];
-										shape.length = 0;
-										shape.bendCount = 0;
-										for (j = 0; j < shape.pinCount; j++) {
-											pinObj = new Object();
-											pinObj.pitchBend = bits.read(1) == 1;
-											if (pinObj.pitchBend) shape.bendCount++;
-											shape.length += bits.readPartDuration();
-											pinObj.time = shape.length;
-											pinObj.volume = bits.read(2);
-											shape.pins.push(pinObj);
-										}
-									}
-									recentShapes.unshift(shape);
-									if (recentShapes.length > 10) recentShapes.pop();
-									
-									tone = new Tone(0,curPart,curPart + shape.length, shape.initialVolume);
-									tone.notes = [];
-									tone.pins.length = 1;
-									var pitchBends: Array = [];
-									for (j = 0; j < shape.noteCount + shape.bendCount; j++) {
-										var useOldNote: Boolean = bits.read(1) == 1;
-										if (!useOldNote) {
-											var interval: int = bits.readNoteInterval();
-											note = lastNote;
-											var intervalIter: int = interval;
-											while (intervalIter > 0) {
-												note++;
-												while (recentNotes.indexOf(note) != -1) note++;
-												intervalIter--;
-											}
-											while (intervalIter < 0) {
-												note--;
-												while (recentNotes.indexOf(note) != -1) note--;
-												intervalIter++;
-											}
-										} else {
-											var noteIndex: int = bits.read(3);
-											note = recentNotes[noteIndex];
-											recentNotes.splice(noteIndex, 1);
-										}
-										
-										recentNotes.unshift(note);
-										if (recentNotes.length > 8) recentNotes.pop();
-										
-										if (j < shape.noteCount) {
-											tone.notes.push(note);
-										} else {
-											pitchBends.push(note);
-										}
-										
-										if (j == shape.noteCount - 1) {
-											lastNote = tone.notes[0];
-										} else {
-											lastNote = note;
-										}
-									}
-									
-									pitchBends.unshift(tone.notes[0]);
-									
-									for each (pinObj in shape.pins) {
-										if (pinObj.pitchBend) pitchBends.shift();
-										pin = new TonePin(pitchBends[0] - tone.notes[0], pinObj.time, pinObj.volume);
-										tone.pins.push(pin);
-									}
-									curPart = tone.end;
-									newTones.push(tone);
-								}
+						while (true) {
+							var octaveOffset: int = channel == 3 ? 0 : channelOctaves[channel] * 12;
+							var tone: Tone = null;
+							var pin: TonePin = null;
+							var lastNote: int = (channel == 3 ? 4 : 12) + octaveOffset;
+							var recentNotes: Array = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+							var recentShapes: Array = [];
+							for (i = 0; i < recentNotes.length; i++) {
+								recentNotes[i] += octaveOffset;
 							}
-							channelPatterns[channel][i].tones = newTones;
-						}
+							for (i = 0; i < patterns; i++) {
+								var curPart: int = 0;
+								var newTones: Array = [];
+								while (curPart < beats * parts) {
+									var useOldShape: Boolean = bits.read(1) == 1;
+									var newTone: Boolean = false;
+									var shapeIndex: int = 0;
+									if (useOldShape == 1) {
+										shapeIndex = bits.readLongTail(0, 0);
+									} else {
+										newTone = bits.read(1) == 1;
+									}
+									
+									if (!useOldShape && !newTone) {
+										var restLength: int = bits.readPartDuration();
+										curPart += restLength;
+									} else {
+										var shape: Object;
+										var pinObj: Object;
+										var note: int;
+										if (useOldShape) {
+											shape = recentShapes[shapeIndex];
+											recentShapes.splice(shapeIndex, 1);
+										} else {
+											shape = new Object();
+											
+											shape.noteCount = 1;
+											while (shape.noteCount < 4 && bits.read(1) == 1) shape.noteCount++;
+											
+											shape.pinCount = bits.readPinCount();
+											shape.initialVolume = bits.read(2);
+											
+											shape.pins = [];
+											shape.length = 0;
+											shape.bendCount = 0;
+											for (j = 0; j < shape.pinCount; j++) {
+												pinObj = new Object();
+												pinObj.pitchBend = bits.read(1) == 1;
+												if (pinObj.pitchBend) shape.bendCount++;
+												shape.length += bits.readPartDuration();
+												pinObj.time = shape.length;
+												pinObj.volume = bits.read(2);
+												shape.pins.push(pinObj);
+											}
+										}
+										recentShapes.unshift(shape);
+										if (recentShapes.length > 10) recentShapes.pop();
+										
+										tone = new Tone(0,curPart,curPart + shape.length, shape.initialVolume);
+										tone.notes = [];
+										tone.pins.length = 1;
+										var pitchBends: Array = [];
+										for (j = 0; j < shape.noteCount + shape.bendCount; j++) {
+											var useOldNote: Boolean = bits.read(1) == 1;
+											if (!useOldNote) {
+												var interval: int = bits.readNoteInterval();
+												note = lastNote;
+												var intervalIter: int = interval;
+												while (intervalIter > 0) {
+													note++;
+													while (recentNotes.indexOf(note) != -1) note++;
+													intervalIter--;
+												}
+												while (intervalIter < 0) {
+													note--;
+													while (recentNotes.indexOf(note) != -1) note--;
+													intervalIter++;
+												}
+											} else {
+												var noteIndex: int = bits.read(3);
+												note = recentNotes[noteIndex];
+												recentNotes.splice(noteIndex, 1);
+											}
+											
+											recentNotes.unshift(note);
+											if (recentNotes.length > 8) recentNotes.pop();
+											
+											if (j < shape.noteCount) {
+												tone.notes.push(note);
+											} else {
+												pitchBends.push(note);
+											}
+											
+											if (j == shape.noteCount - 1) {
+												lastNote = tone.notes[0];
+											} else {
+												lastNote = note;
+											}
+										}
+										
+										pitchBends.unshift(tone.notes[0]);
+										
+										for each (pinObj in shape.pins) {
+											if (pinObj.pitchBend) pitchBends.shift();
+											pin = new TonePin(pitchBends[0] - tone.notes[0], pinObj.time, pinObj.volume);
+											tone.pins.push(pin);
+										}
+										curPart = tone.end;
+										newTones.push(tone);
+									}
+								}
+								channelPatterns[channel][i].tones = newTones;
+							} // for (i = 0; i < patterns; i++) {
+							
+							if (beforeThree) {
+								break;
+							} else {
+								channel++;
+								if (channel >= Music.numChannels) break;
+							}
+						} // while (true)
+						
 					}
 				}
 			}
 		}
 		
-		public function getBarPattern(channel: int, bar: int): BarPattern {
+		private function clip(min: int, max: int, val: int): int {
+			if (val >= max) return max - 1;
+			if (val < min) return min;
+			return val;
+		}
+		
+		public function getPattern(channel: int, bar: int): BarPattern {
 			return channelPatterns[channel][channelBars[channel][bar]];
 		}
 	}

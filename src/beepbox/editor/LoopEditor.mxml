@@ -97,9 +97,9 @@ SOFTWARE.
 				end -= start;
 				start = 0;
 			}
-			if (end > Music.numBars) {
-				start -= end - Music.numBars;
-				end = Music.numBars;
+			if (end > doc.song.bars) {
+				start -= end - doc.song.bars;
+				end = doc.song.bars;
 			}
 			return {start: start, length: end - start};
 		}
@@ -153,7 +153,7 @@ SOFTWARE.
 						end = temp;
 					}
 					if (start < 0) start = 0;
-					if (end >= Music.numBars) end = Music.numBars;
+					if (end >= doc.song.bars) end = doc.song.bars;
 					change = new ChangeLoop(doc, start, end - start);
 				} else if (cursor.mode == endMode) {
 					start = doc.song.loopStart;
@@ -166,7 +166,7 @@ SOFTWARE.
 						end = temp;
 					}
 					if (start < 0) start = 0;
-					if (end >= Music.numBars) end = Music.numBars;
+					if (end >= doc.song.bars) end = doc.song.bars;
 					change = new ChangeLoop(doc, start, end - start);
 				} else if (cursor.mode == bothMode) {
 					var endPoints: Object = findEndPoints(bar);

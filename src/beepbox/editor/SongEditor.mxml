@@ -57,8 +57,6 @@ SOFTWARE.
 		[Bindable]
 		private var tempoNames: ArrayCollection;
 		[Bindable]
-		private var beatNames: ArrayCollection;
-		[Bindable]
 		private var partNames: ArrayCollection;
 		[Bindable]
 		private var waveNames: ArrayCollection;
@@ -79,12 +77,14 @@ SOFTWARE.
 		private var copyTones: Array;
 		private var copyBeats: int = 0;
 		private var copyParts: int = 0;
+		private var copyDrums: Boolean = false;
+		private var prompt: UIComponent;
+		private var wasPlaying: Boolean;
 		
 		public function init():void {
 			scaleNames = new ArrayCollection(Music.scaleNames);
 			keyNames = new ArrayCollection(Music.keyNames);
 			tempoNames = new ArrayCollection(Music.tempoNames);
-			beatNames = new ArrayCollection(Music.beatNames);
 			partNames = new ArrayCollection(Music.partNames);
 			waveNames = new ArrayCollection(Music.waveNames);
 			filterNames = new ArrayCollection(Music.filterNames);
@@ -100,6 +100,22 @@ SOFTWARE.
 			editorBox.addEventListener(MouseEvent.MOUSE_DOWN, refocusStage);
 		}
 		
+		private function dimMainLayer(): void {
+			wasPlaying = doc.synth.playing;
+			if (wasPlaying) togglePlay();
+			mainLayer.transform.colorTransform = new ColorTransform(0.5, 0.5, 0.5, 1.0, 0, 0, 0, 0);
+			mainLayer.mouseChildren = false;
+		}
+		
+		private function closePrompt(): void {
+			removeElement(prompt);
+			prompt = null;
+			mainLayer.transform.colorTransform = new ColorTransform();
+			mainLayer.mouseChildren = true;
+			if (wasPlaying) togglePlay();
+			stage.focus = stage;
+		}
+		
 		private function refocusStage(event: Event): void {
 			stage.focus = stage;
 		}
@@ -108,7 +124,6 @@ SOFTWARE.
 			scaleDropDown.selectedIndex = doc.song.scale;
 			keyDropDown.selectedIndex = doc.song.key;
 			tempoDropDown.selectedIndex = doc.song.tempo;
-			beatDropDown.selectedIndex = Music.beatCounts.indexOf(doc.song.beats);
 			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
 			if (doc.channel == 3) {
 				waveDropDownGroup.visible   = false;
@@ -122,15 +137,34 @@ SOFTWARE.
 				filterDropDownGroup.visible = true;
 				chorusDropDownGroup.visible = true;
 				effectDropDownGroup.visible = true;
-				waveDropDown.selectedIndex   = doc.song.channelWaves[doc.channel];
-				filterDropDown.selectedIndex = doc.song.channelFilters[doc.channel];
-				attackDropDown.selectedIndex = doc.song.channelAttacks[doc.channel];
-				effectDropDown.selectedIndex = doc.song.channelEffects[doc.channel];
-				chorusDropDown.selectedIndex = doc.song.channelChorus[doc.channel];
-				volumeDropDown.selectedIndex = doc.song.channelVolumes[doc.channel];
 			}
-			currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
-			patternEditorContainer.width = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
+			
+			var pattern: BarPattern = doc.getCurrentPattern();
+			waveDropDown.selectedIndex   = doc.song.instrumentWaves[doc.channel][pattern.instrument];
+			filterDropDown.selectedIndex = doc.song.instrumentFilters[doc.channel][pattern.instrument];
+			attackDropDown.selectedIndex = doc.song.instrumentAttacks[doc.channel][pattern.instrument];
+			effectDropDown.selectedIndex = doc.song.instrumentEffects[doc.channel][pattern.instrument];
+			chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][pattern.instrument];
+			volumeDropDown.selectedIndex = doc.song.instrumentVolumes[doc.channel][pattern.instrument];
+			
+			//currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
+			
+			if (doc.showLetters && piano.parent == null) patternContainerContainer.addElementAt(piano, 0);
+			if (!doc.showLetters && piano.parent != null) patternContainerContainer.removeElement(piano);
+			if (doc.showScrollBar && octaveScrollBar.parent == null) patternContainerContainer.addElement(octaveScrollBar);
+			if (!doc.showScrollBar && octaveScrollBar.parent != null) patternContainerContainer.removeElement(octaveScrollBar);
+			if (doc.song.bars > 16 && barScrollBar.parent == null) editorBox.addElement(barScrollBar);
+			if (doc.song.bars <= 16 && barScrollBar.parent != null) editorBox.removeElement(barScrollBar);
+			
+			var patternWidth: int = 512;
+			if (doc.showLetters) patternWidth -= 32;
+			if (doc.showScrollBar) patternWidth -= 20;
+			patternEditorContainer.width = patternWidth;
+			
+			var trackHeight: int = 128;
+			if (doc.song.bars > 16) trackHeight -= 20;
+			trackEditor.height = trackHeight;
+			
 			volumeSlider.value = doc.volume;
 		}
 		
@@ -186,14 +220,28 @@ SOFTWARE.
 		}
 		
 		private function copy(): void {
-			copyTones = doc.song.getBarPattern(doc.channel, doc.bar).cloneTones();
+			copyTones = doc.getCurrentPattern().cloneTones();
 			copyBeats = doc.song.beats;
 			copyParts = doc.song.parts;
+			copyDrums = doc.channel == 3;
 		}
 		
 		private function paste(): void {
 			if (!canPaste()) return;
 			doc.history.record(new ChangePaste(doc, copyTones));
+		}
+		
+		private function canPaste(): Boolean {
+			return copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts && copyDrums == (doc.channel == 3);
+		}
+		
+		private function showDurationPrompt(): void {
+			var songDurationPrompt: SongDurationPrompt = new SongDurationPrompt;
+			songDurationPrompt.doc = doc;
+			songDurationPrompt.onClose = closePrompt;
+			prompt = songDurationPrompt;
+			addElement(prompt);
+			dimMainLayer();
 		}
 		
 		private function cleanSlate(): void {
@@ -202,7 +250,7 @@ SOFTWARE.
 		}
 		
 		private function export(): void {
-			var wasPlaying: Boolean = doc.synth.playing;
+			wasPlaying = doc.synth.playing;
 			if (wasPlaying) togglePlay();
 			
 			var sampleFrames: int = doc.synth.totalSamples;
@@ -282,73 +330,43 @@ SOFTWARE.
 		}
 		
 		private function onSetScale(): void {
-			var scale: int = scaleDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeScale) doc.history.undo();
-			doc.history.record(new ChangeScale(doc, scale));
+			doc.history.record(new ChangeScale(doc, scaleDropDown.selectedIndex));
 		}
 		
 		private function onSetKey(): void {
-			var key: int = keyDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeKey) doc.history.undo();
-			doc.history.record(new ChangeKey(doc, key));
+			doc.history.record(new ChangeKey(doc, keyDropDown.selectedIndex));
 		}
 		
 		private function onSetTempo(): void {
-			var tempo: int = tempoDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeTempo) doc.history.undo();
-			doc.history.record(new ChangeTempo(doc, tempo));
-		}
-		
-		private function onSetBeats(): void {
-			var beats: int = Music.beatCounts[beatDropDown.selectedIndex];
-			//if (doc.history.getRecentChange() is ChangeBeats) doc.history.undo();
-			doc.history.record(new ChangeBeats(doc, beats));
+			doc.history.record(new ChangeTempo(doc, tempoDropDown.selectedIndex));
 		}
 		
 		private function onSetParts(): void {
-			var parts: int = Music.partCounts[partDropDown.selectedIndex];
-			//if (doc.history.getRecentChange() is ChangeParts) doc.history.undo();
-			doc.history.record(new ChangeParts(doc, parts));
+			doc.history.record(new ChangeParts(doc, Music.partCounts[partDropDown.selectedIndex]));
 		}
 		
 		private function onSetWave(): void {
-			var wave: int = waveDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeWave) doc.history.undo();
-			doc.history.record(new ChangeWave(doc, wave));
+			doc.history.record(new ChangeWave(doc, waveDropDown.selectedIndex));
 		}
 		
 		private function onSetFilter(): void {
-			var filter: int = filterDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeFilter) doc.history.undo();
-			doc.history.record(new ChangeFilter(doc, filter));
+			doc.history.record(new ChangeFilter(doc, filterDropDown.selectedIndex));
 		}
 		
 		private function onSetAttack(): void {
-			var attack: int = attackDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeAttack) doc.history.undo();
-			doc.history.record(new ChangeAttack(doc, attack));
+			doc.history.record(new ChangeAttack(doc, attackDropDown.selectedIndex));
 		}
 		
 		private function onSetEffect(): void {
-			var effect: int = effectDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeEffect) doc.history.undo();
-			doc.history.record(new ChangeEffect(doc, effect));
+			doc.history.record(new ChangeEffect(doc, effectDropDown.selectedIndex));
 		}
 		
 		private function onSetChorus(): void {
-			var chorus: int = chorusDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeChorus) doc.history.undo();
-			doc.history.record(new ChangeChorus(doc, chorus));
+			doc.history.record(new ChangeChorus(doc, chorusDropDown.selectedIndex));
 		}
 		
 		private function onSetVolume(): void {
-			var volume: int = volumeDropDown.selectedIndex;
-			//if (doc.history.getRecentChange() is ChangeVolume) doc.history.undo();
-			doc.history.record(new ChangeVolume(doc, volume));
-		}
-		
-		private function canPaste(): Boolean {
-			return copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts;
+			doc.history.record(new ChangeVolume(doc, volumeDropDown.selectedIndex));
 		}
 		
 		private function openEditMenu(): void {
@@ -386,6 +404,9 @@ SOFTWARE.
 					break;
 				case "clean":
 					cleanSlate();
+					break;
+				case "duration":
+					showDurationPrompt();
 					break;
 			}
 		}
@@ -427,22 +448,16 @@ SOFTWARE.
 		}
 	]]></fx:Script>
 	
-	<s:states>
-		<s:State name="hideAll"/>
-		<s:State name="showPiano"/>
-		<s:State name="showScrollBar"/>
-		<s:State name="showPianoAndScrollBar"/>
-	</s:states>
-	
-	<s:HGroup width="100%" height="100%">
+	<s:HGroup width="100%" height="100%" id="mainLayer">
 		<s:VGroup width="512" id="editorBox">
-			<s:HGroup width="512" height="481" gap="0">
-				<Piano id="piano" doc="{doc}" includeIn="showPiano, showPianoAndScrollBar"/>
+			<s:HGroup id="patternContainerContainer" width="512" height="481" gap="0">
+				<Piano id="piano" doc="{doc}"/>
 				<mx:UIComponent id="patternEditorContainer" width="100%" height="100%"/>
-				<OctaveScrollBar id="octaveScrollBar" doc="{doc}" includeIn="showScrollBar, showPianoAndScrollBar"/>
+				<OctaveScrollBar id="octaveScrollBar" doc="{doc}"/>
 			</s:HGroup>
-			<TrackEditor doc="{doc}"/>
+			<TrackEditor doc="{doc}" id="trackEditor"/>
 			<LoopEditor doc="{doc}"/>
+			<BarScrollBar id="barScrollBar" doc="{doc}"/>
 		</s:VGroup>
 		<s:VGroup width="100%" height="100%">
 			<s:VGroup id="songSettings" height="481" width="100%">
@@ -456,7 +471,7 @@ SOFTWARE.
 					<s:HSlider id="volumeSlider" minimum="0" maximum="100" value="50" stepSize="1" snapInterval="1" liveDragging="true" showDataTip="false" change="doc.setVolume(volumeSlider.value)"/>
 				</s:HGroup>
 				<s:Button id="editButton" label="Edit Menu" click="openEditMenu();" width="100%"/>
-				<s:Button id="optionsButton" label="Options Menu" click="openOptionsMenu();" width="100%"/>
+				<s:Button id="optionsButton" label="Preferences Menu" click="openOptionsMenu();" width="100%"/>
 				<s:Spacer height="5"/>
 				<s:Label text="Song Settings:" color="0xffffff"/>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
@@ -481,17 +496,10 @@ SOFTWARE.
 					</s:DropDownList>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
-					<s:Label text="Beat divisions:" color="0xbbbbbb"/>
+					<s:Label text="Rhythm:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:DropDownList id="partDropDown" dataProvider="{partNames}" width="90" change="onSetParts()" close="stage.focus = stage" right="0">
 						<s:layout> <s:VerticalLayout requestedRowCount="{partNames.length}" horizontalAlign="justify"/> </s:layout>
-					</s:DropDownList>
-				</s:HGroup>
-				<s:HGroup width="100%" gap="0" verticalAlign="middle">
-					<s:Label text="Beats per bar:" color="0xbbbbbb"/>
-					<s:Spacer width="100%"/>
-					<s:DropDownList id="beatDropDown" dataProvider="{beatNames}" width="90" change="onSetBeats()" close="stage.focus = stage" right="0">
-						<s:layout> <s:VerticalLayout requestedRowCount="{beatNames.length}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
 				<s:Spacer height="100%"/>
@@ -543,7 +551,7 @@ SOFTWARE.
 			</s:VGroup>
 		</s:VGroup>
 	</s:HGroup>
-
+	
 	<fx:Declarations>
 		<fx:XML id="editMenuData">
 			<root>
@@ -551,6 +559,7 @@ SOFTWARE.
 				<menuitem label="Redo (Y)" eventName="redo"/>
 				<menuitem label="Copy Pattern (C)" eventName="copy"/>
 				<menuitem label="Paste Pattern (V)" eventName="paste"/>
+				<menuitem label="Custom song size..." eventName="duration"/>
 				<menuitem label="Export to .wav File" eventName="export"/>
 				<menuitem label="Clean Slate" eventName="clean"/>
 			</root>
@@ -560,7 +569,7 @@ SOFTWARE.
 				<menuitem type="check" label="Show Piano" eventName="showLetters"/>
 				<menuitem type="check" label="Highlight 'Fifth' Notes" eventName="showFifth"/>
 				<menuitem type="check" label="Show All Channels" eventName="showChannels"/>
-				<menuitem type="check" label="Show Scroll Bar" eventName="showScrollBar"/>
+				<menuitem type="check" label="Octave Scroll Bar" eventName="showScrollBar"/>
 			</root>
 		</fx:XML>
 	</fx:Declarations>

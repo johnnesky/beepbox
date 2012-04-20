@@ -27,13 +27,16 @@ package beepbox.editor {
 		private var document: Document;
 		private var oldSong: String;
 		private var newSong: String;
-		public var oldPatterns: Array;
-		public var newPatterns: Array;
+		private var oldPatterns: Array;
+		private var newPatterns: Array;
+		private var oldBar: int;
+		private var newBar: int;
 		public function ChangeSong(document: Document, song: String) {
 			super(false);
 			this.document = document;
 			oldSong = document.song.toString();
 			oldPatterns = document.song.channelPatterns;
+			oldBar = document.bar;
 			if (song != null) {
 				newSong = song;
 				document.song.fromString(newSong, false);
@@ -42,6 +45,10 @@ package beepbox.editor {
 				newSong = document.song.toString();
 			}
 			newPatterns = document.song.channelPatterns;
+			newBar = Math.max(0, Math.min(document.song.bars - 1, oldBar));
+			document.bar = newBar;
+			document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
+			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
 			document.changed();
 			didSomething();
 		}
@@ -49,12 +56,18 @@ package beepbox.editor {
 		protected override function doForwards(): void {
 			document.song.fromString(newSong, true);
 			document.song.channelPatterns = newPatterns;
+			document.bar = newBar;
+			document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
+			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
 			document.song.fromString(oldSong, true);
 			document.song.channelPatterns = oldPatterns;
+			document.bar = oldBar;
+			document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
+			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
 			document.changed();
 		}
 	}

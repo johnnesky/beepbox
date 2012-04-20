@@ -23,8 +23,10 @@ SOFTWARE.
 package beepbox.synth {
 	public class BarPattern {
 		public var tones: Array;
+		public var instrument: int;
 		public function BarPattern() {
 			tones = [];
+			instrument = 0;
 			//tones = [new Tone(12, 0, 8)];
 			//tones[0].pins = [new TonePin(0, 0), new TonePin(0, 3), new TonePin(2, 4), new TonePin(2, 8)];
 		}
