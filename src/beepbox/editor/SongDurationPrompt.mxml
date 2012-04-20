@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (C) 2012 John Nesky
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+-->
+
+<s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+                   xmlns:mx="library://ns.adobe.com/flex/mx"
+                   xmlns:s="library://ns.adobe.com/flex/spark"
+                   xmlns="beepbox.editor.*"
+                   horizontalCenter="0" verticalCenter="0"
+                   backgroundColor="0x000000"
+                   borderColor="0x444444"
+                   borderWeight="4"
+                   cornerRadius="15"
+                   creationComplete="init()">
+	<fx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		
+		import mx.collections.ArrayCollection;
+		import mx.controls.Menu;
+		import mx.events.MenuEvent;
+		
+		import beepbox.synth.*;
+		
+		[Bindable]
+		public var doc: Document;
+		
+		[Bindable]
+		public var onClose: Function;
+		
+		public function init():void {
+			beatsStepper.textDisplay.editable = false;
+			beatsStepper.value   = doc.song.beats;
+			beatsStepper.minimum = Music.beatsMin;
+			beatsStepper.maximum = Music.beatsMax;
+			
+			barsStepper.textDisplay.editable = false;
+			barsStepper.value   = doc.song.bars;
+			barsStepper.minimum = Music.barsMin;
+			barsStepper.maximum = Music.barsMax;
+			
+			patternsStepper.textDisplay.editable = false;
+			patternsStepper.value   = doc.song.patterns;
+			patternsStepper.minimum = Music.patternsMin;
+			patternsStepper.maximum = Music.patternsMax;
+			
+			instrumentsStepper.textDisplay.editable = false;
+			instrumentsStepper.value   = doc.song.instruments;
+			instrumentsStepper.minimum = Music.instrumentsMin;
+			instrumentsStepper.maximum = Music.instrumentsMax;
+			
+			addEventListener(KeyboardEvent.KEY_DOWN, catchKeys);
+			addEventListener(KeyboardEvent.KEY_UP, catchKeys);
+			stage.focus = this;
+		}
+		
+		private function catchKeys(event: KeyboardEvent): void {
+			event.stopPropagation();
+		}
+		
+		private function saveChanges(): void {
+			var sequence: ChangeSequence = new ChangeSequence();
+			sequence.append(new ChangeBeats(doc, beatsStepper.value));
+			sequence.append(new ChangeBars(doc, barsStepper.value));
+			sequence.append(new ChangePatterns(doc, patternsStepper.value));
+			sequence.append(new ChangeInstruments(doc, instrumentsStepper.value));
+			doc.history.record(sequence);
+		}
+	]]></fx:Script>
+	
+	<s:VGroup horizontalAlign="center" gap="40"
+	          paddingTop="20" paddingBottom="20" paddingLeft="20" paddingRight="20">
+		<s:Label text="Custom Song Size" color="0xffffff" fontSize="30"/>
+		<s:VGroup horizontalAlign="right" gap="20">
+			<s:HGroup verticalAlign="middle" gap="20">
+				<s:VGroup horizontalAlign="right">
+					<s:Label text="Beats per bar:" color="0xffffff"/>
+					<s:Label text="(Multiples of 3 or 4 are recommended)" color="0x888888"/>
+				</s:VGroup>
+				<s:NumericStepper id="beatsStepper" width="50"/>
+			</s:HGroup>
+			<s:HGroup verticalAlign="middle" gap="20">
+				<s:VGroup horizontalAlign="right">
+					<s:Label text="Bars per song:" color="0xffffff"/>
+					<s:Label text="(Even numbers are recommended)" color="0x888888"/>
+				</s:VGroup>
+				<s:NumericStepper id="barsStepper" width="50"/>
+			</s:HGroup>
+			<s:HGroup verticalAlign="middle" gap="20">
+				<s:Label text="Patterns per channel:" color="0xffffff"/>
+				<s:NumericStepper id="patternsStepper" width="50"/>
+			</s:HGroup>
+			<s:HGroup verticalAlign="middle" gap="20">
+				<s:Label text="Instruments per channel:" color="0xffffff"/>
+				<s:NumericStepper id="instrumentsStepper" width="50"/>
+			</s:HGroup>
+		</s:VGroup>
+		<s:HGroup verticalAlign="middle" gap="20">
+			<s:Button label="Okay" click="saveChanges(); onClose();" width="125"/>
+			<s:Button label="Cancel" click="onClose();" width="125"/>
+		</s:HGroup>
+	</s:VGroup>
+	
+</s:BorderContainer>

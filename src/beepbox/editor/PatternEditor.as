@@ -298,7 +298,7 @@ package beepbox.editor {
 		private function onEnterFrame(event: Event): void {
 			playhead.graphics.clear();
 			if (!doc.synth.playing) return;
-			if (doc.song.getBarPattern(doc.channel, int(doc.synth.playhead)) != pattern) return;
+			if (doc.song.getPattern(doc.channel, int(doc.synth.playhead)) != pattern) return;
 			var modPlayhead: Number = doc.synth.playhead - int(doc.synth.playhead);
 			if (Math.abs(modPlayhead - playheadX) > 0.1) {
 				playheadX = modPlayhead;
@@ -551,7 +551,7 @@ package beepbox.editor {
 		
 		private function documentChanged(): void {
 			editorWidth = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
-			pattern = doc.song.getBarPattern(doc.channel, doc.bar);
+			pattern = doc.getCurrentPattern();
 			partWidth = editorWidth / (doc.song.beats * doc.song.parts);
 			noteHeight = doc.channel == 3 ? 43 : 13;
 			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
@@ -589,7 +589,7 @@ package beepbox.editor {
 			if (doc.channel != 3 && doc.showChannels) {
 				for (var channel: int = 2; channel >= 0; channel--) {
 					if (channel == doc.channel) continue;
-					for each (tone in doc.song.getBarPattern(channel, doc.bar).tones) {
+					for each (tone in doc.song.getPattern(channel, doc.bar).tones) {
 						for each (note in tone.notes) {
 							graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][channel]);
 							drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);

@@ -112,25 +112,47 @@
 √ reset default tone shape when cleaning slate
 √ dragging horizontally should drag the pins, not just the tone endpoints. 
 √ correctly move pins when swingifying, etc.
+√ convert pattern editor from mxml to a sprite
+√ modal dialog for customizing song duration
+√ able to access patterns over 9 with multiple keystrokes
+√ deserialize grouped channel settings
+√ make sure keyboard input is disabled in modal dialog
+√ serialize pattern id, using as many bits as needed.
+√ make sure that all possible pattern bitstrings fit within 4096 characters, or increase the limit. 
+√ make sure you can't copy patterns between drums and tonal instruments
+√ when shrinking bar count, make sure to bound loop, barScrollPos, playhead, etc
 
 NEXT VERSION:
+- use customized bar count, create GUI for scrolling bars somehow. 
+- empty patterns get special 1-bit treatment
+- serialize pattern instruments
+- move "song settings" section down, and fit a "pattern settings" between that and the "instrument settings". The pattern has a colored number and the instrument has a colored letter in the title, if there are at least two instruments.
+- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
+- Benchmark synthesized vs precomputed noise. Precomputed would allow you to select non chip tune style noise. 
+- drums get custom lowpass based on change rate? rebalance volume range too. bass is too quiet, cymbal too loud.
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
 - tones that fade out volume completely shouldn't slide to next tone
 - attack transitions that slide should let the decay filter smoothly rise again to better approximate strings/violin. also repeated notes shouldn't fade out automatically. 
-- group pattern count, bar count, and beats/bar into a modal window. 
-- Benchmark synthesized vs precomputed noise. Precomputed would allow you to select non chip tune style noise. 
-- can I make the "choir" option feel more natural?
-- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
+- can I make the "choir" option feel more natural? wait choir is actually good for brass.
 - volume scaling from chorus effect: Synchronized waves are louder than waves that are almost but not quite the same frequency. Ratio: square root of two!
-- drums get custom lowpass based on change rate? rebalance volume range too. bass is too quiet, cymbal too loud.
-- option: autoplay on startup
 - don't autoplay until URL fragment has been passed through
 - medium sustain filter, slower sharp filter...
 - dedicated silent 0 pattern
-- Dim the column occupied by a tone to communicate mono voice?
-- make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
+- asynchronous wav export
+- octave dragging should just be one History change. 
 
 MORE FEATURES:
+- when holding down left or right arrow, stop at end of song until release and repress
+- when pasting into the debug text field, re select the text after parsing.
+- tooltips
+- make a non-editing embeddable player, in an iframe, with playhead tracking and all channels and no highlighting. Gravatars?
+- rapid document/fragment changes due to undo cause undefined state
+- make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
+- web interface to share songs so that other visitors can see them. let users enter a name and a "password", which can just be an email address, which is used to generate a "retro" gravatar identicon. 
+- Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
+- option: autoplay on startup
+- Dim the column occupied by a tone to communicate mono voice?
+- wav export dialog lets you toggle intro, loop count, fade out or outro...
 - when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - Distortion applying to green and yellow channels
 - Reverb
@@ -138,33 +160,23 @@ MORE FEATURES:
 - adjust drop down menu widths to fit the size of their contents, mostly so that they're not all the same size, to give you an extra visual cue to find the menu you're looking for
 - rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
 - make play and volume controls prettier
-- convert pattern editor from mxml to a sprite
-- distortion: light medium heavy, per channel distortion toggle
-- tooltips
-- double number of beat divisions
 - illustrate arpeggio texture on tones with multiple notes
 - phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
 - snap to tone edges from other channels, to help making NES style harmonies. 
 - new song setting: distortion, nonlinear mixing of channels...
 - save most recent song to localSO so that it doesn't accidentally get lost when window closes
 - options for timing offset
-- asynchronous wav export
-- extend bar count and pattern count for advanced users. 
-- a flag: "patterns share settings" or "unify channel settings" or whatever
 - a way to convert a byte array to a first class Flash Sound object. 
 - new preferences: follow playhead, autoplay on load?
 - piano should still play when song is paused
 - If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
 - visual feedback when a note is played
-- make a non-editing embeddable player, in an iframe, with playhead tracking and all channels and no highlighting.
 - 5 parts per beat?
-- rapid document/fragment changes cause undefined state
 - make some button to bookmark the song in your browser
 - MIDI export
 - preload some common tone shapes into the recentShape list. increment format number.
-- Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
+- double number of beat divisions
 - Get in touch with wonderfl about supporting beepbox
 - get in touch with http://youcanmakevideogames.com/resources/music
 - a facebook app to put songs in your profile
-- web interface to share songs so that other visitors can see them. let users enter a name and a "password", which can just be an email address, which is used to generate a "retro" gravatar identicon. 
 - automatic flash projector for offline version without causing the vvvvvv/machinarium file type issue.

@@ -30,7 +30,7 @@ package beepbox.editor {
 		public function ChangeChorus(document: Document, chorus: int) {
 			super(false);
 			this.document = document;
-			oldChorus = document.song.channelChorus[document.channel];
+			oldChorus = document.song.instrumentChorus[document.channel][document.getCurrentPattern().instrument];
 			newChorus = chorus;
 			if (oldChorus != newChorus) {
 				didSomething();
@@ -39,12 +39,12 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			document.song.channelChorus[document.channel] = newChorus;
+			document.song.instrumentChorus[document.channel][document.getCurrentPattern().instrument] = newChorus;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.song.channelChorus[document.channel] = oldChorus;
+			document.song.instrumentChorus[document.channel][document.getCurrentPattern().instrument] = oldChorus;
 			document.changed();
 		}
 	}

@@ -30,7 +30,7 @@ package beepbox.editor {
 		public function ChangeWave(document: Document, wave: int) {
 			super(false);
 			this.document = document;
-			oldWave = document.song.channelWaves[document.channel];
+			oldWave = document.song.instrumentWaves[document.channel][document.getCurrentPattern().instrument];
 			newWave = wave;
 			if (oldWave != newWave) {
 				didSomething();
@@ -39,12 +39,12 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			document.song.channelWaves[document.channel] = newWave;
+			document.song.instrumentWaves[document.channel][document.getCurrentPattern().instrument] = newWave;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.song.channelWaves[document.channel] = oldWave;
+			document.song.instrumentWaves[document.channel][document.getCurrentPattern().instrument] = oldWave;
 			document.changed();
 		}
 	}
