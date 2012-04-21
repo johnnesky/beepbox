@@ -53,7 +53,6 @@ package beepbox.editor {
 			history = new ChangeHistory();
 			song = new Song();
 			synth = new Synth(song);
-			synth.play();
 			
 			try {
 				localSO = SharedObject.getLocal("preferences");

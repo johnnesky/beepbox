@@ -74,7 +74,7 @@ package beepbox.editor {
 							if (j < oldInstruments) {
 								channel.push(oldArray[i][j]);
 							} else {
-								if (k == 0 && i < 3) { // square wave
+								if (k == 0) { // square wave or white noise
 									channel.push(1);
 								} else if (k == 2) { // sudden attack
 									channel.push(1);

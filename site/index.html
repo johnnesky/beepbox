@@ -83,6 +83,7 @@
 		You can insert or delete notes by clicking on the gray rows at the top. 
 		Beep Box automatically plays the notes out loud for you. 
 		Drag horizontally in this area to adjust the duration of notes.
+		Drag vertically on a note to bend its pitch, or drag vertically above or below the note to adjust its volume.
 		Click above or below an existing note to add a rapid arpeggio/trill. 
 	</p>
 	<p>
@@ -90,7 +91,7 @@
 		You can select a new bar to edit by clicking once on a number below the note area. 
 		You can swap the pattern assigned to that bar by clicking again on the selected bar.
 		There are four rows of bars representing different channels that can play at the same time. 
-		The gray channel is for drums. 
+		The gray channel is for drums only. 
 	</p>
 	<p>
 		All song data is packaged into the URL text at the top of your browser. 
@@ -105,6 +106,8 @@
 			Spacebar: Pause or Resume<br/>
 			Z: Undo<br/>
 			Y or Shift Z: Redo<br/>
+			C: Copy the current pattern<br/>
+			V: Paste the current pattern<br/>
 			[ ]: Move the playhead backward and forward<br/>
 			Arrow Keys: Change which bar is selected<br/>
 			1-8: Reassign a pattern to the currently selected bar<br/>
@@ -130,7 +133,7 @@
 <script type="text/javascript">
 //<![CDATA[
 	var hashInterval = null;
-	var myhash = "";
+	var myhash = "**blank**";
 	
 	function getFlashMovieObject(movieName)
 	{

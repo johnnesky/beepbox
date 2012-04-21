@@ -72,7 +72,7 @@ package beepbox.synth {
 			];
 			channelOctaves = [3,2,1,0];
 			instrumentVolumes = [[0],[0],[0],[0]];
-			instrumentWaves   = [[1],[1],[1],[0]];
+			instrumentWaves   = [[1],[1],[1],[1]];
 			instrumentFilters = [[0],[0],[0],[0]];
 			instrumentAttacks = [[1],[1],[1],[1]];
 			instrumentEffects = [[0],[0],[0],[0]];
@@ -289,6 +289,7 @@ package beepbox.synth {
 			var beforeThree: Boolean = version < 3;
 			var base64: Array = beforeThree ? oldBase64 : newBase64;
 			if (beforeThree) instrumentAttacks = [[0],[0],[0],[0]];
+			if (beforeThree) instrumentWaves   = [[1],[1],[1],[0]];
 			while (charIndex < compressed.length) {
 				var command: String = compressed.charAt(charIndex++);
 				var bits: BitField;
@@ -336,7 +337,7 @@ package beepbox.synth {
 				} else if (command == "f") {
 					if (beforeThree) {
 						channel = base64.indexOf(compressed.charAt(charIndex++));
-						instrumentFilters[channel][0] = clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						instrumentFilters[channel][0] = [0, 2, 3, 5][clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)))];
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
 							instrumentFilters[channel][i] = clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)));
@@ -355,8 +356,8 @@ package beepbox.synth {
 					if (beforeThree) {
 						channel = base64.indexOf(compressed.charAt(charIndex++));
 						instrumentEffects[channel][0] = clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
-						if (instrumentEffects[channel] == 1) instrumentEffects[channel] = 3;
-						else if (instrumentEffects[channel] == 3) instrumentEffects[channel] = 5;
+						if (instrumentEffects[channel][0] == 1) instrumentEffects[channel][0] = 3;
+						else if (instrumentEffects[channel][0] == 3) instrumentEffects[channel][0] = 5;
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
 							instrumentEffects[channel][i] = clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
@@ -574,9 +575,12 @@ package beepbox.synth {
 		}
 		
 		private function clip(min: int, max: int, val: int): int {
-			if (val >= max) return max - 1;
-			if (val < min) return min;
-			return val;
+			if (val < max) {
+				if (val >= min) return val;
+				else return min;
+			} else {
+				return max - 1;
+			}
 		}
 		
 		public function getPattern(channel: int, bar: int): BarPattern {

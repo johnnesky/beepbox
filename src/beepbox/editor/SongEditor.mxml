@@ -132,13 +132,11 @@ SOFTWARE.
 			tempoDropDown.selectedIndex = doc.song.tempo;
 			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
 			if (doc.channel == 3) {
-				attackDropDownGroup.visible = false;
 				filterDropDownGroup.visible = false;
 				chorusDropDownGroup.visible = false;
 				effectDropDownGroup.visible = false;
 				waveDropDown.dataProvider = drumNames;
 			} else {
-				attackDropDownGroup.visible = true;
 				filterDropDownGroup.visible = true;
 				chorusDropDownGroup.visible = true;
 				effectDropDownGroup.visible = true;
@@ -479,7 +477,7 @@ SOFTWARE.
 			<s:VGroup id="songSettings" height="100%" width="100%">
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Spacer width="50%"/>
-					<s:Label text="Beep Box version 1.0.1" color="0xbbbbbb" right="0"/>
+					<s:Label text="Beep Box version 1.1" color="0xbbbbbb" right="0"/>
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:HGroup width="100%" verticalAlign="middle">
