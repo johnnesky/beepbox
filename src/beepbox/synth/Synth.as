@@ -259,45 +259,86 @@ package beepbox.synth {
 				bar = song.loopStart;
 			}
 			
-			const sampleTime: Number = 1.0 / samplesPerSecond;
-			const samplesPerArpeggio: int = getSamplesPerArpeggio();
-			const instrumentIndex: int = 0;
+			var sampleTime: Number = 1.0 / samplesPerSecond;
+			var samplesPerArpeggio: int = getSamplesPerArpeggio();
 			
-			const maxLeadVolume:    Number = Music.channelVolumes[0] * (song.instrumentVolumes[0][instrumentIndex] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[0][instrumentIndex]])) * Music.waveVolumes[song.instrumentWaves[0][instrumentIndex]] * Music.filterVolumes[song.instrumentFilters[0][instrumentIndex]] * 0.5;
-			const maxHarmonyVolume: Number = Music.channelVolumes[1] * (song.instrumentVolumes[1][instrumentIndex] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[1][instrumentIndex]])) * Music.waveVolumes[song.instrumentWaves[1][instrumentIndex]] * Music.filterVolumes[song.instrumentFilters[1][instrumentIndex]] * 0.5;
-			const maxBassVolume:    Number = Music.channelVolumes[2] * (song.instrumentVolumes[2][instrumentIndex] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[2][instrumentIndex]])) * Music.waveVolumes[song.instrumentWaves[2][instrumentIndex]] * Music.filterVolumes[song.instrumentFilters[2][instrumentIndex]] * 0.5;
-			const maxDrumVolume:    Number = Music.channelVolumes[3] * (song.instrumentVolumes[3][instrumentIndex] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[3][instrumentIndex]]));
+			var maxLeadVolume:    Number;
+			var maxHarmonyVolume: Number;
+			var maxBassVolume:    Number;
+			var maxDrumVolume:    Number;
 			
-			const leadWave:    Vector.<Number> = waves[song.instrumentWaves[0][instrumentIndex]];
-			const harmonyWave: Vector.<Number> = waves[song.instrumentWaves[1][instrumentIndex]];
-			const bassWave:    Vector.<Number> = waves[song.instrumentWaves[2][instrumentIndex]];
+			var leadWave:    Vector.<Number>;
+			var harmonyWave: Vector.<Number>;
+			var bassWave:    Vector.<Number>;
 			
-			const leadWaveLength:    int = leadWave.length;
-			const harmonyWaveLength: int = harmonyWave.length;
-			const bassWaveLength:    int = bassWave.length;
+			var leadWaveLength:    int;
+			var harmonyWaveLength: int;
+			var bassWaveLength:    int;
 			
-			const leadFilterBase:    Number = Math.pow(2, -Music.filterBases[song.instrumentFilters[0][instrumentIndex]]);
-			const harmonyFilterBase: Number = Math.pow(2, -Music.filterBases[song.instrumentFilters[1][instrumentIndex]]);
-			const bassFilterBase:    Number = Math.pow(2, -Music.filterBases[song.instrumentFilters[2][instrumentIndex]]);
-			const drumFilter: Number = 0.2;
+			var leadFilterBase:    Number;
+			var harmonyFilterBase: Number;
+			var bassFilterBase:    Number;
+			var drumFilter: Number;
 			
-			const leadFilterScale:    Number = Math.pow(2, -Music.filterDecays[song.instrumentFilters[0][instrumentIndex]] / samplesPerSecond);
-			const harmonyFilterScale: Number = Math.pow(2, -Music.filterDecays[song.instrumentFilters[1][instrumentIndex]] / samplesPerSecond);
-			const bassFilterScale:    Number = Math.pow(2, -Music.filterDecays[song.instrumentFilters[2][instrumentIndex]] / samplesPerSecond);
+			var leadFilterScale:    Number;
+			var harmonyFilterScale: Number;
+			var bassFilterScale:    Number;
 			
-			const leadTremeloScale:    Number = Music.effectTremelos[song.instrumentEffects[0][instrumentIndex]];
-			const harmonyTremeloScale: Number = Music.effectTremelos[song.instrumentEffects[1][instrumentIndex]];
-			const bassTremeloScale:    Number = Music.effectTremelos[song.instrumentEffects[2][instrumentIndex]];
+			var leadTremeloScale:    Number;
+			var harmonyTremeloScale: Number;
+			var bassTremeloScale:    Number;
 			
-			const leadChorusA:    Number = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[0][instrumentIndex]] + Music.chorusValues[song.instrumentChorus[0][instrumentIndex]]) / 12.0 );
-			const harmonyChorusA: Number = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[1][instrumentIndex]] + Music.chorusValues[song.instrumentChorus[1][instrumentIndex]]) / 12.0 );
-			const bassChorusA:    Number = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[2][instrumentIndex]] + Music.chorusValues[song.instrumentChorus[2][instrumentIndex]]) / 12.0 );
-			const leadChorusB:    Number = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[0][instrumentIndex]] - Music.chorusValues[song.instrumentChorus[0][instrumentIndex]]) / 12.0 );
-			const harmonyChorusB: Number = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[1][instrumentIndex]] - Music.chorusValues[song.instrumentChorus[1][instrumentIndex]]) / 12.0 );
-			const bassChorusB:    Number = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[2][instrumentIndex]] - Music.chorusValues[song.instrumentChorus[2][instrumentIndex]]) / 12.0 );
-			if (song.instrumentChorus[0][instrumentIndex] == 0) leadPeriodB = leadPeriodA;
-			if (song.instrumentChorus[1][instrumentIndex] == 0) harmonyPeriodB = harmonyPeriodA;
-			if (song.instrumentChorus[2][instrumentIndex] == 0) bassPeriodB = bassPeriodA;
+			var leadChorusA:    Number;
+			var harmonyChorusA: Number;
+			var bassChorusA:    Number;
+			var leadChorusB:    Number;
+			var harmonyChorusB: Number;
+			var bassChorusB:    Number;
+			
+			var updateInstruments: Function = function(): void {
+				var instrumentLead: int    = song.getPattern(0, bar).instrument;
+				var instrumentHarmony: int = song.getPattern(1, bar).instrument;
+				var instrumentBass: int    = song.getPattern(2, bar).instrument;
+				var instrumentDrum: int    = song.getPattern(3, bar).instrument;
+				
+				maxLeadVolume    = Music.channelVolumes[0] * (song.instrumentVolumes[0][instrumentLead] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[0][instrumentLead]])) * Music.waveVolumes[song.instrumentWaves[0][instrumentLead]] * Music.filterVolumes[song.instrumentFilters[0][instrumentLead]] * 0.5;
+				maxHarmonyVolume = Music.channelVolumes[1] * (song.instrumentVolumes[1][instrumentHarmony] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[1][instrumentHarmony]])) * Music.waveVolumes[song.instrumentWaves[1][instrumentHarmony]] * Music.filterVolumes[song.instrumentFilters[1][instrumentHarmony]] * 0.5;
+				maxBassVolume    = Music.channelVolumes[2] * (song.instrumentVolumes[2][instrumentBass] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[2][instrumentBass]])) * Music.waveVolumes[song.instrumentWaves[2][instrumentBass]] * Music.filterVolumes[song.instrumentFilters[2][instrumentBass]] * 0.5;
+				maxDrumVolume    = Music.channelVolumes[3] * (song.instrumentVolumes[3][instrumentDrum] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[3][instrumentDrum]]));
+				
+				leadWave    = waves[song.instrumentWaves[0][instrumentLead]];
+				harmonyWave = waves[song.instrumentWaves[1][instrumentHarmony]];
+				bassWave    = waves[song.instrumentWaves[2][instrumentBass]];
+				
+				leadWaveLength    = leadWave.length;
+				harmonyWaveLength = harmonyWave.length;
+				bassWaveLength    = bassWave.length;
+				
+				leadFilterBase    = Math.pow(2, -Music.filterBases[song.instrumentFilters[0][instrumentLead]]);
+				harmonyFilterBase = Math.pow(2, -Music.filterBases[song.instrumentFilters[1][instrumentHarmony]]);
+				bassFilterBase    = Math.pow(2, -Music.filterBases[song.instrumentFilters[2][instrumentBass]]);
+				drumFilter = 0.2;
+				
+				leadFilterScale    = Math.pow(2, -Music.filterDecays[song.instrumentFilters[0][instrumentLead]] / samplesPerSecond);
+				harmonyFilterScale = Math.pow(2, -Music.filterDecays[song.instrumentFilters[1][instrumentHarmony]] / samplesPerSecond);
+				bassFilterScale    = Math.pow(2, -Music.filterDecays[song.instrumentFilters[2][instrumentBass]] / samplesPerSecond);
+				
+				leadTremeloScale    = Music.effectTremelos[song.instrumentEffects[0][instrumentLead]];
+				harmonyTremeloScale = Music.effectTremelos[song.instrumentEffects[1][instrumentHarmony]];
+				bassTremeloScale    = Music.effectTremelos[song.instrumentEffects[2][instrumentBass]];
+				
+				leadChorusA    = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[0][instrumentLead]] + Music.chorusValues[song.instrumentChorus[0][instrumentLead]]) / 12.0 );
+				harmonyChorusA = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[1][instrumentHarmony]] + Music.chorusValues[song.instrumentChorus[1][instrumentHarmony]]) / 12.0 );
+				bassChorusA    = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[2][instrumentBass]] + Music.chorusValues[song.instrumentChorus[2][instrumentBass]]) / 12.0 );
+				leadChorusB    = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[0][instrumentLead]] - Music.chorusValues[song.instrumentChorus[0][instrumentLead]]) / 12.0 );
+				harmonyChorusB = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[1][instrumentHarmony]] - Music.chorusValues[song.instrumentChorus[1][instrumentHarmony]]) / 12.0 );
+				bassChorusB    = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[2][instrumentBass]] - Music.chorusValues[song.instrumentChorus[2][instrumentBass]]) / 12.0 );
+				if (song.instrumentChorus[0][instrumentLead] == 0) leadPeriodB = leadPeriodA;
+				if (song.instrumentChorus[1][instrumentHarmony] == 0) harmonyPeriodB = harmonyPeriodA;
+				if (song.instrumentChorus[2][instrumentBass] == 0) bassPeriodB = bassPeriodA;
+			}
+			
+			updateInstruments();
 			
 			while (totalSamples > 0) {
 				var samples: int;
@@ -334,9 +375,10 @@ package beepbox.synth {
 				var time: int = part + beat * song.parts;
 				
 				for (var channel: int = 0; channel < 4; channel++) {
-					var attack: int = song.instrumentAttacks[channel][instrumentIndex];
-					
 					var pattern: BarPattern = song.getPattern(channel, bar);
+					
+					var attack: int = song.instrumentAttacks[channel][pattern.instrument];
+					
 					var tone: Tone = null;
 					var prevTone: Tone = null;
 					var nextTone: Tone = null;
@@ -461,8 +503,8 @@ package beepbox.synth {
 						volumeDelta = (endVol - startVol) / samples;
 						var timeSinceStart: Number = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / samplesPerSecond;
 						if (timeSinceStart == 0.0 && !inhibitRestart) resetPeriod = true;
-						filter = channel == 3 ? 1.0 : Math.pow(2, -Music.filterDecays[song.instrumentFilters[channel][instrumentIndex]] * timeSinceStart);
-						vibratoScale = (song.instrumentEffects[channel][instrumentIndex] == 2 && time - tone.start < 3) ? 0.0 : Math.pow( 2.0, Music.effectVibratos[song.instrumentEffects[channel][instrumentIndex]] / 12.0 ) - 1.0;
+						filter = channel == 3 ? 1.0 : Math.pow(2, -Music.filterDecays[song.instrumentFilters[channel][pattern.instrument]] * timeSinceStart);
+						vibratoScale = (song.instrumentEffects[channel][pattern.instrument] == 2 && time - tone.start < 3) ? 0.0 : Math.pow( 2.0, Music.effectVibratos[song.instrumentEffects[channel][pattern.instrument]] / 12.0 ) - 1.0;
 					}
 					
 					if (channel == 0) {
@@ -629,6 +671,7 @@ package beepbox.synth {
 								if (loop && (bar < song.loopStart || bar >= song.loopStart + song.loopLength)) {
 									bar = song.loopStart;
 								}
+								updateInstruments();
 							}
 						}
 					}
