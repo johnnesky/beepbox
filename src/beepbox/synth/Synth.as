@@ -46,6 +46,10 @@ package beepbox.synth {
 			new <Number>[1.0, -1.0, 1.0, -1.0, 1.0, 0.0],
 			new <Number>[0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2, ],
 		];
+		private const drumWaves: Vector.<Vector.<Number>> = new <Vector.<Number>> [
+			new Vector.<Number>(),
+			new Vector.<Number>(),
+		];
 		
 		public var song: Song = null;
 		public var pianoPressed: Boolean = false;
@@ -71,7 +75,6 @@ package beepbox.synth {
 		private var bassSample: Number = 0.0;
 		private var drumPeriod: Number = 0.0;
 		private var drumSample: Number = 0.0;
-		private var drumBuffer: int = 1;
 		private var drumSignal: Number = 1.0;
 		private var stillGoing: Boolean = false;
 		private var sound: Sound = new Sound();
@@ -111,15 +114,35 @@ package beepbox.synth {
 		
 		public function Synth(song: * = null) {
 			var i: int;
+			var wave: Vector.<Number>;
 			
 			waves.fixed = true;
-			for each (var wave: Vector.<Number> in waves) {
+			for each (wave in waves) {
 				wave.fixed = true;
-				
 				var sum: Number = 0.0;
 				for (i = 0; i < wave.length; i++) sum += wave[i];
 				var average: Number = sum / wave.length;
 				for (i = 0; i < wave.length; i++) wave[i] -= average;
+			}
+			
+			drumWaves.fixed = true;
+			for each (wave in drumWaves) {
+				if (drumWaves.indexOf(wave) == 0) {
+					var drumBuffer: int = 1;
+					for (i = 0; i < 32767; i++) {
+						wave.push((drumBuffer & 1) * 2.0 - 1.0);
+						var newBuffer: int = drumBuffer >> 1;
+						if ((drumBuffer + newBuffer) & 1 == 1) {
+							newBuffer += 1 << 14;
+						}
+						drumBuffer = newBuffer;
+					}
+				} else if (drumWaves.indexOf(wave) == 1) {
+					for (i = 0; i < 32767; i++) {
+						wave.push(Math.random() * 2.0 - 1.0);
+					}
+				}
+				wave.fixed = true;
 			}
 			
 			sound.addEventListener(SampleDataEvent.SAMPLE_DATA, onSampleData, false, 0, true);
@@ -270,6 +293,7 @@ package beepbox.synth {
 			var leadWave:    Vector.<Number>;
 			var harmonyWave: Vector.<Number>;
 			var bassWave:    Vector.<Number>;
+			var drumWave:    Vector.<Number>;
 			
 			var leadWaveLength:    int;
 			var harmonyWaveLength: int;
@@ -309,6 +333,7 @@ package beepbox.synth {
 				leadWave    = waves[song.instrumentWaves[0][instrumentLead]];
 				harmonyWave = waves[song.instrumentWaves[1][instrumentHarmony]];
 				bassWave    = waves[song.instrumentWaves[2][instrumentBass]];
+				drumWave    = drumWaves[song.instrumentWaves[3][instrumentDrum]];
 				
 				leadWaveLength    = leadWave.length;
 				harmonyWaveLength = harmonyWave.length;
@@ -544,7 +569,7 @@ package beepbox.synth {
 							bassPeriodB = 0.0;
 						}
 					} else if (channel == 3) {
-						drumPeriodDelta = periodDelta;
+						drumPeriodDelta = periodDelta / 32767.0;
 						drumPeriodDeltaScale = periodDeltaScale;
 						drumVolume = toneVolume * maxDrumVolume;
 						drumVolumeDelta = volumeDelta * maxDrumVolume;
@@ -596,19 +621,12 @@ package beepbox.synth {
 					bassFilter *= bassFilterScale;
 					sample += bassSample;
 					
-					drumSample += (drumSignal * drumVolume - drumSample) * drumFilter;
+					drumSample += (drumWave[int(drumPeriod * 32767.0)] * drumVolume - drumSample) * drumFilter;
 					drumVolume += drumVolumeDelta;
 					drumPeriod += drumPeriodDelta;
 					drumPeriodDelta *= drumPeriodDeltaScale;
-					if (drumPeriod >= 1.0) {
-						drumPeriod -= 1.0;
-						var newBuffer: int = drumBuffer >> 1;
-						if ((drumBuffer + newBuffer) & 1 == 1) {
-							newBuffer += 1 << 14;
-						}
-						drumBuffer = newBuffer;
-						drumSignal = (2.0 * (drumBuffer & 1) - 1.0);
-					}
+					drumPeriod -= int(drumPeriod);
+					
 					sample += drumSample;
 					
 					/*
@@ -670,6 +688,9 @@ package beepbox.synth {
 								bar++;
 								if (loop && (bar < song.loopStart || bar >= song.loopStart + song.loopLength)) {
 									bar = song.loopStart;
+								}
+								if (bar >= song.bars) {
+									bar = 0;
 								}
 								updateInstruments();
 							}

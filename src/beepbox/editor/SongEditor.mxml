@@ -72,6 +72,8 @@ SOFTWARE.
 		private var volumeNames: ArrayCollection;
 		[Bindable]
 		private var instrumentNames: ArrayCollection;
+		[Bindable]
+		private var drumNames: ArrayCollection;
 		
 		private var patternEditor: PatternEditor;
 		private var editMenu: Menu;
@@ -94,6 +96,7 @@ SOFTWARE.
 			effectNames = new ArrayCollection(Music.effectNames);
 			chorusNames = new ArrayCollection(Music.chorusNames);
 			volumeNames = new ArrayCollection(Music.volumeNames);
+			drumNames = new ArrayCollection(Music.drumNames);
 			instrumentNames = new ArrayCollection();
 			patternEditor = new PatternEditor(doc);
 			patternEditorContainer.addChild(patternEditor);
@@ -129,17 +132,17 @@ SOFTWARE.
 			tempoDropDown.selectedIndex = doc.song.tempo;
 			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
 			if (doc.channel == 3) {
-				waveDropDownGroup.visible   = false;
 				attackDropDownGroup.visible = false;
 				filterDropDownGroup.visible = false;
 				chorusDropDownGroup.visible = false;
 				effectDropDownGroup.visible = false;
+				waveDropDown.dataProvider = drumNames;
 			} else {
-				waveDropDownGroup.visible   = true;
 				attackDropDownGroup.visible = true;
 				filterDropDownGroup.visible = true;
 				chorusDropDownGroup.visible = true;
 				effectDropDownGroup.visible = true;
+				waveDropDown.dataProvider = waveNames;
 			}
 			
 			patternSettingsLabel.visible    = doc.song.instruments > 1;

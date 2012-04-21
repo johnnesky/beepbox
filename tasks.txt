@@ -124,10 +124,11 @@
 √ use customized bar count, create GUI for scrolling bars somehow. 
 √ empty patterns get special 1-bit treatment
 √ serialize pattern instruments
+√ Benchmark synthesized vs precomputed noise. Precomputed would allow you to select non chip tune style noise. 
 
 NEXT VERSION:
-- Benchmark synthesized vs precomputed noise. Precomputed would allow you to select non chip tune style noise. 
 - drums get custom lowpass based on change rate? rebalance volume range too. bass is too quiet, cymbal too loud.
+- check to see if the drum frequency range could be usefully extended
 - tones that fade out volume completely shouldn't slide to next tone
 - attack transitions that slide should let the decay filter smoothly rise again to better approximate strings/violin. also repeated notes shouldn't fade out automatically. 
 - can I make the "choir" option feel more natural? wait choir is actually good for brass.
@@ -136,6 +137,7 @@ NEXT VERSION:
 - medium sustain filter, slower sharp filter...
 
 MORE FEATURES:
+- can drums use the other envelope/slide options?
 - octave dragging should just be one History change. 
 - asynchronous wav export
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!

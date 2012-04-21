@@ -53,6 +53,7 @@ package beepbox.synth {
 		public static const partNames: Array = ["triples", "standard"];
 		public static const partCounts: Array = [3, 4];
 		public static const noteNames: Array = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+		public static const drumNames: Array = ["retro", "white"];
 		public static const waveNames: Array = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
 		public static const waveVolumes: Array = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
 		public static const filterNames: Array = ["sustain sharp", "sustain soft", "decay sharp", "decay soft"];
