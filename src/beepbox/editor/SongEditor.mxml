@@ -70,6 +70,8 @@ SOFTWARE.
 		private var chorusNames: ArrayCollection;
 		[Bindable]
 		private var volumeNames: ArrayCollection;
+		[Bindable]
+		private var instrumentNames: ArrayCollection;
 		
 		private var patternEditor: PatternEditor;
 		private var editMenu: Menu;
@@ -92,6 +94,7 @@ SOFTWARE.
 			effectNames = new ArrayCollection(Music.effectNames);
 			chorusNames = new ArrayCollection(Music.chorusNames);
 			volumeNames = new ArrayCollection(Music.volumeNames);
+			instrumentNames = new ArrayCollection();
 			patternEditor = new PatternEditor(doc);
 			patternEditorContainer.addChild(patternEditor);
 			doc.watch(onUpdated);
@@ -139,6 +142,10 @@ SOFTWARE.
 				effectDropDownGroup.visible = true;
 			}
 			
+			instrumentDropDownGroup.visible = doc.song.instruments > 1;
+			while (instrumentNames.length < doc.song.instruments) instrumentNames.addItem(instrumentNames.length + 1);
+			while (instrumentNames.length > doc.song.instruments) instrumentNames.removeItemAt(instrumentNames.length - 1);
+			
 			var pattern: BarPattern = doc.getCurrentPattern();
 			waveDropDown.selectedIndex   = doc.song.instrumentWaves[doc.channel][pattern.instrument];
 			filterDropDown.selectedIndex = doc.song.instrumentFilters[doc.channel][pattern.instrument];
@@ -146,6 +153,7 @@ SOFTWARE.
 			effectDropDown.selectedIndex = doc.song.instrumentEffects[doc.channel][pattern.instrument];
 			chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][pattern.instrument];
 			volumeDropDown.selectedIndex = doc.song.instrumentVolumes[doc.channel][pattern.instrument];
+			instrumentDropDown.selectedIndex = pattern.instrument;
 			
 			//currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
 			
@@ -369,6 +377,10 @@ SOFTWARE.
 			doc.history.record(new ChangeVolume(doc, volumeDropDown.selectedIndex));
 		}
 		
+		private function onSetInstrument(): void {
+			doc.history.record(new ChangePatternInstrument(doc, instrumentDropDown.selectedIndex));
+		}
+		
 		private function openEditMenu(): void {
 			var editNameSpace: Namespace =  new Namespace("beepbox.editor.*");
 			editMenuData.editNameSpace::menuitem.(@eventName == "undo")[0].@enabled = doc.history.canUndo();
@@ -506,6 +518,13 @@ SOFTWARE.
 				<s:Label id="channelSettingsLabel" text="Channel Settings:" color="0xffffff"/>
 			</s:VGroup>
 			<s:VGroup id="channelSettings" height="100%" width="100%">
+				<s:HGroup id="instrumentDropDownGroup" width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Instrument:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:DropDownList id="instrumentDropDown" dataProvider="{instrumentNames}" width="120" change="onSetInstrument()" close="stage.focus = stage" right="0">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:HGroup>
 				<s:HGroup id="volumeDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Volume:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>

@@ -121,11 +121,11 @@
 √ make sure that all possible pattern bitstrings fit within 4096 characters, or increase the limit. 
 √ make sure you can't copy patterns between drums and tonal instruments
 √ when shrinking bar count, make sure to bound loop, barScrollPos, playhead, etc
+√ use customized bar count, create GUI for scrolling bars somehow. 
+√ empty patterns get special 1-bit treatment
+√ serialize pattern instruments
 
 NEXT VERSION:
-- use customized bar count, create GUI for scrolling bars somehow. 
-- empty patterns get special 1-bit treatment
-- serialize pattern instruments
 - move "song settings" section down, and fit a "pattern settings" between that and the "instrument settings". The pattern has a colored number and the instrument has a colored letter in the title, if there are at least two instruments.
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - Benchmark synthesized vs precomputed noise. Precomputed would allow you to select non chip tune style noise. 
