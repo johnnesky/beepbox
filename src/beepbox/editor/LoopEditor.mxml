@@ -63,6 +63,7 @@ SOFTWARE.
 			updateCursorStatus();
 			render();
 			doc.watch(documentChanged);
+			scrollRect = new Rectangle(0, 0, width, height);
 		}
 		
 		private function onAddedToStage(): void {
@@ -76,7 +77,7 @@ SOFTWARE.
 		}
 		
 		private function updateCursorStatus(): void {
-			var bar: Number = mouseX / barWidth;
+			var bar: Number = mouseX / barWidth + doc.barScrollPos;
 			cursor.startBar = bar;
 			
 			if (bar > doc.song.loopStart - 0.25 && bar < doc.song.loopStart + doc.song.loopLength + 0.25) {
@@ -138,7 +139,7 @@ SOFTWARE.
 				if (change != null) change.undo();
 				change = null;
 				
-				var bar: Number = mouseX / barWidth;
+				var bar: Number = mouseX / barWidth + doc.barScrollPos;
 				var start: int;
 				var end: int;
 				var temp: int;
@@ -199,22 +200,22 @@ SOFTWARE.
 			var radius: int = height / 2;
 			if (cursor.mode == startMode) {
 				preview.graphics.beginFill(0xffffff);
-				preview.graphics.drawCircle(doc.song.loopStart * barWidth + radius, radius, radius - 4);
+				preview.graphics.drawCircle((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius - 4);
 				preview.graphics.endFill();
 			} else if (cursor.mode == endMode) {
 				preview.graphics.beginFill(0xffffff);
-				preview.graphics.drawCircle((doc.song.loopStart + doc.song.loopLength) * barWidth - radius, radius, radius - 4);
+				preview.graphics.drawCircle((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius - 4);
 				preview.graphics.endFill();
 			} else if (cursor.mode == bothMode) {
 				var endPoints: Object = findEndPoints(cursor.startBar);
 				preview.graphics.beginFill(0xffffff);
-				preview.graphics.drawCircle(endPoints.start * barWidth + radius, radius, radius - 4);
+				preview.graphics.drawCircle((endPoints.start - doc.barScrollPos) * barWidth + radius, radius, radius - 4);
 				preview.graphics.endFill();
 				preview.graphics.beginFill(0xffffff);
-				preview.graphics.drawRect(endPoints.start * barWidth + radius, 4, endPoints.length * barWidth - height, height - 8);
+				preview.graphics.drawRect((endPoints.start - doc.barScrollPos) * barWidth + radius, 4, endPoints.length * barWidth - height, height - 8);
 				preview.graphics.endFill();
 				preview.graphics.beginFill(0xffffff);
-				preview.graphics.drawCircle((endPoints.start + endPoints.length) * barWidth - radius, radius, radius - 4);
+				preview.graphics.drawCircle((endPoints.start + endPoints.length - doc.barScrollPos) * barWidth - radius, radius, radius - 4);
 				preview.graphics.endFill();
 			}
 		}
@@ -228,22 +229,22 @@ SOFTWARE.
 			
 			var radius: int = height / 2;
 			container.graphics.beginFill(0x7744ff);
-			container.graphics.drawCircle(doc.song.loopStart * barWidth + radius, radius, radius);
+			container.graphics.drawCircle((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x7744ff);
-			container.graphics.drawRect(doc.song.loopStart * barWidth + radius, 0, doc.song.loopLength * barWidth - height, height);
+			container.graphics.drawRect((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, 0, doc.song.loopLength * barWidth - height, height);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x7744ff);
-			container.graphics.drawCircle((doc.song.loopStart + doc.song.loopLength) * barWidth - radius, radius, radius);
+			container.graphics.drawCircle((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x000000);
-			container.graphics.drawCircle(doc.song.loopStart * barWidth + radius, radius, radius - 4);
+			container.graphics.drawCircle((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius - 4);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x000000);
-			container.graphics.drawRect(doc.song.loopStart * barWidth + radius, 4, doc.song.loopLength * barWidth - height, height - 8);
+			container.graphics.drawRect((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, 4, doc.song.loopLength * barWidth - height, height - 8);
 			container.graphics.endFill();
 			container.graphics.beginFill(0x000000);
-			container.graphics.drawCircle((doc.song.loopStart + doc.song.loopLength) * barWidth - radius, radius, radius - 4);
+			container.graphics.drawCircle((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius - 4);
 			container.graphics.endFill();
 			
 			updatePreview();

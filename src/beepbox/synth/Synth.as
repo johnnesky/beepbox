@@ -304,10 +304,6 @@ package beepbox.synth {
 			var bassFilterBase:    Number;
 			var drumFilter: Number;
 			
-			var leadFilterScale:    Number;
-			var harmonyFilterScale: Number;
-			var bassFilterScale:    Number;
-			
 			var leadTremeloScale:    Number;
 			var harmonyTremeloScale: Number;
 			var bassTremeloScale:    Number;
@@ -325,10 +321,10 @@ package beepbox.synth {
 				var instrumentBass: int    = song.getPattern(2, bar).instrument;
 				var instrumentDrum: int    = song.getPattern(3, bar).instrument;
 				
-				maxLeadVolume    = Music.channelVolumes[0] * (song.instrumentVolumes[0][instrumentLead] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[0][instrumentLead]])) * Music.waveVolumes[song.instrumentWaves[0][instrumentLead]] * Music.filterVolumes[song.instrumentFilters[0][instrumentLead]] * 0.5;
-				maxHarmonyVolume = Music.channelVolumes[1] * (song.instrumentVolumes[1][instrumentHarmony] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[1][instrumentHarmony]])) * Music.waveVolumes[song.instrumentWaves[1][instrumentHarmony]] * Music.filterVolumes[song.instrumentFilters[1][instrumentHarmony]] * 0.5;
-				maxBassVolume    = Music.channelVolumes[2] * (song.instrumentVolumes[2][instrumentBass] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[2][instrumentBass]])) * Music.waveVolumes[song.instrumentWaves[2][instrumentBass]] * Music.filterVolumes[song.instrumentFilters[2][instrumentBass]] * 0.5;
-				maxDrumVolume    = Music.channelVolumes[3] * (song.instrumentVolumes[3][instrumentDrum] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[3][instrumentDrum]]));
+				maxLeadVolume    = Music.channelVolumes[0] * (song.instrumentVolumes[0][instrumentLead] == 5 ? 0.0 :    Math.pow(2, -Music.volumeValues[song.instrumentVolumes[0][instrumentLead]]))    * Music.waveVolumes[song.instrumentWaves[0][instrumentLead]]    * Music.filterVolumes[song.instrumentFilters[0][instrumentLead]]    * Music.chorusVolumes[song.instrumentChorus[0][instrumentLead]]    * 0.5;
+				maxHarmonyVolume = Music.channelVolumes[1] * (song.instrumentVolumes[1][instrumentHarmony] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[1][instrumentHarmony]])) * Music.waveVolumes[song.instrumentWaves[1][instrumentHarmony]] * Music.filterVolumes[song.instrumentFilters[1][instrumentHarmony]] * Music.chorusVolumes[song.instrumentChorus[0][instrumentHarmony]] * 0.5;
+				maxBassVolume    = Music.channelVolumes[2] * (song.instrumentVolumes[2][instrumentBass] == 5 ? 0.0 :    Math.pow(2, -Music.volumeValues[song.instrumentVolumes[2][instrumentBass]]))    * Music.waveVolumes[song.instrumentWaves[2][instrumentBass]]    * Music.filterVolumes[song.instrumentFilters[2][instrumentBass]]    * Music.chorusVolumes[song.instrumentChorus[0][instrumentBass]]    * 0.5;
+				maxDrumVolume    = Music.channelVolumes[3] * (song.instrumentVolumes[3][instrumentDrum] == 5 ? 0.0 :    Math.pow(2, -Music.volumeValues[song.instrumentVolumes[3][instrumentDrum]]))    * Music.drumVolumes[song.instrumentWaves[3][instrumentDrum]];
 				
 				leadWave    = waves[song.instrumentWaves[0][instrumentLead]];
 				harmonyWave = waves[song.instrumentWaves[1][instrumentHarmony]];
@@ -342,13 +338,12 @@ package beepbox.synth {
 				leadFilterBase    = Math.pow(2, -Music.filterBases[song.instrumentFilters[0][instrumentLead]]);
 				harmonyFilterBase = Math.pow(2, -Music.filterBases[song.instrumentFilters[1][instrumentHarmony]]);
 				bassFilterBase    = Math.pow(2, -Music.filterBases[song.instrumentFilters[2][instrumentBass]]);
-				drumFilter = 0.2;
-				
-				leadFilterScale    = Math.pow(2, -Music.filterDecays[song.instrumentFilters[0][instrumentLead]] / samplesPerSecond);
-				harmonyFilterScale = Math.pow(2, -Music.filterDecays[song.instrumentFilters[1][instrumentHarmony]] / samplesPerSecond);
-				bassFilterScale    = Math.pow(2, -Music.filterDecays[song.instrumentFilters[2][instrumentBass]] / samplesPerSecond);
+				drumFilter = 0.5;
 				
 				leadTremeloScale    = Music.effectTremelos[song.instrumentEffects[0][instrumentLead]];
+				trace(Music.effectTremelos, instrumentHarmony)
+				trace(song.instrumentEffects[1])
+				trace(song.instrumentEffects[1][instrumentHarmony])
 				harmonyTremeloScale = Music.effectTremelos[song.instrumentEffects[1][instrumentHarmony]];
 				bassTremeloScale    = Music.effectTremelos[song.instrumentEffects[2][instrumentBass]];
 				
@@ -380,18 +375,21 @@ package beepbox.synth {
 				var leadVolume: Number;
 				var leadVolumeDelta: Number;
 				var leadFilter: Number;
+				var leadFilterScale: Number;
 				var leadVibratoScale: Number;
 				var harmonyPeriodDelta: Number;
 				var harmonyPeriodDeltaScale: Number;
 				var harmonyVolume: Number;
 				var harmonyVolumeDelta: Number;
 				var harmonyFilter: Number;
+				var harmonyFilterScale: Number;
 				var harmonyVibratoScale: Number;
 				var bassPeriodDelta: Number;
 				var bassPeriodDeltaScale: Number;
 				var bassVolume: Number;
 				var bassVolumeDelta: Number;
 				var bassFilter: Number;
+				var bassFilterScale: Number;
 				var bassVibratoScale: Number;
 				var drumPeriodDelta: Number;
 				var drumPeriodDeltaScale: Number;
@@ -427,6 +425,7 @@ package beepbox.synth {
 					var toneVolume: Number;
 					var volumeDelta: Number;
 					var filter: Number;
+					var filterScale: Number;
 					var vibratoScale: Number;
 					var resetPeriod: Boolean = false;
 					if (pianoPressed && channel == pianoChannel) {
@@ -435,6 +434,7 @@ package beepbox.synth {
 						toneVolume = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + pianoNote) / 48.0);
 						volumeDelta = 0.0;
 						filter = 1.0;
+						filterScale = 1.0;
 						vibratoScale = 0.0;
 					} else if (tone == null) {
 						periodDelta = 0.0;
@@ -442,6 +442,7 @@ package beepbox.synth {
 						toneVolume = 0.0;
 						volumeDelta = 0.0;
 						filter = 1.0;
+						filterScale = 1.0;
 						vibratoScale = 0.0;
 						resetPeriod = true;
 					} else {
@@ -479,6 +480,8 @@ package beepbox.synth {
 						var arpeggioVolumeEnd:   Number = startPin.volume * (1.0 - arpeggioRatioEnd)   + endPin.volume * arpeggioRatioEnd;
 						var arpeggioIntervalStart: Number = startPin.interval * (1.0 - arpeggioRatioStart) + endPin.interval * arpeggioRatioStart;
 						var arpeggioIntervalEnd:   Number = startPin.interval * (1.0 - arpeggioRatioEnd)   + endPin.interval * arpeggioRatioEnd;
+						var arpeggioFilterTimeStart: Number = startPin.time * (1.0 - arpeggioRatioStart) + endPin.time * arpeggioRatioStart;
+						var arpeggioFilterTimeEnd:   Number = startPin.time * (1.0 - arpeggioRatioEnd)   + endPin.time * arpeggioRatioEnd;
 						
 						var inhibitRestart: Boolean = false;
 						if (arpeggioStart == toneStart) {
@@ -489,10 +492,13 @@ package beepbox.synth {
 							} else if (attack == 3) {
 								if (prevTone == null || prevTone.notes.length > 1 || tone.notes.length > 1) {
 									arpeggioVolumeStart = 0.0;
-								} else if (prevTone.notes[0] + prevTone.pins[prevTone.pins.length-1].interval == pitch) {
+								} else if (prevTone.pins[prevTone.pins.length-1].volume == 0 || tone.pins[0].volume == 0) {
 									arpeggioVolumeStart = 0.0;
+								//} else if (prevTone.notes[0] + prevTone.pins[prevTone.pins.length-1].interval == pitch) {
+								//	arpeggioVolumeStart = 0.0;
 								} else {
 									arpeggioIntervalStart = (prevTone.notes[0] + prevTone.pins[prevTone.pins.length-1].interval - pitch) * 0.5;
+									arpeggioFilterTimeStart = prevTone.pins[prevTone.pins.length-1].time * 0.5;
 									inhibitRestart = true;
 								}
 							}
@@ -503,10 +509,13 @@ package beepbox.synth {
 							} else if (attack == 3) {
 								if (nextTone == null || nextTone.notes.length > 1 || tone.notes.length > 1) {
 									arpeggioVolumeEnd = 0.0;
-								} else if (nextTone.notes[0] == pitch + tone.pins[tone.pins.length-1].interval) {
-									arpeggioVolumeEnd = 0.0;
+								} else if (tone.pins[tone.pins.length-1].volume == 0 || nextTone.pins[0].volume == 0) {
+									arpeggioVolumeStart = 0.0;
+								//} else if (nextTone.notes[0] == pitch + tone.pins[tone.pins.length-1].interval) {
+									//arpeggioVolumeEnd = 0.0;
 								} else {
 									arpeggioIntervalEnd = (nextTone.notes[0] + tone.pins[tone.pins.length-1].interval - pitch) * 0.5;
+									arpeggioFilterTimeEnd *= 0.5;
 								}
 							}
 						}
@@ -515,10 +524,23 @@ package beepbox.synth {
 						var endRatio:   Number = 1.0 - (arpeggioSamples)           / samplesPerArpeggio;
 						var startInterval: Number = arpeggioIntervalStart * (1.0 - startRatio) + arpeggioIntervalEnd * startRatio;
 						var endInterval:   Number = arpeggioIntervalStart * (1.0 - endRatio)   + arpeggioIntervalEnd * endRatio;
+						var startFilterTime: Number = arpeggioFilterTimeStart * (1.0 - startRatio) + arpeggioFilterTimeEnd * startRatio;
+						var endFilterTime:   Number = arpeggioFilterTimeStart * (1.0 - endRatio)   + arpeggioFilterTimeEnd * endRatio;
 						var startFreq: Number = frequencyFromPitch(channelRoot + (pitch + startInterval) * intervalScale);
 						var endFreq:   Number = frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
-						var startVol: Number = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + startInterval) / 48.0);
-						var endVol:   Number = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + endInterval) / 48.0);
+						var pitchDamping: Number;
+						if (channel == 3) {
+							if (song.instrumentWaves[3][pattern.instrument] > 0) {
+								drumFilter = Math.min(1.0, startFreq * sampleTime * 8.0);
+								pitchDamping = 24.0;
+							} else {
+								pitchDamping = 60.0;
+							}
+						} else {
+							pitchDamping = 48.0;
+						}
+						var startVol: Number = Math.pow(2.0, -(pitch + startInterval) * intervalScale / pitchDamping);
+						var endVol:   Number = Math.pow(2.0, -(pitch + endInterval) * intervalScale / pitchDamping);
 						startVol *= volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);
 						endVol   *= volumeConversion(arpeggioVolumeStart * (1.0 - endRatio)   + arpeggioVolumeEnd * endRatio);
 						var freqScale: Number = endFreq / startFreq;
@@ -528,7 +550,11 @@ package beepbox.synth {
 						volumeDelta = (endVol - startVol) / samples;
 						var timeSinceStart: Number = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / samplesPerSecond;
 						if (timeSinceStart == 0.0 && !inhibitRestart) resetPeriod = true;
-						filter = channel == 3 ? 1.0 : Math.pow(2, -Music.filterDecays[song.instrumentFilters[channel][pattern.instrument]] * timeSinceStart);
+						
+						var filterScaleRate: Number = Music.filterDecays[song.instrumentFilters[channel][pattern.instrument]];
+						filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / samplesPerSecond);
+						var endFilter: Number = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / samplesPerSecond);
+						filterScale = Math.pow(endFilter / filter, 1.0 / samples);
 						vibratoScale = (song.instrumentEffects[channel][pattern.instrument] == 2 && time - tone.start < 3) ? 0.0 : Math.pow( 2.0, Music.effectVibratos[song.instrumentEffects[channel][pattern.instrument]] / 12.0 ) - 1.0;
 					}
 					
@@ -538,6 +564,7 @@ package beepbox.synth {
 						leadVolume = toneVolume * maxLeadVolume;
 						leadVolumeDelta = volumeDelta * maxLeadVolume;
 						leadFilter = filter * leadFilterBase;
+						leadFilterScale = filterScale;
 						leadVibratoScale = vibratoScale;
 						if (resetPeriod) {
 							leadSample = 0.0;
@@ -550,6 +577,7 @@ package beepbox.synth {
 						harmonyVolume = toneVolume * maxHarmonyVolume;
 						harmonyVolumeDelta = volumeDelta * maxHarmonyVolume;
 						harmonyFilter = filter * harmonyFilterBase;
+						harmonyFilterScale = filterScale;
 						harmonyVibratoScale = vibratoScale;
 						if (resetPeriod) {
 							harmonySample = 0.0;
@@ -562,6 +590,7 @@ package beepbox.synth {
 						bassVolume = toneVolume * maxBassVolume;
 						bassVolumeDelta = volumeDelta * maxBassVolume;
 						bassFilter = filter * bassFilterBase;
+						bassFilterScale = filterScale;
 						bassVibratoScale = vibratoScale;
 						if (resetPeriod) {
 							bassSample = 0.0;

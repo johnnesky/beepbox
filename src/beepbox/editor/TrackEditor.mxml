@@ -105,7 +105,7 @@ SOFTWARE.
 		private function onEnterFrame(event: Event): void {
 			playhead.graphics.clear();
 			playhead.graphics.lineStyle(4, 0xffffff);
-			var pos: Number = barWidth * doc.synth.playhead;
+			var pos: Number = barWidth * (doc.synth.playhead - doc.barScrollPos);
 			playhead.graphics.moveTo(pos, 0);
 			playhead.graphics.lineTo(pos, height);
 			playhead.graphics.lineStyle();
@@ -262,6 +262,7 @@ SOFTWARE.
 			pattern = doc.getCurrentPattern();
 			editorHeight = doc.song.bars > 16 ? 108 : 128;
 			channelHeight = editorHeight / Music.numChannels;
+			scrollRect = new Rectangle(0, 0, width, editorHeight);
 			render();
 		}
 		

@@ -125,24 +125,25 @@
 √ empty patterns get special 1-bit treatment
 √ serialize pattern instruments
 √ Benchmark synthesized vs precomputed noise. Precomputed would allow you to select non chip tune style noise. 
+√ rebalance drum volume range. bass is too quiet, cymbal too loud.
+√ each drum wave gets volume scale
+√ don't autoplay until URL fragment has been passed through
+√ drums get custom lowpass based on change rate
+√ can drums use the other envelope/slide options?
+√ tones that fade out volume completely shouldn't slide to next tone
+√ attack transitions that slide should let the decay filter smoothly rise again to better approximate strings/violin. also repeated notes shouldn't fade out automatically. 
+√ volume scaling from chorus effect: Synchronized waves are louder than waves that are almost but not quite the same frequency. Ratio: square root of two!
+√ medium sustain filter, slower sharp filter...
 
 NEXT VERSION:
-- drums get custom lowpass based on change rate? rebalance volume range too. bass is too quiet, cymbal too loud.
-- check to see if the drum frequency range could be usefully extended
-- tones that fade out volume completely shouldn't slide to next tone
-- attack transitions that slide should let the decay filter smoothly rise again to better approximate strings/violin. also repeated notes shouldn't fade out automatically. 
-- can I make the "choir" option feel more natural? wait choir is actually good for brass.
-- volume scaling from chorus effect: Synchronized waves are louder than waves that are almost but not quite the same frequency. Ratio: square root of two!
-- don't autoplay until URL fragment has been passed through
-- medium sustain filter, slower sharp filter...
 
 MORE FEATURES:
-- can drums use the other envelope/slide options?
+- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
+- check to see if the drum frequency range could be usefully extended
 - octave dragging should just be one History change. 
 - asynchronous wav export
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
 - move "song settings" section down, and fit a "pattern settings" between that and the "instrument settings". The pattern has a colored number and the instrument has a colored letter in the title, if there are at least two instruments.
-- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - when holding down left or right arrow, stop at end of song until release and repress
 - when pasting into the debug text field, re select the text after parsing.
 - tooltips

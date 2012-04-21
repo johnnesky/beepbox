@@ -69,6 +69,7 @@ SOFTWARE.
 			stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPressed);
 			stage.addEventListener(KeyboardEvent.KEY_UP, onKeyReleased);
 			doc.history.watch(onUpdated);
+			doc.synth.play();
 		}
 		
 		private function onEnterFrame(event: Event): void {

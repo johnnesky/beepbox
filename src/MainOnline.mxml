@@ -51,6 +51,8 @@ SOFTWARE.
 		
 		private var prevHash: String = null;
 		
+		private var wokeUp: Boolean = false;
+		
 		/*
 		public function Main() {
 			init();
@@ -104,7 +106,14 @@ SOFTWARE.
 			if (prevHash != myhash) {
 				prevHash = myhash;
 				//fragment.text = myhash;
-				doc.history.record(new ChangeSong(doc, prevHash));
+				if (myhash != "") {
+					doc.history.record(new ChangeSong(doc, prevHash));
+				}
+				
+				if (!wokeUp) {
+					wokeUp = true;
+					doc.synth.play();
+				}
 			}
 		}
 	]]></fx:Script>
