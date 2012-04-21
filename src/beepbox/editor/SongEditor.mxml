@@ -142,6 +142,7 @@ SOFTWARE.
 				effectDropDownGroup.visible = true;
 			}
 			
+			patternSettingsLabel.visible    = doc.song.instruments > 1;
 			instrumentDropDownGroup.visible = doc.song.instruments > 1;
 			while (instrumentNames.length < doc.song.instruments) instrumentNames.addItem(instrumentNames.length + 1);
 			while (instrumentNames.length > doc.song.instruments) instrumentNames.removeItemAt(instrumentNames.length - 1);
@@ -472,7 +473,7 @@ SOFTWARE.
 			<BarScrollBar id="barScrollBar" doc="{doc}"/>
 		</s:VGroup>
 		<s:VGroup width="100%" height="100%">
-			<s:VGroup id="songSettings" height="481" width="100%">
+			<s:VGroup id="songSettings" height="100%" width="100%">
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Spacer width="50%"/>
 					<s:Label text="Beep Box version 1.0.1" color="0xbbbbbb" right="0"/>
@@ -484,7 +485,7 @@ SOFTWARE.
 				</s:HGroup>
 				<s:Button id="editButton" label="Edit Menu" click="openEditMenu();" width="100%"/>
 				<s:Button id="optionsButton" label="Preferences Menu" click="openOptionsMenu();" width="100%"/>
-				<s:Spacer height="5"/>
+				<s:Spacer height="100%"/>
 				<s:Label text="Song Settings:" color="0xffffff"/>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Scale:" color="0xbbbbbb"/>
@@ -514,10 +515,8 @@ SOFTWARE.
 						<s:layout> <s:VerticalLayout requestedRowCount="{partNames.length}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
-				<s:Spacer height="100%"/>
-				<s:Label id="channelSettingsLabel" text="Channel Settings:" color="0xffffff"/>
-			</s:VGroup>
-			<s:VGroup id="channelSettings" height="100%" width="100%">
+				<s:Spacer height="20"/>
+				<s:Label id="patternSettingsLabel" text="Pattern Settings:" color="0xffffff"/>
 				<s:HGroup id="instrumentDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Instrument:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
@@ -525,6 +524,8 @@ SOFTWARE.
 						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
 					</s:DropDownList>
 				</s:HGroup>
+				<s:Spacer height="20"/>
+				<s:Label id="instrumentSettingsLabel" text="Instrument Settings:" color="0xffffff"/>
 				<s:HGroup id="volumeDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Volume:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
