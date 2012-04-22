@@ -250,6 +250,9 @@ package beepbox.synth {
 		public function synthesize(data: ByteArray, totalSamples: int, loop: Boolean): void {
 			var i: int;
 			
+			var sampleTime: Number = 1.0 / samplesPerSecond;
+			var samplesPerArpeggio: int = getSamplesPerArpeggio();
+			
 			if (song == null) {
 				for (i = 0; i < totalSamples; i++) {
 					data.writeFloat(0.0);
@@ -281,9 +284,6 @@ package beepbox.synth {
 			if (bar >= song.bars) {
 				bar = song.loopStart;
 			}
-			
-			var sampleTime: Number = 1.0 / samplesPerSecond;
-			var samplesPerArpeggio: int = getSamplesPerArpeggio();
 			
 			var maxLeadVolume:    Number;
 			var maxHarmonyVolume: Number;
@@ -341,9 +341,6 @@ package beepbox.synth {
 				drumFilter = 0.5;
 				
 				leadTremeloScale    = Music.effectTremelos[song.instrumentEffects[0][instrumentLead]];
-				trace(Music.effectTremelos, instrumentHarmony)
-				trace(song.instrumentEffects[1])
-				trace(song.instrumentEffects[1][instrumentHarmony])
 				harmonyTremeloScale = Music.effectTremelos[song.instrumentEffects[1][instrumentHarmony]];
 				bassTremeloScale    = Music.effectTremelos[song.instrumentEffects[2][instrumentBass]];
 				
