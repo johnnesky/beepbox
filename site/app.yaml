@@ -13,6 +13,10 @@ handlers:
   static_files: BeepBoxOffline.swf
   upload: BeepBoxOffline\.swf
 
+- url: /BeepBoxEmbedded\.swf
+  static_files: BeepBoxEmbedded.swf
+  upload: BeepBoxEmbedded\.swf
+
 - url: /favicon\.ico
   static_files: favicon.ico
   upload: favicon\.ico
@@ -24,6 +28,14 @@ handlers:
 - url: /
   static_files: index.html
   upload: index\.html
+
+- url: /embed\.html
+  static_files: embed.html
+  upload: embed\.html
+
+- url: /test\.html
+  static_files: test.html
+  upload: test\.html
 
 - url: .*
   script: main.py
