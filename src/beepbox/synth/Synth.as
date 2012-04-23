@@ -109,6 +109,7 @@ package beepbox.synth {
 		}
 		
 		public function get totalBars(): Number {
+			if (song == null) return 0.0;
 			return song.bars;
 		}
 		

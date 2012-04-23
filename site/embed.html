@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title>Beep Box</title>
+</head>
+
+<body bgcolor="#000000"> <div>
+	<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=11,0,0,0" width="200" height="50" id="BeepBox" align="middle">
+	<param name="allowScriptAccess" value="sameDomain" />
+	<param name="movie" value="BeepBoxEmbedded.swf" />
+	<param name="quality" value="high" />
+	<param name="bgcolor" value="#000000" />
+	<embed src="BeepBoxEmbedded.swf" quality="high" bgcolor="#000000" width="200" height="50" name="BeepBox" align="middle" allowScriptAccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" />
+	</object>
+</div> </body>
+
+<script type="text/javascript">
+//<![CDATA[
+	document.write(parent.location.hash);
+	
+	window.onload = function(){
+		pageDidLoad();
+	};
+	
+	var hashInterval = null;
+	var myhash = "**blank**";
+	
+	function getFlashMovieObject(movieName)
+	{
+		if (window.document[movieName])  {
+			return window.document[movieName];
+		}
+		if (navigator.appName.indexOf("Microsoft Internet")==-1) {
+			if (document.embeds && document.embeds[movieName])
+				return document.embeds[movieName]; 
+		} else // if (navigator.appName.indexOf("Microsoft Internet")!=-1)
+		{
+			return document.getElementById(movieName);
+		} 	
+	}
+	
+	function pageDidLoad() {
+		hashInterval = setInterval('checkHash()', 100);
+	}
+	
+	function checkHash() {
+		if (myhash != parent.location.hash) {
+			var flashMovie = getFlashMovieObject("BeepBox");
+			if (flashMovie && flashMovie.hashUpdatedExternally) {
+				myhash = parent.location.hash;
+				flashMovie.hashUpdatedExternally(myhash);
+			}
+		}
+	}
+//]]>
+</script>
+</html>
