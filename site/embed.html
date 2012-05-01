@@ -16,7 +16,7 @@
 
 <script type="text/javascript">
 //<![CDATA[
-	document.write(parent.location.hash);
+	document.write(location.hash);
 	
 	window.onload = function(){
 		pageDidLoad();
@@ -44,10 +44,10 @@
 	}
 	
 	function checkHash() {
-		if (myhash != parent.location.hash) {
+		if (myhash != location.hash) {
 			var flashMovie = getFlashMovieObject("BeepBox");
 			if (flashMovie && flashMovie.hashUpdatedExternally) {
-				myhash = parent.location.hash;
+				myhash = location.hash;
 				flashMovie.hashUpdatedExternally(myhash);
 			}
 		}
