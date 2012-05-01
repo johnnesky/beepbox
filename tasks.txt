@@ -136,6 +136,7 @@
 √ medium sustain filter, slower sharp filter...
 
 NEXT VERSION:
+- rapid document/fragment changes due to undo cause undefined state
 - make a non-editing embeddable player, in an iframe, with playhead tracking and all channels and no highlighting. Gravatar-like thing.
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - octave dragging should just be one History change. 
@@ -143,10 +144,10 @@ NEXT VERSION:
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
 - move "song settings" section down, and fit a "pattern settings" between that and the "instrument settings". The pattern has a colored number and the instrument has a colored letter in the title, if there are at least two instruments.
 - tooltips
-- rapid document/fragment changes due to undo cause undefined state
 - make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
 - new preferences: follow playhead, autoplay on load?
 - example songs on the website. Mario overworld?
+- compacting and concatenating songs!
 
 NEXT VERSION:
 - web interface to share songs so that other visitors can see them onsite.
@@ -160,7 +161,6 @@ NEXT VERSION:
 - new song setting: distortion, nonlinear mixing of channels...
 - save most recent song to localSO so that it doesn't accidentally get lost when window closes
 - If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
-- compacting and concatenating songs!
 
 MORE FEATURES:
 - a way to convert a byte array to a first class Flash Sound object. 
@@ -175,6 +175,7 @@ MORE FEATURES:
 - make play and volume controls prettier
 - illustrate arpeggio texture on tones with multiple notes
 - visual feedback when a note is played
+- make the static file handler cache expiration longer than 10 minutes.
 
 MAYBE:
 - options for timing offset
