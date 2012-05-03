@@ -73,13 +73,13 @@ SOFTWARE.
 				var format: TextFormat = new TextFormat();
 				format.align = TextFormatAlign.CENTER;
 				format.bold = true;
-				format.font = "Arial";
+				format.font = "Helvetica";
 				format.size = 11;
 				var text: TextField = new TextField();
 				text.width = 20;
 				text.x = 13;
 				text.height = 20;
-				text.y = 13 * (Music.noteCount - i - 1) - 2;
+				text.y = 13 * (Music.noteCount - i - 1);
 				text.wordWrap = true;
 				text.type = TextFieldType.DYNAMIC;
 				text.selectable = false;
