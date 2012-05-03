@@ -33,44 +33,56 @@ package {
 	import flash.net.*;
 	
 	import beepbox.synth.*;
+	import beepbox.avatar.*;
 	
-	[SWF(width='200', height='50', backgroundColor='#000000', frameRate='15')]
+	[SWF(width='100', height='100', backgroundColor='#000000', frameRate='15')]
 	public class MainEmbedded extends Sprite 
 	{
-		public static const WIDTH: int = 200;
-		public static const HEIGHT: int = 50;
-		
 		private var prevHash: String = null;
 		
-		private var wokeUp: Boolean = false;
-		
-		private var synth: Synth = new Synth("3sbk4l0egt3a7g0fj7i0r1w1100f0000d1110c0000h0000v2200o3320b1hjzHzK-1hjzHzK-1hjzHzK-1hjzHzK-p24ZFzzQ1E39kxIceEtoV8s66138l1S0L1u2139l1H39McyaeOgKA0TxAU213jj0NM4x8i0o0c86ywz7keUtVxQk1E3hi6OEcB8Atl0q0Qmm6eCexg6wd50oczkhO8VcsEeAc26gG3E1q2U406hG3i6jw94ksf8i5Uo0dZY26kHHzxp2gAgM0o4d516ej7uegceGwd0q84czm6yj8Xa0Q1EIIctcvq0Q1EE3ihE8W1OgV8s46Icxk7o24110w0OdgqMOk392OEWhS1ANQQ4toUctBpzRxx1M0WNSk1I3ANMEXwS3I79xSzJ7q6QtEXgw0");
-		//private var text: TextField;
+		private var synth: Synth = new Synth();
+		private var avatar: Avatar;
+		private var byline: TextField;
+		private var beepboxLine: TextField;
 		
 		public function MainEmbedded() 
 		{
+			stage.scaleMode = StageScaleMode.NO_SCALE;
+			stage.align = StageAlign.TOP_LEFT;
+			stage.addEventListener(Event.RESIZE, onStageResize);
 			stage.addEventListener(Event.ENTER_FRAME, onEnterFrame);
+			stage.addEventListener(MouseEvent.MOUSE_MOVE, onMouseMove);
 			stage.addEventListener(MouseEvent.CLICK, onClick);
 			
-			/*
 			var format: TextFormat = new TextFormat();
-			format.align = TextFormatAlign.CENTER;
-			format.bold = true;
-			format.font = "Arial";
-			format.size = 15;
-			text = new TextField();
-			text.width = WIDTH;
-			text.x = 0;
-			text.height = 22;
-			text.y = 13;
-			text.wordWrap = true;
-			text.type = TextFieldType.DYNAMIC;
-			text.selectable = false;
-			text.mouseEnabled = false;
-			text.defaultTextFormat = format;
-			text.textColor = 0xffffff;
-			addChild(text);
-			*/
+			format.align = TextFormatAlign.RIGHT;
+			//format.bold = true;
+			format.font = "Helvetica";
+			format.size = 10;
+			byline = new TextField();
+			byline.y = 2;
+			byline.height = 14;
+			byline.wordWrap = true;
+			byline.type = TextFieldType.DYNAMIC;
+			byline.selectable = false;
+			//byline.mouseEnabled = false;
+			byline.defaultTextFormat = format;
+			byline.textColor = 0x777777;
+			addChild(byline);
+			
+			beepboxLine = new TextField();
+			beepboxLine.height = 14;
+			beepboxLine.wordWrap = true;
+			beepboxLine.type = TextFieldType.DYNAMIC;
+			beepboxLine.selectable = false;
+			//beepboxLine.mouseEnabled = false;
+			beepboxLine.defaultTextFormat = format;
+			beepboxLine.textColor = 0x777777;
+			addChild(beepboxLine);
+			
+			avatar = new Avatar();
+			addChild(avatar);
+			
 			//synth = new Synth(songs[songIndex].data);
 			//text.text = songs[songIndex].title;
 			
@@ -78,29 +90,32 @@ package {
 		}
 		
 		private function hashUpdatedExternally(myhash: String): void {
-			if (prevHash != myhash) {
+			if (prevHash != myhash && myhash != "") {
 				prevHash = myhash;
-				//fragment.text = myhash;
-				if (myhash != "") {
-					synth.setSong(myhash);
-				}
+				synth.setSong(myhash);
+				synth.snapToStart();
 				
-				if (!wokeUp) {
-					wokeUp = true;
-				}
+				var title: String = "Untitled Untitled Untitled";
+				var name: String = "Anonymous Anonymous";
+				var time: String = "10:00 12/12/2012"
+				
+				byline.htmlText = title + " shared by " + name;
+				beepboxLine.htmlText = "with <u><font color=\"#7744ff\"><a target=\"_parent\" href=\"http://www.beepbox.co/" + myhash + "\">Beep Box</a></font></u> at " + time;
+				
+				render();
 			}
 		}
 		
+		private function onStageResize(event: Event): void {
+			render();
+		}
+		
 		private function onEnterFrame(event: Event): void {
-			graphics.clear();
-			if (synth.song != null) {
-				graphics.beginFill(0x777777);
-				graphics.drawRect(0, 0, WIDTH * synth.playhead / synth.totalBars, HEIGHT);
-				graphics.endFill();
-				graphics.lineStyle(2, 0x777777);
-				graphics.drawRect(0, 0, WIDTH, HEIGHT);
-				graphics.lineStyle();
-			}
+			if (synth.playing) render();
+		}
+		
+		private function onMouseMove(event: MouseEvent): void {
+			render();
 		}
 		
 		private function onClick(event: MouseEvent): void {
@@ -109,6 +124,66 @@ package {
 					synth.pause();
 				} else {
 					synth.play();
+				}
+			}
+			render();
+		}
+		
+		private function render(): void {
+			graphics.clear();
+			if (synth.song != null) {
+				var barHeight: Number = stage.stageHeight;
+				
+				avatar.x = stage.stageWidth - avatar.width;
+				byline.x = barHeight;
+				byline.width = stage.stageWidth - barHeight - avatar.width;
+				beepboxLine.x = barHeight;
+				beepboxLine.y = barHeight - 14;
+				beepboxLine.width = stage.stageWidth - barHeight;
+				
+				var lineRadius: Number = barHeight * 0.075;
+				
+				var overPlay: Boolean = mouseX < barHeight;
+				
+				if (overPlay) {
+					graphics.beginFill(0xffffff);
+					graphics.drawCircle(barHeight * 0.5, barHeight * 0.5, barHeight * 0.5);
+					graphics.endFill();
+				} else {
+					graphics.lineStyle(lineRadius * 2, 0x7744ff);
+					graphics.drawCircle(barHeight * 0.5, barHeight * 0.5, barHeight * 0.5 - lineRadius);
+					graphics.lineStyle();
+				}
+				if (synth.playing) {
+					graphics.lineStyle(lineRadius * 2, overPlay ? 0x000000 : 0xffffff, 1.0, false, LineScaleMode.NONE, CapsStyle.SQUARE);
+					graphics.moveTo(barHeight * 0.35, barHeight * 0.35);
+					graphics.lineTo(barHeight * 0.35, barHeight * 0.65);
+					graphics.moveTo(barHeight * 0.65, barHeight * 0.35);
+					graphics.lineTo(barHeight * 0.65, barHeight * 0.65);
+					graphics.lineStyle();
+				} else {
+					graphics.beginFill(overPlay ? 0x000000 : 0xffffff);
+					var circleRadius: Number = barHeight * 0.5 - lineRadius;
+					graphics.moveTo(lineRadius + circleRadius * (1.0 + Math.cos(Math.PI * 0.000)), lineRadius + circleRadius * (1.0 + Math.sin(Math.PI * 0.000)));
+					graphics.lineTo(lineRadius + circleRadius * (1.0 + Math.cos(Math.PI * 0.666)), lineRadius + circleRadius * (1.0 + Math.sin(Math.PI * 0.666)));
+					graphics.lineTo(lineRadius + circleRadius * (1.0 + Math.cos(Math.PI * 1.333)), lineRadius + circleRadius * (1.0 + Math.sin(Math.PI * 1.333)));
+					graphics.lineTo(lineRadius + circleRadius * (1.0 + Math.cos(Math.PI * 0.000)), lineRadius + circleRadius * (1.0 + Math.sin(Math.PI * 0.000)));
+					graphics.endFill();
+				}
+				
+				var timelineLeft: Number = barHeight + lineRadius;
+				var timelineWidth: Number = stage.stageWidth - barHeight - lineRadius * 2;
+				var playhead: Number = timelineLeft + timelineWidth * synth.playhead / synth.totalBars;
+				
+				if (timelineWidth > 0) {
+					graphics.lineStyle(lineRadius * 2, 0x777777, 1.0, false, LineScaleMode.NONE, CapsStyle.SQUARE);
+					graphics.moveTo(timelineLeft, barHeight * 0.5);
+					graphics.lineTo(timelineLeft + timelineWidth, barHeight * 0.5);
+					graphics.lineStyle();
+					graphics.lineStyle(lineRadius * 2, 0xffffff, 1.0, false, LineScaleMode.NONE, CapsStyle.ROUND);
+					graphics.moveTo(playhead, barHeight * 0.333);
+					graphics.lineTo(playhead, barHeight * 0.666);
+					graphics.lineStyle();
 				}
 			}
 		}

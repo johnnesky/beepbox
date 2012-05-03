@@ -134,23 +134,25 @@
 √ attack transitions that slide should let the decay filter smoothly rise again to better approximate strings/violin. also repeated notes shouldn't fade out automatically. 
 √ volume scaling from chorus effect: Synchronized waves are louder than waves that are almost but not quite the same frequency. Ratio: square root of two!
 √ medium sustain filter, slower sharp filter...
+√ make a non-editing embeddable player, in an iframe.
 
 NEXT VERSION:
 - rapid document/fragment changes due to undo cause undefined state
-- make a non-editing embeddable player, in an iframe, with playhead tracking and all channels and no highlighting. Gravatar-like thing.
+- fix it so that the browser back button isn't useless. 
+- avatar hashing
+- server RSA authentication
+- volume control
+- twitter stream on the side
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - octave dragging should just be one History change. 
 - asynchronous wav export
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
 - move "song settings" section down, and fit a "pattern settings" between that and the "instrument settings". The pattern has a colored number and the instrument has a colored letter in the title, if there are at least two instruments.
-- tooltips
-- make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
 - new preferences: follow playhead, autoplay on load?
 - example songs on the website. Mario overworld?
-- compacting and concatenating songs!
 
 NEXT VERSION:
-- web interface to share songs so that other visitors can see them onsite.
+- offsite album player, with scrolling notes.
 - Distortion applying to green and yellow channels
 - Reverb
 - optimize those Math functions in Synth
@@ -161,13 +163,15 @@ NEXT VERSION:
 - new song setting: distortion, nonlinear mixing of channels...
 - save most recent song to localSO so that it doesn't accidentally get lost when window closes
 - If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
+- compacting and concatenating songs!
+- tooltips
+- make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
 
 MORE FEATURES:
 - a way to convert a byte array to a first class Flash Sound object. 
 - Get in touch with wonderfl about supporting beepbox
 - Get in touch with ludum dare about linking to beepbox: http://www.ludumdare.com/compo/tools/
 - get in touch with http://youcanmakevideogames.com/resources/music
-- when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - piano should still play when song is paused
 - check to see if the drum frequency range could be usefully extended
 - when holding down left or right arrow, stop at end of song until release and repress
@@ -178,6 +182,7 @@ MORE FEATURES:
 - make the static file handler cache expiration longer than 10 minutes.
 
 MAYBE:
+- when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - options for timing offset
 - phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
 - adjust drop down menu widths to fit the size of their contents, mostly so that they're not all the same size, to give you an extra visual cue to find the menu you're looking for
