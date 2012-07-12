@@ -137,22 +137,35 @@
 √ make a non-editing embeddable player, in an iframe.
 
 NEXT VERSION:
-- rapid document/fragment changes due to undo cause undefined state
-- fix it so that the browser back button isn't useless. 
-- avatar hashing
+- mouse is attracted to active note half a note above cursor, but not below cursor, even overrides active note at cursor to highlight note above. 
 - server RSA authentication
+http://stackoverflow.com/questions/4232389/signing-and-verifying-data-using-pycrypto-rsa
+http://en.wikipedia.org/wiki/Salt_(cryptography)
+http://en.wikipedia.org/wiki/Key_stretching
+http://code.google.com/p/as3crypto/
+http://hustoknow.blogspot.com/2012/01/using-pycrypto-instead-of-m2crypto-on.html
+- avatar hashing. store the name and salt in a localshared object. If you want to use a new identity, a new salt is generated. If you want to reuse an identity from another song, you're instructed to input that song (to extract the salt). 
+- name as URL
 - volume control
+- make sure bots ignore embed.html
 - twitter stream on the side
+- sharing menu uses localSharedObject to remember your settings, maybe even password
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - octave dragging should just be one History change. 
 - asynchronous wav export
+- make sure there's only one beep box player playing simultaneously. 
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
 - move "song settings" section down, and fit a "pattern settings" between that and the "instrument settings". The pattern has a colored number and the instrument has a colored letter in the title, if there are at least two instruments.
 - new preferences: follow playhead, autoplay on load?
 - example songs on the website. Mario overworld?
+- rapid document/fragment changes due to undo cause undefined state
+- fix it so that the browser back button isn't useless. save state before and after pasting new song. 
+- when starting at a bar where all tones are at the end of the bar, go ahead and skip the beginning of the bar, up to maybe one beat before the first tone.
+- illustrate volume envelope dragging to make it less confusing. 
 
 NEXT VERSION:
-- offsite album player, with scrolling notes.
+- offsite album player, with scrolling notes. hashbang urls, bot indexable. 
+- it would be awesome to have a couple of modes where when you drag the playhead, it overrides the tempo of the song to match the motion of your mouse. In one mode it distorts the pitch like a DJ table, in the other it plays the normal pitch like SoundSPEAR.
 - Distortion applying to green and yellow channels
 - Reverb
 - optimize those Math functions in Synth
@@ -182,6 +195,7 @@ MORE FEATURES:
 - make the static file handler cache expiration longer than 10 minutes.
 
 MAYBE:
+- allow drums to be divided into shorter parts, crucial for songs like the mario overworld
 - when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - options for timing offset
 - phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
