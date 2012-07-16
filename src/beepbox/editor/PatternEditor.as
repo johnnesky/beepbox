@@ -133,7 +133,7 @@ package beepbox.editor {
 					var arc: Number = Math.sqrt(1.0 / Math.sqrt(4.0) - Math.pow(intervalRatio - 0.5, 2.0)) - 0.5;
 					var bendHeight: Number = Math.abs(nextPin.interval - prevPin.interval);
 					interval = prevPin.interval * (1.0 - intervalRatio) + nextPin.interval * intervalRatio;
-					error = arc * bendHeight + 0.5;
+					error = arc * bendHeight + 1.0;
 					break;
 				}
 				
@@ -151,21 +151,21 @@ package beepbox.editor {
 				}
 				
 				mousePitch -= interval;
-				cursor.note = snapToNote(mousePitch, -minInterval, Music.maxPitch - maxInterval);
+				cursor.note = snapToNote(mousePitch, -minInterval, (doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch) - maxInterval);
 				
-				var nearest: Number = Number.MAX_VALUE;
+				var nearest: Number = error;
 				for (i = 0; i < cursor.curTone.notes.length; i++) {
-					var distance: Number = Math.abs(cursor.curTone.notes[i] - mousePitch);
-					if (distance > error || distance > nearest) continue;
+					var distance: Number = Math.abs(cursor.curTone.notes[i] - mousePitch + 0.5);
+					if (distance > nearest) continue;
 					nearest = distance;
-					cursor.noteIndex = i;
 					cursor.note = cursor.curTone.notes[i];
 				}
 				
 				for (i = 0; i < cursor.curTone.notes.length; i++) {
-					if (cursor.curTone.notes[i] != cursor.note) continue;
-					cursor.noteIndex = i;
-					break;
+					if (cursor.curTone.notes[i] == cursor.note) {
+						cursor.noteIndex = i;
+						break;
+					}
 				}
 			} else {
 				cursor.note = snapToNote(mousePitch, 0, Music.maxPitch);
@@ -462,7 +462,7 @@ package beepbox.editor {
 					} else {
 						var bendStart: int;
 						var bendEnd: int;
-						if (mouseX > mouseXStart) {
+						if (mouseX >= mouseXStart) {
 							bendStart = cursor.part;
 							bendEnd   = currentPart + 1;
 						} else {
