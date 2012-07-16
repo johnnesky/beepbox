@@ -339,7 +339,7 @@ package beepbox.synth {
 				leadFilterBase    = Math.pow(2, -Music.filterBases[song.instrumentFilters[0][instrumentLead]]);
 				harmonyFilterBase = Math.pow(2, -Music.filterBases[song.instrumentFilters[1][instrumentHarmony]]);
 				bassFilterBase    = Math.pow(2, -Music.filterBases[song.instrumentFilters[2][instrumentBass]]);
-				drumFilter = 0.5;
+				drumFilter = 1.0;
 				
 				leadTremeloScale    = Music.effectTremelos[song.instrumentEffects[0][instrumentLead]];
 				harmonyTremeloScale = Music.effectTremelos[song.instrumentEffects[1][instrumentHarmony]];

@@ -135,17 +135,30 @@
 √ volume scaling from chorus effect: Synchronized waves are louder than waves that are almost but not quite the same frequency. Ratio: square root of two!
 √ medium sustain filter, slower sharp filter...
 √ make a non-editing embeddable player, in an iframe.
+√ server RSA authentication
+√ figure out song/playlist distinction in embedded players
+√ figure out data format for published songs. 
+√ mouse is attracted to active note half a note above cursor, but not below cursor, even overrides active note at cursor to highlight note above. 
+√ upper boundary isn't working with drum portamento
+√ retro drums really need more sharpness in upper range
 
 NEXT VERSION:
-- mouse is attracted to active note half a note above cursor, but not below cursor, even overrides active note at cursor to highlight note above. 
-- server RSA authentication
-http://stackoverflow.com/questions/4232389/signing-and-verifying-data-using-pycrypto-rsa
-http://en.wikipedia.org/wiki/Salt_(cryptography)
-http://en.wikipedia.org/wiki/Key_stretching
-http://code.google.com/p/as3crypto/
-http://hustoknow.blogspot.com/2012/01/using-pycrypto-instead-of-m2crypto-on.html
-- avatar hashing. store the name and salt in a localshared object. If you want to use a new identity, a new salt is generated. If you want to reuse an identity from another song, you're instructed to input that song (to extract the salt). 
-- name as URL
+- preliminary publish prompt
+- round trip to server
+- author, password, website
+- button to add more songs to list extracted from urls
+- add titles to songs
+- update embed player to show all songs
+- song rearranging
+- song loop count
+- song fade-in/out
+- key stretching, salt, at least partially on server
+- cc license choice
+- cc license enforcement
+- store author/password is localSO or cookie, if "remember me" is flagged
+- flag to reveal password, otherwise show dots
+- "inspire me" button for passwords, shows prompt with a random button that gives you three-ish words, and requests that you personalize your password by adding some more words and punctuation to complete the thought. 
+- underline author name as URL in embed player
 - volume control
 - make sure bots ignore embed.html
 - twitter stream on the side
@@ -162,9 +175,14 @@ http://hustoknow.blogspot.com/2012/01/using-pycrypto-instead-of-m2crypto-on.html
 - fix it so that the browser back button isn't useless. save state before and after pasting new song. 
 - when starting at a bar where all tones are at the end of the bar, go ahead and skip the beginning of the bar, up to maybe one beat before the first tone.
 - illustrate volume envelope dragging to make it less confusing. 
+- remember recent songs in cookies or local shared object.
+- put songs in browser history before/after pasting new songs.
+- offsite album player, with scrolling notes. hashbang urls, bot indexable. 
+- main website should break out of iframe for security: http://usablelayout.com/articles/automatically-break-out-iframe
+- fix those goddamn flex dropdowns so they stop throwing errors. 
 
 NEXT VERSION:
-- offsite album player, with scrolling notes. hashbang urls, bot indexable. 
+- allow drums to be divided into shorter parts, crucial for songs like the mario overworld
 - it would be awesome to have a couple of modes where when you drag the playhead, it overrides the tempo of the song to match the motion of your mouse. In one mode it distorts the pitch like a DJ table, in the other it plays the normal pitch like SoundSPEAR.
 - Distortion applying to green and yellow channels
 - Reverb
@@ -195,7 +213,6 @@ MORE FEATURES:
 - make the static file handler cache expiration longer than 10 minutes.
 
 MAYBE:
-- allow drums to be divided into shorter parts, crucial for songs like the mario overworld
 - when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - options for timing offset
 - phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
