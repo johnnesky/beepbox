@@ -146,7 +146,7 @@
 √ preliminary publish prompt
 
 NEXT VERSION:
-- fix piano pitch
+- fix piano pitch. still horribly broken!
 - round trip to server. How are the link, iframe html, and twitter button presented?
 - author, password, website
 - red close button in corner
