@@ -145,8 +145,8 @@ SOFTWARE.
 		}
 		
 		private function onMouseMoved(event: Event): void {
-			updateCursorNote()
-			doc.synth.pianoNote = cursorNote;
+			updateCursorNote();
+			doc.synth.pianoNote = cursorNote + doc.song.channelOctaves[doc.channel] * 12;
 			updatePreview();
 		}
 		

@@ -47,12 +47,19 @@ SOFTWARE.
 		import beepbox.synth.*;
 		
 		[Bindable]
-		public var doc: Document;
+		private var doc: Document;
 		
 		[Bindable]
-		public var onClose: Function;
+		private var onClose: Function;
 		
-		public function init():void {
+		public static function make(doc: Document, onClose: Function): SongDurationPrompt {
+			var prompt: SongDurationPrompt = new SongDurationPrompt();
+			prompt.doc = doc;
+			prompt.onClose = onClose;
+			return prompt;
+		}
+		
+		private function init():void {
 			beatsStepper.textDisplay.editable = false;
 			beatsStepper.value   = doc.song.beats;
 			beatsStepper.minimum = Music.beatsMin;
@@ -75,7 +82,6 @@ SOFTWARE.
 			
 			addEventListener(KeyboardEvent.KEY_DOWN, catchKeys);
 			addEventListener(KeyboardEvent.KEY_UP, catchKeys);
-			stage.focus = this;
 		}
 		
 		private function catchKeys(event: KeyboardEvent): void {
