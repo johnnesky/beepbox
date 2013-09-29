@@ -106,20 +106,25 @@ SOFTWARE.
 			editorBox.addEventListener(MouseEvent.MOUSE_DOWN, refocusStage);
 		}
 		
-		private function dimMainLayer(): void {
+		private function setPrompt(newPrompt: UIComponent): void {
 			wasPlaying = doc.synth.playing;
 			if (wasPlaying) togglePlay();
 			mainLayer.transform.colorTransform = new ColorTransform(0.5, 0.5, 0.5, 1.0, 0, 0, 0, 0);
 			mainLayer.mouseChildren = false;
+			mainLayer.tabChildren = false;
+			prompt = newPrompt;
+			addElement(prompt);
+			stage.focus = prompt;
 		}
 		
 		private function closePrompt(): void {
+			stage.focus = stage;
 			removeElement(prompt);
 			prompt = null;
 			mainLayer.transform.colorTransform = new ColorTransform();
 			mainLayer.mouseChildren = true;
+			mainLayer.tabChildren = true;
 			if (wasPlaying) togglePlay();
-			stage.focus = stage;
 		}
 		
 		private function refocusStage(event: Event): void {
@@ -245,21 +250,16 @@ SOFTWARE.
 			return copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts && copyDrums == (doc.channel == 3);
 		}
 		
-		private function showDurationPrompt(): void {
-			var songDurationPrompt: SongDurationPrompt = new SongDurationPrompt;
-			songDurationPrompt.doc = doc;
-			songDurationPrompt.onClose = closePrompt;
-			prompt = songDurationPrompt;
-			addElement(prompt);
-			dimMainLayer();
-		}
-		
 		private function cleanSlate(): void {
 			doc.history.record(new ChangeSong(doc, null));
 			patternEditor.resetCopiedPins();
 		}
-		
-		private function export(): void {
+		/*
+		private function openPublishPrompt(): void {
+			setPrompt(PublishPrompt.make(doc, closePrompt));
+		}
+		*/
+		private function openExportPrompt(): void {
 			wasPlaying = doc.synth.playing;
 			if (wasPlaying) togglePlay();
 			
@@ -413,14 +413,11 @@ SOFTWARE.
 				case "paste":
 					paste();
 					break;
-				case "export":
-					export();
-					break;
 				case "clean":
 					cleanSlate();
 					break;
 				case "duration":
-					showDurationPrompt();
+					setPrompt(SongDurationPrompt.make(doc, closePrompt));
 					break;
 			}
 		}
@@ -477,7 +474,7 @@ SOFTWARE.
 			<s:VGroup id="songSettings" height="100%" width="100%">
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Spacer width="50%"/>
-					<s:Label text="Beep Box version 1.1" color="0xbbbbbb" right="0"/>
+					<s:Label text="Beep Box version 1.1.1" color="0xbbbbbb" right="0"/>
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:HGroup width="100%" verticalAlign="middle">
@@ -486,6 +483,8 @@ SOFTWARE.
 				</s:HGroup>
 				<s:Button id="editButton" label="Edit Menu" click="openEditMenu();" width="100%"/>
 				<s:Button id="optionsButton" label="Preferences Menu" click="openOptionsMenu();" width="100%"/>
+				<!--<s:Button id="publishButton" label="Publishing Panel..." click="openPublishPrompt();" width="100%"/>-->
+				<s:Button id="exportButton" label="Export to .wav File" click="openExportPrompt();" width="100%"/>
 				<s:Spacer height="100%"/>
 				<s:Label text="Song Settings:" color="0xffffff"/>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
@@ -581,7 +580,6 @@ SOFTWARE.
 				<menuitem label="Copy Pattern (C)" eventName="copy"/>
 				<menuitem label="Paste Pattern (V)" eventName="paste"/>
 				<menuitem label="Custom song size..." eventName="duration"/>
-				<menuitem label="Export to .wav File" eventName="export"/>
 				<menuitem label="Clean Slate" eventName="clean"/>
 			</root>
 		</fx:XML>

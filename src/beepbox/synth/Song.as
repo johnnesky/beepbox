@@ -384,10 +384,10 @@ package beepbox.synth {
 				} else if (command == "o") {
 					if (beforeThree) {
 						channel = base64.indexOf(compressed.charAt(charIndex++));
-						channelOctaves[channel] = clip(0, 4, base64.indexOf(compressed.charAt(charIndex++)));
+						channelOctaves[channel] = clip(0, 5, base64.indexOf(compressed.charAt(charIndex++)));
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
-							channelOctaves[channel] = clip(0, 4, base64.indexOf(compressed.charAt(charIndex++)));
+							channelOctaves[channel] = clip(0, 5, base64.indexOf(compressed.charAt(charIndex++)));
 						}
 					}
 				} else if (command == "b") {

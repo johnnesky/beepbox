@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (C) 2012 John Nesky
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+-->
+
+<s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+                   xmlns:mx="library://ns.adobe.com/flex/mx"
+                   xmlns:s="library://ns.adobe.com/flex/spark"
+                   xmlns="beepbox.editor.*"
+                   horizontalCenter="0" verticalCenter="0"
+                   backgroundColor="0x000000"
+                   borderColor="0x444444"
+                   borderWeight="4"
+                   cornerRadius="15"
+                   creationComplete="init()">
+	<fx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		import flash.net.*;
+		
+		import mx.collections.ArrayCollection;
+		import mx.controls.Menu;
+		import mx.events.MenuEvent;
+		
+		import com.hurlant.util.Hex;
+		import com.hurlant.crypto.hash.SHA256;
+		import com.hurlant.crypto.rsa.RSAKey;
+		
+		import beepbox.synth.*;
+		
+		[Bindable]
+		private var doc: Document;
+		
+		[Bindable]
+		private var onClose: Function;
+		
+		[Bindable]
+		private var licenseNames: ArrayCollection;
+		
+		[Bindable]
+		private var repeatCounts: ArrayCollection;
+		
+		public static function make(doc: Document, onClose: Function): PublishPrompt {
+			var prompt: PublishPrompt = new PublishPrompt();
+			prompt.doc = doc;
+			prompt.onClose = onClose;
+			return prompt;
+		}
+		
+		private function init():void {
+			licenseNames = new ArrayCollection(["CC1", "CC2"]);
+			repeatCounts = new ArrayCollection(["1", "2", "3", "4"]);
+			addEventListener(KeyboardEvent.KEY_DOWN, catchKeys);
+			addEventListener(KeyboardEvent.KEY_UP, catchKeys);
+			
+			
+			
+			
+			/*
+			trace("hello?");
+			var messageBytes: ByteArray = Hex.toArray(Hex.fromString("The rain in Spain falls mainly on the Plain"));
+			var sha: SHA256 = new SHA256();
+			var hashBytes: ByteArray = sha.hash(messageBytes);
+			var hash: String = Hex.fromArray(hashBytes);
+			trace(hash);
+			
+			var signatureBytes: ByteArray = Hex.toArray("58416bb66ea247afaa99db193536ebc12e8bae1c34d99500769e729d2d9af00e0066ae626c865e0d6c38bb7fb10c5de8838a76b958e78e31ceb8bcb36c919a8f2127acf3cb14018735562901ed8feedf320ace4b57ae1340b817bba0d1f0f1b382176e76a5ee848d406a43b80ad2cb44bae816a63358cbb76241ca77e80583f9ae78c8ef5176539ecc211bfef46b02bf06d85dcb097e86d5f5bc24a81be73efc956fc59d9489024b72578269dc2b18d71ee072750c86c4d6778ed68cfac848bb54886034b46821b47567241985ff4cd6094e9ff4e17054a1f3811103dfc65e00519ff58bca7c5bb1ab1ad281028668507f1161b265f92bb2ae226a6732864595");
+			var n: String = "aa869620409491c16801c4232a45ad3e9044cb7cab0c18d352574e594dde8ef3310537a848d8911cc63093eaba7a8e34866f8a5be1b73ed7162676fd1ab6b50b64c1c26dd176577d3ad974861a9a92657dd94fe5585e28430a5977eac80cb1ca59f31dca6e8639183df72168b9f3a5fe75d8c2095eb3e73dfb2aad54027814e9d437b3ae077c00d364e4fb325c4e831e8fc14046434f0494ff7244471609766dca179efbc0f7d144869ab4ba16b700c9429793bcd66588fa6c9593db02991315d655943bdb3003941ddd25e5b1e341d7601f569ceb0408d82fa2243f29c1f453b2488d96f08a2f3974da059d4e0826d41f69bdd760c8df0410c433e61253a75d";
+			var e: String = "10001";
+			var rsa: RSAKey = RSAKey.parsePublicKey(n, e);
+			var verifiedBytes: ByteArray = new ByteArray();
+			rsa.verify(signatureBytes, verifiedBytes, signatureBytes.length);
+			trace(Hex.fromArray(verifiedBytes));
+			*/
+			
+			var request: URLRequest = new URLRequest("authenticate_song");
+			request.method = URLRequestMethod.POST;
+			request.data = new URLVariables("name=John Nesky&password=hello&song=1234567890");
+			var loader: URLLoader = new URLLoader(request);
+			loader.addEventListener(Event.COMPLETE, onPostComplete);
+			loader.addEventListener(HTTPStatusEvent.HTTP_STATUS, onPostStatus);
+			loader.addEventListener(IOErrorEvent.IO_ERROR, onPostError);
+			loader.addEventListener(Event.OPEN, onPostStatus);
+			loader.addEventListener(ProgressEvent.PROGRESS, onPostStatus);
+			loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onPostError);
+		}
+		
+		private function catchKeys(event: KeyboardEvent): void {
+			event.stopPropagation();
+		}
+		
+		private function onPostError(event: Event): void {
+			trace(event);
+		}
+		
+		private function onPostStatus(event: Event): void {
+		}
+		
+		private function onPostComplete(event: Event): void {
+			trace(event.target.data);
+		}
+	]]></fx:Script>
+	<s:VGroup horizontalAlign="center" gap="30"
+	          paddingTop="20" paddingBottom="20" paddingLeft="20" paddingRight="20">
+		<s:Label text="Publishing" color="0xffffff" fontSize="30"/>
+		<s:VGroup horizontalAlign="left" gap="15">
+			<s:HGroup verticalAlign="middle" gap="10">
+				<s:VGroup horizontalAlign="left">
+					<s:Label text="Artist name:" color="0xffffff"/>
+					<s:TextInput id="artistName" width="200" editable="true" selectable="true" paste="" focusIn=""/>
+				</s:VGroup>
+				<s:VGroup horizontalAlign="left">
+					<s:Label text="Artist website: (optional)" color="0xffffff"/>
+					<s:TextInput id="artistWebsite" width="200" editable="true" selectable="true" paste="" focusIn="" text="http://"/>
+				</s:VGroup>
+			</s:HGroup>
+			<s:HGroup verticalAlign="middle" gap="10">
+				<s:VGroup horizontalAlign="left">
+					<s:Label text="Avatar password:" color="0xffffff"/>
+					<s:TextInput id="avatarPassword" width="200" editable="true" selectable="true" paste="" focusIn=""/>
+				</s:VGroup>
+			</s:HGroup>
+			<s:HGroup verticalAlign="middle" gap="10">
+				<s:VGroup horizontalAlign="left">
+					<s:Label text="Publish License:" color="0xffffff"/>
+					<s:DropDownList id="licenseDropDown" dataProvider="{licenseNames}" width="200" change="" close="">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+				</s:VGroup>
+			</s:HGroup>
+			<s:VGroup>
+				<s:HGroup verticalAlign="middle" gap="5">
+					<s:Label text="Title:" color="0xffffff" width="200"/>
+					<s:Label text="Fade in:" color="0xffffff" width="60"/>
+					<s:Label text="Loop count:" color="0xffffff" width="70"/>
+					<s:Label text="Fade out:" color="0xffffff" width="60"/>
+				</s:HGroup>
+				<s:HGroup verticalAlign="middle" gap="5">
+					<s:TextInput id="songTitle" width="200" editable="true" selectable="true" paste="" focusIn="" text=""/>
+					<s:VGroup horizontalAlign="center" width="60">
+						<s:CheckBox id="fadeIn" change=""/>
+					</s:VGroup>
+					<s:DropDownList id="loopDropDown" dataProvider="{repeatCounts}" width="70" change="" close="">
+						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+					</s:DropDownList>
+					<s:VGroup horizontalAlign="center" width="60">
+						<s:CheckBox id="fadeOut" change=""/>
+					</s:VGroup>
+				</s:HGroup>
+			</s:VGroup>
+			<s:VGroup horizontalAlign="center" width="100%">
+				<s:Button id="includeButton" label="Include more songs" click="" width="200"/>
+				<s:Button id="customizeButton" label="Customize playlist style" click="" width="200"/>
+				<s:Button id="closeButton" label="Close" click="onClose();" width="200"/>
+			</s:VGroup>
+		</s:VGroup>
+	</s:VGroup>
+</s:BorderContainer>

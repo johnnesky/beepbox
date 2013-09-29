@@ -141,19 +141,26 @@
 √ mouse is attracted to active note half a note above cursor, but not below cursor, even overrides active note at cursor to highlight note above. 
 √ upper boundary isn't working with drum portamento
 √ retro drums really need more sharpness in upper range
+√ oops, could press tab a few times to get keyboard focus away from prompt
+√ generalize prompt functionality
+√ preliminary publish prompt
 
 NEXT VERSION:
-- preliminary publish prompt
-- round trip to server
+- fix piano pitch
+- round trip to server. How are the link, iframe html, and twitter button presented?
 - author, password, website
+- red close button in corner
+- show light "http://" or "http://www.beepbox.com/" in url fields while empty
 - button to add more songs to list extracted from urls
+- non-editable songs in list from pre-published playlists
 - add titles to songs
 - update embed player to show all songs
 - song rearranging
 - song loop count
 - song fade-in/out
 - key stretching, salt, at least partially on server
-- cc license choice
+- cc license choices
+- link to cc website for more info
 - cc license enforcement
 - store author/password is localSO or cookie, if "remember me" is flagged
 - flag to reveal password, otherwise show dots
@@ -165,6 +172,7 @@ NEXT VERSION:
 - sharing menu uses localSharedObject to remember your settings, maybe even password
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - octave dragging should just be one History change. 
+- wav export dialog lets you set loop count and fade in/out
 - asynchronous wav export
 - make sure there's only one beep box player playing simultaneously. 
 - buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
@@ -188,7 +196,6 @@ NEXT VERSION:
 - Reverb
 - optimize those Math functions in Synth
 - Dim the column occupied by a tone to communicate mono voice?
-- wav export dialog lets you toggle intro, loop count, fade out or outro...
 - rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
 - snap to tone edges from other channels, to help making NES style harmonies. 
 - new song setting: distortion, nonlinear mixing of channels...
