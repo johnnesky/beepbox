@@ -80,8 +80,8 @@ package beepbox.synth {
 			scale = 0;
 			key = Music.keyNames.length - 1;
 			loopStart = 0;
-			loopLength = 16;
-			tempo = 1;
+			loopLength = 4;
+			tempo = 2;
 			beats = 8;
 			bars = 16;
 			patterns = 8;
