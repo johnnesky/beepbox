@@ -1,9 +1,9 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-<title>Beep Box</title>
-<meta content="Beep Box is a tool for sketching and sharing chiptune melodies." name="Description" />
-<meta content="chiptune, music, melody, composition, tool, square wave, NES, NSF, Beep Box, beepbox" name="Keywords" />
+<title>BeepBox</title>
+<meta content="BeepBox is a tool for sketching and sharing chiptune melodies." name="Description" />
+<meta content="chiptune, music, melody, composition, tool, square wave, NES, NSF, BeepBox, beepbox" name="Keywords" />
 <style>
 	body {
 		font-family: sans-serif;
@@ -11,11 +11,8 @@
 		color: #ffffff;
 	}
 	h1 {
-		font-size: 40px;
+		font-size: 30px;
 		text-align: center;
-	}
-	h2 {
-		font-size: 20px;
 	}
 	.centerDiv {
 		margin: 0px auto;
@@ -27,6 +24,7 @@
 </head>
 
 <body onload="pageDidLoad()" bgcolor="#000000"> <div class="centerDiv" style="width: 700px">
+	
 	<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=11,0,0,0" width="700" height="645" id="BeepBox" align="middle">
 		<param name="allowScriptAccess" value="sameDomain" />
 		<param name="movie" value="BeepBoxOnline.swf" />
@@ -36,10 +34,10 @@
 	</object>
 	
 	<h1>
-		Beep Box
+		BeepBox
 	</h1>
 	<p>
-		Beep Box is a Flash-based tool for sketching and sharing chiptune melodies. 
+		BeepBox is a Flash-based tool for sketching and sharing chiptune melodies. 
 	</p>
 	<p>
 		All song data is packaged into the URL text at the top of your browser. 
@@ -47,100 +45,72 @@
 		When you are satisfied with your song, copy and paste the URL to save and share your song. 
 	</p>
 	
-	<!--
-	<p style="text-align: center;">
-		It's free! If you like it, please consider supporting the developer. :)
-	</p>
-	<div class="centerDiv" style="width: 230px">
-		<script type="text/javascript"> 
-		function validateAmount(amount){
-			if(amount.value.match( /^[0-9]+(\.([0-9]+))?$/)){
-				return true;
-			}else{
-				alert('You must enter a valid donation.');
-				amount.focus();
-				return false;
-			}
-		}
-		</script>
-		
-		<form action="https://checkout.google.com/api/checkout/v2/checkoutForm/Merchant/801694119754985" id="BB_BuyButtonForm" method="post" name="BB_BuyButtonForm" onSubmit="return validateAmount(this.item_price_1)" target="_top">
-			<input name="item_name_1" type="hidden" value="Beep Box Donation"/>
-			<input name="item_description_1" type="hidden" value="Thank you for donating to support John Nesky, the developer of Beep Box."/>
-			<input name="item_quantity_1" type="hidden" value="1"/>
-			<input name="item_currency_1" type="hidden" value="USD"/>
-			<input name="item_is_modifiable_1" type="hidden" value="true"/>
-			<input name="item_min_price_1" type="hidden" value="0.01"/>
-			<input name="item_max_price_1" type="hidden" value="25000.0"/>
-			<input name="_charset_" type="hidden" value="utf-8"/>
-			<table cellpadding="5" cellspacing="0" width="1%">
-				<tr>
-					<td align="right" nowrap="nowrap" width="1%">&#x24; <input id="item_price_1" name="item_price_1" onfocus="this.style.color='black'; this.value='';" size="11" style="color:grey;" type="text" value="Enter Amount"/>
-					</td>
-					<td align="left" width="1%">
-						<input alt="Donate" src="https://checkout.google.com/buttons/support.gif?merchant_id=801694119754985&amp;w=130&amp;h=50&amp;style=trans&amp;variant=text&amp;loc=en_US" type="image"/>
-					</td>
-				</tr>
-			</table>
-		</form>
+	<div>
+		<div style="width: 375px; display: inline-block;">
+			<h1>
+				Instructions
+			</h1>
+			<p>
+				You can insert or delete notes by clicking on the gray rows at the top. 
+				BeepBox automatically plays the notes out loud for you. Try it!
+			</p>
+			<p>
+				Notes go into patterns, and you can edit one pattern at a time.
+				Those numbered boxes at the bottom of the editor are the different patterns you can edit.
+				Click the other boxes to move to a different part of the song, or click the arrows on the currently selected box to swap which pattern is played during that part of the song.
+				There are four rows that BeepBox can play simultaneously, and each row has its own set of patterns. 
+				The blue loop underneath the boxes controls which part of the song is currently repeating. Move the loop to listen to a different part of the song, or drag the ends to expand the loop to include the whole song. 
+				Note that the gray channel is for drums only.
+			</p>
+			<p>
+				You can click above or below an existing note to enable a rapid arpeggio/trill effect. 
+				Drag horizontally on a note to adjust its duration.
+				Drag vertically on a note to bend its pitch, or drag vertically above or below the note to adjust its volume.
+			</p>
+			<p>
+				When BeepBox has focus (click in the Flash rectangle above), you can use these keyboard shortcuts: <br/>
+				<p style="margin-left:50px;">
+					Spacebar: Pause or Resume<br/>
+					Z: Undo<br/>
+					Y or Shift Z: Redo<br/>
+					C: Copy the current pattern<br/>
+					V: Paste the current pattern<br/>
+					[ ]: Move the playhead backward and forward<br/>
+					Arrow Keys: Change which bar is selected<br/>
+					1-8: Reassign a pattern to the currently selected bar<br/>
+				</p>
+			</p>
+			<p>
+				BeepBox has many more features. 
+				Try playing with the buttons and menus on the right side to find out what it can do!
+			</p>
+			<p>
+				Need some inspiration? <a href="https://twitter.com/beepboxco">Check out some of these songs that other people have posted on Twitter!</a>
+			</p>
+			<h1>
+				About
+			</h1>
+			<p>
+				BeepBox is developed by <a href="http://www.johnnesky.com">John Nesky</a>. Follow <a href="https://twitter.com/#!/shaktool">his twitter account</a> for updates. 
+			</p>
+			<p>
+				You can download <a href="BeepBoxOffline.swf">an offline version of BeepBox</a> (right click and select "Save As...") to use when you don't have access to the internet. The features are otherwise the same. You can open BeepBoxOffline.swf in a browser tab to run it, or you can install a <a href="http://www.adobe.com/support/flashplayer/downloads.html">Flash Projector</a> to run swf files without a browser. 
+			</p>
+			<p>
+				You can also download and use <a href="https://code.google.com/p/beepbox/source/checkout">the source code</a> under the MIT license. You can use the synth code to play BeepBox songs in your own Flash projects. 
+			</p>
+			<p>
+				Neither John Nesky nor BeepBox assume responsibility for any copyrighted material played on BeepBox. No songs are ever received, recorded, or distributed by BeepBox's servers. All song data is contained in the URL after the hash (#) mark, and BeepBox running inside your browser converts that data into sound waves.
+			</p>
+		</div>
+		<div style="width: 300px; float: right;">
+			<h1>
+				Shared on Twitter:
+			</h1>
+			<a class="twitter-timeline" width="300" data-tweet-limit="10" data-link-color="#8866ff" data-chrome="noheader nofooter transparent" data-dnt="true" href="https://twitter.com/search?q=beepbox.co" data-widget-id="418501337848889345">Tweets about "beepbox.co"</a>
+			<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+		</div>
 	</div>
-	-->
-	
-	<h1>
-		Instructions
-	</h1>
-	<p>
-		You can insert or delete notes by clicking on the gray rows at the top. 
-		Beep Box automatically plays the notes out loud for you. Try it!
-	</p>
-	<p>
-		Notes go into patterns, and you can edit one pattern at a time.
-		Those numbered boxes at the bottom of the editor are the different patterns you can edit.
-		Click the other boxes to move to a different part of the song, or click the arrows on the currently selected box to swap which pattern is played during that part of the song.
-		There are four rows that Beep Box can play simultaneously, and each row has its own set of patterns. 
-		The blue loop underneath the boxes controls which part of the song is currently repeating. Move the loop to listen to a different part of the song, or drag the ends to expand the loop to include the whole song. 
-		Note that the gray channel is for drums only.
-	</p>
-	<p>
-		You can click above or below an existing note to enable a rapid arpeggio/trill effect. 
-		Drag horizontally on a note to adjust its duration.
-		Drag vertically on a note to bend its pitch, or drag vertically above or below the note to adjust its volume.
-	</p>
-	<p>
-		When Beep Box has focus (click in the Flash rectangle above), you can use these keyboard shortcuts: <br/>
-		<p style="margin-left:50px;">
-			Spacebar: Pause or Resume<br/>
-			Z: Undo<br/>
-			Y or Shift Z: Redo<br/>
-			C: Copy the current pattern<br/>
-			V: Paste the current pattern<br/>
-			[ ]: Move the playhead backward and forward<br/>
-			Arrow Keys: Change which bar is selected<br/>
-			1-8: Reassign a pattern to the currently selected bar<br/>
-		</p>
-	</p>
-	<p>
-		Beep Box has many more features. 
-		Try playing with the buttons and menus on the right side to find out what it can do!
-	</p>
-	<p>
-		Need some inspiration? <a href="https://twitter.com/search?q=beepbox.co&src=typd&f=realtime">Check out some of these songs that other people have posted on Twitter!</a>
-	</p>
-	<h1>
-		About
-	</h1>
-	<p>
-		Beep Box is developed by <a href="http://www.johnnesky.com">John Nesky</a>. Follow <a href="https://twitter.com/#!/shaktool">his twitter account</a> for updates. 
-	</p>
-	<p>
-		You can download <a href="BeepBoxOffline.swf">an offline version of Beep Box</a> (right click and select "Save As...") to use when you don't have access to the internet. The features are otherwise the same. You can open BeepBoxOffline.swf in a browser tab to run it, or you can install a <a href="http://www.adobe.com/support/flashplayer/downloads.html">Flash Projector</a> to run swf files without a browser. 
-	</p>
-	<p>
-		You can also download and use <a href="https://code.google.com/p/beepbox/source/checkout">the source code</a> under the MIT license. You can use the synth code to play Beep Box songs in your own Flash projects. 
-	</p>
-	<p>
-		Neither John Nesky nor Beep Box assume responsibility for any copyrighted material played on Beep Box. No songs are ever received, recorded, or distributed by Beep Box's servers. All song data is contained in the URL after the hash (#) mark, and Beep Box running inside your browser converts that data into sound waves.
-	</p>
 </div> </body>
 
 <script type="text/javascript">

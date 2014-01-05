@@ -40,6 +40,7 @@ SOFTWARE.
 		import flash.text.*;
 		import flash.ui.*;
 		import flash.utils.*;
+	    import flash.desktop.*;
 		
 		import mx.collections.ArrayCollection;
 		import mx.controls.Menu;
@@ -339,6 +340,11 @@ SOFTWARE.
 			if (wasPlaying) togglePlay();
 		}
 		
+		private function copyToClipboard(): void {
+			Clipboard.generalClipboard.clear();
+			Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, "http://www.beepbox.co/" + doc.song.toString());
+		}
+		
 		private function onSetScale(): void {
 			doc.history.record(new ChangeScale(doc, scaleDropDown.selectedIndex));
 		}
@@ -474,7 +480,7 @@ SOFTWARE.
 			<s:VGroup id="songSettings" height="100%" width="100%">
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Spacer width="50%"/>
-					<s:Label text="Beep Box version 1.1.1" color="0xbbbbbb" right="0"/>
+					<s:Label text="BeepBox version 1.1.2" color="0xbbbbbb" right="0"/>
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:HGroup width="100%" verticalAlign="middle">
@@ -485,6 +491,7 @@ SOFTWARE.
 				<s:Button id="optionsButton" label="Preferences Menu" click="openOptionsMenu();" width="100%"/>
 				<!--<s:Button id="publishButton" label="Publishing Panel..." click="openPublishPrompt();" width="100%"/>-->
 				<s:Button id="exportButton" label="Export to .wav File" click="openExportPrompt();" width="100%"/>
+				<s:Button id="copyButton" label="Copy URL to Clipboard" click="copyToClipboard();" width="100%"/>
 				<s:Spacer height="100%"/>
 				<s:Label text="Song Settings:" color="0xffffff"/>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">

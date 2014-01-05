@@ -55,6 +55,7 @@ package beepbox.synth {
 		public var pianoPressed: Boolean = false;
 		public var pianoNote: int = 0;
 		public var pianoChannel: int = 0;
+		public var enableIntro: Boolean = true;
 		public var volume: Number = 1.0;
 		
 		private var _playhead: Number = 0.0;
@@ -191,7 +192,8 @@ package beepbox.synth {
 		}
 		
 		public function snapToStart(): void {
-			bar = song == null ? 0 : song.loopStart;
+			bar = 0;
+			enableIntro = true;
 			snapToBar();
 		}
 		
@@ -207,10 +209,10 @@ package beepbox.synth {
 		public function nextBar(): void {
 			var oldBar: int = bar;
 			bar++;
-			if (bar == song.bars) {
-				bar = 0;
+			if (bar >= song.bars) {
+				bar = song.loopStart;
 			}
-			if (song != null && bar < song.loopStart || bar >= song.loopStart + song.loopLength || bar >= song.bars) {
+			if (bar >= song.loopStart + song.loopLength || bar >= song.bars) {
 				bar = song.loopStart;
 			}
 			_playhead += bar - oldBar;
@@ -222,7 +224,10 @@ package beepbox.synth {
 			if (bar < 0) {
 				bar = song.bars - 1;
 			}
-			if (song != null && bar < song.loopStart || bar >= song.loopStart + song.loopLength || bar >= song.bars) {
+			if (bar < song.loopStart) {
+				enableIntro = true;
+			}
+			if (bar >= song.loopStart + song.loopLength || bar >= song.bars) {
 				bar = song.loopStart + song.loopLength - 1;
 			}
 			_playhead += bar - oldBar;
@@ -274,8 +279,9 @@ package beepbox.synth {
 			}
 			if (beat >= song.beats) {
 				bar++;
-				if (loop && (bar < song.loopStart || bar >= song.loopStart + song.loopLength)) {
-					bar = song.loopStart;
+				if (loop) {
+					if (bar < song.loopStart && !enableIntro) bar = song.loopStart;
+					if (bar >= song.loopStart + song.loopLength) bar = song.loopStart;
 				}
 				beat = 0;
 				part = 0;
@@ -284,6 +290,9 @@ package beepbox.synth {
 			}
 			if (bar >= song.bars) {
 				bar = song.loopStart;
+			}
+			if (bar >= song.loopStart) {
+				enableIntro = false;
 			}
 			
 			var maxLeadVolume:    Number;
@@ -427,13 +436,25 @@ package beepbox.synth {
 					var vibratoScale: Number;
 					var resetPeriod: Boolean = false;
 					if (pianoPressed && channel == pianoChannel) {
-						periodDelta = frequencyFromPitch(pitch + channelRoot + pianoNote * intervalScale) * sampleTime;
+						var pianoFreq: Number = frequencyFromPitch(channelRoot + pianoNote * intervalScale);
+						var pianoPitchDamping: Number;
+						if (channel == 3) {
+							if (song.instrumentWaves[3][pattern.instrument] > 0) {
+								drumFilter = Math.min(1.0, pianoFreq * sampleTime * 8.0);
+								pianoPitchDamping = 24.0;
+							} else {
+								pianoPitchDamping = 60.0;
+							}
+						} else {
+							pianoPitchDamping = 48.0;
+						}
+						periodDelta = pianoFreq * sampleTime;
 						periodDeltaScale = 1.0;
-						toneVolume = channel == 3 ? 1.0 : Math.pow(2.0, -(pitch + pianoNote) / 48.0);
+						toneVolume = Math.pow(2.0, -pianoNote * intervalScale / pianoPitchDamping);
 						volumeDelta = 0.0;
 						filter = 1.0;
 						filterScale = 1.0;
-						vibratoScale = 0.0;
+						vibratoScale = Math.pow(2.0, Music.effectVibratos[song.instrumentEffects[channel][pattern.instrument]] / 12.0 ) - 1.0;
 					} else if (tone == null) {
 						periodDelta = 0.0;
 						periodDeltaScale = 0.0;
@@ -530,6 +551,7 @@ package beepbox.synth {
 						if (channel == 3) {
 							if (song.instrumentWaves[3][pattern.instrument] > 0) {
 								drumFilter = Math.min(1.0, startFreq * sampleTime * 8.0);
+								trace(drumFilter);
 								pitchDamping = 24.0;
 							} else {
 								pitchDamping = 60.0;
@@ -713,11 +735,18 @@ package beepbox.synth {
 								beat = 0;
 								effectPeriod = 0.0;
 								bar++;
-								if (loop && (bar < song.loopStart || bar >= song.loopStart + song.loopLength)) {
-									bar = song.loopStart;
+								if (loop) {
+									if (bar < song.loopStart) {
+										if (!enableIntro) bar = song.loopStart;
+									} else {
+										enableIntro = false;
+									}
+									if (bar >= song.loopStart + song.loopLength) {
+										bar = song.loopStart;
+									}
 								}
 								if (bar >= song.bars) {
-									bar = 0;
+									bar = song.loopStart;
 								}
 								updateInstruments();
 							}
@@ -739,7 +768,7 @@ package beepbox.synth {
 		
 		private function getSamplesPerArpeggio(): int {
 			if (song == null) return 0;
-			var beatsPerMinute: Number = 120.0 * Math.pow(2.0, (-1.0 + song.tempo) / 3.0);
+			var beatsPerMinute: Number = 120.0 * Math.pow(2.0, (-4.0 + song.tempo) / 9.0);
 			var beatsPerSecond: Number = beatsPerMinute / 60.0;
 			var partsPerSecond: Number = beatsPerSecond * song.parts;
 			var arpeggioPerSecond: Number = partsPerSecond * 4.0;

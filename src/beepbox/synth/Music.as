@@ -22,8 +22,7 @@ SOFTWARE.
 
 package beepbox.synth {
 	public class Music {
-		// C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
-		public static const scaleNames: Array = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "gypsy :)", "gypsy :(", "enigma", "expert"];
+		public static const scaleNames: Array = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "flamenco :)", "flamenco :(", "enigma", "expert"];
 		public static const scaleFlags: Array = [
 			[ true, false,  true, false,  true, false, false,  true, false,  true, false, false],
 			[ true, false, false,  true, false,  true, false,  true, false, false,  true, false],
@@ -39,9 +38,10 @@ package beepbox.synth {
 			[ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true],
 		];
 		public static const pianoScaleFlags: Array = [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true];
+		// C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
 		public static const keyNames: Array = ["B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C"];
 		public static const keyTransposes: Array = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
-		public static const tempoNames: Array = ["slow", "steady", "fast", "hyper"];
+		public static const tempoNames: Array = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
 		public static const beatsMin: int = 3;
 		public static const beatsMax: int = 12;
 		public static const barsMin: int = 1;

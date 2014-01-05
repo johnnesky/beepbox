@@ -140,7 +140,6 @@ SOFTWARE.
 		private function onMousePressed(event: Event): void {
 			mouseDown = true;
 			doc.synth.pianoPressed = true;
-			doc.synth.pianoChannel = doc.channel;
 			updatePreview();
 		}
 		
@@ -169,6 +168,9 @@ SOFTWARE.
 		private function documentChanged(): void {
 			noteHeight = doc.channel == 3 ? 43 : 13;
 			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
+			updateCursorNote();
+			doc.synth.pianoNote = cursorNote + doc.song.channelOctaves[doc.channel] * 12;
+			doc.synth.pianoChannel = doc.channel;
 			render();
 		}
 		
