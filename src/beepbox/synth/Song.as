@@ -23,7 +23,7 @@ SOFTWARE.
 package beepbox.synth {
 	public class Song {
 		private static const oldestVersion: int = 2;
-		private static const latestVersion: int = 3;
+		private static const latestVersion: int = 4;
 		private static const oldBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
 		private static const newBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","-","_",];
 		
@@ -81,7 +81,7 @@ package beepbox.synth {
 			key = Music.keyNames.length - 1;
 			loopStart = 0;
 			loopLength = 4;
-			tempo = 2;
+			tempo = 7;
 			beats = 8;
 			bars = 16;
 			patterns = 8;
@@ -287,6 +287,7 @@ package beepbox.synth {
 			var version: int = newBase64.indexOf(compressed.charAt(charIndex++));
 			if (version == -1 || version > latestVersion || version < oldestVersion) return;
 			var beforeThree: Boolean = version < 3;
+			var beforeFour:  Boolean = version < 4;
 			var base64: Array = beforeThree ? oldBase64 : newBase64;
 			if (beforeThree) instrumentAttacks = [[0],[0],[0],[0]];
 			if (beforeThree) instrumentWaves   = [[1],[1],[1],[0]];
@@ -306,7 +307,12 @@ package beepbox.synth {
 				} else if (command == "e") {
 					loopLength = base64.indexOf(compressed.charAt(charIndex++));
 				} else if (command == "t") {
-					tempo = base64.indexOf(compressed.charAt(charIndex++));
+					if (beforeFour) {
+						tempo = [1, 4, 7, 10][base64.indexOf(compressed.charAt(charIndex++))];
+					} else {
+						tempo = base64.indexOf(compressed.charAt(charIndex++));
+					}
+					tempo = Math.max(0, Math.min(Music.tempoNames.length, tempo));
 				} else if (command == "a") {
 					if (beforeThree) {
 						beats = [6, 7, 8, 9, 10][base64.indexOf(compressed.charAt(charIndex++))];

@@ -100,7 +100,7 @@ package {
 				var time: String = "10:00 12/12/2012"
 				
 				byline.htmlText = title + " shared by " + name;
-				beepboxLine.htmlText = "with <u><font color=\"#7744ff\"><a target=\"_parent\" href=\"http://www.beepbox.co/" + myhash + "\">Beep Box</a></font></u> at " + time;
+				beepboxLine.htmlText = "with <u><font color=\"#7744ff\"><a target=\"_parent\" href=\"http://www.beepbox.co/" + myhash + "\">BeepBox</a></font></u> at " + time;
 				
 				render();
 			}
