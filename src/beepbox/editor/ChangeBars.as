@@ -49,7 +49,7 @@ package beepbox.editor {
 				for (var i: int = 0; i < Music.numChannels; i++) {
 					var channel: Array = [];
 					for (var j: int = 0; j < newBars; j++) {
-						channel.push(j < oldBars ? oldChannelBars[i][j] : 0);
+						channel.push(j < oldBars ? oldChannelBars[i][j] : 1);
 					}
 					newChannelBars.push(channel);
 				}
@@ -67,7 +67,6 @@ package beepbox.editor {
 					newBarScrollPos = Math.max(0, Math.min(newBars - 16, newBarScrollPos));
 					newLoopLength = Math.min(newBars, newLoopLength);
 					newLoopStart = Math.min(newBars - newLoopLength, newLoopStart);
-					
 				}
 				doForwards();
 				didSomething();

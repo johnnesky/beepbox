@@ -23,29 +23,11 @@ SOFTWARE.
 package beepbox.editor {
 	import beepbox.synth.*;
 	
-	public class ChangeFilter extends Change {
-		private var document: Document;
-		private var oldFilter: int;
-		private var newFilter: int;
-		public function ChangeFilter(document: Document, filter: int) {
-			super(false);
-			this.document = document;
-			oldFilter = document.song.instrumentFilters[document.channel][document.getCurrentInstrument()];
-			newFilter = filter;
-			if (oldFilter != newFilter) {
-				didSomething();
-				redo();
+	public class ChangeTranspose extends ChangeSequence {
+		public function ChangeTranspose(document: Document, bar: BarPattern, upward: Boolean) {
+			for (var i: int = 0; i < bar.tones.length; i++) {
+				append(new ChangeTransposeTone(document, bar.tones[i], upward));
 			}
-		}
-		
-		protected override function doForwards(): void {
-			document.song.instrumentFilters[document.channel][document.getCurrentInstrument()] = newFilter;
-			document.changed();
-		}
-		
-		protected override function doBackwards(): void {
-			document.song.instrumentFilters[document.channel][document.getCurrentInstrument()] = oldFilter;
-			document.changed();
 		}
 	}
 }

@@ -144,9 +144,26 @@
 √ oops, could press tab a few times to get keyboard focus away from prompt
 √ generalize prompt functionality
 √ preliminary publish prompt
+√ fix piano pitch. still horribly broken!
+√ twitter stream on the side
+√ color-blind friendly colors
+√ buttons to transpose up and down to the next valid note
+√ dedicated silent 0 pattern
+√ take focus away from master volume after clicking it
+√ wav export intro, loop count, outro
+√ disable intro and outro checkboxes when the loop encompasses the entire song
+
+? fix those goddamn flex dropdowns so they stop throwing errors
+- new preferences: follow playhead, play at load?
+- fade in/out checkboxes
+- pitch bends mixed with arpeggios don’t properly check min/max bounds
+- derive song length from number of bars with non-zero patterns
+- piano should still play when song is paused
+- more “effect” keys like stutter, scratch, scrub, drag playhead, speedmult, whatever.
+- asynchronous wav export
+- javascript mobile support?
 
 NEXT VERSION:
-- fix piano pitch. still horribly broken!
 - round trip to server. How are the link, iframe html, and twitter button presented?
 - author, password, website
 - red close button in corner
@@ -168,16 +185,11 @@ NEXT VERSION:
 - underline author name as URL in embed player
 - volume control
 - make sure bots ignore embed.html
-- twitter stream on the side
 - sharing menu uses localSharedObject to remember your settings, maybe even password
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 
-- octave dragging should just be one History change. 
-- wav export dialog lets you set loop count and fade in/out
-- asynchronous wav export
+- octave scroll dragging should just be one History change. 
 - make sure there's only one beep box player playing simultaneously. 
-- buttons to transpose up and down to the next valid note... careful of pitch bends and boundary conditions!
 - move "song settings" section down, and fit a "pattern settings" between that and the "instrument settings". The pattern has a colored number and the instrument has a colored letter in the title, if there are at least two instruments.
-- new preferences: follow playhead, autoplay on load?
 - example songs on the website. Mario overworld?
 - rapid document/fragment changes due to undo cause undefined state
 - fix it so that the browser back button isn't useless. save state before and after pasting new song. 
@@ -187,7 +199,6 @@ NEXT VERSION:
 - put songs in browser history before/after pasting new songs.
 - offsite album player, with scrolling notes. hashbang urls, bot indexable. 
 - main website should break out of iframe for security: http://usablelayout.com/articles/automatically-break-out-iframe
-- fix those goddamn flex dropdowns so they stop throwing errors. 
 
 NEXT VERSION:
 - allow drums to be divided into shorter parts, crucial for songs like the mario overworld
@@ -210,9 +221,7 @@ MORE FEATURES:
 - Get in touch with wonderfl about supporting beepbox
 - Get in touch with ludum dare about linking to beepbox: http://www.ludumdare.com/compo/tools/
 - get in touch with http://youcanmakevideogames.com/resources/music
-- piano should still play when song is paused
 - check to see if the drum frequency range could be usefully extended
-- when holding down left or right arrow, stop at end of song until release and repress
 - when pasting into the debug text field, re select the text after parsing.
 - make play and volume controls prettier
 - illustrate arpeggio texture on tones with multiple notes
@@ -230,7 +239,6 @@ MAYBE:
 - preload some common tone shapes into the recentShape list. increment format number.
 - MIDI export
 - 5 parts per beat?
-- dedicated silent 0 pattern
 - make some button to bookmark the song in your browser
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
 

@@ -93,5 +93,10 @@ package beepbox.editor {
 		public function getCurrentPattern(): BarPattern {
 			return song.getPattern(channel, bar);
 		}
+		
+		public function getCurrentInstrument(): int {
+			var pattern: BarPattern = getCurrentPattern();
+			return pattern == null ? 0 : pattern.instrument;
+		}
 	}
 }

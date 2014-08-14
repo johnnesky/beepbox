@@ -48,6 +48,17 @@ SOFTWARE.
 		
 		import beepbox.synth.*;
 		
+		/*
+		public static const channelColorsDim:    Array = [0x449944, 0x777744, 0xaa4444, 0x666666];
+		public static const channelColorsBright: Array = [0x44ff44, 0xffff44, 0xff8844, 0xaaaaaa];
+		public static const noteColorsDim:       Array = [0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa];
+		public static const noteColorsBright:    Array = [0xccffcc, 0xffffcc, 0xffddcc, 0xeeeeee];
+		*/
+		public static const channelColorsDim:    Array = [0x0099a1, 0xa1a100, 0xc75000, 0x6f6f6f];
+		public static const channelColorsBright: Array = [0x25f3ff, 0xffff25, 0xff9752, 0xaaaaaa];
+		public static const noteColorsDim:       Array = [0x00bdc7, 0xc7c700, 0xff771c, 0xaaaaaa];
+		public static const noteColorsBright:    Array = [0x92f9ff, 0xffff92, 0xffcdab, 0xeeeeee];
+		
 		[Bindable]
 		public var doc: Document;
 		
@@ -149,19 +160,21 @@ SOFTWARE.
 				waveDropDown.dataProvider = waveNames;
 			}
 			
-			patternSettingsLabel.visible    = doc.song.instruments > 1;
-			instrumentDropDownGroup.visible = doc.song.instruments > 1;
+			var pattern: BarPattern = doc.getCurrentPattern();
+			
+			patternSettingsLabel.visible    = doc.song.instruments > 1 && pattern != null;
+			instrumentDropDownGroup.visible = doc.song.instruments > 1 && pattern != null;
 			while (instrumentNames.length < doc.song.instruments) instrumentNames.addItem(instrumentNames.length + 1);
 			while (instrumentNames.length > doc.song.instruments) instrumentNames.removeItemAt(instrumentNames.length - 1);
 			
-			var pattern: BarPattern = doc.getCurrentPattern();
-			waveDropDown.selectedIndex   = doc.song.instrumentWaves[doc.channel][pattern.instrument];
-			filterDropDown.selectedIndex = doc.song.instrumentFilters[doc.channel][pattern.instrument];
-			attackDropDown.selectedIndex = doc.song.instrumentAttacks[doc.channel][pattern.instrument];
-			effectDropDown.selectedIndex = doc.song.instrumentEffects[doc.channel][pattern.instrument];
-			chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][pattern.instrument];
-			volumeDropDown.selectedIndex = doc.song.instrumentVolumes[doc.channel][pattern.instrument];
-			instrumentDropDown.selectedIndex = pattern.instrument;
+			var instrument: int = doc.getCurrentInstrument();
+			waveDropDown.selectedIndex   = doc.song.instrumentWaves[doc.channel][instrument];
+			filterDropDown.selectedIndex = doc.song.instrumentFilters[doc.channel][instrument];
+			attackDropDown.selectedIndex = doc.song.instrumentAttacks[doc.channel][instrument];
+			effectDropDown.selectedIndex = doc.song.instrumentEffects[doc.channel][instrument];
+			chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][instrument];
+			volumeDropDown.selectedIndex = doc.song.instrumentVolumes[doc.channel][instrument];
+			instrumentDropDown.selectedIndex = instrument;
 			
 			//currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
 			
@@ -191,6 +204,7 @@ SOFTWARE.
 		
 		private function onKeyPressed(event: KeyboardEvent): void {
 			//if (event.ctrlKey)
+			//trace(event.keyCode)
 			switch (event.keyCode) {
 				case 32: // space
 					stage.focus = stage;
@@ -218,10 +232,24 @@ SOFTWARE.
 				case 221: // right brace
 					doc.synth.nextBar();
 					break;
+				case 71: // g
+					doc.synth.stutterPressed = true;
+					break;
+				case 189: // -
+					transpose(false);
+					break;
+				case 187: // +
+					transpose(true);
+					break;
 			}
 		}
 		
 		private function onKeyReleased(event: KeyboardEvent): void {
+			switch (event.keyCode) {
+				case 71: // g
+					doc.synth.stutterPressed = false;
+					break;
+			}
 		}
 		
 		private function togglePlay(): void {
@@ -236,7 +264,9 @@ SOFTWARE.
 		}
 		
 		private function copy(): void {
-			copyTones = doc.getCurrentPattern().cloneTones();
+			var pattern: BarPattern = doc.getCurrentPattern();
+			if (pattern == null) return;
+			copyTones = pattern.cloneTones();
 			copyBeats = doc.song.beats;
 			copyParts = doc.song.parts;
 			copyDrums = doc.channel == 3;
@@ -248,12 +278,18 @@ SOFTWARE.
 		}
 		
 		private function canPaste(): Boolean {
-			return copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts && copyDrums == (doc.channel == 3);
+			return doc.getCurrentPattern() != null && copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts && copyDrums == (doc.channel == 3);
 		}
 		
 		private function cleanSlate(): void {
 			doc.history.record(new ChangeSong(doc, null));
 			patternEditor.resetCopiedPins();
+		}
+		
+		private function transpose(upward: Boolean): void {
+			var pattern: BarPattern = doc.getCurrentPattern();
+			if (pattern == null) return;
+			doc.history.record(new ChangeTranspose(doc, pattern, upward));
 		}
 		/*
 		private function openPublishPrompt(): void {
@@ -261,83 +297,7 @@ SOFTWARE.
 		}
 		*/
 		private function openExportPrompt(): void {
-			wasPlaying = doc.synth.playing;
-			if (wasPlaying) togglePlay();
-			
-			var sampleFrames: int = doc.synth.totalSamples;
-			var recordedSamples: ByteArray = new ByteArray();
-			var timer: int = getTimer();
-			new Synth(doc.song).synthesize(recordedSamples, sampleFrames, false);
-			trace("export timer", getTimer() - timer);
-			
-			var srcChannelCount: int = 2;
-			var wavChannelCount: int = 1;
-			var sampleRate: int = 44100;
-			var bytesPerSample: int = 2;
-			var bitsPerSample: int = 8 * bytesPerSample;
-			var sampleCount: int = wavChannelCount * sampleFrames;
-
-			var data: ByteArray = new ByteArray();
-			data.endian = Endian.LITTLE_ENDIAN;
-			data.writeUTFBytes("RIFF");
-			data.writeInt(36 + sampleCount * bytesPerSample); // size of remaining file
-			data.writeUTFBytes("WAVEfmt ");
-			data.writeInt(0x00000010); // size of following header
-			data.writeShort(0x0001); // not compressed
-			data.writeShort(wavChannelCount); // channel count
-			data.writeInt(sampleRate); // sample rate
-			data.writeInt(sampleRate * bytesPerSample * wavChannelCount); // bytes per second
-			data.writeShort(bytesPerSample); // sample rate
-			data.writeShort(bitsPerSample); // sample rate
-			data.writeUTFBytes("data");
-			data.writeInt(sampleCount * bytesPerSample);
-			
-			var stride: int;
-			var repeat: int;
-			if (srcChannelCount == wavChannelCount) {
-				stride = 1;
-				repeat = 1;
-			} else {
-				stride = srcChannelCount;
-				repeat = wavChannelCount;
-			}
-			
-			var i: int;
-			var j: int;
-			var k: int;
-			var val: int;
-			recordedSamples.position = 0;
-			if (bytesPerSample > 1) {
-				// usually samples are signed. 
-				for (i = 0; i < sampleFrames; i++) {
-					for (j = 0; j < stride; j++) {
-						val = recordedSamples.readFloat() * ((1 << (bitsPerSample - 1)) - 1);
-					}
-					for (k = 0; k < repeat; k++) {
-						if (bytesPerSample == 2) {
-							data.writeShort(val);
-						} else if (bytesPerSample == 4) {
-							data.writeInt(val);
-						} else {
-							throw new Error("unsupported sample size");
-						}
-					}
-				}
-			} else {
-				// 8 bit samples are a special case: they are unsigned.
-				for (i = 0; i < sampleFrames; i++) {
-					for (j = 0; j < stride; j++) {
-						val = recordedSamples.readFloat() * 127 + 128;
-					}
-					for (k = 0; k < repeat; k++) {
-						data.writeByte(val > 255 ? 255 : (val < 0 ? 0 : val));
-					}
-				}
-			}
-			
-			new FileReference().save(data, "song.wav");
-			
-			if (wasPlaying) togglePlay();
+			setPrompt(ExportPrompt.make(doc, closePrompt));
 		}
 		
 		private function copyToClipboard(): void {
@@ -386,6 +346,7 @@ SOFTWARE.
 		}
 		
 		private function onSetInstrument(): void {
+			if (doc.getCurrentPattern() == null) return;
 			doc.history.record(new ChangePatternInstrument(doc, instrumentDropDown.selectedIndex));
 		}
 		
@@ -418,6 +379,12 @@ SOFTWARE.
 					break;
 				case "paste":
 					paste();
+					break;
+				case "transposeUp":
+					transpose(true);
+					break;
+				case "transposeDown":
+					transpose(false);
 					break;
 				case "clean":
 					cleanSlate();
@@ -480,12 +447,12 @@ SOFTWARE.
 			<s:VGroup id="songSettings" height="100%" width="100%">
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Spacer width="50%"/>
-					<s:Label text="BeepBox version 1.1.2" color="0xbbbbbb" right="0"/>
+					<s:Label text="BeepBox version 1.1.3" color="0xbbbbbb" right="0"/>
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Button id="playButton" label="Pause" click="togglePlay(); stage.focus = stage" width="100%"/>
-					<s:HSlider id="volumeSlider" minimum="0" maximum="100" value="50" stepSize="1" snapInterval="1" liveDragging="true" showDataTip="false" change="doc.setVolume(volumeSlider.value)"/>
+					<s:HSlider id="volumeSlider" minimum="0" maximum="100" value="50" stepSize="1" snapInterval="1" liveDragging="true" showDataTip="false" change="doc.setVolume(volumeSlider.value); stage.focus = stage"/>
 				</s:HGroup>
 				<s:Button id="editButton" label="Edit Menu" click="openEditMenu();" width="100%"/>
 				<s:Button id="optionsButton" label="Preferences Menu" click="openOptionsMenu();" width="100%"/>
@@ -586,6 +553,8 @@ SOFTWARE.
 				<menuitem label="Redo (Y)" eventName="redo"/>
 				<menuitem label="Copy Pattern (C)" eventName="copy"/>
 				<menuitem label="Paste Pattern (V)" eventName="paste"/>
+				<menuitem label="Shift Notes Up (+)" eventName="transposeUp"/>
+				<menuitem label="Shift Notes Down (-)" eventName="transposeDown"/>
 				<menuitem label="Custom song size..." eventName="duration"/>
 				<menuitem label="Clean Slate" eventName="clean"/>
 			</root>
