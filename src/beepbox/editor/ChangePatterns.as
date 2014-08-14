@@ -48,7 +48,7 @@ package beepbox.editor {
 					var channel: Array = [];
 					for (j = 0; j < document.song.channelBars[i].length; j++) {
 						var bar: int = document.song.channelBars[i][j];
-						if (bar >= newPatterns) bar = 0;
+						if (bar > newPatterns) bar = 1;
 						channel.push(bar);
 					}
 					newChannelBars.push(channel);

@@ -32,7 +32,7 @@ package beepbox.editor {
 			this.document = document;
 			oldPattern = document.song.channelBars[document.channel][document.bar];
 			newPattern = pattern;
-			if (oldPattern != newPattern && pattern < document.song.channelPatterns[document.channel].length) {
+			if (oldPattern != newPattern && pattern <= document.song.channelPatterns[document.channel].length) {
 				didSomething();
 				redo();
 			}

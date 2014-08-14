@@ -30,7 +30,7 @@ package beepbox.editor {
 		public function ChangeAttack(document: Document, attack: int) {
 			super(false);
 			this.document = document;
-			oldAttack = document.song.instrumentAttacks[document.channel][document.getCurrentPattern().instrument];
+			oldAttack = document.song.instrumentAttacks[document.channel][document.getCurrentInstrument()];
 			newAttack = attack;
 			if (oldAttack != newAttack) {
 				didSomething();
@@ -39,12 +39,12 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			document.song.instrumentAttacks[document.channel][document.getCurrentPattern().instrument] = newAttack;
+			document.song.instrumentAttacks[document.channel][document.getCurrentInstrument()] = newAttack;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			document.song.instrumentAttacks[document.channel][document.getCurrentPattern().instrument] = oldAttack;
+			document.song.instrumentAttacks[document.channel][document.getCurrentInstrument()] = oldAttack;
 			document.changed();
 		}
 	}

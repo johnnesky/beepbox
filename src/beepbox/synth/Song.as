@@ -23,7 +23,7 @@ SOFTWARE.
 package beepbox.synth {
 	public class Song {
 		private static const oldestVersion: int = 2;
-		private static const latestVersion: int = 4;
+		private static const latestVersion: int = 5;
 		private static const oldBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
 		private static const newBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","-","_",];
 		
@@ -65,10 +65,10 @@ package beepbox.synth {
 				];
 			}
 			channelBars = [
-				[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-				[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-				[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-				[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 			];
 			channelOctaves = [3,2,1,0];
 			instrumentVolumes = [[0],[0],[0],[0]];
@@ -99,8 +99,8 @@ package beepbox.synth {
 			result += base64[latestVersion];
 			result += "s" + base64[scale];
 			result += "k" + base64[key];
-			result += "l" + base64[loopStart];
-			result += "e" + base64[loopLength];
+			result += "l" + base64[loopStart >> 6] + base64[loopStart & 0x3f];
+			result += "e" + base64[(loopLength - 1) >> 6] + base64[(loopLength - 1) & 0x3f];
 			result += "t" + base64[tempo];
 			result += "a" + base64[beats - 1];
 			result += "g" + base64[(bars - 1) >> 6] + base64[(bars - 1) & 0x3f];
@@ -146,7 +146,7 @@ package beepbox.synth {
 			result += "b";
 			bits = new BitField(base64);
 			var neededBits: int = 0;
-			while ((1 << neededBits) < patterns) neededBits++;
+			while ((1 << neededBits) < patterns + 1) neededBits++;
 			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < bars; i++) {
 				bits.write(neededBits, channelBars[channel][i]);
 			}
@@ -288,6 +288,7 @@ package beepbox.synth {
 			if (version == -1 || version > latestVersion || version < oldestVersion) return;
 			var beforeThree: Boolean = version < 3;
 			var beforeFour:  Boolean = version < 4;
+			var beforeFive:  Boolean = version < 5;
 			var base64: Array = beforeThree ? oldBase64 : newBase64;
 			if (beforeThree) instrumentAttacks = [[0],[0],[0],[0]];
 			if (beforeThree) instrumentWaves   = [[1],[1],[1],[0]];
@@ -303,9 +304,17 @@ package beepbox.synth {
 				} else if (command == "k") {
 					key = base64.indexOf(compressed.charAt(charIndex++));
 				} else if (command == "l") {
-					loopStart = base64.indexOf(compressed.charAt(charIndex++));
+					if (beforeFive) {
+						loopStart = base64.indexOf(compressed.charAt(charIndex++));
+					} else {
+						loopStart = (base64.indexOf(compressed.charAt(charIndex++)) << 6) + base64.indexOf(compressed.charAt(charIndex++));
+					}
 				} else if (command == "e") {
-					loopLength = base64.indexOf(compressed.charAt(charIndex++));
+					if (beforeFive) {
+						loopLength = base64.indexOf(compressed.charAt(charIndex++));
+					} else {
+						loopLength = (base64.indexOf(compressed.charAt(charIndex++)) << 6) + base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					}
 				} else if (command == "t") {
 					if (beforeFour) {
 						tempo = [1, 4, 7, 10][base64.indexOf(compressed.charAt(charIndex++))];
@@ -405,16 +414,25 @@ package beepbox.synth {
 						bits = new BitField(base64);
 						bits.load(compressed.substr(charIndex, subStringLength));
 						for (i = 0; i < barCount; i++) {
-							channelBars[channel][i] = bits.read(3);
+							channelBars[channel][i] = bits.read(3) + 1;
 						}
-					} else {
+					} else if (beforeFive) {
 						var neededBits: int = 0;
 						while ((1 << neededBits) < patterns) neededBits++;
 						bits = new BitField(base64);
 						subStringLength = Math.ceil(Music.numChannels * bars * neededBits / 6);
 						bits.load(compressed.substr(charIndex, subStringLength));
 						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < bars; i++) {
-							channelBars[channel][i] = bits.read(neededBits);
+							channelBars[channel][i] = bits.read(neededBits) + 1;
+						}
+					} else {
+						var neededBits2: int = 0;
+						while ((1 << neededBits2) < patterns + 1) neededBits2++;
+						bits = new BitField(base64);
+						subStringLength = Math.ceil(Music.numChannels * bars * neededBits2 / 6);
+						bits.load(compressed.substr(charIndex, subStringLength));
+						for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < bars; i++) {
+							channelBars[channel][i] = bits.read(neededBits2);
 						}
 					}
 					charIndex += subStringLength;
@@ -590,7 +608,14 @@ package beepbox.synth {
 		}
 		
 		public function getPattern(channel: int, bar: int): BarPattern {
-			return channelPatterns[channel][channelBars[channel][bar]];
+			var patternIndex: int = channelBars[channel][bar];
+			if (patternIndex == 0) return null;
+			return channelPatterns[channel][patternIndex - 1];
+		}
+		
+		public function getPatternInstrument(channel: int, bar: int): int {
+			var pattern: BarPattern = getPattern(channel, bar);
+			return pattern == null ? 0 : pattern.instrument;
 		}
 	}
 }

@@ -48,9 +48,9 @@ package beepbox.editor {
 		private var mouseDragging: Boolean = false;
 		private var mouseHorizontal: Boolean = false;
 		private var defaultPinChannels: Array = [
-			[new TonePin(0, 0, 3), new TonePin(0, 4, 3)],
-			[new TonePin(0, 0, 3), new TonePin(0, 4, 3)],
-			[new TonePin(0, 0, 3), new TonePin(0, 4, 3)],
+			[new TonePin(0, 0, 3), new TonePin(0, 2, 3)],
+			[new TonePin(0, 0, 3), new TonePin(0, 2, 3)],
+			[new TonePin(0, 0, 3), new TonePin(0, 2, 3)],
 			[new TonePin(0, 0, 3), new TonePin(0, 2, 0)],
 		];
 		private var copiedPinChannels: Array = defaultPinChannels.concat();
@@ -92,6 +92,8 @@ package beepbox.editor {
 		private function updateCursorStatus(): void {
 			var i: int;
 			var j: int;
+			
+			if (pattern == null) return;
 			
 			cursor = new PatternCursor();
 			
@@ -298,6 +300,7 @@ package beepbox.editor {
 		private function onEnterFrame(event: Event): void {
 			playhead.graphics.clear();
 			if (!doc.synth.playing) return;
+			if (pattern == null) return;
 			if (doc.song.getPattern(doc.channel, int(doc.synth.playhead)) != pattern) return;
 			var modPlayhead: Number = doc.synth.playhead - int(doc.synth.playhead);
 			if (Math.abs(modPlayhead - playheadX) > 0.1) {
@@ -320,6 +323,7 @@ package beepbox.editor {
 		}
 		
 		private function onMousePressed(event: Event): void {
+			if (pattern == null) return;
 			mouseDown = true;
 			mouseXStart = mouseX;
 			mouseYStart = mouseY;
@@ -333,6 +337,7 @@ package beepbox.editor {
 			var start: int;
 			var end: int;
 			var i: int = 0;
+			if (pattern == null) return;
 			if (mouseDown && cursor.valid) {
 				if (!mouseDragging) {
 					var dx: Number = mouseX - mouseXStart;
@@ -502,6 +507,7 @@ package beepbox.editor {
 		
 		private function onMouseReleased(event: Event): void {
 			if (!cursor.valid) return;
+			if (pattern == null) return;
 			if (mouseDragging) {
 				if (dragChange != null) {
 					doc.history.record(dragChange);
@@ -542,7 +548,7 @@ package beepbox.editor {
 		
 		private function updatePreview(): void {
 			preview.graphics.clear();
-			if (!mouseOver || mouseDown || !cursor.valid) return;
+			if (!mouseOver || mouseDown || !cursor.valid || pattern == null) return;
 			
 			preview.graphics.lineStyle(2, 0xffffff);
 			drawNote(preview.graphics, cursor.note, cursor.start, cursor.pins, noteHeight / 2 + 1, true, octaveOffset);
@@ -568,6 +574,10 @@ package beepbox.editor {
 			graphics.drawRect(0, 0, partWidth * doc.song.beats * doc.song.parts, noteHeight * noteCount);
 			graphics.endFill();
 			
+			updatePreview();
+			
+			if (pattern == null) return;
+			
 			for (var j: int = 0; j < noteCount; j++) {
 				if (doc.channel != 3 && Music.scaleFlags[doc.song.scale][j%12] == false) {
 					continue;
@@ -589,9 +599,11 @@ package beepbox.editor {
 			if (doc.channel != 3 && doc.showChannels) {
 				for (var channel: int = 2; channel >= 0; channel--) {
 					if (channel == doc.channel) continue;
-					for each (tone in doc.song.getPattern(channel, doc.bar).tones) {
+					var pattern2: BarPattern = doc.song.getPattern(channel, doc.bar);
+					if (pattern2 == null) continue;
+					for each (tone in pattern2.tones) {
 						for each (note in tone.notes) {
-							graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][channel]);
+							graphics.beginFill(SongEditor.noteColorsDim[channel]);
 							drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
 							graphics.endFill();
 						}
@@ -600,16 +612,14 @@ package beepbox.editor {
 			}
 			for each (tone in pattern.tones) {
 				for each (note in tone.notes) {
-					graphics.beginFill([0x66dd66, 0xcccc66, 0xdd8866, 0xaaaaaa][doc.channel]);
+					graphics.beginFill(SongEditor.noteColorsDim[doc.channel]);
 					drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
 					graphics.endFill();
-					graphics.beginFill([0xccffcc, 0xffffcc, 0xffddcc, 0xeeeeee][doc.channel]);
+					graphics.beginFill(SongEditor.noteColorsBright[doc.channel]);
 					drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
 					graphics.endFill();
 				}
 			}
-			
-			updatePreview();
 		}
 		
 		private function drawNote(graphics: Graphics, note: int, start: int, pins: Array, radius: int, showVolume: Boolean, offset: Number): void {

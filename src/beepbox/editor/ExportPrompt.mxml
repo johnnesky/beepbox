@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (C) 2012 John Nesky
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+-->
+
+<s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+                   xmlns:mx="library://ns.adobe.com/flex/mx"
+                   xmlns:s="library://ns.adobe.com/flex/spark"
+                   xmlns="beepbox.editor.*"
+                   horizontalCenter="0" verticalCenter="0"
+                   backgroundColor="0x000000"
+                   borderColor="0x444444"
+                   borderWeight="4"
+                   cornerRadius="15"
+                   creationComplete="init()">
+	<fx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		import flash.net.*;
+		
+		import mx.collections.ArrayCollection;
+		import mx.controls.Menu;
+		import mx.events.MenuEvent;
+		
+		import com.hurlant.util.Hex;
+		import com.hurlant.crypto.hash.SHA256;
+		import com.hurlant.crypto.rsa.RSAKey;
+		
+		import beepbox.synth.*;
+		
+		[Bindable]
+		private var doc: Document;
+		
+		[Bindable]
+		private var onClose: Function;
+		
+		[Bindable]
+		private var repeatCounts: ArrayCollection;
+		
+		public static function make(doc: Document, onClose: Function): ExportPrompt {
+			var prompt: ExportPrompt = new ExportPrompt();
+			prompt.doc = doc;
+			prompt.onClose = onClose;
+			return prompt;
+		}
+		
+		private function init():void {
+			repeatCounts = new ArrayCollection(["1", "2", "3", "4"]);
+			loopDropDown.selectedIndex = 0;
+			
+			if (doc.song.loopStart == 0) {
+				enableIntro.selected = false;
+				enableIntro.enabled = false;
+			}
+			if (doc.song.loopStart + doc.song.loopLength == doc.song.bars) {
+				enableOutro.selected = false;
+				enableOutro.enabled = false;
+			}
+			
+			addEventListener(KeyboardEvent.KEY_DOWN, catchKeys);
+			addEventListener(KeyboardEvent.KEY_UP, catchKeys);
+		}
+		
+		private function catchKeys(event: KeyboardEvent): void {
+			event.stopPropagation();
+		}
+		
+		private function onExport(): void {
+			var synth: Synth = new Synth(doc.song)
+			synth.enableIntro = enableIntro.selected;
+			synth.enableOutro = enableOutro.selected;
+			synth.loopCount = loopDropDown.selectedIndex + 1;
+			if (!synth.enableIntro) {
+				for (var introIter: int = 0; introIter < doc.song.loopStart; introIter++) {
+					synth.nextBar();
+				}
+			}
+			var sampleFrames: int = synth.totalSamples;
+			var recordedSamples: ByteArray = new ByteArray();
+			var timer: int = getTimer();
+			synth.synthesize(recordedSamples, sampleFrames);
+			trace("export timer", getTimer() - timer);
+			
+			var srcChannelCount: int = 2;
+			var wavChannelCount: int = 1;
+			var sampleRate: int = 44100;
+			var bytesPerSample: int = 2;
+			var bitsPerSample: int = 8 * bytesPerSample;
+			var sampleCount: int = wavChannelCount * sampleFrames;
+
+			var data: ByteArray = new ByteArray();
+			data.endian = Endian.LITTLE_ENDIAN;
+			data.writeUTFBytes("RIFF");
+			data.writeInt(36 + sampleCount * bytesPerSample); // size of remaining file
+			data.writeUTFBytes("WAVEfmt ");
+			data.writeInt(0x00000010); // size of following header
+			data.writeShort(0x0001); // not compressed
+			data.writeShort(wavChannelCount); // channel count
+			data.writeInt(sampleRate); // sample rate
+			data.writeInt(sampleRate * bytesPerSample * wavChannelCount); // bytes per second
+			data.writeShort(bytesPerSample); // sample rate
+			data.writeShort(bitsPerSample); // sample rate
+			data.writeUTFBytes("data");
+			data.writeInt(sampleCount * bytesPerSample);
+			
+			var stride: int;
+			var repeat: int;
+			if (srcChannelCount == wavChannelCount) {
+				stride = 1;
+				repeat = 1;
+			} else {
+				stride = srcChannelCount;
+				repeat = wavChannelCount;
+			}
+			
+			var i: int;
+			var j: int;
+			var k: int;
+			var val: int;
+			recordedSamples.position = 0;
+			if (bytesPerSample > 1) {
+				// usually samples are signed. 
+				for (i = 0; i < sampleFrames; i++) {
+					for (j = 0; j < stride; j++) {
+						val = recordedSamples.readFloat() * ((1 << (bitsPerSample - 1)) - 1);
+					}
+					for (k = 0; k < repeat; k++) {
+						if (bytesPerSample == 2) {
+							data.writeShort(val);
+						} else if (bytesPerSample == 4) {
+							data.writeInt(val);
+						} else {
+							throw new Error("unsupported sample size");
+						}
+					}
+				}
+			} else {
+				// 8 bit samples are a special case: they are unsigned.
+				for (i = 0; i < sampleFrames; i++) {
+					for (j = 0; j < stride; j++) {
+						val = recordedSamples.readFloat() * 127 + 128;
+					}
+					for (k = 0; k < repeat; k++) {
+						data.writeByte(val > 255 ? 255 : (val < 0 ? 0 : val));
+					}
+				}
+			}
+			
+			new FileReference().save(data, "song.wav");
+			
+			onClose();
+		}
+	]]></fx:Script>
+	<s:VGroup horizontalAlign="center" gap="30"
+	          paddingTop="20" paddingBottom="20" paddingLeft="20" paddingRight="20">
+		<s:Label text="Export Options" color="0xffffff" fontSize="30"/>
+		<s:VGroup>
+			<s:HGroup verticalAlign="middle" gap="5">
+				<s:Label text="Intro:" color="0xffffff" width="60"/>
+				<s:Label text="Loop count:" color="0xffffff" width="70"/>
+				<s:Label text="Outro:" color="0xffffff" width="60"/>
+			</s:HGroup>
+			<s:HGroup verticalAlign="middle" gap="5">
+				<s:VGroup horizontalAlign="center" width="60">
+					<s:CheckBox id="enableIntro" selected="true"/>
+				</s:VGroup>
+				<s:DropDownList id="loopDropDown" dataProvider="{repeatCounts}" width="70">
+					<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
+				</s:DropDownList>
+				<s:VGroup horizontalAlign="center" width="60">
+					<s:CheckBox id="enableOutro" selected="true"/>
+				</s:VGroup>
+			</s:HGroup>
+		</s:VGroup>
+		<s:Button id="exportButton" label="Export" click="onExport();" width="200"/>
+		<s:Button id="closeButton" label="Cancel" click="onClose();" width="200"/>
+	</s:VGroup>
+</s:BorderContainer>

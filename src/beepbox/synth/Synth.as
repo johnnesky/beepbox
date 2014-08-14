@@ -52,10 +52,13 @@ package beepbox.synth {
 		];
 		
 		public var song: Song = null;
+		public var stutterPressed: Boolean = false;
 		public var pianoPressed: Boolean = false;
 		public var pianoNote: int = 0;
 		public var pianoChannel: int = 0;
 		public var enableIntro: Boolean = true;
+		public var enableOutro: Boolean = false;
+		public var loopCount: int = -1;
 		public var volume: Number = 1.0;
 		
 		private var _playhead: Number = 0.0;
@@ -102,7 +105,13 @@ package beepbox.synth {
 		
 		public function get totalSamples(): int {
 			if (song == null) return 0;
-			return getSamplesPerArpeggio() * 4 * song.parts * song.beats * song.bars;
+			var samplesPerBar: int = getSamplesPerArpeggio() * 4 * song.parts * song.beats;
+			var loopMinCount: int = loopCount;
+			if (loopMinCount < 0) loopMinCount = 1;
+			var bars: int = song.loopLength * loopMinCount;
+			if (enableIntro) bars += song.loopStart;
+			if (enableOutro) bars += song.bars - (song.loopStart + song.loopLength);
+			return bars * samplesPerBar;
 		}
 		
 		public function get totalSeconds(): Number {
@@ -237,7 +246,7 @@ package beepbox.synth {
 			if (paused) {
 				return;
 			} else {
-				synthesize(event.data, 4096, true);
+				synthesize(event.data, 4096);
 			}
 			stillGoing = true;
 		}
@@ -253,7 +262,52 @@ package beepbox.synth {
 			}
 		}
 		
-		public function synthesize(data: ByteArray, totalSamples: int, loop: Boolean): void {
+		public function synthesize(data: ByteArray, totalSamples: int): void {
+			var stutterFunction: Function;
+			if (stutterPressed) {
+				var barOld: int = bar;
+				var beatOld: int = beat;
+				var partOld: int = part;
+				var arpeggioOld: int = arpeggio;
+				var arpeggioSamplesOld: int = arpeggioSamples;
+				var leadPeriodAOld: Number = leadPeriodA;
+				var leadPeriodBOld: Number = leadPeriodB;
+				var leadSampleOld: Number = leadSample;
+				var harmonyPeriodAOld: Number = harmonyPeriodA;
+				var harmonyPeriodBOld: Number = harmonyPeriodB;
+				var harmonySampleOld: Number = harmonySample;
+				var bassPeriodAOld: Number = bassPeriodA;
+				var bassPeriodBOld: Number = bassPeriodB;
+				var bassSampleOld: Number = bassSample;
+				var drumPeriodOld: Number = drumPeriod;
+				var drumSampleOld: Number = drumSample;
+				var drumSignalOld: Number = drumSignal;
+				var effectPeriodOld: Number = effectPeriod;
+				var limitOld: Number = limit;
+				stutterFunction = function(): void {
+					bar = barOld;
+					beat = beatOld;
+					part = partOld;
+					arpeggio = arpeggioOld;
+					arpeggioSamples = arpeggioSamplesOld;
+					leadPeriodA = leadPeriodAOld;
+					leadPeriodB = leadPeriodBOld;
+					leadSample = leadSampleOld;
+					harmonyPeriodA = harmonyPeriodAOld;
+					harmonyPeriodB = harmonyPeriodBOld;
+					harmonySample = harmonySampleOld;
+					bassPeriodA = bassPeriodAOld;
+					bassPeriodB = bassPeriodBOld;
+					bassSample = bassSampleOld;
+					drumPeriod = drumPeriodOld;
+					drumSample = drumSampleOld;
+					drumSignal = drumSignalOld;
+					effectPeriod = effectPeriodOld;
+					limit = limitOld;
+				}
+			}
+			
+			
 			var i: int;
 			
 			var sampleTime: Number = 1.0 / samplesPerSecond;
@@ -279,17 +333,19 @@ package beepbox.synth {
 			}
 			if (beat >= song.beats) {
 				bar++;
-				if (loop) {
-					if (bar < song.loopStart && !enableIntro) bar = song.loopStart;
-					if (bar >= song.loopStart + song.loopLength) bar = song.loopStart;
-				}
 				beat = 0;
 				part = 0;
 				arpeggio = 0;
 				arpeggioSamples = samplesPerArpeggio;
+				
+				if (loopCount == -1) {
+					if (bar < song.loopStart && !enableIntro) bar = song.loopStart;
+					if (bar >= song.loopStart + song.loopLength && !enableOutro) bar = song.loopStart;
+				}
 			}
 			if (bar >= song.bars) {
 				bar = song.loopStart;
+				enableOutro = false;
 			}
 			if (bar >= song.loopStart) {
 				enableIntro = false;
@@ -326,10 +382,10 @@ package beepbox.synth {
 			var bassChorusB:    Number;
 			
 			var updateInstruments: Function = function(): void {
-				var instrumentLead: int    = song.getPattern(0, bar).instrument;
-				var instrumentHarmony: int = song.getPattern(1, bar).instrument;
-				var instrumentBass: int    = song.getPattern(2, bar).instrument;
-				var instrumentDrum: int    = song.getPattern(3, bar).instrument;
+				var instrumentLead: int    = song.getPatternInstrument(0, bar);
+				var instrumentHarmony: int = song.getPatternInstrument(1, bar);
+				var instrumentBass: int    = song.getPatternInstrument(2, bar);
+				var instrumentDrum: int    = song.getPatternInstrument(3, bar);
 				
 				maxLeadVolume    = Music.channelVolumes[0] * (song.instrumentVolumes[0][instrumentLead] == 5 ? 0.0 :    Math.pow(2, -Music.volumeValues[song.instrumentVolumes[0][instrumentLead]]))    * Music.waveVolumes[song.instrumentWaves[0][instrumentLead]]    * Music.filterVolumes[song.instrumentFilters[0][instrumentLead]]    * Music.chorusVolumes[song.instrumentChorus[0][instrumentLead]]    * 0.5;
 				maxHarmonyVolume = Music.channelVolumes[1] * (song.instrumentVolumes[1][instrumentHarmony] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[1][instrumentHarmony]])) * Music.waveVolumes[song.instrumentWaves[1][instrumentHarmony]] * Music.filterVolumes[song.instrumentFilters[1][instrumentHarmony]] * Music.chorusVolumes[song.instrumentChorus[0][instrumentHarmony]] * 0.5;
@@ -407,19 +463,21 @@ package beepbox.synth {
 				for (var channel: int = 0; channel < 4; channel++) {
 					var pattern: BarPattern = song.getPattern(channel, bar);
 					
-					var attack: int = song.instrumentAttacks[channel][pattern.instrument];
+					var attack: int = pattern == null ? 0 : song.instrumentAttacks[channel][pattern.instrument];
 					
 					var tone: Tone = null;
 					var prevTone: Tone = null;
 					var nextTone: Tone = null;
-					for (i = 0; i < pattern.tones.length; i++) {
-						if (pattern.tones[i].end <= time) {
-							prevTone = pattern.tones[i];
-						} else if (pattern.tones[i].start <= time && pattern.tones[i].end > time) {
-							tone = pattern.tones[i];
-						} else if (pattern.tones[i].start > time) {
-							nextTone = pattern.tones[i];
-							break;
+					if (pattern != null) {
+						for (i = 0; i < pattern.tones.length; i++) {
+							if (pattern.tones[i].end <= time) {
+								prevTone = pattern.tones[i];
+							} else if (pattern.tones[i].start <= time && pattern.tones[i].end > time) {
+								tone = pattern.tones[i];
+							} else if (pattern.tones[i].start > time) {
+								nextTone = pattern.tones[i];
+								break;
+							}
 						}
 					}
 					if (tone != null && prevTone != null && prevTone.end != tone.start) prevTone = null;
@@ -735,18 +793,20 @@ package beepbox.synth {
 								beat = 0;
 								effectPeriod = 0.0;
 								bar++;
-								if (loop) {
-									if (bar < song.loopStart) {
-										if (!enableIntro) bar = song.loopStart;
-									} else {
-										enableIntro = false;
-									}
-									if (bar >= song.loopStart + song.loopLength) {
+								if (bar < song.loopStart) {
+									if (!enableIntro) bar = song.loopStart;
+								} else {
+									enableIntro = false;
+								}
+								if (bar >= song.loopStart + song.loopLength) {
+									if (loopCount > 0) loopCount--;
+									if (loopCount != 0) {
 										bar = song.loopStart;
 									}
 								}
 								if (bar >= song.bars) {
 									bar = song.loopStart;
+									enableOutro = false;
 								}
 								updateInstruments();
 							}
@@ -755,6 +815,7 @@ package beepbox.synth {
 				}
 			}
 			
+			if (stutterPressed) stutterFunction();
 			_playhead = (((arpeggio + 1.0 - arpeggioSamples / samplesPerArpeggio) / 4.0 + part) / song.parts + beat) / song.beats + bar;
 		}
 		
