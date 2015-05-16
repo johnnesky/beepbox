@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>BeepBox</title>
+	<meta content="BeepBox is a tool for sketching and sharing chiptune melodies." name="Description" />
+	<meta content="chiptune, music, melody, composition, tool, square wave, NES, NSF, BeepBox, beepbox" name="Keywords" />
+	<style type="text/css">
+div {
+	margin: 0;
+	padding: 0;
+}
+body {
+	font-family: sans-serif;
+	font-size: 16px;
+	color: #ffffff;
+}
+h1 {
+	font-size: 30px;
+	text-align: center;
+}
+.centerDiv {
+	margin: 0px auto;
+}
+a {
+	color: #8866ff;
+}
+	</style>
+</head>
+
+<body bgcolor="#000000"> <div class="centerDiv" style="width: 700px">
+	
+	<div id="beepboxEditorContainer" style="width: 700px; height: 645px;"></div>
+	
+	<h1>
+		BeepBox
+	</h1>
+	<p>
+		BeepBox is an online tool for sketching and sharing chiptune melodies. 
+	</p>
+	<p>
+		All song data is packaged into the URL at the top of your browser. 
+		When you make changes to the song, the URL is updated to reflect your changes. 
+		When you are satisfied with your song, just copy and paste the URL to save and share your song! 
+	</p>
+	
+	<div>
+		<div style="width: 375px; display: inline-block;">
+			<h1>
+				Instructions
+			</h1>
+			<p>
+				You can add or remove notes by clicking on the gray rows at the top. 
+				BeepBox automatically plays the notes out loud for you. Try it!
+			</p>
+			<p>
+				Notes go into patterns, and you can edit one pattern at a time.
+				Those numbered boxes at the bottom of the editor are the different patterns you can edit.
+				Click the other boxes to move to a different part of the song, or click the arrows on the currently selected box to swap which pattern is played during that part of the song.
+			</p>
+			<p>
+				There are four rows of patterns that BeepBox can play simultaneously, and each row has its own set of patterns. 
+				The first three rows can play melodies and the bottom row is for drums.
+			</p>
+			<p>
+				The purple loop underneath the numbered boxes controls which part of the song is currently repeating. 
+				Move the loop to listen to a different part of the song, or drag the ends to expand the loop to include the whole song. 
+			</p>
+			<p>
+				When BeepBox has focus (click on its interface above), you can use these keyboard shortcuts: <br/>
+				<p style="margin-left:50px;">
+					Spacebar: Pause or Resume<br/>
+					Z: Undo<br/>
+					Y or Shift Z: Redo<br/>
+					C: Copy the current pattern<br/>
+					V: Paste the current pattern<br/>
+					[ ]: Move the playhead backward and forward<br/>
+					Arrow Keys: Change which bar is selected<br/>
+					1-8: Reassign a pattern to the currently selected bar<br/>
+				</p>
+			</p>
+			<p>
+				In the pattern editor, you can click and drag horizontally on a note to adjust its duration.
+				You can also click above or below an existing note to enable a rapid arpeggio/trill effect, oscillating between two or more simultaneous notes. 
+			</p>
+			<p>
+				ADVANCED: Drag vertically on an existing note to bend its pitch, or drag vertically from above or below the note to adjust its volume.
+			</p>
+			<p>
+				BeepBox has many more features. 
+				Try playing with the buttons and menus on the right side to find out what it can do!
+			</p>
+			<p>
+				Need some inspiration? <a href="https://twitter.com/beepboxco">Check out some of these songs that other people have posted on Twitter!</a>
+			</p>
+			<h1>
+				About
+			</h1>
+			<p>
+				BeepBox is developed by <a href="http://www.johnnesky.com">John Nesky</a>, also known as <a href="https://twitter.com/shaktool">@shaktool</a>. 
+			</p>
+			<p>
+				You can download <a href="BeepBoxOffline.swf">an offline Flash version of BeepBox</a> (right click and select "Save As...") to use when you don't have access to the internet. The features are otherwise the same. You can open BeepBoxOffline.swf in a browser tab to run it, or you can install a <a href="http://www.adobe.com/support/flashplayer/downloads.html">Flash Projector</a> to run swf files without a browser. 
+			</p>
+			<p>
+				You can download and use <a href="https://bitbucket.org/shaktool/beepbox">the source code</a> under the MIT license. In particular, you can use the synth code <a href="synth_example.html">as demonstrated here</a> to play BeepBox songs in your own JavaScript projects! 
+			</p>
+			<p>
+				Neither John Nesky nor BeepBox assume responsibility for any copyrighted material played on BeepBox. No songs are ever received, recorded, or distributed by BeepBox's servers. All song data is contained in the URL after the hash (#) mark, and BeepBox running inside your browser converts that data into sound waves.
+			</p>
+		</div>
+		<div style="width: 300px; float: right;">
+			<h1>
+				Shared on Twitter:
+			</h1>
+			<a class="twitter-timeline" width="300" data-tweet-limit="10" data-link-color="#8866ff" data-chrome="noheader nofooter transparent" data-dnt="true" href="https://twitter.com/search?q=beepbox.co" data-widget-id="418501337848889345">Tweets about "beepbox.co"</a>
+			<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+		</div>
+	</div>
+</div>
+
+<!--
+Instead of loading js beepbox editor interface directly, test for browser support.
+<script type="text/javascript" src="beepbox_editor.js"></script>
+-->
+<script type="text/javascript">
+//<![CDATA[
+
+var hasAudioContext = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
+
+// Note: Safari doesn't support saving generated audio files. (But on iOS Safari, use js anyway since Flash doesn't work)
+var isMacSafari = /Macintosh/i.test(navigator.userAgent) && /Safari/i.test(navigator.userAgent) && !(/Chrome/i.test(navigator.userAgent));
+
+if (hasAudioContext && !isMacSafari) {
+	// Go ahead and load js beepbox editor interface:
+	var fileref = document.createElement("script")
+	fileref.setAttribute("type", "text/javascript")
+	fileref.setAttribute("src", "beepbox_editor.js")
+	document.getElementsByTagName("head")[0].appendChild(fileref)
+} else {
+	document.getElementById("beepboxEditorContainer").innerHTML = '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=11,0,0,0" width="700" height="645" id="BeepBox" align="middle"><param name="allowScriptAccess" value="sameDomain" /><param name="movie" value="BeepBoxOnline.swf" /><param name="quality" value="high" /><param name="bgcolor" value="#000000" /><embed src="BeepBoxOnline.swf" quality="high" bgcolor="#000000" width="700" height="645" name="BeepBox" align="middle" allowScriptAccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" /></object>';
+	
+	var hashInterval = null;
+	var myhash = "**blank**";
+	
+	function getFlashMovieObject(movieName)
+	{
+		if (window.document[movieName])  {
+			return window.document[movieName];
+		}
+		if (navigator.appName.indexOf("Microsoft Internet")==-1) {
+			if (document.embeds && document.embeds[movieName])
+				return document.embeds[movieName]; 
+		} else // if (navigator.appName.indexOf("Microsoft Internet")!=-1)
+		{
+			return document.getElementById(movieName);
+		} 	
+	}
+	
+	function pageDidLoad() {
+		hashInterval = setInterval('checkHash()', 100);
+	}
+	
+	function checkHash() {
+		if (myhash != location.hash) {
+			var flashMovie = getFlashMovieObject("BeepBox");
+			if (flashMovie && flashMovie.hashUpdatedExternally) {
+				myhash = location.hash;
+				flashMovie.hashUpdatedExternally(myhash);
+			}
+		}
+	}
+	
+	function documentUpdated(message) {
+		if (location.hash != message) {
+			location.hash = message;
+			myhash = message;
+		}
+	}
+	
+	hashInterval = setInterval('checkHash()', 100);
+}
+
+//]]>
+</script>
+
+</body></html>

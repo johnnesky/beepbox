@@ -44,11 +44,11 @@ SOFTWARE.
 		import mx.collections.ArrayCollection;
 		import mx.controls.Menu;
 		import mx.events.MenuEvent;
-		
+		/*
 		import com.hurlant.util.Hex;
 		import com.hurlant.crypto.hash.SHA256;
 		import com.hurlant.crypto.rsa.RSAKey;
-		
+		*/
 		import beepbox.synth.*;
 		
 		[Bindable]
