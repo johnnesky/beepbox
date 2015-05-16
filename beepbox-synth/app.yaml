@@ -1,5 +1,5 @@
 application: beepbox-synth
-version: 1-1-3
+version: 2-0b
 runtime: python27
 api_version: 1
 threadsafe: true
@@ -38,6 +38,14 @@ handlers:
   static_files: BeepBoxEmbedded.swf
   upload: BeepBoxEmbedded\.swf
 
+- url: /beepbox_editor\.js
+  static_files: beepbox_editor.js
+  upload: beepbox_editor.js
+
+- url: /beepbox_synth\.js
+  static_files: beepbox_editor.js
+  upload: beepbox_editor.js
+
 - url: /CryptoTest\.swf
   static_files: CryptoTest.swf
   upload: CryptoTest\.swf
@@ -61,6 +69,10 @@ handlers:
 - url: /test\.html
   static_files: test.html
   upload: test\.html
+
+- url: /synth_example\.html
+  static_files: synth_example.html
+  upload: synth_example\.html
 
 #- url: /.*
 #  script: main.py
