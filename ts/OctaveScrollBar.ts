@@ -60,6 +60,7 @@ module beepbox {
 		}
 		
 		function onMousePressed(event: MouseEvent): void {
+			event.preventDefault();
 			mouseDown = true;
 			if (doc.channel == 3) return;
 			updatePreview();
