@@ -304,6 +304,7 @@ module beepbox {
 		}
 		
 		function onMousePressed(event: MouseEvent): void {
+			event.preventDefault();
 			if (pattern == null) return;
 			mouseDown = true;
 			mouseXStart = mouseX;

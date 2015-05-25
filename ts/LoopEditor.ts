@@ -113,6 +113,7 @@ module beepbox {
 		}
 		
 		function onMousePressed(event: MouseEvent): void {
+			event.preventDefault();
 			mouseDown = true;
 			updateCursorStatus();
 			updatePreview();

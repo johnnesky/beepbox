@@ -163,6 +163,7 @@ module beepbox {
 		}
 		
 		function onMousePressed(event: MouseEvent): void {
+			event.preventDefault();
 			var channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, mouseY / channelHeight)));
 			var bar: number = Math.floor(Math.min(doc.song.bars-1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
 			if (doc.channel == channel && doc.bar == bar) {

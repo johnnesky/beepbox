@@ -55,6 +55,7 @@ module beepbox {
 		}
 		
 		function onMousePressed(event: MouseEvent): void {
+			e.preventDefault();
 			mouseDown = true;
 			updatePreview();
 			if (mouseX >= doc.barScrollPos * barWidth && mouseX <= (doc.barScrollPos + 16) * barWidth) {

@@ -3474,6 +3474,7 @@ var beepbox;
             mouseOver = false;
         }
         function onMousePressed(event) {
+            event.preventDefault();
             if (pattern == null)
                 return;
             mouseDown = true;
@@ -4001,6 +4002,7 @@ var beepbox;
             mouseOver = false;
         }
         function onMousePressed(event) {
+            event.preventDefault();
             var channel = Math.floor(Math.min(beepbox.Music.numChannels - 1, Math.max(0, mouseY / channelHeight)));
             var bar = Math.floor(Math.min(doc.song.bars - 1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
             if (doc.channel == channel && doc.bar == bar) {
@@ -4205,6 +4207,7 @@ var beepbox;
             mouseOver = false;
         }
         function onMousePressed(event) {
+            event.preventDefault();
             mouseDown = true;
             updateCursorStatus();
             updatePreview();
@@ -4394,6 +4397,7 @@ var beepbox;
             mouseOver = false;
         }
         function onMousePressed(event) {
+            e.preventDefault();
             mouseDown = true;
             updatePreview();
             if (mouseX >= doc.barScrollPos * barWidth && mouseX <= (doc.barScrollPos + 16) * barWidth) {
@@ -4561,6 +4565,8 @@ var beepbox;
             mouseOver = false;
         }
         function onMousePressed(event) {
+            console.log('wat');
+            event.preventDefault();
             mouseDown = true;
             if (doc.channel == 3)
                 return;
@@ -4775,6 +4781,7 @@ var beepbox;
             mouseOver = false;
         }
         function onMousePressed(event) {
+            event.preventDefault();
             mouseDown = true;
             doc.synth.pianoPressed = true;
             updatePreview();
