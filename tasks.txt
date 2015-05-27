@@ -152,6 +152,19 @@
 √ take focus away from master volume after clicking it
 √ wav export intro, loop count, outro
 √ disable intro and outro checkboxes when the loop encompasses the entire song
+√ javascript mobile support!
+
+- document synth api
+- minify
+- export audio, mp3 and ogg?
+- detect vibrate switch
+- circle of fifths display
+- disable canvas pixel blurring in high dpi? why doesn't it work yet?
+- show playhead on loop editor?
+- multitouch?
+http://www.html5rocks.com/en/mobile/touchandmouse/
+http://www.html5rocks.com/en/mobile/touch/
+- responsive design layout?
 
 ? fix those goddamn flex dropdowns so they stop throwing errors
 - new preferences: follow playhead, play at load?
@@ -161,10 +174,13 @@
 - piano should still play when song is paused
 - more “effect” keys like stutter, scratch, scrub, drag playhead, speedmult, whatever.
 - asynchronous wav export
-- javascript mobile support?
+
+
+
+
 
 NEXT VERSION:
-- round trip to server. How are the link, iframe html, and twitter button presented?
+- round trip to server auth. How are the link, iframe html, and twitter button presented?
 - author, password, website
 - red close button in corner
 - show light "http://" or "http://www.beepbox.com/" in url fields while empty

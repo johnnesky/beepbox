@@ -139,7 +139,7 @@ var hasAudioContext = (window.AudioContext || window.webkitAudioContext || windo
 // Note: Safari doesn't support saving generated audio files from javascript. (But on iOS Safari, use js anyway since Flash doesn't work)
 var isMacSafari = /Macintosh/i.test(navigator.userAgent) && /Safari/i.test(navigator.userAgent) && !(/Chrome/i.test(navigator.userAgent));
 
-if (hasAudioContext && !isMacSafari && !hasFlash) {
+if (hasAudioContext && (!isMacSafari || !hasFlash)) {
 	// Go ahead and load js beepbox editor interface:
 	var fileref = document.createElement("script")
 	fileref.setAttribute("type", "text/javascript")
