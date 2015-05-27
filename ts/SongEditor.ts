@@ -544,7 +544,7 @@ beepboxEditorContainer.innerHTML = (function () {
 	
 	<div style="float: left; width: 182px; height: 645px; font-size: 12px;">
 		<div style="width:100%; text-align: center; color: #bbbbbb;">
-			BeepBox 2.0 beta
+			BeepBox 2.0
 		</div>
 		
 		<div style="width:100%; margin: 5px 0;">
