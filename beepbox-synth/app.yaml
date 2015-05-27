@@ -70,6 +70,10 @@ handlers:
   static_files: test.html
   upload: test\.html
 
+- url: /js\.html
+  static_files: js.html
+  upload: js\.html
+
 - url: /synth_example\.html
   static_files: synth_example.html
   upload: synth_example\.html

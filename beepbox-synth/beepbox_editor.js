@@ -4397,7 +4397,7 @@ var beepbox;
             mouseOver = false;
         }
         function onMousePressed(event) {
-            e.preventDefault();
+            event.preventDefault();
             mouseDown = true;
             updatePreview();
             if (mouseX >= doc.barScrollPos * barWidth && mouseX <= (doc.barScrollPos + 16) * barWidth) {
@@ -4565,7 +4565,6 @@ var beepbox;
             mouseOver = false;
         }
         function onMousePressed(event) {
-            console.log('wat');
             event.preventDefault();
             mouseDown = true;
             if (doc.channel == 3)
