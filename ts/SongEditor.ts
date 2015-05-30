@@ -733,10 +733,3 @@ new beepbox.SongEditor(doc);
 doc.history.watch(onUpdated);
 
 checkHash();
-
-
-
-var lamescript = document.createElement("script")
-lamescript.setAttribute("type", "text/javascript")
-lamescript.setAttribute("src", "https://raw.githubusercontent.com/akrennmair/libmp3lame-js/master/dist/libmp3lame.min.js")
-document.getElementsByTagName("head")[0].appendChild(lamescript)
