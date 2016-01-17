@@ -156,7 +156,7 @@ module beepbox {
 		});
 		
 		function refocusStage(event: Event): void {
-			//stage.focus = stage;
+			mainLayer.focus();
 		}
 		
 		function onUpdated(): void {
@@ -462,7 +462,7 @@ module beepbox {
 		exportButton.addEventListener("click", openExportPrompt);
 		volumeSlider.addEventListener("input", setVolumeSlider);
 		
-		//editorBox.addEventListener("mousedown", refocusStage);
+		editorBox.addEventListener("mousedown", refocusStage);
 		mainLayer.addEventListener("keydown", onKeyPressed);
 		mainLayer.addEventListener("keyup", onKeyReleased);
 	}

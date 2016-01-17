@@ -1719,11 +1719,10 @@ SOFTWARE.
 */
 /// <reference path="synth.ts" />
 "use strict";
-var __extends = this.__extends || function (d, b) {
+var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
-    __.prototype = b.prototype;
-    d.prototype = new __();
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var beepbox;
 (function (beepbox) {
@@ -5305,7 +5304,7 @@ var beepbox;
             mainLayer.focus();
         });
         function refocusStage(event) {
-            //stage.focus = stage;
+            mainLayer.focus();
         }
         function onUpdated() {
             var optionCommands = [
@@ -5585,7 +5584,7 @@ var beepbox;
         playButton.addEventListener("click", togglePlay);
         exportButton.addEventListener("click", openExportPrompt);
         volumeSlider.addEventListener("input", setVolumeSlider);
-        //editorBox.addEventListener("mousedown", refocusStage);
+        editorBox.addEventListener("mousedown", refocusStage);
         mainLayer.addEventListener("keydown", onKeyPressed);
         mainLayer.addEventListener("keyup", onKeyReleased);
     };
