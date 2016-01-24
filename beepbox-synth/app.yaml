@@ -43,8 +43,8 @@ handlers:
   upload: beepbox_editor.js
 
 - url: /beepbox_synth\.js
-  static_files: beepbox_editor.js
-  upload: beepbox_editor.js
+  static_files: beepbox_synth.js
+  upload: beepbox_synth.js
 
 - url: /CryptoTest\.swf
   static_files: CryptoTest.swf
