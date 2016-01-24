@@ -1052,7 +1052,7 @@ var beepbox;
             this._scriptNode.channelCountMode = 'explicit';
             this._scriptNode.channelInterpretation = 'speakers';
             this._scriptNode.connect(this._audioCtx.destination);
-            this.samplesPerSecond = this._audioCtx;
+            this.samplesPerSecond = this._audioCtx.sampleRate;
             this._effectAngle = Math.PI * 2.0 / (this._effectDuration * this.samplesPerSecond);
             this._effectYMult = 2.0 * Math.cos(this._effectAngle);
             this._limitDecay = 1.0 / (2.0 * this.samplesPerSecond);
