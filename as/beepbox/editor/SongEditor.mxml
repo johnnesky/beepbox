@@ -146,7 +146,7 @@ SOFTWARE.
 		private function onUpdated(): void {
 			scaleDropDown.selectedIndex = doc.song.scale;
 			keyDropDown.selectedIndex = doc.song.key;
-			tempoDropDown.selectedIndex = doc.song.tempo;
+			tempoSlider.value = doc.song.tempo;
 			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
 			if (doc.channel == 3) {
 				filterDropDownGroup.visible = false;
@@ -173,7 +173,7 @@ SOFTWARE.
 			attackDropDown.selectedIndex = doc.song.instrumentAttacks[doc.channel][instrument];
 			effectDropDown.selectedIndex = doc.song.instrumentEffects[doc.channel][instrument];
 			chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][instrument];
-			volumeDropDown.selectedIndex = doc.song.instrumentVolumes[doc.channel][instrument];
+			channelVolumeSlider.value = -doc.song.instrumentVolumes[doc.channel][instrument];
 			instrumentDropDown.selectedIndex = instrument;
 			
 			//currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
@@ -314,7 +314,7 @@ SOFTWARE.
 		}
 		
 		private function onSetTempo(): void {
-			doc.history.record(new ChangeTempo(doc, tempoDropDown.selectedIndex));
+			doc.history.record(new ChangeTempo(doc, tempoSlider.value));
 		}
 		
 		private function onSetParts(): void {
@@ -342,7 +342,7 @@ SOFTWARE.
 		}
 		
 		private function onSetVolume(): void {
-			doc.history.record(new ChangeVolume(doc, volumeDropDown.selectedIndex));
+			doc.history.record(new ChangeVolume(doc, -channelVolumeSlider.value));
 		}
 		
 		private function onSetInstrument(): void {
@@ -447,7 +447,7 @@ SOFTWARE.
 			<s:VGroup id="songSettings" height="100%" width="100%">
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Spacer width="50%"/>
-					<s:Label text="BeepBox version 1.1.3" color="0xbbbbbb" right="0"/>
+					<s:Label text="BeepBox version 1.1.4" color="0xbbbbbb" right="0"/>
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:HGroup width="100%" verticalAlign="middle">
@@ -478,9 +478,7 @@ SOFTWARE.
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Tempo:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="tempoDropDown" dataProvider="{tempoNames}" width="90" change="onSetTempo()" close="stage.focus = stage" right="0">
-						<s:layout> <s:VerticalLayout requestedRowCount="{tempoNames.length}" horizontalAlign="justify"/> </s:layout>
-					</s:DropDownList>
+					<s:HSlider id="tempoSlider" width="90" minimum="0" maximum="11" value="7" stepSize="1" snapInterval="1" liveDragging="true" showDataTip="false" change="onSetTempo(); stage.focus = stage"/>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Rhythm:" color="0xbbbbbb"/>
@@ -500,12 +498,10 @@ SOFTWARE.
 				</s:HGroup>
 				<s:Spacer height="20"/>
 				<s:Label id="instrumentSettingsLabel" text="Instrument Settings:" color="0xffffff"/>
-				<s:HGroup id="volumeDropDownGroup" width="100%" gap="0" verticalAlign="middle">
+				<s:HGroup id="channelVolumeSliderGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Volume:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
-					<s:DropDownList id="volumeDropDown" dataProvider="{volumeNames}" width="120" change="onSetVolume()" close="stage.focus = stage" right="0">
-						<s:layout> <s:VerticalLayout requestedRowCount="{4}" horizontalAlign="justify"/> </s:layout>
-					</s:DropDownList>
+					<s:HSlider id="channelVolumeSlider" width="120" minimum="-5" maximum="0" value="0" stepSize="1" snapInterval="1" liveDragging="true" showDataTip="false" change="onSetVolume(); stage.focus = stage"/>
 				</s:HGroup>
 				<s:HGroup id="waveDropDownGroup" width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Wave:" color="0xbbbbbb"/>
