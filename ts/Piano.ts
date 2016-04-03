@@ -167,7 +167,7 @@ module beepbox {
 				    
 					var brightness: number = 1.0 + ((j - noteCount / 2.0) / noteCount) * 0.5;
 					var imageData: ImageData = graphics.getImageData(x, y, w, h);
-					var data: number[] = imageData.data;
+					var data: Uint8ClampedArray = imageData.data;
 					for(var i = 0; i < data.length; i += 4) {
 						data[i + 0] *= brightness;
 						data[i + 1] *= brightness;

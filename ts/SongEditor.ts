@@ -105,10 +105,10 @@ module beepbox {
 		var instrumentDropDownGroup: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDownGroup");
 		var scaleDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("scaleDropDown");
 		var keyDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("keyDropDown");
-		var tempoDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("tempoDropDown");
+		var tempoSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("tempoSlider");
 		var partDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("partDropDown");
 		var instrumentDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDown");
-		var volumeDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("volumeDropDown");
+		var channelVolumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("channelVolumeSlider");
 		var waveDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("waveDropDown");
 		var attackDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("attackDropDown");
 		var filterDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("filterDropDown");
@@ -129,13 +129,11 @@ module beepbox {
 		editButton.innerHTML  = BuildOptionsWithTitle(editCommands, "Edit Menu");
 		scaleDropDown.innerHTML  = BuildOptions(Music.scaleNames);
 		keyDropDown.innerHTML    = BuildOptions(Music.keyNames);
-		tempoDropDown.innerHTML  = BuildOptions(Music.tempoNames);
 		partDropDown.innerHTML   = BuildOptions(Music.partNames);
 		filterDropDown.innerHTML = BuildOptions(Music.filterNames);
 		attackDropDown.innerHTML = BuildOptions(Music.attackNames);
 		effectDropDown.innerHTML = BuildOptions(Music.effectNames);
 		chorusDropDown.innerHTML = BuildOptions(Music.chorusNames);
-		volumeDropDown.innerHTML = BuildOptions(Music.volumeNames);
 		var waveNames: string = BuildOptions(Music.waveNames);
 		var drumNames: string = BuildOptions(Music.drumNames);
 		
@@ -170,7 +168,7 @@ module beepbox {
 			
 			scaleDropDown.selectedIndex = doc.song.scale;
 			keyDropDown.selectedIndex = doc.song.key;
-			tempoDropDown.selectedIndex = doc.song.tempo;
+			tempoSlider.value = ""+doc.song.tempo;
 			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
 			if (doc.channel == 3) {
 				filterDropDownGroup.style.visibility = "hidden";
@@ -200,7 +198,7 @@ module beepbox {
 			attackDropDown.selectedIndex = doc.song.instrumentAttacks[doc.channel][instrument];
 			effectDropDown.selectedIndex = doc.song.instrumentEffects[doc.channel][instrument];
 			chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][instrument];
-			volumeDropDown.selectedIndex = doc.song.instrumentVolumes[doc.channel][instrument];
+			channelVolumeSlider.value = -doc.song.instrumentVolumes[doc.channel][instrument]+"";
 			instrumentDropDown.selectedIndex = instrument;
 			
 			//currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
@@ -356,7 +354,7 @@ module beepbox {
 		}
 		
 		function onSetTempo(): void {
-			doc.history.record(new ChangeTempo(doc, tempoDropDown.selectedIndex));
+			doc.history.record(new ChangeTempo(doc, parseInt(tempoSlider.value)));
 		}
 		
 		function onSetParts(): void {
@@ -384,7 +382,7 @@ module beepbox {
 		}
 		
 		function onSetVolume(): void {
-			doc.history.record(new ChangeVolume(doc, volumeDropDown.selectedIndex));
+			doc.history.record(new ChangeVolume(doc, -parseInt(channelVolumeSlider.value)));
 		}
 		
 		function onSetInstrument(): void {
@@ -449,10 +447,10 @@ module beepbox {
 		optionsButton.addEventListener("change", optionsMenuHandler);
 		scaleDropDown.addEventListener("change", onSetScale);
 		keyDropDown.addEventListener("change", onSetKey);
-		tempoDropDown.addEventListener("change", onSetTempo);
+		tempoSlider.addEventListener("input", onSetTempo);
 		partDropDown.addEventListener("change", onSetParts);
 		instrumentDropDown.addEventListener("change", onSetInstrument);
-		volumeDropDown.addEventListener("change", onSetVolume);
+		channelVolumeSlider.addEventListener("input", onSetVolume);
 		waveDropDown.addEventListener("change",   onSetWave);
 		attackDropDown.addEventListener("change", onSetAttack);
 		filterDropDown.addEventListener("change", onSetFilter);
@@ -476,8 +474,7 @@ module beepbox {
 
 var styleSheet = document.createElement('style');
 styleSheet.type = "text/css";
-styleSheet.appendChild(document.createTextNode((function () {
-/*
+styleSheet.appendChild(document.createTextNode(`
 #mainLayer div {
 	margin: 0;
 	padding: 0;
@@ -495,14 +492,95 @@ styleSheet.appendChild(document.createTextNode((function () {
 	vertical-align: middle;
 	line-height: 27px;
 }
-*/
-;}).toString().replace(/^[^\/]+\/\*!?/, '').replace(/\*\/[^\/]+$/, '')));
+
+/* slider style designed with http://danielstern.ca/range.css/ */
+input[type=range].beepBoxSlider {
+	-webkit-appearance: none;
+	width: 100%;
+	margin: 4px 0;
+}
+input[type=range].beepBoxSlider:focus {
+	outline: none;
+}
+input[type=range].beepBoxSlider::-webkit-slider-runnable-track {
+	width: 100%;
+	height: 6px;
+	cursor: pointer;
+	background: #b0b0b0;
+	border-radius: 0.1px;
+	border: 1px solid rgba(0, 0, 0, 0.5);
+}
+input[type=range].beepBoxSlider::-webkit-slider-thumb {
+	box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);
+	border: 1px solid rgba(0, 0, 0, 0.5);
+	height: 14px;
+	width: 14px;
+	border-radius: 8px;
+	background: #f0f0f0;
+	cursor: pointer;
+	-webkit-appearance: none;
+	margin-top: -5px;
+}
+input[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {
+	background: #d6d6d6;
+}
+input[type=range].beepBoxSlider::-moz-range-track {
+	width: 100%;
+	height: 6px;
+	cursor: pointer;
+	background: #b0b0b0;
+	border-radius: 0.1px;
+	border: 1px solid rgba(0, 0, 0, 0.5);
+}
+input[type=range].beepBoxSlider::-moz-range-thumb {
+	box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);
+	border: 1px solid rgba(0, 0, 0, 0.5);
+	height: 14px;
+	width: 14px;
+	border-radius: 8px;
+	background: #f0f0f0;
+	cursor: pointer;
+}
+input[type=range].beepBoxSlider::-ms-track {
+	width: 100%;
+	height: 6px;
+	cursor: pointer;
+	background: transparent;
+	border-color: transparent;
+	color: transparent;
+}
+input[type=range].beepBoxSlider::-ms-fill-lower {
+	background: #8a8a8a;
+	border: 1px solid rgba(0, 0, 0, 0.5);
+	border-radius: 0.2px;
+}
+input[type=range].beepBoxSlider::-ms-fill-upper {
+	background: #b0b0b0;
+	border: 1px solid rgba(0, 0, 0, 0.5);
+	border-radius: 0.2px;
+}
+input[type=range].beepBoxSlider::-ms-thumb {
+	box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);
+	border: 1px solid rgba(0, 0, 0, 0.5);
+	height: 14px;
+	width: 14px;
+	border-radius: 8px;
+	background: #f0f0f0;
+	cursor: pointer;
+	height: 6px;
+}
+input[type=range].beepBoxSlider:focus::-ms-fill-lower {
+	background: #b0b0b0;
+}
+input[type=range].beepBoxSlider:focus::-ms-fill-upper {
+	background: #d6d6d6;
+}
+`));
 document.head.appendChild(styleSheet);
 
 
 var beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer");
-beepboxEditorContainer.innerHTML = (function () {
-/*
+beepboxEditorContainer.innerHTML = `
 <div id="mainLayer" tabindex="0" style="width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;">
 	<div id="editorBox" style="width: 512px; height: 645px; float: left;">
 		<div id="patternContainerContainer" style="width: 512px; height: 481px; display: table; table-layout: fixed;">
@@ -544,13 +622,13 @@ beepboxEditorContainer.innerHTML = (function () {
 	
 	<div style="float: left; width: 182px; height: 645px; font-size: 12px;">
 		<div style="width:100%; text-align: center; color: #bbbbbb;">
-			BeepBox 2.0
+			BeepBox 2.0.1
 		</div>
 		
 		<div style="width:100%; margin: 5px 0;">
 			<button id="playButton" style="width: 75px; float: left; margin: 0px" type="button">Play</button>
 			<div style="float: left; width: 4px; height: 10px;"></div>
-			<span style="float: left; background: #777777;"><input id="volumeSlider" style="width: 101px; margin: 0px;" type="range" min="0" max="100" value="50" step="1" /></span>
+			<input class="beepBoxSlider" id="volumeSlider" style="float: left; width: 101px; margin: 0px;" type="range" min="0" max="100" value="50" step="1" />
 			<div style="clear: both;"></div> 
 		</div>
 		
@@ -573,7 +651,10 @@ beepboxEditorContainer.innerHTML = (function () {
 			Key: <span style="float: right;"><select id="keyDropDown" style="width:90px;"></select></span><div style="clear: both;"></div> 
 		</div>
 		<div class="selectRow">
-			Tempo: <span style="float: right;"><select id="tempoDropDown" style="width:90px;"></select></span><div style="clear: both;"></div> 
+			Tempo: 
+			<span style="float: right;">
+				<input class="beepBoxSlider" id="tempoSlider" style="width: 90px; margin: 0px;" type="range" min="0" max="11" value="7" step="1" />
+			</span><div style="clear: both;"></div> 
 		</div>
 		<div class="selectRow">
 			Rhythm: <span style="float: right;"><select id="partDropDown" style="width:90px;"></select></span><div style="clear: both;"></div> 
@@ -595,8 +676,11 @@ beepboxEditorContainer.innerHTML = (function () {
 			Instrument Settings:
 		</div>
 		
-		<div id="volumeDropDownGroup" class="selectRow">
-			Volume: <span style="float: right;"><select id="volumeDropDown" style="width:120px;"></select></span><div style="clear: both;"></div> 
+		<div id="channelVolumeSliderGroup" class="selectRow">
+			Volume: 
+			<span style="float: right;">
+				<input class="beepBoxSlider" id="channelVolumeSlider" style="width: 120px; margin: 0px;" type="range" min="-5" max="0" value="0" step="1" />
+			</span><div style="clear: both;"></div> 
 		</div>
 		<div id="waveDropDownGroup" class="selectRow">
 			Wave: <span style="float: right;"><select id="waveDropDown" style="width:120px;"></select></span><div style="clear: both;"></div> 
@@ -691,8 +775,7 @@ beepboxEditorContainer.innerHTML = (function () {
 		</div>
 	</div>
 </div>
-*/
-;}).toString().replace(/^[^\/]+\/\*!?/, '').replace(/\*\/[^\/]+$/, '');
+`;
 
 
 var prevHash: string = "**blank**";

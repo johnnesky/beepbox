@@ -1,3 +1,8 @@
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 /*
 Copyright (C) 2012 John Nesky
 
@@ -153,7 +158,7 @@ var beepbox;
             console.log(this._bits);
         };
         return BitField;
-    })();
+    }());
     beepbox.BitField = BitField;
     var Music = (function () {
         function Music() {
@@ -164,7 +169,7 @@ var beepbox;
             [true, false, false, true, false, true, false, true, false, false, true, false],
             [true, false, false, false, true, true, false, true, false, false, false, true],
             [true, true, false, true, false, false, false, true, true, false, false, false],
-            [true, false, false, true, true, false, false, true, false, true, true, false],
+            [true, false, true, true, true, false, false, true, false, true, false, false],
             [true, false, false, true, false, true, true, true, false, false, true, false],
             [true, false, true, false, true, true, false, true, false, true, false, true],
             [true, false, true, true, false, true, false, true, true, false, true, false],
@@ -214,7 +219,7 @@ var beepbox;
         Music.noteCount = 37;
         Music.maxPitch = 84;
         return Music;
-    })();
+    }());
     beepbox.Music = Music;
     var TonePin = (function () {
         function TonePin(interval, time, volume) {
@@ -223,7 +228,7 @@ var beepbox;
             this.volume = volume;
         }
         return TonePin;
-    })();
+    }());
     beepbox.TonePin = TonePin;
     var Tone = (function () {
         function Tone(note, start, end, volume, fadeout) {
@@ -234,7 +239,7 @@ var beepbox;
             this.end = end;
         }
         return Tone;
-    })();
+    }());
     beepbox.Tone = Tone;
     var BarPattern = (function () {
         function BarPattern() {
@@ -255,7 +260,7 @@ var beepbox;
             return result;
         };
         return BarPattern;
-    })();
+    }());
     beepbox.BarPattern = BarPattern;
     var Song = (function () {
         function Song(string) {
@@ -884,7 +889,7 @@ var beepbox;
         Song._oldBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", ".", "_",];
         Song._newBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "-", "_",];
         return Song;
-    })();
+    }());
     beepbox.Song = Song;
     var Synth = (function () {
         function Synth(song) {
@@ -1697,7 +1702,7 @@ var beepbox;
             return Math.floor(this.samplesPerSecond / arpeggioPerSecond);
         };
         return Synth;
-    })();
+    }());
     beepbox.Synth = Synth;
 })(beepbox || (beepbox = {}));
 /*
@@ -1723,11 +1728,6 @@ SOFTWARE.
 */
 /// <reference path="synth.ts" />
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
 var beepbox;
 (function (beepbox) {
     var Model = (function () {
@@ -1767,7 +1767,7 @@ var beepbox;
         };
         Model._waitingForFrame = [];
         return Model;
-    })();
+    }());
     beepbox.Model = Model;
     var Change = (function () {
         function Change(reversed) {
@@ -1815,7 +1815,7 @@ var beepbox;
             throw new Error("Change.doBackwards(): Override me.");
         };
         return Change;
-    })();
+    }());
     beepbox.Change = Change;
     var ChangeHistory = (function (_super) {
         __extends(ChangeHistory, _super);
@@ -1862,7 +1862,7 @@ var beepbox;
             return this._recentChange;
         };
         return ChangeHistory;
-    })(Model);
+    }(Model));
     beepbox.ChangeHistory = ChangeHistory;
     var SongDocument = (function (_super) {
         __extends(SongDocument, _super);
@@ -1924,7 +1924,7 @@ var beepbox;
         };
         SongDocument._latestVersion = 2;
         return SongDocument;
-    })(Model);
+    }(Model));
     beepbox.SongDocument = SongDocument;
     var ChangeSequence = (function (_super) {
         __extends(ChangeSequence, _super);
@@ -1963,7 +1963,7 @@ var beepbox;
             }
         };
         return ChangeSequence;
-    })(Change);
+    }(Change));
     beepbox.ChangeSequence = ChangeSequence;
     var ChangePins = (function (_super) {
         __extends(ChangePins, _super);
@@ -2029,7 +2029,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangePins;
-    })(Change);
+    }(Change));
     beepbox.ChangePins = ChangePins;
     var ChangeAttack = (function (_super) {
         __extends(ChangeAttack, _super);
@@ -2052,7 +2052,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeAttack;
-    })(Change);
+    }(Change));
     beepbox.ChangeAttack = ChangeAttack;
     var ChangeBarPattern = (function (_super) {
         __extends(ChangeBarPattern, _super);
@@ -2075,7 +2075,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeBarPattern;
-    })(Change);
+    }(Change));
     beepbox.ChangeBarPattern = ChangeBarPattern;
     var ChangeBars = (function (_super) {
         __extends(ChangeBars, _super);
@@ -2131,7 +2131,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeBars;
-    })(Change);
+    }(Change));
     beepbox.ChangeBars = ChangeBars;
     var ChangeBeats = (function (_super) {
         __extends(ChangeBeats, _super);
@@ -2167,7 +2167,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeBeats;
-    })(Change);
+    }(Change));
     beepbox.ChangeBeats = ChangeBeats;
     var ChangeChannelBar = (function (_super) {
         __extends(ChangeChannelBar, _super);
@@ -2196,7 +2196,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeChannelBar;
-    })(Change);
+    }(Change));
     beepbox.ChangeChannelBar = ChangeChannelBar;
     var ChangeChorus = (function (_super) {
         __extends(ChangeChorus, _super);
@@ -2219,7 +2219,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeChorus;
-    })(Change);
+    }(Change));
     beepbox.ChangeChorus = ChangeChorus;
     var ChangeEffect = (function (_super) {
         __extends(ChangeEffect, _super);
@@ -2242,7 +2242,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeEffect;
-    })(Change);
+    }(Change));
     beepbox.ChangeEffect = ChangeEffect;
     var ChangeFilter = (function (_super) {
         __extends(ChangeFilter, _super);
@@ -2265,7 +2265,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeFilter;
-    })(Change);
+    }(Change));
     beepbox.ChangeFilter = ChangeFilter;
     var ChangeInstruments = (function (_super) {
         __extends(ChangeInstruments, _super);
@@ -2364,7 +2364,7 @@ var beepbox;
             }
         };
         return ChangeInstruments;
-    })(Change);
+    }(Change));
     beepbox.ChangeInstruments = ChangeInstruments;
     var ChangeKey = (function (_super) {
         __extends(ChangeKey, _super);
@@ -2387,7 +2387,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeKey;
-    })(Change);
+    }(Change));
     beepbox.ChangeKey = ChangeKey;
     var ChangeLoop = (function (_super) {
         __extends(ChangeLoop, _super);
@@ -2414,7 +2414,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeLoop;
-    })(Change);
+    }(Change));
     beepbox.ChangeLoop = ChangeLoop;
     var ChangeNoteAdded = (function (_super) {
         __extends(ChangeNoteAdded, _super);
@@ -2438,7 +2438,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeNoteAdded;
-    })(Change);
+    }(Change));
     beepbox.ChangeNoteAdded = ChangeNoteAdded;
     var ChangeOctave = (function (_super) {
         __extends(ChangeOctave, _super);
@@ -2461,7 +2461,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeOctave;
-    })(Change);
+    }(Change));
     beepbox.ChangeOctave = ChangeOctave;
     var ChangeParts = (function (_super) {
         __extends(ChangeParts, _super);
@@ -2495,7 +2495,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeParts;
-    })(Change);
+    }(Change));
     beepbox.ChangeParts = ChangeParts;
     var ChangePaste = (function (_super) {
         __extends(ChangePaste, _super);
@@ -2521,7 +2521,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangePaste;
-    })(Change);
+    }(Change));
     beepbox.ChangePaste = ChangePaste;
     var ChangePatternInstrument = (function (_super) {
         __extends(ChangePatternInstrument, _super);
@@ -2544,7 +2544,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangePatternInstrument;
-    })(Change);
+    }(Change));
     beepbox.ChangePatternInstrument = ChangePatternInstrument;
     var ChangePatterns = (function (_super) {
         __extends(ChangePatterns, _super);
@@ -2600,7 +2600,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangePatterns;
-    })(Change);
+    }(Change));
     beepbox.ChangePatterns = ChangePatterns;
     var ChangePinTime = (function (_super) {
         __extends(ChangePinTime, _super);
@@ -2633,7 +2633,7 @@ var beepbox;
             _super.call(this, document, tone, changePins);
         }
         return ChangePinTime;
-    })(ChangePins);
+    }(ChangePins));
     beepbox.ChangePinTime = ChangePinTime;
     var ChangePitchBend = (function (_super) {
         __extends(ChangePitchBend, _super);
@@ -2715,7 +2715,7 @@ var beepbox;
             _super.call(this, document, tone, changePins);
         }
         return ChangePitchBend;
-    })(ChangePins);
+    }(ChangePins));
     beepbox.ChangePitchBend = ChangePitchBend;
     var ChangeRhythm = (function (_super) {
         __extends(ChangeRhythm, _super);
@@ -2743,7 +2743,7 @@ var beepbox;
             }
         }
         return ChangeRhythm;
-    })(ChangeSequence);
+    }(ChangeSequence));
     beepbox.ChangeRhythm = ChangeRhythm;
     var ChangeRhythmTone = (function (_super) {
         __extends(ChangeRhythmTone, _super);
@@ -2757,7 +2757,7 @@ var beepbox;
             _super.call(this, document, tone, changePins);
         }
         return ChangeRhythmTone;
-    })(ChangePins);
+    }(ChangePins));
     beepbox.ChangeRhythmTone = ChangeRhythmTone;
     var ChangeScale = (function (_super) {
         __extends(ChangeScale, _super);
@@ -2780,7 +2780,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeScale;
-    })(Change);
+    }(Change));
     beepbox.ChangeScale = ChangeScale;
     var ChangeSong = (function (_super) {
         __extends(ChangeSong, _super);
@@ -2823,7 +2823,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeSong;
-    })(Change);
+    }(Change));
     beepbox.ChangeSong = ChangeSong;
     var ChangeTempo = (function (_super) {
         __extends(ChangeTempo, _super);
@@ -2846,7 +2846,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeTempo;
-    })(Change);
+    }(Change));
     beepbox.ChangeTempo = ChangeTempo;
     var ChangeToneAdded = (function (_super) {
         __extends(ChangeToneAdded, _super);
@@ -2869,7 +2869,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeToneAdded;
-    })(Change);
+    }(Change));
     beepbox.ChangeToneAdded = ChangeToneAdded;
     var ChangeToneLength = (function (_super) {
         __extends(ChangeToneLength, _super);
@@ -2907,7 +2907,7 @@ var beepbox;
             _super.call(this, document, tone, changePins);
         }
         return ChangeToneLength;
-    })(ChangePins);
+    }(ChangePins));
     beepbox.ChangeToneLength = ChangeToneLength;
     var ChangeToneTruncate = (function (_super) {
         __extends(ChangeToneTruncate, _super);
@@ -2940,7 +2940,7 @@ var beepbox;
             }
         }
         return ChangeToneTruncate;
-    })(ChangeSequence);
+    }(ChangeSequence));
     beepbox.ChangeToneTruncate = ChangeToneTruncate;
     var ChangeTransposeTone = (function (_super) {
         __extends(ChangeTransposeTone, _super);
@@ -3044,7 +3044,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeTransposeTone;
-    })(Change);
+    }(Change));
     beepbox.ChangeTransposeTone = ChangeTransposeTone;
     var ChangeTranspose = (function (_super) {
         __extends(ChangeTranspose, _super);
@@ -3055,7 +3055,7 @@ var beepbox;
             }
         }
         return ChangeTranspose;
-    })(ChangeSequence);
+    }(ChangeSequence));
     beepbox.ChangeTranspose = ChangeTranspose;
     var ChangeVolume = (function (_super) {
         __extends(ChangeVolume, _super);
@@ -3078,7 +3078,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeVolume;
-    })(Change);
+    }(Change));
     beepbox.ChangeVolume = ChangeVolume;
     var ChangeVolumeBend = (function (_super) {
         __extends(ChangeVolumeBend, _super);
@@ -3131,7 +3131,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeVolumeBend;
-    })(Change);
+    }(Change));
     beepbox.ChangeVolumeBend = ChangeVolumeBend;
     var ChangeWave = (function (_super) {
         __extends(ChangeWave, _super);
@@ -3154,7 +3154,7 @@ var beepbox;
             this._document.changed();
         };
         return ChangeWave;
-    })(Change);
+    }(Change));
     beepbox.ChangeWave = ChangeWave;
     var PatternCursor = (function () {
         function PatternCursor() {
@@ -3173,7 +3173,7 @@ var beepbox;
             this.pins = null;
         }
         return PatternCursor;
-    })();
+    }());
     beepbox.PatternCursor = PatternCursor;
 })(beepbox || (beepbox = {}));
 /*
@@ -5259,10 +5259,10 @@ var beepbox;
         var instrumentDropDownGroup = document.getElementById("instrumentDropDownGroup");
         var scaleDropDown = document.getElementById("scaleDropDown");
         var keyDropDown = document.getElementById("keyDropDown");
-        var tempoDropDown = document.getElementById("tempoDropDown");
+        var tempoSlider = document.getElementById("tempoSlider");
         var partDropDown = document.getElementById("partDropDown");
         var instrumentDropDown = document.getElementById("instrumentDropDown");
-        var volumeDropDown = document.getElementById("volumeDropDown");
+        var channelVolumeSlider = document.getElementById("channelVolumeSlider");
         var waveDropDown = document.getElementById("waveDropDown");
         var attackDropDown = document.getElementById("attackDropDown");
         var filterDropDown = document.getElementById("filterDropDown");
@@ -5281,13 +5281,11 @@ var beepbox;
         editButton.innerHTML = BuildOptionsWithTitle(editCommands, "Edit Menu");
         scaleDropDown.innerHTML = BuildOptions(beepbox.Music.scaleNames);
         keyDropDown.innerHTML = BuildOptions(beepbox.Music.keyNames);
-        tempoDropDown.innerHTML = BuildOptions(beepbox.Music.tempoNames);
         partDropDown.innerHTML = BuildOptions(beepbox.Music.partNames);
         filterDropDown.innerHTML = BuildOptions(beepbox.Music.filterNames);
         attackDropDown.innerHTML = BuildOptions(beepbox.Music.attackNames);
         effectDropDown.innerHTML = BuildOptions(beepbox.Music.effectNames);
         chorusDropDown.innerHTML = BuildOptions(beepbox.Music.chorusNames);
-        volumeDropDown.innerHTML = BuildOptions(beepbox.Music.volumeNames);
         var waveNames = BuildOptions(beepbox.Music.waveNames);
         var drumNames = BuildOptions(beepbox.Music.drumNames);
         function setPrompt(newPrompt) {
@@ -5320,7 +5318,7 @@ var beepbox;
             optionsButton.innerHTML = BuildOptionsWithTitle(optionCommands, "Preferences Menu");
             scaleDropDown.selectedIndex = doc.song.scale;
             keyDropDown.selectedIndex = doc.song.key;
-            tempoDropDown.selectedIndex = doc.song.tempo;
+            tempoSlider.value = "" + doc.song.tempo;
             partDropDown.selectedIndex = beepbox.Music.partCounts.indexOf(doc.song.parts);
             if (doc.channel == 3) {
                 filterDropDownGroup.style.visibility = "hidden";
@@ -5348,7 +5346,7 @@ var beepbox;
             attackDropDown.selectedIndex = doc.song.instrumentAttacks[doc.channel][instrument];
             effectDropDown.selectedIndex = doc.song.instrumentEffects[doc.channel][instrument];
             chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][instrument];
-            volumeDropDown.selectedIndex = doc.song.instrumentVolumes[doc.channel][instrument];
+            channelVolumeSlider.value = -doc.song.instrumentVolumes[doc.channel][instrument] + "";
             instrumentDropDown.selectedIndex = instrument;
             //currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
             pianoContainer.style.display = doc.showLetters ? "table-cell" : "none";
@@ -5494,7 +5492,7 @@ var beepbox;
             doc.history.record(new beepbox.ChangeKey(doc, keyDropDown.selectedIndex));
         }
         function onSetTempo() {
-            doc.history.record(new beepbox.ChangeTempo(doc, tempoDropDown.selectedIndex));
+            doc.history.record(new beepbox.ChangeTempo(doc, parseInt(tempoSlider.value)));
         }
         function onSetParts() {
             doc.history.record(new beepbox.ChangeParts(doc, beepbox.Music.partCounts[partDropDown.selectedIndex]));
@@ -5515,7 +5513,7 @@ var beepbox;
             doc.history.record(new beepbox.ChangeChorus(doc, chorusDropDown.selectedIndex));
         }
         function onSetVolume() {
-            doc.history.record(new beepbox.ChangeVolume(doc, volumeDropDown.selectedIndex));
+            doc.history.record(new beepbox.ChangeVolume(doc, -parseInt(channelVolumeSlider.value)));
         }
         function onSetInstrument() {
             if (doc.getCurrentPattern() == null)
@@ -5576,10 +5574,10 @@ var beepbox;
         optionsButton.addEventListener("change", optionsMenuHandler);
         scaleDropDown.addEventListener("change", onSetScale);
         keyDropDown.addEventListener("change", onSetKey);
-        tempoDropDown.addEventListener("change", onSetTempo);
+        tempoSlider.addEventListener("input", onSetTempo);
         partDropDown.addEventListener("change", onSetParts);
         instrumentDropDown.addEventListener("change", onSetInstrument);
-        volumeDropDown.addEventListener("change", onSetVolume);
+        channelVolumeSlider.addEventListener("input", onSetVolume);
         waveDropDown.addEventListener("change", onSetWave);
         attackDropDown.addEventListener("change", onSetAttack);
         filterDropDown.addEventListener("change", onSetFilter);
@@ -5599,223 +5597,10 @@ var beepbox;
 })(beepbox || (beepbox = {}));
 var styleSheet = document.createElement('style');
 styleSheet.type = "text/css";
-styleSheet.appendChild(document.createTextNode((function () {
-    /*
-    #mainLayer div {
-        margin: 0;
-        padding: 0;
-    }
-    #mainLayer canvas {
-        overflow: hidden;
-        position: absolute;
-        display: block;
-    }
-    
-    #mainLayer .selectRow {
-        width:100%;
-        color: #bbbbbb;
-        margin: 0;
-        vertical-align: middle;
-        line-height: 27px;
-    }
-    */
-    ;
-}).toString().replace(/^[^\/]+\/\*!?/, '').replace(/\*\/[^\/]+$/, '')));
+styleSheet.appendChild(document.createTextNode("\n#mainLayer div {\n\tmargin: 0;\n\tpadding: 0;\n}\n#mainLayer canvas {\n\toverflow: hidden;\n\tposition: absolute;\n\tdisplay: block;\n}\n\n#mainLayer .selectRow {\n\twidth:100%;\n\tcolor: #bbbbbb;\n\tmargin: 0;\n\tvertical-align: middle;\n\tline-height: 27px;\n}\n\n/* slider style designed with http://danielstern.ca/range.css/ */\ninput[type=range].beepBoxSlider {\n\t-webkit-appearance: none;\n\twidth: 100%;\n\tmargin: 4px 0;\n}\ninput[type=range].beepBoxSlider:focus {\n\toutline: none;\n}\ninput[type=range].beepBoxSlider::-webkit-slider-runnable-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-webkit-slider-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\t-webkit-appearance: none;\n\tmargin-top: -5px;\n}\ninput[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {\n\tbackground: #d6d6d6;\n}\ninput[type=range].beepBoxSlider::-moz-range-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-moz-range-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n}\ninput[type=range].beepBoxSlider::-ms-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: transparent;\n\tborder-color: transparent;\n\tcolor: transparent;\n}\ninput[type=range].beepBoxSlider::-ms-fill-lower {\n\tbackground: #8a8a8a;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-fill-upper {\n\tbackground: #b0b0b0;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\theight: 6px;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-lower {\n\tbackground: #b0b0b0;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-upper {\n\tbackground: #d6d6d6;\n}\n"));
 document.head.appendChild(styleSheet);
 var beepboxEditorContainer = document.getElementById("beepboxEditorContainer");
-beepboxEditorContainer.innerHTML = (function () {
-    /*
-    <div id="mainLayer" tabindex="0" style="width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;">
-        <div id="editorBox" style="width: 512px; height: 645px; float: left;">
-            <div id="patternContainerContainer" style="width: 512px; height: 481px; display: table; table-layout: fixed;">
-                <div id="pianoContainer" style="width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;">
-                    <canvas id="piano" width="32" height="481"></canvas>
-                    <canvas id="pianoPreview" width="32" height="43"></canvas>
-                </div>
-                <div id="patternEditorContainer"  style="height: 481px; display: table-cell; overflow:hidden; position: relative;">
-                    <canvas id="patternEditor" width="512" height="481"></canvas>
-                    <canvas id="patternEditorPreview" width="512" height="481"></canvas>
-                    <div id="patternPlayhead" style="width: 4px; height: 481px; overflow:hidden; position: absolute; background: #ffffff; visibility: hidden;"></div>
-                </div>
-                <div id="octaveScrollBarContainer" style="width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;">
-                    <canvas id="octaveScrollBar" width="20" height="481"></canvas>
-                    <canvas id="octaveScrollBarPreview" width="20" height="481"></canvas>
-                </div>
-            </div>
-            <div style="width: 512px; height: 6px;"></div>
-            <div id="trackContainerContainer" style="width: 512px; height: 158px;">
-                <div id="trackEditorContainer" style="width: 512px; height: 128px; position: relative; overflow:hidden;">
-                    <canvas id="trackEditor" width="512" height="128"></canvas>
-                    <canvas id="trackEditorPreview" width="32" height="32"></canvas>
-                    <div id="trackPlayhead" style="width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;"></div>
-                </div>
-                <div style="width: 512px; height: 5px;"></div>
-                <div id="loopEditorContainer" style="width: 512px; height: 20px; position: relative;">
-                    <canvas id="loopEditor" width="512" height="20"></canvas>
-                    <canvas id="loopEditorPreview" width="512" height="20"></canvas>
-                </div>
-                <div style="width: 512px; height: 5px;"></div>
-                <div id="barScrollBarContainer" style="width: 512px; height: 20px; position: relative;">
-                    <canvas id="barScrollBar" width="512" height="20"></canvas>
-                    <canvas id="barScrollBarPreview" width="512" height="20"></canvas>
-                </div>
-            </div>
-        </div>
-        
-        <div style="float: left; width: 6px; height: 645px;"></div>
-        
-        <div style="float: left; width: 182px; height: 645px; font-size: 12px;">
-            <div style="width:100%; text-align: center; color: #bbbbbb;">
-                BeepBox 2.0
-            </div>
-            
-            <div style="width:100%; margin: 5px 0;">
-                <button id="playButton" style="width: 75px; float: left; margin: 0px" type="button">Play</button>
-                <div style="float: left; width: 4px; height: 10px;"></div>
-                <span style="float: left; background: #777777;"><input id="volumeSlider" style="width: 101px; margin: 0px;" type="range" min="0" max="100" value="50" step="1" /></span>
-                <div style="clear: both;"></div>
-            </div>
-            
-            <select id="editButton" style="width:100%; margin: 5px 0;">Edit Menu</select>
-            <select id="optionsButton" style="width:100%; margin: 5px 0;">Preferences Menu</select>
-            <!--<button id="publishButton" style="width:100%" type="button">Publishing Panel...</button>-->
-            <button id="exportButton" style="width:100%; margin: 5px 0;" type="button">Export to .wav File</button>
-            <!--<button id="copyButton" style="width:100%" type="button">Copy URL to Clipboard</button>-->
-            
-            <div style="width: 100%; height: 110px;"></div>
-            
-            <div style="width:100%; margin: 3px 0;">
-                Song Settings:
-            </div>
-            
-            <div class="selectRow">
-                Scale: <span style="float: right;"><select id="scaleDropDown" style="width:90px;"></select></span><div style="clear: both;"></div>
-            </div>
-            <div class="selectRow">
-                Key: <span style="float: right;"><select id="keyDropDown" style="width:90px;"></select></span><div style="clear: both;"></div>
-            </div>
-            <div class="selectRow">
-                Tempo: <span style="float: right;"><select id="tempoDropDown" style="width:90px;"></select></span><div style="clear: both;"></div>
-            </div>
-            <div class="selectRow">
-                Rhythm: <span style="float: right;"><select id="partDropDown" style="width:90px;"></select></span><div style="clear: both;"></div>
-            </div>
-            
-            <div style="width: 100%; height: 25px;"></div>
-            
-            <div id="patternSettingsLabel" style="visibility: hidden; width:100%; margin: 3px 0;">
-                Pattern Settings:
-            </div>
-            
-            <div id="instrumentDropDownGroup" style="width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;">
-                Instrument: <span style="float: right;"><select id="instrumentDropDown" style="width:120px;"></select></span><div style="clear: both;"></div>
-            </div>
-            
-            <div style="width: 100%; height: 25px;"></div>
-            
-            <div id="instrumentSettingsLabel" style="clear: both; width:100%; margin: 3px 0;">
-                Instrument Settings:
-            </div>
-            
-            <div id="volumeDropDownGroup" class="selectRow">
-                Volume: <span style="float: right;"><select id="volumeDropDown" style="width:120px;"></select></span><div style="clear: both;"></div>
-            </div>
-            <div id="waveDropDownGroup" class="selectRow">
-                Wave: <span style="float: right;"><select id="waveDropDown" style="width:120px;"></select></span><div style="clear: both;"></div>
-            </div>
-            <div id="attackDropDownGroup" class="selectRow">
-                Envelope: <span style="float: right;"><select id="attackDropDown" style="width:120px;"></select></span><div style="clear: both;"></div>
-            </div>
-            <div id="filterDropDownGroup" class="selectRow">
-                Filter: <span style="float: right;"><select id="filterDropDown" style="width:120px;"></select></span><div style="clear: both;"></div>
-            </div>
-            <div id="chorusDropDownGroup" class="selectRow">
-                Chorus: <span style="float: right;"><select id="chorusDropDown" style="width:120px;"></select></span><div style="clear: both;"></div>
-            </div>
-            <div id="effectDropDownGroup" class="selectRow">
-                Effect: <span style="float: right;"><select id="effectDropDown" style="width:120px;"></select></span><div style="clear: both;"></div>
-            </div>
-        </div>
-        
-        <div id="promptBackground" style="position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;"></div>
-        
-        <div id="songSizePrompt" style="position: absolute; display: none;">
-            <div style="display: table-cell; vertical-align: middle; width: 700px; height: 645px;">
-                <div style="margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;">
-                    <div style="font-size: 30px">Custom Song Size</div>
-                    
-                    <div style="height: 30px;"></div>
-                    
-                    <div style="vertical-align: middle; line-height: 46px;">
-                        <span style="float: right;"><div style="display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;">Beats per bar:<br /><span style="color: #888888;">(Multiples of 3 or 4 are recommended)</span></div><div style="display: inline-block; width: 20px; height: 1px;"></div><input id="beatsStepper" style="width: 40px; height: 16px;" type="number" min="1" max="128" step="1" /></span>
-                        <div style="clear: both;"></div>
-                    </div>
-                    <div style="vertical-align: middle; line-height: 46px;">
-                        <span style="float: right;"><div style="display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;">Bars per song:<br /><span style="color: #888888;">(Multiples of 2 or 4 are recommended)</span></div><div style="display: inline-block; width: 20px; height: 1px;"></div><input id="barsStepper" style="width: 40px; height: 16px;" type="number" min="1" max="128" step="1" /></span>
-                        <div style="clear: both;"></div>
-                    </div>
-                    <div style="vertical-align: middle; line-height: 46px;">
-                        <span style="float: right;">Patterns per channel:<div style="display: inline-block; width: 20px; height: 1px;"></div><input id="patternsStepper" style="width: 40px; height: 16px;" type="number" min="1" max="32" step="1" /></span>
-                        <div style="clear: both;"></div>
-                    </div>
-                    <div style="vertical-align: middle; line-height: 46px;">
-                        <span style="float: right;">Instruments per channel:<div style="display: inline-block; width: 20px; height: 1px;"></div><input id="instrumentsStepper" style="width: 40px; height: 16px;" type="number" min="1" max="10" step="1" /></span>
-                        <div style="clear: both;"></div>
-                    </div>
-                    
-                    <div style="height: 30px;"></div>
-                    
-                    <button id="songDurationOkayButton" style="width:125px; float: left;" type="button">Okay</button>
-                    <button id="songDurationCancelButton" style="width:125px; float: right;" type="button">Cancel</button>
-                    <div style="clear: both;"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div id="exportPrompt" style="position: absolute; display: none;">
-            <div style="display: table-cell; vertical-align: middle; width: 700px; height: 645px;">
-                <div style="margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;">
-                    <div style="font-size: 30px">Export Options</div>
-                    
-                    <div style="height: 30px;"></div>
-                    
-                    <div style="display: table; width: 200px;">
-                        <div style="display: table-row;">
-                            <div style="display: table-cell;">
-                                Intro:
-                            </div>
-                            <div style="display: table-cell;">
-                                Loop Count:
-                            </div>
-                            <div style="display: table-cell;">
-                                Outro:
-                            </div>
-                        </div>
-                        <div style="display: table-row; height: 30px;">
-                            <div style="display: table-cell; vertical-align: middle;">
-                                <input id="enableIntro" type="checkbox" />
-                            </div>
-                            <div style="display: table-cell; vertical-align: middle;">
-                                <input id="loopDropDown" style="width: 40px; height: 16px;" type="number" min="1" max="4" step="1" />
-                            </div>
-                            <div style="display: table-cell; vertical-align: middle;">
-                                <input id="enableOutro" type="checkbox" />
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="height: 30px;"></div>
-                    
-                    <button id="exportOkayButton" style="width:200px;" type="button">Export</button>
-                    <div style="height: 30px;"></div>
-                    <button id="exportCancelButton" style="width:200px;" type="button">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    */
-    ;
-}).toString().replace(/^[^\/]+\/\*!?/, '').replace(/\*\/[^\/]+$/, '');
+beepboxEditorContainer.innerHTML = "\n<div id=\"mainLayer\" tabindex=\"0\" style=\"width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;\">\n\t<div id=\"editorBox\" style=\"width: 512px; height: 645px; float: left;\">\n\t\t<div id=\"patternContainerContainer\" style=\"width: 512px; height: 481px; display: table; table-layout: fixed;\">\n\t\t\t<div id=\"pianoContainer\" style=\"width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"piano\" width=\"32\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"pianoPreview\" width=\"32\" height=\"43\"></canvas>\n\t\t\t</div>\n\t\t\t<div id=\"patternEditorContainer\"  style=\"height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"patternEditor\" width=\"512\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"patternEditorPreview\" width=\"512\" height=\"481\"></canvas>\n\t\t\t\t<div id=\"patternPlayhead\" style=\"width: 4px; height: 481px; overflow:hidden; position: absolute; background: #ffffff; visibility: hidden;\"></div>\n\t\t\t</div>\n\t\t\t<div id=\"octaveScrollBarContainer\" style=\"width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"octaveScrollBar\" width=\"20\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"octaveScrollBarPreview\" width=\"20\" height=\"481\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t\t<div style=\"width: 512px; height: 6px;\"></div>\n\t\t<div id=\"trackContainerContainer\" style=\"width: 512px; height: 158px;\">\n\t\t\t<div id=\"trackEditorContainer\" style=\"width: 512px; height: 128px; position: relative; overflow:hidden;\">\n\t\t\t\t<canvas id=\"trackEditor\" width=\"512\" height=\"128\"></canvas>\n\t\t\t\t<canvas id=\"trackEditorPreview\" width=\"32\" height=\"32\"></canvas>\n\t\t\t\t<div id=\"trackPlayhead\" style=\"width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;\"></div>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"loopEditorContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"loopEditor\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"loopEditorPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"barScrollBarContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"barScrollBar\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"barScrollBarPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div style=\"float: left; width: 6px; height: 645px;\"></div>\n\t\n\t<div style=\"float: left; width: 182px; height: 645px; font-size: 12px;\">\n\t\t<div style=\"width:100%; text-align: center; color: #bbbbbb;\">\n\t\t\tBeepBox 2.0.1\n\t\t</div>\n\t\t\n\t\t<div style=\"width:100%; margin: 5px 0;\">\n\t\t\t<button id=\"playButton\" style=\"width: 75px; float: left; margin: 0px\" type=\"button\">Play</button>\n\t\t\t<div style=\"float: left; width: 4px; height: 10px;\"></div>\n\t\t\t<input class=\"beepBoxSlider\" id=\"volumeSlider\" style=\"float: left; width: 101px; margin: 0px;\" type=\"range\" min=\"0\" max=\"100\" value=\"50\" step=\"1\" />\n\t\t\t<div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<select id=\"editButton\" style=\"width:100%; margin: 5px 0;\">Edit Menu</select>\n\t\t<select id=\"optionsButton\" style=\"width:100%; margin: 5px 0;\">Preferences Menu</select>\n\t\t<!--<button id=\"publishButton\" style=\"width:100%\" type=\"button\">Publishing Panel...</button>-->\n\t\t<button id=\"exportButton\" style=\"width:100%; margin: 5px 0;\" type=\"button\">Export to .wav File</button>\n\t\t<!--<button id=\"copyButton\" style=\"width:100%\" type=\"button\">Copy URL to Clipboard</button>-->\n\t\t\n\t\t<div style=\"width: 100%; height: 110px;\"></div>\n\t\t\n\t\t<div style=\"width:100%; margin: 3px 0;\">\n\t\t\tSong Settings:\n\t\t</div>\n\t\t\n\t\t<div class=\"selectRow\">\n\t\t\tScale: <span style=\"float: right;\"><select id=\"scaleDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tKey: <span style=\"float: right;\"><select id=\"keyDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tTempo: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"tempoSlider\" style=\"width: 90px; margin: 0px;\" type=\"range\" min=\"0\" max=\"11\" value=\"7\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tRhythm: <span style=\"float: right;\"><select id=\"partDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"patternSettingsLabel\" style=\"visibility: hidden; width:100%; margin: 3px 0;\">\n\t\t\tPattern Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"instrumentDropDownGroup\" style=\"width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;\">\n\t\t\tInstrument: <span style=\"float: right;\"><select id=\"instrumentDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"instrumentSettingsLabel\" style=\"clear: both; width:100%; margin: 3px 0;\">\n\t\t\tInstrument Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"channelVolumeSliderGroup\" class=\"selectRow\">\n\t\t\tVolume: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"channelVolumeSlider\" style=\"width: 120px; margin: 0px;\" type=\"range\" min=\"-5\" max=\"0\" value=\"0\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"waveDropDownGroup\" class=\"selectRow\">\n\t\t\tWave: <span style=\"float: right;\"><select id=\"waveDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"attackDropDownGroup\" class=\"selectRow\">\n\t\t\tEnvelope: <span style=\"float: right;\"><select id=\"attackDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"filterDropDownGroup\" class=\"selectRow\">\n\t\t\tFilter: <span style=\"float: right;\"><select id=\"filterDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"chorusDropDownGroup\" class=\"selectRow\">\n\t\t\tChorus: <span style=\"float: right;\"><select id=\"chorusDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"effectDropDownGroup\" class=\"selectRow\">\n\t\t\tEffect: <span style=\"float: right;\"><select id=\"effectDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t</div>\n\t\n\t<div id=\"promptBackground\" style=\"position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;\"></div>\n\t\n\t<div id=\"songSizePrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Custom Song Size</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Beats per bar:<br /><span style=\"color: #888888;\">(Multiples of 3 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"beatsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Bars per song:<br /><span style=\"color: #888888;\">(Multiples of 2 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"barsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Patterns per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"patternsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"32\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Instruments per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"instrumentsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"10\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"songDurationOkayButton\" style=\"width:125px; float: left;\" type=\"button\">Okay</button>\n\t\t\t\t<button id=\"songDurationCancelButton\" style=\"width:125px; float: right;\" type=\"button\">Cancel</button>\n\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div id=\"exportPrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Export Options</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"display: table; width: 200px;\">\n\t\t\t\t\t<div style=\"display: table-row;\">\n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tIntro:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tLoop Count:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tOutro:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t</div> \n\t\t\t\t\t<div style=\"display: table-row; height: 30px;\">\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"enableIntro\" type=\"checkbox\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"loopDropDown\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"4\" step=\"1\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"enableOutro\" type=\"checkbox\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div> \n\t\t\t\t</div> \n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"exportOkayButton\" style=\"width:200px;\" type=\"button\">Export</button>\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t<button id=\"exportCancelButton\" style=\"width:200px;\" type=\"button\">Cancel</button>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n";
 var prevHash = "**blank**";
 var doc = new beepbox.SongDocument();
 var wokeUp = false;

@@ -153,7 +153,7 @@ var beepbox;
             console.log(this._bits);
         };
         return BitField;
-    })();
+    }());
     beepbox.BitField = BitField;
     var Music = (function () {
         function Music() {
@@ -164,7 +164,7 @@ var beepbox;
             [true, false, false, true, false, true, false, true, false, false, true, false],
             [true, false, false, false, true, true, false, true, false, false, false, true],
             [true, true, false, true, false, false, false, true, true, false, false, false],
-            [true, false, false, true, true, false, false, true, false, true, true, false],
+            [true, false, true, true, true, false, false, true, false, true, false, false],
             [true, false, false, true, false, true, true, true, false, false, true, false],
             [true, false, true, false, true, true, false, true, false, true, false, true],
             [true, false, true, true, false, true, false, true, true, false, true, false],
@@ -214,7 +214,7 @@ var beepbox;
         Music.noteCount = 37;
         Music.maxPitch = 84;
         return Music;
-    })();
+    }());
     beepbox.Music = Music;
     var TonePin = (function () {
         function TonePin(interval, time, volume) {
@@ -223,7 +223,7 @@ var beepbox;
             this.volume = volume;
         }
         return TonePin;
-    })();
+    }());
     beepbox.TonePin = TonePin;
     var Tone = (function () {
         function Tone(note, start, end, volume, fadeout) {
@@ -234,7 +234,7 @@ var beepbox;
             this.end = end;
         }
         return Tone;
-    })();
+    }());
     beepbox.Tone = Tone;
     var BarPattern = (function () {
         function BarPattern() {
@@ -255,7 +255,7 @@ var beepbox;
             return result;
         };
         return BarPattern;
-    })();
+    }());
     beepbox.BarPattern = BarPattern;
     var Song = (function () {
         function Song(string) {
@@ -884,7 +884,7 @@ var beepbox;
         Song._oldBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", ".", "_",];
         Song._newBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "-", "_",];
         return Song;
-    })();
+    }());
     beepbox.Song = Song;
     var Synth = (function () {
         function Synth(song) {
@@ -1697,6 +1697,6 @@ var beepbox;
             return Math.floor(this.samplesPerSecond / arpeggioPerSecond);
         };
         return Synth;
-    })();
+    }());
     beepbox.Synth = Synth;
 })(beepbox || (beepbox = {}));
