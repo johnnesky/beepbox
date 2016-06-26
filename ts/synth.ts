@@ -198,7 +198,7 @@ module beepbox {
 		public static barsMin: number = 1;
 		public static barsMax: number = 128;
 		public static patternsMin: number = 1;
-		public static patternsMax: number = 32;
+		public static patternsMax: number = 64;
 		public static instrumentsMin: number = 1;
 		public static instrumentsMax: number = 10;
 		public static partNames: string[] = ["triples", "standard"];
@@ -1697,7 +1697,7 @@ module beepbox {
 		
 		private _getSamplesPerArpeggio(): number {
 			if (this.song == null) return 0;
-			var beatsPerMinute: number = 120.0 * Math.pow(2.0, (-4.0 + this.song.tempo) / 9.0);
+			var beatsPerMinute: number = Math.round(120.0 * Math.pow(2.0, (-4.0 + this.song.tempo) / 9.0));
 			var beatsPerSecond: number = beatsPerMinute / 60.0;
 			var partsPerSecond: number = beatsPerSecond * this.song.parts;
 			var arpeggioPerSecond: number = partsPerSecond * 4.0;

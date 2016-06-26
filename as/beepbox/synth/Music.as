@@ -47,7 +47,7 @@ package beepbox.synth {
 		public static const barsMin: int = 1;
 		public static const barsMax: int = 128;
 		public static const patternsMin: int = 1;
-		public static const patternsMax: int = 32;
+		public static const patternsMax: int = 64;
 		public static const instrumentsMin: int = 1;
 		public static const instrumentsMax: int = 10;
 		public static const partNames: Array = ["triples", "standard"];
