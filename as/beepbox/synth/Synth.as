@@ -829,7 +829,7 @@ package beepbox.synth {
 		
 		private function getSamplesPerArpeggio(): int {
 			if (song == null) return 0;
-			var beatsPerMinute: Number = 120.0 * Math.pow(2.0, (-4.0 + song.tempo) / 9.0);
+			var beatsPerMinute: Number = Math.round(120.0 * Math.pow(2.0, (-4.0 + song.tempo) / 9.0));
 			var beatsPerSecond: Number = beatsPerMinute / 60.0;
 			var partsPerSecond: Number = beatsPerSecond * song.parts;
 			var arpeggioPerSecond: Number = partsPerSecond * 4.0;

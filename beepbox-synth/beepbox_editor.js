@@ -188,7 +188,7 @@ var beepbox;
         Music.barsMin = 1;
         Music.barsMax = 128;
         Music.patternsMin = 1;
-        Music.patternsMax = 32;
+        Music.patternsMax = 64;
         Music.instrumentsMin = 1;
         Music.instrumentsMax = 10;
         Music.partNames = ["triples", "standard"];
@@ -1695,7 +1695,7 @@ var beepbox;
         Synth.prototype._getSamplesPerArpeggio = function () {
             if (this.song == null)
                 return 0;
-            var beatsPerMinute = 120.0 * Math.pow(2.0, (-4.0 + this.song.tempo) / 9.0);
+            var beatsPerMinute = Math.round(120.0 * Math.pow(2.0, (-4.0 + this.song.tempo) / 9.0));
             var beatsPerSecond = beatsPerMinute / 60.0;
             var partsPerSecond = beatsPerSecond * this.song.parts;
             var arpeggioPerSecond = partsPerSecond * 4.0;
