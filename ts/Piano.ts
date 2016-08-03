@@ -127,7 +127,7 @@ module beepbox {
 		}
 		
 		function updatePreview(): void {
-			previewGraphics.clearRect(0, 0, 32, 43);
+			previewGraphics.clearRect(0, 0, 32, 40);
 			if (!mouseOver || mouseDown) return;
 			preview.style.left = "0px";
 			preview.style.top = noteHeight * (noteCount - cursorNote - 1) + "px";
@@ -137,7 +137,7 @@ module beepbox {
 		}
 		
 		function documentChanged(): void {
-			noteHeight = doc.channel == 3 ? 43 : 13;
+			noteHeight = doc.channel == 3 ? 40 : 13;
 			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
 			updateCursorNote();
 			doc.synth.pianoNote = cursorNote + doc.song.channelOctaves[doc.channel] * 12;
@@ -179,12 +179,23 @@ module beepbox {
 				    graphics.drawImage(key, 0, noteHeight * (noteCount - j - 1));
 				} else {
 					var text: string = Music.noteNames[noteNameIndex];
+					
+					if (text == null) {
+						var shiftDir: number = Music.blackKeyNameParents[j%12];
+						text = Music.noteNames[(noteNameIndex + 12 + shiftDir) % 12];
+						if (shiftDir == 1) {
+							text += "♭";
+						} else if (shiftDir == -1) {
+							text += "♯";
+						}
+					}
+					
 					var textColor: string = Music.pianoScaleFlags[noteNameIndex] ? "#000000" : "#ffffff";
 					key = Music.pianoScaleFlags[noteNameIndex] ? WhiteKey : BlackKey;
 				    graphics.drawImage(key, 0, noteHeight * (noteCount - j - 1));
 					graphics.font = "bold 11px sans-serif";
 				    graphics.fillStyle = textColor;
-				    graphics.fillText(text, 17, noteHeight * (noteCount - j) - 3);
+				    graphics.fillText(text, 15, noteHeight * (noteCount - j) - 3);
 				}
 			}
 			updatePreview();

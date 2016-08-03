@@ -30,14 +30,23 @@ module beepbox {
 	export interface PatternEditor {
 		resetCopiedPins: ()=>void;
 	}
-
+	
 	export function PatternEditor(doc: SongDocument): void {
+		function prettyNumber(value: number): string {
+			return value.toFixed(2).replace(/\.?0*$/, "");
+		}
+		
 		var container: HTMLElement = <HTMLElement>document.getElementById("patternEditorContainer");
-		var canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("patternEditor");
-		var graphics: CanvasRenderingContext2D = canvas.getContext("2d");
-		var preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("patternEditorPreview");
-		var previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
-		var playhead: HTMLElement = document.getElementById("patternPlayhead");
+		
+		var svgNS: string = "http://www.w3.org/2000/svg";
+		var svg: SVGSVGElement = <SVGSVGElement><any> document.getElementById("patternEditorSvg");
+		var svgPlayhead: SVGRectElement = <SVGRectElement><any> document.getElementById("patternEditorPlayhead");
+		var svgNoteContainer: SVGSVGElement = <SVGSVGElement><any> document.getElementById("patternEditorNoteContainer");
+		var svgPreview: SVGPathElement = <SVGPathElement><any> document.getElementById("patternEditorPreview");
+		var svgNoteBackground: SVGPatternElement = <SVGPatternElement><any> document.getElementById("patternEditorNoteBackground");
+		var svgDrumBackground: SVGPatternElement = <SVGPatternElement><any> document.getElementById("patternEditorDrumBackground");
+		var svgBackground: SVGRectElement = <SVGRectElement><any> document.getElementById("patternEditorBackground");
+		
 		var editorWidth: number;
 		var editorHeight: number = 481;
 		var partWidth: number;
@@ -69,6 +78,27 @@ module beepbox {
 		var playheadX: number = 0.0;
 		var octaveOffset: number = 0;
 		
+		var defaultNoteHeight: number = 13;
+		var defaultDrumHeight: number = 40;
+		
+		let backgroundNoteRows: SVGRectElement[] = [];
+		for (let i: number = 0; i < 12; i++) {
+			let y: number = (12 - i) % 12;
+			let rectangle: SVGRectElement = <SVGRectElement> document.createElementNS(svgNS, "rect");
+			rectangle.setAttributeNS(null, "x", "1");
+			rectangle.setAttributeNS(null, "y", "" + (y * defaultNoteHeight + 1));
+			rectangle.setAttributeNS(null, "height", "" + (defaultNoteHeight - 2));
+			svgNoteBackground.appendChild(rectangle);
+			backgroundNoteRows[i] = rectangle;
+		}
+		
+		let backgroundDrumRow: SVGRectElement = <SVGRectElement> document.createElementNS(svgNS, "rect");
+		backgroundDrumRow.setAttributeNS(null, "x", "1");
+		backgroundDrumRow.setAttributeNS(null, "y", "1");
+		backgroundDrumRow.setAttributeNS(null, "height", "" + (defaultDrumHeight - 2));
+		backgroundDrumRow.setAttributeNS(null, "fill", "#444444");
+		svgDrumBackground.appendChild(backgroundDrumRow);
+		
 		function updateCursorStatus(): void {
 			var i: number;
 			var j: number;
@@ -77,7 +107,7 @@ module beepbox {
 			
 			cursor = new PatternCursor();
 			
-			if (mouseOver == false || mouseX < 0 || mouseX > editorWidth || mouseY < 0 || mouseY > editorHeight) return;
+			if (mouseX < 0 || mouseX > editorWidth || mouseY < 0 || mouseY > editorHeight) return;
 			
 			cursor.part = Math.floor(Math.max(0, Math.min(doc.song.beats * doc.song.parts - 1, mouseX / partWidth)));
 			
@@ -281,16 +311,16 @@ module beepbox {
 		
 		function onEnterFrame(timestamp: number): void {
 			if (!doc.synth.playing || pattern == null || doc.song.getPattern(doc.channel, Math.floor(doc.synth.playhead)) != pattern) {
-				playhead.style.visibility = "hidden";
+				svgPlayhead.setAttributeNS(null, "visibility", "hidden");
 			} else {
-				playhead.style.visibility = "visible";
+				svgPlayhead.setAttributeNS(null, "visibility", "visible");
 				var modPlayhead: number = doc.synth.playhead - Math.floor(doc.synth.playhead);
 				if (Math.abs(modPlayhead - playheadX) > 0.1) {
 					playheadX = modPlayhead;
 				} else {
 					playheadX += (modPlayhead - playheadX) * 0.2;
 				}
-				playhead.style.left = (playheadX * editorWidth - 2) + "px";
+				svgPlayhead.setAttributeNS(null, "x", "" + prettyNumber(playheadX * editorWidth - 2));
 			}
 			window.requestAnimationFrame(onEnterFrame);
 		}
@@ -315,10 +345,38 @@ module beepbox {
 			updatePreview();
 		}
 		
+		function onTouchPressed(event: TouchEvent): void {
+			event.preventDefault();
+			if (pattern == null) return;
+			mouseDown = true;
+			var boundingRect: ClientRect = svg.getBoundingClientRect();
+			mouseX = event.touches[0].clientX - boundingRect.left;
+			mouseY = event.touches[0].clientY - boundingRect.top;
+			mouseXStart = mouseX;
+			mouseYStart = mouseY;
+			mouseXPrev = mouseX;
+			mouseYPrev = mouseY;
+			updateCursorStatus();
+			updatePreview();
+		}
+		
 		function onMouseMoved(event: MouseEvent): void {
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			var boundingRect: ClientRect = svg.getBoundingClientRect();
     		mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    onCursorMoved();
+		}
+		
+		function onTouchMoved(event: TouchEvent): void {
+			if (!mouseDown) return;
+			event.preventDefault();
+			var boundingRect: ClientRect = svg.getBoundingClientRect();
+			mouseX = event.touches[0].clientX - boundingRect.left;
+			mouseY = event.touches[0].clientY - boundingRect.top;
+		    onCursorMoved();
+		}
+		
+		function onCursorMoved(): void {
 			var start: number;
 			var end: number;
 			var i: number = 0;
@@ -440,7 +498,7 @@ module beepbox {
 							if (bendPart > nextPin.time) continue;
 							if (bendPart < prevPin.time) throw new Error();
 							var volumeRatio: number = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
-							bendVolume = prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((mouseYStart - mouseY) / 25.0);
+							bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((mouseYStart - mouseY) / 25.0));
 							if (bendVolume < 0) bendVolume = 0;
 							if (bendVolume > 3) bendVolume = 3;
 							bendInterval = snapToNote(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + cursor.curTone.notes[0], 0, Music.maxPitch) - cursor.curTone.notes[0];
@@ -490,7 +548,7 @@ module beepbox {
 			}
 		}
 		
-		function onMouseReleased(event: MouseEvent): void {
+		function onCursorReleased(event: Event): void {
 			if (!cursor.valid) return;
 			if (pattern == null) return;
 			if (mouseDragging) {
@@ -528,55 +586,70 @@ module beepbox {
 			mouseDown = false;
 			mouseDragging = false;
 			updateCursorStatus();
-			render();
+			updatePreview();
 		}
 		
 		function updatePreview(): void {
-			previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
-			if (!mouseOver || mouseDown || !cursor.valid || pattern == null) return;
-			
-			previewGraphics.lineWidth = 2;
-			previewGraphics.strokeStyle = "#ffffff";
-			drawNote(previewGraphics, cursor.note, cursor.start, cursor.pins, noteHeight / 2 + 1, true, octaveOffset);
-			previewGraphics.stroke();
+			if (!mouseOver || mouseDown || !cursor.valid || pattern == null) {
+				svgPreview.setAttributeNS(null, "visibility", "hidden");
+			} else {
+				svgPreview.setAttributeNS(null, "visibility", "visible");
+				drawNote(svgPreview, cursor.note, cursor.start, cursor.pins, noteHeight / 2 + 1, true, octaveOffset);
+			}
 		}
 		
+		function makeEmptyReplacementElement(node: Node): Node {
+			let clone: Node = node.cloneNode(false);
+			node.parentNode.replaceChild(clone, node);
+			return clone;
+		}
+
 		function documentChanged(): void {
 			editorWidth = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
-			canvas.width = editorWidth;
 			pattern = doc.getCurrentPattern();
 			partWidth = editorWidth / (doc.song.beats * doc.song.parts);
-			noteHeight = doc.channel == 3 ? 43 : 13;
+			noteHeight = doc.channel == 3 ? defaultDrumHeight : defaultNoteHeight;
 			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
 			octaveOffset = doc.song.channelOctaves[doc.channel] * 12;
-			//scrollRect = new Rectangle(0, 0, editorWidth, editorHeight);
 			copiedPins = copiedPinChannels[doc.channel];
+			
+			svg.setAttributeNS(null, "width", "" + editorWidth);
+			svgBackground.setAttributeNS(null, "width", "" + editorWidth);
+			svgNoteBackground.setAttributeNS(null, "width", "" + (editorWidth / doc.song.beats));
+			svgDrumBackground.setAttributeNS(null, "width", "" + (editorWidth / doc.song.beats));
+			
 			if (!mouseDown) updateCursorStatus();
-			render();
-		}
-		
-		function render(): void {
-			graphics.clearRect(0, 0, editorWidth, editorHeight);
-			graphics.fillStyle = "#000000";
-			//graphics.fillRect(0, 0, partWidth * doc.song.beats * doc.song.parts, noteHeight * noteCount);
+			
+			svgNoteContainer = <SVGSVGElement> makeEmptyReplacementElement(svgNoteContainer);
 			
 			updatePreview();
 			
-			if (pattern == null) return;
+			if (pattern == null) {
+				svg.setAttributeNS(null, "visibility", "hidden");
+				return;
+			}
+			svg.setAttributeNS(null, "visibility", "visible");
 			
-			for (var j: number = 0; j < noteCount; j++) {
-				if (doc.channel != 3 && Music.scaleFlags[doc.song.scale][j%12] == false) {
-					continue;
-				}
+			for (var j: number = 0; j < 12; j++) {
 				var color: string = "#444444";
-				if (doc.channel != 3) {
-					if (j%12 == 0) color = "#886644";
-					if (j%12 == 7 && doc.showFifth) color = "#446688";
-				}
-				graphics.fillStyle = color;
-				for (var k: number = 0; k < doc.song.beats; k++) {
-					graphics.fillRect(partWidth * k * doc.song.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.song.parts - 2, noteHeight - 2);
-				}
+				if (j == 0) color = "#886644";
+				if (j == 7 && doc.showFifth) color = "#446688";
+				let rectangle: SVGRectElement = backgroundNoteRows[j];
+				rectangle.setAttributeNS(null, "width", "" + (partWidth * doc.song.parts - 2));
+				rectangle.setAttributeNS(null, "fill", color);
+				rectangle.setAttributeNS(null, "visibility", Music.scaleFlags[doc.song.scale][j] ? "visible" : "hidden");
+			}
+			
+			backgroundDrumRow.setAttributeNS(null, "width", "" + (partWidth * doc.song.parts - 2));
+			
+			if (doc.channel == 3) {
+				svgBackground.setAttributeNS(null, "fill", "url(#patternEditorDrumBackground)");
+				svgBackground.setAttributeNS(null, "height", "" + (defaultDrumHeight * Music.drumCount));
+				svg.setAttributeNS(null, "height", "" + (defaultDrumHeight * Music.drumCount));
+			} else {
+				svgBackground.setAttributeNS(null, "fill", "url(#patternEditorNoteBackground)");
+				svgBackground.setAttributeNS(null, "height", "" + editorHeight);
+				svg.setAttributeNS(null, "height", "" + editorHeight);
 			}
 			
 			if (doc.channel != 3 && doc.showChannels) {
@@ -586,26 +659,33 @@ module beepbox {
 					if (pattern2 == null) continue;
 					pattern2.tones.forEach((tone: Tone)=>{
 						tone.notes.forEach((note: number)=>{
-							graphics.fillStyle = SongEditor.noteColorsDim[channel];
-							drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
-							graphics.fill();
+							let notePath: SVGPathElement = <SVGPathElement> document.createElementNS(svgNS, "path");
+							notePath.setAttributeNS(null, "fill", SongEditor.noteColorsDim[channel]);
+							notePath.setAttributeNS(null, "pointer-events", "none");
+							drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
+							svgNoteContainer.appendChild(notePath);
 						});
 					});
 				}
 			}
+			
 			pattern.tones.forEach((tone: Tone)=>{
 				tone.notes.forEach((note: number)=>{
-					graphics.fillStyle = SongEditor.noteColorsDim[doc.channel];
-					drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
-					graphics.fill();
-					graphics.fillStyle = SongEditor.noteColorsBright[doc.channel];
-					drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
-					graphics.fill();
+					let notePath: SVGPathElement = <SVGPathElement> document.createElementNS(svgNS, "path");
+					notePath.setAttributeNS(null, "fill", SongEditor.noteColorsDim[doc.channel]);
+					notePath.setAttributeNS(null, "pointer-events", "none");
+					drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
+					svgNoteContainer.appendChild(notePath);
+					notePath = <SVGPathElement> document.createElementNS(svgNS, "path");
+					notePath.setAttributeNS(null, "fill", SongEditor.noteColorsBright[doc.channel]);
+					notePath.setAttributeNS(null, "pointer-events", "none");
+					drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
+					svgNoteContainer.appendChild(notePath);
 				});
 			});
 		}
 		
-		function drawNote(graphics: CanvasRenderingContext2D, note: number, start: number, pins: TonePin[], radius: number, showVolume: boolean, offset: number): void {
+		function drawNote(svgElement: SVGPathElement, note: number, start: number, pins: TonePin[], radius: number, showVolume: boolean, offset: number): void {
 			var i: number;
 			var prevPin: TonePin;
 			var nextPin: TonePin;
@@ -616,8 +696,7 @@ module beepbox {
 			var prevVolume: number;
 			var nextVolume: number;
 			nextPin = pins[0];
-			graphics.beginPath();
-			graphics.moveTo(partWidth * (start + nextPin.time) + 1, noteToPixelHeight(note - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0));
+			var pathString: string = "M " + prettyNumber(partWidth * (start + nextPin.time) + 1) + " " + prettyNumber(noteToPixelHeight(note - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
 			for (i = 1; i < pins.length; i++) {
 				prevPin = nextPin;
 				nextPin = pins[i];
@@ -627,10 +706,10 @@ module beepbox {
 				nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
 				prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
 				nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
-				graphics.lineTo(prevSide, prevHeight - radius * prevVolume);
-				if (prevPin.interval > nextPin.interval) graphics.lineTo(prevSide + 1, prevHeight - radius * prevVolume);
-				if (prevPin.interval < nextPin.interval) graphics.lineTo(nextSide - 1, nextHeight - radius * nextVolume);
-				graphics.lineTo(nextSide, nextHeight - radius * nextVolume);
+				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
+				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(prevSide + 1) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
+				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(nextSide - 1) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
+				pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
 			}
 			for (i = pins.length - 2; i >= 0; i--) {
 				prevPin = nextPin;
@@ -641,34 +720,34 @@ module beepbox {
 				nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
 				prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
 				nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
-				graphics.lineTo(prevSide, prevHeight + radius * prevVolume);
-				if (prevPin.interval < nextPin.interval) graphics.lineTo(prevSide - 1, prevHeight + radius * prevVolume);
-				if (prevPin.interval > nextPin.interval) graphics.lineTo(nextSide + 1, nextHeight + radius * nextVolume);
-				graphics.lineTo(nextSide, nextHeight + radius * nextVolume);
+				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
+				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(prevSide - 1) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
+				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(nextSide + 1) + " " + prettyNumber(nextHeight + radius * nextVolume) + " ";
+				pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight + radius * nextVolume) + " ";
 			}
-			graphics.closePath();
+			pathString += "z";
+			
+			svgElement.setAttributeNS(null, "d", pathString);
 		}
 		
 		function noteToPixelHeight(note: number): number {
 			return noteHeight * (noteCount - (note) - 0.5);
 		}
 		
-		/*
-		graphics.mozImageSmoothingEnabled = false;
-		graphics.webkitImageSmoothingEnabled = false;
-		graphics.msImageSmoothingEnabled = false;
-		graphics.imageSmoothingEnabled = false;
-		*/
 		doc.watch(documentChanged);
 		documentChanged();
 		updateCursorStatus();
 		updatePreview();
-		//canvas.addEventListener(Event.ENTER_FRAME, onEnterFrame);
 		window.requestAnimationFrame(onEnterFrame);
-		container.addEventListener("mousedown", onMousePressed);
+		svg.addEventListener("mousedown", onMousePressed);
 		document.addEventListener("mousemove", onMouseMoved);
-		document.addEventListener("mouseup", onMouseReleased);
-		container.addEventListener("mouseover", onMouseOver);
-		container.addEventListener("mouseout", onMouseOut);
+		document.addEventListener("mouseup", onCursorReleased);
+		svg.addEventListener("mouseover", onMouseOver);
+		svg.addEventListener("mouseout", onMouseOut);
+		
+		svg.addEventListener("touchstart", onTouchPressed);
+		document.addEventListener("touchmove", onTouchMoved);
+		document.addEventListener("touchend", onCursorReleased);
+		document.addEventListener("touchcancel", onCursorReleased);
 	}
 }

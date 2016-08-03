@@ -134,9 +134,15 @@ Instead of loading js beepbox editor interface directly, test for browser suppor
 <script type="text/javascript">
 //<![CDATA[
 
-var hasAudioContext = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
+var hasFlash = false;
+try {
+	if (new ActiveXObject('ShockwaveFlash.ShockwaveFlash')) { hasFlash = true; }
+} catch (e) {
+	var type = "application/x-shockwave-flash";
+	if (navigator.mimeTypes && navigator.mimeTypes[type] && navigator.mimeTypes[type].enabledPlugin) { hasFlash = true; }
+}
 
-if (hasAudioContext) {
+if (!hasFlash) {
 	// Go ahead and load js beepbox editor interface:
 	var fileref = document.createElement("script")
 	fileref.setAttribute("type", "text/javascript")

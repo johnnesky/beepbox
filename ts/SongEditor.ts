@@ -586,19 +586,26 @@ beepboxEditorContainer.innerHTML = `
 		<div id="patternContainerContainer" style="width: 512px; height: 481px; display: table; table-layout: fixed;">
 			<div id="pianoContainer" style="width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;">
 				<canvas id="piano" width="32" height="481"></canvas>
-				<canvas id="pianoPreview" width="32" height="43"></canvas>
+				<canvas id="pianoPreview" width="32" height="40"></canvas>
 			</div>
 			<div id="patternEditorContainer"  style="height: 481px; display: table-cell; overflow:hidden; position: relative;">
-				<canvas id="patternEditor" width="512" height="481"></canvas>
-				<canvas id="patternEditorPreview" width="512" height="481"></canvas>
-				<div id="patternPlayhead" style="width: 4px; height: 481px; overflow:hidden; position: absolute; background: #ffffff; visibility: hidden;"></div>
+				<svg id="patternEditorSvg" xmlns="http://www.w3.org/2000/svg" style="background-color: #000000; touch-action: none; position: absolute;" width="512" height="481">
+					<defs id="patternEditorDefs">
+						<pattern id="patternEditorNoteBackground" x="0" y="0" width="64" height="156" patternUnits="userSpaceOnUse"></pattern>
+						<pattern id="patternEditorDrumBackground" x="0" y="0" width="64" height="40" patternUnits="userSpaceOnUse"></pattern>
+					</defs>
+					<rect id="patternEditorBackground" x="0" y="0" width="512" height="481" pointer-events="none" fill="url(#patternEditorNoteBackground)"></rect>
+					<svg id="patternEditorNoteContainer"></svg>
+					<path id="patternEditorPreview" fill="none" stroke="white" stroke-width="2" pointer-events="none"></path>
+					<rect id="patternEditorPlayhead" x="0" y="0" width="4" height="481" fill="white" pointer-events="none"></rect>
+				</svg>
 			</div>
 			<div id="octaveScrollBarContainer" style="width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;">
 				<canvas id="octaveScrollBar" width="20" height="481"></canvas>
 				<canvas id="octaveScrollBarPreview" width="20" height="481"></canvas>
 			</div>
 		</div>
-		<div style="width: 512px; height: 6px;"></div>
+		<div style="width: 512px; height: 6px; clear: both;"></div>
 		<div id="trackContainerContainer" style="width: 512px; height: 158px;">
 			<div id="trackEditorContainer" style="width: 512px; height: 128px; position: relative; overflow:hidden;">
 				<canvas id="trackEditor" width="512" height="128"></canvas>
@@ -622,7 +629,7 @@ beepboxEditorContainer.innerHTML = `
 	
 	<div style="float: left; width: 182px; height: 645px; font-size: 12px;">
 		<div style="width:100%; text-align: center; color: #bbbbbb;">
-			BeepBox 2.0.1
+			BeepBox 2.1
 		</div>
 		
 		<div style="width:100%; margin: 5px 0;">
@@ -788,17 +795,18 @@ function checkHash(): void {
 		if (prevHash != "") {
 			doc.history.record(new beepbox.ChangeSong(doc, prevHash));
 		}
-	
-		if (!wokeUp) {
-			wokeUp = true;
-			if ( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
-				// don't autoplay on mobile devices, wait for input.
-			} else {
-				doc.synth.play();
-			}
-			doc.changed();
-		}
 	}
+	
+	if (!wokeUp && !document.hidden) {
+		wokeUp = true;
+		if ( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
+			// don't autoplay on mobile devices, wait for input.
+		} else {
+			doc.synth.play();
+		}
+		doc.changed();
+	}
+	
 	beepbox.Model.updateAll();
 	window.requestAnimationFrame(checkHash);
 }

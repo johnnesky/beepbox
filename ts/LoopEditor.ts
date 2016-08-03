@@ -120,10 +120,34 @@ module beepbox {
 			onMouseMoved(event);
 		}
 		
+		function onTouchPressed(event: TouchEvent): void {
+			event.preventDefault();
+			mouseDown = true;
+			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			mouseX = event.touches[0].clientX - boundingRect.left;
+			mouseY = event.touches[0].clientY - boundingRect.top;
+			updateCursorStatus();
+			updatePreview();
+			onTouchMoved(event);
+		}
+		
 		function onMouseMoved(event: MouseEvent): void {
 			var boundingRect: ClientRect = canvas.getBoundingClientRect();
     		mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    onCursorMoved();
+		}
+		
+		function onTouchMoved(event: TouchEvent): void {
+			if (!mouseDown) return;
+			event.preventDefault();
+			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			mouseX = event.touches[0].clientX - boundingRect.left;
+			mouseY = event.touches[0].clientY - boundingRect.top;
+		    onCursorMoved();
+		}
+		
+		function onCursorMoved(): void {
 			if (mouseDown) {
 				if (change != null) change.undo();
 				change = null;
@@ -168,7 +192,7 @@ module beepbox {
 			}
 		}
 		
-		function onMouseReleased(event: MouseEvent): void {
+		function onCursorReleased(event: Event): void {
 			if (mouseDown) {
 				if (change != null) {
 					//if (doc.history.getRecentChange() is ChangeLoop) doc.history.undo();
@@ -246,10 +270,15 @@ module beepbox {
 		
 		container.addEventListener("mousedown", onMousePressed);
 		document.addEventListener("mousemove", onMouseMoved);
-		document.addEventListener("mouseup", onMouseReleased);
+		document.addEventListener("mouseup", onCursorReleased);
 		container.addEventListener("mouseover", onMouseOver);
 		container.addEventListener("mouseout", onMouseOut);
 		document.addEventListener("keydown", onKeyPressed);
 		document.addEventListener("keyup", onKeyReleased);
+		
+		container.addEventListener("touchstart", onTouchPressed);
+		document.addEventListener("touchmove", onTouchMoved);
+		document.addEventListener("touchend", onCursorReleased);
+		document.addEventListener("touchcancel", onCursorReleased);
 	}
 }

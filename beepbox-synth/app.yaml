@@ -1,8 +1,10 @@
 application: beepbox-synth
-version: 2-0-1
+version: 2-1
 runtime: python27
 api_version: 1
 threadsafe: true
+
+default_expiration: "3h"
 
 libraries:
 - name: pycrypto
@@ -25,14 +27,11 @@ handlers:
 - url: /BeepBoxOnline\.swf
   static_files: BeepBoxOnline.swf
   upload: BeepBoxOnline\.swf
+  expiration: "12h"
 
 - url: /BeepBoxOffline\.swf
   static_files: BeepBoxOffline.swf
   upload: BeepBoxOffline\.swf
-
-- url: /BeepBoxDebug\.swf
-  static_files: BeepBoxDebug.swf
-  upload: BeepBoxDebug\.swf
 
 - url: /BeepBoxEmbedded\.swf
   static_files: BeepBoxEmbedded.swf
@@ -45,10 +44,6 @@ handlers:
 - url: /beepbox_synth\.js
   static_files: beepbox_synth.js
   upload: beepbox_synth.js
-
-- url: /CryptoTest\.swf
-  static_files: CryptoTest.swf
-  upload: CryptoTest\.swf
 
 - url: /favicon\.ico
   static_files: favicon.ico
@@ -74,12 +69,10 @@ handlers:
   static_files: js.html
   upload: js\.html
 
+- url: /flash\.html
+  static_files: flash.html
+  upload: flash\.html
+
 - url: /synth_example\.html
   static_files: synth_example.html
   upload: synth_example\.html
-
-#- url: /.*
-#  script: main.py
-
-- url: /authenticate_song
-  script: authenticate_song.app

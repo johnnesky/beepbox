@@ -180,7 +180,9 @@ var beepbox;
         ];
         Music.pianoScaleFlags = [true, false, true, false, true, true, false, true, false, true, false, true];
         // C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
-        Music.keyNames = ["B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C"];
+        Music.blackKeyNameParents = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
+        Music.noteNames = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
+        Music.keyNames = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
         Music.keyTransposes = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
         Music.tempoNames = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
         Music.beatsMin = 3;
@@ -193,7 +195,6 @@ var beepbox;
         Music.instrumentsMax = 10;
         Music.partNames = ["triples", "standard"];
         Music.partCounts = [3, 4];
-        Music.noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
         Music.waveNames = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
         Music.waveVolumes = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
         Music.drumNames = ["retro", "white"];
@@ -215,7 +216,7 @@ var beepbox;
         Music.channelVolumes = [0.27, 0.27, 0.27, 0.19];
         Music.drumInterval = 6;
         Music.numChannels = 4;
-        Music.drumCount = 11;
+        Music.drumCount = 12;
         Music.noteCount = 37;
         Music.maxPitch = 84;
         return Music;
@@ -1906,19 +1907,28 @@ var beepbox;
             return pattern == null ? 0 : pattern.instrument;
         };
         SongDocument.prototype._setCookie = function (name, value) {
-            var d = new Date();
-            d.setTime(d.getTime() + (10 * 365 * 24 * 60 * 60 * 1000));
-            document.cookie = name + "=" + value + "; expires=" + d.toUTCString();
+            localStorage.setItem(name, value);
         };
         SongDocument.prototype._getCookie = function (cname) {
+            var item = localStorage.getItem(cname);
+            if (item != null) {
+                return item;
+            }
+            // Legacy: check for cookie:
             var name = cname + "=";
             var ca = document.cookie.split(';');
             for (var i = 0; i < ca.length; i++) {
                 var c = ca[i];
                 while (c.charAt(0) == ' ')
                     c = c.substring(1);
-                if (c.indexOf(name) == 0)
-                    return c.substring(name.length, c.length);
+                if (c.indexOf(name) == 0) {
+                    // Found cookie, convert it to localStorage and delete original.
+                    var value = c.substring(name.length, c.length);
+                    this._setCookie(cname, value);
+                    // Delete old cookie by providing old expiration:
+                    document.cookie = cname + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                    return value;
+                }
             }
             return "";
         };
@@ -2955,10 +2965,11 @@ var beepbox;
             this._newNotes = [];
             var i;
             var j;
+            var maxPitch = (doc.channel == 3 ? beepbox.Music.drumCount - 1 : beepbox.Music.maxPitch);
             for (i = 0; i < this._oldNotes.length; i++) {
                 var note = this._oldNotes[i];
                 if (upward) {
-                    for (j = note + 1; j <= beepbox.Music.maxPitch; j++) {
+                    for (j = note + 1; j <= maxPitch; j++) {
                         if (doc.channel == 3 || beepbox.Music.scaleFlags[doc.song.scale][j % 12] == true) {
                             note = j;
                             break;
@@ -2984,13 +2995,13 @@ var beepbox;
                     this._newNotes.push(note);
             }
             var min = 0;
-            var max = beepbox.Music.maxPitch;
+            var max = maxPitch;
             for (i = 1; i < this._newNotes.length; i++) {
                 var diff = this._newNotes[0] - this._newNotes[i];
                 if (min < diff)
                     min = diff;
-                if (max > diff + beepbox.Music.maxPitch)
-                    max = diff + beepbox.Music.maxPitch;
+                if (max > diff + maxPitch)
+                    max = diff + maxPitch;
             }
             this._oldPins.forEach(function (oldPin) {
                 var interval = oldPin.interval + _this._oldNotes[0];
@@ -3204,12 +3215,18 @@ SOFTWARE.
 var beepbox;
 (function (beepbox) {
     function PatternEditor(doc) {
+        function prettyNumber(value) {
+            return value.toFixed(2).replace(/\.?0*$/, "");
+        }
         var container = document.getElementById("patternEditorContainer");
-        var canvas = document.getElementById("patternEditor");
-        var graphics = canvas.getContext("2d");
-        var preview = document.getElementById("patternEditorPreview");
-        var previewGraphics = preview.getContext("2d");
-        var playhead = document.getElementById("patternPlayhead");
+        var svgNS = "http://www.w3.org/2000/svg";
+        var svg = document.getElementById("patternEditorSvg");
+        var svgPlayhead = document.getElementById("patternEditorPlayhead");
+        var svgNoteContainer = document.getElementById("patternEditorNoteContainer");
+        var svgPreview = document.getElementById("patternEditorPreview");
+        var svgNoteBackground = document.getElementById("patternEditorNoteBackground");
+        var svgDrumBackground = document.getElementById("patternEditorDrumBackground");
+        var svgBackground = document.getElementById("patternEditorBackground");
         var editorWidth;
         var editorHeight = 481;
         var partWidth;
@@ -3240,13 +3257,31 @@ var beepbox;
         var pattern;
         var playheadX = 0.0;
         var octaveOffset = 0;
+        var defaultNoteHeight = 13;
+        var defaultDrumHeight = 40;
+        var backgroundNoteRows = [];
+        for (var i = 0; i < 12; i++) {
+            var y = (12 - i) % 12;
+            var rectangle = document.createElementNS(svgNS, "rect");
+            rectangle.setAttributeNS(null, "x", "1");
+            rectangle.setAttributeNS(null, "y", "" + (y * defaultNoteHeight + 1));
+            rectangle.setAttributeNS(null, "height", "" + (defaultNoteHeight - 2));
+            svgNoteBackground.appendChild(rectangle);
+            backgroundNoteRows[i] = rectangle;
+        }
+        var backgroundDrumRow = document.createElementNS(svgNS, "rect");
+        backgroundDrumRow.setAttributeNS(null, "x", "1");
+        backgroundDrumRow.setAttributeNS(null, "y", "1");
+        backgroundDrumRow.setAttributeNS(null, "height", "" + (defaultDrumHeight - 2));
+        backgroundDrumRow.setAttributeNS(null, "fill", "#444444");
+        svgDrumBackground.appendChild(backgroundDrumRow);
         function updateCursorStatus() {
             var i;
             var j;
             if (pattern == null)
                 return;
             cursor = new beepbox.PatternCursor();
-            if (mouseOver == false || mouseX < 0 || mouseX > editorWidth || mouseY < 0 || mouseY > editorHeight)
+            if (mouseX < 0 || mouseX > editorWidth || mouseY < 0 || mouseY > editorHeight)
                 return;
             cursor.part = Math.floor(Math.max(0, Math.min(doc.song.beats * doc.song.parts - 1, mouseX / partWidth)));
             pattern.tones.every(function (tone) {
@@ -3455,10 +3490,10 @@ var beepbox;
         });
         function onEnterFrame(timestamp) {
             if (!doc.synth.playing || pattern == null || doc.song.getPattern(doc.channel, Math.floor(doc.synth.playhead)) != pattern) {
-                playhead.style.visibility = "hidden";
+                svgPlayhead.setAttributeNS(null, "visibility", "hidden");
             }
             else {
-                playhead.style.visibility = "visible";
+                svgPlayhead.setAttributeNS(null, "visibility", "visible");
                 var modPlayhead = doc.synth.playhead - Math.floor(doc.synth.playhead);
                 if (Math.abs(modPlayhead - playheadX) > 0.1) {
                     playheadX = modPlayhead;
@@ -3466,7 +3501,7 @@ var beepbox;
                 else {
                     playheadX += (modPlayhead - playheadX) * 0.2;
                 }
-                playhead.style.left = (playheadX * editorWidth - 2) + "px";
+                svgPlayhead.setAttributeNS(null, "x", "" + prettyNumber(playheadX * editorWidth - 2));
             }
             window.requestAnimationFrame(onEnterFrame);
         }
@@ -3488,10 +3523,37 @@ var beepbox;
             updateCursorStatus();
             updatePreview();
         }
+        function onTouchPressed(event) {
+            event.preventDefault();
+            if (pattern == null)
+                return;
+            mouseDown = true;
+            var boundingRect = svg.getBoundingClientRect();
+            mouseX = event.touches[0].clientX - boundingRect.left;
+            mouseY = event.touches[0].clientY - boundingRect.top;
+            mouseXStart = mouseX;
+            mouseYStart = mouseY;
+            mouseXPrev = mouseX;
+            mouseYPrev = mouseY;
+            updateCursorStatus();
+            updatePreview();
+        }
         function onMouseMoved(event) {
-            var boundingRect = canvas.getBoundingClientRect();
+            var boundingRect = svg.getBoundingClientRect();
             mouseX = (event.clientX || event.pageX) - boundingRect.left;
             mouseY = (event.clientY || event.pageY) - boundingRect.top;
+            onCursorMoved();
+        }
+        function onTouchMoved(event) {
+            if (!mouseDown)
+                return;
+            event.preventDefault();
+            var boundingRect = svg.getBoundingClientRect();
+            mouseX = event.touches[0].clientX - boundingRect.left;
+            mouseY = event.touches[0].clientY - boundingRect.top;
+            onCursorMoved();
+        }
+        function onCursorMoved() {
             var start;
             var end;
             var i = 0;
@@ -3610,7 +3672,7 @@ var beepbox;
                             if (bendPart < prevPin.time)
                                 throw new Error();
                             var volumeRatio = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
-                            bendVolume = prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((mouseYStart - mouseY) / 25.0);
+                            bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((mouseYStart - mouseY) / 25.0));
                             if (bendVolume < 0)
                                 bendVolume = 0;
                             if (bendVolume > 3)
@@ -3666,7 +3728,7 @@ var beepbox;
                 updatePreview();
             }
         }
-        function onMouseReleased(event) {
+        function onCursorReleased(event) {
             if (!cursor.valid)
                 return;
             if (pattern == null)
@@ -3709,53 +3771,64 @@ var beepbox;
             mouseDown = false;
             mouseDragging = false;
             updateCursorStatus();
-            render();
+            updatePreview();
         }
         function updatePreview() {
-            previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
-            if (!mouseOver || mouseDown || !cursor.valid || pattern == null)
-                return;
-            previewGraphics.lineWidth = 2;
-            previewGraphics.strokeStyle = "#ffffff";
-            drawNote(previewGraphics, cursor.note, cursor.start, cursor.pins, noteHeight / 2 + 1, true, octaveOffset);
-            previewGraphics.stroke();
+            if (!mouseOver || mouseDown || !cursor.valid || pattern == null) {
+                svgPreview.setAttributeNS(null, "visibility", "hidden");
+            }
+            else {
+                svgPreview.setAttributeNS(null, "visibility", "visible");
+                drawNote(svgPreview, cursor.note, cursor.start, cursor.pins, noteHeight / 2 + 1, true, octaveOffset);
+            }
+        }
+        function makeEmptyReplacementElement(node) {
+            var clone = node.cloneNode(false);
+            node.parentNode.replaceChild(clone, node);
+            return clone;
         }
         function documentChanged() {
             editorWidth = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
-            canvas.width = editorWidth;
             pattern = doc.getCurrentPattern();
             partWidth = editorWidth / (doc.song.beats * doc.song.parts);
-            noteHeight = doc.channel == 3 ? 43 : 13;
+            noteHeight = doc.channel == 3 ? defaultDrumHeight : defaultNoteHeight;
             noteCount = doc.channel == 3 ? beepbox.Music.drumCount : beepbox.Music.noteCount;
             octaveOffset = doc.song.channelOctaves[doc.channel] * 12;
-            //scrollRect = new Rectangle(0, 0, editorWidth, editorHeight);
             copiedPins = copiedPinChannels[doc.channel];
+            svg.setAttributeNS(null, "width", "" + editorWidth);
+            svgBackground.setAttributeNS(null, "width", "" + editorWidth);
+            svgNoteBackground.setAttributeNS(null, "width", "" + (editorWidth / doc.song.beats));
+            svgDrumBackground.setAttributeNS(null, "width", "" + (editorWidth / doc.song.beats));
             if (!mouseDown)
                 updateCursorStatus();
-            render();
-        }
-        function render() {
-            graphics.clearRect(0, 0, editorWidth, editorHeight);
-            graphics.fillStyle = "#000000";
-            //graphics.fillRect(0, 0, partWidth * doc.song.beats * doc.song.parts, noteHeight * noteCount);
+            svgNoteContainer = makeEmptyReplacementElement(svgNoteContainer);
             updatePreview();
-            if (pattern == null)
+            if (pattern == null) {
+                svg.setAttributeNS(null, "visibility", "hidden");
                 return;
-            for (var j = 0; j < noteCount; j++) {
-                if (doc.channel != 3 && beepbox.Music.scaleFlags[doc.song.scale][j % 12] == false) {
-                    continue;
-                }
+            }
+            svg.setAttributeNS(null, "visibility", "visible");
+            for (var j = 0; j < 12; j++) {
                 var color = "#444444";
-                if (doc.channel != 3) {
-                    if (j % 12 == 0)
-                        color = "#886644";
-                    if (j % 12 == 7 && doc.showFifth)
-                        color = "#446688";
-                }
-                graphics.fillStyle = color;
-                for (var k = 0; k < doc.song.beats; k++) {
-                    graphics.fillRect(partWidth * k * doc.song.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.song.parts - 2, noteHeight - 2);
-                }
+                if (j == 0)
+                    color = "#886644";
+                if (j == 7 && doc.showFifth)
+                    color = "#446688";
+                var rectangle = backgroundNoteRows[j];
+                rectangle.setAttributeNS(null, "width", "" + (partWidth * doc.song.parts - 2));
+                rectangle.setAttributeNS(null, "fill", color);
+                rectangle.setAttributeNS(null, "visibility", beepbox.Music.scaleFlags[doc.song.scale][j] ? "visible" : "hidden");
+            }
+            backgroundDrumRow.setAttributeNS(null, "width", "" + (partWidth * doc.song.parts - 2));
+            if (doc.channel == 3) {
+                svgBackground.setAttributeNS(null, "fill", "url(#patternEditorDrumBackground)");
+                svgBackground.setAttributeNS(null, "height", "" + (defaultDrumHeight * beepbox.Music.drumCount));
+                svg.setAttributeNS(null, "height", "" + (defaultDrumHeight * beepbox.Music.drumCount));
+            }
+            else {
+                svgBackground.setAttributeNS(null, "fill", "url(#patternEditorNoteBackground)");
+                svgBackground.setAttributeNS(null, "height", "" + editorHeight);
+                svg.setAttributeNS(null, "height", "" + editorHeight);
             }
             if (doc.channel != 3 && doc.showChannels) {
                 for (var channel = 2; channel >= 0; channel--) {
@@ -3766,25 +3839,31 @@ var beepbox;
                         continue;
                     pattern2.tones.forEach(function (tone) {
                         tone.notes.forEach(function (note) {
-                            graphics.fillStyle = beepbox.SongEditor.noteColorsDim[channel];
-                            drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
-                            graphics.fill();
+                            var notePath = document.createElementNS(svgNS, "path");
+                            notePath.setAttributeNS(null, "fill", beepbox.SongEditor.noteColorsDim[channel]);
+                            notePath.setAttributeNS(null, "pointer-events", "none");
+                            drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
+                            svgNoteContainer.appendChild(notePath);
                         });
                     });
                 }
             }
             pattern.tones.forEach(function (tone) {
                 tone.notes.forEach(function (note) {
-                    graphics.fillStyle = beepbox.SongEditor.noteColorsDim[doc.channel];
-                    drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
-                    graphics.fill();
-                    graphics.fillStyle = beepbox.SongEditor.noteColorsBright[doc.channel];
-                    drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
-                    graphics.fill();
+                    var notePath = document.createElementNS(svgNS, "path");
+                    notePath.setAttributeNS(null, "fill", beepbox.SongEditor.noteColorsDim[doc.channel]);
+                    notePath.setAttributeNS(null, "pointer-events", "none");
+                    drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
+                    svgNoteContainer.appendChild(notePath);
+                    notePath = document.createElementNS(svgNS, "path");
+                    notePath.setAttributeNS(null, "fill", beepbox.SongEditor.noteColorsBright[doc.channel]);
+                    notePath.setAttributeNS(null, "pointer-events", "none");
+                    drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
+                    svgNoteContainer.appendChild(notePath);
                 });
             });
         }
-        function drawNote(graphics, note, start, pins, radius, showVolume, offset) {
+        function drawNote(svgElement, note, start, pins, radius, showVolume, offset) {
             var i;
             var prevPin;
             var nextPin;
@@ -3795,8 +3874,7 @@ var beepbox;
             var prevVolume;
             var nextVolume;
             nextPin = pins[0];
-            graphics.beginPath();
-            graphics.moveTo(partWidth * (start + nextPin.time) + 1, noteToPixelHeight(note - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0));
+            var pathString = "M " + prettyNumber(partWidth * (start + nextPin.time) + 1) + " " + prettyNumber(noteToPixelHeight(note - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
             for (i = 1; i < pins.length; i++) {
                 prevPin = nextPin;
                 nextPin = pins[i];
@@ -3806,12 +3884,12 @@ var beepbox;
                 nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
                 prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
                 nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
-                graphics.lineTo(prevSide, prevHeight - radius * prevVolume);
+                pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
                 if (prevPin.interval > nextPin.interval)
-                    graphics.lineTo(prevSide + 1, prevHeight - radius * prevVolume);
+                    pathString += "L " + prettyNumber(prevSide + 1) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
                 if (prevPin.interval < nextPin.interval)
-                    graphics.lineTo(nextSide - 1, nextHeight - radius * nextVolume);
-                graphics.lineTo(nextSide, nextHeight - radius * nextVolume);
+                    pathString += "L " + prettyNumber(nextSide - 1) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
+                pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
             }
             for (i = pins.length - 2; i >= 0; i--) {
                 prevPin = nextPin;
@@ -3822,35 +3900,33 @@ var beepbox;
                 nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
                 prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
                 nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
-                graphics.lineTo(prevSide, prevHeight + radius * prevVolume);
+                pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
                 if (prevPin.interval < nextPin.interval)
-                    graphics.lineTo(prevSide - 1, prevHeight + radius * prevVolume);
+                    pathString += "L " + prettyNumber(prevSide - 1) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
                 if (prevPin.interval > nextPin.interval)
-                    graphics.lineTo(nextSide + 1, nextHeight + radius * nextVolume);
-                graphics.lineTo(nextSide, nextHeight + radius * nextVolume);
+                    pathString += "L " + prettyNumber(nextSide + 1) + " " + prettyNumber(nextHeight + radius * nextVolume) + " ";
+                pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight + radius * nextVolume) + " ";
             }
-            graphics.closePath();
+            pathString += "z";
+            svgElement.setAttributeNS(null, "d", pathString);
         }
         function noteToPixelHeight(note) {
             return noteHeight * (noteCount - (note) - 0.5);
         }
-        /*
-        graphics.mozImageSmoothingEnabled = false;
-        graphics.webkitImageSmoothingEnabled = false;
-        graphics.msImageSmoothingEnabled = false;
-        graphics.imageSmoothingEnabled = false;
-        */
         doc.watch(documentChanged);
         documentChanged();
         updateCursorStatus();
         updatePreview();
-        //canvas.addEventListener(Event.ENTER_FRAME, onEnterFrame);
         window.requestAnimationFrame(onEnterFrame);
-        container.addEventListener("mousedown", onMousePressed);
+        svg.addEventListener("mousedown", onMousePressed);
         document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onMouseReleased);
-        container.addEventListener("mouseover", onMouseOver);
-        container.addEventListener("mouseout", onMouseOut);
+        document.addEventListener("mouseup", onCursorReleased);
+        svg.addEventListener("mouseover", onMouseOver);
+        svg.addEventListener("mouseout", onMouseOut);
+        svg.addEventListener("touchstart", onTouchPressed);
+        document.addEventListener("touchmove", onTouchMoved);
+        document.addEventListener("touchend", onCursorReleased);
+        document.addEventListener("touchcancel", onCursorReleased);
     }
     beepbox.PatternEditor = PatternEditor;
 })(beepbox || (beepbox = {}));
@@ -4216,10 +4292,32 @@ var beepbox;
             updatePreview();
             onMouseMoved(event);
         }
+        function onTouchPressed(event) {
+            event.preventDefault();
+            mouseDown = true;
+            var boundingRect = canvas.getBoundingClientRect();
+            mouseX = event.touches[0].clientX - boundingRect.left;
+            mouseY = event.touches[0].clientY - boundingRect.top;
+            updateCursorStatus();
+            updatePreview();
+            onTouchMoved(event);
+        }
         function onMouseMoved(event) {
             var boundingRect = canvas.getBoundingClientRect();
             mouseX = (event.clientX || event.pageX) - boundingRect.left;
             mouseY = (event.clientY || event.pageY) - boundingRect.top;
+            onCursorMoved();
+        }
+        function onTouchMoved(event) {
+            if (!mouseDown)
+                return;
+            event.preventDefault();
+            var boundingRect = canvas.getBoundingClientRect();
+            mouseX = event.touches[0].clientX - boundingRect.left;
+            mouseY = event.touches[0].clientY - boundingRect.top;
+            onCursorMoved();
+        }
+        function onCursorMoved() {
             if (mouseDown) {
                 if (change != null)
                     change.undo();
@@ -4272,7 +4370,7 @@ var beepbox;
                 updatePreview();
             }
         }
-        function onMouseReleased(event) {
+        function onCursorReleased(event) {
             if (mouseDown) {
                 if (change != null) {
                     //if (doc.history.getRecentChange() is ChangeLoop) doc.history.undo();
@@ -4344,11 +4442,15 @@ var beepbox;
         doc.watch(documentChanged);
         container.addEventListener("mousedown", onMousePressed);
         document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onMouseReleased);
+        document.addEventListener("mouseup", onCursorReleased);
         container.addEventListener("mouseover", onMouseOver);
         container.addEventListener("mouseout", onMouseOut);
         document.addEventListener("keydown", onKeyPressed);
         document.addEventListener("keyup", onKeyReleased);
+        container.addEventListener("touchstart", onTouchPressed);
+        document.addEventListener("touchmove", onTouchMoved);
+        document.addEventListener("touchend", onCursorReleased);
+        document.addEventListener("touchcancel", onCursorReleased);
     }
     beepbox.LoopEditor = LoopEditor;
 })(beepbox || (beepbox = {}));
@@ -4408,10 +4510,34 @@ var beepbox;
                 dragStart = mouseX;
             }
         }
+        function onTouchPressed(event) {
+            event.preventDefault();
+            mouseDown = true;
+            var boundingRect = canvas.getBoundingClientRect();
+            mouseX = event.touches[0].clientX - boundingRect.left;
+            mouseY = event.touches[0].clientY - boundingRect.top;
+            updatePreview();
+            if (mouseX >= doc.barScrollPos * barWidth && mouseX <= (doc.barScrollPos + 16) * barWidth) {
+                dragging = true;
+                dragStart = mouseX;
+            }
+        }
         function onMouseMoved(event) {
             var boundingRect = canvas.getBoundingClientRect();
             mouseX = (event.clientX || event.pageX) - boundingRect.left;
             mouseY = (event.clientY || event.pageY) - boundingRect.top;
+            onCursorMoved();
+        }
+        function onTouchMoved(event) {
+            if (!mouseDown)
+                return;
+            event.preventDefault();
+            var boundingRect = canvas.getBoundingClientRect();
+            mouseX = event.touches[0].clientX - boundingRect.left;
+            mouseY = event.touches[0].clientY - boundingRect.top;
+            onCursorMoved();
+        }
+        function onCursorMoved() {
             if (dragging) {
                 while (mouseX - dragStart < -barWidth * 0.5) {
                     if (doc.barScrollPos > 0) {
@@ -4436,7 +4562,7 @@ var beepbox;
             }
             updatePreview();
         }
-        function onMouseReleased(event) {
+        function onCursorReleased(event) {
             if (!dragging && mouseDown) {
                 if (mouseX < (doc.barScrollPos + 8) * barWidth) {
                     if (doc.barScrollPos > 0)
@@ -4509,9 +4635,13 @@ var beepbox;
         documentChanged();
         container.addEventListener("mousedown", onMousePressed);
         document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onMouseReleased);
+        document.addEventListener("mouseup", onCursorReleased);
         container.addEventListener("mouseover", onMouseOver);
         container.addEventListener("mouseout", onMouseOut);
+        container.addEventListener("touchstart", onTouchPressed);
+        document.addEventListener("touchmove", onTouchMoved);
+        document.addEventListener("touchend", onCursorReleased);
+        document.addEventListener("touchcancel", onCursorReleased);
     }
     beepbox.BarScrollBar = BarScrollBar;
 })(beepbox || (beepbox = {}));
@@ -4578,10 +4708,36 @@ var beepbox;
                 dragStart = mouseY;
             }
         }
+        function onTouchPressed(event) {
+            event.preventDefault();
+            mouseDown = true;
+            var boundingRect = canvas.getBoundingClientRect();
+            mouseX = event.touches[0].clientX - boundingRect.left;
+            mouseY = event.touches[0].clientY - boundingRect.top;
+            if (doc.channel == 3)
+                return;
+            updatePreview();
+            if (mouseY >= barBottom - barHeight && mouseY <= barBottom) {
+                dragging = true;
+                dragStart = mouseY;
+            }
+        }
         function onMouseMoved(event) {
             var boundingRect = canvas.getBoundingClientRect();
             mouseX = (event.clientX || event.pageX) - boundingRect.left;
             mouseY = (event.clientY || event.pageY) - boundingRect.top;
+            onCursorMoved();
+        }
+        function onTouchMoved(event) {
+            if (!mouseDown)
+                return;
+            event.preventDefault();
+            var boundingRect = canvas.getBoundingClientRect();
+            mouseX = event.touches[0].clientX - boundingRect.left;
+            mouseY = event.touches[0].clientY - boundingRect.top;
+            onCursorMoved();
+        }
+        function onCursorMoved() {
             if (doc.channel == 3)
                 return;
             if (dragging) {
@@ -4606,7 +4762,7 @@ var beepbox;
             }
             updatePreview();
         }
-        function onMouseReleased(event) {
+        function onCursorReleased(event) {
             if (doc.channel != 3 && !dragging && mouseDown) {
                 if (mouseY < barBottom - barHeight * 0.5) {
                     if (currentOctave < 4)
@@ -4682,9 +4838,13 @@ var beepbox;
         barHeight = (octaveHeight * 3 + rootHeight);
         container.addEventListener("mousedown", onMousePressed);
         document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onMouseReleased);
+        document.addEventListener("mouseup", onCursorReleased);
         container.addEventListener("mouseover", onMouseOver);
         container.addEventListener("mouseout", onMouseOut);
+        container.addEventListener("touchstart", onTouchPressed);
+        document.addEventListener("touchmove", onTouchMoved);
+        document.addEventListener("touchend", onCursorReleased);
+        document.addEventListener("touchcancel", onCursorReleased);
     }
     beepbox.OctaveScrollBar = OctaveScrollBar;
 })(beepbox || (beepbox = {}));
@@ -4802,7 +4962,7 @@ var beepbox;
             updatePreview();
         }
         function updatePreview() {
-            previewGraphics.clearRect(0, 0, 32, 43);
+            previewGraphics.clearRect(0, 0, 32, 40);
             if (!mouseOver || mouseDown)
                 return;
             preview.style.left = "0px";
@@ -4812,7 +4972,7 @@ var beepbox;
             previewGraphics.strokeRect(1, 1, editorWidth - 2, noteHeight - 2);
         }
         function documentChanged() {
-            noteHeight = doc.channel == 3 ? 43 : 13;
+            noteHeight = doc.channel == 3 ? 40 : 13;
             noteCount = doc.channel == 3 ? beepbox.Music.drumCount : beepbox.Music.noteCount;
             updateCursorNote();
             doc.synth.pianoNote = cursorNote + doc.song.channelOctaves[doc.channel] * 12;
@@ -4853,12 +5013,22 @@ var beepbox;
                 }
                 else {
                     var text = beepbox.Music.noteNames[noteNameIndex];
+                    if (text == null) {
+                        var shiftDir = beepbox.Music.blackKeyNameParents[j % 12];
+                        text = beepbox.Music.noteNames[(noteNameIndex + 12 + shiftDir) % 12];
+                        if (shiftDir == 1) {
+                            text += "♭";
+                        }
+                        else if (shiftDir == -1) {
+                            text += "♯";
+                        }
+                    }
                     var textColor = beepbox.Music.pianoScaleFlags[noteNameIndex] ? "#000000" : "#ffffff";
                     key = beepbox.Music.pianoScaleFlags[noteNameIndex] ? WhiteKey : BlackKey;
                     graphics.drawImage(key, 0, noteHeight * (noteCount - j - 1));
                     graphics.font = "bold 11px sans-serif";
                     graphics.fillStyle = textColor;
-                    graphics.fillText(text, 17, noteHeight * (noteCount - j) - 3);
+                    graphics.fillText(text, 15, noteHeight * (noteCount - j) - 3);
                 }
             }
             updatePreview();
@@ -5122,6 +5292,11 @@ var beepbox;
             }
             var blob = new Blob([arrayBuffer], { type: "audio/vnd.wav" }); // audio/vnd.wave ?
             saveAs(blob, "song.wav");
+            /*
+            var blob = new Blob([arrayBuffer], {type: 'application/octet-stream'});
+            var url = URL.createObjectURL(url);
+            window.open(url);
+            */
             onClose();
         }
         loopDropDown.value = "1";
@@ -5149,28 +5324,71 @@ var beepbox;
     }
     beepbox.ExportPrompt = ExportPrompt;
 })(beepbox || (beepbox = {}));
-/*! @source http://purl.eligrey.com/github/FileSaver.js/blob/master/FileSaver.js */
+/*! @source https://github.com/eligrey/FileSaver.js/blob/master/FileSaver.min.js */
 var saveAs = saveAs || function (e) {
     "use strict";
-    if ("undefined" == typeof navigator || !/MSIE [1-9]\./.test(navigator.userAgent)) {
-        var t = e.document, n = function () { return e.URL || e.webkitURL || e; }, o = t.createElementNS("http://www.w3.org/1999/xhtml", "a"), r = "download" in o, i = function (n) { var o = t.createEvent("MouseEvents"); o.initMouseEvent("click", !0, !1, e, 0, 0, 0, 0, 0, !1, !1, !1, !1, 0, null), n.dispatchEvent(o); }, a = e.webkitRequestFileSystem, c = e.requestFileSystem || a || e.mozRequestFileSystem, u = function (t) { (e.setImmediate || e.setTimeout)(function () { throw t; }, 0); }, f = "application/octet-stream", s = 0, d = 500, l = function (t) { var o = function () { "string" == typeof t ? n : t.remove(); }; e.chrome ? o() : setTimeout(o, d); }, v = function (e, t, n) { t = [].concat(t); for (var o = t.length; o--;) {
-            var r = e["on" + t[o]];
-            if ("function" == typeof r)
-                try {
-                    r.call(e, n || e);
-                }
-                catch (i) {
-                    u(i);
-                }
-        } }, p = function (e) { return /^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(e.type) ? new Blob(["\ufeff", e], { type: e.type }) : e; }, w = function (t, u) { t = p(t); var d, w, y, m = this, S = t.type, h = !1, O = function () { v(m, "writestart progress write writeend".split(" ")); }, E = function () { if ((h || !d) && (d = n().createObjectURL(t)), w)
-            w.location.href = d;
-        else {
-            var o = e.open(d, "_blank");
-            void 0 == o && "undefined" != typeof safari && (e.location.href = d);
-        } m.readyState = m.DONE, O(), l(d); }, R = function (e) { return function () { return m.readyState !== m.DONE ? e.apply(this, arguments) : void 0; }; }, b = { create: !0, exclusive: !1 }; return m.readyState = m.INIT, u || (u = "download"), r ? (d = n().createObjectURL(t), o.href = d, o.download = u, i(o), m.readyState = m.DONE, O(), void l(d)) : (e.chrome && S && S !== f && (y = t.slice || t.webkitSlice, t = y.call(t, 0, t.size, f), h = !0), a && "download" !== u && (u += ".download"), (S === f || a) && (w = e), c ? (s += t.size, void c(e.TEMPORARY, s, R(function (e) { e.root.getDirectory("saved", b, R(function (e) { var n = function () { e.getFile(u, b, R(function (e) { e.createWriter(R(function (n) { n.onwriteend = function (t) { w.location.href = e.toURL(), m.readyState = m.DONE, v(m, "writeend", t), l(e); }, n.onerror = function () { var e = n.error; e.code !== e.ABORT_ERR && E(); }, "writestart progress write abort".split(" ").forEach(function (e) { n["on" + e] = m["on" + e]; }), n.write(t), m.abort = function () { n.abort(), m.readyState = m.DONE; }, m.readyState = m.WRITING; }), E); }), E); }; e.getFile(u, { create: !1 }, R(function (e) { e.remove(), n(); }), R(function (e) { e.code === e.NOT_FOUND_ERR ? n() : E(); })); }), E); }), E)) : void E()); }, y = w.prototype, m = function (e, t) { return new w(e, t); };
-        return "undefined" != typeof navigator && navigator.msSaveOrOpenBlob ? function (e, t) { return navigator.msSaveOrOpenBlob(p(e), t); } : (y.abort = function () { var e = this; e.readyState = e.DONE, v(e, "abort"); }, y.readyState = y.INIT = 0, y.WRITING = 1, y.DONE = 2, y.error = y.onwritestart = y.onprogress = y.onwrite = y.onabort = y.onerror = y.onwriteend = null, m);
+    if (typeof e === "undefined" || typeof navigator !== "undefined" && /MSIE [1-9]\./.test(navigator.userAgent)) {
+        return;
     }
-}("undefined" != typeof self && self || "undefined" != typeof window && window || this.content);
+    var t = e.document, n = function () { return e.URL || e.webkitURL || e; }, r = t.createElementNS("http://www.w3.org/1999/xhtml", "a"), o = "download" in r, i = function (e) { var t = new MouseEvent("click"); e.dispatchEvent(t); }, a = /constructor/i.test(e.HTMLElement), f = /CriOS\/[\d]+/.test(navigator.userAgent), u = function (t) { (e.setImmediate || e.setTimeout)(function () { throw t; }, 0); }, d = "application/octet-stream", s = 1e3 * 40, c = function (e) { var t = function () { if (typeof e === "string") {
+        n().revokeObjectURL(e);
+    }
+    else {
+        e.remove();
+    } }; setTimeout(t, s); }, l = function (e, t, n) { t = [].concat(t); var r = t.length; while (r--) {
+        var o = e["on" + t[r]];
+        if (typeof o === "function") {
+            try {
+                o.call(e, n || e);
+            }
+            catch (i) {
+                u(i);
+            }
+        }
+    } }, p = function (e) { if (/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(e.type)) {
+        return new Blob([String.fromCharCode(65279), e], { type: e.type });
+    } return e; }, v = function (t, u, s) { if (!s) {
+        t = p(t);
+    } var v = this, w = t.type, m = w === d, y, h = function () { l(v, "writestart progress write writeend".split(" ")); }, S = function () { if ((f || m && a) && e.FileReader) {
+        var r = new FileReader;
+        r.onloadend = function () { var t = f ? r.result : r.result.replace(/^data:[^;]*;/, "data:attachment/file;"); var n = e.open(t, "_blank"); if (!n)
+            e.location.href = t; t = undefined; v.readyState = v.DONE; h(); };
+        r.readAsDataURL(t);
+        v.readyState = v.INIT;
+        return;
+    } if (!y) {
+        y = n().createObjectURL(t);
+    } if (m) {
+        e.location.href = y;
+    }
+    else {
+        var o = e.open(y, "_blank");
+        if (!o) {
+            e.location.href = y;
+        }
+    } v.readyState = v.DONE; h(); c(y); }; v.readyState = v.INIT; if (o) {
+        y = n().createObjectURL(t);
+        setTimeout(function () { r.href = y; r.download = u; i(r); h(); c(y); v.readyState = v.DONE; });
+        return;
+    } S(); }, w = v.prototype, m = function (e, t, n) { return new v(e, t || e.name || "download", n); };
+    if (typeof navigator !== "undefined" && navigator.msSaveOrOpenBlob) {
+        return function (e, t, n) { t = t || e.name || "download"; if (!n) {
+            e = p(e);
+        } return navigator.msSaveOrOpenBlob(e, t); };
+    }
+    w.abort = function () { };
+    w.readyState = w.INIT = 0;
+    w.WRITING = 1;
+    w.DONE = 2;
+    w.error = w.onwritestart = w.onprogress = w.onwrite = w.onabort = w.onerror = w.onwriteend = null;
+    return m;
+}(typeof self !== "undefined" && self || typeof window !== "undefined" && window || this.content);
+if (typeof module !== "undefined" && module.exports) {
+    module.exports.saveAs = saveAs;
+}
+else if (typeof define !== "undefined" && define !== null && define.amd !== null) {
+    define([], function () { return saveAs; });
+}
 /*
 Copyright (C) 2012 John Nesky
 
@@ -5600,7 +5818,7 @@ styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode("\n#mainLayer div {\n\tmargin: 0;\n\tpadding: 0;\n}\n#mainLayer canvas {\n\toverflow: hidden;\n\tposition: absolute;\n\tdisplay: block;\n}\n\n#mainLayer .selectRow {\n\twidth:100%;\n\tcolor: #bbbbbb;\n\tmargin: 0;\n\tvertical-align: middle;\n\tline-height: 27px;\n}\n\n/* slider style designed with http://danielstern.ca/range.css/ */\ninput[type=range].beepBoxSlider {\n\t-webkit-appearance: none;\n\twidth: 100%;\n\tmargin: 4px 0;\n}\ninput[type=range].beepBoxSlider:focus {\n\toutline: none;\n}\ninput[type=range].beepBoxSlider::-webkit-slider-runnable-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-webkit-slider-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\t-webkit-appearance: none;\n\tmargin-top: -5px;\n}\ninput[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {\n\tbackground: #d6d6d6;\n}\ninput[type=range].beepBoxSlider::-moz-range-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-moz-range-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n}\ninput[type=range].beepBoxSlider::-ms-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: transparent;\n\tborder-color: transparent;\n\tcolor: transparent;\n}\ninput[type=range].beepBoxSlider::-ms-fill-lower {\n\tbackground: #8a8a8a;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-fill-upper {\n\tbackground: #b0b0b0;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\theight: 6px;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-lower {\n\tbackground: #b0b0b0;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-upper {\n\tbackground: #d6d6d6;\n}\n"));
 document.head.appendChild(styleSheet);
 var beepboxEditorContainer = document.getElementById("beepboxEditorContainer");
-beepboxEditorContainer.innerHTML = "\n<div id=\"mainLayer\" tabindex=\"0\" style=\"width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;\">\n\t<div id=\"editorBox\" style=\"width: 512px; height: 645px; float: left;\">\n\t\t<div id=\"patternContainerContainer\" style=\"width: 512px; height: 481px; display: table; table-layout: fixed;\">\n\t\t\t<div id=\"pianoContainer\" style=\"width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"piano\" width=\"32\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"pianoPreview\" width=\"32\" height=\"43\"></canvas>\n\t\t\t</div>\n\t\t\t<div id=\"patternEditorContainer\"  style=\"height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"patternEditor\" width=\"512\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"patternEditorPreview\" width=\"512\" height=\"481\"></canvas>\n\t\t\t\t<div id=\"patternPlayhead\" style=\"width: 4px; height: 481px; overflow:hidden; position: absolute; background: #ffffff; visibility: hidden;\"></div>\n\t\t\t</div>\n\t\t\t<div id=\"octaveScrollBarContainer\" style=\"width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"octaveScrollBar\" width=\"20\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"octaveScrollBarPreview\" width=\"20\" height=\"481\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t\t<div style=\"width: 512px; height: 6px;\"></div>\n\t\t<div id=\"trackContainerContainer\" style=\"width: 512px; height: 158px;\">\n\t\t\t<div id=\"trackEditorContainer\" style=\"width: 512px; height: 128px; position: relative; overflow:hidden;\">\n\t\t\t\t<canvas id=\"trackEditor\" width=\"512\" height=\"128\"></canvas>\n\t\t\t\t<canvas id=\"trackEditorPreview\" width=\"32\" height=\"32\"></canvas>\n\t\t\t\t<div id=\"trackPlayhead\" style=\"width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;\"></div>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"loopEditorContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"loopEditor\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"loopEditorPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"barScrollBarContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"barScrollBar\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"barScrollBarPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div style=\"float: left; width: 6px; height: 645px;\"></div>\n\t\n\t<div style=\"float: left; width: 182px; height: 645px; font-size: 12px;\">\n\t\t<div style=\"width:100%; text-align: center; color: #bbbbbb;\">\n\t\t\tBeepBox 2.0.1\n\t\t</div>\n\t\t\n\t\t<div style=\"width:100%; margin: 5px 0;\">\n\t\t\t<button id=\"playButton\" style=\"width: 75px; float: left; margin: 0px\" type=\"button\">Play</button>\n\t\t\t<div style=\"float: left; width: 4px; height: 10px;\"></div>\n\t\t\t<input class=\"beepBoxSlider\" id=\"volumeSlider\" style=\"float: left; width: 101px; margin: 0px;\" type=\"range\" min=\"0\" max=\"100\" value=\"50\" step=\"1\" />\n\t\t\t<div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<select id=\"editButton\" style=\"width:100%; margin: 5px 0;\">Edit Menu</select>\n\t\t<select id=\"optionsButton\" style=\"width:100%; margin: 5px 0;\">Preferences Menu</select>\n\t\t<!--<button id=\"publishButton\" style=\"width:100%\" type=\"button\">Publishing Panel...</button>-->\n\t\t<button id=\"exportButton\" style=\"width:100%; margin: 5px 0;\" type=\"button\">Export to .wav File</button>\n\t\t<!--<button id=\"copyButton\" style=\"width:100%\" type=\"button\">Copy URL to Clipboard</button>-->\n\t\t\n\t\t<div style=\"width: 100%; height: 110px;\"></div>\n\t\t\n\t\t<div style=\"width:100%; margin: 3px 0;\">\n\t\t\tSong Settings:\n\t\t</div>\n\t\t\n\t\t<div class=\"selectRow\">\n\t\t\tScale: <span style=\"float: right;\"><select id=\"scaleDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tKey: <span style=\"float: right;\"><select id=\"keyDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tTempo: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"tempoSlider\" style=\"width: 90px; margin: 0px;\" type=\"range\" min=\"0\" max=\"11\" value=\"7\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tRhythm: <span style=\"float: right;\"><select id=\"partDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"patternSettingsLabel\" style=\"visibility: hidden; width:100%; margin: 3px 0;\">\n\t\t\tPattern Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"instrumentDropDownGroup\" style=\"width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;\">\n\t\t\tInstrument: <span style=\"float: right;\"><select id=\"instrumentDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"instrumentSettingsLabel\" style=\"clear: both; width:100%; margin: 3px 0;\">\n\t\t\tInstrument Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"channelVolumeSliderGroup\" class=\"selectRow\">\n\t\t\tVolume: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"channelVolumeSlider\" style=\"width: 120px; margin: 0px;\" type=\"range\" min=\"-5\" max=\"0\" value=\"0\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"waveDropDownGroup\" class=\"selectRow\">\n\t\t\tWave: <span style=\"float: right;\"><select id=\"waveDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"attackDropDownGroup\" class=\"selectRow\">\n\t\t\tEnvelope: <span style=\"float: right;\"><select id=\"attackDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"filterDropDownGroup\" class=\"selectRow\">\n\t\t\tFilter: <span style=\"float: right;\"><select id=\"filterDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"chorusDropDownGroup\" class=\"selectRow\">\n\t\t\tChorus: <span style=\"float: right;\"><select id=\"chorusDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"effectDropDownGroup\" class=\"selectRow\">\n\t\t\tEffect: <span style=\"float: right;\"><select id=\"effectDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t</div>\n\t\n\t<div id=\"promptBackground\" style=\"position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;\"></div>\n\t\n\t<div id=\"songSizePrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Custom Song Size</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Beats per bar:<br /><span style=\"color: #888888;\">(Multiples of 3 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"beatsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Bars per song:<br /><span style=\"color: #888888;\">(Multiples of 2 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"barsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Patterns per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"patternsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"32\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Instruments per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"instrumentsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"10\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"songDurationOkayButton\" style=\"width:125px; float: left;\" type=\"button\">Okay</button>\n\t\t\t\t<button id=\"songDurationCancelButton\" style=\"width:125px; float: right;\" type=\"button\">Cancel</button>\n\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div id=\"exportPrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Export Options</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"display: table; width: 200px;\">\n\t\t\t\t\t<div style=\"display: table-row;\">\n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tIntro:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tLoop Count:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tOutro:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t</div> \n\t\t\t\t\t<div style=\"display: table-row; height: 30px;\">\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"enableIntro\" type=\"checkbox\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"loopDropDown\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"4\" step=\"1\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"enableOutro\" type=\"checkbox\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div> \n\t\t\t\t</div> \n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"exportOkayButton\" style=\"width:200px;\" type=\"button\">Export</button>\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t<button id=\"exportCancelButton\" style=\"width:200px;\" type=\"button\">Cancel</button>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n";
+beepboxEditorContainer.innerHTML = "\n<div id=\"mainLayer\" tabindex=\"0\" style=\"width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;\">\n\t<div id=\"editorBox\" style=\"width: 512px; height: 645px; float: left;\">\n\t\t<div id=\"patternContainerContainer\" style=\"width: 512px; height: 481px; display: table; table-layout: fixed;\">\n\t\t\t<div id=\"pianoContainer\" style=\"width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"piano\" width=\"32\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"pianoPreview\" width=\"32\" height=\"40\"></canvas>\n\t\t\t</div>\n\t\t\t<div id=\"patternEditorContainer\"  style=\"height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<svg id=\"patternEditorSvg\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background-color: #000000; touch-action: none; position: absolute;\" width=\"512\" height=\"481\">\n\t\t\t\t\t<defs id=\"patternEditorDefs\">\n\t\t\t\t\t\t<pattern id=\"patternEditorNoteBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"156\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t\t<pattern id=\"patternEditorDrumBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"40\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t</defs>\n\t\t\t\t\t<rect id=\"patternEditorBackground\" x=\"0\" y=\"0\" width=\"512\" height=\"481\" pointer-events=\"none\" fill=\"url(#patternEditorNoteBackground)\"></rect>\n\t\t\t\t\t<svg id=\"patternEditorNoteContainer\"></svg>\n\t\t\t\t\t<path id=\"patternEditorPreview\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" pointer-events=\"none\"></path>\n\t\t\t\t\t<rect id=\"patternEditorPlayhead\" x=\"0\" y=\"0\" width=\"4\" height=\"481\" fill=\"white\" pointer-events=\"none\"></rect>\n\t\t\t\t</svg>\n\t\t\t</div>\n\t\t\t<div id=\"octaveScrollBarContainer\" style=\"width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"octaveScrollBar\" width=\"20\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"octaveScrollBarPreview\" width=\"20\" height=\"481\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t\t<div style=\"width: 512px; height: 6px; clear: both;\"></div>\n\t\t<div id=\"trackContainerContainer\" style=\"width: 512px; height: 158px;\">\n\t\t\t<div id=\"trackEditorContainer\" style=\"width: 512px; height: 128px; position: relative; overflow:hidden;\">\n\t\t\t\t<canvas id=\"trackEditor\" width=\"512\" height=\"128\"></canvas>\n\t\t\t\t<canvas id=\"trackEditorPreview\" width=\"32\" height=\"32\"></canvas>\n\t\t\t\t<div id=\"trackPlayhead\" style=\"width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;\"></div>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"loopEditorContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"loopEditor\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"loopEditorPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"barScrollBarContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"barScrollBar\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"barScrollBarPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div style=\"float: left; width: 6px; height: 645px;\"></div>\n\t\n\t<div style=\"float: left; width: 182px; height: 645px; font-size: 12px;\">\n\t\t<div style=\"width:100%; text-align: center; color: #bbbbbb;\">\n\t\t\tBeepBox 2.1\n\t\t</div>\n\t\t\n\t\t<div style=\"width:100%; margin: 5px 0;\">\n\t\t\t<button id=\"playButton\" style=\"width: 75px; float: left; margin: 0px\" type=\"button\">Play</button>\n\t\t\t<div style=\"float: left; width: 4px; height: 10px;\"></div>\n\t\t\t<input class=\"beepBoxSlider\" id=\"volumeSlider\" style=\"float: left; width: 101px; margin: 0px;\" type=\"range\" min=\"0\" max=\"100\" value=\"50\" step=\"1\" />\n\t\t\t<div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<select id=\"editButton\" style=\"width:100%; margin: 5px 0;\">Edit Menu</select>\n\t\t<select id=\"optionsButton\" style=\"width:100%; margin: 5px 0;\">Preferences Menu</select>\n\t\t<!--<button id=\"publishButton\" style=\"width:100%\" type=\"button\">Publishing Panel...</button>-->\n\t\t<button id=\"exportButton\" style=\"width:100%; margin: 5px 0;\" type=\"button\">Export to .wav File</button>\n\t\t<!--<button id=\"copyButton\" style=\"width:100%\" type=\"button\">Copy URL to Clipboard</button>-->\n\t\t\n\t\t<div style=\"width: 100%; height: 110px;\"></div>\n\t\t\n\t\t<div style=\"width:100%; margin: 3px 0;\">\n\t\t\tSong Settings:\n\t\t</div>\n\t\t\n\t\t<div class=\"selectRow\">\n\t\t\tScale: <span style=\"float: right;\"><select id=\"scaleDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tKey: <span style=\"float: right;\"><select id=\"keyDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tTempo: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"tempoSlider\" style=\"width: 90px; margin: 0px;\" type=\"range\" min=\"0\" max=\"11\" value=\"7\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tRhythm: <span style=\"float: right;\"><select id=\"partDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"patternSettingsLabel\" style=\"visibility: hidden; width:100%; margin: 3px 0;\">\n\t\t\tPattern Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"instrumentDropDownGroup\" style=\"width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;\">\n\t\t\tInstrument: <span style=\"float: right;\"><select id=\"instrumentDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"instrumentSettingsLabel\" style=\"clear: both; width:100%; margin: 3px 0;\">\n\t\t\tInstrument Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"channelVolumeSliderGroup\" class=\"selectRow\">\n\t\t\tVolume: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"channelVolumeSlider\" style=\"width: 120px; margin: 0px;\" type=\"range\" min=\"-5\" max=\"0\" value=\"0\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"waveDropDownGroup\" class=\"selectRow\">\n\t\t\tWave: <span style=\"float: right;\"><select id=\"waveDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"attackDropDownGroup\" class=\"selectRow\">\n\t\t\tEnvelope: <span style=\"float: right;\"><select id=\"attackDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"filterDropDownGroup\" class=\"selectRow\">\n\t\t\tFilter: <span style=\"float: right;\"><select id=\"filterDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"chorusDropDownGroup\" class=\"selectRow\">\n\t\t\tChorus: <span style=\"float: right;\"><select id=\"chorusDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"effectDropDownGroup\" class=\"selectRow\">\n\t\t\tEffect: <span style=\"float: right;\"><select id=\"effectDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t</div>\n\t\n\t<div id=\"promptBackground\" style=\"position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;\"></div>\n\t\n\t<div id=\"songSizePrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Custom Song Size</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Beats per bar:<br /><span style=\"color: #888888;\">(Multiples of 3 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"beatsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Bars per song:<br /><span style=\"color: #888888;\">(Multiples of 2 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"barsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Patterns per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"patternsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"32\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Instruments per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"instrumentsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"10\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"songDurationOkayButton\" style=\"width:125px; float: left;\" type=\"button\">Okay</button>\n\t\t\t\t<button id=\"songDurationCancelButton\" style=\"width:125px; float: right;\" type=\"button\">Cancel</button>\n\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div id=\"exportPrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Export Options</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"display: table; width: 200px;\">\n\t\t\t\t\t<div style=\"display: table-row;\">\n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tIntro:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tLoop Count:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tOutro:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t</div> \n\t\t\t\t\t<div style=\"display: table-row; height: 30px;\">\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"enableIntro\" type=\"checkbox\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"loopDropDown\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"4\" step=\"1\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"enableOutro\" type=\"checkbox\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div> \n\t\t\t\t</div> \n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"exportOkayButton\" style=\"width:200px;\" type=\"button\">Export</button>\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t<button id=\"exportCancelButton\" style=\"width:200px;\" type=\"button\">Cancel</button>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n";
 var prevHash = "**blank**";
 var doc = new beepbox.SongDocument();
 var wokeUp = false;
@@ -5610,15 +5828,15 @@ function checkHash() {
         if (prevHash != "") {
             doc.history.record(new beepbox.ChangeSong(doc, prevHash));
         }
-        if (!wokeUp) {
-            wokeUp = true;
-            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent)) {
-            }
-            else {
-                doc.synth.play();
-            }
-            doc.changed();
+    }
+    if (!wokeUp && !document.hidden) {
+        wokeUp = true;
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent)) {
         }
+        else {
+            doc.synth.play();
+        }
+        doc.changed();
     }
     beepbox.Model.updateAll();
     window.requestAnimationFrame(checkHash);
