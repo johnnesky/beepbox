@@ -71,10 +71,38 @@ module beepbox {
 			}
 		}
 		
+		function onTouchPressed(event: TouchEvent): void {
+			event.preventDefault();
+			mouseDown = true;
+			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			mouseX = event.touches[0].clientX - boundingRect.left;
+			mouseY = event.touches[0].clientY - boundingRect.top;
+			if (doc.channel == 3) return;
+			updatePreview();
+			
+			if (mouseY >= barBottom - barHeight && mouseY <= barBottom) {
+				dragging = true;
+				dragStart = mouseY;
+			}
+		}
+		
 		function onMouseMoved(event: MouseEvent): void {
 			var boundingRect: ClientRect = canvas.getBoundingClientRect();
     		mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    onCursorMoved();
+		}
+		
+		function onTouchMoved(event: TouchEvent): void {
+			if (!mouseDown) return;
+			event.preventDefault();
+			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			mouseX = event.touches[0].clientX - boundingRect.left;
+			mouseY = event.touches[0].clientY - boundingRect.top;
+		    onCursorMoved();
+		}
+		
+		function onCursorMoved(): void {
 			if (doc.channel == 3) return;
 			if (dragging) {
 				while (mouseY - dragStart < -octaveHeight * 0.5) {
@@ -98,7 +126,7 @@ module beepbox {
 			updatePreview();
 		}
 		
-		function onMouseReleased(event: MouseEvent): void {
+		function onCursorReleased(event: Event): void {
 			if (doc.channel != 3 && !dragging && mouseDown) {
 				if (mouseY < barBottom - barHeight * 0.5) {
 					if (currentOctave < 4) doc.history.record(new ChangeOctave(doc, currentOctave + 1));
@@ -178,8 +206,13 @@ module beepbox {
 		
 		container.addEventListener("mousedown", onMousePressed);
 		document.addEventListener("mousemove", onMouseMoved);
-		document.addEventListener("mouseup", onMouseReleased);
+		document.addEventListener("mouseup", onCursorReleased);
 		container.addEventListener("mouseover", onMouseOver);
 		container.addEventListener("mouseout", onMouseOut);
+		
+		container.addEventListener("touchstart", onTouchPressed);
+		document.addEventListener("touchmove", onTouchMoved);
+		document.addEventListener("touchend", onCursorReleased);
+		document.addEventListener("touchcancel", onCursorReleased);
 	}
 }

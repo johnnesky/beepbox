@@ -190,7 +190,9 @@ module beepbox {
 		];
 		public static pianoScaleFlags: boolean[] = [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true];
 		// C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
-		public static keyNames: string[] = ["B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C"];
+		public static blackKeyNameParents: number[] = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
+		public static noteNames: string[] = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
+		public static keyNames: string[] = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
 		public static keyTransposes: number[] = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
 		public static tempoNames: string[] = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
 		public static beatsMin: number = 3;
@@ -203,7 +205,6 @@ module beepbox {
 		public static instrumentsMax: number = 10;
 		public static partNames: string[] = ["triples", "standard"];
 		public static partCounts: number[] = [3, 4];
-		public static noteNames: string[] = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 		public static waveNames: string[] = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
 		public static waveVolumes: number[] = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
 		public static drumNames: string[] = ["retro", "white"];
@@ -225,7 +226,7 @@ module beepbox {
 		public static channelVolumes: number[] = [0.27, 0.27, 0.27, 0.19];
 		public static drumInterval: number = 6;
 		public static numChannels: number = 4;
-		public static drumCount: number = 11;
+		public static drumCount: number = 12;
 		public static noteCount: number = 37;
 		public static maxPitch: number = 84;
 	}

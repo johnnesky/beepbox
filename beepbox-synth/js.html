@@ -6,6 +6,10 @@
 	<meta name="description" content="BeepBox is an online tool for sketching and sharing chiptune melodies. " />
 	<meta name="keywords" content="chiptune, music, melody, composition, tool, square wave, NES, NSF, BeepBox, beepbox" />
 	<meta name="viewport" content="width=700">
+	<meta name="apple-mobile-web-app-capable" content="yes"/>
+	<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+	<meta name="mobile-web-app-capable" content="yes"/>
+	<meta name="format-detection" content="telephone=no">
 	<style type="text/css">
 div {
 	margin: 0;
@@ -130,20 +134,9 @@ Instead of loading js beepbox editor interface directly, test for browser suppor
 <script type="text/javascript">
 //<![CDATA[
 
-var hasFlash = false;
-try {
-	if (new ActiveXObject('ShockwaveFlash.ShockwaveFlash')) { hasFlash = true; }
-} catch (e) {
-	var type = "application/x-shockwave-flash";
-	if (navigator.mimeTypes && navigator.mimeTypes[type] && navigator.mimeTypes[type].enabledPlugin) { hasFlash = true; }
-}
-
 var hasAudioContext = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
 
-// Note: Safari doesn't support saving generated audio files from javascript. (But on iOS Safari, use js anyway since Flash doesn't work)
-var isMacSafari = /Macintosh/i.test(navigator.userAgent) && /Safari/i.test(navigator.userAgent) && !(/Chrome/i.test(navigator.userAgent));
-
-if (hasAudioContext && (!isMacSafari || !hasFlash)) {
+if (hasAudioContext) {
 	// Go ahead and load js beepbox editor interface:
 	var fileref = document.createElement("script")
 	fileref.setAttribute("type", "text/javascript")

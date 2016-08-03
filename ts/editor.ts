@@ -238,18 +238,32 @@ module beepbox {
 		}
 		
 		private _setCookie(name: string, value: string): void {
-			var d: Date = new Date();
-			d.setTime(d.getTime() + (10 * 365 * 24 * 60 * 60 * 1000));
-			document.cookie = name + "=" + value + "; expires=" + d.toUTCString();
+			localStorage.setItem(name, value);
 		}
 		
 		private _getCookie(cname: string): string {
+			var item: string = localStorage.getItem(cname);
+			if (item != null) {
+				return item;
+			}
+			
+			// Legacy: check for cookie:
 			var name: string = cname + "=";
 			var ca: string[] = document.cookie.split(';');
 			for (var i = 0; i < ca.length; i++) {
 				var c: string = ca[i];
 				while (c.charAt(0)==' ') c = c.substring(1);
-				if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+				if (c.indexOf(name) == 0) {
+					// Found cookie, convert it to localStorage and delete original.
+					var value: string = c.substring(name.length, c.length);
+					
+					this._setCookie(cname, value);
+					
+					// Delete old cookie by providing old expiration:
+					document.cookie = cname + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+					
+					return value;
+				}
 			}
 			return "";
 		}
@@ -1379,11 +1393,12 @@ module beepbox {
 			
 			var i: number;
 			var j: number;
+			var maxPitch: number = (doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch);
 			
 			for (i = 0; i < this._oldNotes.length; i++) {
 				var note: number = this._oldNotes[i];
 				if (upward) {
-					for (j = note + 1; j <= Music.maxPitch; j++) {
+					for (j = note + 1; j <= maxPitch; j++) {
 						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12] == true) {
 							note = j;
 							break;
@@ -1409,12 +1424,12 @@ module beepbox {
 			}
 			
 			var min: number = 0;
-			var max: number = Music.maxPitch;
+			var max: number = maxPitch;
 			
 			for (i = 1; i < this._newNotes.length; i++) {
 				var diff: number = this._newNotes[0] - this._newNotes[i];
 				if (min < diff) min = diff;
-				if (max > diff + Music.maxPitch) max = diff + Music.maxPitch;
+				if (max > diff + maxPitch) max = diff + maxPitch;
 			}
 			
 			this._oldPins.forEach((oldPin: TonePin)=>{
