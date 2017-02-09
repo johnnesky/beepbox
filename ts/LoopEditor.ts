@@ -40,29 +40,29 @@ module beepbox {
 	}
 
 	export function LoopEditor(doc: SongDocument): void {
-		var barWidth: number = 32;
-		var mouseX: number;
-		var mouseY: number;
-		var container: HTMLElement = <HTMLElement>document.getElementById("loopEditorContainer");
-		var canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("loopEditor");
-		var graphics: CanvasRenderingContext2D = canvas.getContext("2d");
-		var preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("loopEditorPreview");
-		var previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
-		var editorWidth: number = 512;
-		var editorHeight: number = 20;
+		const barWidth: number = 32;
+		let mouseX: number;
+		let mouseY: number;
+		const container: HTMLElement = <HTMLElement>document.getElementById("loopEditorContainer");
+		const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("loopEditor");
+		const graphics: CanvasRenderingContext2D = canvas.getContext("2d");
+		const preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("loopEditorPreview");
+		const previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
+		const editorWidth: number = 512;
+		const editorHeight: number = 20;
 		
-		var startMode:   number = 0;
-		var endMode:     number = 1;
-		var bothMode:    number = 2;
+		const startMode:   number = 0;
+		const endMode:     number = 1;
+		const bothMode:    number = 2;
 		
-		var change: ChangeLoop;
+		let change: ChangeLoop;
 		
-		var cursor: Cursor = {};
-		var mouseDown: boolean = false;
-		var mouseOver: boolean = false;
+		let cursor: Cursor = {};
+		let mouseDown: boolean = false;
+		let mouseOver: boolean = false;
 		
 		function updateCursorStatus(): void {
-			var bar: number = mouseX / barWidth + doc.barScrollPos;
+			const bar: number = mouseX / barWidth + doc.barScrollPos;
 			cursor.startBar = bar;
 			
 			if (bar > doc.song.loopStart - 0.25 && bar < doc.song.loopStart + doc.song.loopLength + 0.25) {
@@ -77,8 +77,8 @@ module beepbox {
 		}
 		
 		function findEndPoints(middle: number): Endpoints {
-			var start: number = Math.round(middle - doc.song.loopLength / 2);
-			var end: number = start + doc.song.loopLength;
+			let start: number = Math.round(middle - doc.song.loopLength / 2);
+			let end: number = start + doc.song.loopLength;
 			if (start < 0) {
 				end -= start;
 				start = 0;
@@ -123,7 +123,7 @@ module beepbox {
 		function onTouchPressed(event: TouchEvent): void {
 			event.preventDefault();
 			mouseDown = true;
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
 			mouseX = event.touches[0].clientX - boundingRect.left;
 			mouseY = event.touches[0].clientY - boundingRect.top;
 			updateCursorStatus();
@@ -132,7 +132,7 @@ module beepbox {
 		}
 		
 		function onMouseMoved(event: MouseEvent): void {
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
     		mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
 		    onCursorMoved();
@@ -141,7 +141,7 @@ module beepbox {
 		function onTouchMoved(event: TouchEvent): void {
 			if (!mouseDown) return;
 			event.preventDefault();
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
 			mouseX = event.touches[0].clientX - boundingRect.left;
 			mouseY = event.touches[0].clientY - boundingRect.top;
 		    onCursorMoved();
@@ -152,10 +152,10 @@ module beepbox {
 				if (change != null) change.undo();
 				change = null;
 				
-				var bar: number = mouseX / barWidth + doc.barScrollPos;
-				var start: number;
-				var end: number;
-				var temp: number;
+				const bar: number = mouseX / barWidth + doc.barScrollPos;
+				let start: number;
+				let end: number;
+				let temp: number;
 				if (cursor.mode == startMode) {
 					start = doc.song.loopStart + Math.round(bar - cursor.startBar);
 					end = doc.song.loopStart + doc.song.loopLength;
@@ -183,7 +183,7 @@ module beepbox {
 					if (end >= doc.song.bars) end = doc.song.bars;
 					change = new ChangeLoop(doc, start, end - start);
 				} else if (cursor.mode == bothMode) {
-					var endPoints: Endpoints = findEndPoints(bar);
+					const endPoints: Endpoints = findEndPoints(bar);
 					change = new ChangeLoop(doc, endPoints.start, endPoints.length);
 				}
 			} else {
@@ -210,7 +210,7 @@ module beepbox {
 			previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
 			if (!mouseOver || mouseDown) return;
 			
-			var radius: number = editorHeight / 2;
+			const radius: number = editorHeight / 2;
 			if (cursor.mode == startMode) {
 				previewGraphics.fillStyle = "#ffffff";
 				previewGraphics.beginPath();
@@ -222,7 +222,7 @@ module beepbox {
 				previewGraphics.arc((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
 				previewGraphics.fill();
 			} else if (cursor.mode == bothMode) {
-				var endPoints: Endpoints = findEndPoints(cursor.startBar);
+				const endPoints: Endpoints = findEndPoints(cursor.startBar);
 				previewGraphics.fillStyle = "#ffffff";
 				previewGraphics.beginPath();
 				previewGraphics.arc((endPoints.start - doc.barScrollPos) * barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
@@ -243,7 +243,7 @@ module beepbox {
 		function render(): void {
 			graphics.clearRect(0, 0, editorWidth, editorHeight);
 			
-			var radius: number = editorHeight / 2;
+			const radius: number = editorHeight / 2;
 			graphics.fillStyle = "#7744ff";
 			graphics.beginPath();
 			graphics.arc((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius, 0, 2 * Math.PI);

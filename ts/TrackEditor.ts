@@ -31,23 +31,23 @@ module beepbox {
 	}
 
 	export function TrackEditor(doc: SongDocument, songEditor: SongEditor): void {
-		var barWidth: number = 32;
-		var mouseX: number;
-		var mouseY: number;
-		var mainLayer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("mainLayer");
-		var container: HTMLElement = <HTMLElement>document.getElementById("trackEditorContainer");
-		var canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditor");
-		var graphics: CanvasRenderingContext2D = canvas.getContext("2d");
-		var playhead: HTMLElement = document.getElementById("trackPlayhead");
-		var preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditorPreview");
-		var previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
+		const barWidth: number = 32;
+		let mouseX: number;
+		let mouseY: number;
+		const mainLayer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("mainLayer");
+		const container: HTMLElement = <HTMLElement>document.getElementById("trackEditorContainer");
+		const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditor");
+		const graphics: CanvasRenderingContext2D = canvas.getContext("2d");
+		const playhead: HTMLElement = document.getElementById("trackPlayhead");
+		const preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditorPreview");
+		const previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
 		
-		var pattern: BarPattern;
-		var mouseOver: boolean = false;
-		var digits: string = "";
-		var editorWidth: number = 512;
-		var editorHeight: number = 128;
-		var channelHeight: number = 32;
+		let pattern: BarPattern;
+		let mouseOver: boolean = false;
+		let digits: string = "";
+		const editorWidth: number = 512;
+		let editorHeight: number = 128;
+		let channelHeight: number = 32;
 		
 		function onEnterFrame(timestamp: number): void {
 			playhead.style.left = (barWidth * (doc.synth.playhead - doc.barScrollPos) - 2) + "px";
@@ -55,7 +55,7 @@ module beepbox {
 		}
 		
 		function setChannelBar(channel: number, bar: number): void {
-			var oldBarScrollPos: number = doc.barScrollPos;
+			const oldBarScrollPos: number = doc.barScrollPos;
 			if (doc.history.getRecentChange() instanceof ChangeChannelBar) doc.history.undo();
 			doc.barScrollPos = oldBarScrollPos;
 			doc.history.record(new ChangeChannelBar(doc, channel, bar));
@@ -135,7 +135,7 @@ module beepbox {
 		
 		function nextDigit(digit: string): void {
 			digits += digit;
-			var parsed: number = parseInt(digits);
+			let parsed: number = parseInt(digits);
 			if (parsed <= doc.song.patterns) {
 				setBarPattern(parsed);
 				return;
@@ -164,11 +164,11 @@ module beepbox {
 		
 		function onMousePressed(event: MouseEvent): void {
 			event.preventDefault();
-			var channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, mouseY / channelHeight)));
-			var bar: number = Math.floor(Math.min(doc.song.bars-1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
+			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, mouseY / channelHeight)));
+			const bar: number = Math.floor(Math.min(doc.song.bars-1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
 			if (doc.channel == channel && doc.bar == bar) {
-				var up: boolean = (mouseY % channelHeight) < channelHeight / 2;
-				var patternCount: number = doc.song.channelPatterns[channel].length;
+				const up: boolean = (mouseY % channelHeight) < channelHeight / 2;
+				const patternCount: number = doc.song.channelPatterns[channel].length;
 				setBarPattern((doc.song.channelBars[channel][bar] + (up ? 1 : patternCount)) % (patternCount + 1));
 			} else {
 				setChannelBar(channel, bar);
@@ -176,7 +176,7 @@ module beepbox {
 		}
 		
 		function onMouseMoved(event: MouseEvent): void {
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
     		mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			updatePreview();
@@ -189,20 +189,20 @@ module beepbox {
 			previewGraphics.clearRect(0, 0, 34, 34);
 			if (!mouseOver) return;
 			
-			var channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, mouseY / channelHeight)));
-			var bar: number = Math.floor(Math.min(doc.song.bars-1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
+			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, mouseY / channelHeight)));
+			const bar: number = Math.floor(Math.min(doc.song.bars-1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
 			
 			preview.style.left = barWidth * (bar - doc.barScrollPos) + "px";
 			preview.style.top = channelHeight * channel + "px";
 			
-			var selected: boolean = (bar == doc.bar && channel == doc.channel);
+			const selected: boolean = (bar == doc.bar && channel == doc.channel);
 			if (selected) {
-				var up: boolean = (mouseY % channelHeight) < channelHeight / 2;
-				var center: number = barWidth * 0.8;
-				var middle: number = channelHeight * 0.5;
-				var base: number = channelHeight * 0.1;
-				var tip: number = channelHeight * 0.4;
-				var width: number = channelHeight * 0.175;
+				const up: boolean = (mouseY % channelHeight) < channelHeight / 2;
+				const center: number = barWidth * 0.8;
+				const middle: number = channelHeight * 0.5;
+				const base: number = channelHeight * 0.1;
+				const tip: number = channelHeight * 0.4;
+				const width: number = channelHeight * 0.175;
 				
 				previewGraphics.lineWidth = 1;
 				previewGraphics.strokeStyle = "#000000";
@@ -242,20 +242,19 @@ module beepbox {
 		function render(): void {
 			graphics.clearRect(0, 0, editorWidth, editorHeight);
 			
-			var renderCount: number = Math.min(16, doc.song.bars);
-			for (var j: number = 0; j < Music.numChannels; j++) {
-				var channelColor: string = SongEditor.channelColorsBright[j];
-				var channelDim: string   = SongEditor.channelColorsDim[j];
-				var i: number;
-				for (i = 0; i < renderCount; i++) {
-					var pattern: BarPattern = doc.song.getPattern(j, i + doc.barScrollPos);
-					var selected: boolean = (i + doc.barScrollPos == doc.bar && j == doc.channel);
+			const renderCount: number = Math.min(16, doc.song.bars);
+			for (let j: number = 0; j < Music.numChannels; j++) {
+				const channelColor: string = SongEditor.channelColorsBright[j];
+				const channelDim: string   = SongEditor.channelColorsDim[j];
+				for (let i: number = 0; i < renderCount; i++) {
+					const pattern: BarPattern = doc.song.getPattern(j, i + doc.barScrollPos);
+					const selected: boolean = (i + doc.barScrollPos == doc.bar && j == doc.channel);
 					if (selected || pattern != null) {
 						graphics.fillStyle = (selected ? channelColor : "#444444");
 						graphics.fillRect(barWidth * i + 1, channelHeight * j + 1, barWidth - 2, channelHeight - 2);
 					}
 					
-					var text = String(doc.song.channelBars[j][i + doc.barScrollPos]);
+					const text = String(doc.song.channelBars[j][i + doc.barScrollPos]);
 					graphics.font = "bold 20px sans-serif";
 					graphics.textAlign = 'center';
 					graphics.textBaseline = 'middle';

@@ -30,26 +30,26 @@ module beepbox {
 	}
 
 	export function OctaveScrollBar(doc: SongDocument): void {
-		var preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBarPreview");
-		var previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
-		var mouseX: number;
-		var mouseY: number;
-		var container: HTMLElement = <HTMLElement>document.getElementById("octaveScrollBarContainer");
-		var canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBar");
-		var graphics: CanvasRenderingContext2D = canvas.getContext("2d");
-		var editorWidth: number = 20;
-		var editorHeight: number = 481;
-		var mouseDown: boolean = false;
-		var mouseOver: boolean = false;
+		const preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBarPreview");
+		const previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
+		let mouseX: number;
+		let mouseY: number;
+		const container: HTMLElement = <HTMLElement>document.getElementById("octaveScrollBarContainer");
+		const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBar");
+		const graphics: CanvasRenderingContext2D = canvas.getContext("2d");
+		const editorWidth: number = 20;
+		const editorHeight: number = 481;
+		let mouseDown: boolean = false;
+		let mouseOver: boolean = false;
 		
-		var rootHeight: number = 4.0;
-		var octaveCount: number = 7;
-		var octaveHeight: number;
-		var barHeight: number;
-		var dragging: boolean = false;
-		var dragStart: number;
-		var currentOctave: number;
-		var barBottom: number;
+		const rootHeight: number = 4.0;
+		const octaveCount: number = 7;
+		let octaveHeight: number;
+		let barHeight: number;
+		let dragging: boolean = false;
+		let dragStart: number;
+		let currentOctave: number;
+		let barBottom: number;
 		
 		function onMouseOver(event: MouseEvent): void {
 			mouseOver = true;
@@ -74,7 +74,7 @@ module beepbox {
 		function onTouchPressed(event: TouchEvent): void {
 			event.preventDefault();
 			mouseDown = true;
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
 			mouseX = event.touches[0].clientX - boundingRect.left;
 			mouseY = event.touches[0].clientY - boundingRect.top;
 			if (doc.channel == 3) return;
@@ -87,7 +87,7 @@ module beepbox {
 		}
 		
 		function onMouseMoved(event: MouseEvent): void {
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
     		mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
 		    onCursorMoved();
@@ -96,7 +96,7 @@ module beepbox {
 		function onTouchMoved(event: TouchEvent): void {
 			if (!mouseDown) return;
 			event.preventDefault();
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
 			mouseX = event.touches[0].clientX - boundingRect.left;
 			mouseY = event.touches[0].clientY - boundingRect.top;
 		    onCursorMoved();
@@ -144,10 +144,10 @@ module beepbox {
 			if (doc.channel == 3) return;
 			if (!mouseOver || mouseDown) return;
 			
-			var center: number = editorWidth * 0.5;
-			var base: number = 20;
-			var tip: number = 9;
-			var arrowWidth: number = 6;
+			const center: number = editorWidth * 0.5;
+			const base: number = 20;
+			const tip: number = 9;
+			const arrowWidth: number = 6;
 			if (mouseY < barBottom - barHeight) {
 				previewGraphics.fillStyle = "#ffffff";
 				previewGraphics.beginPath();
@@ -187,7 +187,7 @@ module beepbox {
 				graphics.fillStyle = "#444444";
 				graphics.fillRect(2, barBottom, editorWidth - 4, -barHeight);
 				
-				for (var i: number = 0; i <= octaveCount; i++) {
+				for (let i: number = 0; i <= octaveCount; i++) {
 					graphics.fillStyle = "#886644";
 					graphics.fillRect(0, i * octaveHeight, editorWidth, rootHeight);
 				}

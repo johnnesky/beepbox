@@ -3,27 +3,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -34,16 +13,16 @@ var beepbox;
             this._base64 = base64;
         }
         BitField.prototype.load = function (source) {
-            var _this = this;
-            source.split("").forEach(function (char) {
-                var value = _this._base64.indexOf(char);
-                _this._bits.push((value & 0x20) != 0);
-                _this._bits.push((value & 0x10) != 0);
-                _this._bits.push((value & 0x08) != 0);
-                _this._bits.push((value & 0x04) != 0);
-                _this._bits.push((value & 0x02) != 0);
-                _this._bits.push((value & 0x01) != 0);
-            });
+            for (var _i = 0, _a = source.split(""); _i < _a.length; _i++) {
+                var char = _a[_i];
+                var value = this._base64.indexOf(char);
+                this._bits.push((value & 0x20) != 0);
+                this._bits.push((value & 0x10) != 0);
+                this._bits.push((value & 0x08) != 0);
+                this._bits.push((value & 0x04) != 0);
+                this._bits.push((value & 0x02) != 0);
+                this._bits.push((value & 0x01) != 0);
+            }
         };
         BitField.prototype.addPadding = function () {
             while ((this._bits.length % 6) != 0) {
@@ -114,11 +93,11 @@ var beepbox;
         };
         BitField.prototype.writeNoteInterval = function (value) {
             if (value < 0) {
-                this.write(1, 1); // sign
+                this.write(1, 1);
                 this.writeLongTail(1, 3, -value);
             }
             else {
-                this.write(1, 0); // sign
+                this.write(1, 0);
                 this.writeLongTail(1, 3, value);
             }
         };
@@ -163,64 +142,63 @@ var beepbox;
     var Music = (function () {
         function Music() {
         }
-        Music.scaleNames = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "romani :)", "romani :(", "enigma", "expert"];
-        Music.scaleFlags = [
-            [true, false, true, false, true, false, false, true, false, true, false, false],
-            [true, false, false, true, false, true, false, true, false, false, true, false],
-            [true, false, false, false, true, true, false, true, false, false, false, true],
-            [true, true, false, true, false, false, false, true, true, false, false, false],
-            [true, false, true, true, true, false, false, true, false, true, false, false],
-            [true, false, false, true, false, true, true, true, false, false, true, false],
-            [true, false, true, false, true, true, false, true, false, true, false, true],
-            [true, false, true, true, false, true, false, true, true, false, true, false],
-            [true, true, false, false, true, true, false, true, true, false, true, false],
-            [true, false, true, true, false, false, true, true, true, false, false, true],
-            [true, false, true, false, true, false, true, false, true, false, true, false],
-            [true, true, true, true, true, true, true, true, true, true, true, true],
-        ];
-        Music.pianoScaleFlags = [true, false, true, false, true, true, false, true, false, true, false, true];
-        // C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
-        Music.blackKeyNameParents = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
-        Music.noteNames = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
-        Music.keyNames = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
-        Music.keyTransposes = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
-        Music.tempoNames = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
-        Music.beatsMin = 3;
-        Music.beatsMax = 12;
-        Music.barsMin = 1;
-        Music.barsMax = 128;
-        Music.patternsMin = 1;
-        Music.patternsMax = 64;
-        Music.instrumentsMin = 1;
-        Music.instrumentsMax = 10;
-        Music.partNames = ["triples", "standard"];
-        Music.partCounts = [3, 4];
-        Music.waveNames = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
-        Music.waveVolumes = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
-        Music.drumNames = ["retro", "white"];
-        Music.drumVolumes = [0.25, 1.0];
-        Music.filterNames = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
-        Music.filterBases = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
-        Music.filterDecays = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
-        Music.filterVolumes = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
-        Music.attackNames = ["binary", "sudden", "smooth", "slide"];
-        Music.effectNames = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
-        Music.effectVibratos = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
-        Music.effectTremelos = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-        Music.chorusNames = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves"];
-        Music.chorusValues = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6];
-        Music.chorusOffsets = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6];
-        Music.chorusVolumes = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8];
-        Music.volumeNames = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
-        Music.volumeValues = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
-        Music.channelVolumes = [0.27, 0.27, 0.27, 0.19];
-        Music.drumInterval = 6;
-        Music.numChannels = 4;
-        Music.drumCount = 12;
-        Music.noteCount = 37;
-        Music.maxPitch = 84;
         return Music;
     }());
+    Music.scaleNames = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "romani :)", "romani :(", "enigma", "expert"];
+    Music.scaleFlags = [
+        [true, false, true, false, true, false, false, true, false, true, false, false],
+        [true, false, false, true, false, true, false, true, false, false, true, false],
+        [true, false, false, false, true, true, false, true, false, false, false, true],
+        [true, true, false, true, false, false, false, true, true, false, false, false],
+        [true, false, true, true, true, false, false, true, false, true, false, false],
+        [true, false, false, true, false, true, true, true, false, false, true, false],
+        [true, false, true, false, true, true, false, true, false, true, false, true],
+        [true, false, true, true, false, true, false, true, true, false, true, false],
+        [true, true, false, false, true, true, false, true, true, false, true, false],
+        [true, false, true, true, false, false, true, true, true, false, false, true],
+        [true, false, true, false, true, false, true, false, true, false, true, false],
+        [true, true, true, true, true, true, true, true, true, true, true, true],
+    ];
+    Music.pianoScaleFlags = [true, false, true, false, true, true, false, true, false, true, false, true];
+    Music.blackKeyNameParents = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
+    Music.noteNames = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
+    Music.keyNames = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
+    Music.keyTransposes = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
+    Music.tempoNames = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
+    Music.beatsMin = 3;
+    Music.beatsMax = 15;
+    Music.barsMin = 1;
+    Music.barsMax = 128;
+    Music.patternsMin = 1;
+    Music.patternsMax = 64;
+    Music.instrumentsMin = 1;
+    Music.instrumentsMax = 10;
+    Music.partNames = ["triples", "standard"];
+    Music.partCounts = [3, 4];
+    Music.waveNames = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
+    Music.waveVolumes = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
+    Music.drumNames = ["retro", "white"];
+    Music.drumVolumes = [0.25, 1.0];
+    Music.filterNames = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
+    Music.filterBases = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
+    Music.filterDecays = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
+    Music.filterVolumes = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
+    Music.attackNames = ["binary", "sudden", "smooth", "slide"];
+    Music.effectNames = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
+    Music.effectVibratos = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
+    Music.effectTremelos = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
+    Music.chorusNames = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves"];
+    Music.chorusValues = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6];
+    Music.chorusOffsets = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6];
+    Music.chorusVolumes = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8];
+    Music.volumeNames = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
+    Music.volumeValues = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
+    Music.channelVolumes = [0.27, 0.27, 0.27, 0.19];
+    Music.drumInterval = 6;
+    Music.numChannels = 4;
+    Music.drumCount = 12;
+    Music.noteCount = 37;
+    Music.maxPitch = 84;
     beepbox.Music = Music;
     var TonePin = (function () {
         function TonePin(interval, time, volume) {
@@ -249,15 +227,17 @@ var beepbox;
         }
         BarPattern.prototype.cloneTones = function () {
             var result = [];
-            this.tones.forEach(function (oldTone) {
+            for (var _i = 0, _a = this.tones; _i < _a.length; _i++) {
+                var oldTone = _a[_i];
                 var newTone = new Tone(-1, oldTone.start, oldTone.end, 3);
                 newTone.notes = oldTone.notes.concat();
                 newTone.pins = [];
-                oldTone.pins.forEach(function (oldPin) {
+                for (var _b = 0, _c = oldTone.pins; _b < _c.length; _b++) {
+                    var oldPin = _c[_b];
                     newTone.pins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
-                });
+                }
                 result.push(newTone);
-            });
+            }
             return result;
         };
         return BarPattern;
@@ -308,9 +288,7 @@ var beepbox;
             this.instruments = 1;
         };
         Song.prototype.toString = function () {
-            var _this = this;
             var channel;
-            var i;
             var bits;
             var result = "#";
             var base64 = Song._newBase64;
@@ -327,32 +305,32 @@ var beepbox;
             result += "r" + base64[Music.partCounts.indexOf(this.parts)];
             result += "w";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentWaves[channel][i]];
                 }
             result += "f";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentFilters[channel][i]];
                 }
             result += "d";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentAttacks[channel][i]];
                 }
             result += "c";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentEffects[channel][i]];
                 }
             result += "h";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentChorus[channel][i]];
                 }
             result += "v";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentVolumes[channel][i]];
                 }
             result += "o";
@@ -365,7 +343,7 @@ var beepbox;
             while ((1 << neededBits) < this.patterns + 1)
                 neededBits++;
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.bars; i++) {
+                for (var i = 0; i < this.bars; i++) {
                     bits.write(neededBits, this.channelBars[channel][i]);
                 }
             result += bits.toString();
@@ -379,32 +357,33 @@ var beepbox;
                 var lastNote = (channel == 3 ? 4 : 12) + octaveOffset;
                 var recentNotes = channel == 3 ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0];
                 var recentShapes = [];
-                for (i = 0; i < recentNotes.length; i++) {
+                for (var i = 0; i < recentNotes.length; i++) {
                     recentNotes[i] += octaveOffset;
                 }
-                this.channelPatterns[channel].forEach(function (p) {
+                for (var _i = 0, _a = this.channelPatterns[channel]; _i < _a.length; _i++) {
+                    var p = _a[_i];
                     bits.write(neededInstrumentBits, p.instrument);
                     if (p.tones.length > 0) {
                         bits.write(1, 1);
                         var curPart = 0;
-                        p.tones.forEach(function (t) {
+                        for (var _b = 0, _c = p.tones; _b < _c.length; _b++) {
+                            var t = _c[_b];
                             if (t.start > curPart) {
-                                bits.write(2, 0); // rest
+                                bits.write(2, 0);
                                 bits.writePartDuration(t.start - curPart);
                             }
                             var shapeBits = new BitField(base64);
-                            // 0: 1 note, 10: 2 notes, 110: 3 notes, 111: 4 notes
-                            for (i = 1; i < t.notes.length; i++)
+                            for (var i = 1; i < t.notes.length; i++)
                                 shapeBits.write(1, 1);
                             if (t.notes.length < 4)
                                 shapeBits.write(1, 0);
                             shapeBits.writePinCount(t.pins.length - 1);
-                            shapeBits.write(2, t.pins[0].volume); // volume
+                            shapeBits.write(2, t.pins[0].volume);
                             var shapePart = 0;
                             var startNote = t.notes[0];
                             var currentNote = startNote;
                             var pitchBends = [];
-                            for (i = 1; i < t.pins.length; i++) {
+                            for (var i = 1; i < t.pins.length; i++) {
                                 var pin = t.pins[i];
                                 var nextNote = startNote + pin.interval;
                                 if (currentNote != nextNote) {
@@ -422,11 +401,11 @@ var beepbox;
                             var shapeString = shapeBits.toString();
                             var shapeIndex = recentShapes.indexOf(shapeString);
                             if (shapeIndex == -1) {
-                                bits.write(2, 1); // new shape
+                                bits.write(2, 1);
                                 bits.concat(shapeBits);
                             }
                             else {
-                                bits.write(1, 1); // old shape
+                                bits.write(1, 1);
                                 bits.writeLongTail(0, 0, shapeIndex);
                                 recentShapes.splice(shapeIndex, 1);
                             }
@@ -434,7 +413,7 @@ var beepbox;
                             if (recentShapes.length > 10)
                                 recentShapes.pop();
                             var allNotes = t.notes.concat(pitchBends);
-                            for (i = 0; i < allNotes.length; i++) {
+                            for (var i = 0; i < allNotes.length; i++) {
                                 var note = allNotes[i];
                                 var noteIndex = recentNotes.indexOf(note);
                                 if (noteIndex == -1) {
@@ -473,16 +452,16 @@ var beepbox;
                                 }
                             }
                             curPart = t.end;
-                        }, _this);
-                        if (curPart < _this.beats * _this.parts) {
-                            bits.write(2, 0); // rest
-                            bits.writePartDuration(_this.beats * _this.parts - curPart);
+                        }
+                        if (curPart < this.beats * this.parts) {
+                            bits.write(2, 0);
+                            bits.writePartDuration(this.beats * this.parts - curPart);
                         }
                     }
                     else {
                         bits.write(1, 0);
                     }
-                });
+                }
             }
             var bitString = bits.toString();
             var stringLength = bitString.length;
@@ -517,10 +496,8 @@ var beepbox;
                 this.instrumentWaves = [[1], [1], [1], [0]];
             while (charIndex < compressed.length) {
                 var command = compressed.charAt(charIndex++);
-                var bits;
-                var channel;
-                var i;
-                var j;
+                var bits = void 0;
+                var channel = void 0;
                 if (command == "s") {
                     this.scale = base64.indexOf(compressed.charAt(charIndex++));
                     if (beforeThree && this.scale == 10)
@@ -584,10 +561,11 @@ var beepbox;
                         this.instrumentWaves[channel][0] = this._clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentWaves[channel][i] = this._clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "f") {
@@ -596,10 +574,11 @@ var beepbox;
                         this.instrumentFilters[channel][0] = [0, 2, 3, 5][this._clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)))];
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentFilters[channel][i] = this._clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "d") {
@@ -608,10 +587,11 @@ var beepbox;
                         this.instrumentAttacks[channel][0] = this._clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentAttacks[channel][i] = this._clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "c") {
@@ -624,10 +604,11 @@ var beepbox;
                             this.instrumentEffects[channel][0] = 5;
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentEffects[channel][i] = this._clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "h") {
@@ -636,10 +617,11 @@ var beepbox;
                         this.instrumentChorus[channel][0] = this._clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentChorus[channel][i] = this._clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "v") {
@@ -648,10 +630,11 @@ var beepbox;
                         this.instrumentVolumes[channel][0] = this._clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentVolumes[channel][i] = this._clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "o") {
@@ -666,14 +649,14 @@ var beepbox;
                     }
                 }
                 else if (command == "b") {
-                    var subStringLength;
+                    var subStringLength = void 0;
                     if (beforeThree) {
                         channel = base64.indexOf(compressed.charAt(charIndex++));
                         var barCount = base64.indexOf(compressed.charAt(charIndex++));
                         subStringLength = Math.ceil(barCount * 0.5);
                         bits = new BitField(base64);
                         bits.load(compressed.substr(charIndex, subStringLength));
-                        for (i = 0; i < barCount; i++) {
+                        for (var i = 0; i < barCount; i++) {
                             this.channelBars[channel][i] = bits.read(3) + 1;
                         }
                     }
@@ -684,10 +667,11 @@ var beepbox;
                         bits = new BitField(base64);
                         subStringLength = Math.ceil(Music.numChannels * this.bars * neededBits / 6);
                         bits.load(compressed.substr(charIndex, subStringLength));
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.bars; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.bars; i++) {
                                 this.channelBars[channel][i] = bits.read(neededBits) + 1;
                             }
+                        }
                     }
                     else {
                         var neededBits2 = 0;
@@ -696,10 +680,11 @@ var beepbox;
                         bits = new BitField(base64);
                         subStringLength = Math.ceil(Music.numChannels * this.bars * neededBits2 / 6);
                         bits.load(compressed.substr(charIndex, subStringLength));
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.bars; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.bars; i++) {
                                 this.channelBars[channel][i] = bits.read(neededBits2);
                             }
+                        }
                     }
                     charIndex += subStringLength;
                 }
@@ -736,10 +721,10 @@ var beepbox;
                             var lastNote = (channel == 3 ? 4 : 12) + octaveOffset;
                             var recentNotes = channel == 3 ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0];
                             var recentShapes = [];
-                            for (i = 0; i < recentNotes.length; i++) {
+                            for (var i = 0; i < recentNotes.length; i++) {
                                 recentNotes[i] += octaveOffset;
                             }
-                            for (i = 0; i < this.patterns; i++) {
+                            for (var i = 0; i < this.patterns; i++) {
                                 var newPattern = new BarPattern();
                                 newPattern.instrument = bits.read(neededInstrumentBits);
                                 this.channelPatterns[channel][i] = newPattern;
@@ -762,9 +747,9 @@ var beepbox;
                                         curPart += restLength;
                                     }
                                     else {
-                                        var shape;
-                                        var pinObj;
-                                        var note;
+                                        var shape = void 0;
+                                        var pinObj = void 0;
+                                        var note = void 0;
                                         if (useOldShape) {
                                             shape = recentShapes[shapeIndex];
                                             recentShapes.splice(shapeIndex, 1);
@@ -779,7 +764,7 @@ var beepbox;
                                             shape.pins = [];
                                             shape.length = 0;
                                             shape.bendCount = 0;
-                                            for (j = 0; j < shape.pinCount; j++) {
+                                            for (var j = 0; j < shape.pinCount; j++) {
                                                 pinObj = {};
                                                 pinObj.pitchBend = bits.read(1) == 1;
                                                 if (pinObj.pitchBend)
@@ -797,7 +782,7 @@ var beepbox;
                                         tone.notes = [];
                                         tone.pins.length = 1;
                                         var pitchBends = [];
-                                        for (j = 0; j < shape.noteCount + shape.bendCount; j++) {
+                                        for (var j = 0; j < shape.noteCount + shape.bendCount; j++) {
                                             var useOldNote = bits.read(1) == 1;
                                             if (!useOldNote) {
                                                 var interval = bits.readNoteInterval();
@@ -838,18 +823,19 @@ var beepbox;
                                             }
                                         }
                                         pitchBends.unshift(tone.notes[0]);
-                                        shape.pins.forEach(function (pinObj) {
-                                            if (pinObj.pitchBend)
+                                        for (var _i = 0, _a = shape.pins; _i < _a.length; _i++) {
+                                            var pinObj_1 = _a[_i];
+                                            if (pinObj_1.pitchBend)
                                                 pitchBends.shift();
-                                            pin = new TonePin(pitchBends[0] - tone.notes[0], pinObj.time, pinObj.volume);
+                                            pin = new TonePin(pitchBends[0] - tone.notes[0], pinObj_1.time, pinObj_1.volume);
                                             tone.pins.push(pin);
-                                        });
+                                        }
                                         curPart = tone.end;
                                         newTones.push(tone);
                                     }
                                 }
                                 newPattern.tones = newTones;
-                            } // for (i = 0; i < patterns; i++) {
+                            }
                             if (beforeThree) {
                                 break;
                             }
@@ -858,7 +844,7 @@ var beepbox;
                                 if (channel >= Music.numChannels)
                                     break;
                             }
-                        } // while (true)
+                        }
                     }
                 }
             }
@@ -885,12 +871,15 @@ var beepbox;
             var pattern = this.getPattern(channel, bar);
             return pattern == null ? 0 : pattern.instrument;
         };
-        Song._oldestVersion = 2;
-        Song._latestVersion = 5;
-        Song._oldBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", ".", "_",];
-        Song._newBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "-", "_",];
+        Song.prototype.getBeatsPerMinute = function () {
+            return Math.round(120.0 * Math.pow(2.0, (-4.0 + this.tempo) / 9.0));
+        };
         return Song;
     }());
+    Song._oldestVersion = 2;
+    Song._latestVersion = 5;
+    Song._oldBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", ".", "_",];
+    Song._newBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "-", "_",];
     beepbox.Song = Song;
     var Synth = (function () {
         function Synth(song) {
@@ -941,27 +930,24 @@ var beepbox;
             this._drumSample = 0.0;
             this._drumSignal = 1.0;
             this._stillGoing = false;
-            //private sound: Sound = new Sound();
-            //private soundChannel: SoundChannel = null;
-            //private timer: Timer = new Timer(200, 0);
             this._effectPeriod = 0.0;
             this._limit = 0.0;
-            var i;
             var wave;
-            this._waves.forEach(function (wave) {
-                //wave.fixed = true;
+            for (var _i = 0, _a = this._waves; _i < _a.length; _i++) {
+                var wave_1 = _a[_i];
                 var sum = 0.0;
-                for (i = 0; i < wave.length; i++)
-                    sum += wave[i];
-                var average = sum / wave.length;
-                for (i = 0; i < wave.length; i++)
-                    wave[i] -= average;
-            });
-            this._drumWaves.forEach(function (wave, index) {
+                for (var i = 0; i < wave_1.length; i++)
+                    sum += wave_1[i];
+                var average = sum / wave_1.length;
+                for (var i = 0; i < wave_1.length; i++)
+                    wave_1[i] -= average;
+            }
+            for (var index = 0; index < this._drumWaves.length; index++) {
+                var wave_2 = this._drumWaves[index];
                 if (index == 0) {
                     var drumBuffer = 1;
-                    for (i = 0; i < 32767; i++) {
-                        wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+                    for (var i = 0; i < 32767; i++) {
+                        wave_2[i] = (drumBuffer & 1) * 2.0 - 1.0;
                         var newBuffer = drumBuffer >> 1;
                         if (((drumBuffer + newBuffer) & 1) == 1) {
                             newBuffer += 1 << 14;
@@ -970,26 +956,14 @@ var beepbox;
                     }
                 }
                 else if (index == 1) {
-                    for (i = 0; i < 32767; i++) {
-                        wave[i] = Math.random() * 2.0 - 1.0;
+                    for (var i = 0; i < 32767; i++) {
+                        wave_2[i] = Math.random() * 2.0 - 1.0;
                     }
                 }
-                //wave.fixed = true;
-            });
+            }
             if (song != null) {
                 this.setSong(song);
             }
-            /*
-            reverbDelay1.length = 1024;
-            reverbDelay1.fixed = true;
-            for (i = 0; i < reverbDelay1.length; i++) reverbDelay1[i] = 0.0;
-            reverbDelay2.length = 1024;
-            reverbDelay2.fixed = true;
-            for (i = 0; i < reverbDelay2.length; i++) reverbDelay2[i] = 0.0;
-            reverbDelay3.length = 1024;
-            reverbDelay3.fixed = true;
-            for (i = 0; i < reverbDelay3.length; i++) reverbDelay3[i] = 0.0;
-            */
         }
         Object.defineProperty(Synth.prototype, "playing", {
             get: function () {
@@ -1053,7 +1027,7 @@ var beepbox;
             this._paused = false;
             var contextClass = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
             this._audioCtx = this._audioCtx || new contextClass();
-            this._scriptNode = this._audioCtx.createScriptProcessor ? this._audioCtx.createScriptProcessor(2048, 0, 1) : this._audioCtx.createJavaScriptNode(2048, 0, 1); // 2048, 0 input channels, 1 output
+            this._scriptNode = this._audioCtx.createScriptProcessor ? this._audioCtx.createScriptProcessor(2048, 0, 1) : this._audioCtx.createJavaScriptNode(2048, 0, 1);
             this._scriptNode.onaudioprocess = this._onSampleData.bind(this);
             this._scriptNode.channelCountMode = 'explicit';
             this._scriptNode.channelInterpretation = 'speakers';
@@ -1069,7 +1043,7 @@ var beepbox;
             this._paused = true;
             this._scriptNode.disconnect(this._audioCtx.destination);
             if (this._audioCtx.close) {
-                this._audioCtx.close(); // firefox is missing this function?
+                this._audioCtx.close();
                 this._audioCtx = null;
             }
             this._scriptNode = null;
@@ -1116,83 +1090,61 @@ var beepbox;
             var outputBuffer = audioProcessingEvent.outputBuffer;
             var outputData = outputBuffer.getChannelData(0);
             this.synthesize(outputData, outputBuffer.length);
-            /*
-            if (this.paused) {
-                return;
-            } else {
-                this.synthesize(event.data, 4096);
-            }
-            this.stillGoing = true;
-            */
         };
-        /*
-        private _checkSound(event: TimerEvent): void {
-            if (!this.stillGoing) {
-                if (soundChannel != null) {
-                    soundChannel.stop();
-                }
-                soundChannel = sound.play();
-            } else {
-                this.stillGoing = false;
-            }
-        }
-        */
         Synth.prototype.synthesize = function (data, totalSamples) {
             var _this = this;
             var bufferIndex = 0;
             var stutterFunction;
             if (this.stutterPressed) {
-                var barOld = this._bar;
-                var beatOld = this._beat;
-                var partOld = this._part;
-                var arpeggioOld = this._arpeggio;
-                var arpeggioSamplesOld = this._arpeggioSamples;
-                var leadPeriodAOld = this._leadPeriodA;
-                var leadPeriodBOld = this._leadPeriodB;
-                var leadSampleOld = this._leadSample;
-                var harmonyPeriodAOld = this._harmonyPeriodA;
-                var harmonyPeriodBOld = this._harmonyPeriodB;
-                var harmonySampleOld = this._harmonySample;
-                var bassPeriodAOld = this._bassPeriodA;
-                var bassPeriodBOld = this._bassPeriodB;
-                var bassSampleOld = this._bassSample;
-                var drumPeriodOld = this._drumPeriod;
-                var drumSampleOld = this._drumSample;
-                var drumSignalOld = this._drumSignal;
-                var effectPeriodOld = this._effectPeriod;
-                var limitOld = this._limit;
+                var barOld_1 = this._bar;
+                var beatOld_1 = this._beat;
+                var partOld_1 = this._part;
+                var arpeggioOld_1 = this._arpeggio;
+                var arpeggioSamplesOld_1 = this._arpeggioSamples;
+                var leadPeriodAOld_1 = this._leadPeriodA;
+                var leadPeriodBOld_1 = this._leadPeriodB;
+                var leadSampleOld_1 = this._leadSample;
+                var harmonyPeriodAOld_1 = this._harmonyPeriodA;
+                var harmonyPeriodBOld_1 = this._harmonyPeriodB;
+                var harmonySampleOld_1 = this._harmonySample;
+                var bassPeriodAOld_1 = this._bassPeriodA;
+                var bassPeriodBOld_1 = this._bassPeriodB;
+                var bassSampleOld_1 = this._bassSample;
+                var drumPeriodOld_1 = this._drumPeriod;
+                var drumSampleOld_1 = this._drumSample;
+                var drumSignalOld_1 = this._drumSignal;
+                var effectPeriodOld_1 = this._effectPeriod;
+                var limitOld_1 = this._limit;
                 stutterFunction = function () {
-                    _this._bar = barOld;
-                    _this._beat = beatOld;
-                    _this._part = partOld;
-                    _this._arpeggio = arpeggioOld;
-                    _this._arpeggioSamples = arpeggioSamplesOld;
-                    _this._leadPeriodA = leadPeriodAOld;
-                    _this._leadPeriodB = leadPeriodBOld;
-                    _this._leadSample = leadSampleOld;
-                    _this._harmonyPeriodA = harmonyPeriodAOld;
-                    _this._harmonyPeriodB = harmonyPeriodBOld;
-                    _this._harmonySample = harmonySampleOld;
-                    _this._bassPeriodA = bassPeriodAOld;
-                    _this._bassPeriodB = bassPeriodBOld;
-                    _this._bassSample = bassSampleOld;
-                    _this._drumPeriod = drumPeriodOld;
-                    _this._drumSample = drumSampleOld;
-                    _this._drumSignal = drumSignalOld;
-                    _this._effectPeriod = effectPeriodOld;
-                    _this._limit = limitOld;
+                    _this._bar = barOld_1;
+                    _this._beat = beatOld_1;
+                    _this._part = partOld_1;
+                    _this._arpeggio = arpeggioOld_1;
+                    _this._arpeggioSamples = arpeggioSamplesOld_1;
+                    _this._leadPeriodA = leadPeriodAOld_1;
+                    _this._leadPeriodB = leadPeriodBOld_1;
+                    _this._leadSample = leadSampleOld_1;
+                    _this._harmonyPeriodA = harmonyPeriodAOld_1;
+                    _this._harmonyPeriodB = harmonyPeriodBOld_1;
+                    _this._harmonySample = harmonySampleOld_1;
+                    _this._bassPeriodA = bassPeriodAOld_1;
+                    _this._bassPeriodB = bassPeriodBOld_1;
+                    _this._bassSample = bassSampleOld_1;
+                    _this._drumPeriod = drumPeriodOld_1;
+                    _this._drumSample = drumSampleOld_1;
+                    _this._drumSignal = drumSignalOld_1;
+                    _this._effectPeriod = effectPeriodOld_1;
+                    _this._limit = limitOld_1;
                 };
             }
-            var i;
             var sampleTime = 1.0 / this.samplesPerSecond;
             var samplesPerArpeggio = this._getSamplesPerArpeggio();
             if (this.song == null) {
-                for (i = 0; i < totalSamples; i++) {
+                for (var i = 0; i < totalSamples; i++) {
                     data[i] = 0.0;
                 }
                 return;
             }
-            // Check the bounds of the playhead:
             if (this._arpeggioSamples == 0 || this._arpeggioSamples > samplesPerArpeggio) {
                 this._arpeggioSamples = samplesPerArpeggio;
             }
@@ -1284,7 +1236,7 @@ var beepbox;
             };
             updateInstruments();
             while (totalSamples > 0) {
-                var samples;
+                var samples = void 0;
                 if (this._arpeggioSamples <= totalSamples) {
                     samples = this._arpeggioSamples;
                 }
@@ -1319,14 +1271,14 @@ var beepbox;
                 var drumVolume;
                 var drumVolumeDelta;
                 var time = this._part + this._beat * this.song.parts;
-                for (var channel = 0; channel < 4; channel++) {
-                    var pattern = this.song.getPattern(channel, this._bar);
-                    var attack = pattern == null ? 0 : this.song.instrumentAttacks[channel][pattern.instrument];
+                var _loop_1 = function (channel) {
+                    var pattern = this_1.song.getPattern(channel, this_1._bar);
+                    var attack = pattern == null ? 0 : this_1.song.instrumentAttacks[channel][pattern.instrument];
                     var tone = null;
                     var prevTone = null;
                     var nextTone = null;
                     if (pattern != null) {
-                        for (i = 0; i < pattern.tones.length; i++) {
+                        for (var i = 0; i < pattern.tones.length; i++) {
                             if (pattern.tones[i].end <= time) {
                                 prevTone = pattern.tones[i];
                             }
@@ -1343,21 +1295,21 @@ var beepbox;
                         prevTone = null;
                     if (tone != null && nextTone != null && nextTone.start != tone.end)
                         nextTone = null;
-                    var channelRoot = channel == 3 ? 69 : Music.keyTransposes[this.song.key];
+                    var channelRoot = channel == 3 ? 69 : Music.keyTransposes[this_1.song.key];
                     var intervalScale = channel == 3 ? Music.drumInterval : 1;
-                    var periodDelta;
-                    var periodDeltaScale;
-                    var toneVolume;
-                    var volumeDelta;
-                    var filter;
-                    var filterScale;
-                    var vibratoScale;
+                    var periodDelta = void 0;
+                    var periodDeltaScale = void 0;
+                    var toneVolume = void 0;
+                    var volumeDelta = void 0;
+                    var filter = void 0;
+                    var filterScale = void 0;
+                    var vibratoScale = void 0;
                     var resetPeriod = false;
-                    if (this.pianoPressed && channel == this.pianoChannel) {
-                        var pianoFreq = this._frequencyFromPitch(channelRoot + this.pianoNote * intervalScale);
-                        var pianoPitchDamping;
+                    if (this_1.pianoPressed && channel == this_1.pianoChannel) {
+                        var pianoFreq = this_1._frequencyFromPitch(channelRoot + this_1.pianoNote * intervalScale);
+                        var pianoPitchDamping = void 0;
                         if (channel == 3) {
-                            if (this.song.instrumentWaves[3][pattern.instrument] > 0) {
+                            if (this_1.song.instrumentWaves[3][pattern.instrument] > 0) {
                                 drumFilter = Math.min(1.0, pianoFreq * sampleTime * 8.0);
                                 pianoPitchDamping = 24.0;
                             }
@@ -1370,11 +1322,11 @@ var beepbox;
                         }
                         periodDelta = pianoFreq * sampleTime;
                         periodDeltaScale = 1.0;
-                        toneVolume = Math.pow(2.0, -this.pianoNote * intervalScale / pianoPitchDamping);
+                        toneVolume = Math.pow(2.0, -this_1.pianoNote * intervalScale / pianoPitchDamping);
                         volumeDelta = 0.0;
                         filter = 1.0;
                         filterScale = 1.0;
-                        vibratoScale = Math.pow(2.0, Music.effectVibratos[this.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
+                        vibratoScale = Math.pow(2.0, Music.effectVibratos[this_1.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
                     }
                     else if (tone == null) {
                         periodDelta = 0.0;
@@ -1387,45 +1339,45 @@ var beepbox;
                         resetPeriod = true;
                     }
                     else {
-                        var pitch;
+                        var pitch = void 0;
                         if (tone.notes.length == 2) {
-                            pitch = tone.notes[this._arpeggio >> 1];
+                            pitch = tone.notes[this_1._arpeggio >> 1];
                         }
                         else if (tone.notes.length == 3) {
-                            pitch = tone.notes[this._arpeggio == 3 ? 1 : this._arpeggio];
+                            pitch = tone.notes[this_1._arpeggio == 3 ? 1 : this_1._arpeggio];
                         }
                         else if (tone.notes.length == 4) {
-                            pitch = tone.notes[this._arpeggio];
+                            pitch = tone.notes[this_1._arpeggio];
                         }
                         else {
                             pitch = tone.notes[0];
                         }
-                        var startPin = null;
-                        var endPin = null;
+                        var startPin_1 = null;
+                        var endPin_1 = null;
                         tone.pins.every(function (pin) {
                             if (pin.time + tone.start <= time) {
-                                startPin = pin;
+                                startPin_1 = pin;
                             }
                             else {
-                                endPin = pin;
+                                endPin_1 = pin;
                                 return false;
                             }
                             return true;
-                        }, this);
+                        }, this_1);
                         var toneStart = tone.start * 4;
                         var toneEnd = tone.end * 4;
-                        var pinStart = (tone.start + startPin.time) * 4;
-                        var pinEnd = (tone.start + endPin.time) * 4;
-                        var arpeggioStart = time * 4 + this._arpeggio;
-                        var arpeggioEnd = time * 4 + this._arpeggio + 1;
+                        var pinStart = (tone.start + startPin_1.time) * 4;
+                        var pinEnd = (tone.start + endPin_1.time) * 4;
+                        var arpeggioStart = time * 4 + this_1._arpeggio;
+                        var arpeggioEnd = time * 4 + this_1._arpeggio + 1;
                         var arpeggioRatioStart = (arpeggioStart - pinStart) / (pinEnd - pinStart);
                         var arpeggioRatioEnd = (arpeggioEnd - pinStart) / (pinEnd - pinStart);
-                        var arpeggioVolumeStart = startPin.volume * (1.0 - arpeggioRatioStart) + endPin.volume * arpeggioRatioStart;
-                        var arpeggioVolumeEnd = startPin.volume * (1.0 - arpeggioRatioEnd) + endPin.volume * arpeggioRatioEnd;
-                        var arpeggioIntervalStart = startPin.interval * (1.0 - arpeggioRatioStart) + endPin.interval * arpeggioRatioStart;
-                        var arpeggioIntervalEnd = startPin.interval * (1.0 - arpeggioRatioEnd) + endPin.interval * arpeggioRatioEnd;
-                        var arpeggioFilterTimeStart = startPin.time * (1.0 - arpeggioRatioStart) + endPin.time * arpeggioRatioStart;
-                        var arpeggioFilterTimeEnd = startPin.time * (1.0 - arpeggioRatioEnd) + endPin.time * arpeggioRatioEnd;
+                        var arpeggioVolumeStart = startPin_1.volume * (1.0 - arpeggioRatioStart) + endPin_1.volume * arpeggioRatioStart;
+                        var arpeggioVolumeEnd = startPin_1.volume * (1.0 - arpeggioRatioEnd) + endPin_1.volume * arpeggioRatioEnd;
+                        var arpeggioIntervalStart = startPin_1.interval * (1.0 - arpeggioRatioStart) + endPin_1.interval * arpeggioRatioStart;
+                        var arpeggioIntervalEnd = startPin_1.interval * (1.0 - arpeggioRatioEnd) + endPin_1.interval * arpeggioRatioEnd;
+                        var arpeggioFilterTimeStart = startPin_1.time * (1.0 - arpeggioRatioStart) + endPin_1.time * arpeggioRatioStart;
+                        var arpeggioFilterTimeEnd = startPin_1.time * (1.0 - arpeggioRatioEnd) + endPin_1.time * arpeggioRatioEnd;
                         var inhibitRestart = false;
                         if (arpeggioStart == toneStart) {
                             if (attack == 0) {
@@ -1465,19 +1417,18 @@ var beepbox;
                                 }
                             }
                         }
-                        var startRatio = 1.0 - (this._arpeggioSamples + samples) / samplesPerArpeggio;
-                        var endRatio = 1.0 - (this._arpeggioSamples) / samplesPerArpeggio;
+                        var startRatio = 1.0 - (this_1._arpeggioSamples + samples) / samplesPerArpeggio;
+                        var endRatio = 1.0 - (this_1._arpeggioSamples) / samplesPerArpeggio;
                         var startInterval = arpeggioIntervalStart * (1.0 - startRatio) + arpeggioIntervalEnd * startRatio;
                         var endInterval = arpeggioIntervalStart * (1.0 - endRatio) + arpeggioIntervalEnd * endRatio;
                         var startFilterTime = arpeggioFilterTimeStart * (1.0 - startRatio) + arpeggioFilterTimeEnd * startRatio;
                         var endFilterTime = arpeggioFilterTimeStart * (1.0 - endRatio) + arpeggioFilterTimeEnd * endRatio;
-                        var startFreq = this._frequencyFromPitch(channelRoot + (pitch + startInterval) * intervalScale);
-                        var endFreq = this._frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
-                        var pitchDamping;
+                        var startFreq = this_1._frequencyFromPitch(channelRoot + (pitch + startInterval) * intervalScale);
+                        var endFreq = this_1._frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
+                        var pitchDamping = void 0;
                         if (channel == 3) {
-                            if (this.song.instrumentWaves[3][pattern.instrument] > 0) {
+                            if (this_1.song.instrumentWaves[3][pattern.instrument] > 0) {
                                 drumFilter = Math.min(1.0, startFreq * sampleTime * 8.0);
-                                //console.log(drumFilter);
                                 pitchDamping = 24.0;
                             }
                             else {
@@ -1489,21 +1440,21 @@ var beepbox;
                         }
                         var startVol = Math.pow(2.0, -(pitch + startInterval) * intervalScale / pitchDamping);
                         var endVol = Math.pow(2.0, -(pitch + endInterval) * intervalScale / pitchDamping);
-                        startVol *= this._volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);
-                        endVol *= this._volumeConversion(arpeggioVolumeStart * (1.0 - endRatio) + arpeggioVolumeEnd * endRatio);
+                        startVol *= this_1._volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);
+                        endVol *= this_1._volumeConversion(arpeggioVolumeStart * (1.0 - endRatio) + arpeggioVolumeEnd * endRatio);
                         var freqScale = endFreq / startFreq;
                         periodDelta = startFreq * sampleTime;
                         periodDeltaScale = Math.pow(freqScale, 1.0 / samples);
                         toneVolume = startVol;
                         volumeDelta = (endVol - startVol) / samples;
-                        var timeSinceStart = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / this.samplesPerSecond;
+                        var timeSinceStart = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / this_1.samplesPerSecond;
                         if (timeSinceStart == 0.0 && !inhibitRestart)
                             resetPeriod = true;
-                        var filterScaleRate = Music.filterDecays[this.song.instrumentFilters[channel][pattern.instrument]];
-                        filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / this.samplesPerSecond);
-                        var endFilter = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / this.samplesPerSecond);
+                        var filterScaleRate = Music.filterDecays[this_1.song.instrumentFilters[channel][pattern.instrument]];
+                        filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / this_1.samplesPerSecond);
+                        var endFilter = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / this_1.samplesPerSecond);
                         filterScale = Math.pow(endFilter / filter, 1.0 / samples);
-                        vibratoScale = (this.song.instrumentEffects[channel][pattern.instrument] == 2 && time - tone.start < 3) ? 0.0 : Math.pow(2.0, Music.effectVibratos[this.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
+                        vibratoScale = (this_1.song.instrumentEffects[channel][pattern.instrument] == 2 && time - tone.start < 3) ? 0.0 : Math.pow(2.0, Music.effectVibratos[this_1.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
                     }
                     if (channel == 0) {
                         leadPeriodDelta = periodDelta;
@@ -1514,9 +1465,9 @@ var beepbox;
                         leadFilterScale = filterScale;
                         leadVibratoScale = vibratoScale;
                         if (resetPeriod) {
-                            this._leadSample = 0.0;
-                            this._leadPeriodA = 0.0;
-                            this._leadPeriodB = 0.0;
+                            this_1._leadSample = 0.0;
+                            this_1._leadPeriodA = 0.0;
+                            this_1._leadPeriodB = 0.0;
                         }
                     }
                     else if (channel == 1) {
@@ -1528,9 +1479,9 @@ var beepbox;
                         harmonyFilterScale = filterScale;
                         harmonyVibratoScale = vibratoScale;
                         if (resetPeriod) {
-                            this._harmonySample = 0.0;
-                            this._harmonyPeriodA = 0.0;
-                            this._harmonyPeriodB = 0.0;
+                            this_1._harmonySample = 0.0;
+                            this_1._harmonyPeriodA = 0.0;
+                            this_1._harmonyPeriodB = 0.0;
                         }
                     }
                     else if (channel == 2) {
@@ -1542,9 +1493,9 @@ var beepbox;
                         bassFilterScale = filterScale;
                         bassVibratoScale = vibratoScale;
                         if (resetPeriod) {
-                            this._bassSample = 0.0;
-                            this._bassPeriodA = 0.0;
-                            this._bassPeriodB = 0.0;
+                            this_1._bassSample = 0.0;
+                            this_1._bassPeriodA = 0.0;
+                            this_1._bassPeriodB = 0.0;
                         }
                     }
                     else if (channel == 3) {
@@ -1553,6 +1504,10 @@ var beepbox;
                         drumVolume = toneVolume * maxDrumVolume;
                         drumVolumeDelta = volumeDelta * maxDrumVolume;
                     }
+                };
+                var this_1 = this;
+                for (var channel = 0; channel < 4; channel++) {
+                    _loop_1(channel);
                 }
                 var effectY = Math.sin(this._effectPeriod);
                 var prevEffectY = Math.sin(this._effectPeriod - this._effectAngle);
@@ -1600,42 +1555,12 @@ var beepbox;
                     drumPeriodDelta *= drumPeriodDeltaScale;
                     this._drumPeriod -= Math.floor(this._drumPeriod);
                     sample += this._drumSample;
-                    /*
-                    var g: number = 0.9;
-                    var reverbSample: number;
-                    
-                    reverbSample = reverbDelay1[reverbDelayIndex1];
-                    sample += reverbSample * g;
-                    reverbDelay1[reverbDelayIndex1] = sample;
-                    //reverbDelayIndex1 = (reverbDelayIndex1 + 1) & 0x3ff;
-                    reverbDelayIndex1 = (reverbDelayIndex1 + 1) % 1021;
-                    sample *= -g;
-                    sample += reverbSample;
-                    
-                    reverbSample = reverbDelay2[reverbDelayIndex2];
-                    sample += reverbSample * g;
-                    reverbDelay2[reverbDelayIndex2] = sample;
-                    //reverbDelayIndex2 = (reverbDelayIndex2 + 1) & 0x3ff;
-                    reverbDelayIndex2 = (reverbDelayIndex2 + 1) % 317;
-                    sample *= -g;
-                    sample += reverbSample;
-                    
-                    reverbSample = reverbDelay3[reverbDelayIndex3];
-                    sample += reverbSample * g;
-                    reverbDelay3[reverbDelayIndex3] = sample;
-                    //reverbDelayIndex3 = (reverbDelayIndex3 + 1) & 0x3ff;
-                    reverbDelayIndex3 = (reverbDelayIndex3 + 1) % 89;
-                    sample *= -g;
-                    sample += reverbSample;
-                    */
                     var abs = sample < 0.0 ? -sample : sample;
                     this._limit -= this._limitDecay;
                     if (this._limit < abs)
                         this._limit = abs;
                     sample /= this._limit * 0.75 + 0.25;
                     sample *= this.volume;
-                    //data.writeFloat(sample);
-                    //data.writeFloat(sample);
                     data[bufferIndex] = sample;
                     bufferIndex = bufferIndex + 1;
                     samples--;
@@ -1696,7 +1621,7 @@ var beepbox;
         Synth.prototype._getSamplesPerArpeggio = function () {
             if (this.song == null)
                 return 0;
-            var beatsPerMinute = Math.round(120.0 * Math.pow(2.0, (-4.0 + this.song.tempo) / 9.0));
+            var beatsPerMinute = this.song.getBeatsPerMinute();
             var beatsPerSecond = beatsPerMinute / 60.0;
             var partsPerSecond = beatsPerSecond * this.song.parts;
             var arpeggioPerSecond = partsPerSecond * 4.0;
@@ -1706,35 +1631,50 @@ var beepbox;
     }());
     beepbox.Synth = Synth;
 })(beepbox || (beepbox = {}));
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
+    function lerp(low, high, t) {
+        return low + t * (high - low);
+    }
+    beepbox.lerp = lerp;
+    var html;
+    (function (html) {
+        function element(type, attributes, children) {
+            var elem = document.createElement(type);
+            if (attributes)
+                for (var _i = 0, _a = Object.keys(attributes); _i < _a.length; _i++) {
+                    var key = _a[_i];
+                    elem[key] = attributes[key];
+                }
+            if (children)
+                for (var _b = 0, children_1 = children; _b < children_1.length; _b++) {
+                    var child = children_1[_b];
+                    elem.appendChild(child);
+                }
+            return elem;
+        }
+        html.element = element;
+        function button(attributes, children) {
+            return element("button", attributes, children);
+        }
+        html.button = button;
+        function div(attributes, children) {
+            return element("div", attributes, children);
+        }
+        html.div = div;
+        function input(attributes) {
+            return element("input", attributes);
+        }
+        html.input = input;
+        function text(content) {
+            return document.createTextNode(content);
+        }
+        html.text = text;
+    })(html = beepbox.html || (beepbox.html = {}));
     var Model = (function () {
         function Model() {
             this._watchers = [];
-            //private _parentModels: Model[] = [];
             this._dirty = false;
         }
         Model.prototype.watch = function (watcher) {
@@ -1756,19 +1696,21 @@ var beepbox;
         };
         Model.prototype._update = function () {
             this._dirty = false;
-            this._watchers.concat().forEach(function (watcher) {
+            for (var _i = 0, _a = this._watchers.concat(); _i < _a.length; _i++) {
+                var watcher = _a[_i];
                 watcher();
-            });
+            }
         };
         Model.updateAll = function () {
-            this._waitingForFrame.concat().forEach(function (model) {
+            for (var _i = 0, _a = this._waitingForFrame.concat(); _i < _a.length; _i++) {
+                var model = _a[_i];
                 model._update();
-            });
+            }
             this._waitingForFrame.length = 0;
         };
-        Model._waitingForFrame = [];
         return Model;
     }());
+    Model._waitingForFrame = [];
     beepbox.Model = Model;
     var Change = (function () {
         function Change(reversed) {
@@ -1802,10 +1744,6 @@ var beepbox;
                 this._doneForwards = true;
             }
         };
-        // isDoneForwards() returns whether or not the Change was most recently 
-        // performed forwards or backwards. If the change created something, do not 
-        // delete it in the change destructor unless the Change was performed 
-        // backwards: 
         Change.prototype._isDoneForwards = function () {
             return this._doneForwards;
         };
@@ -1821,11 +1759,12 @@ var beepbox;
     var ChangeHistory = (function (_super) {
         __extends(ChangeHistory, _super);
         function ChangeHistory() {
-            _super.call(this);
-            this._changes = [];
-            this._index = 0;
-            this._recentChange = null;
-            this.changed();
+            var _this = _super.call(this) || this;
+            _this._changes = [];
+            _this._index = 0;
+            _this._recentChange = null;
+            _this.changed();
+            return _this;
         }
         ChangeHistory.prototype.canUndo = function () {
             return this._index > 0;
@@ -1868,21 +1807,22 @@ var beepbox;
     var SongDocument = (function (_super) {
         __extends(SongDocument, _super);
         function SongDocument() {
-            _super.call(this);
-            this.channel = 0;
-            this.bar = 0;
-            this.barScrollPos = 0;
-            this.volume = 75;
-            this.history = new ChangeHistory();
-            this.song = new beepbox.Song();
-            this.synth = new beepbox.Synth(this.song);
-            this.showFifth = this._getCookie("showFifth") == "true";
-            this.showLetters = this._getCookie("showLetters") == "true";
-            this.showChannels = this._getCookie("showChannels") == "true";
-            this.showScrollBar = this._getCookie("showScrollBar") == "true";
-            if (this._getCookie("volume") != "")
-                this.volume = Number(this._getCookie("volume"));
-            this.synth.volume = this._calcVolume();
+            var _this = _super.call(this) || this;
+            _this.channel = 0;
+            _this.bar = 0;
+            _this.barScrollPos = 0;
+            _this.volume = 75;
+            _this.history = new ChangeHistory();
+            _this.song = new beepbox.Song();
+            _this.synth = new beepbox.Synth(_this.song);
+            _this.showFifth = _this._getCookie("showFifth") == "true";
+            _this.showLetters = _this._getCookie("showLetters") == "true";
+            _this.showChannels = _this._getCookie("showChannels") == "true";
+            _this.showScrollBar = _this._getCookie("showScrollBar") == "true";
+            if (_this._getCookie("volume") != "")
+                _this.volume = Number(_this._getCookie("volume"));
+            _this.synth.volume = _this._calcVolume();
+            return _this;
         }
         SongDocument.prototype.savePreferences = function () {
             this._setCookie("showFifth", this.showFifth ? "true" : "false");
@@ -1914,7 +1854,6 @@ var beepbox;
             if (item != null) {
                 return item;
             }
-            // Legacy: check for cookie:
             var name = cname + "=";
             var ca = document.cookie.split(';');
             for (var i = 0; i < ca.length; i++) {
@@ -1922,31 +1861,30 @@ var beepbox;
                 while (c.charAt(0) == ' ')
                     c = c.substring(1);
                 if (c.indexOf(name) == 0) {
-                    // Found cookie, convert it to localStorage and delete original.
                     var value = c.substring(name.length, c.length);
                     this._setCookie(cname, value);
-                    // Delete old cookie by providing old expiration:
                     document.cookie = cname + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
                     return value;
                 }
             }
             return "";
         };
-        SongDocument._latestVersion = 2;
         return SongDocument;
     }(Model));
+    SongDocument._latestVersion = 2;
     beepbox.SongDocument = SongDocument;
     var ChangeSequence = (function (_super) {
         __extends(ChangeSequence, _super);
         function ChangeSequence(changes) {
             if (changes === void 0) { changes = null; }
-            _super.call(this, false);
+            var _this = _super.call(this, false) || this;
             if (changes == null) {
-                this._changes = [];
+                _this._changes = [];
             }
             else {
-                this._changes = changes.concat();
+                _this._changes = changes.concat();
             }
+            return _this;
         }
         ChangeSequence.prototype.append = function (change) {
             if (change.isNoop())
@@ -1954,14 +1892,6 @@ var beepbox;
             this._changes[this._changes.length] = change;
             this._didSomething();
         };
-        /*
-        // WARNING: prepend is almost always a bad idea. Know what you're doing.
-        protected _prepend(change: Change): void {
-            if (change.didNothing) return;
-            this._changes.splice(0,0,change);
-            this._didSomething();
-        }
-        */
         ChangeSequence.prototype._doForwards = function () {
             for (var i = 0; i < this._changes.length; i++) {
                 this._changes[i].redo();
@@ -1977,21 +1907,22 @@ var beepbox;
     beepbox.ChangeSequence = ChangeSequence;
     var ChangePins = (function (_super) {
         __extends(ChangePins, _super);
-        function ChangePins(document, tone, changePins) {
-            _super.call(this, false);
-            this._document = document;
-            this._tone = tone;
-            this._oldStart = tone.start;
-            this._oldEnd = tone.end;
-            this._newStart = tone.start;
-            this._newEnd = tone.end;
-            this._oldPins = tone.pins;
-            this._newPins = [];
-            this._oldNotes = tone.notes;
-            this._newNotes = [];
-            changePins();
-            var i;
-            for (i = 0; i < this._newPins.length - 1;) {
+        function ChangePins(_document, _tone) {
+            var _this = _super.call(this, false) || this;
+            _this._document = _document;
+            _this._tone = _tone;
+            _this._oldStart = _this._tone.start;
+            _this._oldEnd = _this._tone.end;
+            _this._newStart = _this._tone.start;
+            _this._newEnd = _this._tone.end;
+            _this._oldPins = _this._tone.pins;
+            _this._newPins = [];
+            _this._oldNotes = _this._tone.notes;
+            _this._newNotes = [];
+            return _this;
+        }
+        ChangePins.prototype._finishSetup = function () {
+            for (var i = 0; i < this._newPins.length - 1;) {
                 if (this._newPins[i].time >= this._newPins[i + 1].time) {
                     this._newPins.splice(i, 1);
                 }
@@ -1999,7 +1930,7 @@ var beepbox;
                     i++;
                 }
             }
-            for (i = 1; i < this._newPins.length - 1;) {
+            for (var i = 1; i < this._newPins.length - 1;) {
                 if (this._newPins[i - 1].interval == this._newPins[i].interval &&
                     this._newPins[i].interval == this._newPins[i + 1].interval &&
                     this._newPins[i - 1].volume == this._newPins[i].volume &&
@@ -2012,10 +1943,10 @@ var beepbox;
             }
             var firstInterval = this._newPins[0].interval;
             var firstTime = this._newPins[0].time;
-            for (i = 0; i < this._oldNotes.length; i++) {
+            for (var i = 0; i < this._oldNotes.length; i++) {
                 this._newNotes[i] = this._oldNotes[i] + firstInterval;
             }
-            for (i = 0; i < this._newPins.length; i++) {
+            for (var i = 0; i < this._newPins.length; i++) {
                 this._newPins[i].interval -= firstInterval;
                 this._newPins[i].time -= firstTime;
             }
@@ -2023,7 +1954,7 @@ var beepbox;
             this._newEnd = this._newStart + this._newPins[this._newPins.length - 1].time;
             this._doForwards();
             this._didSomething();
-        }
+        };
         ChangePins.prototype._doForwards = function () {
             this._tone.pins = this._newPins;
             this._tone.notes = this._newNotes;
@@ -2044,14 +1975,15 @@ var beepbox;
     var ChangeAttack = (function (_super) {
         __extends(ChangeAttack, _super);
         function ChangeAttack(document, attack) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldAttack = document.song.instrumentAttacks[document.channel][document.getCurrentInstrument()];
-            this._newAttack = attack;
-            if (this._oldAttack != this._newAttack) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldAttack = document.song.instrumentAttacks[document.channel][document.getCurrentInstrument()];
+            _this._newAttack = attack;
+            if (_this._oldAttack != _this._newAttack) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeAttack.prototype._doForwards = function () {
             this._document.song.instrumentAttacks[this._document.channel][this._document.getCurrentInstrument()] = this._newAttack;
@@ -2067,14 +1999,15 @@ var beepbox;
     var ChangeBarPattern = (function (_super) {
         __extends(ChangeBarPattern, _super);
         function ChangeBarPattern(document, pattern) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldPattern = document.song.channelBars[document.channel][document.bar];
-            this._newPattern = pattern;
-            if (this._oldPattern != this._newPattern && pattern <= document.song.channelPatterns[document.channel].length) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldPattern = document.song.channelBars[document.channel][document.bar];
+            _this._newPattern = pattern;
+            if (_this._oldPattern != _this._newPattern && pattern <= document.song.channelPatterns[document.channel].length) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeBarPattern.prototype._doForwards = function () {
             this._document.song.channelBars[this._document.channel][this._document.bar] = this._newPattern;
@@ -2090,37 +2023,38 @@ var beepbox;
     var ChangeBars = (function (_super) {
         __extends(ChangeBars, _super);
         function ChangeBars(document, bars) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldBars = document.song.bars;
-            this._newBars = bars;
-            if (this._oldBars != this._newBars) {
-                this._oldChannelBars = document.song.channelBars;
-                this._newChannelBars = [];
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldBars = document.song.bars;
+            _this._newBars = bars;
+            if (_this._oldBars != _this._newBars) {
+                _this._oldChannelBars = document.song.channelBars;
+                _this._newChannelBars = [];
                 for (var i = 0; i < beepbox.Music.numChannels; i++) {
                     var channel = [];
-                    for (var j = 0; j < this._newBars; j++) {
-                        channel.push(j < this._oldBars ? this._oldChannelBars[i][j] : 1);
+                    for (var j = 0; j < _this._newBars; j++) {
+                        channel.push(j < _this._oldBars ? _this._oldChannelBars[i][j] : 1);
                     }
-                    this._newChannelBars.push(channel);
+                    _this._newChannelBars.push(channel);
                 }
-                this._oldBar = document.bar;
-                this._oldBarScrollPos = document.barScrollPos;
-                this._oldLoopStart = document.song.loopStart;
-                this._oldLoopLength = document.song.loopLength;
-                this._newBar = document.bar;
-                this._newBarScrollPos = document.barScrollPos;
-                this._newLoopStart = document.song.loopStart;
-                this._newLoopLength = document.song.loopLength;
-                if (this._oldBars > this._newBars) {
-                    this._newBar = Math.min(this._newBar, this._newBars - 1);
-                    this._newBarScrollPos = Math.max(0, Math.min(this._newBars - 16, this._newBarScrollPos));
-                    this._newLoopLength = Math.min(this._newBars, this._newLoopLength);
-                    this._newLoopStart = Math.min(this._newBars - this._newLoopLength, this._newLoopStart);
+                _this._oldBar = document.bar;
+                _this._oldBarScrollPos = document.barScrollPos;
+                _this._oldLoopStart = document.song.loopStart;
+                _this._oldLoopLength = document.song.loopLength;
+                _this._newBar = document.bar;
+                _this._newBarScrollPos = document.barScrollPos;
+                _this._newLoopStart = document.song.loopStart;
+                _this._newLoopLength = document.song.loopLength;
+                if (_this._oldBars > _this._newBars) {
+                    _this._newBar = Math.min(_this._newBar, _this._newBars - 1);
+                    _this._newBarScrollPos = Math.max(0, Math.min(_this._newBars - 16, _this._newBarScrollPos));
+                    _this._newLoopLength = Math.min(_this._newBars, _this._newLoopLength);
+                    _this._newLoopStart = Math.min(_this._newBars - _this._newLoopLength, _this._newLoopStart);
                 }
-                this._doForwards();
-                this._didSomething();
+                _this._doForwards();
+                _this._didSomething();
             }
+            return _this;
         }
         ChangeBars.prototype._doForwards = function () {
             this._document.bar = this._newBar;
@@ -2146,23 +2080,24 @@ var beepbox;
     var ChangeBeats = (function (_super) {
         __extends(ChangeBeats, _super);
         function ChangeBeats(document, beats) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldBeats = document.song.beats;
-            this._newBeats = beats;
-            if (this._oldBeats != this._newBeats) {
-                if (this._oldBeats > this._newBeats) {
-                    this._sequence = new ChangeSequence();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldBeats = document.song.beats;
+            _this._newBeats = beats;
+            if (_this._oldBeats != _this._newBeats) {
+                if (_this._oldBeats > _this._newBeats) {
+                    _this._sequence = new ChangeSequence();
                     for (var i = 0; i < beepbox.Music.numChannels; i++) {
                         for (var j = 0; j < document.song.channelPatterns[i].length; j++) {
-                            this._sequence.append(new ChangeToneTruncate(document, document.song.channelPatterns[i][j], this._newBeats * document.song.parts, this._oldBeats * document.song.parts));
+                            _this._sequence.append(new ChangeToneTruncate(document, document.song.channelPatterns[i][j], _this._newBeats * document.song.parts, _this._oldBeats * document.song.parts));
                         }
                     }
                 }
-                this._document.song.beats = this._newBeats;
-                this._document.changed();
-                this._didSomething();
+                _this._document.song.beats = _this._newBeats;
+                _this._document.changed();
+                _this._didSomething();
             }
+            return _this;
         }
         ChangeBeats.prototype._doForwards = function () {
             if (this._sequence != null)
@@ -2182,16 +2117,17 @@ var beepbox;
     var ChangeChannelBar = (function (_super) {
         __extends(ChangeChannelBar, _super);
         function ChangeChannelBar(document, channel, bar) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldChannel = document.channel;
-            this._newChannel = channel;
-            this._oldBar = document.bar;
-            this._newBar = bar;
-            this._doForwards();
-            if (this._oldChannel != this._newChannel || this._oldBar != this._newBar) {
-                this._didSomething();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldChannel = document.channel;
+            _this._newChannel = channel;
+            _this._oldBar = document.bar;
+            _this._newBar = bar;
+            _this._doForwards();
+            if (_this._oldChannel != _this._newChannel || _this._oldBar != _this._newBar) {
+                _this._didSomething();
             }
+            return _this;
         }
         ChangeChannelBar.prototype._doForwards = function () {
             this._document.channel = this._newChannel;
@@ -2211,14 +2147,15 @@ var beepbox;
     var ChangeChorus = (function (_super) {
         __extends(ChangeChorus, _super);
         function ChangeChorus(document, chorus) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldChorus = document.song.instrumentChorus[document.channel][document.getCurrentInstrument()];
-            this._newChorus = chorus;
-            if (this._oldChorus != this._newChorus) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldChorus = document.song.instrumentChorus[document.channel][document.getCurrentInstrument()];
+            _this._newChorus = chorus;
+            if (_this._oldChorus != _this._newChorus) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeChorus.prototype._doForwards = function () {
             this._document.song.instrumentChorus[this._document.channel][this._document.getCurrentInstrument()] = this._newChorus;
@@ -2234,14 +2171,15 @@ var beepbox;
     var ChangeEffect = (function (_super) {
         __extends(ChangeEffect, _super);
         function ChangeEffect(document, effect) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldEffect = document.song.instrumentEffects[document.channel][document.getCurrentInstrument()];
-            this._newEffect = effect;
-            if (this._oldEffect != this._newEffect) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldEffect = document.song.instrumentEffects[document.channel][document.getCurrentInstrument()];
+            _this._newEffect = effect;
+            if (_this._oldEffect != _this._newEffect) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeEffect.prototype._doForwards = function () {
             this._document.song.instrumentEffects[this._document.channel][this._document.getCurrentInstrument()] = this._newEffect;
@@ -2257,14 +2195,15 @@ var beepbox;
     var ChangeFilter = (function (_super) {
         __extends(ChangeFilter, _super);
         function ChangeFilter(document, filter) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldFilter = document.song.instrumentFilters[document.channel][document.getCurrentInstrument()];
-            this._newFilter = filter;
-            if (this._oldFilter != this._newFilter) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldFilter = document.song.instrumentFilters[document.channel][document.getCurrentInstrument()];
+            _this._newFilter = filter;
+            if (_this._oldFilter != _this._newFilter) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeFilter.prototype._doForwards = function () {
             this._document.song.instrumentFilters[this._document.channel][this._document.getCurrentInstrument()] = this._newFilter;
@@ -2280,36 +2219,32 @@ var beepbox;
     var ChangeInstruments = (function (_super) {
         __extends(ChangeInstruments, _super);
         function ChangeInstruments(document, instruments) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldInstruments = document.song.instruments;
-            this._newInstruments = instruments;
-            if (this._oldInstruments != this._newInstruments) {
-                // todo: adjust size of instrument arrays, make sure no references to invalid instruments
-                this._oldInstrumentWaves = document.song.instrumentWaves;
-                this._oldInstrumentFilters = document.song.instrumentFilters;
-                this._oldInstrumentAttacks = document.song.instrumentAttacks;
-                this._oldInstrumentEffects = document.song.instrumentEffects;
-                this._oldInstrumentChorus = document.song.instrumentChorus;
-                this._oldInstrumentVolumes = document.song.instrumentVolumes;
-                this._newInstrumentWaves = [];
-                this._newInstrumentFilters = [];
-                this._newInstrumentAttacks = [];
-                this._newInstrumentEffects = [];
-                this._newInstrumentChorus = [];
-                this._newInstrumentVolumes = [];
-                var oldArrays = [this._oldInstrumentWaves, this._oldInstrumentFilters, this._oldInstrumentAttacks, this._oldInstrumentEffects, this._oldInstrumentChorus, this._oldInstrumentVolumes];
-                var newArrays = [this._newInstrumentWaves, this._newInstrumentFilters, this._newInstrumentAttacks, this._newInstrumentEffects, this._newInstrumentChorus, this._newInstrumentVolumes];
-                var k;
-                var i;
-                var j;
-                for (k = 0; k < newArrays.length; k++) {
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldInstruments = document.song.instruments;
+            _this._newInstruments = instruments;
+            if (_this._oldInstruments != _this._newInstruments) {
+                _this._oldInstrumentWaves = document.song.instrumentWaves;
+                _this._oldInstrumentFilters = document.song.instrumentFilters;
+                _this._oldInstrumentAttacks = document.song.instrumentAttacks;
+                _this._oldInstrumentEffects = document.song.instrumentEffects;
+                _this._oldInstrumentChorus = document.song.instrumentChorus;
+                _this._oldInstrumentVolumes = document.song.instrumentVolumes;
+                _this._newInstrumentWaves = [];
+                _this._newInstrumentFilters = [];
+                _this._newInstrumentAttacks = [];
+                _this._newInstrumentEffects = [];
+                _this._newInstrumentChorus = [];
+                _this._newInstrumentVolumes = [];
+                var oldArrays = [_this._oldInstrumentWaves, _this._oldInstrumentFilters, _this._oldInstrumentAttacks, _this._oldInstrumentEffects, _this._oldInstrumentChorus, _this._oldInstrumentVolumes];
+                var newArrays = [_this._newInstrumentWaves, _this._newInstrumentFilters, _this._newInstrumentAttacks, _this._newInstrumentEffects, _this._newInstrumentChorus, _this._newInstrumentVolumes];
+                for (var k = 0; k < newArrays.length; k++) {
                     var oldArray = oldArrays[k];
                     var newArray = newArrays[k];
-                    for (i = 0; i < beepbox.Music.numChannels; i++) {
+                    for (var i = 0; i < beepbox.Music.numChannels; i++) {
                         var channel = [];
-                        for (j = 0; j < this._newInstruments; j++) {
-                            if (j < this._oldInstruments) {
+                        for (var j = 0; j < _this._newInstruments; j++) {
+                            if (j < _this._oldInstruments) {
                                 channel.push(oldArray[i][j]);
                             }
                             else {
@@ -2327,22 +2262,23 @@ var beepbox;
                         newArray.push(channel);
                     }
                 }
-                this._oldInstrumentIndices = [];
-                this._newInstrumentIndices = [];
-                for (i = 0; i < beepbox.Music.numChannels; i++) {
+                _this._oldInstrumentIndices = [];
+                _this._newInstrumentIndices = [];
+                for (var i = 0; i < beepbox.Music.numChannels; i++) {
                     var oldIndices = [];
                     var newIndices = [];
-                    for (j = 0; j < document.song.patterns; j++) {
+                    for (var j = 0; j < document.song.patterns; j++) {
                         var oldIndex = document.song.channelPatterns[i][j].instrument;
                         oldIndices.push(oldIndex);
-                        newIndices.push(oldIndex < this._newInstruments ? oldIndex : 0);
+                        newIndices.push(oldIndex < _this._newInstruments ? oldIndex : 0);
                     }
-                    this._oldInstrumentIndices.push(oldIndices);
-                    this._newInstrumentIndices.push(newIndices);
+                    _this._oldInstrumentIndices.push(oldIndices);
+                    _this._newInstrumentIndices.push(newIndices);
                 }
-                this._doForwards();
-                this._didSomething();
+                _this._doForwards();
+                _this._didSomething();
             }
+            return _this;
         }
         ChangeInstruments.prototype._doForwards = function () {
             this._document.song.instruments = this._newInstruments;
@@ -2379,14 +2315,15 @@ var beepbox;
     var ChangeKey = (function (_super) {
         __extends(ChangeKey, _super);
         function ChangeKey(document, key) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldKey = document.song.key;
-            this._newKey = key;
-            if (this._oldKey != this._newKey) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldKey = document.song.key;
+            _this._newKey = key;
+            if (_this._oldKey != _this._newKey) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeKey.prototype._doForwards = function () {
             this._document.song.key = this._newKey;
@@ -2402,16 +2339,17 @@ var beepbox;
     var ChangeLoop = (function (_super) {
         __extends(ChangeLoop, _super);
         function ChangeLoop(document, start, length) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldStart = document.song.loopStart;
-            this._newStart = start;
-            this._oldLength = document.song.loopLength;
-            this._newLength = length;
-            if (this._oldStart != this._newStart || this._oldLength != this._newLength) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldStart = document.song.loopStart;
+            _this._newStart = start;
+            _this._oldLength = document.song.loopLength;
+            _this._newLength = length;
+            if (_this._oldStart != _this._newStart || _this._oldLength != _this._newLength) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeLoop.prototype._doForwards = function () {
             this._document.song.loopStart = this._newStart;
@@ -2430,14 +2368,15 @@ var beepbox;
         __extends(ChangeNoteAdded, _super);
         function ChangeNoteAdded(document, pattern, tone, note, index, deletion) {
             if (deletion === void 0) { deletion = false; }
-            _super.call(this, deletion);
-            this._document = document;
-            this._pattern = pattern;
-            this._tone = tone;
-            this._note = note;
-            this._index = index;
-            this._didSomething();
-            this.redo();
+            var _this = _super.call(this, deletion) || this;
+            _this._document = document;
+            _this._pattern = pattern;
+            _this._tone = tone;
+            _this._note = note;
+            _this._index = index;
+            _this._didSomething();
+            _this.redo();
+            return _this;
         }
         ChangeNoteAdded.prototype._doForwards = function () {
             this._tone.notes.splice(this._index, 0, this._note);
@@ -2453,14 +2392,15 @@ var beepbox;
     var ChangeOctave = (function (_super) {
         __extends(ChangeOctave, _super);
         function ChangeOctave(document, octave) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldOctave = document.song.channelOctaves[document.channel];
-            this._newOctave = octave;
-            if (this._oldOctave != this._newOctave) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldOctave = document.song.channelOctaves[document.channel];
+            _this._newOctave = octave;
+            if (_this._oldOctave != _this._newOctave) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeOctave.prototype._doForwards = function () {
             this._document.song.channelOctaves[this._document.channel] = this._newOctave;
@@ -2476,21 +2416,22 @@ var beepbox;
     var ChangeParts = (function (_super) {
         __extends(ChangeParts, _super);
         function ChangeParts(document, parts) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldParts = document.song.parts;
-            this._newParts = parts;
-            if (this._oldParts != this._newParts) {
-                this._sequence = new ChangeSequence();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldParts = document.song.parts;
+            _this._newParts = parts;
+            if (_this._oldParts != _this._newParts) {
+                _this._sequence = new ChangeSequence();
                 for (var i = 0; i < beepbox.Music.numChannels; i++) {
                     for (var j = 0; j < document.song.channelPatterns[i].length; j++) {
-                        this._sequence.append(new ChangeRhythm(document, document.song.channelPatterns[i][j], this._oldParts, this._newParts));
+                        _this._sequence.append(new ChangeRhythm(document, document.song.channelPatterns[i][j], _this._oldParts, _this._newParts));
                     }
                 }
-                document.song.parts = this._newParts;
+                document.song.parts = _this._newParts;
                 document.changed();
-                this._didSomething();
+                _this._didSomething();
             }
+            return _this;
         }
         ChangeParts.prototype._doForwards = function () {
             if (this._sequence != null)
@@ -2510,15 +2451,16 @@ var beepbox;
     var ChangePaste = (function (_super) {
         __extends(ChangePaste, _super);
         function ChangePaste(document, tones) {
-            _super.call(this, false);
-            this._document = document;
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
             var pattern = document.getCurrentPattern();
-            this.oldTones = pattern.tones;
+            _this.oldTones = pattern.tones;
             pattern.tones = tones;
             pattern.tones = pattern.cloneTones();
-            this.newTones = pattern.tones;
+            _this.newTones = pattern.tones;
             document.changed();
-            this._didSomething();
+            _this._didSomething();
+            return _this;
         }
         ChangePaste.prototype._doForwards = function () {
             var pattern = this._document.getCurrentPattern();
@@ -2536,14 +2478,15 @@ var beepbox;
     var ChangePatternInstrument = (function (_super) {
         __extends(ChangePatternInstrument, _super);
         function ChangePatternInstrument(document, instrument) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldInstrument = document.getCurrentPattern().instrument;
-            this._newInstrument = instrument;
-            if (this._oldInstrument != this._newInstrument) {
-                this._doForwards();
-                this._didSomething();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldInstrument = document.getCurrentPattern().instrument;
+            _this._newInstrument = instrument;
+            if (_this._oldInstrument != _this._newInstrument) {
+                _this._doForwards();
+                _this._didSomething();
             }
+            return _this;
         }
         ChangePatternInstrument.prototype._doForwards = function () {
             this._document.getCurrentPattern().instrument = this._newInstrument;
@@ -2559,27 +2502,26 @@ var beepbox;
     var ChangePatterns = (function (_super) {
         __extends(ChangePatterns, _super);
         function ChangePatterns(document, patterns) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldPatterns = document.song.patterns;
-            this._newPatterns = patterns;
-            if (this._oldPatterns != this._newPatterns) {
-                this._oldChannelBars = document.song.channelBars;
-                this._newChannelBars = [];
-                this._oldChannelPatterns = document.song.channelPatterns;
-                this._newChannelPatterns = [];
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldPatterns = document.song.patterns;
+            _this._newPatterns = patterns;
+            if (_this._oldPatterns != _this._newPatterns) {
+                _this._oldChannelBars = document.song.channelBars;
+                _this._newChannelBars = [];
+                _this._oldChannelPatterns = document.song.channelPatterns;
+                _this._newChannelPatterns = [];
                 for (var i = 0; i < beepbox.Music.numChannels; i++) {
-                    var j;
                     var channelBars = [];
-                    for (j = 0; j < document.song.channelBars[i].length; j++) {
+                    for (var j = 0; j < document.song.channelBars[i].length; j++) {
                         var bar = document.song.channelBars[i][j];
-                        if (bar > this._newPatterns)
+                        if (bar > _this._newPatterns)
                             bar = 1;
                         channelBars.push(bar);
                     }
-                    this._newChannelBars.push(channelBars);
+                    _this._newChannelBars.push(channelBars);
                     var channelPatterns = [];
-                    for (j = 0; j < this._newPatterns; j++) {
+                    for (var j = 0; j < _this._newPatterns; j++) {
                         if (j < document.song.channelPatterns[i].length) {
                             channelPatterns.push(document.song.channelPatterns[i][j]);
                         }
@@ -2587,11 +2529,12 @@ var beepbox;
                             channelPatterns.push(new beepbox.BarPattern());
                         }
                     }
-                    this._newChannelPatterns.push(channelPatterns);
+                    _this._newChannelPatterns.push(channelPatterns);
                 }
-                this._doForwards();
-                this._didSomething();
+                _this._doForwards();
+                _this._didSomething();
             }
+            return _this;
         }
         ChangePatterns.prototype._doForwards = function () {
             if (this._sequence != null)
@@ -2615,32 +2558,31 @@ var beepbox;
     var ChangePinTime = (function (_super) {
         __extends(ChangePinTime, _super);
         function ChangePinTime(document, tone, pinIndex, shiftedTime) {
-            var _this = this;
-            var changePins = function () {
-                shiftedTime -= _this._oldStart;
-                var originalTime = _this._oldPins[pinIndex].time;
-                var skipStart = Math.min(originalTime, shiftedTime);
-                var skipEnd = Math.max(originalTime, shiftedTime);
-                var setPin = false;
-                for (var i = 0; i < _this._oldPins.length; i++) {
-                    var oldPin = tone.pins[i];
-                    var time = oldPin.time;
-                    if (time < skipStart) {
-                        _this._newPins.push(new beepbox.TonePin(oldPin.interval, time, oldPin.volume));
-                    }
-                    else if (time > skipEnd) {
-                        if (!setPin) {
-                            _this._newPins.push(new beepbox.TonePin(_this._oldPins[pinIndex].interval, shiftedTime, _this._oldPins[pinIndex].volume));
-                            setPin = true;
-                        }
-                        _this._newPins.push(new beepbox.TonePin(oldPin.interval, time, oldPin.volume));
-                    }
+            var _this = _super.call(this, document, tone) || this;
+            shiftedTime -= _this._oldStart;
+            var originalTime = _this._oldPins[pinIndex].time;
+            var skipStart = Math.min(originalTime, shiftedTime);
+            var skipEnd = Math.max(originalTime, shiftedTime);
+            var setPin = false;
+            for (var i = 0; i < _this._oldPins.length; i++) {
+                var oldPin = tone.pins[i];
+                var time = oldPin.time;
+                if (time < skipStart) {
+                    _this._newPins.push(new beepbox.TonePin(oldPin.interval, time, oldPin.volume));
                 }
-                if (!setPin) {
-                    _this._newPins.push(new beepbox.TonePin(_this._oldPins[pinIndex].interval, shiftedTime, _this._oldPins[pinIndex].volume));
+                else if (time > skipEnd) {
+                    if (!setPin) {
+                        _this._newPins.push(new beepbox.TonePin(_this._oldPins[pinIndex].interval, shiftedTime, _this._oldPins[pinIndex].volume));
+                        setPin = true;
+                    }
+                    _this._newPins.push(new beepbox.TonePin(oldPin.interval, time, oldPin.volume));
                 }
-            };
-            _super.call(this, document, tone, changePins);
+            }
+            if (!setPin) {
+                _this._newPins.push(new beepbox.TonePin(_this._oldPins[pinIndex].interval, shiftedTime, _this._oldPins[pinIndex].volume));
+            }
+            _this._finishSetup();
+            return _this;
         }
         return ChangePinTime;
     }(ChangePins));
@@ -2648,81 +2590,80 @@ var beepbox;
     var ChangePitchBend = (function (_super) {
         __extends(ChangePitchBend, _super);
         function ChangePitchBend(document, tone, bendStart, bendEnd, bendTo, noteIndex) {
-            var _this = this;
-            var changePins = function () {
-                bendStart -= _this._oldStart;
-                bendEnd -= _this._oldStart;
-                bendTo -= tone.notes[noteIndex];
-                var setStart = false;
-                var setEnd = false;
-                var prevInterval = 0;
-                var prevVolume = 3;
-                var persist = true;
-                var i;
-                var direction;
-                var stop;
-                var push;
-                if (bendEnd > bendStart) {
-                    i = 0;
-                    direction = 1;
-                    stop = tone.pins.length;
-                    push = function (item) { _this._newPins.push(item); };
-                }
-                else {
-                    i = tone.pins.length - 1;
-                    direction = -1;
-                    stop = -1;
-                    push = function (item) { _this._newPins.unshift(item); };
-                }
-                for (; i != stop; i += direction) {
-                    var oldPin = tone.pins[i];
-                    var time = oldPin.time;
-                    for (;;) {
-                        if (!setStart) {
-                            if (time * direction <= bendStart * direction) {
-                                prevInterval = oldPin.interval;
-                                prevVolume = oldPin.volume;
-                            }
-                            if (time * direction < bendStart * direction) {
-                                push(new beepbox.TonePin(oldPin.interval, time, oldPin.volume));
-                                break;
-                            }
-                            else {
-                                push(new beepbox.TonePin(prevInterval, bendStart, prevVolume));
-                                setStart = true;
-                            }
+            var _this = _super.call(this, document, tone) || this;
+            bendStart -= _this._oldStart;
+            bendEnd -= _this._oldStart;
+            bendTo -= tone.notes[noteIndex];
+            var setStart = false;
+            var setEnd = false;
+            var prevInterval = 0;
+            var prevVolume = 3;
+            var persist = true;
+            var i;
+            var direction;
+            var stop;
+            var push;
+            if (bendEnd > bendStart) {
+                i = 0;
+                direction = 1;
+                stop = tone.pins.length;
+                push = function (item) { _this._newPins.push(item); };
+            }
+            else {
+                i = tone.pins.length - 1;
+                direction = -1;
+                stop = -1;
+                push = function (item) { _this._newPins.unshift(item); };
+            }
+            for (; i != stop; i += direction) {
+                var oldPin = tone.pins[i];
+                var time = oldPin.time;
+                for (;;) {
+                    if (!setStart) {
+                        if (time * direction <= bendStart * direction) {
+                            prevInterval = oldPin.interval;
+                            prevVolume = oldPin.volume;
                         }
-                        else if (!setEnd) {
-                            if (time * direction <= bendEnd * direction) {
-                                prevInterval = oldPin.interval;
-                                prevVolume = oldPin.volume;
-                            }
-                            if (time * direction < bendEnd * direction) {
-                                break;
-                            }
-                            else {
-                                push(new beepbox.TonePin(bendTo, bendEnd, prevVolume));
-                                setEnd = true;
-                            }
+                        if (time * direction < bendStart * direction) {
+                            push(new beepbox.TonePin(oldPin.interval, time, oldPin.volume));
+                            break;
                         }
                         else {
-                            if (time * direction == bendEnd * direction) {
-                                break;
-                            }
-                            else {
-                                if (oldPin.interval != prevInterval)
-                                    persist = false;
-                                push(new beepbox.TonePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
-                                break;
-                            }
+                            push(new beepbox.TonePin(prevInterval, bendStart, prevVolume));
+                            setStart = true;
+                        }
+                    }
+                    else if (!setEnd) {
+                        if (time * direction <= bendEnd * direction) {
+                            prevInterval = oldPin.interval;
+                            prevVolume = oldPin.volume;
+                        }
+                        if (time * direction < bendEnd * direction) {
+                            break;
+                        }
+                        else {
+                            push(new beepbox.TonePin(bendTo, bendEnd, prevVolume));
+                            setEnd = true;
+                        }
+                    }
+                    else {
+                        if (time * direction == bendEnd * direction) {
+                            break;
+                        }
+                        else {
+                            if (oldPin.interval != prevInterval)
+                                persist = false;
+                            push(new beepbox.TonePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
+                            break;
                         }
                     }
                 }
-                if (!setEnd) {
-                    push(new beepbox.TonePin(bendTo, bendEnd, prevVolume));
-                }
-            };
-            _super.call(this, document, tone, changePins);
+            }
+            if (!setEnd) {
+                push(new beepbox.TonePin(bendTo, bendEnd, prevVolume));
+            }
+            _this._finishSetup();
+            return _this;
         }
         return ChangePitchBend;
     }(ChangePins));
@@ -2730,7 +2671,7 @@ var beepbox;
     var ChangeRhythm = (function (_super) {
         __extends(ChangeRhythm, _super);
         function ChangeRhythm(document, bar, oldParts, newParts) {
-            _super.call(this);
+            var _this = _super.call(this) || this;
             var changeRhythm;
             if (oldParts == 4 && newParts == 3)
                 changeRhythm = function (oldTime) {
@@ -2744,13 +2685,14 @@ var beepbox;
             while (i < bar.tones.length) {
                 var tone = bar.tones[i];
                 if (changeRhythm(tone.start) >= changeRhythm(tone.end)) {
-                    this.append(new ChangeToneAdded(document, bar, tone, i, true));
+                    _this.append(new ChangeToneAdded(document, bar, tone, i, true));
                 }
                 else {
-                    this.append(new ChangeRhythmTone(document, tone, changeRhythm));
+                    _this.append(new ChangeRhythmTone(document, tone, changeRhythm));
                     i++;
                 }
             }
+            return _this;
         }
         return ChangeRhythm;
     }(ChangeSequence));
@@ -2758,13 +2700,13 @@ var beepbox;
     var ChangeRhythmTone = (function (_super) {
         __extends(ChangeRhythmTone, _super);
         function ChangeRhythmTone(document, tone, changeRhythm) {
-            var _this = this;
-            var changePins = function () {
-                _this._oldPins.forEach(function (oldPin) {
-                    _this._newPins.push(new beepbox.TonePin(oldPin.interval, changeRhythm(oldPin.time + _this._oldStart) - _this._oldStart, oldPin.volume));
-                });
-            };
-            _super.call(this, document, tone, changePins);
+            var _this = _super.call(this, document, tone) || this;
+            for (var _i = 0, _a = _this._oldPins; _i < _a.length; _i++) {
+                var oldPin = _a[_i];
+                _this._newPins.push(new beepbox.TonePin(oldPin.interval, changeRhythm(oldPin.time + _this._oldStart) - _this._oldStart, oldPin.volume));
+            }
+            _this._finishSetup();
+            return _this;
         }
         return ChangeRhythmTone;
     }(ChangePins));
@@ -2772,14 +2714,15 @@ var beepbox;
     var ChangeScale = (function (_super) {
         __extends(ChangeScale, _super);
         function ChangeScale(document, scale) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldScale = document.song.scale;
-            this._newScale = scale;
-            if (this._oldScale != this._newScale) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldScale = document.song.scale;
+            _this._newScale = scale;
+            if (_this._oldScale != _this._newScale) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeScale.prototype._doForwards = function () {
             this._document.song.scale = this._newScale;
@@ -2795,26 +2738,27 @@ var beepbox;
     var ChangeSong = (function (_super) {
         __extends(ChangeSong, _super);
         function ChangeSong(document, song) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldSong = document.song.toString();
-            this._oldPatterns = document.song.channelPatterns;
-            this._oldBar = document.bar;
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldSong = document.song.toString();
+            _this._oldPatterns = document.song.channelPatterns;
+            _this._oldBar = document.bar;
             if (song != null) {
-                this._newSong = song;
-                document.song.fromString(this._newSong, false);
+                _this._newSong = song;
+                document.song.fromString(_this._newSong, false);
             }
             else {
                 document.song.initToDefault(false);
-                this._newSong = document.song.toString();
+                _this._newSong = document.song.toString();
             }
-            this._newPatterns = document.song.channelPatterns;
-            this._newBar = Math.max(0, Math.min(document.song.bars - 1, this._oldBar));
-            document.bar = this._newBar;
+            _this._newPatterns = document.song.channelPatterns;
+            _this._newBar = Math.max(0, Math.min(document.song.bars - 1, _this._oldBar));
+            document.bar = _this._newBar;
             document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
             document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
             document.changed();
-            this._didSomething();
+            _this._didSomething();
+            return _this;
         }
         ChangeSong.prototype._doForwards = function () {
             this._document.song.fromString(this._newSong, true);
@@ -2838,14 +2782,15 @@ var beepbox;
     var ChangeTempo = (function (_super) {
         __extends(ChangeTempo, _super);
         function ChangeTempo(document, tempo) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldTempo = document.song.tempo;
-            this._newTempo = tempo;
-            if (this._oldTempo != this._newTempo) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldTempo = document.song.tempo;
+            _this._newTempo = tempo;
+            if (_this._oldTempo != _this._newTempo) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeTempo.prototype._doForwards = function () {
             this._document.song.tempo = this._newTempo;
@@ -2862,13 +2807,14 @@ var beepbox;
         __extends(ChangeToneAdded, _super);
         function ChangeToneAdded(document, bar, tone, index, deletion) {
             if (deletion === void 0) { deletion = false; }
-            _super.call(this, deletion);
-            this._document = document;
-            this._bar = bar;
-            this._tone = tone;
-            this._index = index;
-            this._didSomething();
-            this.redo();
+            var _this = _super.call(this, deletion) || this;
+            _this._document = document;
+            _this._bar = bar;
+            _this._tone = tone;
+            _this._index = index;
+            _this._didSomething();
+            _this.redo();
+            return _this;
         }
         ChangeToneAdded.prototype._doForwards = function () {
             this._bar.tones.splice(this._index, 0, this._tone);
@@ -2884,37 +2830,36 @@ var beepbox;
     var ChangeToneLength = (function (_super) {
         __extends(ChangeToneLength, _super);
         function ChangeToneLength(document, tone, truncStart, truncEnd) {
-            var _this = this;
-            var changePins = function () {
-                truncStart -= _this._oldStart;
-                truncEnd -= _this._oldStart;
-                var setStart = false;
-                var prevVolume = _this._oldPins[0].volume;
-                var prevInterval = _this._oldPins[0].interval;
-                var i;
-                for (i = 0; i < _this._oldPins.length; i++) {
-                    var oldPin = _this._oldPins[i];
-                    if (oldPin.time < truncStart) {
-                        prevVolume = oldPin.volume;
-                        prevInterval = oldPin.interval;
+            var _this = _super.call(this, document, tone) || this;
+            truncStart -= _this._oldStart;
+            truncEnd -= _this._oldStart;
+            var setStart = false;
+            var prevVolume = _this._oldPins[0].volume;
+            var prevInterval = _this._oldPins[0].interval;
+            var i;
+            for (i = 0; i < _this._oldPins.length; i++) {
+                var oldPin = _this._oldPins[i];
+                if (oldPin.time < truncStart) {
+                    prevVolume = oldPin.volume;
+                    prevInterval = oldPin.interval;
+                }
+                else if (oldPin.time <= truncEnd) {
+                    if (oldPin.time > truncStart && !setStart) {
+                        _this._newPins.push(new beepbox.TonePin(prevInterval, truncStart, prevVolume));
                     }
-                    else if (oldPin.time <= truncEnd) {
-                        if (oldPin.time > truncStart && !setStart) {
-                            _this._newPins.push(new beepbox.TonePin(prevInterval, truncStart, prevVolume));
-                        }
-                        _this._newPins.push(new beepbox.TonePin(oldPin.interval, oldPin.time, oldPin.volume));
-                        setStart = true;
-                        if (oldPin.time == truncEnd) {
-                            return;
-                        }
-                    }
-                    else {
-                        break;
+                    _this._newPins.push(new beepbox.TonePin(oldPin.interval, oldPin.time, oldPin.volume));
+                    setStart = true;
+                    if (oldPin.time == truncEnd) {
+                        return _this;
                     }
                 }
-                _this._newPins.push(new beepbox.TonePin(_this._oldPins[i].interval, truncEnd, _this._oldPins[i].volume));
-            };
-            _super.call(this, document, tone, changePins);
+                else {
+                    break;
+                }
+            }
+            _this._newPins.push(new beepbox.TonePin(_this._oldPins[i].interval, truncEnd, _this._oldPins[i].volume));
+            _this._finishSetup();
+            return _this;
         }
         return ChangeToneLength;
     }(ChangePins));
@@ -2923,7 +2868,7 @@ var beepbox;
         __extends(ChangeToneTruncate, _super);
         function ChangeToneTruncate(document, bar, start, end, skipTone) {
             if (skipTone === void 0) { skipTone = null; }
-            _super.call(this);
+            var _this = _super.call(this) || this;
             var i = 0;
             while (i < bar.tones.length) {
                 var tone = bar.tones[i];
@@ -2937,17 +2882,18 @@ var beepbox;
                     break;
                 }
                 else if (tone.start < start) {
-                    this.append(new ChangeToneLength(document, tone, tone.start, start));
+                    _this.append(new ChangeToneLength(document, tone, tone.start, start));
                     i++;
                 }
                 else if (tone.end > end) {
-                    this.append(new ChangeToneLength(document, tone, end, tone.end));
+                    _this.append(new ChangeToneLength(document, tone, end, tone.end));
                     i++;
                 }
                 else {
-                    this.append(new ChangeToneAdded(document, bar, tone, i, true));
+                    _this.append(new ChangeToneAdded(document, bar, tone, i, true));
                 }
             }
+            return _this;
         }
         return ChangeToneTruncate;
     }(ChangeSequence));
@@ -2955,21 +2901,18 @@ var beepbox;
     var ChangeTransposeTone = (function (_super) {
         __extends(ChangeTransposeTone, _super);
         function ChangeTransposeTone(doc, tone, upward) {
-            var _this = this;
-            _super.call(this, false);
-            this._document = doc;
-            this._tone = tone;
-            this._oldPins = tone.pins;
-            this._newPins = [];
-            this._oldNotes = tone.notes;
-            this._newNotes = [];
-            var i;
-            var j;
+            var _this = _super.call(this, false) || this;
+            _this._document = doc;
+            _this._tone = tone;
+            _this._oldPins = tone.pins;
+            _this._newPins = [];
+            _this._oldNotes = tone.notes;
+            _this._newNotes = [];
             var maxPitch = (doc.channel == 3 ? beepbox.Music.drumCount - 1 : beepbox.Music.maxPitch);
-            for (i = 0; i < this._oldNotes.length; i++) {
-                var note = this._oldNotes[i];
+            for (var i = 0; i < _this._oldNotes.length; i++) {
+                var note = _this._oldNotes[i];
                 if (upward) {
-                    for (j = note + 1; j <= maxPitch; j++) {
+                    for (var j = note + 1; j <= maxPitch; j++) {
                         if (doc.channel == 3 || beepbox.Music.scaleFlags[doc.song.scale][j % 12] == true) {
                             note = j;
                             break;
@@ -2977,7 +2920,7 @@ var beepbox;
                     }
                 }
                 else {
-                    for (j = note - 1; j >= 0; j--) {
+                    for (var j = note - 1; j >= 0; j--) {
                         if (doc.channel == 3 || beepbox.Music.scaleFlags[doc.song.scale][j % 12] == true) {
                             note = j;
                             break;
@@ -2985,32 +2928,33 @@ var beepbox;
                     }
                 }
                 var foundMatch = false;
-                for (j = 0; j < this._newNotes.length; j++) {
-                    if (this._newNotes[j] == note) {
+                for (var j = 0; j < _this._newNotes.length; j++) {
+                    if (_this._newNotes[j] == note) {
                         foundMatch = true;
                         break;
                     }
                 }
                 if (!foundMatch)
-                    this._newNotes.push(note);
+                    _this._newNotes.push(note);
             }
             var min = 0;
             var max = maxPitch;
-            for (i = 1; i < this._newNotes.length; i++) {
-                var diff = this._newNotes[0] - this._newNotes[i];
+            for (var i = 1; i < _this._newNotes.length; i++) {
+                var diff = _this._newNotes[0] - _this._newNotes[i];
                 if (min < diff)
                     min = diff;
                 if (max > diff + maxPitch)
                     max = diff + maxPitch;
             }
-            this._oldPins.forEach(function (oldPin) {
+            for (var _i = 0, _a = _this._oldPins; _i < _a.length; _i++) {
+                var oldPin = _a[_i];
                 var interval = oldPin.interval + _this._oldNotes[0];
                 if (interval < min)
                     interval = min;
                 if (interval > max)
                     interval = max;
                 if (upward) {
-                    for (i = interval + 1; i <= max; i++) {
+                    for (var i = interval + 1; i <= max; i++) {
                         if (doc.channel == 3 || beepbox.Music.scaleFlags[doc.song.scale][i % 12] == true) {
                             interval = i;
                             break;
@@ -3018,7 +2962,7 @@ var beepbox;
                     }
                 }
                 else {
-                    for (i = interval - 1; i >= min; i--) {
+                    for (var i = interval - 1; i >= min; i--) {
                         if (doc.channel == 3 || beepbox.Music.scaleFlags[doc.song.scale][i % 12] == true) {
                             interval = i;
                             break;
@@ -3027,22 +2971,23 @@ var beepbox;
                 }
                 interval -= _this._newNotes[0];
                 _this._newPins.push(new beepbox.TonePin(interval, oldPin.time, oldPin.volume));
-            });
-            if (this._newPins[0].interval != 0)
+            }
+            if (_this._newPins[0].interval != 0)
                 throw new Error("wrong pin start interval");
-            for (i = 1; i < this._newPins.length - 1;) {
-                if (this._newPins[i - 1].interval == this._newPins[i].interval &&
-                    this._newPins[i].interval == this._newPins[i + 1].interval &&
-                    this._newPins[i - 1].volume == this._newPins[i].volume &&
-                    this._newPins[i].volume == this._newPins[i + 1].volume) {
-                    this._newPins.splice(i, 1);
+            for (var i = 1; i < _this._newPins.length - 1;) {
+                if (_this._newPins[i - 1].interval == _this._newPins[i].interval &&
+                    _this._newPins[i].interval == _this._newPins[i + 1].interval &&
+                    _this._newPins[i - 1].volume == _this._newPins[i].volume &&
+                    _this._newPins[i].volume == _this._newPins[i + 1].volume) {
+                    _this._newPins.splice(i, 1);
                 }
                 else {
                     i++;
                 }
             }
-            this._doForwards();
-            this._didSomething();
+            _this._doForwards();
+            _this._didSomething();
+            return _this;
         }
         ChangeTransposeTone.prototype._doForwards = function () {
             this._tone.pins = this._newPins;
@@ -3060,10 +3005,11 @@ var beepbox;
     var ChangeTranspose = (function (_super) {
         __extends(ChangeTranspose, _super);
         function ChangeTranspose(document, bar, upward) {
-            _super.call(this);
+            var _this = _super.call(this) || this;
             for (var i = 0; i < bar.tones.length; i++) {
-                this.append(new ChangeTransposeTone(document, bar.tones[i], upward));
+                _this.append(new ChangeTransposeTone(document, bar.tones[i], upward));
             }
+            return _this;
         }
         return ChangeTranspose;
     }(ChangeSequence));
@@ -3071,14 +3017,15 @@ var beepbox;
     var ChangeVolume = (function (_super) {
         __extends(ChangeVolume, _super);
         function ChangeVolume(document, volume) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldVolume = document.song.instrumentVolumes[document.channel][document.getCurrentInstrument()];
-            this._newVolume = volume;
-            if (this._oldVolume != this._newVolume) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldVolume = document.song.instrumentVolumes[document.channel][document.getCurrentInstrument()];
+            _this._newVolume = volume;
+            if (_this._oldVolume != _this._newVolume) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeVolume.prototype._doForwards = function () {
             this._document.song.instrumentVolumes[this._document.channel][this._document.getCurrentInstrument()] = this._newVolume;
@@ -3094,16 +3041,15 @@ var beepbox;
     var ChangeVolumeBend = (function (_super) {
         __extends(ChangeVolumeBend, _super);
         function ChangeVolumeBend(document, bar, tone, bendPart, bendVolume, bendInterval) {
-            var _this = this;
-            _super.call(this, false);
-            this._document = document;
-            this._bar = bar;
-            this._tone = tone;
-            this._oldPins = tone.pins;
-            this._newPins = [];
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._bar = bar;
+            _this._tone = tone;
+            _this._oldPins = tone.pins;
+            _this._newPins = [];
             var inserted = false;
-            var i;
-            tone.pins.forEach(function (pin) {
+            for (var _i = 0, _a = tone.pins; _i < _a.length; _i++) {
+                var pin = _a[_i];
                 if (pin.time < bendPart) {
                     _this._newPins.push(pin);
                 }
@@ -3118,20 +3064,21 @@ var beepbox;
                     }
                     _this._newPins.push(pin);
                 }
-            });
-            for (i = 1; i < this._newPins.length - 1;) {
-                if (this._newPins[i - 1].interval == this._newPins[i].interval &&
-                    this._newPins[i].interval == this._newPins[i + 1].interval &&
-                    this._newPins[i - 1].volume == this._newPins[i].volume &&
-                    this._newPins[i].volume == this._newPins[i + 1].volume) {
-                    this._newPins.splice(i, 1);
+            }
+            for (var i = 1; i < _this._newPins.length - 1;) {
+                if (_this._newPins[i - 1].interval == _this._newPins[i].interval &&
+                    _this._newPins[i].interval == _this._newPins[i + 1].interval &&
+                    _this._newPins[i - 1].volume == _this._newPins[i].volume &&
+                    _this._newPins[i].volume == _this._newPins[i + 1].volume) {
+                    _this._newPins.splice(i, 1);
                 }
                 else {
                     i++;
                 }
             }
-            this._doForwards();
-            this._didSomething();
+            _this._doForwards();
+            _this._didSomething();
+            return _this;
         }
         ChangeVolumeBend.prototype._doForwards = function () {
             this._tone.pins = this._newPins;
@@ -3147,14 +3094,15 @@ var beepbox;
     var ChangeWave = (function (_super) {
         __extends(ChangeWave, _super);
         function ChangeWave(document, wave) {
-            _super.call(this, false);
-            this._document = document;
-            this._oldWave = document.song.instrumentWaves[document.channel][document.getCurrentInstrument()];
-            this._newWave = wave;
-            if (this._oldWave != this._newWave) {
-                this._didSomething();
-                this.redo();
+            var _this = _super.call(this, false) || this;
+            _this._document = document;
+            _this._oldWave = document.song.instrumentWaves[document.channel][document.getCurrentInstrument()];
+            _this._newWave = wave;
+            if (_this._oldWave != _this._newWave) {
+                _this._didSomething();
+                _this.redo();
             }
+            return _this;
         }
         ChangeWave.prototype._doForwards = function () {
             this._document.song.instrumentWaves[this._document.channel][this._document.getCurrentInstrument()] = this._newWave;
@@ -3187,30 +3135,6 @@ var beepbox;
     }());
     beepbox.PatternCursor = PatternCursor;
 })(beepbox || (beepbox = {}));
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
-/// <reference path="SongEditor.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -3250,8 +3174,6 @@ var beepbox;
         var mouseYStart = 0;
         var mouseXPrev = 0;
         var mouseYPrev = 0;
-        //var precise: boolean = false;
-        //var precisionX: number = 0;
         var dragChange = null;
         var cursor = new beepbox.PatternCursor();
         var pattern;
@@ -3263,28 +3185,27 @@ var beepbox;
         for (var i = 0; i < 12; i++) {
             var y = (12 - i) % 12;
             var rectangle = document.createElementNS(svgNS, "rect");
-            rectangle.setAttributeNS(null, "x", "1");
-            rectangle.setAttributeNS(null, "y", "" + (y * defaultNoteHeight + 1));
-            rectangle.setAttributeNS(null, "height", "" + (defaultNoteHeight - 2));
+            rectangle.setAttribute("x", "1");
+            rectangle.setAttribute("y", "" + (y * defaultNoteHeight + 1));
+            rectangle.setAttribute("height", "" + (defaultNoteHeight - 2));
             svgNoteBackground.appendChild(rectangle);
             backgroundNoteRows[i] = rectangle;
         }
         var backgroundDrumRow = document.createElementNS(svgNS, "rect");
-        backgroundDrumRow.setAttributeNS(null, "x", "1");
-        backgroundDrumRow.setAttributeNS(null, "y", "1");
-        backgroundDrumRow.setAttributeNS(null, "height", "" + (defaultDrumHeight - 2));
-        backgroundDrumRow.setAttributeNS(null, "fill", "#444444");
+        backgroundDrumRow.setAttribute("x", "1");
+        backgroundDrumRow.setAttribute("y", "1");
+        backgroundDrumRow.setAttribute("height", "" + (defaultDrumHeight - 2));
+        backgroundDrumRow.setAttribute("fill", "#444444");
         svgDrumBackground.appendChild(backgroundDrumRow);
         function updateCursorStatus() {
-            var i;
-            var j;
             if (pattern == null)
                 return;
             cursor = new beepbox.PatternCursor();
             if (mouseX < 0 || mouseX > editorWidth || mouseY < 0 || mouseY > editorHeight)
                 return;
             cursor.part = Math.floor(Math.max(0, Math.min(doc.song.beats * doc.song.parts - 1, mouseX / partWidth)));
-            pattern.tones.every(function (tone) {
+            for (var _i = 0, _a = pattern.tones; _i < _a.length; _i++) {
+                var tone = _a[_i];
                 if (tone.end <= cursor.part) {
                     cursor.prevTone = tone;
                     cursor.curIndex++;
@@ -3294,20 +3215,19 @@ var beepbox;
                 }
                 else if (tone.start > cursor.part) {
                     cursor.nextTone = tone;
-                    return false;
+                    break;
                 }
-                return true;
-            });
+            }
             var mousePitch = findMousePitch(mouseY);
             if (cursor.curTone != null) {
                 cursor.start = cursor.curTone.start;
                 cursor.end = cursor.curTone.end;
                 cursor.pins = cursor.curTone.pins;
-                var interval;
-                var error;
-                var prevPin;
+                var interval = void 0;
+                var error = void 0;
+                var prevPin = void 0;
                 var nextPin = cursor.curTone.pins[0];
-                for (j = 1; j < cursor.curTone.pins.length; j++) {
+                for (var j = 1; j < cursor.curTone.pins.length; j++) {
                     prevPin = nextPin;
                     nextPin = cursor.curTone.pins[j];
                     var leftSide = partWidth * (cursor.curTone.start + prevPin.time);
@@ -3326,7 +3246,8 @@ var beepbox;
                 var minInterval = Number.MAX_VALUE;
                 var maxInterval = -Number.MAX_VALUE;
                 var bestDistance = Number.MAX_VALUE;
-                cursor.curTone.pins.forEach(function (pin) {
+                for (var _b = 0, _c = cursor.curTone.pins; _b < _c.length; _b++) {
+                    var pin = _c[_b];
                     if (minInterval > pin.interval)
                         minInterval = pin.interval;
                     if (maxInterval < pin.interval)
@@ -3336,18 +3257,18 @@ var beepbox;
                         bestDistance = pinDistance;
                         cursor.nearPinIndex = cursor.curTone.pins.indexOf(pin);
                     }
-                });
+                }
                 mousePitch -= interval;
                 cursor.note = snapToNote(mousePitch, -minInterval, (doc.channel == 3 ? beepbox.Music.drumCount - 1 : beepbox.Music.maxPitch) - maxInterval);
                 var nearest = error;
-                for (i = 0; i < cursor.curTone.notes.length; i++) {
+                for (var i = 0; i < cursor.curTone.notes.length; i++) {
                     var distance = Math.abs(cursor.curTone.notes[i] - mousePitch + 0.5);
                     if (distance > nearest)
                         continue;
                     nearest = distance;
                     cursor.note = cursor.curTone.notes[i];
                 }
-                for (i = 0; i < cursor.curTone.notes.length; i++) {
+                for (var i = 0; i < cursor.curTone.notes.length; i++) {
                     if (cursor.curTone.notes[i] == cursor.note) {
                         cursor.noteIndex = i;
                         break;
@@ -3410,18 +3331,18 @@ var beepbox;
                 }
                 else {
                     cursor.pins = [];
-                    copiedPins.every(function (oldPin) {
+                    for (var _d = 0, copiedPins_1 = copiedPins; _d < copiedPins_1.length; _d++) {
+                        var oldPin = copiedPins_1[_d];
                         if (oldPin.time <= cursor.end - cursor.start) {
                             cursor.pins.push(new beepbox.TonePin(0, oldPin.time, oldPin.volume));
                             if (oldPin.time == cursor.end - cursor.start)
-                                return false;
+                                break;
                         }
                         else {
                             cursor.pins.push(new beepbox.TonePin(0, cursor.end - cursor.start, oldPin.volume));
-                            return false;
+                            break;
                         }
-                        return true;
-                    });
+                    }
                 }
             }
             cursor.valid = true;
@@ -3471,9 +3392,10 @@ var beepbox;
         }
         function copyPins(tone) {
             copiedPins = [];
-            tone.pins.forEach(function (oldPin) {
+            for (var _i = 0, _a = tone.pins; _i < _a.length; _i++) {
+                var oldPin = _a[_i];
                 copiedPins.push(new beepbox.TonePin(0, oldPin.time, oldPin.volume));
-            });
+            }
             for (var i = 1; i < copiedPins.length - 1;) {
                 if (copiedPins[i - 1].volume == copiedPins[i].volume &&
                     copiedPins[i].volume == copiedPins[i + 1].volume) {
@@ -3490,10 +3412,10 @@ var beepbox;
         });
         function onEnterFrame(timestamp) {
             if (!doc.synth.playing || pattern == null || doc.song.getPattern(doc.channel, Math.floor(doc.synth.playhead)) != pattern) {
-                svgPlayhead.setAttributeNS(null, "visibility", "hidden");
+                svgPlayhead.setAttribute("visibility", "hidden");
             }
             else {
-                svgPlayhead.setAttributeNS(null, "visibility", "visible");
+                svgPlayhead.setAttribute("visibility", "visible");
                 var modPlayhead = doc.synth.playhead - Math.floor(doc.synth.playhead);
                 if (Math.abs(modPlayhead - playheadX) > 0.1) {
                     playheadX = modPlayhead;
@@ -3501,7 +3423,7 @@ var beepbox;
                 else {
                     playheadX += (modPlayhead - playheadX) * 0.2;
                 }
-                svgPlayhead.setAttributeNS(null, "x", "" + prettyNumber(playheadX * editorWidth - 2));
+                svgPlayhead.setAttribute("x", "" + prettyNumber(playheadX * editorWidth - 2));
             }
             window.requestAnimationFrame(onEnterFrame);
         }
@@ -3556,7 +3478,6 @@ var beepbox;
         function onCursorMoved() {
             var start;
             var end;
-            var i = 0;
             if (pattern == null)
                 return;
             if (mouseDown && cursor.valid) {
@@ -3576,8 +3497,8 @@ var beepbox;
                     var currentPart = Math.floor(mouseX / partWidth);
                     var sequence = new beepbox.ChangeSequence();
                     if (cursor.curTone == null) {
-                        var backwards;
-                        var directLength;
+                        var backwards = void 0;
+                        var directLength = void 0;
                         if (currentPart < cursor.start) {
                             backwards = true;
                             directLength = cursor.start - currentPart;
@@ -3587,16 +3508,15 @@ var beepbox;
                             directLength = currentPart - cursor.start + 1;
                         }
                         var defaultLength = 1;
-                        //[1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 36, ].forEach((blessedLength: number)=>{
-                        for (i = 0; i <= doc.song.beats * doc.song.parts; i++) {
-                            if (i >= 5 &&
-                                i % doc.song.parts != 0 &&
-                                i != doc.song.parts * 3.0 / 2.0 &&
-                                i != doc.song.parts * 4.0 / 3.0 &&
-                                i != doc.song.parts * 5.0 / 3.0) {
+                        for (var i_1 = 0; i_1 <= doc.song.beats * doc.song.parts; i_1++) {
+                            if (i_1 >= 5 &&
+                                i_1 % doc.song.parts != 0 &&
+                                i_1 != doc.song.parts * 3.0 / 2.0 &&
+                                i_1 != doc.song.parts * 4.0 / 3.0 &&
+                                i_1 != doc.song.parts * 5.0 / 3.0) {
                                 continue;
                             }
-                            var blessedLength = i;
+                            var blessedLength = i_1;
                             if (blessedLength == directLength) {
                                 defaultLength = blessedLength;
                                 break;
@@ -3626,13 +3546,10 @@ var beepbox;
                         if (end > doc.song.beats * doc.song.parts)
                             end = doc.song.beats * doc.song.parts;
                         sequence.append(new beepbox.ChangeToneTruncate(doc, pattern, start, end));
-                        i = 0;
-                        while (i < pattern.tones.length) {
-                            var tone = pattern.tones[i];
-                            if (tone.start >= end) {
+                        var i = void 0;
+                        for (i = 0; i < pattern.tones.length; i++) {
+                            if (pattern.tones[i].start >= end)
                                 break;
-                            }
-                            i++;
                         }
                         var theTone = new beepbox.Tone(cursor.note, start, end, 3, doc.channel == 3);
                         sequence.append(new beepbox.ChangeToneAdded(doc, pattern, theTone, i));
@@ -3660,11 +3577,11 @@ var beepbox;
                     }
                     else if (cursor.noteIndex == -1) {
                         var bendPart = Math.round(Math.max(cursor.curTone.start, Math.min(cursor.curTone.end, mouseX / partWidth))) - cursor.curTone.start;
-                        var prevPin;
+                        var prevPin = void 0;
                         var nextPin = cursor.curTone.pins[0];
-                        var bendVolume;
-                        var bendInterval;
-                        for (i = 1; i < cursor.curTone.pins.length; i++) {
+                        var bendVolume = void 0;
+                        var bendInterval = void 0;
+                        for (var i = 1; i < cursor.curTone.pins.length; i++) {
                             prevPin = nextPin;
                             nextPin = cursor.curTone.pins[i];
                             if (bendPart > nextPin.time)
@@ -3684,8 +3601,8 @@ var beepbox;
                         copyPins(cursor.curTone);
                     }
                     else {
-                        var bendStart;
-                        var bendEnd;
+                        var bendStart = void 0;
+                        var bendEnd = void 0;
                         if (mouseX >= mouseXStart) {
                             bendStart = cursor.part;
                             bendEnd = currentPart + 1;
@@ -3706,12 +3623,13 @@ var beepbox;
                         }
                         var minNote = Number.MAX_VALUE;
                         var maxNote = -Number.MAX_VALUE;
-                        cursor.curTone.notes.forEach(function (note) {
+                        for (var _i = 0, _a = cursor.curTone.notes; _i < _a.length; _i++) {
+                            var note = _a[_i];
                             if (minNote > note)
                                 minNote = note;
                             if (maxNote < note)
                                 maxNote = note;
-                        });
+                        }
                         minNote -= cursor.curTone.notes[0];
                         maxNote -= cursor.curTone.notes[0];
                         var bendTo = snapToNote(findMousePitch(mouseY), -minNote, beepbox.Music.maxPitch - maxNote);
@@ -3743,9 +3661,10 @@ var beepbox;
                 if (cursor.curTone == null) {
                     var tone = new beepbox.Tone(cursor.note, cursor.start, cursor.end, 3, doc.channel == 3);
                     tone.pins = [];
-                    cursor.pins.forEach(function (oldPin) {
+                    for (var _i = 0, _a = cursor.pins; _i < _a.length; _i++) {
+                        var oldPin = _a[_i];
                         tone.pins.push(new beepbox.TonePin(0, oldPin.time, oldPin.volume));
-                    });
+                    }
                     doc.history.record(new beepbox.ChangeToneAdded(doc, pattern, tone, cursor.curIndex));
                 }
                 else {
@@ -3775,10 +3694,10 @@ var beepbox;
         }
         function updatePreview() {
             if (!mouseOver || mouseDown || !cursor.valid || pattern == null) {
-                svgPreview.setAttributeNS(null, "visibility", "hidden");
+                svgPreview.setAttribute("visibility", "hidden");
             }
             else {
-                svgPreview.setAttributeNS(null, "visibility", "visible");
+                svgPreview.setAttribute("visibility", "visible");
                 drawNote(svgPreview, cursor.note, cursor.start, cursor.pins, noteHeight / 2 + 1, true, octaveOffset);
             }
         }
@@ -3795,19 +3714,19 @@ var beepbox;
             noteCount = doc.channel == 3 ? beepbox.Music.drumCount : beepbox.Music.noteCount;
             octaveOffset = doc.song.channelOctaves[doc.channel] * 12;
             copiedPins = copiedPinChannels[doc.channel];
-            svg.setAttributeNS(null, "width", "" + editorWidth);
-            svgBackground.setAttributeNS(null, "width", "" + editorWidth);
-            svgNoteBackground.setAttributeNS(null, "width", "" + (editorWidth / doc.song.beats));
-            svgDrumBackground.setAttributeNS(null, "width", "" + (editorWidth / doc.song.beats));
+            svg.setAttribute("width", "" + editorWidth);
+            svgBackground.setAttribute("width", "" + editorWidth);
+            svgNoteBackground.setAttribute("width", "" + (editorWidth / doc.song.beats));
+            svgDrumBackground.setAttribute("width", "" + (editorWidth / doc.song.beats));
             if (!mouseDown)
                 updateCursorStatus();
             svgNoteContainer = makeEmptyReplacementElement(svgNoteContainer);
             updatePreview();
             if (pattern == null) {
-                svg.setAttributeNS(null, "visibility", "hidden");
+                svg.setAttribute("visibility", "hidden");
                 return;
             }
-            svg.setAttributeNS(null, "visibility", "visible");
+            svg.setAttribute("visibility", "visible");
             for (var j = 0; j < 12; j++) {
                 var color = "#444444";
                 if (j == 0)
@@ -3815,20 +3734,20 @@ var beepbox;
                 if (j == 7 && doc.showFifth)
                     color = "#446688";
                 var rectangle = backgroundNoteRows[j];
-                rectangle.setAttributeNS(null, "width", "" + (partWidth * doc.song.parts - 2));
-                rectangle.setAttributeNS(null, "fill", color);
-                rectangle.setAttributeNS(null, "visibility", beepbox.Music.scaleFlags[doc.song.scale][j] ? "visible" : "hidden");
+                rectangle.setAttribute("width", "" + (partWidth * doc.song.parts - 2));
+                rectangle.setAttribute("fill", color);
+                rectangle.setAttribute("visibility", beepbox.Music.scaleFlags[doc.song.scale][j] ? "visible" : "hidden");
             }
-            backgroundDrumRow.setAttributeNS(null, "width", "" + (partWidth * doc.song.parts - 2));
+            backgroundDrumRow.setAttribute("width", "" + (partWidth * doc.song.parts - 2));
             if (doc.channel == 3) {
-                svgBackground.setAttributeNS(null, "fill", "url(#patternEditorDrumBackground)");
-                svgBackground.setAttributeNS(null, "height", "" + (defaultDrumHeight * beepbox.Music.drumCount));
-                svg.setAttributeNS(null, "height", "" + (defaultDrumHeight * beepbox.Music.drumCount));
+                svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
+                svgBackground.setAttribute("height", "" + (defaultDrumHeight * beepbox.Music.drumCount));
+                svg.setAttribute("height", "" + (defaultDrumHeight * beepbox.Music.drumCount));
             }
             else {
-                svgBackground.setAttributeNS(null, "fill", "url(#patternEditorNoteBackground)");
-                svgBackground.setAttributeNS(null, "height", "" + editorHeight);
-                svg.setAttributeNS(null, "height", "" + editorHeight);
+                svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground)");
+                svgBackground.setAttribute("height", "" + editorHeight);
+                svg.setAttribute("height", "" + editorHeight);
             }
             if (doc.channel != 3 && doc.showChannels) {
                 for (var channel = 2; channel >= 0; channel--) {
@@ -3837,53 +3756,48 @@ var beepbox;
                     var pattern2 = doc.song.getPattern(channel, doc.bar);
                     if (pattern2 == null)
                         continue;
-                    pattern2.tones.forEach(function (tone) {
-                        tone.notes.forEach(function (note) {
+                    for (var _i = 0, _a = pattern2.tones; _i < _a.length; _i++) {
+                        var tone = _a[_i];
+                        for (var _b = 0, _c = tone.notes; _b < _c.length; _b++) {
+                            var note = _c[_b];
                             var notePath = document.createElementNS(svgNS, "path");
-                            notePath.setAttributeNS(null, "fill", beepbox.SongEditor.noteColorsDim[channel]);
-                            notePath.setAttributeNS(null, "pointer-events", "none");
+                            notePath.setAttribute("fill", beepbox.SongEditor.noteColorsDim[channel]);
+                            notePath.setAttribute("pointer-events", "none");
                             drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
                             svgNoteContainer.appendChild(notePath);
-                        });
-                    });
+                        }
+                    }
                 }
             }
-            pattern.tones.forEach(function (tone) {
-                tone.notes.forEach(function (note) {
+            for (var _d = 0, _e = pattern.tones; _d < _e.length; _d++) {
+                var tone = _e[_d];
+                for (var _f = 0, _g = tone.notes; _f < _g.length; _f++) {
+                    var note = _g[_f];
                     var notePath = document.createElementNS(svgNS, "path");
-                    notePath.setAttributeNS(null, "fill", beepbox.SongEditor.noteColorsDim[doc.channel]);
-                    notePath.setAttributeNS(null, "pointer-events", "none");
+                    notePath.setAttribute("fill", beepbox.SongEditor.noteColorsDim[doc.channel]);
+                    notePath.setAttribute("pointer-events", "none");
                     drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
                     svgNoteContainer.appendChild(notePath);
                     notePath = document.createElementNS(svgNS, "path");
-                    notePath.setAttributeNS(null, "fill", beepbox.SongEditor.noteColorsBright[doc.channel]);
-                    notePath.setAttributeNS(null, "pointer-events", "none");
+                    notePath.setAttribute("fill", beepbox.SongEditor.noteColorsBright[doc.channel]);
+                    notePath.setAttribute("pointer-events", "none");
                     drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
                     svgNoteContainer.appendChild(notePath);
-                });
-            });
+                }
+            }
         }
         function drawNote(svgElement, note, start, pins, radius, showVolume, offset) {
-            var i;
-            var prevPin;
-            var nextPin;
-            var prevSide;
-            var nextSide;
-            var prevHeight;
-            var nextHeight;
-            var prevVolume;
-            var nextVolume;
-            nextPin = pins[0];
+            var nextPin = pins[0];
             var pathString = "M " + prettyNumber(partWidth * (start + nextPin.time) + 1) + " " + prettyNumber(noteToPixelHeight(note - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
-            for (i = 1; i < pins.length; i++) {
-                prevPin = nextPin;
+            for (var i = 1; i < pins.length; i++) {
+                var prevPin = nextPin;
                 nextPin = pins[i];
-                prevSide = partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
-                nextSide = partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
-                prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
-                nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
-                prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
-                nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
+                var prevSide = partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
+                var nextSide = partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
+                var prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
+                var nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
+                var prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
+                var nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
                 pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
                 if (prevPin.interval > nextPin.interval)
                     pathString += "L " + prettyNumber(prevSide + 1) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
@@ -3891,15 +3805,15 @@ var beepbox;
                     pathString += "L " + prettyNumber(nextSide - 1) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
                 pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
             }
-            for (i = pins.length - 2; i >= 0; i--) {
-                prevPin = nextPin;
+            for (var i = pins.length - 2; i >= 0; i--) {
+                var prevPin = nextPin;
                 nextPin = pins[i];
-                prevSide = partWidth * (start + prevPin.time) - (i == pins.length - 2 ? 1 : 0);
-                nextSide = partWidth * (start + nextPin.time) + (i == 0 ? 1 : 0);
-                prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
-                nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
-                prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
-                nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
+                var prevSide = partWidth * (start + prevPin.time) - (i == pins.length - 2 ? 1 : 0);
+                var nextSide = partWidth * (start + nextPin.time) + (i == 0 ? 1 : 0);
+                var prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
+                var nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
+                var prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
+                var nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
                 pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
                 if (prevPin.interval < nextPin.interval)
                     pathString += "L " + prettyNumber(prevSide - 1) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
@@ -3908,7 +3822,7 @@ var beepbox;
                 pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight + radius * nextVolume) + " ";
             }
             pathString += "z";
-            svgElement.setAttributeNS(null, "d", pathString);
+            svgElement.setAttribute("d", pathString);
         }
         function noteToPixelHeight(note) {
             return noteHeight * (noteCount - (note) - 0.5);
@@ -3930,30 +3844,6 @@ var beepbox;
     }
     beepbox.PatternEditor = PatternEditor;
 })(beepbox || (beepbox = {}));
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
-/// <reference path="SongEditor.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -3994,7 +3884,6 @@ var beepbox;
         function onKeyPressed(event) {
             if (songEditor.promptVisible)
                 return;
-            //if (event.ctrlKey)
             switch (event.keyCode) {
                 case 38:
                     setChannelBar((doc.channel + 3) % beepbox.Music.numChannels, doc.bar);
@@ -4148,7 +4037,6 @@ var beepbox;
             canvas.height = editorHeight;
             canvas.style.width = String(editorHeight);
             channelHeight = editorHeight / beepbox.Music.numChannels;
-            //scrollRect = new Rectangle(0, 0, width, editorHeight);
             render();
         }
         function render() {
@@ -4157,11 +4045,10 @@ var beepbox;
             for (var j = 0; j < beepbox.Music.numChannels; j++) {
                 var channelColor = beepbox.SongEditor.channelColorsBright[j];
                 var channelDim = beepbox.SongEditor.channelColorsDim[j];
-                var i;
-                for (i = 0; i < renderCount; i++) {
-                    var pattern = doc.song.getPattern(j, i + doc.barScrollPos);
+                for (var i = 0; i < renderCount; i++) {
+                    var pattern_1 = doc.song.getPattern(j, i + doc.barScrollPos);
                     var selected = (i + doc.barScrollPos == doc.bar && j == doc.channel);
-                    if (selected || pattern != null) {
+                    if (selected || pattern_1 != null) {
                         graphics.fillStyle = (selected ? channelColor : "#444444");
                         graphics.fillRect(barWidth * i + 1, channelHeight * j + 1, barWidth - 2, channelHeight - 2);
                     }
@@ -4169,19 +4056,13 @@ var beepbox;
                     graphics.font = "bold 20px sans-serif";
                     graphics.textAlign = 'center';
                     graphics.textBaseline = 'middle';
-                    graphics.fillStyle = selected ? "#000000" : (pattern == null || pattern.tones.length == 0 ? channelDim : channelColor);
+                    graphics.fillStyle = selected ? "#000000" : (pattern_1 == null || pattern_1.tones.length == 0 ? channelDim : channelColor);
                     graphics.fillText(text, barWidth * (i + 0.5), channelHeight * (j + 0.5) + 1.0);
                 }
             }
             updatePreview();
         }
         pattern = doc.getCurrentPattern();
-        /*
-        graphics.mozImageSmoothingEnabled = false;
-        graphics.webkitImageSmoothingEnabled = false;
-        graphics.msImageSmoothingEnabled = false;
-        graphics.imageSmoothingEnabled = false;
-        */
         render();
         doc.watch(documentChanged);
         window.requestAnimationFrame(onEnterFrame);
@@ -4195,29 +4076,6 @@ var beepbox;
     }
     beepbox.TrackEditor = TrackEditor;
 })(beepbox || (beepbox = {}));
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -4268,14 +4126,6 @@ var beepbox;
             return { start: start, length: end - start };
         }
         function onKeyPressed(event) {
-            //if (event.ctrlKey)
-            /*
-            switch (event.keyCode) {
-                case 38: // up
-                    setChannelBar((doc.channel + 2) % 3, doc.bar);
-                    break;
-            }
-            */
         }
         function onKeyReleased(event) {
         }
@@ -4323,9 +4173,9 @@ var beepbox;
                     change.undo();
                 change = null;
                 var bar = mouseX / barWidth + doc.barScrollPos;
-                var start;
-                var end;
-                var temp;
+                var start = void 0;
+                var end = void 0;
+                var temp = void 0;
                 if (cursor.mode == startMode) {
                     start = doc.song.loopStart + Math.round(bar - cursor.startBar);
                     end = doc.song.loopStart + doc.song.loopLength;
@@ -4373,7 +4223,6 @@ var beepbox;
         function onCursorReleased(event) {
             if (mouseDown) {
                 if (change != null) {
-                    //if (doc.history.getRecentChange() is ChangeLoop) doc.history.undo();
                     doc.history.record(change);
                     change = null;
                 }
@@ -4454,29 +4303,6 @@ var beepbox;
     }
     beepbox.LoopEditor = LoopEditor;
 })(beepbox || (beepbox = {}));
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -4645,29 +4471,6 @@ var beepbox;
     }
     beepbox.BarScrollBar = BarScrollBar;
 })(beepbox || (beepbox = {}));
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -4817,8 +4620,6 @@ var beepbox;
             render();
         }
         function render() {
-            //if (preview == null) return;
-            //if (stage == null) return;
             graphics.clearRect(0, 0, editorWidth, editorHeight);
             if (doc.channel != 3) {
                 graphics.fillStyle = "#444444";
@@ -4830,8 +4631,6 @@ var beepbox;
             }
             updatePreview();
         }
-        //preview = new Sprite();
-        //container.addChild(preview);
         doc.watch(documentChanged);
         documentChanged();
         octaveHeight = (editorHeight - rootHeight) / octaveCount;
@@ -4848,29 +4647,6 @@ var beepbox;
     }
     beepbox.OctaveScrollBar = OctaveScrollBar;
 })(beepbox || (beepbox = {}));
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -5043,30 +4819,6 @@ var beepbox;
     }
     beepbox.Piano = Piano;
 })(beepbox || (beepbox = {}));
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
-/// <reference path="SongEditor.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -5142,46 +4894,97 @@ var beepbox;
     }
     beepbox.SongDurationPrompt = SongDurationPrompt;
 })(beepbox || (beepbox = {}));
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
-/// <reference path="SongEditor.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
+    var button = beepbox.html.button, div = beepbox.html.div, input = beepbox.html.input, text = beepbox.html.text;
+    if (!ArrayBuffer.transfer) {
+        ArrayBuffer.transfer = function (source, length) {
+            source = Object(source);
+            var dest = new ArrayBuffer(length);
+            if (!(source instanceof ArrayBuffer) || !(dest instanceof ArrayBuffer)) {
+                throw new TypeError('Source and destination must be ArrayBuffer instances');
+            }
+            var nextOffset = 0;
+            var leftBytes = Math.min(source.byteLength, dest.byteLength);
+            var wordSizes = [8, 4, 2, 1];
+            for (var _i = 0, wordSizes_1 = wordSizes; _i < wordSizes_1.length; _i++) {
+                var wordSize = wordSizes_1[_i];
+                if (leftBytes >= wordSize) {
+                    var done = transferWith(wordSize, source, dest, nextOffset, leftBytes);
+                    nextOffset = done.nextOffset;
+                    leftBytes = done.leftBytes;
+                }
+            }
+            return dest;
+            function transferWith(wordSize, source, dest, nextOffset, leftBytes) {
+                var ViewClass = Uint8Array;
+                switch (wordSize) {
+                    case 8:
+                        ViewClass = Float64Array;
+                        break;
+                    case 4:
+                        ViewClass = Float32Array;
+                        break;
+                    case 2:
+                        ViewClass = Uint16Array;
+                        break;
+                    case 1:
+                        ViewClass = Uint8Array;
+                        break;
+                    default:
+                        ViewClass = Uint8Array;
+                        break;
+                }
+                var view_source = new ViewClass(source, nextOffset, (leftBytes / wordSize) | 0);
+                var view_dest = new ViewClass(dest, nextOffset, (leftBytes / wordSize) | 0);
+                for (var i = 0; i < view_dest.length; i++) {
+                    view_dest[i] = view_source[i];
+                }
+                return {
+                    nextOffset: view_source.byteOffset + view_source.byteLength,
+                    leftBytes: leftBytes - view_dest.length * wordSize,
+                };
+            }
+        };
+    }
     function ExportPrompt(doc, songEditor) {
-        var container = document.getElementById("exportPrompt");
-        var enableIntro = document.getElementById("enableIntro");
-        var loopDropDown = document.getElementById("loopDropDown");
-        var enableOutro = document.getElementById("enableOutro");
-        var exportOkayButton = document.getElementById("exportOkayButton");
-        var exportCancelButton = document.getElementById("exportCancelButton");
+        var enableIntro = input({ type: "checkbox" });
+        var loopDropDown = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "4", step: "1" });
+        var enableOutro = input({ type: "checkbox" });
+        var exportWavButton = button({ style: "width:200px;", type: "button" }, [text("Export to .wav")]);
+        var exportCancelButton = button({ style: "width:200px;", type: "button" }, [text("Cancel")]);
+        var container = div({ style: "position: absolute;" }, [
+            div({ style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;" }, [
+                div({ style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
+                    div({ style: "font-size: 30px" }, [text("Export Options")]),
+                    div({ style: "height: 30px;" }),
+                    div({ style: "display: table; width: 200px;" }, [
+                        div({ style: "display: table-row;" }, [
+                            div({ style: "display: table-cell;" }, [text("Intro:")]),
+                            div({ style: "display: table-cell;" }, [text("Loop Count:")]),
+                            div({ style: "display: table-cell;" }, [text("Outro:")]),
+                        ]),
+                        div({ style: "display: table-row; height: 30px;" }, [
+                            div({ style: "display: table-cell; vertical-align: middle;" }, [enableIntro]),
+                            div({ style: "display: table-cell; vertical-align: middle;" }, [loopDropDown]),
+                            div({ style: "display: table-cell; vertical-align: middle;" }, [enableOutro]),
+                        ]),
+                    ]),
+                    div({ style: "height: 20px;" }),
+                    exportWavButton,
+                    div({ style: "height: 20px;" }),
+                    exportCancelButton,
+                ]),
+            ]),
+        ]);
+        beepboxEditorContainer.children[0].appendChild(container);
         function onClose() {
-            container.style.display = "none";
+            beepboxEditorContainer.children[0].removeChild(container);
             songEditor.closePrompt();
             loopDropDown.removeEventListener("keypress", validateKey);
             loopDropDown.removeEventListener("blur", validateNumber);
-            exportOkayButton.removeEventListener("click", onExport);
+            exportWavButton.removeEventListener("click", onExportToWav);
             exportCancelButton.removeEventListener("click", onClose);
         }
         function validateKey(event) {
@@ -5196,7 +4999,7 @@ var beepbox;
             var input = event.target;
             input.value = Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value)))) + "";
         }
-        function onExport() {
+        function onExportToWav() {
             var synth = new beepbox.Synth(doc.song);
             synth.enableIntro = enableIntro.checked;
             synth.enableOutro = enableOutro.checked;
@@ -5208,9 +5011,7 @@ var beepbox;
             }
             var sampleFrames = synth.totalSamples;
             var recordedSamples = new Float32Array(sampleFrames);
-            //var timer: number = performance.now();
             synth.synthesize(recordedSamples, sampleFrames);
-            //console.log("export timer", (performance.now() - timer) / 1000.0);
             var srcChannelCount = 1;
             var wavChannelCount = 1;
             var sampleRate = 44100;
@@ -5224,25 +5025,25 @@ var beepbox;
             data.setUint32(index, 0x52494646, false);
             index += 4;
             data.setUint32(index, 36 + sampleCount * bytesPerSample, true);
-            index += 4; // size of remaining file
+            index += 4;
             data.setUint32(index, 0x57415645, false);
             index += 4;
             data.setUint32(index, 0x666D7420, false);
             index += 4;
             data.setUint32(index, 0x00000010, true);
-            index += 4; // size of following header
+            index += 4;
             data.setUint16(index, 0x0001, true);
-            index += 2; // not compressed
+            index += 2;
             data.setUint16(index, wavChannelCount, true);
-            index += 2; // channel count
+            index += 2;
             data.setUint32(index, sampleRate, true);
-            index += 4; // sample rate
+            index += 4;
             data.setUint32(index, sampleRate * bytesPerSample * wavChannelCount, true);
-            index += 4; // bytes per second
+            index += 4;
             data.setUint16(index, bytesPerSample, true);
-            index += 2; // sample rate
+            index += 2;
             data.setUint16(index, bitsPerSample, true);
-            index += 2; // sample rate
+            index += 2;
             data.setUint32(index, 0x64617461, false);
             index += 4;
             data.setUint32(index, sampleCount * bytesPerSample, true);
@@ -5257,15 +5058,11 @@ var beepbox;
                 stride = srcChannelCount;
                 repeat = wavChannelCount;
             }
-            var i;
-            var j;
-            var k;
             var val;
             if (bytesPerSample > 1) {
-                // usually samples are signed. 
-                for (i = 0; i < sampleFrames; i++) {
+                for (var i = 0; i < sampleFrames; i++) {
                     val = Math.floor(recordedSamples[i * stride] * ((1 << (bitsPerSample - 1)) - 1));
-                    for (k = 0; k < repeat; k++) {
+                    for (var k = 0; k < repeat; k++) {
                         if (bytesPerSample == 2) {
                             data.setInt16(index, val, true);
                             index += 2;
@@ -5281,22 +5078,16 @@ var beepbox;
                 }
             }
             else {
-                // 8 bit samples are a special case: they are unsigned.
-                for (i = 0; i < sampleFrames; i++) {
+                for (var i = 0; i < sampleFrames; i++) {
                     val = Math.floor(recordedSamples[i * stride] * 127 + 128);
-                    for (k = 0; k < repeat; k++) {
+                    for (var k = 0; k < repeat; k++) {
                         data.setUint8(index, val > 255 ? 255 : (val < 0 ? 0 : val));
                         index++;
                     }
                 }
             }
-            var blob = new Blob([arrayBuffer], { type: "audio/vnd.wav" }); // audio/vnd.wave ?
+            var blob = new Blob([arrayBuffer], { type: "audio/wav" });
             saveAs(blob, "song.wav");
-            /*
-            var blob = new Blob([arrayBuffer], {type: 'application/octet-stream'});
-            var url = URL.createObjectURL(url);
-            window.open(url);
-            */
             onClose();
         }
         loopDropDown.value = "1";
@@ -5318,13 +5109,12 @@ var beepbox;
         }
         loopDropDown.addEventListener("keypress", validateKey);
         loopDropDown.addEventListener("blur", validateNumber);
-        exportOkayButton.addEventListener("click", onExport);
+        exportWavButton.addEventListener("click", onExportToWav);
         exportCancelButton.addEventListener("click", onClose);
         container.style.display = "block";
     }
     beepbox.ExportPrompt = ExportPrompt;
 })(beepbox || (beepbox = {}));
-/*! @source https://github.com/eligrey/FileSaver.js/blob/master/FileSaver.min.js */
 var saveAs = saveAs || function (e) {
     "use strict";
     if (typeof e === "undefined" || typeof navigator !== "undefined" && /MSIE [1-9]\./.test(navigator.userAgent)) {
@@ -5336,10 +5126,10 @@ var saveAs = saveAs || function (e) {
     else {
         e.remove();
     } }; setTimeout(t, s); }, l = function (e, t, n) { t = [].concat(t); var r = t.length; while (r--) {
-        var o = e["on" + t[r]];
-        if (typeof o === "function") {
+        var o_1 = e["on" + t[r]];
+        if (typeof o_1 === "function") {
             try {
-                o.call(e, n || e);
+                o_1.call(e, n || e);
             }
             catch (i) {
                 u(i);
@@ -5350,10 +5140,10 @@ var saveAs = saveAs || function (e) {
     } return e; }, v = function (t, u, s) { if (!s) {
         t = p(t);
     } var v = this, w = t.type, m = w === d, y, h = function () { l(v, "writestart progress write writeend".split(" ")); }, S = function () { if ((f || m && a) && e.FileReader) {
-        var r = new FileReader;
-        r.onloadend = function () { var t = f ? r.result : r.result.replace(/^data:[^;]*;/, "data:attachment/file;"); var n = e.open(t, "_blank"); if (!n)
+        var r_1 = new FileReader;
+        r_1.onloadend = function () { var t = f ? r_1.result : r_1.result.replace(/^data:[^;]*;/, "data:attachment/file;"); var n = e.open(t, "_blank"); if (!n)
             e.location.href = t; t = undefined; v.readyState = v.DONE; h(); };
-        r.readAsDataURL(t);
+        r_1.readAsDataURL(t);
         v.readyState = v.INIT;
         return;
     } if (!y) {
@@ -5362,8 +5152,8 @@ var saveAs = saveAs || function (e) {
         e.location.href = y;
     }
     else {
-        var o = e.open(y, "_blank");
-        if (!o) {
+        var o_2 = e.open(y, "_blank");
+        if (!o_2) {
             e.location.href = y;
         }
     } v.readyState = v.DONE; h(); c(y); }; v.readyState = v.INIT; if (o) {
@@ -5389,37 +5179,6 @@ if (typeof module !== "undefined" && module.exports) {
 else if (typeof define !== "undefined" && define !== null && define.amd !== null) {
     define([], function () { return saveAs; });
 }
-/*
-Copyright (C) 2012 John Nesky
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
-/// <reference path="PatternEditor.ts" />
-/// <reference path="TrackEditor.ts" />
-/// <reference path="LoopEditor.ts" />
-/// <reference path="BarScrollBar.ts" />
-/// <reference path="OctaveScrollBar.ts" />
-/// <reference path="Piano.ts" />
-/// <reference path="SongDurationPrompt.ts" />
-/// <reference path="ExportPrompt.ts" />
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -5455,8 +5214,6 @@ var beepbox;
             return result;
         }
         var promptBackground = document.getElementById("promptBackground");
-        //var songSizePrompt: HTMLElement = <HTMLElement>document.getElementById("songSizePrompt");
-        //var exportPrompt: HTMLElement = <HTMLElement>document.getElementById("exportPrompt");
         var editButton = document.getElementById("editButton");
         var optionsButton = document.getElementById("optionsButton");
         var mainLayer = document.getElementById("mainLayer");
@@ -5566,7 +5323,6 @@ var beepbox;
             chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][instrument];
             channelVolumeSlider.value = -doc.song.instrumentVolumes[doc.channel][instrument] + "";
             instrumentDropDown.selectedIndex = instrument;
-            //currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
             pianoContainer.style.display = doc.showLetters ? "table-cell" : "none";
             octaveScrollBarContainer.style.display = doc.showScrollBar ? "table-cell" : "none";
             barScrollBarContainer.style.display = doc.song.bars > 16 ? "table-row" : "none";
@@ -5591,11 +5347,8 @@ var beepbox;
         function onKeyPressed(event) {
             if (_this.promptVisible)
                 return;
-            //if (event.ctrlKey)
-            //trace(event.keyCode)
             switch (event.keyCode) {
                 case 32:
-                    //stage.focus = stage;
                     togglePlay();
                     event.preventDefault();
                     break;
@@ -5632,12 +5385,12 @@ var beepbox;
                     doc.synth.stutterPressed = true;
                     event.preventDefault();
                     break;
-                case 189: // -
+                case 189:
                 case 173:
                     transpose(false);
                     event.preventDefault();
                     break;
-                case 187: // +
+                case 187:
                 case 61:
                     transpose(true);
                     event.preventDefault();
@@ -5693,15 +5446,11 @@ var beepbox;
             doc.history.record(new beepbox.ChangeTranspose(doc, pattern, upward));
         }
         function openPublishPrompt() {
-            //setPrompt(PublishPrompt.make(doc, closePrompt));
         }
         function openExportPrompt() {
             setPrompt(beepbox.ExportPrompt);
-            //setPrompt(ExportPrompt.make(doc, closePrompt));
         }
         function copyToClipboard() {
-            //Clipboard.generalClipboard.clear();
-            //Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, "http://www.beepbox.co/" + doc.song.toString());
         }
         function onSetScale() {
             doc.history.record(new beepbox.ChangeScale(doc, scaleDropDown.selectedIndex));
@@ -5818,7 +5567,7 @@ styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode("\n#mainLayer div {\n\tmargin: 0;\n\tpadding: 0;\n}\n#mainLayer canvas {\n\toverflow: hidden;\n\tposition: absolute;\n\tdisplay: block;\n}\n\n#mainLayer .selectRow {\n\twidth:100%;\n\tcolor: #bbbbbb;\n\tmargin: 0;\n\tvertical-align: middle;\n\tline-height: 27px;\n}\n\n/* slider style designed with http://danielstern.ca/range.css/ */\ninput[type=range].beepBoxSlider {\n\t-webkit-appearance: none;\n\twidth: 100%;\n\tmargin: 4px 0;\n}\ninput[type=range].beepBoxSlider:focus {\n\toutline: none;\n}\ninput[type=range].beepBoxSlider::-webkit-slider-runnable-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-webkit-slider-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\t-webkit-appearance: none;\n\tmargin-top: -5px;\n}\ninput[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {\n\tbackground: #d6d6d6;\n}\ninput[type=range].beepBoxSlider::-moz-range-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-moz-range-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n}\ninput[type=range].beepBoxSlider::-ms-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: transparent;\n\tborder-color: transparent;\n\tcolor: transparent;\n}\ninput[type=range].beepBoxSlider::-ms-fill-lower {\n\tbackground: #8a8a8a;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-fill-upper {\n\tbackground: #b0b0b0;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\theight: 6px;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-lower {\n\tbackground: #b0b0b0;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-upper {\n\tbackground: #d6d6d6;\n}\n"));
 document.head.appendChild(styleSheet);
 var beepboxEditorContainer = document.getElementById("beepboxEditorContainer");
-beepboxEditorContainer.innerHTML = "\n<div id=\"mainLayer\" tabindex=\"0\" style=\"width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;\">\n\t<div id=\"editorBox\" style=\"width: 512px; height: 645px; float: left;\">\n\t\t<div id=\"patternContainerContainer\" style=\"width: 512px; height: 481px; display: table; table-layout: fixed;\">\n\t\t\t<div id=\"pianoContainer\" style=\"width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"piano\" width=\"32\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"pianoPreview\" width=\"32\" height=\"40\"></canvas>\n\t\t\t</div>\n\t\t\t<div id=\"patternEditorContainer\"  style=\"height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<svg id=\"patternEditorSvg\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background-color: #000000; touch-action: none; position: absolute;\" width=\"512\" height=\"481\">\n\t\t\t\t\t<defs id=\"patternEditorDefs\">\n\t\t\t\t\t\t<pattern id=\"patternEditorNoteBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"156\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t\t<pattern id=\"patternEditorDrumBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"40\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t</defs>\n\t\t\t\t\t<rect id=\"patternEditorBackground\" x=\"0\" y=\"0\" width=\"512\" height=\"481\" pointer-events=\"none\" fill=\"url(#patternEditorNoteBackground)\"></rect>\n\t\t\t\t\t<svg id=\"patternEditorNoteContainer\"></svg>\n\t\t\t\t\t<path id=\"patternEditorPreview\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" pointer-events=\"none\"></path>\n\t\t\t\t\t<rect id=\"patternEditorPlayhead\" x=\"0\" y=\"0\" width=\"4\" height=\"481\" fill=\"white\" pointer-events=\"none\"></rect>\n\t\t\t\t</svg>\n\t\t\t</div>\n\t\t\t<div id=\"octaveScrollBarContainer\" style=\"width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"octaveScrollBar\" width=\"20\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"octaveScrollBarPreview\" width=\"20\" height=\"481\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t\t<div style=\"width: 512px; height: 6px; clear: both;\"></div>\n\t\t<div id=\"trackContainerContainer\" style=\"width: 512px; height: 158px;\">\n\t\t\t<div id=\"trackEditorContainer\" style=\"width: 512px; height: 128px; position: relative; overflow:hidden;\">\n\t\t\t\t<canvas id=\"trackEditor\" width=\"512\" height=\"128\"></canvas>\n\t\t\t\t<canvas id=\"trackEditorPreview\" width=\"32\" height=\"32\"></canvas>\n\t\t\t\t<div id=\"trackPlayhead\" style=\"width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;\"></div>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"loopEditorContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"loopEditor\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"loopEditorPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"barScrollBarContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"barScrollBar\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"barScrollBarPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div style=\"float: left; width: 6px; height: 645px;\"></div>\n\t\n\t<div style=\"float: left; width: 182px; height: 645px; font-size: 12px;\">\n\t\t<div style=\"width:100%; text-align: center; color: #bbbbbb;\">\n\t\t\tBeepBox 2.1\n\t\t</div>\n\t\t\n\t\t<div style=\"width:100%; margin: 5px 0;\">\n\t\t\t<button id=\"playButton\" style=\"width: 75px; float: left; margin: 0px\" type=\"button\">Play</button>\n\t\t\t<div style=\"float: left; width: 4px; height: 10px;\"></div>\n\t\t\t<input class=\"beepBoxSlider\" id=\"volumeSlider\" style=\"float: left; width: 101px; margin: 0px;\" type=\"range\" min=\"0\" max=\"100\" value=\"50\" step=\"1\" />\n\t\t\t<div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<select id=\"editButton\" style=\"width:100%; margin: 5px 0;\">Edit Menu</select>\n\t\t<select id=\"optionsButton\" style=\"width:100%; margin: 5px 0;\">Preferences Menu</select>\n\t\t<!--<button id=\"publishButton\" style=\"width:100%\" type=\"button\">Publishing Panel...</button>-->\n\t\t<button id=\"exportButton\" style=\"width:100%; margin: 5px 0;\" type=\"button\">Export to .wav File</button>\n\t\t<!--<button id=\"copyButton\" style=\"width:100%\" type=\"button\">Copy URL to Clipboard</button>-->\n\t\t\n\t\t<div style=\"width: 100%; height: 110px;\"></div>\n\t\t\n\t\t<div style=\"width:100%; margin: 3px 0;\">\n\t\t\tSong Settings:\n\t\t</div>\n\t\t\n\t\t<div class=\"selectRow\">\n\t\t\tScale: <span style=\"float: right;\"><select id=\"scaleDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tKey: <span style=\"float: right;\"><select id=\"keyDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tTempo: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"tempoSlider\" style=\"width: 90px; margin: 0px;\" type=\"range\" min=\"0\" max=\"11\" value=\"7\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tRhythm: <span style=\"float: right;\"><select id=\"partDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"patternSettingsLabel\" style=\"visibility: hidden; width:100%; margin: 3px 0;\">\n\t\t\tPattern Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"instrumentDropDownGroup\" style=\"width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;\">\n\t\t\tInstrument: <span style=\"float: right;\"><select id=\"instrumentDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"instrumentSettingsLabel\" style=\"clear: both; width:100%; margin: 3px 0;\">\n\t\t\tInstrument Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"channelVolumeSliderGroup\" class=\"selectRow\">\n\t\t\tVolume: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"channelVolumeSlider\" style=\"width: 120px; margin: 0px;\" type=\"range\" min=\"-5\" max=\"0\" value=\"0\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"waveDropDownGroup\" class=\"selectRow\">\n\t\t\tWave: <span style=\"float: right;\"><select id=\"waveDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"attackDropDownGroup\" class=\"selectRow\">\n\t\t\tEnvelope: <span style=\"float: right;\"><select id=\"attackDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"filterDropDownGroup\" class=\"selectRow\">\n\t\t\tFilter: <span style=\"float: right;\"><select id=\"filterDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"chorusDropDownGroup\" class=\"selectRow\">\n\t\t\tChorus: <span style=\"float: right;\"><select id=\"chorusDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"effectDropDownGroup\" class=\"selectRow\">\n\t\t\tEffect: <span style=\"float: right;\"><select id=\"effectDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t</div>\n\t\n\t<div id=\"promptBackground\" style=\"position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;\"></div>\n\t\n\t<div id=\"songSizePrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Custom Song Size</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Beats per bar:<br /><span style=\"color: #888888;\">(Multiples of 3 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"beatsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Bars per song:<br /><span style=\"color: #888888;\">(Multiples of 2 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"barsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Patterns per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"patternsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"32\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Instruments per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"instrumentsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"10\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"songDurationOkayButton\" style=\"width:125px; float: left;\" type=\"button\">Okay</button>\n\t\t\t\t<button id=\"songDurationCancelButton\" style=\"width:125px; float: right;\" type=\"button\">Cancel</button>\n\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div id=\"exportPrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Export Options</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"display: table; width: 200px;\">\n\t\t\t\t\t<div style=\"display: table-row;\">\n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tIntro:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tLoop Count:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t\t<div style=\"display: table-cell;\">\n\t\t\t\t\t\t\tOutro:\n\t\t\t\t\t\t</div> \n\t\t\t\t\t</div> \n\t\t\t\t\t<div style=\"display: table-row; height: 30px;\">\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"enableIntro\" type=\"checkbox\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"loopDropDown\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"4\" step=\"1\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div style=\"display: table-cell; vertical-align: middle;\">\n\t\t\t\t\t\t\t<input id=\"enableOutro\" type=\"checkbox\" />\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div> \n\t\t\t\t</div> \n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"exportOkayButton\" style=\"width:200px;\" type=\"button\">Export</button>\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t<button id=\"exportCancelButton\" style=\"width:200px;\" type=\"button\">Cancel</button>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n";
+beepboxEditorContainer.innerHTML = "\n<div id=\"mainLayer\" tabindex=\"0\" style=\"width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;\">\n\t<div id=\"editorBox\" style=\"width: 512px; height: 645px; float: left;\">\n\t\t<div id=\"patternContainerContainer\" style=\"width: 512px; height: 481px; display: table; table-layout: fixed;\">\n\t\t\t<div id=\"pianoContainer\" style=\"width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"piano\" width=\"32\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"pianoPreview\" width=\"32\" height=\"40\"></canvas>\n\t\t\t</div>\n\t\t\t<div id=\"patternEditorContainer\"  style=\"height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<svg id=\"patternEditorSvg\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background-color: #000000; touch-action: none; position: absolute;\" width=\"512\" height=\"481\">\n\t\t\t\t\t<defs id=\"patternEditorDefs\">\n\t\t\t\t\t\t<pattern id=\"patternEditorNoteBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"156\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t\t<pattern id=\"patternEditorDrumBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"40\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t</defs>\n\t\t\t\t\t<rect id=\"patternEditorBackground\" x=\"0\" y=\"0\" width=\"512\" height=\"481\" pointer-events=\"none\" fill=\"url(#patternEditorNoteBackground)\"></rect>\n\t\t\t\t\t<svg id=\"patternEditorNoteContainer\"></svg>\n\t\t\t\t\t<path id=\"patternEditorPreview\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" pointer-events=\"none\"></path>\n\t\t\t\t\t<rect id=\"patternEditorPlayhead\" x=\"0\" y=\"0\" width=\"4\" height=\"481\" fill=\"white\" pointer-events=\"none\"></rect>\n\t\t\t\t</svg>\n\t\t\t</div>\n\t\t\t<div id=\"octaveScrollBarContainer\" style=\"width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"octaveScrollBar\" width=\"20\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"octaveScrollBarPreview\" width=\"20\" height=\"481\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t\t<div style=\"width: 512px; height: 6px; clear: both;\"></div>\n\t\t<div id=\"trackContainerContainer\" style=\"width: 512px; height: 158px;\">\n\t\t\t<div id=\"trackEditorContainer\" style=\"width: 512px; height: 128px; position: relative; overflow:hidden;\">\n\t\t\t\t<canvas id=\"trackEditor\" width=\"512\" height=\"128\"></canvas>\n\t\t\t\t<canvas id=\"trackEditorPreview\" width=\"32\" height=\"32\"></canvas>\n\t\t\t\t<div id=\"trackPlayhead\" style=\"width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;\"></div>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"loopEditorContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"loopEditor\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"loopEditorPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"barScrollBarContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"barScrollBar\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"barScrollBarPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div style=\"float: left; width: 6px; height: 645px;\"></div>\n\t\n\t<div style=\"float: left; width: 182px; height: 645px; font-size: 12px;\">\n\t\t<div style=\"width:100%; text-align: center; color: #bbbbbb;\">\n\t\t\tBeepBox 2.1\n\t\t</div>\n\t\t\n\t\t<div style=\"width:100%; margin: 5px 0;\">\n\t\t\t<button id=\"playButton\" style=\"width: 75px; float: left; margin: 0px\" type=\"button\">Play</button>\n\t\t\t<div style=\"float: left; width: 4px; height: 10px;\"></div>\n\t\t\t<input class=\"beepBoxSlider\" id=\"volumeSlider\" style=\"float: left; width: 101px; margin: 0px;\" type=\"range\" min=\"0\" max=\"100\" value=\"50\" step=\"1\" />\n\t\t\t<div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<select id=\"editButton\" style=\"width:100%; margin: 5px 0;\">Edit Menu</select>\n\t\t<select id=\"optionsButton\" style=\"width:100%; margin: 5px 0;\">Preferences Menu</select>\n\t\t<!--<button id=\"publishButton\" style=\"width:100%\" type=\"button\">Publishing Panel...</button>-->\n\t\t<button id=\"exportButton\" style=\"width:100%; margin: 5px 0;\" type=\"button\">Export</button>\n\t\t<!--<button id=\"copyButton\" style=\"width:100%\" type=\"button\">Copy URL to Clipboard</button>-->\n\t\t\n\t\t<div style=\"width: 100%; height: 110px;\"></div>\n\t\t\n\t\t<div style=\"width:100%; margin: 3px 0;\">\n\t\t\tSong Settings:\n\t\t</div>\n\t\t\n\t\t<div class=\"selectRow\">\n\t\t\tScale: <span style=\"float: right;\"><select id=\"scaleDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tKey: <span style=\"float: right;\"><select id=\"keyDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tTempo: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"tempoSlider\" style=\"width: 90px; margin: 0px;\" type=\"range\" min=\"0\" max=\"11\" value=\"7\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tRhythm: <span style=\"float: right;\"><select id=\"partDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"patternSettingsLabel\" style=\"visibility: hidden; width:100%; margin: 3px 0;\">\n\t\t\tPattern Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"instrumentDropDownGroup\" style=\"width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;\">\n\t\t\tInstrument: <span style=\"float: right;\"><select id=\"instrumentDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"instrumentSettingsLabel\" style=\"clear: both; width:100%; margin: 3px 0;\">\n\t\t\tInstrument Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"channelVolumeSliderGroup\" class=\"selectRow\">\n\t\t\tVolume: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"channelVolumeSlider\" style=\"width: 120px; margin: 0px;\" type=\"range\" min=\"-5\" max=\"0\" value=\"0\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"waveDropDownGroup\" class=\"selectRow\">\n\t\t\tWave: <span style=\"float: right;\"><select id=\"waveDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"attackDropDownGroup\" class=\"selectRow\">\n\t\t\tEnvelope: <span style=\"float: right;\"><select id=\"attackDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"filterDropDownGroup\" class=\"selectRow\">\n\t\t\tFilter: <span style=\"float: right;\"><select id=\"filterDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"chorusDropDownGroup\" class=\"selectRow\">\n\t\t\tChorus: <span style=\"float: right;\"><select id=\"chorusDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"effectDropDownGroup\" class=\"selectRow\">\n\t\t\tEffect: <span style=\"float: right;\"><select id=\"effectDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t</div>\n\t\n\t<div id=\"promptBackground\" style=\"position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;\"></div>\n\t\n\t<div id=\"songSizePrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Custom Song Size</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Beats per bar:<br /><span style=\"color: #888888;\">(Multiples of 3 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"beatsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Bars per song:<br /><span style=\"color: #888888;\">(Multiples of 2 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"barsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Patterns per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"patternsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"32\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Instruments per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"instrumentsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"10\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"songDurationOkayButton\" style=\"width:125px; float: left;\" type=\"button\">Okay</button>\n\t\t\t\t<button id=\"songDurationCancelButton\" style=\"width:125px; float: right;\" type=\"button\">Cancel</button>\n\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n";
 var prevHash = "**blank**";
 var doc = new beepbox.SongDocument();
 var wokeUp = false;

@@ -47,75 +47,75 @@ module beepbox {
 		noteColorsBright?: string[];
 	}
 
-	export var SongEditor: SongEditorClass = function(doc: SongDocument): void {
-		var _this: SongEditor = this;
-		var width: number = 700;
-		var height: number = 645;
-		var patternEditor: PatternEditor = new PatternEditor(doc);
-		var trackEditor: TrackEditor = new TrackEditor(doc, this);
-		var loopEditor: LoopEditor = new LoopEditor(doc);
-		var barScrollBar: BarScrollBar = new BarScrollBar(doc);
-		var octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(doc);
-		var piano: Piano = new Piano(doc);
-		var copyTones: Tone[];
-		var copyBeats: number = 0;
-		var copyParts: number = 0;
-		var copyDrums: boolean = false;
-		var wasPlaying: boolean;
+	export const SongEditor: SongEditorClass = function(doc: SongDocument): void {
+		const _this: SongEditor = this;
+		const width: number = 700;
+		const height: number = 645;
+		const patternEditor: PatternEditor = new PatternEditor(doc);
+		const trackEditor: TrackEditor = new TrackEditor(doc, this);
+		const loopEditor: LoopEditor = new LoopEditor(doc);
+		const barScrollBar: BarScrollBar = new BarScrollBar(doc);
+		const octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(doc);
+		const piano: Piano = new Piano(doc);
+		let copyTones: Tone[];
+		let copyBeats: number = 0;
+		let copyParts: number = 0;
+		let copyDrums: boolean = false;
+		let wasPlaying: boolean;
 		
 		this.promptVisible = false;
 		
 		function BuildOptions(items: any[]): string {
-			var result: string = "";
-			for (var i: number = 0; i < items.length; i++) {
+			let result: string = "";
+			for (let i: number = 0; i < items.length; i++) {
 				result = result + '<option value="' + items[i] + '">' + items[i] + '</option>';
 			}
 			return result;
 		}
 		
 		function BuildOptionsWithTitle(items: string[][], title: string): string {
-			var result: string = "";
+			let result: string = "";
 			result = result + '<option value="' + title + '" selected="selected" disabled="disabled">' + title + '</option>';
-			for (var i: number = 0; i < items.length; i++) {
+			for (let i: number = 0; i < items.length; i++) {
 				result = result + '<option value="' + items[i][1] + '">' + items[i][0] + '</option>';
 			}
 			return result;
 		}
 		
-		var promptBackground: HTMLElement = <HTMLElement>document.getElementById("promptBackground");
-		//var songSizePrompt: HTMLElement = <HTMLElement>document.getElementById("songSizePrompt");
-		//var exportPrompt: HTMLElement = <HTMLElement>document.getElementById("exportPrompt");
-		var editButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("editButton");
-		var optionsButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("optionsButton");
-		var mainLayer: HTMLElement = <HTMLElement>document.getElementById("mainLayer");
-		var editorBox: HTMLElement = <HTMLElement>document.getElementById("editorBox");
-		var patternContainerContainer: HTMLElement = <HTMLElement>document.getElementById("patternContainerContainer");
-		var patternEditorContainer: HTMLElement = <HTMLElement>document.getElementById("patternEditorContainer");
-		var pianoContainer: HTMLElement = <HTMLElement>document.getElementById("pianoContainer");
-		var octaveScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("octaveScrollBarContainer");
-		var trackEditorContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("trackEditorContainer");
-		var barScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("barScrollBarContainer");
-		var playButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("playButton");
-		var exportButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("exportButton");
-		var volumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("volumeSlider");
-		var filterDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("filterDropDownGroup");
-		var chorusDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("chorusDropDownGroup");
-		var effectDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("effectDropDownGroup");
-		var patternSettingsLabel: HTMLSelectElement = <HTMLSelectElement>document.getElementById("patternSettingsLabel");
-		var instrumentDropDownGroup: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDownGroup");
-		var scaleDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("scaleDropDown");
-		var keyDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("keyDropDown");
-		var tempoSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("tempoSlider");
-		var partDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("partDropDown");
-		var instrumentDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDown");
-		var channelVolumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("channelVolumeSlider");
-		var waveDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("waveDropDown");
-		var attackDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("attackDropDown");
-		var filterDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("filterDropDown");
-		var chorusDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("chorusDropDown");
-		var effectDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("effectDropDown");
+		const promptBackground: HTMLElement = <HTMLElement>document.getElementById("promptBackground");
+		//const songSizePrompt: HTMLElement = <HTMLElement>document.getElementById("songSizePrompt");
+		//const exportPrompt: HTMLElement = <HTMLElement>document.getElementById("exportPrompt");
+		const editButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("editButton");
+		const optionsButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("optionsButton");
+		const mainLayer: HTMLElement = <HTMLElement>document.getElementById("mainLayer");
+		const editorBox: HTMLElement = <HTMLElement>document.getElementById("editorBox");
+		const patternContainerContainer: HTMLElement = <HTMLElement>document.getElementById("patternContainerContainer");
+		const patternEditorContainer: HTMLElement = <HTMLElement>document.getElementById("patternEditorContainer");
+		const pianoContainer: HTMLElement = <HTMLElement>document.getElementById("pianoContainer");
+		const octaveScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("octaveScrollBarContainer");
+		const trackEditorContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("trackEditorContainer");
+		const barScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("barScrollBarContainer");
+		const playButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("playButton");
+		const exportButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("exportButton");
+		const volumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("volumeSlider");
+		const filterDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("filterDropDownGroup");
+		const chorusDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("chorusDropDownGroup");
+		const effectDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("effectDropDownGroup");
+		const patternSettingsLabel: HTMLSelectElement = <HTMLSelectElement>document.getElementById("patternSettingsLabel");
+		const instrumentDropDownGroup: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDownGroup");
+		const scaleDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("scaleDropDown");
+		const keyDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("keyDropDown");
+		const tempoSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("tempoSlider");
+		const partDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("partDropDown");
+		const instrumentDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDown");
+		const channelVolumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("channelVolumeSlider");
+		const waveDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("waveDropDown");
+		const attackDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("attackDropDown");
+		const filterDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("filterDropDown");
+		const chorusDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("chorusDropDown");
+		const effectDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("effectDropDown");
 		
-		var editCommands: string[][] = [
+		const editCommands: string[][] = [
 			[ "Undo (Z)", "undo" ],
 			[ "Redo (Y)", "redo" ],
 			[ "Copy Pattern (C)", "copy" ],
@@ -134,8 +134,8 @@ module beepbox {
 		attackDropDown.innerHTML = BuildOptions(Music.attackNames);
 		effectDropDown.innerHTML = BuildOptions(Music.effectNames);
 		chorusDropDown.innerHTML = BuildOptions(Music.chorusNames);
-		var waveNames: string = BuildOptions(Music.waveNames);
-		var drumNames: string = BuildOptions(Music.drumNames);
+		const waveNames: string = BuildOptions(Music.waveNames);
+		const drumNames: string = BuildOptions(Music.drumNames);
 		
 		function setPrompt(newPrompt: (doc: SongDocument, songEditor: SongEditor)=>void): void {
 			if (_this.promptVisible) return;
@@ -158,7 +158,7 @@ module beepbox {
 		}
 		
 		function onUpdated(): void {
-			var optionCommands: string[][] = [
+			const optionCommands: string[][] = [
 				[ (doc.showLetters ? "✓ " : "") + "Show Piano", "showLetters" ],
 				[ (doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes", "showFifth" ],
 				[ (doc.showChannels ? "✓ " : "") + "Show All Channels", "showChannels" ],
@@ -182,17 +182,17 @@ module beepbox {
 				waveDropDown.innerHTML = waveNames;
 			}
 			
-			var pattern: BarPattern = doc.getCurrentPattern();
+			const pattern: BarPattern | null = doc.getCurrentPattern();
 			
 			patternSettingsLabel.style.visibility    = (doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
 			instrumentDropDownGroup.style.visibility = (doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
-			var instrumentList: number[] = [];
-			for (var i: number = 0; i < doc.song.instruments; i++) {
+			const instrumentList: number[] = [];
+			for (let i: number = 0; i < doc.song.instruments; i++) {
 				instrumentList.push(i + 1);
 			}
 			instrumentDropDown.innerHTML = BuildOptions(instrumentList);
 			
-			var instrument: number = doc.getCurrentInstrument();
+			const instrument: number = doc.getCurrentInstrument();
 			waveDropDown.selectedIndex   = doc.song.instrumentWaves[doc.channel][instrument];
 			filterDropDown.selectedIndex = doc.song.instrumentFilters[doc.channel][instrument];
 			attackDropDown.selectedIndex = doc.song.instrumentAttacks[doc.channel][instrument];
@@ -206,12 +206,12 @@ module beepbox {
 			octaveScrollBarContainer.style.display = doc.showScrollBar ? "table-cell" : "none";
 			barScrollBarContainer.style.display = doc.song.bars > 16 ? "table-row" : "none";
 			
-			var patternWidth: number = 512;
+			let patternWidth: number = 512;
 			if (doc.showLetters) patternWidth -= 32;
 			if (doc.showScrollBar) patternWidth -= 20;
 			patternEditorContainer.style.width = String(patternWidth) + "px";
 			
-			var trackHeight: number = 128;
+			let trackHeight: number = 128;
 			if (doc.song.bars > 16) trackHeight -= 20;
 			trackEditorContainer.style.height = String(trackHeight) + "px";
 			
@@ -303,7 +303,7 @@ module beepbox {
 		}
 		
 		function copy(): void {
-			var pattern: BarPattern = doc.getCurrentPattern();
+			const pattern: BarPattern | null = doc.getCurrentPattern();
 			if (pattern == null) return;
 			copyTones = pattern.cloneTones();
 			copyBeats = doc.song.beats;
@@ -326,7 +326,7 @@ module beepbox {
 		}
 		
 		function transpose(upward: boolean): void {
-			var pattern: BarPattern = doc.getCurrentPattern();
+			const pattern: BarPattern | null = doc.getCurrentPattern();
 			if (pattern == null) return;
 			doc.history.record(new ChangeTranspose(doc, pattern, upward));
 		}
@@ -472,7 +472,7 @@ module beepbox {
 }
 
 
-var styleSheet = document.createElement('style');
+const styleSheet = document.createElement('style');
 styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode(`
 #mainLayer div {
@@ -579,7 +579,7 @@ input[type=range].beepBoxSlider:focus::-ms-fill-upper {
 document.head.appendChild(styleSheet);
 
 
-var beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer");
+const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer");
 beepboxEditorContainer.innerHTML = `
 <div id="mainLayer" tabindex="0" style="width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;">
 	<div id="editorBox" style="width: 512px; height: 645px; float: left;">
@@ -642,7 +642,7 @@ beepboxEditorContainer.innerHTML = `
 		<select id="editButton" style="width:100%; margin: 5px 0;">Edit Menu</select>
 		<select id="optionsButton" style="width:100%; margin: 5px 0;">Preferences Menu</select>
 		<!--<button id="publishButton" style="width:100%" type="button">Publishing Panel...</button>-->
-		<button id="exportButton" style="width:100%; margin: 5px 0;" type="button">Export to .wav File</button>
+		<button id="exportButton" style="width:100%; margin: 5px 0;" type="button">Export</button>
 		<!--<button id="copyButton" style="width:100%" type="button">Copy URL to Clipboard</button>-->
 		
 		<div style="width: 100%; height: 110px;"></div>
@@ -740,54 +740,13 @@ beepboxEditorContainer.innerHTML = `
 			</div>
 		</div>
 	</div>
-	
-	<div id="exportPrompt" style="position: absolute; display: none;">
-		<div style="display: table-cell; vertical-align: middle; width: 700px; height: 645px;">
-			<div style="margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;">
-				<div style="font-size: 30px">Export Options</div>
-				
-				<div style="height: 30px;"></div>
-				
-				<div style="display: table; width: 200px;">
-					<div style="display: table-row;">
-						<div style="display: table-cell;">
-							Intro:
-						</div> 
-						<div style="display: table-cell;">
-							Loop Count:
-						</div> 
-						<div style="display: table-cell;">
-							Outro:
-						</div> 
-					</div> 
-					<div style="display: table-row; height: 30px;">
-						<div style="display: table-cell; vertical-align: middle;">
-							<input id="enableIntro" type="checkbox" />
-						</div>
-						<div style="display: table-cell; vertical-align: middle;">
-							<input id="loopDropDown" style="width: 40px; height: 16px;" type="number" min="1" max="4" step="1" />
-						</div>
-						<div style="display: table-cell; vertical-align: middle;">
-							<input id="enableOutro" type="checkbox" />
-						</div>
-					</div> 
-				</div> 
-				
-				<div style="height: 30px;"></div>
-				
-				<button id="exportOkayButton" style="width:200px;" type="button">Export</button>
-				<div style="height: 30px;"></div>
-				<button id="exportCancelButton" style="width:200px;" type="button">Cancel</button>
-			</div>
-		</div>
-	</div>
 </div>
 `;
 
 
-var prevHash: string = "**blank**";
-var doc: beepbox.SongDocument = new beepbox.SongDocument();
-var wokeUp: boolean = false;
+let prevHash: string = "**blank**";
+const doc: beepbox.SongDocument = new beepbox.SongDocument();
+let wokeUp: boolean = false;
 
 function checkHash(): void {
 	if (prevHash != location.hash) {
@@ -812,7 +771,7 @@ function checkHash(): void {
 }
 
 function onUpdated (): void {
-	var hash: string = doc.song.toString();
+	const hash: string = doc.song.toString();
 	if (location.hash != hash) {
 		location.hash = hash;
 		prevHash = hash;

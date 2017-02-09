@@ -30,21 +30,21 @@ module beepbox {
 	}
 
 	export function BarScrollBar(doc: SongDocument): void {
-		var preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("barScrollBarPreview");
-		var previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
-		var mouseX: number;
-		var mouseY: number;
-		var container: HTMLElement = <HTMLElement>document.getElementById("barScrollBarContainer");
-		var canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("barScrollBar");
-		var graphics: CanvasRenderingContext2D = canvas.getContext("2d");
-		var editorWidth: number = 512;
-		var editorHeight: number = 20;
-		var mouseDown: boolean = false;
-		var mouseOver: boolean = false;
-		var dragging: boolean = false;
-		var dragStart: number;
+		const preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("barScrollBarPreview");
+		const previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
+		let mouseX: number;
+		let mouseY: number;
+		const container: HTMLElement = <HTMLElement>document.getElementById("barScrollBarContainer");
+		const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("barScrollBar");
+		const graphics: CanvasRenderingContext2D = canvas.getContext("2d");
+		const editorWidth: number = 512;
+		let editorHeight: number = 20;
+		let mouseDown: boolean = false;
+		let mouseOver: boolean = false;
+		let dragging: boolean = false;
+		let dragStart: number;
 		
-		var barWidth: number;
+		let barWidth: number;
 		
 		function onMouseOver(event: MouseEvent): void {
 			mouseOver = true;
@@ -67,7 +67,7 @@ module beepbox {
 		function onTouchPressed(event: TouchEvent): void {
 			event.preventDefault();
 			mouseDown = true;
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
 			mouseX = event.touches[0].clientX - boundingRect.left;
 			mouseY = event.touches[0].clientY - boundingRect.top;
 			updatePreview();
@@ -78,7 +78,7 @@ module beepbox {
 		}
 		
 		function onMouseMoved(event: MouseEvent): void {
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
     		mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
 		    onCursorMoved();
@@ -87,7 +87,7 @@ module beepbox {
 		function onTouchMoved(event: TouchEvent): void {
 			if (!mouseDown) return;
 			event.preventDefault();
-			var boundingRect: ClientRect = canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = canvas.getBoundingClientRect();
 			mouseX = event.touches[0].clientX - boundingRect.left;
 			mouseY = event.touches[0].clientY - boundingRect.top;
 		    onCursorMoved();
@@ -136,10 +136,10 @@ module beepbox {
 			previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
 			if (!mouseOver || mouseDown) return;
 			
-			var center: number = editorHeight * 0.5;
-			var base: number = 20;
-			var tip: number = 9;
-			var arrowHeight: number = 6;
+			const center: number = editorHeight * 0.5;
+			const base: number = 20;
+			const tip: number = 9;
+			const arrowHeight: number = 6;
 			if (mouseX < doc.barScrollPos * barWidth) {
 				previewGraphics.fillStyle = "#ffffff";
 				previewGraphics.beginPath();
@@ -174,9 +174,9 @@ module beepbox {
 			graphics.fillStyle = "#444444";
 			graphics.fillRect(barWidth * doc.barScrollPos, 2, barWidth * 16, editorHeight - 4);
 			
-			for (var i: number = 0; i <= doc.song.bars; i++) {
-				var lineWidth: number = (i % 16 == 0) ? 2 : 0;
-				var lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? editorHeight / 8 : editorHeight / 3);
+			for (let i: number = 0; i <= doc.song.bars; i++) {
+				const lineWidth: number = (i % 16 == 0) ? 2 : 0;
+				const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? editorHeight / 8 : editorHeight / 3);
 				graphics.beginPath();
 				graphics.strokeStyle = "#444444";
 				graphics.lineWidth = lineWidth;
