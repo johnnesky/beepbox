@@ -25,6 +25,31 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
+	export function lerp(low: number, high: number, t: number): number {
+		return low + t * (high - low);
+	}
+	
+	export namespace html {
+		export function element(type: string, attributes?: Record<string, string | number>, children?: Node[]): HTMLElement {
+			const elem: HTMLElement = document.createElement(type);
+			if (attributes) for (const key of Object.keys(attributes)) (<any>elem)[key] = attributes[key];
+			if (children) for (const child of children) elem.appendChild(child);
+			return elem;
+		}
+		export function button(attributes?: Record<string, string | number>, children?: Node[]): HTMLButtonElement {
+			return <HTMLButtonElement> element("button", attributes, children);
+		}
+		export function div(attributes?: Record<string, string | number>, children?: Node[]): HTMLDivElement {
+			return <HTMLDivElement> element("div", attributes, children);
+		}
+		export function input(attributes?: Record<string, string | number>): HTMLInputElement {
+			return <HTMLInputElement> element("input", attributes);
+		}
+		export function text(content: string): Text {
+			return document.createTextNode(content);
+		}
+	}
+	
 	export class Model {
 		private static _waitingForFrame: Model[] = [];
 		private _watchers: (()=>void)[] = [];
@@ -38,7 +63,7 @@ module beepbox {
 		}
 		
 		public unwatch(watcher: ()=>void): void {
-			var index: number = this._watchers.indexOf(watcher);
+			const index: number = this._watchers.indexOf(watcher);
 			if (index != -1) {
 				this._watchers.splice(index, 1);
 			}
@@ -48,23 +73,23 @@ module beepbox {
 			if (this._dirty == false) {
 				this._dirty = true;
 				Model._waitingForFrame.push(this);
-				/*this._parentModels.forEach( (parentModel: Model)=>{
+				/*for (const parentModel of this._parentModels) {
 					this._parentModel.changed();
-				});*/
+				}*/
 			}
 		}
 		
 		private _update(): void {
 			this._dirty = false;
-			this._watchers.concat().forEach((watcher: ()=>void)=>{
+			for (const watcher of this._watchers.concat()) {
 				watcher();
-			});
+			}
 		}
 		
 		public static updateAll(): void {
-			this._waitingForFrame.concat().forEach((model: Model)=>{
+			for (const model of this._waitingForFrame.concat()) {
 				model._update();
-			});
+			}
 			this._waitingForFrame.length = 0;
 		}
 	}
@@ -157,7 +182,7 @@ module beepbox {
 		public undo(): void {
 			if (this._index <= 0) return;
 			this._index--;
-			var change: Change = this._changes[this._index];
+			const change: Change = this._changes[this._index];
 			change.undo();
 			this._recentChange = null;
 			this.changed();
@@ -165,7 +190,7 @@ module beepbox {
 		
 		public redo(): void {
 			if (this._index >= this._changes.length) return;
-			var change: Change = this._changes[this._index];
+			const change: Change = this._changes[this._index];
 			change.redo();
 			this._index++;
 			this.changed();
@@ -233,7 +258,7 @@ module beepbox {
 		}
 		
 		public getCurrentInstrument(): number {
-			var pattern: BarPattern = this.getCurrentPattern();
+			const pattern: BarPattern = this.getCurrentPattern();
 			return pattern == null ? 0 : pattern.instrument;
 		}
 		
@@ -242,20 +267,20 @@ module beepbox {
 		}
 		
 		private _getCookie(cname: string): string {
-			var item: string = localStorage.getItem(cname);
+			const item: string = localStorage.getItem(cname);
 			if (item != null) {
 				return item;
 			}
 			
 			// Legacy: check for cookie:
-			var name: string = cname + "=";
-			var ca: string[] = document.cookie.split(';');
-			for (var i = 0; i < ca.length; i++) {
-				var c: string = ca[i];
+			const name: string = cname + "=";
+			const ca: string[] = document.cookie.split(';');
+			for (let i = 0; i < ca.length; i++) {
+				let c: string = ca[i];
 				while (c.charAt(0)==' ') c = c.substring(1);
 				if (c.indexOf(name) == 0) {
 					// Found cookie, convert it to localStorage and delete original.
-					var value: string = c.substring(name.length, c.length);
+					const value: string = c.substring(name.length, c.length);
 					
 					this._setCookie(cname, value);
 					
@@ -296,21 +321,19 @@ module beepbox {
 		*/
 		
 		protected _doForwards(): void {
-			for (var i: number = 0; i < this._changes.length; i++) {
+			for (let i: number = 0; i < this._changes.length; i++) {
 				this._changes[i].redo();
 			}
 		}
 		
 		protected _doBackwards(): void {
-			for (var i: number = this._changes.length-1; i >= 0 ; i--) {
+			for (let i: number = this._changes.length-1; i >= 0 ; i--) {
 				this._changes[i].undo();
 			}
 		}
 	}
 	
 	export class ChangePins extends Change {
-		protected _document: SongDocument;
-		protected _tone: Tone;
 		protected _oldStart: number;
 		protected _newStart: number;
 		protected _oldEnd: number;
@@ -319,23 +342,20 @@ module beepbox {
 		protected _newPins: TonePin[];
 		protected _oldNotes: number[];
 		protected _newNotes: number[];
-		constructor(document: SongDocument, tone: Tone, changePins: ()=>void) {
+		constructor(protected _document: SongDocument, protected _tone: Tone) {
 			super(false);
-			this._document = document;
-			this._tone = tone;
-			this._oldStart = tone.start;
-			this._oldEnd   = tone.end;
-			this._newStart = tone.start;
-			this._newEnd   = tone.end;
-			this._oldPins = tone.pins;
+			this._oldStart = this._tone.start;
+			this._oldEnd   = this._tone.end;
+			this._newStart = this._tone.start;
+			this._newEnd   = this._tone.end;
+			this._oldPins = this._tone.pins;
 			this._newPins = [];
-			this._oldNotes = tone.notes;
+			this._oldNotes = this._tone.notes;
 			this._newNotes = [];
-			
-			changePins();
-			
-			var i: number;
-			for (i = 0; i < this._newPins.length - 1; ) {
+		}
+		
+		protected _finishSetup(): void {
+			for (let i: number = 0; i < this._newPins.length - 1; ) {
 				if (this._newPins[i].time >= this._newPins[i+1].time) {
 					this._newPins.splice(i, 1);
 				} else {
@@ -343,7 +363,7 @@ module beepbox {
 				}
 			}
 			
-			for (i = 1; i < this._newPins.length - 1; ) {
+			for (let i: number = 1; i < this._newPins.length - 1; ) {
 				if (this._newPins[i-1].interval == this._newPins[i].interval && 
 				    this._newPins[i].interval == this._newPins[i+1].interval && 
 				    this._newPins[i-1].volume == this._newPins[i].volume && 
@@ -355,12 +375,12 @@ module beepbox {
 				}
 			}
 			
-			var firstInterval: number = this._newPins[0].interval;
-			var firstTime: number = this._newPins[0].time;
-			for (i = 0; i < this._oldNotes.length; i++) {
+			const firstInterval: number = this._newPins[0].interval;
+			const firstTime: number = this._newPins[0].time;
+			for (let i: number = 0; i < this._oldNotes.length; i++) {
 				this._newNotes[i] = this._oldNotes[i] + firstInterval;
 			}
-			for (i = 0; i < this._newPins.length; i++) {
+			for (let i: number = 0; i < this._newPins.length; i++) {
 				this._newPins[i].interval -= firstInterval;
 				this._newPins[i].time -= firstTime;
 			}
@@ -463,9 +483,9 @@ module beepbox {
 			if (this._oldBars != this._newBars) {
 				this._oldChannelBars = document.song.channelBars;
 				this._newChannelBars = [];
-				for (var i: number = 0; i < Music.numChannels; i++) {
-					var channel: number[] = [];
-					for (var j: number = 0; j < this._newBars; j++) {
+				for (let i: number = 0; i < Music.numChannels; i++) {
+					const channel: number[] = [];
+					for (let j: number = 0; j < this._newBars; j++) {
 						channel.push(j < this._oldBars ? this._oldChannelBars[i][j] : 1);
 					}
 					this._newChannelBars.push(channel);
@@ -524,8 +544,8 @@ module beepbox {
 			if (this._oldBeats != this._newBeats) {
 				if (this._oldBeats > this._newBeats) {
 					this._sequence = new ChangeSequence();
-					for (var i: number = 0; i < Music.numChannels; i++) {
-						for (var j: number = 0; j < document.song.channelPatterns[i].length; j++) {
+					for (let i: number = 0; i < Music.numChannels; i++) {
+						for (let j: number = 0; j < document.song.channelPatterns[i].length; j++) {
 							this._sequence.append(new ChangeToneTruncate(document, document.song.channelPatterns[i][j], this._newBeats * document.song.parts, this._oldBeats * document.song.parts));
 						}
 					}
@@ -698,17 +718,14 @@ module beepbox {
 				this._newInstrumentEffects = [];
 				this._newInstrumentChorus  = [];
 				this._newInstrumentVolumes = [];
-				var oldArrays: number[][][] = [this._oldInstrumentWaves, this._oldInstrumentFilters, this._oldInstrumentAttacks, this._oldInstrumentEffects, this._oldInstrumentChorus, this._oldInstrumentVolumes];
-				var newArrays: number[][][] = [this._newInstrumentWaves, this._newInstrumentFilters, this._newInstrumentAttacks, this._newInstrumentEffects, this._newInstrumentChorus, this._newInstrumentVolumes];
-				var k: number;
-				var i: number;
-				var j: number;
-				for (k = 0; k < newArrays.length; k++) {
-					var oldArray: number[][] = oldArrays[k];
-					var newArray: number[][] = newArrays[k];
-					for (i = 0; i < Music.numChannels; i++) {
-						var channel: number[] = [];
-						for (j = 0; j < this._newInstruments; j++) {
+				const oldArrays: number[][][] = [this._oldInstrumentWaves, this._oldInstrumentFilters, this._oldInstrumentAttacks, this._oldInstrumentEffects, this._oldInstrumentChorus, this._oldInstrumentVolumes];
+				const newArrays: number[][][] = [this._newInstrumentWaves, this._newInstrumentFilters, this._newInstrumentAttacks, this._newInstrumentEffects, this._newInstrumentChorus, this._newInstrumentVolumes];
+				for (let k: number = 0; k < newArrays.length; k++) {
+					const oldArray: number[][] = oldArrays[k];
+					const newArray: number[][] = newArrays[k];
+					for (let i: number = 0; i < Music.numChannels; i++) {
+						const channel: number[] = [];
+						for (let j: number = 0; j < this._newInstruments; j++) {
 							if (j < this._oldInstruments) {
 								channel.push(oldArray[i][j]);
 							} else {
@@ -727,11 +744,11 @@ module beepbox {
 				
 				this._oldInstrumentIndices = [];
 				this._newInstrumentIndices = [];
-				for (i = 0; i < Music.numChannels; i++) {
-					var oldIndices: number[] = [];
-					var newIndices: number[] = [];
-					for (j = 0; j < document.song.patterns; j++) {
-						var oldIndex: number = document.song.channelPatterns[i][j].instrument;
+				for (let i: number = 0; i < Music.numChannels; i++) {
+					const oldIndices: number[] = [];
+					const newIndices: number[] = [];
+					for (let j: number = 0; j < document.song.patterns; j++) {
+						const oldIndex: number = document.song.channelPatterns[i][j].instrument;
 						oldIndices.push(oldIndex);
 						newIndices.push(oldIndex < this._newInstruments ? oldIndex : 0);
 					}
@@ -768,8 +785,8 @@ module beepbox {
 		}
 		
 		private _copyIndices(indices: number[][]): void {
-			for (var i: number = 0; i < Music.numChannels; i++) {
-				for (var j: number = 0; j < this._document.song.patterns; j++) {
+			for (let i: number = 0; i < Music.numChannels; i++) {
+				for (let j: number = 0; j < this._document.song.patterns; j++) {
 					this._document.song.channelPatterns[i][j].instrument = indices[i][j];
 				}
 			}
@@ -900,8 +917,8 @@ module beepbox {
 			this._newParts = parts;
 			if (this._oldParts != this._newParts) {
 				this._sequence = new ChangeSequence();
-				for (var i: number = 0; i < Music.numChannels; i++) {
-					for (var j: number = 0; j < document.song.channelPatterns[i].length; j++) {
+				for (let i: number = 0; i < Music.numChannels; i++) {
+					for (let j: number = 0; j < document.song.channelPatterns[i].length; j++) {
 						this._sequence.append(new ChangeRhythm(document, document.song.channelPatterns[i][j], this._oldParts, this._newParts));
 					}
 				}
@@ -932,7 +949,7 @@ module beepbox {
 			super(false);
 			this._document = document;
 			
-			var pattern: BarPattern = document.getCurrentPattern();
+			const pattern: BarPattern = document.getCurrentPattern();
 			this.oldTones = pattern.tones;
 			pattern.tones = tones;
 			pattern.tones = pattern.cloneTones();
@@ -942,13 +959,13 @@ module beepbox {
 		}
 		
 		protected _doForwards(): void {
-			var pattern: BarPattern = this._document.getCurrentPattern();
+			const pattern: BarPattern = this._document.getCurrentPattern();
 			pattern.tones = this.newTones;
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			var pattern: BarPattern = this._document.getCurrentPattern();
+			const pattern: BarPattern = this._document.getCurrentPattern();
 			pattern.tones = this.oldTones;
 			this._document.changed();
 		}
@@ -1001,18 +1018,17 @@ module beepbox {
 				this._oldChannelPatterns = document.song.channelPatterns;
 				this._newChannelPatterns = [];
 				
-				for (var i: number = 0; i < Music.numChannels; i++) {
-					var j: number;
-					var channelBars: number[] = [];
-					for (j = 0; j < document.song.channelBars[i].length; j++) {
-						var bar: number = document.song.channelBars[i][j];
+				for (let i: number = 0; i < Music.numChannels; i++) {
+					const channelBars: number[] = [];
+					for (let j: number = 0; j < document.song.channelBars[i].length; j++) {
+						let bar: number = document.song.channelBars[i][j];
 						if (bar > this._newPatterns) bar = 1;
 						channelBars.push(bar);
 					}
 					this._newChannelBars.push(channelBars);
 					
-					var channelPatterns: BarPattern[] = [];
-					for (j = 0; j < this._newPatterns; j++) {
+					const channelPatterns: BarPattern[] = [];
+					for (let j: number = 0; j < this._newPatterns; j++) {
 						if (j < document.song.channelPatterns[i].length) {
 							channelPatterns.push(document.song.channelPatterns[i][j]);
 						} else {
@@ -1046,121 +1062,121 @@ module beepbox {
 	
 	export class ChangePinTime extends ChangePins {
 		constructor(document: SongDocument, tone: Tone, pinIndex: number, shiftedTime: number) {
-			var changePins: ()=>void = ()=>{
-				shiftedTime -= this._oldStart;
-				var originalTime: number = this._oldPins[pinIndex].time;
-				var skipStart: number = Math.min(originalTime, shiftedTime);
-				var skipEnd: number = Math.max(originalTime, shiftedTime);
-				var setPin: boolean = false;
-				for (var i: number = 0; i < this._oldPins.length; i++) {
-					var oldPin: TonePin = tone.pins[i];
-					var time: number = oldPin.time;
-					if (time < skipStart) {
-						this._newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
-					} else if (time > skipEnd) {
-						if (!setPin) {
-							this._newPins.push(new TonePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
-							setPin = true;
-						}
-						this._newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
+			super(document, tone);
+			
+			shiftedTime -= this._oldStart;
+			const originalTime: number = this._oldPins[pinIndex].time;
+			const skipStart: number = Math.min(originalTime, shiftedTime);
+			const skipEnd: number = Math.max(originalTime, shiftedTime);
+			let setPin: boolean = false;
+			for (let i: number = 0; i < this._oldPins.length; i++) {
+				const oldPin: TonePin = tone.pins[i];
+				const time: number = oldPin.time;
+				if (time < skipStart) {
+					this._newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
+				} else if (time > skipEnd) {
+					if (!setPin) {
+						this._newPins.push(new TonePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
+						setPin = true;
 					}
-				}
-				if (!setPin) {
-					this._newPins.push(new TonePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
+					this._newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
 				}
 			}
+			if (!setPin) {
+				this._newPins.push(new TonePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
+			}
 			
-			super(document, tone, changePins);
+			this._finishSetup();
 		}
 	}
 	
 	export class ChangePitchBend extends ChangePins {
 		constructor(document: SongDocument, tone: Tone, bendStart: number, bendEnd: number, bendTo: number, noteIndex: number) {
-			var changePins: ()=>void = ()=>{
-				bendStart -= this._oldStart;
-				bendEnd   -= this._oldStart;
-				bendTo    -= tone.notes[noteIndex];
-				
-				var setStart: boolean = false;
-				var setEnd: boolean   = false;
-				var prevInterval: number = 0;
-				var prevVolume: number = 3;
-				var persist: boolean = true;
-				var i: number;
-				var direction: number;
-				var stop: number;
-				var push: (item: TonePin)=>void;
-				if (bendEnd > bendStart) {
-					i = 0;
-					direction = 1;
-					stop = tone.pins.length;
-					push = (item: TonePin)=>{ this._newPins.push(item); };
-				} else {
-					i = tone.pins.length - 1;
-					direction = -1;
-					stop = -1;
-					push = (item: TonePin)=>{ this._newPins.unshift(item); };
-				}
-				for (; i != stop; i += direction) {
-					var oldPin: TonePin = tone.pins[i];
-					var time: number = oldPin.time;
-					for (;;) {
-						if (!setStart) {
-							if (time * direction <= bendStart * direction) {
-								prevInterval = oldPin.interval;
-								prevVolume = oldPin.volume;
-							}
-							if (time * direction < bendStart * direction) {
-								push(new TonePin(oldPin.interval, time, oldPin.volume));
-								break;
-							} else {
-								push(new TonePin(prevInterval, bendStart, prevVolume));
-								setStart = true;
-							}
-						} else if (!setEnd) {
-							if (time * direction <= bendEnd * direction) {
-								prevInterval = oldPin.interval;
-								prevVolume = oldPin.volume;
-							}
-							if (time * direction < bendEnd * direction) {
-								break;
-							} else {
-								push(new TonePin(bendTo, bendEnd, prevVolume));
-								setEnd = true;
-							}
+			super(document, tone);
+			
+			bendStart -= this._oldStart;
+			bendEnd   -= this._oldStart;
+			bendTo    -= tone.notes[noteIndex];
+			
+			let setStart: boolean = false;
+			let setEnd: boolean   = false;
+			let prevInterval: number = 0;
+			let prevVolume: number = 3;
+			let persist: boolean = true;
+			let i: number;
+			let direction: number;
+			let stop: number;
+			let push: (item: TonePin)=>void;
+			if (bendEnd > bendStart) {
+				i = 0;
+				direction = 1;
+				stop = tone.pins.length;
+				push = (item: TonePin)=>{ this._newPins.push(item); };
+			} else {
+				i = tone.pins.length - 1;
+				direction = -1;
+				stop = -1;
+				push = (item: TonePin)=>{ this._newPins.unshift(item); };
+			}
+			for (; i != stop; i += direction) {
+				const oldPin: TonePin = tone.pins[i];
+				const time: number = oldPin.time;
+				for (;;) {
+					if (!setStart) {
+						if (time * direction <= bendStart * direction) {
+							prevInterval = oldPin.interval;
+							prevVolume = oldPin.volume;
+						}
+						if (time * direction < bendStart * direction) {
+							push(new TonePin(oldPin.interval, time, oldPin.volume));
+							break;
 						} else {
-							if (time * direction == bendEnd * direction) {
-								break;
-							} else {
-								if (oldPin.interval != prevInterval) persist = false;
-								push(new TonePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
-								break;
-							}
+							push(new TonePin(prevInterval, bendStart, prevVolume));
+							setStart = true;
+						}
+					} else if (!setEnd) {
+						if (time * direction <= bendEnd * direction) {
+							prevInterval = oldPin.interval;
+							prevVolume = oldPin.volume;
+						}
+						if (time * direction < bendEnd * direction) {
+							break;
+						} else {
+							push(new TonePin(bendTo, bendEnd, prevVolume));
+							setEnd = true;
+						}
+					} else {
+						if (time * direction == bendEnd * direction) {
+							break;
+						} else {
+							if (oldPin.interval != prevInterval) persist = false;
+							push(new TonePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
+							break;
 						}
 					}
 				}
-				if (!setEnd) {
-					push(new TonePin(bendTo, bendEnd, prevVolume));
-				}
+			}
+			if (!setEnd) {
+				push(new TonePin(bendTo, bendEnd, prevVolume));
 			}
 			
-			super(document, tone, changePins);
+			this._finishSetup();
 		}
 	}
 	
 	export class ChangeRhythm extends ChangeSequence {
 		constructor(document: SongDocument, bar: BarPattern, oldParts: number, newParts: number) {
 			super();
-			var changeRhythm: (oldTime:number)=>number;
+			let changeRhythm: (oldTime:number)=>number;
 			if (oldParts == 4 && newParts == 3) changeRhythm = (oldTime: number)=>{
 				return Math.ceil(oldTime * 3.0 / 4.0);
 			}
 			if (oldParts == 3 && newParts == 4) changeRhythm = (oldTime: number)=>{
 				return Math.floor(oldTime * 4.0 / 3.0);
 			}
-			var i: number = 0;
+			let i: number = 0;
 			while (i < bar.tones.length) {
-				var tone: Tone = bar.tones[i];
+				const tone: Tone = bar.tones[i];
 				if (changeRhythm(tone.start) >= changeRhythm(tone.end)) {
 					this.append(new ChangeToneAdded(document, bar, tone, i, true));
 				} else {
@@ -1173,13 +1189,13 @@ module beepbox {
 	
 	export class ChangeRhythmTone extends ChangePins {
 		constructor(document: SongDocument, tone: Tone, changeRhythm: (oldTime:number)=>number) {
-			var changePins: ()=>void = ()=>{
-				this._oldPins.forEach((oldPin: TonePin)=>{
-					this._newPins.push(new TonePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.volume));
-				});
+			super(document, tone);
+			
+			for (const oldPin of this._oldPins) {
+				this._newPins.push(new TonePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.volume));
 			}
 			
-			super(document, tone, changePins);
+			this._finishSetup();
 		}
 	}
 	
@@ -1312,46 +1328,46 @@ module beepbox {
 	
 	export class ChangeToneLength extends ChangePins {
 		constructor(document: SongDocument, tone: Tone, truncStart: number, truncEnd: number) {
-			var changePins: ()=>void = ()=>{
-				truncStart -= this._oldStart;
-				truncEnd   -= this._oldStart;
-				var setStart: boolean = false;
-				var prevVolume: number = this._oldPins[0].volume;
-				var prevInterval: number = this._oldPins[0].interval;
-				var i: number;
-				for (i = 0; i < this._oldPins.length; i++) {
-					var oldPin: TonePin = this._oldPins[i];
-					if (oldPin.time < truncStart) {
-						prevVolume = oldPin.volume;
-						prevInterval = oldPin.interval;
-					} else if (oldPin.time <= truncEnd) {
-						if (oldPin.time > truncStart && !setStart) {
-							this._newPins.push(new TonePin(prevInterval, truncStart, prevVolume));
-						}
-						this._newPins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
-						setStart = true;
-						if (oldPin.time == truncEnd) {
-							return;
-						}
-					} else {
-						break;
-					} 
-					
-				}
+			super(document, tone);
+			
+			truncStart -= this._oldStart;
+			truncEnd   -= this._oldStart;
+			let setStart: boolean = false;
+			let prevVolume: number = this._oldPins[0].volume;
+			let prevInterval: number = this._oldPins[0].interval;
+			let i: number;
+			for (i = 0; i < this._oldPins.length; i++) {
+				const oldPin: TonePin = this._oldPins[i];
+				if (oldPin.time < truncStart) {
+					prevVolume = oldPin.volume;
+					prevInterval = oldPin.interval;
+				} else if (oldPin.time <= truncEnd) {
+					if (oldPin.time > truncStart && !setStart) {
+						this._newPins.push(new TonePin(prevInterval, truncStart, prevVolume));
+					}
+					this._newPins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
+					setStart = true;
+					if (oldPin.time == truncEnd) {
+						return;
+					}
+				} else {
+					break;
+				} 
 				
-				this._newPins.push(new TonePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
 			}
 			
-			super(document, tone, changePins);
+			this._newPins.push(new TonePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
+			
+			this._finishSetup();
 		}
 	}
 	
 	export class ChangeToneTruncate extends ChangeSequence {
 		constructor(document: SongDocument, bar: BarPattern, start: number, end: number, skipTone: Tone = null) {
 			super();
-			var i: number = 0;
+			let i: number = 0;
 			while (i < bar.tones.length) {
-				var tone: Tone = bar.tones[i];
+				const tone: Tone = bar.tones[i];
 				if (tone == skipTone && skipTone != null) {
 					i++;
 				} else if (tone.end <= start) {
@@ -1391,21 +1407,19 @@ module beepbox {
 			this._oldNotes = tone.notes;
 			this._newNotes = [];
 			
-			var i: number;
-			var j: number;
-			var maxPitch: number = (doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch);
+			const maxPitch: number = (doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch);
 			
-			for (i = 0; i < this._oldNotes.length; i++) {
-				var note: number = this._oldNotes[i];
+			for (let i: number = 0; i < this._oldNotes.length; i++) {
+				let note: number = this._oldNotes[i];
 				if (upward) {
-					for (j = note + 1; j <= maxPitch; j++) {
+					for (let j: number = note + 1; j <= maxPitch; j++) {
 						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12] == true) {
 							note = j;
 							break;
 						}
 					}
 				} else {
-					for (j = note - 1; j >= 0; j--) {
+					for (let j: number = note - 1; j >= 0; j--) {
 						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12] == true) {
 							note = j;
 							break;
@@ -1413,8 +1427,8 @@ module beepbox {
 					}
 				}
 				
-				var foundMatch: boolean = false;
-				for (j = 0; j < this._newNotes.length; j++) {
+				let foundMatch: boolean = false;
+				for (let j: number = 0; j < this._newNotes.length; j++) {
 					if (this._newNotes[j] == note) {
 						foundMatch = true;
 						break;
@@ -1423,29 +1437,29 @@ module beepbox {
 				if (!foundMatch) this._newNotes.push(note);
 			}
 			
-			var min: number = 0;
-			var max: number = maxPitch;
+			let min: number = 0;
+			let max: number = maxPitch;
 			
-			for (i = 1; i < this._newNotes.length; i++) {
-				var diff: number = this._newNotes[0] - this._newNotes[i];
+			for (let i: number = 1; i < this._newNotes.length; i++) {
+				const diff: number = this._newNotes[0] - this._newNotes[i];
 				if (min < diff) min = diff;
 				if (max > diff + maxPitch) max = diff + maxPitch;
 			}
 			
-			this._oldPins.forEach((oldPin: TonePin)=>{
-				var interval: number = oldPin.interval + this._oldNotes[0];
+			for (const oldPin of this._oldPins) {
+				let interval: number = oldPin.interval + this._oldNotes[0];
 				
 				if (interval < min) interval = min;
 				if (interval > max) interval = max;
 				if (upward) {
-					for (i = interval + 1; i <= max; i++) {
+					for (let i: number = interval + 1; i <= max; i++) {
 						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][i%12] == true) {
 							interval = i;
 							break;
 						}
 					}
 				} else {
-					for (i = interval - 1; i >= min; i--) {
+					for (let i: number = interval - 1; i >= min; i--) {
 						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][i%12] == true) {
 							interval = i;
 							break;
@@ -1454,11 +1468,11 @@ module beepbox {
 				}
 				interval -= this._newNotes[0];
 				this._newPins.push(new TonePin(interval, oldPin.time, oldPin.volume));
-			});
+			}
 			
 			if (this._newPins[0].interval != 0) throw new Error("wrong pin start interval");
 			
-			for (i = 1; i < this._newPins.length - 1; ) {
+			for (let i: number = 1; i < this._newPins.length - 1; ) {
 				if (this._newPins[i-1].interval == this._newPins[i].interval && 
 				    this._newPins[i].interval == this._newPins[i+1].interval && 
 				    this._newPins[i-1].volume == this._newPins[i].volume && 
@@ -1490,7 +1504,7 @@ module beepbox {
 	export class ChangeTranspose extends ChangeSequence {
 		constructor(document: SongDocument, bar: BarPattern, upward: boolean) {
 			super();
-			for (var i: number = 0; i < bar.tones.length; i++) {
+			for (let i: number = 0; i < bar.tones.length; i++) {
 				this.append(new ChangeTransposeTone(document, bar.tones[i], upward));
 			}
 		}
@@ -1536,10 +1550,9 @@ module beepbox {
 			this._oldPins = tone.pins;
 			this._newPins = [];
 			
-			var inserted: boolean = false;
-			var i: number;
+			let inserted: boolean = false;
 			
-			tone.pins.forEach((pin: TonePin)=>{
+			for (const pin of tone.pins) {
 				if (pin.time < bendPart) {
 					this._newPins.push(pin);
 				} else if (pin.time == bendPart) {
@@ -1552,9 +1565,9 @@ module beepbox {
 					}
 					this._newPins.push(pin);
 				}
-			});
+			}
 			
-			for (i = 1; i < this._newPins.length - 1; ) {
+			for (let i: number = 1; i < this._newPins.length - 1; ) {
 				if (this._newPins[i-1].interval == this._newPins[i].interval && 
 				    this._newPins[i].interval == this._newPins[i+1].interval && 
 				    this._newPins[i-1].volume == this._newPins[i].volume && 

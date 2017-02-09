@@ -31,13 +31,13 @@ module beepbox {
 	}
 
 	export function SongDurationPrompt(doc: SongDocument, songEditor: SongEditor): void {
-		var container: HTMLElement = <HTMLElement>document.getElementById("songSizePrompt");
-		var beatsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("beatsStepper");
-		var barsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("barsStepper");
-		var patternsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("patternsStepper");
-		var instrumentsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("instrumentsStepper");
-		var songDurationOkayButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("songDurationOkayButton");
-		var songDurationCancelButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("songDurationCancelButton");
+		const container: HTMLElement = <HTMLElement>document.getElementById("songSizePrompt");
+		const beatsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("beatsStepper");
+		const barsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("barsStepper");
+		const patternsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("patternsStepper");
+		const instrumentsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("instrumentsStepper");
+		const songDurationOkayButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("songDurationOkayButton");
+		const songDurationCancelButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("songDurationCancelButton");
 		
 		
 		function onClose(): void { 
@@ -56,7 +56,7 @@ module beepbox {
 		}
 		
 		function validateKey(event: KeyboardEvent): boolean {
-			var charCode = (event.which) ? event.which : event.keyCode;
+			const charCode = (event.which) ? event.which : event.keyCode;
 			if (charCode != 46 && charCode > 31 && (charCode < 48 || charCode > 57)) {
 				event.preventDefault();
 				return true;
@@ -65,7 +65,7 @@ module beepbox {
 		}
 		
 		function validateNumber(event: Event): void {
-			var input: HTMLInputElement = <HTMLInputElement>event.target;
+			const input: HTMLInputElement = <HTMLInputElement>event.target;
 			input.value = Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value)))) + "";
 		}
 		
@@ -74,7 +74,7 @@ module beepbox {
 		}
 		
 		function saveChanges(): void {
-			var sequence: ChangeSequence = new ChangeSequence();
+			const sequence: ChangeSequence = new ChangeSequence();
 			sequence.append(new ChangeBeats(doc, validate(beatsStepper)));
 			sequence.append(new ChangeBars(doc, validate(barsStepper)));
 			sequence.append(new ChangePatterns(doc, validate(patternsStepper)));
