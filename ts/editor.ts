@@ -32,7 +32,9 @@ module beepbox {
 	export namespace html {
 		export function element(type: string, attributes?: Record<string, string | number>, children?: Node[]): HTMLElement {
 			const elem: HTMLElement = document.createElement(type);
-			if (attributes) for (const key of Object.keys(attributes)) (<any>elem)[key] = attributes[key];
+			if (attributes) for (const key of Object.keys(attributes)) {
+				if (key == "style") elem.setAttribute(key, <string>attributes[key]); else (<any>elem)[key] = attributes[key];
+			}
 			if (children) for (const child of children) elem.appendChild(child);
 			return elem;
 		}
