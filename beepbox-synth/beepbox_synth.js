@@ -29,16 +29,16 @@ var beepbox;
             this._base64 = base64;
         }
         BitField.prototype.load = function (source) {
-            var _this = this;
-            source.split("").forEach(function (char) {
-                var value = _this._base64.indexOf(char);
-                _this._bits.push((value & 0x20) != 0);
-                _this._bits.push((value & 0x10) != 0);
-                _this._bits.push((value & 0x08) != 0);
-                _this._bits.push((value & 0x04) != 0);
-                _this._bits.push((value & 0x02) != 0);
-                _this._bits.push((value & 0x01) != 0);
-            });
+            for (var _i = 0, _a = source.split(""); _i < _a.length; _i++) {
+                var char = _a[_i];
+                var value = this._base64.indexOf(char);
+                this._bits.push((value & 0x20) != 0);
+                this._bits.push((value & 0x10) != 0);
+                this._bits.push((value & 0x08) != 0);
+                this._bits.push((value & 0x04) != 0);
+                this._bits.push((value & 0x02) != 0);
+                this._bits.push((value & 0x01) != 0);
+            }
         };
         BitField.prototype.addPadding = function () {
             while ((this._bits.length % 6) != 0) {
@@ -158,63 +158,64 @@ var beepbox;
     var Music = (function () {
         function Music() {
         }
-        Music.scaleNames = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "romani :)", "romani :(", "enigma", "expert"];
-        Music.scaleFlags = [
-            [true, false, true, false, true, false, false, true, false, true, false, false],
-            [true, false, false, true, false, true, false, true, false, false, true, false],
-            [true, false, false, false, true, true, false, true, false, false, false, true],
-            [true, true, false, true, false, false, false, true, true, false, false, false],
-            [true, false, true, true, true, false, false, true, false, true, false, false],
-            [true, false, false, true, false, true, true, true, false, false, true, false],
-            [true, false, true, false, true, true, false, true, false, true, false, true],
-            [true, false, true, true, false, true, false, true, true, false, true, false],
-            [true, true, false, false, true, true, false, true, true, false, true, false],
-            [true, false, true, true, false, false, true, true, true, false, false, true],
-            [true, false, true, false, true, false, true, false, true, false, true, false],
-            [true, true, true, true, true, true, true, true, true, true, true, true],
-        ];
-        Music.pianoScaleFlags = [true, false, true, false, true, true, false, true, false, true, false, true];
-        // C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
-        Music.keyNames = ["B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C"];
-        Music.keyTransposes = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
-        Music.tempoNames = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
-        Music.beatsMin = 3;
-        Music.beatsMax = 12;
-        Music.barsMin = 1;
-        Music.barsMax = 128;
-        Music.patternsMin = 1;
-        Music.patternsMax = 64;
-        Music.instrumentsMin = 1;
-        Music.instrumentsMax = 10;
-        Music.partNames = ["triples", "standard"];
-        Music.partCounts = [3, 4];
-        Music.noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-        Music.waveNames = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
-        Music.waveVolumes = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
-        Music.drumNames = ["retro", "white"];
-        Music.drumVolumes = [0.25, 1.0];
-        Music.filterNames = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
-        Music.filterBases = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
-        Music.filterDecays = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
-        Music.filterVolumes = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
-        Music.attackNames = ["binary", "sudden", "smooth", "slide"];
-        Music.effectNames = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
-        Music.effectVibratos = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
-        Music.effectTremelos = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-        Music.chorusNames = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves"];
-        Music.chorusValues = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6];
-        Music.chorusOffsets = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6];
-        Music.chorusVolumes = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8];
-        Music.volumeNames = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
-        Music.volumeValues = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
-        Music.channelVolumes = [0.27, 0.27, 0.27, 0.19];
-        Music.drumInterval = 6;
-        Music.numChannels = 4;
-        Music.drumCount = 11;
-        Music.noteCount = 37;
-        Music.maxPitch = 84;
         return Music;
     }());
+    Music.scaleNames = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "romani :)", "romani :(", "enigma", "expert"];
+    Music.scaleFlags = [
+        [true, false, true, false, true, false, false, true, false, true, false, false],
+        [true, false, false, true, false, true, false, true, false, false, true, false],
+        [true, false, false, false, true, true, false, true, false, false, false, true],
+        [true, true, false, true, false, false, false, true, true, false, false, false],
+        [true, false, true, true, true, false, false, true, false, true, false, false],
+        [true, false, false, true, false, true, true, true, false, false, true, false],
+        [true, false, true, false, true, true, false, true, false, true, false, true],
+        [true, false, true, true, false, true, false, true, true, false, true, false],
+        [true, true, false, false, true, true, false, true, true, false, true, false],
+        [true, false, true, true, false, false, true, true, true, false, false, true],
+        [true, false, true, false, true, false, true, false, true, false, true, false],
+        [true, true, true, true, true, true, true, true, true, true, true, true],
+    ];
+    Music.pianoScaleFlags = [true, false, true, false, true, true, false, true, false, true, false, true];
+    // C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
+    Music.blackKeyNameParents = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
+    Music.noteNames = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
+    Music.keyNames = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
+    Music.keyTransposes = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
+    Music.tempoNames = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
+    Music.beatsMin = 3;
+    Music.beatsMax = 15;
+    Music.barsMin = 1;
+    Music.barsMax = 128;
+    Music.patternsMin = 1;
+    Music.patternsMax = 64;
+    Music.instrumentsMin = 1;
+    Music.instrumentsMax = 10;
+    Music.partNames = ["triples", "standard"];
+    Music.partCounts = [3, 4];
+    Music.waveNames = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
+    Music.waveVolumes = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
+    Music.drumNames = ["retro", "white"];
+    Music.drumVolumes = [0.25, 1.0];
+    Music.filterNames = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
+    Music.filterBases = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
+    Music.filterDecays = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
+    Music.filterVolumes = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
+    Music.attackNames = ["binary", "sudden", "smooth", "slide"];
+    Music.effectNames = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
+    Music.effectVibratos = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
+    Music.effectTremelos = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
+    Music.chorusNames = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves"];
+    Music.chorusValues = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6];
+    Music.chorusOffsets = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6];
+    Music.chorusVolumes = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8];
+    Music.volumeNames = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
+    Music.volumeValues = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
+    Music.channelVolumes = [0.27, 0.27, 0.27, 0.19];
+    Music.drumInterval = 6;
+    Music.numChannels = 4;
+    Music.drumCount = 12;
+    Music.noteCount = 37;
+    Music.maxPitch = 84;
     beepbox.Music = Music;
     var TonePin = (function () {
         function TonePin(interval, time, volume) {
@@ -243,15 +244,17 @@ var beepbox;
         }
         BarPattern.prototype.cloneTones = function () {
             var result = [];
-            this.tones.forEach(function (oldTone) {
+            for (var _i = 0, _a = this.tones; _i < _a.length; _i++) {
+                var oldTone = _a[_i];
                 var newTone = new Tone(-1, oldTone.start, oldTone.end, 3);
                 newTone.notes = oldTone.notes.concat();
                 newTone.pins = [];
-                oldTone.pins.forEach(function (oldPin) {
+                for (var _b = 0, _c = oldTone.pins; _b < _c.length; _b++) {
+                    var oldPin = _c[_b];
                     newTone.pins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
-                });
+                }
                 result.push(newTone);
-            });
+            }
             return result;
         };
         return BarPattern;
@@ -302,9 +305,7 @@ var beepbox;
             this.instruments = 1;
         };
         Song.prototype.toString = function () {
-            var _this = this;
             var channel;
-            var i;
             var bits;
             var result = "#";
             var base64 = Song._newBase64;
@@ -321,32 +322,32 @@ var beepbox;
             result += "r" + base64[Music.partCounts.indexOf(this.parts)];
             result += "w";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentWaves[channel][i]];
                 }
             result += "f";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentFilters[channel][i]];
                 }
             result += "d";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentAttacks[channel][i]];
                 }
             result += "c";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentEffects[channel][i]];
                 }
             result += "h";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentChorus[channel][i]];
                 }
             result += "v";
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.instruments; i++) {
+                for (var i = 0; i < this.instruments; i++) {
                     result += base64[this.instrumentVolumes[channel][i]];
                 }
             result += "o";
@@ -359,7 +360,7 @@ var beepbox;
             while ((1 << neededBits) < this.patterns + 1)
                 neededBits++;
             for (channel = 0; channel < Music.numChannels; channel++)
-                for (i = 0; i < this.bars; i++) {
+                for (var i = 0; i < this.bars; i++) {
                     bits.write(neededBits, this.channelBars[channel][i]);
                 }
             result += bits.toString();
@@ -373,22 +374,24 @@ var beepbox;
                 var lastNote = (channel == 3 ? 4 : 12) + octaveOffset;
                 var recentNotes = channel == 3 ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0];
                 var recentShapes = [];
-                for (i = 0; i < recentNotes.length; i++) {
+                for (var i = 0; i < recentNotes.length; i++) {
                     recentNotes[i] += octaveOffset;
                 }
-                this.channelPatterns[channel].forEach(function (p) {
+                for (var _i = 0, _a = this.channelPatterns[channel]; _i < _a.length; _i++) {
+                    var p = _a[_i];
                     bits.write(neededInstrumentBits, p.instrument);
                     if (p.tones.length > 0) {
                         bits.write(1, 1);
                         var curPart = 0;
-                        p.tones.forEach(function (t) {
+                        for (var _b = 0, _c = p.tones; _b < _c.length; _b++) {
+                            var t = _c[_b];
                             if (t.start > curPart) {
                                 bits.write(2, 0); // rest
                                 bits.writePartDuration(t.start - curPart);
                             }
                             var shapeBits = new BitField(base64);
                             // 0: 1 note, 10: 2 notes, 110: 3 notes, 111: 4 notes
-                            for (i = 1; i < t.notes.length; i++)
+                            for (var i = 1; i < t.notes.length; i++)
                                 shapeBits.write(1, 1);
                             if (t.notes.length < 4)
                                 shapeBits.write(1, 0);
@@ -398,7 +401,7 @@ var beepbox;
                             var startNote = t.notes[0];
                             var currentNote = startNote;
                             var pitchBends = [];
-                            for (i = 1; i < t.pins.length; i++) {
+                            for (var i = 1; i < t.pins.length; i++) {
                                 var pin = t.pins[i];
                                 var nextNote = startNote + pin.interval;
                                 if (currentNote != nextNote) {
@@ -428,7 +431,7 @@ var beepbox;
                             if (recentShapes.length > 10)
                                 recentShapes.pop();
                             var allNotes = t.notes.concat(pitchBends);
-                            for (i = 0; i < allNotes.length; i++) {
+                            for (var i = 0; i < allNotes.length; i++) {
                                 var note = allNotes[i];
                                 var noteIndex = recentNotes.indexOf(note);
                                 if (noteIndex == -1) {
@@ -467,16 +470,16 @@ var beepbox;
                                 }
                             }
                             curPart = t.end;
-                        }, _this);
-                        if (curPart < _this.beats * _this.parts) {
+                        }
+                        if (curPart < this.beats * this.parts) {
                             bits.write(2, 0); // rest
-                            bits.writePartDuration(_this.beats * _this.parts - curPart);
+                            bits.writePartDuration(this.beats * this.parts - curPart);
                         }
                     }
                     else {
                         bits.write(1, 0);
                     }
-                });
+                }
             }
             var bitString = bits.toString();
             var stringLength = bitString.length;
@@ -511,10 +514,8 @@ var beepbox;
                 this.instrumentWaves = [[1], [1], [1], [0]];
             while (charIndex < compressed.length) {
                 var command = compressed.charAt(charIndex++);
-                var bits;
-                var channel;
-                var i;
-                var j;
+                var bits = void 0;
+                var channel = void 0;
                 if (command == "s") {
                     this.scale = base64.indexOf(compressed.charAt(charIndex++));
                     if (beforeThree && this.scale == 10)
@@ -578,10 +579,11 @@ var beepbox;
                         this.instrumentWaves[channel][0] = this._clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentWaves[channel][i] = this._clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "f") {
@@ -590,10 +592,11 @@ var beepbox;
                         this.instrumentFilters[channel][0] = [0, 2, 3, 5][this._clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)))];
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentFilters[channel][i] = this._clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "d") {
@@ -602,10 +605,11 @@ var beepbox;
                         this.instrumentAttacks[channel][0] = this._clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentAttacks[channel][i] = this._clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "c") {
@@ -618,10 +622,11 @@ var beepbox;
                             this.instrumentEffects[channel][0] = 5;
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentEffects[channel][i] = this._clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "h") {
@@ -630,10 +635,11 @@ var beepbox;
                         this.instrumentChorus[channel][0] = this._clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentChorus[channel][i] = this._clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "v") {
@@ -642,10 +648,11 @@ var beepbox;
                         this.instrumentVolumes[channel][0] = this._clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                     }
                     else {
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.instruments; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.instruments; i++) {
                                 this.instrumentVolumes[channel][i] = this._clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
                             }
+                        }
                     }
                 }
                 else if (command == "o") {
@@ -660,14 +667,14 @@ var beepbox;
                     }
                 }
                 else if (command == "b") {
-                    var subStringLength;
+                    var subStringLength = void 0;
                     if (beforeThree) {
                         channel = base64.indexOf(compressed.charAt(charIndex++));
                         var barCount = base64.indexOf(compressed.charAt(charIndex++));
                         subStringLength = Math.ceil(barCount * 0.5);
                         bits = new BitField(base64);
                         bits.load(compressed.substr(charIndex, subStringLength));
-                        for (i = 0; i < barCount; i++) {
+                        for (var i = 0; i < barCount; i++) {
                             this.channelBars[channel][i] = bits.read(3) + 1;
                         }
                     }
@@ -678,10 +685,11 @@ var beepbox;
                         bits = new BitField(base64);
                         subStringLength = Math.ceil(Music.numChannels * this.bars * neededBits / 6);
                         bits.load(compressed.substr(charIndex, subStringLength));
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.bars; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.bars; i++) {
                                 this.channelBars[channel][i] = bits.read(neededBits) + 1;
                             }
+                        }
                     }
                     else {
                         var neededBits2 = 0;
@@ -690,10 +698,11 @@ var beepbox;
                         bits = new BitField(base64);
                         subStringLength = Math.ceil(Music.numChannels * this.bars * neededBits2 / 6);
                         bits.load(compressed.substr(charIndex, subStringLength));
-                        for (channel = 0; channel < Music.numChannels; channel++)
-                            for (i = 0; i < this.bars; i++) {
+                        for (channel = 0; channel < Music.numChannels; channel++) {
+                            for (var i = 0; i < this.bars; i++) {
                                 this.channelBars[channel][i] = bits.read(neededBits2);
                             }
+                        }
                     }
                     charIndex += subStringLength;
                 }
@@ -730,10 +739,10 @@ var beepbox;
                             var lastNote = (channel == 3 ? 4 : 12) + octaveOffset;
                             var recentNotes = channel == 3 ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0];
                             var recentShapes = [];
-                            for (i = 0; i < recentNotes.length; i++) {
+                            for (var i = 0; i < recentNotes.length; i++) {
                                 recentNotes[i] += octaveOffset;
                             }
-                            for (i = 0; i < this.patterns; i++) {
+                            for (var i = 0; i < this.patterns; i++) {
                                 var newPattern = new BarPattern();
                                 newPattern.instrument = bits.read(neededInstrumentBits);
                                 this.channelPatterns[channel][i] = newPattern;
@@ -756,9 +765,9 @@ var beepbox;
                                         curPart += restLength;
                                     }
                                     else {
-                                        var shape;
-                                        var pinObj;
-                                        var note;
+                                        var shape = void 0;
+                                        var pinObj = void 0;
+                                        var note = void 0;
                                         if (useOldShape) {
                                             shape = recentShapes[shapeIndex];
                                             recentShapes.splice(shapeIndex, 1);
@@ -773,7 +782,7 @@ var beepbox;
                                             shape.pins = [];
                                             shape.length = 0;
                                             shape.bendCount = 0;
-                                            for (j = 0; j < shape.pinCount; j++) {
+                                            for (var j = 0; j < shape.pinCount; j++) {
                                                 pinObj = {};
                                                 pinObj.pitchBend = bits.read(1) == 1;
                                                 if (pinObj.pitchBend)
@@ -791,7 +800,7 @@ var beepbox;
                                         tone.notes = [];
                                         tone.pins.length = 1;
                                         var pitchBends = [];
-                                        for (j = 0; j < shape.noteCount + shape.bendCount; j++) {
+                                        for (var j = 0; j < shape.noteCount + shape.bendCount; j++) {
                                             var useOldNote = bits.read(1) == 1;
                                             if (!useOldNote) {
                                                 var interval = bits.readNoteInterval();
@@ -832,18 +841,19 @@ var beepbox;
                                             }
                                         }
                                         pitchBends.unshift(tone.notes[0]);
-                                        shape.pins.forEach(function (pinObj) {
-                                            if (pinObj.pitchBend)
+                                        for (var _i = 0, _a = shape.pins; _i < _a.length; _i++) {
+                                            var pinObj_1 = _a[_i];
+                                            if (pinObj_1.pitchBend)
                                                 pitchBends.shift();
-                                            pin = new TonePin(pitchBends[0] - tone.notes[0], pinObj.time, pinObj.volume);
+                                            pin = new TonePin(pitchBends[0] - tone.notes[0], pinObj_1.time, pinObj_1.volume);
                                             tone.pins.push(pin);
-                                        });
+                                        }
                                         curPart = tone.end;
                                         newTones.push(tone);
                                     }
                                 }
                                 newPattern.tones = newTones;
-                            } // for (i = 0; i < patterns; i++) {
+                            } // for (let i: number = 0; i < patterns; i++) {
                             if (beforeThree) {
                                 break;
                             }
@@ -879,12 +889,15 @@ var beepbox;
             var pattern = this.getPattern(channel, bar);
             return pattern == null ? 0 : pattern.instrument;
         };
-        Song._oldestVersion = 2;
-        Song._latestVersion = 5;
-        Song._oldBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", ".", "_",];
-        Song._newBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "-", "_",];
+        Song.prototype.getBeatsPerMinute = function () {
+            return Math.round(120.0 * Math.pow(2.0, (-4.0 + this.tempo) / 9.0));
+        };
         return Song;
     }());
+    Song._oldestVersion = 2;
+    Song._latestVersion = 5;
+    Song._oldBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", ".", "_",];
+    Song._newBase64 = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "-", "_",];
     beepbox.Song = Song;
     var Synth = (function () {
         function Synth(song) {
@@ -940,22 +953,23 @@ var beepbox;
             //private timer: Timer = new Timer(200, 0);
             this._effectPeriod = 0.0;
             this._limit = 0.0;
-            var i;
             var wave;
-            this._waves.forEach(function (wave) {
+            for (var _i = 0, _a = this._waves; _i < _a.length; _i++) {
+                var wave_1 = _a[_i];
                 //wave.fixed = true;
                 var sum = 0.0;
-                for (i = 0; i < wave.length; i++)
-                    sum += wave[i];
-                var average = sum / wave.length;
-                for (i = 0; i < wave.length; i++)
-                    wave[i] -= average;
-            });
-            this._drumWaves.forEach(function (wave, index) {
+                for (var i = 0; i < wave_1.length; i++)
+                    sum += wave_1[i];
+                var average = sum / wave_1.length;
+                for (var i = 0; i < wave_1.length; i++)
+                    wave_1[i] -= average;
+            }
+            for (var index = 0; index < this._drumWaves.length; index++) {
+                var wave_2 = this._drumWaves[index];
                 if (index == 0) {
                     var drumBuffer = 1;
-                    for (i = 0; i < 32767; i++) {
-                        wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+                    for (var i = 0; i < 32767; i++) {
+                        wave_2[i] = (drumBuffer & 1) * 2.0 - 1.0;
                         var newBuffer = drumBuffer >> 1;
                         if (((drumBuffer + newBuffer) & 1) == 1) {
                             newBuffer += 1 << 14;
@@ -964,25 +978,24 @@ var beepbox;
                     }
                 }
                 else if (index == 1) {
-                    for (i = 0; i < 32767; i++) {
-                        wave[i] = Math.random() * 2.0 - 1.0;
+                    for (var i = 0; i < 32767; i++) {
+                        wave_2[i] = Math.random() * 2.0 - 1.0;
                     }
                 }
-                //wave.fixed = true;
-            });
+            }
             if (song != null) {
                 this.setSong(song);
             }
             /*
             reverbDelay1.length = 1024;
             reverbDelay1.fixed = true;
-            for (i = 0; i < reverbDelay1.length; i++) reverbDelay1[i] = 0.0;
+            for (let i: number = 0; i < reverbDelay1.length; i++) reverbDelay1[i] = 0.0;
             reverbDelay2.length = 1024;
             reverbDelay2.fixed = true;
-            for (i = 0; i < reverbDelay2.length; i++) reverbDelay2[i] = 0.0;
+            for (let i: number = 0; i < reverbDelay2.length; i++) reverbDelay2[i] = 0.0;
             reverbDelay3.length = 1024;
             reverbDelay3.fixed = true;
-            for (i = 0; i < reverbDelay3.length; i++) reverbDelay3[i] = 0.0;
+            for (let i: number = 0; i < reverbDelay3.length; i++) reverbDelay3[i] = 0.0;
             */
         }
         Object.defineProperty(Synth.prototype, "playing", {
@@ -1136,52 +1149,51 @@ var beepbox;
             var bufferIndex = 0;
             var stutterFunction;
             if (this.stutterPressed) {
-                var barOld = this._bar;
-                var beatOld = this._beat;
-                var partOld = this._part;
-                var arpeggioOld = this._arpeggio;
-                var arpeggioSamplesOld = this._arpeggioSamples;
-                var leadPeriodAOld = this._leadPeriodA;
-                var leadPeriodBOld = this._leadPeriodB;
-                var leadSampleOld = this._leadSample;
-                var harmonyPeriodAOld = this._harmonyPeriodA;
-                var harmonyPeriodBOld = this._harmonyPeriodB;
-                var harmonySampleOld = this._harmonySample;
-                var bassPeriodAOld = this._bassPeriodA;
-                var bassPeriodBOld = this._bassPeriodB;
-                var bassSampleOld = this._bassSample;
-                var drumPeriodOld = this._drumPeriod;
-                var drumSampleOld = this._drumSample;
-                var drumSignalOld = this._drumSignal;
-                var effectPeriodOld = this._effectPeriod;
-                var limitOld = this._limit;
+                var barOld_1 = this._bar;
+                var beatOld_1 = this._beat;
+                var partOld_1 = this._part;
+                var arpeggioOld_1 = this._arpeggio;
+                var arpeggioSamplesOld_1 = this._arpeggioSamples;
+                var leadPeriodAOld_1 = this._leadPeriodA;
+                var leadPeriodBOld_1 = this._leadPeriodB;
+                var leadSampleOld_1 = this._leadSample;
+                var harmonyPeriodAOld_1 = this._harmonyPeriodA;
+                var harmonyPeriodBOld_1 = this._harmonyPeriodB;
+                var harmonySampleOld_1 = this._harmonySample;
+                var bassPeriodAOld_1 = this._bassPeriodA;
+                var bassPeriodBOld_1 = this._bassPeriodB;
+                var bassSampleOld_1 = this._bassSample;
+                var drumPeriodOld_1 = this._drumPeriod;
+                var drumSampleOld_1 = this._drumSample;
+                var drumSignalOld_1 = this._drumSignal;
+                var effectPeriodOld_1 = this._effectPeriod;
+                var limitOld_1 = this._limit;
                 stutterFunction = function () {
-                    _this._bar = barOld;
-                    _this._beat = beatOld;
-                    _this._part = partOld;
-                    _this._arpeggio = arpeggioOld;
-                    _this._arpeggioSamples = arpeggioSamplesOld;
-                    _this._leadPeriodA = leadPeriodAOld;
-                    _this._leadPeriodB = leadPeriodBOld;
-                    _this._leadSample = leadSampleOld;
-                    _this._harmonyPeriodA = harmonyPeriodAOld;
-                    _this._harmonyPeriodB = harmonyPeriodBOld;
-                    _this._harmonySample = harmonySampleOld;
-                    _this._bassPeriodA = bassPeriodAOld;
-                    _this._bassPeriodB = bassPeriodBOld;
-                    _this._bassSample = bassSampleOld;
-                    _this._drumPeriod = drumPeriodOld;
-                    _this._drumSample = drumSampleOld;
-                    _this._drumSignal = drumSignalOld;
-                    _this._effectPeriod = effectPeriodOld;
-                    _this._limit = limitOld;
+                    _this._bar = barOld_1;
+                    _this._beat = beatOld_1;
+                    _this._part = partOld_1;
+                    _this._arpeggio = arpeggioOld_1;
+                    _this._arpeggioSamples = arpeggioSamplesOld_1;
+                    _this._leadPeriodA = leadPeriodAOld_1;
+                    _this._leadPeriodB = leadPeriodBOld_1;
+                    _this._leadSample = leadSampleOld_1;
+                    _this._harmonyPeriodA = harmonyPeriodAOld_1;
+                    _this._harmonyPeriodB = harmonyPeriodBOld_1;
+                    _this._harmonySample = harmonySampleOld_1;
+                    _this._bassPeriodA = bassPeriodAOld_1;
+                    _this._bassPeriodB = bassPeriodBOld_1;
+                    _this._bassSample = bassSampleOld_1;
+                    _this._drumPeriod = drumPeriodOld_1;
+                    _this._drumSample = drumSampleOld_1;
+                    _this._drumSignal = drumSignalOld_1;
+                    _this._effectPeriod = effectPeriodOld_1;
+                    _this._limit = limitOld_1;
                 };
             }
-            var i;
             var sampleTime = 1.0 / this.samplesPerSecond;
             var samplesPerArpeggio = this._getSamplesPerArpeggio();
             if (this.song == null) {
-                for (i = 0; i < totalSamples; i++) {
+                for (var i = 0; i < totalSamples; i++) {
                     data[i] = 0.0;
                 }
                 return;
@@ -1278,7 +1290,7 @@ var beepbox;
             };
             updateInstruments();
             while (totalSamples > 0) {
-                var samples;
+                var samples = void 0;
                 if (this._arpeggioSamples <= totalSamples) {
                     samples = this._arpeggioSamples;
                 }
@@ -1287,6 +1299,7 @@ var beepbox;
                 }
                 totalSamples -= samples;
                 this._arpeggioSamples -= samples;
+                ///@TODO: If I use "let" for these, Typescript inserts inline functions in place of while loops when transpiling?
                 var leadPeriodDelta;
                 var leadPeriodDeltaScale;
                 var leadVolume;
@@ -1313,14 +1326,14 @@ var beepbox;
                 var drumVolume;
                 var drumVolumeDelta;
                 var time = this._part + this._beat * this.song.parts;
-                for (var channel = 0; channel < 4; channel++) {
-                    var pattern = this.song.getPattern(channel, this._bar);
-                    var attack = pattern == null ? 0 : this.song.instrumentAttacks[channel][pattern.instrument];
-                    var tone = null;
-                    var prevTone = null;
-                    var nextTone = null;
+                var _loop_1 = function (channel) {
+                    var pattern = this_1.song.getPattern(channel, this_1._bar);
+                    var attack = pattern == null ? 0 : this_1.song.instrumentAttacks[channel][pattern.instrument];
+                    tone = null;
+                    prevTone = null;
+                    nextTone = null;
                     if (pattern != null) {
-                        for (i = 0; i < pattern.tones.length; i++) {
+                        for (var i = 0; i < pattern.tones.length; i++) {
                             if (pattern.tones[i].end <= time) {
                                 prevTone = pattern.tones[i];
                             }
@@ -1337,21 +1350,21 @@ var beepbox;
                         prevTone = null;
                     if (tone != null && nextTone != null && nextTone.start != tone.end)
                         nextTone = null;
-                    var channelRoot = channel == 3 ? 69 : Music.keyTransposes[this.song.key];
+                    var channelRoot = channel == 3 ? 69 : Music.keyTransposes[this_1.song.key];
                     var intervalScale = channel == 3 ? Music.drumInterval : 1;
-                    var periodDelta;
-                    var periodDeltaScale;
-                    var toneVolume;
-                    var volumeDelta;
-                    var filter;
-                    var filterScale;
-                    var vibratoScale;
+                    var periodDelta = void 0;
+                    var periodDeltaScale = void 0;
+                    var toneVolume = void 0;
+                    var volumeDelta = void 0;
+                    var filter = void 0;
+                    var filterScale = void 0;
+                    var vibratoScale = void 0;
                     var resetPeriod = false;
-                    if (this.pianoPressed && channel == this.pianoChannel) {
-                        var pianoFreq = this._frequencyFromPitch(channelRoot + this.pianoNote * intervalScale);
-                        var pianoPitchDamping;
+                    if (this_1.pianoPressed && channel == this_1.pianoChannel) {
+                        var pianoFreq = this_1._frequencyFromPitch(channelRoot + this_1.pianoNote * intervalScale);
+                        var pianoPitchDamping = void 0;
                         if (channel == 3) {
-                            if (this.song.instrumentWaves[3][pattern.instrument] > 0) {
+                            if (this_1.song.instrumentWaves[3][pattern.instrument] > 0) {
                                 drumFilter = Math.min(1.0, pianoFreq * sampleTime * 8.0);
                                 pianoPitchDamping = 24.0;
                             }
@@ -1364,11 +1377,11 @@ var beepbox;
                         }
                         periodDelta = pianoFreq * sampleTime;
                         periodDeltaScale = 1.0;
-                        toneVolume = Math.pow(2.0, -this.pianoNote * intervalScale / pianoPitchDamping);
+                        toneVolume = Math.pow(2.0, -this_1.pianoNote * intervalScale / pianoPitchDamping);
                         volumeDelta = 0.0;
                         filter = 1.0;
                         filterScale = 1.0;
-                        vibratoScale = Math.pow(2.0, Music.effectVibratos[this.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
+                        vibratoScale = Math.pow(2.0, Music.effectVibratos[this_1.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
                     }
                     else if (tone == null) {
                         periodDelta = 0.0;
@@ -1381,45 +1394,45 @@ var beepbox;
                         resetPeriod = true;
                     }
                     else {
-                        var pitch;
+                        var pitch = void 0;
                         if (tone.notes.length == 2) {
-                            pitch = tone.notes[this._arpeggio >> 1];
+                            pitch = tone.notes[this_1._arpeggio >> 1];
                         }
                         else if (tone.notes.length == 3) {
-                            pitch = tone.notes[this._arpeggio == 3 ? 1 : this._arpeggio];
+                            pitch = tone.notes[this_1._arpeggio == 3 ? 1 : this_1._arpeggio];
                         }
                         else if (tone.notes.length == 4) {
-                            pitch = tone.notes[this._arpeggio];
+                            pitch = tone.notes[this_1._arpeggio];
                         }
                         else {
                             pitch = tone.notes[0];
                         }
-                        var startPin = null;
-                        var endPin = null;
+                        var startPin_1 = null;
+                        var endPin_1 = null;
                         tone.pins.every(function (pin) {
                             if (pin.time + tone.start <= time) {
-                                startPin = pin;
+                                startPin_1 = pin;
                             }
                             else {
-                                endPin = pin;
+                                endPin_1 = pin;
                                 return false;
                             }
                             return true;
-                        }, this);
+                        }, this_1);
                         var toneStart = tone.start * 4;
                         var toneEnd = tone.end * 4;
-                        var pinStart = (tone.start + startPin.time) * 4;
-                        var pinEnd = (tone.start + endPin.time) * 4;
-                        var arpeggioStart = time * 4 + this._arpeggio;
-                        var arpeggioEnd = time * 4 + this._arpeggio + 1;
+                        var pinStart = (tone.start + startPin_1.time) * 4;
+                        var pinEnd = (tone.start + endPin_1.time) * 4;
+                        var arpeggioStart = time * 4 + this_1._arpeggio;
+                        var arpeggioEnd = time * 4 + this_1._arpeggio + 1;
                         var arpeggioRatioStart = (arpeggioStart - pinStart) / (pinEnd - pinStart);
                         var arpeggioRatioEnd = (arpeggioEnd - pinStart) / (pinEnd - pinStart);
-                        var arpeggioVolumeStart = startPin.volume * (1.0 - arpeggioRatioStart) + endPin.volume * arpeggioRatioStart;
-                        var arpeggioVolumeEnd = startPin.volume * (1.0 - arpeggioRatioEnd) + endPin.volume * arpeggioRatioEnd;
-                        var arpeggioIntervalStart = startPin.interval * (1.0 - arpeggioRatioStart) + endPin.interval * arpeggioRatioStart;
-                        var arpeggioIntervalEnd = startPin.interval * (1.0 - arpeggioRatioEnd) + endPin.interval * arpeggioRatioEnd;
-                        var arpeggioFilterTimeStart = startPin.time * (1.0 - arpeggioRatioStart) + endPin.time * arpeggioRatioStart;
-                        var arpeggioFilterTimeEnd = startPin.time * (1.0 - arpeggioRatioEnd) + endPin.time * arpeggioRatioEnd;
+                        var arpeggioVolumeStart = startPin_1.volume * (1.0 - arpeggioRatioStart) + endPin_1.volume * arpeggioRatioStart;
+                        var arpeggioVolumeEnd = startPin_1.volume * (1.0 - arpeggioRatioEnd) + endPin_1.volume * arpeggioRatioEnd;
+                        var arpeggioIntervalStart = startPin_1.interval * (1.0 - arpeggioRatioStart) + endPin_1.interval * arpeggioRatioStart;
+                        var arpeggioIntervalEnd = startPin_1.interval * (1.0 - arpeggioRatioEnd) + endPin_1.interval * arpeggioRatioEnd;
+                        var arpeggioFilterTimeStart = startPin_1.time * (1.0 - arpeggioRatioStart) + endPin_1.time * arpeggioRatioStart;
+                        var arpeggioFilterTimeEnd = startPin_1.time * (1.0 - arpeggioRatioEnd) + endPin_1.time * arpeggioRatioEnd;
                         var inhibitRestart = false;
                         if (arpeggioStart == toneStart) {
                             if (attack == 0) {
@@ -1459,17 +1472,17 @@ var beepbox;
                                 }
                             }
                         }
-                        var startRatio = 1.0 - (this._arpeggioSamples + samples) / samplesPerArpeggio;
-                        var endRatio = 1.0 - (this._arpeggioSamples) / samplesPerArpeggio;
+                        var startRatio = 1.0 - (this_1._arpeggioSamples + samples) / samplesPerArpeggio;
+                        var endRatio = 1.0 - (this_1._arpeggioSamples) / samplesPerArpeggio;
                         var startInterval = arpeggioIntervalStart * (1.0 - startRatio) + arpeggioIntervalEnd * startRatio;
                         var endInterval = arpeggioIntervalStart * (1.0 - endRatio) + arpeggioIntervalEnd * endRatio;
                         var startFilterTime = arpeggioFilterTimeStart * (1.0 - startRatio) + arpeggioFilterTimeEnd * startRatio;
                         var endFilterTime = arpeggioFilterTimeStart * (1.0 - endRatio) + arpeggioFilterTimeEnd * endRatio;
-                        var startFreq = this._frequencyFromPitch(channelRoot + (pitch + startInterval) * intervalScale);
-                        var endFreq = this._frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
-                        var pitchDamping;
+                        var startFreq = this_1._frequencyFromPitch(channelRoot + (pitch + startInterval) * intervalScale);
+                        var endFreq = this_1._frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
+                        var pitchDamping = void 0;
                         if (channel == 3) {
-                            if (this.song.instrumentWaves[3][pattern.instrument] > 0) {
+                            if (this_1.song.instrumentWaves[3][pattern.instrument] > 0) {
                                 drumFilter = Math.min(1.0, startFreq * sampleTime * 8.0);
                                 //console.log(drumFilter);
                                 pitchDamping = 24.0;
@@ -1483,21 +1496,21 @@ var beepbox;
                         }
                         var startVol = Math.pow(2.0, -(pitch + startInterval) * intervalScale / pitchDamping);
                         var endVol = Math.pow(2.0, -(pitch + endInterval) * intervalScale / pitchDamping);
-                        startVol *= this._volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);
-                        endVol *= this._volumeConversion(arpeggioVolumeStart * (1.0 - endRatio) + arpeggioVolumeEnd * endRatio);
+                        startVol *= this_1._volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);
+                        endVol *= this_1._volumeConversion(arpeggioVolumeStart * (1.0 - endRatio) + arpeggioVolumeEnd * endRatio);
                         var freqScale = endFreq / startFreq;
                         periodDelta = startFreq * sampleTime;
                         periodDeltaScale = Math.pow(freqScale, 1.0 / samples);
                         toneVolume = startVol;
                         volumeDelta = (endVol - startVol) / samples;
-                        var timeSinceStart = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / this.samplesPerSecond;
+                        var timeSinceStart = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / this_1.samplesPerSecond;
                         if (timeSinceStart == 0.0 && !inhibitRestart)
                             resetPeriod = true;
-                        var filterScaleRate = Music.filterDecays[this.song.instrumentFilters[channel][pattern.instrument]];
-                        filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / this.samplesPerSecond);
-                        var endFilter = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / this.samplesPerSecond);
+                        var filterScaleRate = Music.filterDecays[this_1.song.instrumentFilters[channel][pattern.instrument]];
+                        filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / this_1.samplesPerSecond);
+                        var endFilter = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / this_1.samplesPerSecond);
                         filterScale = Math.pow(endFilter / filter, 1.0 / samples);
-                        vibratoScale = (this.song.instrumentEffects[channel][pattern.instrument] == 2 && time - tone.start < 3) ? 0.0 : Math.pow(2.0, Music.effectVibratos[this.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
+                        vibratoScale = (this_1.song.instrumentEffects[channel][pattern.instrument] == 2 && time - tone.start < 3) ? 0.0 : Math.pow(2.0, Music.effectVibratos[this_1.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
                     }
                     if (channel == 0) {
                         leadPeriodDelta = periodDelta;
@@ -1508,9 +1521,9 @@ var beepbox;
                         leadFilterScale = filterScale;
                         leadVibratoScale = vibratoScale;
                         if (resetPeriod) {
-                            this._leadSample = 0.0;
-                            this._leadPeriodA = 0.0;
-                            this._leadPeriodB = 0.0;
+                            this_1._leadSample = 0.0;
+                            this_1._leadPeriodA = 0.0;
+                            this_1._leadPeriodB = 0.0;
                         }
                     }
                     else if (channel == 1) {
@@ -1522,9 +1535,9 @@ var beepbox;
                         harmonyFilterScale = filterScale;
                         harmonyVibratoScale = vibratoScale;
                         if (resetPeriod) {
-                            this._harmonySample = 0.0;
-                            this._harmonyPeriodA = 0.0;
-                            this._harmonyPeriodB = 0.0;
+                            this_1._harmonySample = 0.0;
+                            this_1._harmonyPeriodA = 0.0;
+                            this_1._harmonyPeriodB = 0.0;
                         }
                     }
                     else if (channel == 2) {
@@ -1536,9 +1549,9 @@ var beepbox;
                         bassFilterScale = filterScale;
                         bassVibratoScale = vibratoScale;
                         if (resetPeriod) {
-                            this._bassSample = 0.0;
-                            this._bassPeriodA = 0.0;
-                            this._bassPeriodB = 0.0;
+                            this_1._bassSample = 0.0;
+                            this_1._bassPeriodA = 0.0;
+                            this_1._bassPeriodB = 0.0;
                         }
                     }
                     else if (channel == 3) {
@@ -1547,6 +1560,10 @@ var beepbox;
                         drumVolume = toneVolume * maxDrumVolume;
                         drumVolumeDelta = volumeDelta * maxDrumVolume;
                     }
+                };
+                var this_1 = this, tone, prevTone, nextTone;
+                for (var channel = 0; channel < 4; channel++) {
+                    _loop_1(channel);
                 }
                 var effectY = Math.sin(this._effectPeriod);
                 var prevEffectY = Math.sin(this._effectPeriod - this._effectAngle);
@@ -1595,8 +1612,8 @@ var beepbox;
                     this._drumPeriod -= Math.floor(this._drumPeriod);
                     sample += this._drumSample;
                     /*
-                    var g: number = 0.9;
-                    var reverbSample: number;
+                    const g: number = 0.9;
+                    let reverbSample: number;
                     
                     reverbSample = reverbDelay1[reverbDelayIndex1];
                     sample += reverbSample * g;
@@ -1690,7 +1707,7 @@ var beepbox;
         Synth.prototype._getSamplesPerArpeggio = function () {
             if (this.song == null)
                 return 0;
-            var beatsPerMinute = Math.round(120.0 * Math.pow(2.0, (-4.0 + this.song.tempo) / 9.0));
+            var beatsPerMinute = this.song.getBeatsPerMinute();
             var beatsPerSecond = beatsPerMinute / 60.0;
             var partsPerSecond = beatsPerSecond * this.song.parts;
             var arpeggioPerSecond = partsPerSecond * 4.0;

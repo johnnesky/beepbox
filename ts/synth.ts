@@ -1310,6 +1310,7 @@ module beepbox {
 				totalSamples -= samples;
 				this._arpeggioSamples -= samples;
 				
+				///@TODO: If I use "let" for these, Typescript inserts inline functions in place of while loops when transpiling?
 				var leadPeriodDelta: number;
 				var leadPeriodDeltaScale: number;
 				var leadVolume: number;

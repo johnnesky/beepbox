@@ -1274,9 +1274,9 @@ var beepbox;
                 var _loop_1 = function (channel) {
                     var pattern = this_1.song.getPattern(channel, this_1._bar);
                     var attack = pattern == null ? 0 : this_1.song.instrumentAttacks[channel][pattern.instrument];
-                    var tone = null;
-                    var prevTone = null;
-                    var nextTone = null;
+                    tone = null;
+                    prevTone = null;
+                    nextTone = null;
                     if (pattern != null) {
                         for (var i = 0; i < pattern.tones.length; i++) {
                             if (pattern.tones[i].end <= time) {
@@ -1505,7 +1505,7 @@ var beepbox;
                         drumVolumeDelta = volumeDelta * maxDrumVolume;
                     }
                 };
-                var this_1 = this;
+                var this_1 = this, tone, prevTone, nextTone;
                 for (var channel = 0; channel < 4; channel++) {
                     _loop_1(channel);
                 }
@@ -1645,7 +1645,10 @@ var beepbox;
             if (attributes)
                 for (var _i = 0, _a = Object.keys(attributes); _i < _a.length; _i++) {
                     var key = _a[_i];
-                    elem[key] = attributes[key];
+                    if (key == "style")
+                        elem.setAttribute(key, attributes[key]);
+                    else
+                        elem[key] = attributes[key];
                 }
             if (children)
                 for (var _b = 0, children_1 = children; _b < children_1.length; _b++) {
@@ -4953,6 +4956,7 @@ var beepbox;
         var loopDropDown = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "4", step: "1" });
         var enableOutro = input({ type: "checkbox" });
         var exportWavButton = button({ style: "width:200px;", type: "button" }, [text("Export to .wav")]);
+        var exportMidiButton = button({ style: "width:200px;", type: "button" }, [text("Export to .midi")]);
         var exportCancelButton = button({ style: "width:200px;", type: "button" }, [text("Cancel")]);
         var container = div({ style: "position: absolute;" }, [
             div({ style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;" }, [
@@ -4974,6 +4978,8 @@ var beepbox;
                     div({ style: "height: 20px;" }),
                     exportWavButton,
                     div({ style: "height: 20px;" }),
+                    exportMidiButton,
+                    div({ style: "height: 20px;" }),
                     exportCancelButton,
                 ]),
             ]),
@@ -4985,6 +4991,7 @@ var beepbox;
             loopDropDown.removeEventListener("keypress", validateKey);
             loopDropDown.removeEventListener("blur", validateNumber);
             exportWavButton.removeEventListener("click", onExportToWav);
+            exportMidiButton.removeEventListener("click", onExportToMidi);
             exportCancelButton.removeEventListener("click", onClose);
         }
         function validateKey(event) {
@@ -5090,6 +5097,360 @@ var beepbox;
             saveAs(blob, "song.wav");
             onClose();
         }
+        function onExportToMidi() {
+            var writeIndex = 0;
+            var fileSize = 0;
+            var arrayBuffer = new ArrayBuffer(1024);
+            var data = new DataView(arrayBuffer);
+            function addBytes(numBytes) {
+                fileSize += numBytes;
+                if (fileSize > arrayBuffer.byteLength) {
+                    arrayBuffer = ArrayBuffer.transfer(arrayBuffer, Math.max(arrayBuffer.byteLength * 2, fileSize));
+                    data = new DataView(arrayBuffer);
+                }
+            }
+            function writeUint32(value) {
+                value = value >>> 0;
+                addBytes(4);
+                data.setUint32(writeIndex, value, false);
+                writeIndex = fileSize;
+            }
+            function writeUint24(value) {
+                value = value >>> 0;
+                addBytes(3);
+                data.setUint8(writeIndex, (value >> 16) & 0xff);
+                data.setUint8(writeIndex + 1, (value >> 8) & 0xff);
+                data.setUint8(writeIndex + 2, (value) & 0xff);
+                writeIndex = fileSize;
+            }
+            function writeUint16(value) {
+                value = value >>> 0;
+                addBytes(2);
+                data.setUint16(writeIndex, value, false);
+                writeIndex = fileSize;
+            }
+            function writeUint8(value) {
+                value = value >>> 0;
+                addBytes(1);
+                data.setUint8(writeIndex, value);
+                writeIndex = fileSize;
+            }
+            function writeFlagAnd7Bits(flag, value) {
+                value = ((value >>> 0) & 0x7f) | ((flag & 0x01) << 7);
+                addBytes(1);
+                data.setUint8(writeIndex, value);
+                writeIndex = fileSize;
+            }
+            function writeVariableLength(value) {
+                value = value >>> 0;
+                if (value > 0x0fffffff)
+                    throw new Error("writeVariableLength value too big.");
+                var startWriting = false;
+                for (var i = 0; i < 4; i++) {
+                    var shift = 21 - i * 7;
+                    var bits = (value >>> shift) & 0x7f;
+                    if (bits != 0 || i == 3)
+                        startWriting = true;
+                    if (startWriting)
+                        writeFlagAnd7Bits(i == 3 ? 0 : 1, bits);
+                }
+            }
+            function writeAscii(string) {
+                writeVariableLength(string.length);
+                for (var i = 0; i < string.length; i++) {
+                    var charCode = string.charCodeAt(i);
+                    if (charCode > 0x7f)
+                        throw new Error("Trying to write unicode character as ascii.");
+                    writeUint8(charCode);
+                }
+            }
+            var ticksPerBeat = 96;
+            var ticksPerPart = ticksPerBeat / doc.song.parts;
+            var ticksPerArpeggio = ticksPerPart / 4;
+            var secondsPerMinute = 60;
+            var microsecondsPerMinute = secondsPerMinute * 1000000;
+            var beatsPerMinute = doc.song.getBeatsPerMinute();
+            var microsecondsPerBeat = Math.round(microsecondsPerMinute / beatsPerMinute);
+            var secondsPerTick = secondsPerMinute / (ticksPerBeat * beatsPerMinute);
+            var ticksPerBar = ticksPerBeat * doc.song.beats;
+            var unrolledBars = [];
+            if (enableIntro.checked) {
+                for (var bar = 0; bar < doc.song.loopStart; bar++) {
+                    unrolledBars.push(bar);
+                }
+            }
+            for (var loopIndex = 0; loopIndex < Number(loopDropDown.value); loopIndex++) {
+                for (var bar = doc.song.loopStart; bar < doc.song.loopStart + doc.song.loopLength; bar++) {
+                    unrolledBars.push(bar);
+                }
+            }
+            if (enableIntro.checked) {
+                for (var bar = doc.song.loopStart + doc.song.loopLength; bar < doc.song.bars; bar++) {
+                    unrolledBars.push(bar);
+                }
+            }
+            var tracks = [
+                { isMeta: true, channel: -1, midiChannel: -1, isChorus: false, isDrums: false },
+                { isMeta: false, channel: 0, midiChannel: 0, isChorus: false, isDrums: false },
+                { isMeta: false, channel: 0, midiChannel: 1, isChorus: true, isDrums: false },
+                { isMeta: false, channel: 1, midiChannel: 2, isChorus: false, isDrums: false },
+                { isMeta: false, channel: 1, midiChannel: 3, isChorus: true, isDrums: false },
+                { isMeta: false, channel: 2, midiChannel: 4, isChorus: false, isDrums: false },
+                { isMeta: false, channel: 2, midiChannel: 5, isChorus: true, isDrums: false },
+                { isMeta: false, channel: 3, midiChannel: 6, isChorus: false, isDrums: true },
+            ];
+            writeUint32(0x4D546864);
+            writeUint32(6);
+            writeUint16(1);
+            writeUint16(tracks.length);
+            writeUint16(ticksPerBeat);
+            var _loop_2 = function (track) {
+                writeUint32(0x4D54726B);
+                var isMeta = track.isMeta, channel = track.channel, midiChannel = track.midiChannel, isChorus = track.isChorus, isDrums = track.isDrums;
+                var trackLengthIndex = writeIndex;
+                fileSize += 4;
+                writeIndex = fileSize;
+                var prevTime = 0;
+                var barStartTime = 0;
+                var writeEventTime = function (time) {
+                    if (time < prevTime)
+                        throw new Error("Midi event time cannot go backwards.");
+                    writeVariableLength(time - prevTime);
+                    prevTime = time;
+                };
+                if (isMeta) {
+                    writeEventTime(0);
+                    writeUint16(0xFF01);
+                    writeAscii("http://www.beepbox.co/" + doc.song.toString());
+                    writeEventTime(0);
+                    writeUint24(0xFF5103);
+                    writeUint24(microsecondsPerBeat);
+                    writeEventTime(0);
+                    writeUint24(0xFF5804);
+                    writeUint8(doc.song.beats);
+                    writeUint8(2);
+                    writeUint8(24);
+                    writeUint8(8);
+                    var isMinor = (doc.song.scale < 10) && ((doc.song.scale & 1) == 1);
+                    var key = 11 - doc.song.key;
+                    var numSharps = key;
+                    if ((key & 1) == 1)
+                        numSharps += 6;
+                    if (isMinor)
+                        numSharps += 9;
+                    while (numSharps > 6)
+                        numSharps -= 12;
+                    writeEventTime(0);
+                    writeUint24(0xFF5902);
+                    writeUint8(numSharps);
+                    writeUint8(isMinor ? 1 : 0);
+                    if (enableIntro.checked)
+                        barStartTime += ticksPerBar * doc.song.loopStart;
+                    writeEventTime(barStartTime);
+                    writeUint16(0xFF06);
+                    writeAscii("Loop Start");
+                    for (var loopIndex = 0; loopIndex < Number(loopDropDown.value); loopIndex++) {
+                        barStartTime += ticksPerBar * doc.song.loopLength;
+                        writeEventTime(barStartTime);
+                        writeUint16(0xFF06);
+                        writeAscii(loopIndex < Number(loopDropDown.value) - 1 ? "Loop Repeat" : "Loop End");
+                    }
+                    if (enableOutro.checked)
+                        barStartTime += ticksPerBar * (doc.song.bars - doc.song.loopStart - doc.song.loopLength);
+                    if (barStartTime != ticksPerBar * unrolledBars.length)
+                        throw new Error("Miscalculated number of bars.");
+                }
+                else {
+                    var channelName = ["blue channel", "yellow channel", "orange channel", "gray channel"][channel];
+                    if (isChorus)
+                        channelName += " chorus";
+                    writeEventTime(0);
+                    writeUint16(0xFF03);
+                    writeAscii(channelName);
+                    writeEventTime(barStartTime);
+                    writeUint8(0xB0 | midiChannel);
+                    writeFlagAnd7Bits(0, 0x7E);
+                    writeFlagAnd7Bits(0, 1);
+                    writeEventTime(barStartTime);
+                    writeUint8(0xB0 | midiChannel);
+                    writeFlagAnd7Bits(0, 0x44);
+                    writeFlagAnd7Bits(0, 0x7f);
+                    var prevInstrument = -1;
+                    var prevPitchBend = -1;
+                    var prevExpression = -1;
+                    var channelRoot = isDrums ? 33 : beepbox.Music.keyTransposes[doc.song.key];
+                    var intervalScale = isDrums ? beepbox.Music.drumInterval : 1;
+                    for (var _i = 0, unrolledBars_1 = unrolledBars; _i < unrolledBars_1.length; _i++) {
+                        var bar = unrolledBars_1[_i];
+                        var pattern = doc.song.getPattern(channel, bar);
+                        if (pattern != null) {
+                            var nextInstrument = pattern.instrument;
+                            if (isChorus && doc.song.instrumentChorus[channel][nextInstrument] == 0) {
+                                barStartTime += ticksPerBar;
+                                continue;
+                            }
+                            if (prevInstrument != nextInstrument) {
+                                prevInstrument = nextInstrument;
+                                writeEventTime(barStartTime);
+                                writeUint16(0xFF04);
+                                if (isDrums) {
+                                    var description = "noise: " + beepbox.Music.drumNames[doc.song.instrumentWaves[channel][nextInstrument]];
+                                    description += ", volume: " + beepbox.Music.volumeNames[doc.song.instrumentVolumes[channel][nextInstrument]];
+                                    description += ", envelope: " + beepbox.Music.attackNames[doc.song.instrumentAttacks[channel][nextInstrument]];
+                                    writeAscii(description);
+                                    writeEventTime(barStartTime);
+                                    writeUint8(0xC0 | midiChannel);
+                                    writeFlagAnd7Bits(0, 0x7E);
+                                }
+                                else {
+                                    var description = "wave: " + beepbox.Music.waveNames[doc.song.instrumentWaves[channel][nextInstrument]];
+                                    description += ", volume: " + beepbox.Music.volumeNames[doc.song.instrumentVolumes[channel][nextInstrument]];
+                                    description += ", envelope: " + beepbox.Music.attackNames[doc.song.instrumentAttacks[channel][nextInstrument]];
+                                    description += ", filter: " + beepbox.Music.filterNames[doc.song.instrumentFilters[channel][nextInstrument]];
+                                    description += ", chorus: " + beepbox.Music.chorusNames[doc.song.instrumentChorus[channel][nextInstrument]];
+                                    description += ", effect: " + beepbox.Music.effectNames[doc.song.instrumentEffects[channel][nextInstrument]];
+                                    writeAscii(description);
+                                    var sustainInstruments = [
+                                        0x47,
+                                        0x50,
+                                        0x46,
+                                        0x44,
+                                        0x51,
+                                        0x51,
+                                        0x51,
+                                        0x51,
+                                        0x4A,
+                                    ];
+                                    var decayInstruments = [
+                                        0x2E,
+                                        0x2E,
+                                        0x06,
+                                        0x18,
+                                        0x19,
+                                        0x19,
+                                        0x6A,
+                                        0x6A,
+                                        0x21,
+                                    ];
+                                    var filterInstruments = doc.song.instrumentFilters[channel][nextInstrument] < 3 ? sustainInstruments : decayInstruments;
+                                    writeEventTime(barStartTime);
+                                    writeUint8(0xC0 | midiChannel);
+                                    writeFlagAnd7Bits(0, filterInstruments[doc.song.instrumentWaves[channel][nextInstrument]]);
+                                }
+                                var instrumentVolumeChoice = doc.song.instrumentVolumes[channel][nextInstrument];
+                                var channelVolume = (5 - instrumentVolumeChoice) / 5;
+                                writeEventTime(barStartTime);
+                                writeUint8(0xB0 | midiChannel);
+                                writeFlagAnd7Bits(0, 0x07);
+                                writeFlagAnd7Bits(0, Math.round(0x7f * channelVolume));
+                            }
+                            var effectChoice = doc.song.instrumentEffects[channel][nextInstrument];
+                            var effectVibrato = beepbox.Music.effectVibratos[effectChoice];
+                            var effectTremelo = beepbox.Music.effectTremelos[effectChoice];
+                            var effectDuration = 0.14;
+                            var chorusOffset = beepbox.Music.chorusValues[doc.song.instrumentChorus[channel][nextInstrument]];
+                            if (!isChorus)
+                                chorusOffset *= -1;
+                            chorusOffset += beepbox.Music.chorusOffsets[doc.song.instrumentChorus[channel][nextInstrument]];
+                            for (var toneIndex = 0; toneIndex < pattern.tones.length; toneIndex++) {
+                                var tone = pattern.tones[toneIndex];
+                                var toneStartTime = barStartTime + tone.start * ticksPerPart;
+                                var pinTime = toneStartTime;
+                                var pinVolume = tone.pins[0].volume;
+                                var pinInterval = tone.pins[0].interval;
+                                var pitch = channelRoot + tone.notes[0] * intervalScale;
+                                for (var pinIndex = 1; pinIndex < tone.pins.length; pinIndex++) {
+                                    var nextPinTime = toneStartTime + tone.pins[pinIndex].time * ticksPerPart;
+                                    var nextPinVolume = tone.pins[pinIndex].volume;
+                                    var nextPinInterval = tone.pins[pinIndex].interval;
+                                    var length_1 = nextPinTime - pinTime;
+                                    for (var tick = 0; tick < length_1; tick++) {
+                                        var tickTime = pinTime + tick;
+                                        var linearVolume = beepbox.lerp(pinVolume, nextPinVolume, tick / length_1);
+                                        var linearInterval = beepbox.lerp(pinInterval, nextPinInterval, tick / length_1);
+                                        var arpeggio = Math.floor(tick / ticksPerArpeggio) % 4;
+                                        var nextPitch = void 0;
+                                        if (tone.notes.length == 2) {
+                                            nextPitch = tone.notes[arpeggio >> 1];
+                                        }
+                                        else if (tone.notes.length == 3) {
+                                            nextPitch = tone.notes[arpeggio == 3 ? 1 : arpeggio];
+                                        }
+                                        else if (tone.notes.length == 4) {
+                                            nextPitch = tone.notes[arpeggio];
+                                        }
+                                        else {
+                                            nextPitch = tone.notes[0];
+                                        }
+                                        var fractionalPitch = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
+                                        nextPitch = Math.round(fractionalPitch);
+                                        var pitchOffset = fractionalPitch - nextPitch;
+                                        var effectCurve = Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / effectDuration);
+                                        if (effectChoice != 2 || tickTime - toneStartTime >= 3 * ticksPerPart) {
+                                            pitchOffset += effectVibrato * effectCurve;
+                                        }
+                                        var pitchBend = Math.max(0, Math.min(0x3fff, Math.round(0x2000 + 0x1000 * pitchOffset)));
+                                        var volume = linearVolume / 3;
+                                        var tremelo = 1.0 + effectTremelo * (effectCurve - 1.0);
+                                        var expression = Math.round(0x7f * volume * tremelo);
+                                        if (pitchBend != prevPitchBend) {
+                                            writeEventTime(tickTime);
+                                            writeUint8(0xE0 | midiChannel);
+                                            writeFlagAnd7Bits(0, pitchBend & 0x7f);
+                                            writeFlagAnd7Bits(0, (pitchBend >> 7) & 0x7f);
+                                            prevPitchBend = pitchBend;
+                                        }
+                                        if (expression != prevExpression) {
+                                            writeEventTime(tickTime);
+                                            writeUint8(0xB0 | midiChannel);
+                                            writeFlagAnd7Bits(0, 0x0B);
+                                            writeFlagAnd7Bits(0, expression);
+                                            prevExpression = expression;
+                                        }
+                                        if (tickTime == toneStartTime) {
+                                            writeEventTime(tickTime);
+                                            writeUint8(0x90 | midiChannel);
+                                            writeFlagAnd7Bits(0, nextPitch);
+                                            writeFlagAnd7Bits(0, 0x40);
+                                        }
+                                        else if (nextPitch != pitch) {
+                                            writeEventTime(tickTime);
+                                            writeUint8(0x90 | midiChannel);
+                                            writeFlagAnd7Bits(0, nextPitch);
+                                            writeFlagAnd7Bits(0, 0x40);
+                                            writeEventTime(tickTime);
+                                            writeUint8(0x80 | midiChannel);
+                                            writeFlagAnd7Bits(0, pitch);
+                                            writeFlagAnd7Bits(0, 0x40);
+                                        }
+                                        pitch = nextPitch;
+                                    }
+                                    pinTime = nextPinTime;
+                                    pinVolume = nextPinVolume;
+                                    pinInterval = nextPinInterval;
+                                }
+                                writeEventTime(barStartTime + tone.end * ticksPerPart);
+                                writeUint8(0x80 | midiChannel);
+                                writeFlagAnd7Bits(0, pitch);
+                                writeFlagAnd7Bits(0, 0x40);
+                            }
+                        }
+                        barStartTime += ticksPerBar;
+                    }
+                }
+                writeEventTime(barStartTime);
+                writeUint24(0xFF2F00);
+                data.setUint32(trackLengthIndex, writeIndex - trackLengthIndex - 4, false);
+            };
+            for (var _i = 0, tracks_1 = tracks; _i < tracks_1.length; _i++) {
+                var track = tracks_1[_i];
+                _loop_2(track);
+            }
+            arrayBuffer = ArrayBuffer.transfer(arrayBuffer, fileSize);
+            var blob = new Blob([arrayBuffer], { type: "audio/midi" });
+            saveAs(blob, "song.midi");
+            onClose();
+        }
         loopDropDown.value = "1";
         if (doc.song.loopStart == 0) {
             enableIntro.checked = false;
@@ -5110,6 +5471,7 @@ var beepbox;
         loopDropDown.addEventListener("keypress", validateKey);
         loopDropDown.addEventListener("blur", validateNumber);
         exportWavButton.addEventListener("click", onExportToWav);
+        exportMidiButton.addEventListener("click", onExportToMidi);
         exportCancelButton.addEventListener("click", onClose);
         container.style.display = "block";
     }
@@ -5567,7 +5929,7 @@ styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode("\n#mainLayer div {\n\tmargin: 0;\n\tpadding: 0;\n}\n#mainLayer canvas {\n\toverflow: hidden;\n\tposition: absolute;\n\tdisplay: block;\n}\n\n#mainLayer .selectRow {\n\twidth:100%;\n\tcolor: #bbbbbb;\n\tmargin: 0;\n\tvertical-align: middle;\n\tline-height: 27px;\n}\n\n/* slider style designed with http://danielstern.ca/range.css/ */\ninput[type=range].beepBoxSlider {\n\t-webkit-appearance: none;\n\twidth: 100%;\n\tmargin: 4px 0;\n}\ninput[type=range].beepBoxSlider:focus {\n\toutline: none;\n}\ninput[type=range].beepBoxSlider::-webkit-slider-runnable-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-webkit-slider-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\t-webkit-appearance: none;\n\tmargin-top: -5px;\n}\ninput[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {\n\tbackground: #d6d6d6;\n}\ninput[type=range].beepBoxSlider::-moz-range-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-moz-range-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n}\ninput[type=range].beepBoxSlider::-ms-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: transparent;\n\tborder-color: transparent;\n\tcolor: transparent;\n}\ninput[type=range].beepBoxSlider::-ms-fill-lower {\n\tbackground: #8a8a8a;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-fill-upper {\n\tbackground: #b0b0b0;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\theight: 6px;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-lower {\n\tbackground: #b0b0b0;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-upper {\n\tbackground: #d6d6d6;\n}\n"));
 document.head.appendChild(styleSheet);
 var beepboxEditorContainer = document.getElementById("beepboxEditorContainer");
-beepboxEditorContainer.innerHTML = "\n<div id=\"mainLayer\" tabindex=\"0\" style=\"width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;\">\n\t<div id=\"editorBox\" style=\"width: 512px; height: 645px; float: left;\">\n\t\t<div id=\"patternContainerContainer\" style=\"width: 512px; height: 481px; display: table; table-layout: fixed;\">\n\t\t\t<div id=\"pianoContainer\" style=\"width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"piano\" width=\"32\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"pianoPreview\" width=\"32\" height=\"40\"></canvas>\n\t\t\t</div>\n\t\t\t<div id=\"patternEditorContainer\"  style=\"height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<svg id=\"patternEditorSvg\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background-color: #000000; touch-action: none; position: absolute;\" width=\"512\" height=\"481\">\n\t\t\t\t\t<defs id=\"patternEditorDefs\">\n\t\t\t\t\t\t<pattern id=\"patternEditorNoteBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"156\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t\t<pattern id=\"patternEditorDrumBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"40\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t</defs>\n\t\t\t\t\t<rect id=\"patternEditorBackground\" x=\"0\" y=\"0\" width=\"512\" height=\"481\" pointer-events=\"none\" fill=\"url(#patternEditorNoteBackground)\"></rect>\n\t\t\t\t\t<svg id=\"patternEditorNoteContainer\"></svg>\n\t\t\t\t\t<path id=\"patternEditorPreview\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" pointer-events=\"none\"></path>\n\t\t\t\t\t<rect id=\"patternEditorPlayhead\" x=\"0\" y=\"0\" width=\"4\" height=\"481\" fill=\"white\" pointer-events=\"none\"></rect>\n\t\t\t\t</svg>\n\t\t\t</div>\n\t\t\t<div id=\"octaveScrollBarContainer\" style=\"width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"octaveScrollBar\" width=\"20\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"octaveScrollBarPreview\" width=\"20\" height=\"481\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t\t<div style=\"width: 512px; height: 6px; clear: both;\"></div>\n\t\t<div id=\"trackContainerContainer\" style=\"width: 512px; height: 158px;\">\n\t\t\t<div id=\"trackEditorContainer\" style=\"width: 512px; height: 128px; position: relative; overflow:hidden;\">\n\t\t\t\t<canvas id=\"trackEditor\" width=\"512\" height=\"128\"></canvas>\n\t\t\t\t<canvas id=\"trackEditorPreview\" width=\"32\" height=\"32\"></canvas>\n\t\t\t\t<div id=\"trackPlayhead\" style=\"width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;\"></div>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"loopEditorContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"loopEditor\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"loopEditorPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"barScrollBarContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"barScrollBar\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"barScrollBarPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div style=\"float: left; width: 6px; height: 645px;\"></div>\n\t\n\t<div style=\"float: left; width: 182px; height: 645px; font-size: 12px;\">\n\t\t<div style=\"width:100%; text-align: center; color: #bbbbbb;\">\n\t\t\tBeepBox 2.1\n\t\t</div>\n\t\t\n\t\t<div style=\"width:100%; margin: 5px 0;\">\n\t\t\t<button id=\"playButton\" style=\"width: 75px; float: left; margin: 0px\" type=\"button\">Play</button>\n\t\t\t<div style=\"float: left; width: 4px; height: 10px;\"></div>\n\t\t\t<input class=\"beepBoxSlider\" id=\"volumeSlider\" style=\"float: left; width: 101px; margin: 0px;\" type=\"range\" min=\"0\" max=\"100\" value=\"50\" step=\"1\" />\n\t\t\t<div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<select id=\"editButton\" style=\"width:100%; margin: 5px 0;\">Edit Menu</select>\n\t\t<select id=\"optionsButton\" style=\"width:100%; margin: 5px 0;\">Preferences Menu</select>\n\t\t<!--<button id=\"publishButton\" style=\"width:100%\" type=\"button\">Publishing Panel...</button>-->\n\t\t<button id=\"exportButton\" style=\"width:100%; margin: 5px 0;\" type=\"button\">Export</button>\n\t\t<!--<button id=\"copyButton\" style=\"width:100%\" type=\"button\">Copy URL to Clipboard</button>-->\n\t\t\n\t\t<div style=\"width: 100%; height: 110px;\"></div>\n\t\t\n\t\t<div style=\"width:100%; margin: 3px 0;\">\n\t\t\tSong Settings:\n\t\t</div>\n\t\t\n\t\t<div class=\"selectRow\">\n\t\t\tScale: <span style=\"float: right;\"><select id=\"scaleDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tKey: <span style=\"float: right;\"><select id=\"keyDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tTempo: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"tempoSlider\" style=\"width: 90px; margin: 0px;\" type=\"range\" min=\"0\" max=\"11\" value=\"7\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tRhythm: <span style=\"float: right;\"><select id=\"partDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"patternSettingsLabel\" style=\"visibility: hidden; width:100%; margin: 3px 0;\">\n\t\t\tPattern Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"instrumentDropDownGroup\" style=\"width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;\">\n\t\t\tInstrument: <span style=\"float: right;\"><select id=\"instrumentDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"instrumentSettingsLabel\" style=\"clear: both; width:100%; margin: 3px 0;\">\n\t\t\tInstrument Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"channelVolumeSliderGroup\" class=\"selectRow\">\n\t\t\tVolume: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"channelVolumeSlider\" style=\"width: 120px; margin: 0px;\" type=\"range\" min=\"-5\" max=\"0\" value=\"0\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"waveDropDownGroup\" class=\"selectRow\">\n\t\t\tWave: <span style=\"float: right;\"><select id=\"waveDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"attackDropDownGroup\" class=\"selectRow\">\n\t\t\tEnvelope: <span style=\"float: right;\"><select id=\"attackDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"filterDropDownGroup\" class=\"selectRow\">\n\t\t\tFilter: <span style=\"float: right;\"><select id=\"filterDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"chorusDropDownGroup\" class=\"selectRow\">\n\t\t\tChorus: <span style=\"float: right;\"><select id=\"chorusDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"effectDropDownGroup\" class=\"selectRow\">\n\t\t\tEffect: <span style=\"float: right;\"><select id=\"effectDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t</div>\n\t\n\t<div id=\"promptBackground\" style=\"position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;\"></div>\n\t\n\t<div id=\"songSizePrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Custom Song Size</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Beats per bar:<br /><span style=\"color: #888888;\">(Multiples of 3 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"beatsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Bars per song:<br /><span style=\"color: #888888;\">(Multiples of 2 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"barsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Patterns per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"patternsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"32\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Instruments per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"instrumentsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"10\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"songDurationOkayButton\" style=\"width:125px; float: left;\" type=\"button\">Okay</button>\n\t\t\t\t<button id=\"songDurationCancelButton\" style=\"width:125px; float: right;\" type=\"button\">Cancel</button>\n\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n";
+beepboxEditorContainer.innerHTML = "\n<div id=\"mainLayer\" tabindex=\"0\" style=\"width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;\">\n\t<div id=\"editorBox\" style=\"width: 512px; height: 645px; float: left;\">\n\t\t<div id=\"patternContainerContainer\" style=\"width: 512px; height: 481px; display: table; table-layout: fixed;\">\n\t\t\t<div id=\"pianoContainer\" style=\"width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"piano\" width=\"32\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"pianoPreview\" width=\"32\" height=\"40\"></canvas>\n\t\t\t</div>\n\t\t\t<div id=\"patternEditorContainer\"  style=\"height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<svg id=\"patternEditorSvg\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background-color: #000000; touch-action: none; position: absolute;\" width=\"512\" height=\"481\">\n\t\t\t\t\t<defs id=\"patternEditorDefs\">\n\t\t\t\t\t\t<pattern id=\"patternEditorNoteBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"156\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t\t<pattern id=\"patternEditorDrumBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"40\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t</defs>\n\t\t\t\t\t<rect id=\"patternEditorBackground\" x=\"0\" y=\"0\" width=\"512\" height=\"481\" pointer-events=\"none\" fill=\"url(#patternEditorNoteBackground)\"></rect>\n\t\t\t\t\t<svg id=\"patternEditorNoteContainer\"></svg>\n\t\t\t\t\t<path id=\"patternEditorPreview\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" pointer-events=\"none\"></path>\n\t\t\t\t\t<rect id=\"patternEditorPlayhead\" x=\"0\" y=\"0\" width=\"4\" height=\"481\" fill=\"white\" pointer-events=\"none\"></rect>\n\t\t\t\t</svg>\n\t\t\t</div>\n\t\t\t<div id=\"octaveScrollBarContainer\" style=\"width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"octaveScrollBar\" width=\"20\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"octaveScrollBarPreview\" width=\"20\" height=\"481\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t\t<div style=\"width: 512px; height: 6px; clear: both;\"></div>\n\t\t<div id=\"trackContainerContainer\" style=\"width: 512px; height: 158px;\">\n\t\t\t<div id=\"trackEditorContainer\" style=\"width: 512px; height: 128px; position: relative; overflow:hidden;\">\n\t\t\t\t<canvas id=\"trackEditor\" width=\"512\" height=\"128\"></canvas>\n\t\t\t\t<canvas id=\"trackEditorPreview\" width=\"32\" height=\"32\"></canvas>\n\t\t\t\t<div id=\"trackPlayhead\" style=\"width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;\"></div>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"loopEditorContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"loopEditor\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"loopEditorPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"barScrollBarContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"barScrollBar\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"barScrollBarPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div style=\"float: left; width: 6px; height: 645px;\"></div>\n\t\n\t<div style=\"float: left; width: 182px; height: 645px; font-size: 12px;\">\n\t\t<div style=\"width:100%; text-align: center; color: #bbbbbb;\">\n\t\t\tBeepBox 2.1.1\n\t\t</div>\n\t\t\n\t\t<div style=\"width:100%; margin: 5px 0;\">\n\t\t\t<button id=\"playButton\" style=\"width: 75px; float: left; margin: 0px\" type=\"button\">Play</button>\n\t\t\t<div style=\"float: left; width: 4px; height: 10px;\"></div>\n\t\t\t<input class=\"beepBoxSlider\" id=\"volumeSlider\" style=\"float: left; width: 101px; margin: 0px;\" type=\"range\" min=\"0\" max=\"100\" value=\"50\" step=\"1\" />\n\t\t\t<div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<select id=\"editButton\" style=\"width:100%; margin: 5px 0;\">Edit Menu</select>\n\t\t<select id=\"optionsButton\" style=\"width:100%; margin: 5px 0;\">Preferences Menu</select>\n\t\t<!--<button id=\"publishButton\" style=\"width:100%\" type=\"button\">Publishing Panel...</button>-->\n\t\t<button id=\"exportButton\" style=\"width:100%; margin: 5px 0;\" type=\"button\">Export</button>\n\t\t<!--<button id=\"copyButton\" style=\"width:100%\" type=\"button\">Copy URL to Clipboard</button>-->\n\t\t\n\t\t<div style=\"width: 100%; height: 110px;\"></div>\n\t\t\n\t\t<div style=\"width:100%; margin: 3px 0;\">\n\t\t\tSong Settings:\n\t\t</div>\n\t\t\n\t\t<div class=\"selectRow\">\n\t\t\tScale: <span style=\"float: right;\"><select id=\"scaleDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tKey: <span style=\"float: right;\"><select id=\"keyDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tTempo: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"tempoSlider\" style=\"width: 90px; margin: 0px;\" type=\"range\" min=\"0\" max=\"11\" value=\"7\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tRhythm: <span style=\"float: right;\"><select id=\"partDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"patternSettingsLabel\" style=\"visibility: hidden; width:100%; margin: 3px 0;\">\n\t\t\tPattern Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"instrumentDropDownGroup\" style=\"width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;\">\n\t\t\tInstrument: <span style=\"float: right;\"><select id=\"instrumentDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"instrumentSettingsLabel\" style=\"clear: both; width:100%; margin: 3px 0;\">\n\t\t\tInstrument Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"channelVolumeSliderGroup\" class=\"selectRow\">\n\t\t\tVolume: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"channelVolumeSlider\" style=\"width: 120px; margin: 0px;\" type=\"range\" min=\"-5\" max=\"0\" value=\"0\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"waveDropDownGroup\" class=\"selectRow\">\n\t\t\tWave: <span style=\"float: right;\"><select id=\"waveDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"attackDropDownGroup\" class=\"selectRow\">\n\t\t\tEnvelope: <span style=\"float: right;\"><select id=\"attackDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"filterDropDownGroup\" class=\"selectRow\">\n\t\t\tFilter: <span style=\"float: right;\"><select id=\"filterDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"chorusDropDownGroup\" class=\"selectRow\">\n\t\t\tChorus: <span style=\"float: right;\"><select id=\"chorusDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"effectDropDownGroup\" class=\"selectRow\">\n\t\t\tEffect: <span style=\"float: right;\"><select id=\"effectDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t</div>\n\t\n\t<div id=\"promptBackground\" style=\"position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;\"></div>\n\t\n\t<div id=\"songSizePrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Custom Song Size</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Beats per bar:<br /><span style=\"color: #888888;\">(Multiples of 3 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"beatsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Bars per song:<br /><span style=\"color: #888888;\">(Multiples of 2 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"barsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Patterns per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"patternsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"32\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Instruments per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"instrumentsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"10\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"songDurationOkayButton\" style=\"width:125px; float: left;\" type=\"button\">Okay</button>\n\t\t\t\t<button id=\"songDurationCancelButton\" style=\"width:125px; float: right;\" type=\"button\">Cancel</button>\n\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n";
 var prevHash = "**blank**";
 var doc = new beepbox.SongDocument();
 var wokeUp = false;
