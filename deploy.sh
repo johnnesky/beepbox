@@ -1,3 +1,4 @@
 #!/bin/bash
 
-appcfg.py update beepbox-synth/
+gcloud app deploy --project beepbox-synth beepbox-synth/app.yaml
+#appcfg.py update beepbox-synth/

@@ -339,7 +339,7 @@ module beepbox {
 					unrolledBars.push(bar);
 				}
 			}
-			if (enableIntro.checked) {
+			if (enableOutro.checked) {
 				for (let bar: number = doc.song.loopStart + doc.song.loopLength; bar < doc.song.bars; bar++) {
 					unrolledBars.push(bar);
 				}
