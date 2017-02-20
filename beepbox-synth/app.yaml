@@ -1,14 +1,8 @@
-application: beepbox-synth
-version: 2-1
 runtime: python27
 api_version: 1
 threadsafe: true
 
 default_expiration: "3h"
-
-libraries:
-- name: pycrypto
-  version: latest
 
 #skip_files:
 #- ^(.*/)?app\.yaml

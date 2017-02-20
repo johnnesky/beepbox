@@ -5184,7 +5184,7 @@ var beepbox;
                     unrolledBars.push(bar);
                 }
             }
-            if (enableIntro.checked) {
+            if (enableOutro.checked) {
                 for (var bar = doc.song.loopStart + doc.song.loopLength; bar < doc.song.bars; bar++) {
                     unrolledBars.push(bar);
                 }
