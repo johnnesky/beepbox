@@ -27,8 +27,6 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
-	const svgNS: string = "http://www.w3.org/2000/svg";
-	
 	function prettyNumber(value: number): string {
 		return value.toFixed(2).replace(/\.?0*$/, "");
 	}
@@ -40,17 +38,28 @@ module beepbox {
 	}
 	
 	export class PatternEditor {
-		private readonly _container: HTMLElement = <HTMLElement>document.getElementById("patternEditorContainer");
-		private readonly _svg: SVGSVGElement = <SVGSVGElement><any> document.getElementById("patternEditorSvg");
-		private readonly _svgPlayhead: SVGRectElement = <SVGRectElement><any> document.getElementById("patternEditorPlayhead");
-		private readonly _svgPreview: SVGPathElement = <SVGPathElement><any> document.getElementById("patternEditorPreview");
-		private readonly _svgNoteBackground: SVGPatternElement = <SVGPatternElement><any> document.getElementById("patternEditorNoteBackground");
-		private readonly _svgDrumBackground: SVGPatternElement = <SVGPatternElement><any> document.getElementById("patternEditorDrumBackground");
-		private readonly _svgBackground: SVGRectElement = <SVGRectElement><any> document.getElementById("patternEditorBackground");
+		private readonly _svgNoteBackground: SVGPatternElement = <SVGPatternElement> svgElement("pattern", {id: "patternEditorNoteBackground", x: "0", y: "0", width: "64", height: "156", patternUnits: "userSpaceOnUse"});
+		private readonly _svgDrumBackground: SVGPatternElement = <SVGPatternElement> svgElement("pattern", {id: "patternEditorDrumBackground", x: "0", y: "0", width: "64", height: "40", patternUnits: "userSpaceOnUse"});
+		private readonly _svgBackground: SVGRectElement = <SVGRectElement> svgElement("rect", {x: "0", y: "0", width: "512", height: "481", "pointer-events": "none", fill: "url(#patternEditorNoteBackground)"});
+		private _svgNoteContainer: SVGSVGElement = <SVGSVGElement> svgElement("svg");
+		private readonly _svgPlayhead: SVGRectElement = <SVGRectElement> svgElement("rect", {id: "", x: "0", y: "0", width: "4", height: "481", fill: "white", "pointer-events": "none"});
+		private readonly _svgPreview: SVGPathElement = <SVGPathElement> svgElement("path", {fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none"});
+		private readonly _svg: SVGSVGElement = <SVGSVGElement> svgElement("svg", {xmlns: "http://www.w3.org/2000/svg", style: "background-color: #000000; touch-action: none; position: absolute;", width: "512", height: "481"}, [
+			svgElement("defs", undefined, [
+				this._svgNoteBackground,
+				this._svgDrumBackground,
+			]),
+			this._svgBackground,
+			this._svgNoteContainer,
+			this._svgPreview,
+			this._svgPlayhead,
+		]);
+		public readonly container: HTMLDivElement = html.div({style: "height: 481px; display: table-cell; overflow:hidden; position: relative;"}, [this._svg]);
+		
 		private readonly _defaultNoteHeight: number = 13;
 		private readonly _defaultDrumHeight: number = 40;
 		private readonly _backgroundNoteRows: SVGRectElement[] = [];
-		private readonly _backgroundDrumRow: SVGRectElement = <SVGRectElement> document.createElementNS(svgNS, "rect");
+		private readonly _backgroundDrumRow: SVGRectElement = <SVGRectElement> svgElement("rect");
 		private readonly _defaultPinChannels: TonePin[][] = [
 			[new TonePin(0, 0, 3), new TonePin(0, 2, 3)],
 			[new TonePin(0, 0, 3), new TonePin(0, 2, 3)],
@@ -58,7 +67,6 @@ module beepbox {
 			[new TonePin(0, 0, 3), new TonePin(0, 2, 0)],
 		];
 		
-		private _svgNoteContainer: SVGSVGElement = <SVGSVGElement><any> document.getElementById("patternEditorNoteContainer");
 		private _editorWidth: number;
 		private _editorHeight: number = 481;
 		private _partWidth: number;
@@ -87,7 +95,7 @@ module beepbox {
 		constructor(private _doc: SongDocument) {
 			for (let i: number = 0; i < 12; i++) {
 				const y: number = (12 - i) % 12;
-				const rectangle: SVGRectElement = <SVGRectElement> document.createElementNS(svgNS, "rect");
+				const rectangle: SVGRectElement = <SVGRectElement> svgElement("rect");
 				rectangle.setAttribute("x", "1");
 				rectangle.setAttribute("y", "" + (y * this._defaultNoteHeight + 1));
 				rectangle.setAttribute("height", "" + (this._defaultNoteHeight - 2));
@@ -662,7 +670,7 @@ module beepbox {
 					if (pattern2 == null) continue;
 					for (const tone of pattern2.tones) {
 						for (const note of tone.notes) {
-							const notePath: SVGPathElement = <SVGPathElement> document.createElementNS(svgNS, "path");
+							const notePath: SVGPathElement = <SVGPathElement> svgElement("path");
 							notePath.setAttribute("fill", SongEditor.noteColorsDim[channel]);
 							notePath.setAttribute("pointer-events", "none");
 							this._drawNote(notePath, note, tone.start, tone.pins, this._noteHeight / 2 - 4, false, this._doc.song.channelOctaves[channel] * 12);
@@ -674,12 +682,12 @@ module beepbox {
 			
 			for (const tone of this._pattern.tones) {
 				for (const note of tone.notes) {
-					let notePath: SVGPathElement = <SVGPathElement> document.createElementNS(svgNS, "path");
+					let notePath: SVGPathElement = <SVGPathElement> svgElement("path");
 					notePath.setAttribute("fill", SongEditor.noteColorsDim[this._doc.channel]);
 					notePath.setAttribute("pointer-events", "none");
 					this._drawNote(notePath, note, tone.start, tone.pins, this._noteHeight / 2 + 1, false, this._octaveOffset);
 					this._svgNoteContainer.appendChild(notePath);
-					notePath = <SVGPathElement> document.createElementNS(svgNS, "path");
+					notePath = <SVGPathElement> svgElement("path");
 					notePath.setAttribute("fill", SongEditor.noteColorsBright[this._doc.channel]);
 					notePath.setAttribute("pointer-events", "none");
 					this._drawNote(notePath, note, tone.start, tone.pins, this._noteHeight / 2 + 1, true, this._octaveOffset);

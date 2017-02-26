@@ -34,6 +34,8 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
+	const {button, div, span, select, canvas, input, text} = html;
+	
 	function BuildOptions(items: ReadonlyArray<string | number>): string {
 		let result: string = "";
 		for (let i: number = 0; i < items.length; i++) {
@@ -61,44 +63,6 @@ module beepbox {
 		
 		private readonly _width: number = 700;
 		private readonly _height: number = 645;
-		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
-		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
-		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
-		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc);
-		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
-		private readonly _piano: Piano = new Piano(this._doc);
-		private readonly _promptBackground: HTMLElement = <HTMLElement>document.getElementById("promptBackground");
-		//private readonly _songSizePrompt: HTMLElement = <HTMLElement>document.getElementById("songSizePrompt");
-		//private readonly _exportPrompt: HTMLElement = <HTMLElement>document.getElementById("exportPrompt");
-		private readonly _editButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("editButton");
-		private readonly _optionsButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("optionsButton");
-		private readonly _mainLayer: HTMLElement = <HTMLElement>document.getElementById("mainLayer");
-		private readonly _editorBox: HTMLElement = <HTMLElement>document.getElementById("editorBox");
-		private readonly _patternContainerContainer: HTMLElement = <HTMLElement>document.getElementById("patternContainerContainer");
-		private readonly _patternEditorContainer: HTMLElement = <HTMLElement>document.getElementById("patternEditorContainer");
-		private readonly _pianoContainer: HTMLElement = <HTMLElement>document.getElementById("pianoContainer");
-		private readonly _octaveScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("octaveScrollBarContainer");
-		private readonly _trackEditorContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("trackEditorContainer");
-		private readonly _barScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("barScrollBarContainer");
-		private readonly _playButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("playButton");
-		private readonly _exportButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("exportButton");
-		private readonly _volumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("volumeSlider");
-		private readonly _filterDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("filterDropDownGroup");
-		private readonly _chorusDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("chorusDropDownGroup");
-		private readonly _effectDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("effectDropDownGroup");
-		private readonly _patternSettingsLabel: HTMLSelectElement = <HTMLSelectElement>document.getElementById("patternSettingsLabel");
-		private readonly _instrumentDropDownGroup: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDownGroup");
-		private readonly _scaleDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("scaleDropDown");
-		private readonly _keyDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("keyDropDown");
-		private readonly _tempoSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("tempoSlider");
-		private readonly _partDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("partDropDown");
-		private readonly _instrumentDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDown");
-		private readonly _channelVolumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("channelVolumeSlider");
-		private readonly _waveDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("waveDropDown");
-		private readonly _attackDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("attackDropDown");
-		private readonly _filterDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("filterDropDown");
-		private readonly _chorusDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("chorusDropDown");
-		private readonly _effectDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("effectDropDown");
 		private readonly _waveNames: string = BuildOptions(Music.waveNames);
 		private readonly _drumNames: string = BuildOptions(Music.drumNames);
 		private readonly _editCommands: ReadonlyArray<ReadonlyArray<string>> = [
@@ -111,6 +75,104 @@ module beepbox {
 			[ "Custom song size...", "duration" ],
 			[ "Clean Slate", "clean" ],
 		];
+		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
+		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
+		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
+		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc);
+		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
+		private readonly _piano: Piano = new Piano(this._doc);
+		private readonly _editorBox: HTMLElement = div({style: "width: 512px; height: 645px; float: left;"}, [
+			div({style: "width: 512px; height: 481px; display: table; table-layout: fixed;"}, [
+				this._piano.container,
+				this._patternEditor.container,
+				this._octaveScrollBar.container,
+			]),
+			div({style: "width: 512px; height: 6px; clear: both;"}),
+			div({style: "width: 512px; height: 158px;"}, [
+				this._trackEditor.container,
+				div({style: "width: 512px; height: 5px;"}),
+				this._loopEditor.container,
+				div({style: "width: 512px; height: 5px;"}),
+				this._barScrollBar.container,
+			]),
+		]);
+		private readonly _playButton: HTMLButtonElement = button({style: "width: 75px; float: left; margin: 0px", type: "button"}, [text("Play")]);
+		private readonly _volumeSlider: HTMLInputElement = input({className: "beepBoxSlider", style: "float: left; width: 101px; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1"});
+		private readonly _editButton: HTMLSelectElement = select({style: "width:100%; margin: 5px 0;"});
+		private readonly _optionsButton: HTMLSelectElement = select({style: "width:100%; margin: 5px 0;"}, [text("Preferences Menu")]);
+		private readonly _exportButton: HTMLButtonElement = button({style: "width:100%; margin: 5px 0;", type: "button"}, [text("Export")]);
+		private readonly _scaleDropDown: HTMLSelectElement = select({style: "width:90px;"});
+		private readonly _keyDropDown: HTMLSelectElement = select({style: "width:90px;"});
+		private readonly _tempoSlider: HTMLInputElement = input({className: "beepBoxSlider", style: "width: 90px; margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1"});
+		private readonly _partDropDown: HTMLSelectElement = select({style: "width:90px;"});
+		private readonly _patternSettingsLabel: HTMLDivElement = div({style: "visibility: hidden; width:100%; margin: 3px 0;"}, [text("Pattern Settings:")]);
+		private readonly _instrumentDropDown: HTMLSelectElement = select({style: "width:120px;"});
+		private readonly _instrumentDropDownGroup: HTMLDivElement = div({style: "width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;"}, [text("Instrument: "), span({style: "float: right;"}, [this._instrumentDropDown])]);
+		private readonly _channelVolumeSlider: HTMLInputElement = input({className: "beepBoxSlider", style: "width: 120px; margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"});
+		private readonly _waveDropDown: HTMLSelectElement = select({style: "width:120px;"});
+		private readonly _attackDropDown: HTMLSelectElement = select({style: "width:120px;"});
+		private readonly _filterDropDown: HTMLSelectElement = select({style: "width:120px;"});
+		private readonly _filterDropDownGroup: HTMLDivElement = div({className: "selectRow"}, [text("Filter: "), span({style: "float: right;"}, [this._filterDropDown])]);
+		private readonly _chorusDropDown: HTMLSelectElement = select({style: "width:120px;"});
+		private readonly _chorusDropDownGroup: HTMLElement = div({className: "selectRow"}, [text("Chorus: "), span({style: "float: right;"}, [this._chorusDropDown])]);
+		private readonly _effectDropDown: HTMLSelectElement = select({style: "width:120px;"});
+		private readonly _effectDropDownGroup: HTMLElement = div({className: "selectRow"}, [text("Effect: "), span({style: "float: right;"}, [this._effectDropDown])]);
+		private readonly _promptBackground: HTMLDivElement = div({style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;"});
+		private readonly _mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;"}, [
+			this._editorBox,
+			div({style: "float: left; width: 6px; height: 645px;"}),
+			div({style: "float: left; width: 182px; height: 645px; font-size: 12px;"}, [
+				div({style: "width:100%; text-align: center; color: #bbbbbb;"}, [text("BeepBox 2.1.1")]),
+				div({style: "width:100%; margin: 5px 0;"}, [
+					this._playButton,
+					div({style: "float: left; width: 4px; height: 10px;"}),
+					this._volumeSlider,
+					div({style: "clear: both;"}), 
+				]),
+				this._editButton,
+				this._optionsButton,
+				this._exportButton,
+				div({style: "width: 100%; height: 110px;"}),
+				div({style: "width:100%; margin: 3px 0;"}, [text("Song Settings:")]),
+				div({className: "selectRow"}, [
+					text("Scale: "),
+					span({style: "float: right;"}, [this._scaleDropDown]),
+				]),
+				div({className: "selectRow"}, [
+					text("Key: "),
+					span({style: "float: right;"}, [this._keyDropDown]),
+				]),
+				div({className: "selectRow"}, [
+					text("Tempo: "),
+					span({style: "float: right;"}, [this._tempoSlider]), 
+				]),
+				div({className: "selectRow"}, [
+					text("Rhythm: "),
+					span({style: "float: right;"}, [this._partDropDown]),
+				]),
+				div({style: "width: 100%; height: 25px;"}),
+				this._patternSettingsLabel,
+				this._instrumentDropDownGroup,
+				div({style: "width: 100%; height: 25px;"}),
+				div({style: "clear: both; width:100%; margin: 3px 0;"}, [text("Instrument Settings: ")]),
+				div({className: "selectRow"}, [
+					text("Volume: "),
+					span({style: "float: right;"}, [this._channelVolumeSlider]), 
+				]),
+				div({className: "selectRow"}, [
+					text("Wave: "),
+					span({style: "float: right;"}, [this._waveDropDown]),
+				]),
+				div({className: "selectRow"}, [
+					text("Envelope: "),
+					span({style: "float: right;"}, [this._attackDropDown]),
+				]),
+				this._filterDropDownGroup,
+				this._chorusDropDownGroup,
+				this._effectDropDownGroup,
+			]),
+			this._promptBackground,
+		]);
 		
 		private _copyTones: Tone[];
 		private _copyBeats: number = 0;
@@ -119,6 +181,10 @@ module beepbox {
 		private _wasPlaying: boolean;
 		
 		constructor(private _doc: SongDocument) {
+			///@TODO: Expose the "mainLayer" instead and let the caller appendChild.
+			const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer");
+			beepboxEditorContainer.appendChild(this._mainLayer);
+			
 			this._editButton.innerHTML  = BuildOptionsWithTitle(this._editCommands, "Edit Menu");
 			this._scaleDropDown.innerHTML  = BuildOptions(Music.scaleNames);
 			this._keyDropDown.innerHTML    = BuildOptions(Music.keyNames);
@@ -219,18 +285,18 @@ module beepbox {
 			this._instrumentDropDown.selectedIndex = instrument;
 			
 			//currentState = this._doc.showLetters ? (this._doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (this._doc.showScrollBar ? "showScrollBar" : "hideAll");
-			this._pianoContainer.style.display = this._doc.showLetters ? "table-cell" : "none";
-			this._octaveScrollBarContainer.style.display = this._doc.showScrollBar ? "table-cell" : "none";
-			this._barScrollBarContainer.style.display = this._doc.song.bars > 16 ? "table-row" : "none";
+			this._piano.container.style.display = this._doc.showLetters ? "table-cell" : "none";
+			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "table-cell" : "none";
+			this._barScrollBar.container.style.display = this._doc.song.bars > 16 ? "table-row" : "none";
 			
 			let patternWidth: number = 512;
 			if (this._doc.showLetters) patternWidth -= 32;
 			if (this._doc.showScrollBar) patternWidth -= 20;
-			this._patternEditorContainer.style.width = String(patternWidth) + "px";
+			this._patternEditor.container.style.width = String(patternWidth) + "px";
 			
 			let trackHeight: number = 128;
 			if (this._doc.song.bars > 16) trackHeight -= 20;
-			this._trackEditorContainer.style.height = String(trackHeight) + "px";
+			this._trackEditor.container.style.height = String(trackHeight) + "px";
 			
 			this._volumeSlider.value = String(this._doc.volume);
 			
@@ -243,6 +309,8 @@ module beepbox {
 		
 		private _onKeyPressed = (event: KeyboardEvent): void => {
 			if (this.promptVisible) return;
+			
+			this._trackEditor.onKeyPressed(event);
 			//if (event.ctrlKey)
 			//trace(event.keyCode)
 			switch (event.keyCode) {
@@ -452,23 +520,23 @@ module beepbox {
 			this._doc.savePreferences();
 		}
 	}
-}
 
 
 const styleSheet = document.createElement('style');
 styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode(`
-#mainLayer div {
+.beepboxEditor div {
 	margin: 0;
 	padding: 0;
 }
-#mainLayer canvas {
+
+.beepboxEditor canvas {
 	overflow: hidden;
 	position: absolute;
 	display: block;
 }
 
-#mainLayer .selectRow {
+.beepboxEditor .selectRow {
 	width:100%;
 	color: #bbbbbb;
 	margin: 0;
@@ -562,138 +630,6 @@ input[type=range].beepBoxSlider:focus::-ms-fill-upper {
 document.head.appendChild(styleSheet);
 
 
-const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer");
-beepboxEditorContainer.innerHTML = `
-<div id="mainLayer" tabindex="0" style="width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;">
-	<div id="editorBox" style="width: 512px; height: 645px; float: left;">
-		<div id="patternContainerContainer" style="width: 512px; height: 481px; display: table; table-layout: fixed;">
-			<div id="pianoContainer" style="width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;">
-				<canvas id="piano" width="32" height="481"></canvas>
-				<canvas id="pianoPreview" width="32" height="40"></canvas>
-			</div>
-			<div id="patternEditorContainer"  style="height: 481px; display: table-cell; overflow:hidden; position: relative;">
-				<svg id="patternEditorSvg" xmlns="http://www.w3.org/2000/svg" style="background-color: #000000; touch-action: none; position: absolute;" width="512" height="481">
-					<defs id="patternEditorDefs">
-						<pattern id="patternEditorNoteBackground" x="0" y="0" width="64" height="156" patternUnits="userSpaceOnUse"></pattern>
-						<pattern id="patternEditorDrumBackground" x="0" y="0" width="64" height="40" patternUnits="userSpaceOnUse"></pattern>
-					</defs>
-					<rect id="patternEditorBackground" x="0" y="0" width="512" height="481" pointer-events="none" fill="url(#patternEditorNoteBackground)"></rect>
-					<svg id="patternEditorNoteContainer"></svg>
-					<path id="patternEditorPreview" fill="none" stroke="white" stroke-width="2" pointer-events="none"></path>
-					<rect id="patternEditorPlayhead" x="0" y="0" width="4" height="481" fill="white" pointer-events="none"></rect>
-				</svg>
-			</div>
-			<div id="octaveScrollBarContainer" style="width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;">
-				<canvas id="octaveScrollBar" width="20" height="481"></canvas>
-				<canvas id="octaveScrollBarPreview" width="20" height="481"></canvas>
-			</div>
-		</div>
-		<div style="width: 512px; height: 6px; clear: both;"></div>
-		<div id="trackContainerContainer" style="width: 512px; height: 158px;">
-			<div id="trackEditorContainer" style="width: 512px; height: 128px; position: relative; overflow:hidden;">
-				<canvas id="trackEditor" width="512" height="128"></canvas>
-				<canvas id="trackEditorPreview" width="32" height="32"></canvas>
-				<div id="trackPlayhead" style="width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;"></div>
-			</div>
-			<div style="width: 512px; height: 5px;"></div>
-			<div id="loopEditorContainer" style="width: 512px; height: 20px; position: relative;">
-				<canvas id="loopEditor" width="512" height="20"></canvas>
-				<canvas id="loopEditorPreview" width="512" height="20"></canvas>
-			</div>
-			<div style="width: 512px; height: 5px;"></div>
-			<div id="barScrollBarContainer" style="width: 512px; height: 20px; position: relative;">
-				<canvas id="barScrollBar" width="512" height="20"></canvas>
-				<canvas id="barScrollBarPreview" width="512" height="20"></canvas>
-			</div>
-		</div>
-	</div>
-	
-	<div style="float: left; width: 6px; height: 645px;"></div>
-	
-	<div style="float: left; width: 182px; height: 645px; font-size: 12px;">
-		<div style="width:100%; text-align: center; color: #bbbbbb;">
-			BeepBox 2.1.1
-		</div>
-		
-		<div style="width:100%; margin: 5px 0;">
-			<button id="playButton" style="width: 75px; float: left; margin: 0px" type="button">Play</button>
-			<div style="float: left; width: 4px; height: 10px;"></div>
-			<input class="beepBoxSlider" id="volumeSlider" style="float: left; width: 101px; margin: 0px;" type="range" min="0" max="100" value="50" step="1" />
-			<div style="clear: both;"></div> 
-		</div>
-		
-		<select id="editButton" style="width:100%; margin: 5px 0;">Edit Menu</select>
-		<select id="optionsButton" style="width:100%; margin: 5px 0;">Preferences Menu</select>
-		<!--<button id="publishButton" style="width:100%" type="button">Publishing Panel...</button>-->
-		<button id="exportButton" style="width:100%; margin: 5px 0;" type="button">Export</button>
-		<!--<button id="copyButton" style="width:100%" type="button">Copy URL to Clipboard</button>-->
-		
-		<div style="width: 100%; height: 110px;"></div>
-		
-		<div style="width:100%; margin: 3px 0;">
-			Song Settings:
-		</div>
-		
-		<div class="selectRow">
-			Scale: <span style="float: right;"><select id="scaleDropDown" style="width:90px;"></select></span><div style="clear: both;"></div> 
-		</div>
-		<div class="selectRow">
-			Key: <span style="float: right;"><select id="keyDropDown" style="width:90px;"></select></span><div style="clear: both;"></div> 
-		</div>
-		<div class="selectRow">
-			Tempo: 
-			<span style="float: right;">
-				<input class="beepBoxSlider" id="tempoSlider" style="width: 90px; margin: 0px;" type="range" min="0" max="11" value="7" step="1" />
-			</span><div style="clear: both;"></div> 
-		</div>
-		<div class="selectRow">
-			Rhythm: <span style="float: right;"><select id="partDropDown" style="width:90px;"></select></span><div style="clear: both;"></div> 
-		</div>
-		
-		<div style="width: 100%; height: 25px;"></div>
-		
-		<div id="patternSettingsLabel" style="visibility: hidden; width:100%; margin: 3px 0;">
-			Pattern Settings:
-		</div>
-		
-		<div id="instrumentDropDownGroup" style="width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;">
-			Instrument: <span style="float: right;"><select id="instrumentDropDown" style="width:120px;"></select></span><div style="clear: both;"></div> 
-		</div>
-		
-		<div style="width: 100%; height: 25px;"></div>
-		
-		<div id="instrumentSettingsLabel" style="clear: both; width:100%; margin: 3px 0;">
-			Instrument Settings:
-		</div>
-		
-		<div id="channelVolumeSliderGroup" class="selectRow">
-			Volume: 
-			<span style="float: right;">
-				<input class="beepBoxSlider" id="channelVolumeSlider" style="width: 120px; margin: 0px;" type="range" min="-5" max="0" value="0" step="1" />
-			</span><div style="clear: both;"></div> 
-		</div>
-		<div id="waveDropDownGroup" class="selectRow">
-			Wave: <span style="float: right;"><select id="waveDropDown" style="width:120px;"></select></span><div style="clear: both;"></div> 
-		</div>
-		<div id="attackDropDownGroup" class="selectRow">
-			Envelope: <span style="float: right;"><select id="attackDropDown" style="width:120px;"></select></span><div style="clear: both;"></div> 
-		</div>
-		<div id="filterDropDownGroup" class="selectRow">
-			Filter: <span style="float: right;"><select id="filterDropDown" style="width:120px;"></select></span><div style="clear: both;"></div> 
-		</div>
-		<div id="chorusDropDownGroup" class="selectRow">
-			Chorus: <span style="float: right;"><select id="chorusDropDown" style="width:120px;"></select></span><div style="clear: both;"></div> 
-		</div>
-		<div id="effectDropDownGroup" class="selectRow">
-			Effect: <span style="float: right;"><select id="effectDropDown" style="width:120px;"></select></span><div style="clear: both;"></div> 
-		</div>
-	</div>
-	
-	<div id="promptBackground" style="position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;"></div>
-</div>
-`;
-
-
 let prevHash: string = "**blank**";
 const doc: beepbox.SongDocument = new beepbox.SongDocument();
 let wokeUp: boolean = false;
@@ -733,3 +669,5 @@ new beepbox.SongEditor(doc);
 doc.history.watch(onUpdated);
 
 checkHash();
+
+}

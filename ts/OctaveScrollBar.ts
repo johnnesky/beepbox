@@ -27,10 +27,13 @@ SOFTWARE.
 
 module beepbox {
 	export class OctaveScrollBar {
-		private readonly _preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBarPreview");
+		private readonly _canvas: HTMLCanvasElement = html.canvas({width: "20", height: "481"});
+		private readonly _preview: HTMLCanvasElement = html.canvas({width: "20", height: "481"});
+		public readonly container: HTMLDivElement = html.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;"}, [
+			this._canvas,
+			this._preview,
+		]);
 		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
-		private readonly _container: HTMLElement = <HTMLElement>document.getElementById("octaveScrollBarContainer");
-		private readonly _canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBar");
 		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
 		private readonly _editorWidth: number = 20;
 		private readonly _editorHeight: number = 481;
@@ -55,13 +58,13 @@ module beepbox {
 			this._octaveHeight = (this._editorHeight - this._rootHeight) / this._octaveCount;
 			this._barHeight = (this._octaveHeight * 3 + this._rootHeight);
 			
-			this._container.addEventListener("mousedown", this._onMousePressed);
+			this.container.addEventListener("mousedown", this._onMousePressed);
 			document.addEventListener("mousemove", this._onMouseMoved);
 			document.addEventListener("mouseup", this._onCursorReleased);
-			this._container.addEventListener("mouseover", this._onMouseOver);
-			this._container.addEventListener("mouseout", this._onMouseOut);
+			this.container.addEventListener("mouseover", this._onMouseOver);
+			this.container.addEventListener("mouseout", this._onMouseOut);
 			
-			this._container.addEventListener("touchstart", this._onTouchPressed);
+			this.container.addEventListener("touchstart", this._onTouchPressed);
 			document.addEventListener("touchmove", this._onTouchMoved);
 			document.addEventListener("touchend", this._onCursorReleased);
 			document.addEventListener("touchcancel", this._onCursorReleased);
