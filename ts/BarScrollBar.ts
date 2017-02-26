@@ -26,180 +26,179 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
-	export interface BarScrollBar {
-	}
-
-	export function BarScrollBar(doc: SongDocument): void {
-		const preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("barScrollBarPreview");
-		const previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
-		let mouseX: number;
-		let mouseY: number;
-		const container: HTMLElement = <HTMLElement>document.getElementById("barScrollBarContainer");
-		const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("barScrollBar");
-		const graphics: CanvasRenderingContext2D = canvas.getContext("2d");
-		const editorWidth: number = 512;
-		let editorHeight: number = 20;
-		let mouseDown: boolean = false;
-		let mouseOver: boolean = false;
-		let dragging: boolean = false;
-		let dragStart: number;
+	export class BarScrollBar {
+		private readonly _preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("barScrollBarPreview");
+		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
+		private readonly _container: HTMLElement = <HTMLElement>document.getElementById("barScrollBarContainer");
+		private readonly _canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("barScrollBar");
+		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
+		private readonly _editorWidth: number = 512;
 		
-		let barWidth: number;
+		private _mouseX: number;
+		private _mouseY: number;
+		private _editorHeight: number = 20;
+		private _mouseDown: boolean = false;
+		private _mouseOver: boolean = false;
+		private _dragging: boolean = false;
+		private _dragStart: number;
+		private _barWidth: number;
 		
-		function onMouseOver(event: MouseEvent): void {
-			mouseOver = true;
-		}
-		
-		function onMouseOut(event: MouseEvent): void {
-			mouseOver = false;
-		}
-		
-		function onMousePressed(event: MouseEvent): void {
-			event.preventDefault();
-			mouseDown = true;
-			updatePreview();
-			if (mouseX >= doc.barScrollPos * barWidth && mouseX <= (doc.barScrollPos + 16) * barWidth) {
-				dragging = true;
-				dragStart = mouseX;
-			}
-		}
-		
-		function onTouchPressed(event: TouchEvent): void {
-			event.preventDefault();
-			mouseDown = true;
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-			mouseX = event.touches[0].clientX - boundingRect.left;
-			mouseY = event.touches[0].clientY - boundingRect.top;
-			updatePreview();
-			if (mouseX >= doc.barScrollPos * barWidth && mouseX <= (doc.barScrollPos + 16) * barWidth) {
-				dragging = true;
-				dragStart = mouseX;
-			}
-		}
-		
-		function onMouseMoved(event: MouseEvent): void {
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-    		mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
-		    onCursorMoved();
-		}
-		
-		function onTouchMoved(event: TouchEvent): void {
-			if (!mouseDown) return;
-			event.preventDefault();
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-			mouseX = event.touches[0].clientX - boundingRect.left;
-			mouseY = event.touches[0].clientY - boundingRect.top;
-		    onCursorMoved();
-		}
-		
-		function onCursorMoved(): void {
-			if (dragging) {
-				while (mouseX - dragStart < -barWidth * 0.5) {
-					if (doc.barScrollPos > 0) {
-						doc.barScrollPos--;
-						dragStart -= barWidth;
-						doc.changed();
-					} else {
-						break;
-					}
-				}
-				while (mouseX - dragStart > barWidth * 0.5) {
-					if (doc.barScrollPos < doc.song.bars - 16) {
-						doc.barScrollPos++;
-						dragStart += barWidth;
-						doc.changed();
-					} else {
-						break;
-					}
-				}
-			}
-			updatePreview();
-		}
-		
-		function onCursorReleased(event: Event): void {
-			if (!dragging && mouseDown) {
-				if (mouseX < (doc.barScrollPos + 8) * barWidth) {
-					if (doc.barScrollPos > 0) doc.barScrollPos--;
-					doc.changed();
-				} else {
-					if (doc.barScrollPos < doc.song.bars - 16) doc.barScrollPos++;
-					doc.changed();
-				}
-			}
-			mouseDown = false;
-			dragging = false;
-			updatePreview();
-		}
-		
-		function updatePreview(): void {
-			previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
-			if (!mouseOver || mouseDown) return;
+		constructor(private _doc: SongDocument) {
+			this._doc.watch(this._documentChanged);
+			this._documentChanged();
 			
-			const center: number = editorHeight * 0.5;
+			this._container.addEventListener("mousedown", this._onMousePressed);
+			document.addEventListener("mousemove", this._onMouseMoved);
+			document.addEventListener("mouseup", this._onCursorReleased);
+			this._container.addEventListener("mouseover", this._onMouseOver);
+			this._container.addEventListener("mouseout", this._onMouseOut);
+			
+			this._container.addEventListener("touchstart", this._onTouchPressed);
+			document.addEventListener("touchmove", this._onTouchMoved);
+			document.addEventListener("touchend", this._onCursorReleased);
+			document.addEventListener("touchcancel", this._onCursorReleased);
+		}
+		
+		private _onMouseOver = (event: MouseEvent): void => {
+			this._mouseOver = true;
+		}
+		
+		private _onMouseOut = (event: MouseEvent): void => {
+			this._mouseOver = false;
+		}
+		
+		private _onMousePressed = (event: MouseEvent): void => {
+			event.preventDefault();
+			this._mouseDown = true;
+			this._updatePreview();
+			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + 16) * this._barWidth) {
+				this._dragging = true;
+				this._dragStart = this._mouseX;
+			}
+		}
+		
+		private _onTouchPressed = (event: TouchEvent): void => {
+			event.preventDefault();
+			this._mouseDown = true;
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			this._mouseX = event.touches[0].clientX - boundingRect.left;
+			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			this._updatePreview();
+			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + 16) * this._barWidth) {
+				this._dragging = true;
+				this._dragStart = this._mouseX;
+			}
+		}
+		
+		private _onMouseMoved = (event: MouseEvent): void => {
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    this._onCursorMoved();
+		}
+		
+		private _onTouchMoved = (event: TouchEvent): void => {
+			if (!this._mouseDown) return;
+			event.preventDefault();
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			this._mouseX = event.touches[0].clientX - boundingRect.left;
+			this._mouseY = event.touches[0].clientY - boundingRect.top;
+		    this._onCursorMoved();
+		}
+		
+		private _onCursorMoved(): void {
+			if (this._dragging) {
+				while (this._mouseX - this._dragStart < -this._barWidth * 0.5) {
+					if (this._doc.barScrollPos > 0) {
+						this._doc.barScrollPos--;
+						this._dragStart -= this._barWidth;
+						this._doc.changed();
+					} else {
+						break;
+					}
+				}
+				while (this._mouseX - this._dragStart > this._barWidth * 0.5) {
+					if (this._doc.barScrollPos < this._doc.song.bars - 16) {
+						this._doc.barScrollPos++;
+						this._dragStart += this._barWidth;
+						this._doc.changed();
+					} else {
+						break;
+					}
+				}
+			}
+			this._updatePreview();
+		}
+		
+		private _onCursorReleased = (event: Event): void => {
+			if (!this._dragging && this._mouseDown) {
+				if (this._mouseX < (this._doc.barScrollPos + 8) * this._barWidth) {
+					if (this._doc.barScrollPos > 0) this._doc.barScrollPos--;
+					this._doc.changed();
+				} else {
+					if (this._doc.barScrollPos < this._doc.song.bars - 16) this._doc.barScrollPos++;
+					this._doc.changed();
+				}
+			}
+			this._mouseDown = false;
+			this._dragging = false;
+			this._updatePreview();
+		}
+		
+		private _updatePreview(): void {
+			this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+			if (!this._mouseOver || this._mouseDown) return;
+			
+			const center: number = this._editorHeight * 0.5;
 			const base: number = 20;
 			const tip: number = 9;
 			const arrowHeight: number = 6;
-			if (mouseX < doc.barScrollPos * barWidth) {
-				previewGraphics.fillStyle = "#ffffff";
-				previewGraphics.beginPath();
-				previewGraphics.moveTo(tip, center);
-				previewGraphics.lineTo(base, center + arrowHeight);
-				previewGraphics.lineTo(base, center - arrowHeight);
-				previewGraphics.lineTo(tip, center);
-				previewGraphics.fill();
-			} else if (mouseX > (doc.barScrollPos + 16) * barWidth) {
-				previewGraphics.fillStyle = "#ffffff";
-				previewGraphics.beginPath();
-				previewGraphics.moveTo(editorWidth - tip, center);
-				previewGraphics.lineTo(editorWidth - base, center + arrowHeight);
-				previewGraphics.lineTo(editorWidth - base, center - arrowHeight);
-				previewGraphics.lineTo(editorWidth - tip, center);
-				previewGraphics.fill();
+			if (this._mouseX < this._doc.barScrollPos * this._barWidth) {
+				this._previewGraphics.fillStyle = "#ffffff";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.moveTo(tip, center);
+				this._previewGraphics.lineTo(base, center + arrowHeight);
+				this._previewGraphics.lineTo(base, center - arrowHeight);
+				this._previewGraphics.lineTo(tip, center);
+				this._previewGraphics.fill();
+			} else if (this._mouseX > (this._doc.barScrollPos + 16) * this._barWidth) {
+				this._previewGraphics.fillStyle = "#ffffff";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.moveTo(this._editorWidth - tip, center);
+				this._previewGraphics.lineTo(this._editorWidth - base, center + arrowHeight);
+				this._previewGraphics.lineTo(this._editorWidth - base, center - arrowHeight);
+				this._previewGraphics.lineTo(this._editorWidth - tip, center);
+				this._previewGraphics.fill();
 			} else {
-				previewGraphics.lineWidth = 2;
-				previewGraphics.strokeStyle = "#ffffff";
-				previewGraphics.strokeRect(doc.barScrollPos * barWidth, 1, 16 * barWidth, editorHeight - 2);
+				this._previewGraphics.lineWidth = 2;
+				this._previewGraphics.strokeStyle = "#ffffff";
+				this._previewGraphics.strokeRect(this._doc.barScrollPos * this._barWidth, 1, 16 * this._barWidth, this._editorHeight - 2);
 			}
 		}
 		
-		function documentChanged(): void {
-			barWidth = (editorWidth-1) / Math.max(16, doc.song.bars);
-			render();
+		private _documentChanged = (): void => {
+			this._barWidth = (this._editorWidth-1) / Math.max(16, this._doc.song.bars);
+			this._render();
 		}
 		
-		function render(): void {
-			graphics.clearRect(0, 0, editorWidth, editorHeight);
+		private _render(): void {
+			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
 			
-			graphics.fillStyle = "#444444";
-			graphics.fillRect(barWidth * doc.barScrollPos, 2, barWidth * 16, editorHeight - 4);
+			this._graphics.fillStyle = "#444444";
+			this._graphics.fillRect(this._barWidth * this._doc.barScrollPos, 2, this._barWidth * 16, this._editorHeight - 4);
 			
-			for (let i: number = 0; i <= doc.song.bars; i++) {
+			for (let i: number = 0; i <= this._doc.song.bars; i++) {
 				const lineWidth: number = (i % 16 == 0) ? 2 : 0;
-				const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? editorHeight / 8 : editorHeight / 3);
-				graphics.beginPath();
-				graphics.strokeStyle = "#444444";
-				graphics.lineWidth = lineWidth;
-				graphics.moveTo(i * barWidth, lineHeight);
-				graphics.lineTo(i * barWidth, editorHeight - lineHeight);
-				graphics.stroke();
+				const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
+				this._graphics.beginPath();
+				this._graphics.strokeStyle = "#444444";
+				this._graphics.lineWidth = lineWidth;
+				this._graphics.moveTo(i * this._barWidth, lineHeight);
+				this._graphics.lineTo(i * this._barWidth, this._editorHeight - lineHeight);
+				this._graphics.stroke();
 			}
 			
-			updatePreview();
+			this._updatePreview();
 		}
-		
-		doc.watch(documentChanged);
-		documentChanged();
-		
-		container.addEventListener("mousedown", onMousePressed);
-		document.addEventListener("mousemove", onMouseMoved);
-		document.addEventListener("mouseup", onCursorReleased);
-		container.addEventListener("mouseover", onMouseOver);
-		container.addEventListener("mouseout", onMouseOut);
-		
-		container.addEventListener("touchstart", onTouchPressed);
-		document.addEventListener("touchmove", onTouchMoved);
-		document.addEventListener("touchend", onCursorReleased);
-		document.addEventListener("touchcancel", onCursorReleased);
 	}
 }

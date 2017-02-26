@@ -34,88 +34,74 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
-	export interface SongEditor {
-		closePrompt: ()=>void;
-		promptVisible: boolean;
-	}
-
-	export interface SongEditorClass {
-		(doc: SongDocument): void;
-		channelColorsDim?: string[];
-		channelColorsBright?: string[];
-		noteColorsDim?: string[];
-		noteColorsBright?: string[];
-	}
-
-	export const SongEditor: SongEditorClass = function(doc: SongDocument): void {
-		const _this: SongEditor = this;
-		const width: number = 700;
-		const height: number = 645;
-		const patternEditor: PatternEditor = new PatternEditor(doc);
-		const trackEditor: TrackEditor = new TrackEditor(doc, this);
-		const loopEditor: LoopEditor = new LoopEditor(doc);
-		const barScrollBar: BarScrollBar = new BarScrollBar(doc);
-		const octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(doc);
-		const piano: Piano = new Piano(doc);
-		let copyTones: Tone[];
-		let copyBeats: number = 0;
-		let copyParts: number = 0;
-		let copyDrums: boolean = false;
-		let wasPlaying: boolean;
-		
-		this.promptVisible = false;
-		
-		function BuildOptions(items: any[]): string {
-			let result: string = "";
-			for (let i: number = 0; i < items.length; i++) {
-				result = result + '<option value="' + items[i] + '">' + items[i] + '</option>';
-			}
-			return result;
+	function BuildOptions(items: ReadonlyArray<string | number>): string {
+		let result: string = "";
+		for (let i: number = 0; i < items.length; i++) {
+			result = result + '<option value="' + items[i] + '">' + items[i] + '</option>';
 		}
-		
-		function BuildOptionsWithTitle(items: string[][], title: string): string {
-			let result: string = "";
-			result = result + '<option value="' + title + '" selected="selected" disabled="disabled">' + title + '</option>';
-			for (let i: number = 0; i < items.length; i++) {
-				result = result + '<option value="' + items[i][1] + '">' + items[i][0] + '</option>';
-			}
-			return result;
+		return result;
+	}
+	
+	function BuildOptionsWithTitle(items: ReadonlyArray<ReadonlyArray<string>>, title: string): string {
+		let result: string = "";
+		result = result + '<option value="' + title + '" selected="selected" disabled="disabled">' + title + '</option>';
+		for (let i: number = 0; i < items.length; i++) {
+			result = result + '<option value="' + items[i][1] + '">' + items[i][0] + '</option>';
 		}
+		return result;
+	}
+	
+	export class SongEditor {
+		public static readonly channelColorsDim: ReadonlyArray<string>    = ["#0099a1", "#a1a100", "#c75000", "#6f6f6f"];
+		public static readonly channelColorsBright: ReadonlyArray<string> = ["#25f3ff", "#ffff25", "#ff9752", "#aaaaaa"];
+		public static readonly noteColorsDim: ReadonlyArray<string>       = ["#00bdc7", "#c7c700", "#ff771c", "#aaaaaa"];
+		public static readonly noteColorsBright: ReadonlyArray<string>    = ["#92f9ff", "#ffff92", "#ffcdab", "#eeeeee"];
 		
-		const promptBackground: HTMLElement = <HTMLElement>document.getElementById("promptBackground");
-		//const songSizePrompt: HTMLElement = <HTMLElement>document.getElementById("songSizePrompt");
-		//const exportPrompt: HTMLElement = <HTMLElement>document.getElementById("exportPrompt");
-		const editButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("editButton");
-		const optionsButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("optionsButton");
-		const mainLayer: HTMLElement = <HTMLElement>document.getElementById("mainLayer");
-		const editorBox: HTMLElement = <HTMLElement>document.getElementById("editorBox");
-		const patternContainerContainer: HTMLElement = <HTMLElement>document.getElementById("patternContainerContainer");
-		const patternEditorContainer: HTMLElement = <HTMLElement>document.getElementById("patternEditorContainer");
-		const pianoContainer: HTMLElement = <HTMLElement>document.getElementById("pianoContainer");
-		const octaveScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("octaveScrollBarContainer");
-		const trackEditorContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("trackEditorContainer");
-		const barScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("barScrollBarContainer");
-		const playButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("playButton");
-		const exportButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("exportButton");
-		const volumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("volumeSlider");
-		const filterDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("filterDropDownGroup");
-		const chorusDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("chorusDropDownGroup");
-		const effectDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("effectDropDownGroup");
-		const patternSettingsLabel: HTMLSelectElement = <HTMLSelectElement>document.getElementById("patternSettingsLabel");
-		const instrumentDropDownGroup: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDownGroup");
-		const scaleDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("scaleDropDown");
-		const keyDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("keyDropDown");
-		const tempoSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("tempoSlider");
-		const partDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("partDropDown");
-		const instrumentDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDown");
-		const channelVolumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("channelVolumeSlider");
-		const waveDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("waveDropDown");
-		const attackDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("attackDropDown");
-		const filterDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("filterDropDown");
-		const chorusDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("chorusDropDown");
-		const effectDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("effectDropDown");
+		public promptVisible: boolean = false;
 		
-		const editCommands: string[][] = [
+		private readonly _width: number = 700;
+		private readonly _height: number = 645;
+		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
+		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
+		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
+		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc);
+		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
+		private readonly _piano: Piano = new Piano(this._doc);
+		private readonly _promptBackground: HTMLElement = <HTMLElement>document.getElementById("promptBackground");
+		//private readonly _songSizePrompt: HTMLElement = <HTMLElement>document.getElementById("songSizePrompt");
+		//private readonly _exportPrompt: HTMLElement = <HTMLElement>document.getElementById("exportPrompt");
+		private readonly _editButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("editButton");
+		private readonly _optionsButton: HTMLSelectElement = <HTMLSelectElement>document.getElementById("optionsButton");
+		private readonly _mainLayer: HTMLElement = <HTMLElement>document.getElementById("mainLayer");
+		private readonly _editorBox: HTMLElement = <HTMLElement>document.getElementById("editorBox");
+		private readonly _patternContainerContainer: HTMLElement = <HTMLElement>document.getElementById("patternContainerContainer");
+		private readonly _patternEditorContainer: HTMLElement = <HTMLElement>document.getElementById("patternEditorContainer");
+		private readonly _pianoContainer: HTMLElement = <HTMLElement>document.getElementById("pianoContainer");
+		private readonly _octaveScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("octaveScrollBarContainer");
+		private readonly _trackEditorContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("trackEditorContainer");
+		private readonly _barScrollBarContainer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("barScrollBarContainer");
+		private readonly _playButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("playButton");
+		private readonly _exportButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("exportButton");
+		private readonly _volumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("volumeSlider");
+		private readonly _filterDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("filterDropDownGroup");
+		private readonly _chorusDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("chorusDropDownGroup");
+		private readonly _effectDropDownGroup: HTMLElement = <HTMLElement>document.getElementById("effectDropDownGroup");
+		private readonly _patternSettingsLabel: HTMLSelectElement = <HTMLSelectElement>document.getElementById("patternSettingsLabel");
+		private readonly _instrumentDropDownGroup: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDownGroup");
+		private readonly _scaleDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("scaleDropDown");
+		private readonly _keyDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("keyDropDown");
+		private readonly _tempoSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("tempoSlider");
+		private readonly _partDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("partDropDown");
+		private readonly _instrumentDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("instrumentDropDown");
+		private readonly _channelVolumeSlider: HTMLInputElement = <HTMLInputElement>document.getElementById("channelVolumeSlider");
+		private readonly _waveDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("waveDropDown");
+		private readonly _attackDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("attackDropDown");
+		private readonly _filterDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("filterDropDown");
+		private readonly _chorusDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("chorusDropDown");
+		private readonly _effectDropDown: HTMLSelectElement = <HTMLSelectElement>document.getElementById("effectDropDown");
+		private readonly _waveNames: string = BuildOptions(Music.waveNames);
+		private readonly _drumNames: string = BuildOptions(Music.drumNames);
+		private readonly _editCommands: ReadonlyArray<ReadonlyArray<string>> = [
 			[ "Undo (Z)", "undo" ],
 			[ "Redo (Y)", "redo" ],
 			[ "Copy Pattern (C)", "copy" ],
@@ -124,351 +110,348 @@ module beepbox {
 			[ "Shift Notes Down (-)", "transposeDown" ],
 			[ "Custom song size...", "duration" ],
 			[ "Clean Slate", "clean" ],
-		]
+		];
 		
-		editButton.innerHTML  = BuildOptionsWithTitle(editCommands, "Edit Menu");
-		scaleDropDown.innerHTML  = BuildOptions(Music.scaleNames);
-		keyDropDown.innerHTML    = BuildOptions(Music.keyNames);
-		partDropDown.innerHTML   = BuildOptions(Music.partNames);
-		filterDropDown.innerHTML = BuildOptions(Music.filterNames);
-		attackDropDown.innerHTML = BuildOptions(Music.attackNames);
-		effectDropDown.innerHTML = BuildOptions(Music.effectNames);
-		chorusDropDown.innerHTML = BuildOptions(Music.chorusNames);
-		const waveNames: string = BuildOptions(Music.waveNames);
-		const drumNames: string = BuildOptions(Music.drumNames);
+		private _copyTones: Tone[];
+		private _copyBeats: number = 0;
+		private _copyParts: number = 0;
+		private _copyDrums: boolean = false;
+		private _wasPlaying: boolean;
 		
-		function setPrompt(newPrompt: (doc: SongDocument, songEditor: SongEditor)=>void): void {
-			if (_this.promptVisible) return;
-			wasPlaying = doc.synth.playing;
-			if (wasPlaying) togglePlay();
-			promptBackground.style.display = "block";
-			new newPrompt(doc, _this);
-			_this.promptVisible = true;
-		}
-		
-		this.closePrompt = (()=>{
-			_this.promptVisible = false;
-			promptBackground.style.display = "none";
-			if (wasPlaying) togglePlay();
-			mainLayer.focus();
-		});
-		
-		function refocusStage(event: Event): void {
-			mainLayer.focus();
-		}
-		
-		function onUpdated(): void {
-			const optionCommands: string[][] = [
-				[ (doc.showLetters ? "✓ " : "") + "Show Piano", "showLetters" ],
-				[ (doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes", "showFifth" ],
-				[ (doc.showChannels ? "✓ " : "") + "Show All Channels", "showChannels" ],
-				[ (doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar", "showScrollBar" ],
-			]
-			optionsButton.innerHTML  = BuildOptionsWithTitle(optionCommands, "Preferences Menu");
+		constructor(private _doc: SongDocument) {
+			this._editButton.innerHTML  = BuildOptionsWithTitle(this._editCommands, "Edit Menu");
+			this._scaleDropDown.innerHTML  = BuildOptions(Music.scaleNames);
+			this._keyDropDown.innerHTML    = BuildOptions(Music.keyNames);
+			this._partDropDown.innerHTML   = BuildOptions(Music.partNames);
+			this._filterDropDown.innerHTML = BuildOptions(Music.filterNames);
+			this._attackDropDown.innerHTML = BuildOptions(Music.attackNames);
+			this._effectDropDown.innerHTML = BuildOptions(Music.effectNames);
+			this._chorusDropDown.innerHTML = BuildOptions(Music.chorusNames);
 			
-			scaleDropDown.selectedIndex = doc.song.scale;
-			keyDropDown.selectedIndex = doc.song.key;
-			tempoSlider.value = ""+doc.song.tempo;
-			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
-			if (doc.channel == 3) {
-				filterDropDownGroup.style.visibility = "hidden";
-				chorusDropDownGroup.style.visibility = "hidden";
-				effectDropDownGroup.style.visibility = "hidden";
-				waveDropDown.innerHTML = drumNames;
+			this._doc.watch(this._onUpdated);
+			this._onUpdated();
+			
+			this._editButton.addEventListener("change", this._editMenuHandler);
+			this._optionsButton.addEventListener("change", this._optionsMenuHandler);
+			this._scaleDropDown.addEventListener("change", this._onSetScale);
+			this._keyDropDown.addEventListener("change", this._onSetKey);
+			this._tempoSlider.addEventListener("input", this._onSetTempo);
+			this._partDropDown.addEventListener("change", this._onSetParts);
+			this._instrumentDropDown.addEventListener("change", this._onSetInstrument);
+			this._channelVolumeSlider.addEventListener("input", this._onSetVolume);
+			this._waveDropDown.addEventListener("change", this._onSetWave);
+			this._attackDropDown.addEventListener("change", this._onSetAttack);
+			this._filterDropDown.addEventListener("change", this._onSetFilter);
+			this._chorusDropDown.addEventListener("change", this._onSetChorus);
+			this._effectDropDown.addEventListener("change", this._onSetEffect);
+			this._playButton.addEventListener("click", this._togglePlay);
+			this._exportButton.addEventListener("click", this._openExportPrompt);
+			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
+			
+			this._editorBox.addEventListener("mousedown", this._refocusStage);
+			this._mainLayer.addEventListener("keydown", this._onKeyPressed);
+			this._mainLayer.addEventListener("keyup", this._onKeyReleased);
+		}
+		
+		private _setPrompt(prompt: {container: HTMLElement}): void {
+			if (this.promptVisible) return;
+			this._wasPlaying = this._doc.synth.playing;
+			if (this._wasPlaying) this._togglePlay();
+			this._promptBackground.style.display = "block";
+			this._mainLayer.appendChild(prompt.container);
+			this.promptVisible = true;
+		}
+		
+		public closePrompt(prompt: {container: HTMLElement}) {
+			this.promptVisible = false;
+			this._promptBackground.style.display = "none";
+			if (this._wasPlaying) this._togglePlay();
+			this._mainLayer.removeChild(prompt.container);
+			this._mainLayer.focus();
+		};
+		
+		private _refocusStage = (event: Event): void => {
+			this._mainLayer.focus();
+		}
+		
+		private _onUpdated = (): void => {
+			const optionCommands: string[][] = [
+				[ (this._doc.showLetters ? "✓ " : "") + "Show Piano", "showLetters" ],
+				[ (this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes", "showFifth" ],
+				[ (this._doc.showChannels ? "✓ " : "") + "Show All Channels", "showChannels" ],
+				[ (this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar", "showScrollBar" ],
+			]
+			this._optionsButton.innerHTML  = BuildOptionsWithTitle(optionCommands, "Preferences Menu");
+			
+			this._scaleDropDown.selectedIndex = this._doc.song.scale;
+			this._keyDropDown.selectedIndex = this._doc.song.key;
+			this._tempoSlider.value = ""+this._doc.song.tempo;
+			this._partDropDown.selectedIndex = Music.partCounts.indexOf(this._doc.song.parts);
+			if (this._doc.channel == 3) {
+				this._filterDropDownGroup.style.visibility = "hidden";
+				this._chorusDropDownGroup.style.visibility = "hidden";
+				this._effectDropDownGroup.style.visibility = "hidden";
+				this._waveDropDown.innerHTML = this._drumNames;
 			} else {
-				filterDropDownGroup.style.visibility = "visible";
-				chorusDropDownGroup.style.visibility = "visible";
-				effectDropDownGroup.style.visibility = "visible";
-				waveDropDown.innerHTML = waveNames;
+				this._filterDropDownGroup.style.visibility = "visible";
+				this._chorusDropDownGroup.style.visibility = "visible";
+				this._effectDropDownGroup.style.visibility = "visible";
+				this._waveDropDown.innerHTML = this._waveNames;
 			}
 			
-			const pattern: BarPattern | null = doc.getCurrentPattern();
+			const pattern: BarPattern | null = this._doc.getCurrentPattern();
 			
-			patternSettingsLabel.style.visibility    = (doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
-			instrumentDropDownGroup.style.visibility = (doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
+			this._patternSettingsLabel.style.visibility    = (this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
+			this._instrumentDropDownGroup.style.visibility = (this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
 			const instrumentList: number[] = [];
-			for (let i: number = 0; i < doc.song.instruments; i++) {
+			for (let i: number = 0; i < this._doc.song.instruments; i++) {
 				instrumentList.push(i + 1);
 			}
-			instrumentDropDown.innerHTML = BuildOptions(instrumentList);
+			this._instrumentDropDown.innerHTML = BuildOptions(instrumentList);
 			
-			const instrument: number = doc.getCurrentInstrument();
-			waveDropDown.selectedIndex   = doc.song.instrumentWaves[doc.channel][instrument];
-			filterDropDown.selectedIndex = doc.song.instrumentFilters[doc.channel][instrument];
-			attackDropDown.selectedIndex = doc.song.instrumentAttacks[doc.channel][instrument];
-			effectDropDown.selectedIndex = doc.song.instrumentEffects[doc.channel][instrument];
-			chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][instrument];
-			channelVolumeSlider.value = -doc.song.instrumentVolumes[doc.channel][instrument]+"";
-			instrumentDropDown.selectedIndex = instrument;
+			const instrument: number = this._doc.getCurrentInstrument();
+			this._waveDropDown.selectedIndex   = this._doc.song.instrumentWaves[this._doc.channel][instrument];
+			this._filterDropDown.selectedIndex = this._doc.song.instrumentFilters[this._doc.channel][instrument];
+			this._attackDropDown.selectedIndex = this._doc.song.instrumentAttacks[this._doc.channel][instrument];
+			this._effectDropDown.selectedIndex = this._doc.song.instrumentEffects[this._doc.channel][instrument];
+			this._chorusDropDown.selectedIndex = this._doc.song.instrumentChorus[this._doc.channel][instrument];
+			this._channelVolumeSlider.value = -this._doc.song.instrumentVolumes[this._doc.channel][instrument]+"";
+			this._instrumentDropDown.selectedIndex = instrument;
 			
-			//currentState = doc.showLetters ? (doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (doc.showScrollBar ? "showScrollBar" : "hideAll");
-			pianoContainer.style.display = doc.showLetters ? "table-cell" : "none";
-			octaveScrollBarContainer.style.display = doc.showScrollBar ? "table-cell" : "none";
-			barScrollBarContainer.style.display = doc.song.bars > 16 ? "table-row" : "none";
+			//currentState = this._doc.showLetters ? (this._doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (this._doc.showScrollBar ? "showScrollBar" : "hideAll");
+			this._pianoContainer.style.display = this._doc.showLetters ? "table-cell" : "none";
+			this._octaveScrollBarContainer.style.display = this._doc.showScrollBar ? "table-cell" : "none";
+			this._barScrollBarContainer.style.display = this._doc.song.bars > 16 ? "table-row" : "none";
 			
 			let patternWidth: number = 512;
-			if (doc.showLetters) patternWidth -= 32;
-			if (doc.showScrollBar) patternWidth -= 20;
-			patternEditorContainer.style.width = String(patternWidth) + "px";
+			if (this._doc.showLetters) patternWidth -= 32;
+			if (this._doc.showScrollBar) patternWidth -= 20;
+			this._patternEditorContainer.style.width = String(patternWidth) + "px";
 			
 			let trackHeight: number = 128;
-			if (doc.song.bars > 16) trackHeight -= 20;
-			trackEditorContainer.style.height = String(trackHeight) + "px";
+			if (this._doc.song.bars > 16) trackHeight -= 20;
+			this._trackEditorContainer.style.height = String(trackHeight) + "px";
 			
-			volumeSlider.value = String(doc.volume);
+			this._volumeSlider.value = String(this._doc.volume);
 			
-			if (doc.synth.playing) {
-				playButton.innerHTML = "Pause";
+			if (this._doc.synth.playing) {
+				this._playButton.innerHTML = "Pause";
 			} else {
-				playButton.innerHTML = "Play";
+				this._playButton.innerHTML = "Play";
 			}
 		}
 		
-		function onKeyPressed(event: KeyboardEvent): void {
-			if (_this.promptVisible) return;
+		private _onKeyPressed = (event: KeyboardEvent): void => {
+			if (this.promptVisible) return;
 			//if (event.ctrlKey)
 			//trace(event.keyCode)
 			switch (event.keyCode) {
 				case 32: // space
 					//stage.focus = stage;
-					togglePlay();
+					this._togglePlay();
 					event.preventDefault();
 					break;
 				case 90: // z
 					if (event.shiftKey) {
-						doc.history.redo();
+						this._doc.history.redo();
 					} else {
-						doc.history.undo();
+						this._doc.history.undo();
 					}
 					event.preventDefault();
 					break;
 				case 89: // y
-					doc.history.redo();
+					this._doc.history.redo();
 					event.preventDefault();
 					break;
 				case 67: // c
-					copy();
+					this._copy();
 					event.preventDefault();
 					break;
 				case 86: // v
-					paste();
+					this._paste();
 					event.preventDefault();
 					break;
 				case 219: // left brace
-					doc.synth.prevBar();
+					this._doc.synth.prevBar();
 					event.preventDefault();
 					break;
 				case 221: // right brace
-					doc.synth.nextBar();
+					this._doc.synth.nextBar();
 					event.preventDefault();
 					break;
 				case 71: // g
-					doc.synth.stutterPressed = true;
+					this._doc.synth.stutterPressed = true;
 					event.preventDefault();
 					break;
 				case 189: // -
 				case 173: // Firefox -
-					transpose(false);
+					this._transpose(false);
 					event.preventDefault();
 					break;
 				case 187: // +
 				case 61: // Firefox +
-					transpose(true);
+					this._transpose(true);
 					event.preventDefault();
 					break;
 			}
 		}
 		
-		function onKeyReleased(event: KeyboardEvent): void {
+		private _onKeyReleased = (event: KeyboardEvent): void => {
 			switch (event.keyCode) {
 				case 71: // g
-					doc.synth.stutterPressed = false;
+					this._doc.synth.stutterPressed = false;
 					break;
 			}
 		}
 		
-		function togglePlay(): void {
-			if (doc.synth.playing) {
-				doc.synth.pause();
-				doc.synth.snapToBar();
-				playButton.innerHTML = "Play";
+		private _togglePlay = (): void => {
+			if (this._doc.synth.playing) {
+				this._doc.synth.pause();
+				this._doc.synth.snapToBar();
+				this._playButton.innerHTML = "Play";
 			} else {
-				doc.synth.play();
-				playButton.innerHTML = "Pause";
+				this._doc.synth.play();
+				this._playButton.innerHTML = "Pause";
 			}
 		}
 		
-		function setVolumeSlider(): void {
-			doc.setVolume(Number(volumeSlider.value));
+		private _setVolumeSlider = (): void => {
+			this._doc.setVolume(Number(this._volumeSlider.value));
 		}
 		
-		function copy(): void {
-			const pattern: BarPattern | null = doc.getCurrentPattern();
+		private _copy(): void {
+			const pattern: BarPattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
-			copyTones = pattern.cloneTones();
-			copyBeats = doc.song.beats;
-			copyParts = doc.song.parts;
-			copyDrums = doc.channel == 3;
+			this._copyTones = pattern.cloneTones();
+			this._copyBeats = this._doc.song.beats;
+			this._copyParts = this._doc.song.parts;
+			this._copyDrums = this._doc.channel == 3;
 		}
 		
-		function paste(): void {
-			if (!canPaste()) return;
-			doc.history.record(new ChangePaste(doc, copyTones));
+		private _paste(): void {
+			if (!this._canPaste()) return;
+			this._doc.history.record(new ChangePaste(this._doc, this._copyTones));
 		}
 		
-		function canPaste(): boolean {
-			return doc.getCurrentPattern() != null && copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts && copyDrums == (doc.channel == 3);
+		private _canPaste(): boolean {
+			return this._doc.getCurrentPattern() != null && this._copyTones != null && this._copyBeats == this._doc.song.beats && this._copyParts == this._doc.song.parts && this._copyDrums == (this._doc.channel == 3);
 		}
 		
-		function cleanSlate(): void {
-			doc.history.record(new ChangeSong(doc, null));
-			patternEditor.resetCopiedPins();
+		private _cleanSlate(): void {
+			this._doc.history.record(new ChangeSong(this._doc, null));
+			this._patternEditor.resetCopiedPins();
 		}
 		
-		function transpose(upward: boolean): void {
-			const pattern: BarPattern | null = doc.getCurrentPattern();
+		private _transpose(upward: boolean): void {
+			const pattern: BarPattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
-			doc.history.record(new ChangeTranspose(doc, pattern, upward));
+			this._doc.history.record(new ChangeTranspose(this._doc, pattern, upward));
 		}
 		
-		function openPublishPrompt(): void {
-			//setPrompt(PublishPrompt.make(doc, closePrompt));
+		private _openExportPrompt = (): void => {
+			this._setPrompt(new ExportPrompt(this._doc, this));
 		}
 		
-		function openExportPrompt(): void {
-			setPrompt(ExportPrompt);
-			//setPrompt(ExportPrompt.make(doc, closePrompt));
-		}
-		
-		function copyToClipboard(): void {
+		private _copyToClipboard = (): void => {
 			//Clipboard.generalClipboard.clear();
-			//Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, "http://www.beepbox.co/" + doc.song.toString());
+			//Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, "http://www.beepbox.co/" + this._doc.song.toString());
 		}
 		
-		function onSetScale(): void {
-			doc.history.record(new ChangeScale(doc, scaleDropDown.selectedIndex));
+		private _onSetScale = (): void => {
+			this._doc.history.record(new ChangeScale(this._doc, this._scaleDropDown.selectedIndex));
 		}
 		
-		function onSetKey(): void {
-			doc.history.record(new ChangeKey(doc, keyDropDown.selectedIndex));
+		private _onSetKey = (): void => {
+			this._doc.history.record(new ChangeKey(this._doc, this._keyDropDown.selectedIndex));
 		}
 		
-		function onSetTempo(): void {
-			doc.history.record(new ChangeTempo(doc, parseInt(tempoSlider.value)));
+		private _onSetTempo = (): void => {
+			this._doc.history.record(new ChangeTempo(this._doc, parseInt(this._tempoSlider.value)));
 		}
 		
-		function onSetParts(): void {
-			doc.history.record(new ChangeParts(doc, Music.partCounts[partDropDown.selectedIndex]));
+		private _onSetParts = (): void => {
+			this._doc.history.record(new ChangeParts(this._doc, Music.partCounts[this._partDropDown.selectedIndex]));
 		}
 		
-		function onSetWave(): void {
-			doc.history.record(new ChangeWave(doc, waveDropDown.selectedIndex));
+		private _onSetWave = (): void => {
+			this._doc.history.record(new ChangeWave(this._doc, this._waveDropDown.selectedIndex));
 		}
 		
-		function onSetFilter(): void {
-			doc.history.record(new ChangeFilter(doc, filterDropDown.selectedIndex));
+		private _onSetFilter = (): void => {
+			this._doc.history.record(new ChangeFilter(this._doc, this._filterDropDown.selectedIndex));
 		}
 		
-		function onSetAttack(): void {
-			doc.history.record(new ChangeAttack(doc, attackDropDown.selectedIndex));
+		private _onSetAttack = (): void => {
+			this._doc.history.record(new ChangeAttack(this._doc, this._attackDropDown.selectedIndex));
 		}
 		
-		function onSetEffect(): void {
-			doc.history.record(new ChangeEffect(doc, effectDropDown.selectedIndex));
+		private _onSetEffect = (): void => {
+			this._doc.history.record(new ChangeEffect(this._doc, this._effectDropDown.selectedIndex));
 		}
 		
-		function onSetChorus(): void {
-			doc.history.record(new ChangeChorus(doc, chorusDropDown.selectedIndex));
+		private _onSetChorus = (): void => {
+			this._doc.history.record(new ChangeChorus(this._doc, this._chorusDropDown.selectedIndex));
 		}
 		
-		function onSetVolume(): void {
-			doc.history.record(new ChangeVolume(doc, -parseInt(channelVolumeSlider.value)));
+		private _onSetVolume = (): void => {
+			this._doc.history.record(new ChangeVolume(this._doc, -parseInt(this._channelVolumeSlider.value)));
 		}
 		
-		function onSetInstrument(): void {
-			if (doc.getCurrentPattern() == null) return;
-			doc.history.record(new ChangePatternInstrument(doc, instrumentDropDown.selectedIndex));
+		private _onSetInstrument = (): void => {
+			if (this._doc.getCurrentPattern() == null) return;
+			this._doc.history.record(new ChangePatternInstrument(this._doc, this._instrumentDropDown.selectedIndex));
 		}
 		
-		function editMenuHandler(event:Event): void {
-			switch (editButton.value) {
+		private _editMenuHandler = (event:Event): void => {
+			switch (this._editButton.value) {
 				case "undo":
-					doc.history.undo();
+					this._doc.history.undo();
 					break;
 				case "redo":
-					doc.history.redo();
+					this._doc.history.redo();
 					break;
 				case "copy":
-					copy();
+					this._copy();
 					break;
 				case "paste":
-					paste();
+					this._paste();
 					break;
 				case "transposeUp":
-					transpose(true);
+					this._transpose(true);
 					break;
 				case "transposeDown":
-					transpose(false);
+					this._transpose(false);
 					break;
 				case "clean":
-					cleanSlate();
+					this._cleanSlate();
 					break;
 				case "duration":
-					setPrompt(SongDurationPrompt);
+					this._setPrompt(new SongDurationPrompt(this._doc, this));
 					break;
 			}
-			editButton.selectedIndex = 0;
+			this._editButton.selectedIndex = 0;
 		}
 		
-		function optionsMenuHandler(event:Event): void {
-			switch (optionsButton.value) {
+		private _optionsMenuHandler = (event:Event): void => {
+			switch (this._optionsButton.value) {
 				case "showLetters":
-					doc.showLetters = !doc.showLetters;
+					this._doc.showLetters = !this._doc.showLetters;
 					break;
 				case "showFifth":
-					doc.showFifth = !doc.showFifth;
+					this._doc.showFifth = !this._doc.showFifth;
 					break;
 				case "showChannels":
-					doc.showChannels = !doc.showChannels;
+					this._doc.showChannels = !this._doc.showChannels;
 					break;
 				case "showScrollBar":
-					doc.showScrollBar = !doc.showScrollBar;
+					this._doc.showScrollBar = !this._doc.showScrollBar;
 					break;
 			}
-			optionsButton.selectedIndex = 0;
-			doc.changed();
-			doc.savePreferences();
+			this._optionsButton.selectedIndex = 0;
+			this._doc.changed();
+			this._doc.savePreferences();
 		}
-		
-		doc.watch(onUpdated);
-		onUpdated();
-		
-		editButton.addEventListener("change", editMenuHandler);
-		optionsButton.addEventListener("change", optionsMenuHandler);
-		scaleDropDown.addEventListener("change", onSetScale);
-		keyDropDown.addEventListener("change", onSetKey);
-		tempoSlider.addEventListener("input", onSetTempo);
-		partDropDown.addEventListener("change", onSetParts);
-		instrumentDropDown.addEventListener("change", onSetInstrument);
-		channelVolumeSlider.addEventListener("input", onSetVolume);
-		waveDropDown.addEventListener("change",   onSetWave);
-		attackDropDown.addEventListener("change", onSetAttack);
-		filterDropDown.addEventListener("change", onSetFilter);
-		chorusDropDown.addEventListener("change", onSetChorus);
-		effectDropDown.addEventListener("change", onSetEffect);
-		playButton.addEventListener("click", togglePlay);
-		exportButton.addEventListener("click", openExportPrompt);
-		volumeSlider.addEventListener("input", setVolumeSlider);
-		
-		editorBox.addEventListener("mousedown", refocusStage);
-		mainLayer.addEventListener("keydown", onKeyPressed);
-		mainLayer.addEventListener("keyup", onKeyReleased);
 	}
-	
-	SongEditor.channelColorsDim    = ["#0099a1", "#a1a100", "#c75000", "#6f6f6f"];
-	SongEditor.channelColorsBright = ["#25f3ff", "#ffff25", "#ff9752", "#aaaaaa"];
-	SongEditor.noteColorsDim       = ["#00bdc7", "#c7c700", "#ff771c", "#aaaaaa"];
-	SongEditor.noteColorsBright    = ["#92f9ff", "#ffff92", "#ffcdab", "#eeeeee"];
 }
 
 
@@ -707,39 +690,6 @@ beepboxEditorContainer.innerHTML = `
 	</div>
 	
 	<div id="promptBackground" style="position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;"></div>
-	
-	<div id="songSizePrompt" style="position: absolute; display: none;">
-		<div style="display: table-cell; vertical-align: middle; width: 700px; height: 645px;">
-			<div style="margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;">
-				<div style="font-size: 30px">Custom Song Size</div>
-				
-				<div style="height: 30px;"></div>
-				
-				<div style="vertical-align: middle; line-height: 46px;">
-					<span style="float: right;"><div style="display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;">Beats per bar:<br /><span style="color: #888888;">(Multiples of 3 or 4 are recommended)</span></div><div style="display: inline-block; width: 20px; height: 1px;"></div><input id="beatsStepper" style="width: 40px; height: 16px;" type="number" min="1" max="128" step="1" /></span>
-					<div style="clear: both;"></div>
-				</div>
-				<div style="vertical-align: middle; line-height: 46px;">
-					<span style="float: right;"><div style="display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;">Bars per song:<br /><span style="color: #888888;">(Multiples of 2 or 4 are recommended)</span></div><div style="display: inline-block; width: 20px; height: 1px;"></div><input id="barsStepper" style="width: 40px; height: 16px;" type="number" min="1" max="128" step="1" /></span>
-					<div style="clear: both;"></div>
-				</div>
-				<div style="vertical-align: middle; line-height: 46px;">
-					<span style="float: right;">Patterns per channel:<div style="display: inline-block; width: 20px; height: 1px;"></div><input id="patternsStepper" style="width: 40px; height: 16px;" type="number" min="1" max="32" step="1" /></span>
-					<div style="clear: both;"></div>
-				</div>
-				<div style="vertical-align: middle; line-height: 46px;">
-					<span style="float: right;">Instruments per channel:<div style="display: inline-block; width: 20px; height: 1px;"></div><input id="instrumentsStepper" style="width: 40px; height: 16px;" type="number" min="1" max="10" step="1" /></span>
-					<div style="clear: both;"></div>
-				</div>
-				
-				<div style="height: 30px;"></div>
-				
-				<button id="songDurationOkayButton" style="width:125px; float: left;" type="button">Okay</button>
-				<button id="songDurationCancelButton" style="width:125px; float: right;" type="button">Cancel</button>
-				<div style="clear: both;"></div>
-			</div>
-		</div>
-	</div>
 </div>
 `;
 

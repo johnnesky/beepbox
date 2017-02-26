@@ -26,193 +26,187 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
-	export interface OctaveScrollBar {
-	}
-
-	export function OctaveScrollBar(doc: SongDocument): void {
-		const preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBarPreview");
-		const previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
-		let mouseX: number;
-		let mouseY: number;
-		const container: HTMLElement = <HTMLElement>document.getElementById("octaveScrollBarContainer");
-		const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBar");
-		const graphics: CanvasRenderingContext2D = canvas.getContext("2d");
-		const editorWidth: number = 20;
-		const editorHeight: number = 481;
-		let mouseDown: boolean = false;
-		let mouseOver: boolean = false;
+	export class OctaveScrollBar {
+		private readonly _preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBarPreview");
+		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
+		private readonly _container: HTMLElement = <HTMLElement>document.getElementById("octaveScrollBarContainer");
+		private readonly _canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("octaveScrollBar");
+		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
+		private readonly _editorWidth: number = 20;
+		private readonly _editorHeight: number = 481;
+		private readonly _rootHeight: number = 4.0;
+		private readonly _octaveCount: number = 7;
 		
-		const rootHeight: number = 4.0;
-		const octaveCount: number = 7;
-		let octaveHeight: number;
-		let barHeight: number;
-		let dragging: boolean = false;
-		let dragStart: number;
-		let currentOctave: number;
-		let barBottom: number;
+		private _mouseX: number;
+		private _mouseY: number;
+		private _mouseDown: boolean = false;
+		private _mouseOver: boolean = false;
+		private _octaveHeight: number;
+		private _barHeight: number;
+		private _dragging: boolean = false;
+		private _dragStart: number;
+		private _currentOctave: number;
+		private _barBottom: number;
 		
-		function onMouseOver(event: MouseEvent): void {
-			mouseOver = true;
-		}
-		
-		function onMouseOut(event: MouseEvent): void {
-			mouseOver = false;
-		}
-		
-		function onMousePressed(event: MouseEvent): void {
-			event.preventDefault();
-			mouseDown = true;
-			if (doc.channel == 3) return;
-			updatePreview();
+		constructor(private _doc: SongDocument) {
+			this._doc.watch(this._documentChanged);
+			this._documentChanged();
 			
-			if (mouseY >= barBottom - barHeight && mouseY <= barBottom) {
-				dragging = true;
-				dragStart = mouseY;
+			this._octaveHeight = (this._editorHeight - this._rootHeight) / this._octaveCount;
+			this._barHeight = (this._octaveHeight * 3 + this._rootHeight);
+			
+			this._container.addEventListener("mousedown", this._onMousePressed);
+			document.addEventListener("mousemove", this._onMouseMoved);
+			document.addEventListener("mouseup", this._onCursorReleased);
+			this._container.addEventListener("mouseover", this._onMouseOver);
+			this._container.addEventListener("mouseout", this._onMouseOut);
+			
+			this._container.addEventListener("touchstart", this._onTouchPressed);
+			document.addEventListener("touchmove", this._onTouchMoved);
+			document.addEventListener("touchend", this._onCursorReleased);
+			document.addEventListener("touchcancel", this._onCursorReleased);
+		}
+		
+		private _onMouseOver = (event: MouseEvent): void => {
+			this._mouseOver = true;
+		}
+		
+		private _onMouseOut = (event: MouseEvent): void => {
+			this._mouseOver = false;
+		}
+		
+		private _onMousePressed = (event: MouseEvent): void => {
+			event.preventDefault();
+			this._mouseDown = true;
+			if (this._doc.channel == 3) return;
+			this._updatePreview();
+			
+			if (this._mouseY >= this._barBottom - this._barHeight && this._mouseY <= this._barBottom) {
+				this._dragging = true;
+				this._dragStart = this._mouseY;
 			}
 		}
 		
-		function onTouchPressed(event: TouchEvent): void {
+		private _onTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
-			mouseDown = true;
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-			mouseX = event.touches[0].clientX - boundingRect.left;
-			mouseY = event.touches[0].clientY - boundingRect.top;
-			if (doc.channel == 3) return;
-			updatePreview();
+			this._mouseDown = true;
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			this._mouseX = event.touches[0].clientX - boundingRect.left;
+			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			if (this._doc.channel == 3) return;
+			this._updatePreview();
 			
-			if (mouseY >= barBottom - barHeight && mouseY <= barBottom) {
-				dragging = true;
-				dragStart = mouseY;
+			if (this._mouseY >= this._barBottom - this._barHeight && this._mouseY <= this._barBottom) {
+				this._dragging = true;
+				this._dragStart = this._mouseY;
 			}
 		}
 		
-		function onMouseMoved(event: MouseEvent): void {
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-    		mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
-		    onCursorMoved();
+		private _onMouseMoved = (event: MouseEvent): void => {
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    this._onCursorMoved();
 		}
 		
-		function onTouchMoved(event: TouchEvent): void {
-			if (!mouseDown) return;
+		private _onTouchMoved = (event: TouchEvent): void => {
+			if (!this._mouseDown) return;
 			event.preventDefault();
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-			mouseX = event.touches[0].clientX - boundingRect.left;
-			mouseY = event.touches[0].clientY - boundingRect.top;
-		    onCursorMoved();
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			this._mouseX = event.touches[0].clientX - boundingRect.left;
+			this._mouseY = event.touches[0].clientY - boundingRect.top;
+		    this._onCursorMoved();
 		}
 		
-		function onCursorMoved(): void {
-			if (doc.channel == 3) return;
-			if (dragging) {
-				while (mouseY - dragStart < -octaveHeight * 0.5) {
-					if (currentOctave < 4) {
-						doc.history.record(new ChangeOctave(doc, currentOctave + 1));
-						dragStart -= octaveHeight;
+		private _onCursorMoved(): void {
+			if (this._doc.channel == 3) return;
+			if (this._dragging) {
+				while (this._mouseY - this._dragStart < -this._octaveHeight * 0.5) {
+					if (this._currentOctave < 4) {
+						this._doc.history.record(new ChangeOctave(this._doc, this._currentOctave + 1));
+						this._dragStart -= this._octaveHeight;
 					} else {
 						break;
 					}
 				}
-				while (mouseY - dragStart > octaveHeight * 0.5) {
-					if (currentOctave > 0) {
-						doc.history.record(new ChangeOctave(doc, currentOctave - 1));
-						dragStart += octaveHeight;
+				while (this._mouseY - this._dragStart > this._octaveHeight * 0.5) {
+					if (this._currentOctave > 0) {
+						this._doc.history.record(new ChangeOctave(this._doc, this._currentOctave - 1));
+						this._dragStart += this._octaveHeight;
 					} else {
 						break;
 					}
 				}
 			}
 			
-			updatePreview();
+			this._updatePreview();
 		}
 		
-		function onCursorReleased(event: Event): void {
-			if (doc.channel != 3 && !dragging && mouseDown) {
-				if (mouseY < barBottom - barHeight * 0.5) {
-					if (currentOctave < 4) doc.history.record(new ChangeOctave(doc, currentOctave + 1));
+		private _onCursorReleased = (event: Event): void => {
+			if (this._doc.channel != 3 && !this._dragging && this._mouseDown) {
+				if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
+					if (this._currentOctave < 4) this._doc.history.record(new ChangeOctave(this._doc, this._currentOctave + 1));
 				} else {
-					if (currentOctave > 0) doc.history.record(new ChangeOctave(doc, currentOctave - 1));
+					if (this._currentOctave > 0) this._doc.history.record(new ChangeOctave(this._doc, this._currentOctave - 1));
 				}
 			}
-			mouseDown = false;
-			dragging = false;
-			updatePreview();
+			this._mouseDown = false;
+			this._dragging = false;
+			this._updatePreview();
 		}
 		
-		function updatePreview(): void {
-			previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
-			if (doc.channel == 3) return;
-			if (!mouseOver || mouseDown) return;
+		private _updatePreview(): void {
+			this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+			if (this._doc.channel == 3) return;
+			if (!this._mouseOver || this._mouseDown) return;
 			
-			const center: number = editorWidth * 0.5;
+			const center: number = this._editorWidth * 0.5;
 			const base: number = 20;
 			const tip: number = 9;
 			const arrowWidth: number = 6;
-			if (mouseY < barBottom - barHeight) {
-				previewGraphics.fillStyle = "#ffffff";
-				previewGraphics.beginPath();
-				previewGraphics.moveTo(center, tip);
-				previewGraphics.lineTo(center + arrowWidth, base);
-				previewGraphics.lineTo(center - arrowWidth, base);
-				previewGraphics.lineTo(center, tip);
-				previewGraphics.fill();
-			} else if (mouseY > barBottom) {
-				previewGraphics.fillStyle = "#ffffff";
-				previewGraphics.beginPath();
-				previewGraphics.moveTo(center, editorHeight - tip);
-				previewGraphics.lineTo(center + arrowWidth, editorHeight - base);
-				previewGraphics.lineTo(center - arrowWidth, editorHeight - base);
-				previewGraphics.lineTo(center, editorHeight - tip);
-				previewGraphics.fill();
+			if (this._mouseY < this._barBottom - this._barHeight) {
+				this._previewGraphics.fillStyle = "#ffffff";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.moveTo(center, tip);
+				this._previewGraphics.lineTo(center + arrowWidth, base);
+				this._previewGraphics.lineTo(center - arrowWidth, base);
+				this._previewGraphics.lineTo(center, tip);
+				this._previewGraphics.fill();
+			} else if (this._mouseY > this._barBottom) {
+				this._previewGraphics.fillStyle = "#ffffff";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.moveTo(center, this._editorHeight - tip);
+				this._previewGraphics.lineTo(center + arrowWidth, this._editorHeight - base);
+				this._previewGraphics.lineTo(center - arrowWidth, this._editorHeight - base);
+				this._previewGraphics.lineTo(center, this._editorHeight - tip);
+				this._previewGraphics.fill();
 			} else {
-				previewGraphics.lineWidth = 2;
-				previewGraphics.strokeStyle = "#ffffff";
-				previewGraphics.strokeRect(1, barBottom, editorWidth - 2, -barHeight);
+				this._previewGraphics.lineWidth = 2;
+				this._previewGraphics.strokeStyle = "#ffffff";
+				this._previewGraphics.strokeRect(1, this._barBottom, this._editorWidth - 2, -this._barHeight);
 			}
 		}
 		
-		function documentChanged(): void {
-			currentOctave = doc.song.channelOctaves[doc.channel];
-			barBottom = editorHeight - (octaveHeight * currentOctave);
-			render();
+		private _documentChanged = (): void => {
+			this._currentOctave = this._doc.song.channelOctaves[this._doc.channel];
+			this._barBottom = this._editorHeight - (this._octaveHeight * this._currentOctave);
+			this._render();
 		}
 		
-		function render(): void {
-			//if (preview == null) return;
-			//if (stage == null) return;
+		private _render(): void {
+			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
 			
-			graphics.clearRect(0, 0, editorWidth, editorHeight);
-			
-			if (doc.channel != 3) {
-				graphics.fillStyle = "#444444";
-				graphics.fillRect(2, barBottom, editorWidth - 4, -barHeight);
+			if (this._doc.channel != 3) {
+				this._graphics.fillStyle = "#444444";
+				this._graphics.fillRect(2, this._barBottom, this._editorWidth - 4, -this._barHeight);
 				
-				for (let i: number = 0; i <= octaveCount; i++) {
-					graphics.fillStyle = "#886644";
-					graphics.fillRect(0, i * octaveHeight, editorWidth, rootHeight);
+				for (let i: number = 0; i <= this._octaveCount; i++) {
+					this._graphics.fillStyle = "#886644";
+					this._graphics.fillRect(0, i * this._octaveHeight, this._editorWidth, this._rootHeight);
 				}
 			}
 			
-			updatePreview();
+			this._updatePreview();
 		}
-		
-		//preview = new Sprite();
-		//container.addChild(preview);
-		doc.watch(documentChanged);
-		documentChanged();
-		
-		octaveHeight = (editorHeight - rootHeight) / octaveCount;
-		barHeight = (octaveHeight * 3 + rootHeight);
-		
-		container.addEventListener("mousedown", onMousePressed);
-		document.addEventListener("mousemove", onMouseMoved);
-		document.addEventListener("mouseup", onCursorReleased);
-		container.addEventListener("mouseover", onMouseOver);
-		container.addEventListener("mouseout", onMouseOut);
-		
-		container.addEventListener("touchstart", onTouchPressed);
-		document.addEventListener("touchmove", onTouchMoved);
-		document.addEventListener("touchend", onCursorReleased);
-		document.addEventListener("touchcancel", onCursorReleased);
 	}
 }
