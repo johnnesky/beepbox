@@ -29,12 +29,15 @@ SOFTWARE.
 module beepbox {
 	export class TrackEditor {
 		private readonly _barWidth: number = 32;
-		private readonly _mainLayer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("mainLayer");
-		private readonly _container: HTMLElement = <HTMLElement>document.getElementById("trackEditorContainer");
-		private readonly _canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditor");
+		private readonly _canvas: HTMLCanvasElement = html.canvas({width: "512", height: "128"});
+		private readonly _preview: HTMLCanvasElement = html.canvas({width: "32", height: "32"});
+		private readonly _playhead: HTMLElement = html.div({style: "width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;"});
+		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 128px; position: relative; overflow:hidden;"}, [
+			this._canvas,
+			this._preview,
+			this._playhead,
+		]);
 		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
-		private readonly _playhead: HTMLElement = document.getElementById("trackPlayhead");
-		private readonly _preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditorPreview");
 		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
 		private readonly _editorWidth: number = 512;
 		
@@ -59,13 +62,11 @@ module beepbox {
 			this._doc.watch(this._documentChanged);
 			
 			window.requestAnimationFrame(this._onEnterFrame);
-			this._container.addEventListener("mousedown", this._onMousePressed);
+			this.container.addEventListener("mousedown", this._onMousePressed);
 			document.addEventListener("mousemove", this._onMouseMoved);
 			document.addEventListener("mouseup", this._onMouseReleased);
-			this._container.addEventListener("mouseover", this._onMouseOver);
-			this._container.addEventListener("mouseout", this._onMouseOut);
-			this._mainLayer.addEventListener("keydown", this._onKeyPressed);
-			this._mainLayer.addEventListener("keyup", this._onKeyReleased);
+			this.container.addEventListener("mouseover", this._onMouseOver);
+			this.container.addEventListener("mouseout", this._onMouseOut);
 		}
 		
 		private _onEnterFrame = (timestamp: number): void => {
@@ -86,9 +87,7 @@ module beepbox {
 			this._doc.history.record(new ChangeBarPattern(this._doc, pattern));
 		}
 		
-		private _onKeyPressed = (event: KeyboardEvent): void => {
-			if (this._songEditor.promptVisible) return;
-			//if (event.ctrlKey)
+		public onKeyPressed(event: KeyboardEvent): void {
 			switch (event.keyCode) {
 				case 38: // up
 					this._setChannelBar((this._doc.channel + 3) % Music.numChannels, this._doc.bar);
@@ -168,9 +167,6 @@ module beepbox {
 			}
 			
 			this._digits = "";
-		}
-		
-		private _onKeyReleased = (event: KeyboardEvent): void => {
 		}
 		
 		private _onMouseOver = (event: MouseEvent): void => {

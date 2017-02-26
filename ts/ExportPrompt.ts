@@ -472,7 +472,7 @@ module beepbox {
 					let prevExpression: number = -1;
 					//let prevTremelo: number = -1;
 					const channelRoot: number = isDrums ? 33 : Music.keyTransposes[this._doc.song.key];
-					const intervalScale: number = isDrums ? Music.drumInterval : 1; ///@TODO: What is an appropriate set of "pitches" for drums?
+					const intervalScale: number = isDrums ? Music.drumInterval : 1;
 					
 					for (const bar of unrolledBars) {
 						const pattern: BarPattern | null = this._doc.song.getPattern(channel, bar);

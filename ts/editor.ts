@@ -47,6 +47,12 @@ module beepbox {
 		export function span(attributes?: Record<string, string | number>, children?: Node[]): HTMLSpanElement {
 			return <HTMLSpanElement> element("span", attributes, children);
 		}
+		export function select(attributes?: Record<string, string | number>, children?: Node[]): HTMLSelectElement {
+			return <HTMLSelectElement> element("select", attributes, children);
+		}
+		export function canvas(attributes?: Record<string, string | number>): HTMLCanvasElement {
+			return <HTMLCanvasElement> element("canvas", attributes);
+		}
 		export function input(attributes?: Record<string, string | number>): HTMLInputElement {
 			return <HTMLInputElement> element("input", attributes);
 		}
@@ -56,6 +62,14 @@ module beepbox {
 		export function text(content: string): Text {
 			return document.createTextNode(content);
 		}
+	}
+	
+	const svgNS: string = "http://www.w3.org/2000/svg";
+	export function svgElement(type: string, attributes?: Record<string, string | number>, children?: Node[]): SVGElement {
+		const elem: SVGElement = <SVGElement> document.createElementNS(svgNS, type);
+		if (attributes) for (const key of Object.keys(attributes)) elem.setAttribute(key, <string>attributes[key]);
+		if (children) for (const child of children) elem.appendChild(child);
+		return elem;
 	}
 	
 	export class Model {
