@@ -1048,7 +1048,7 @@ module beepbox {
 		public play(): void {
 			if (!this._paused) return;
 			this._paused = false;
-			const contextClass = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext)
+			const contextClass = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
 			this._audioCtx = this._audioCtx || new contextClass();
 			this._scriptNode = this._audioCtx.createScriptProcessor ? this._audioCtx.createScriptProcessor(2048, 0, 1) : this._audioCtx.createJavaScriptNode(2048, 0, 1); // 2048, 0 input channels, 1 output
 			this._scriptNode.onaudioprocess = this._onSampleData.bind(this);
@@ -1058,7 +1058,7 @@ module beepbox {
 			
 			this.samplesPerSecond = this._audioCtx.sampleRate;
 			this._effectAngle = Math.PI * 2.0 / (this._effectDuration * this.samplesPerSecond);
-			this._effectYMult = 2.0 * Math.cos( this._effectAngle );
+			this._effectYMult = 2.0 * Math.cos(this._effectAngle);
 			this._limitDecay = 1.0 / (2.0 * this.samplesPerSecond);
 		}
 		

@@ -36,129 +36,127 @@ interface Endpoints {
 }
 
 module beepbox {
-	export interface LoopEditor {
-	}
-
-	export function LoopEditor(doc: SongDocument): void {
-		const barWidth: number = 32;
-		let mouseX: number;
-		let mouseY: number;
-		const container: HTMLElement = <HTMLElement>document.getElementById("loopEditorContainer");
-		const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("loopEditor");
-		const graphics: CanvasRenderingContext2D = canvas.getContext("2d");
-		const preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("loopEditorPreview");
-		const previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
-		const editorWidth: number = 512;
-		const editorHeight: number = 20;
+	export class LoopEditor {
+		private readonly _barWidth: number = 32;
+		private readonly _container: HTMLElement = <HTMLElement>document.getElementById("loopEditorContainer");
+		private readonly _canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("loopEditor");
+		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
+		private readonly _preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("loopEditorPreview");
+		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
+		private readonly _editorWidth: number = 512;
+		private readonly _editorHeight: number = 20;
+		private readonly _startMode:   number = 0;
+		private readonly _endMode:     number = 1;
+		private readonly _bothMode:    number = 2;
 		
-		const startMode:   number = 0;
-		const endMode:     number = 1;
-		const bothMode:    number = 2;
+		private _change: ChangeLoop;
+		private _cursor: Cursor = {};
+		private _mouseX: number;
+		private _mouseY: number;
+		private _mouseDown: boolean = false;
+		private _mouseOver: boolean = false;
 		
-		let change: ChangeLoop;
-		
-		let cursor: Cursor = {};
-		let mouseDown: boolean = false;
-		let mouseOver: boolean = false;
-		
-		function updateCursorStatus(): void {
-			const bar: number = mouseX / barWidth + doc.barScrollPos;
-			cursor.startBar = bar;
+		constructor(private _doc: SongDocument) {
+			this._updateCursorStatus();
+			this._render();
+			this._doc.watch(this._documentChanged);
 			
-			if (bar > doc.song.loopStart - 0.25 && bar < doc.song.loopStart + doc.song.loopLength + 0.25) {
-				if (bar - doc.song.loopStart < doc.song.loopLength * 0.5) {
-					cursor.mode = startMode;
+			this._container.addEventListener("mousedown", this._onMousePressed);
+			document.addEventListener("mousemove", this._onMouseMoved);
+			document.addEventListener("mouseup", this._onCursorReleased);
+			this._container.addEventListener("mouseover", this._onMouseOver);
+			this._container.addEventListener("mouseout", this._onMouseOut);
+			
+			this._container.addEventListener("touchstart", this._onTouchPressed);
+			document.addEventListener("touchmove", this._onTouchMoved);
+			document.addEventListener("touchend", this._onCursorReleased);
+			document.addEventListener("touchcancel", this._onCursorReleased);
+		}
+		
+		private _updateCursorStatus(): void {
+			const bar: number = this._mouseX / this._barWidth + this._doc.barScrollPos;
+			this._cursor.startBar = bar;
+			
+			if (bar > this._doc.song.loopStart - 0.25 && bar < this._doc.song.loopStart + this._doc.song.loopLength + 0.25) {
+				if (bar - this._doc.song.loopStart < this._doc.song.loopLength * 0.5) {
+					this._cursor.mode = this._startMode;
 				} else {
-					cursor.mode = endMode;
+					this._cursor.mode = this._endMode;
 				}
 			} else {
-				cursor.mode = bothMode;
+				this._cursor.mode = this._bothMode;
 			}
 		}
 		
-		function findEndPoints(middle: number): Endpoints {
-			let start: number = Math.round(middle - doc.song.loopLength / 2);
-			let end: number = start + doc.song.loopLength;
+		private _findEndPoints(middle: number): Endpoints {
+			let start: number = Math.round(middle - this._doc.song.loopLength / 2);
+			let end: number = start + this._doc.song.loopLength;
 			if (start < 0) {
 				end -= start;
 				start = 0;
 			}
-			if (end > doc.song.bars) {
-				start -= end - doc.song.bars;
-				end = doc.song.bars;
+			if (end > this._doc.song.bars) {
+				start -= end - this._doc.song.bars;
+				end = this._doc.song.bars;
 			}
 			return {start: start, length: end - start};
 		}
 		
-		function onKeyPressed(event: KeyboardEvent): void {
-			//if (event.ctrlKey)
-			/*
-			switch (event.keyCode) {
-				case 38: // up
-					setChannelBar((doc.channel + 2) % 3, doc.bar);
-					break;
-			}
-			*/
+		private _onMouseOver = (event: MouseEvent): void => {
+			this._mouseOver = true;
 		}
 		
-		function onKeyReleased(event: KeyboardEvent): void {
+		private _onMouseOut = (event: MouseEvent): void => {
+			this._mouseOver = false;
 		}
 		
-		function onMouseOver(event: MouseEvent): void {
-			mouseOver = true;
-		}
-		
-		function onMouseOut(event: MouseEvent): void {
-			mouseOver = false;
-		}
-		
-		function onMousePressed(event: MouseEvent): void {
+		private _onMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
-			mouseDown = true;
-			updateCursorStatus();
-			updatePreview();
-			onMouseMoved(event);
+			this._mouseDown = true;
+			this._updateCursorStatus();
+			this._updatePreview();
+			this._onMouseMoved(event);
 		}
 		
-		function onTouchPressed(event: TouchEvent): void {
+		private _onTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
-			mouseDown = true;
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-			mouseX = event.touches[0].clientX - boundingRect.left;
-			mouseY = event.touches[0].clientY - boundingRect.top;
-			updateCursorStatus();
-			updatePreview();
-			onTouchMoved(event);
+			this._mouseDown = true;
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			this._mouseX = event.touches[0].clientX - boundingRect.left;
+			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			this._updateCursorStatus();
+			this._updatePreview();
+			this._onTouchMoved(event);
 		}
 		
-		function onMouseMoved(event: MouseEvent): void {
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-    		mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
-		    onCursorMoved();
+		private _onMouseMoved = (event: MouseEvent): void => {
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    this._onCursorMoved();
 		}
 		
-		function onTouchMoved(event: TouchEvent): void {
-			if (!mouseDown) return;
+		private _onTouchMoved = (event: TouchEvent): void => {
+			if (!this._mouseDown) return;
 			event.preventDefault();
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-			mouseX = event.touches[0].clientX - boundingRect.left;
-			mouseY = event.touches[0].clientY - boundingRect.top;
-		    onCursorMoved();
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			this._mouseX = event.touches[0].clientX - boundingRect.left;
+			this._mouseY = event.touches[0].clientY - boundingRect.top;
+		    this._onCursorMoved();
 		}
 		
-		function onCursorMoved(): void {
-			if (mouseDown) {
-				if (change != null) change.undo();
-				change = null;
+		private _onCursorMoved(): void {
+			if (this._mouseDown) {
+				if (this._change != null) this._change.undo();
+				this._change = null;
 				
-				const bar: number = mouseX / barWidth + doc.barScrollPos;
+				const bar: number = this._mouseX / this._barWidth + this._doc.barScrollPos;
 				let start: number;
 				let end: number;
 				let temp: number;
-				if (cursor.mode == startMode) {
-					start = doc.song.loopStart + Math.round(bar - cursor.startBar);
-					end = doc.song.loopStart + doc.song.loopLength;
+				if (this._cursor.mode == this._startMode) {
+					start = this._doc.song.loopStart + Math.round(bar - this._cursor.startBar);
+					end = this._doc.song.loopStart + this._doc.song.loopLength;
 					if (start == end) {
 						start = end - 1;
 					} else if (start > end) {
@@ -167,11 +165,11 @@ module beepbox {
 						end = temp;
 					}
 					if (start < 0) start = 0;
-					if (end >= doc.song.bars) end = doc.song.bars;
-					change = new ChangeLoop(doc, start, end - start);
-				} else if (cursor.mode == endMode) {
-					start = doc.song.loopStart;
-					end = doc.song.loopStart + doc.song.loopLength + Math.round(bar - cursor.startBar);
+					if (end >= this._doc.song.bars) end = this._doc.song.bars;
+					this._change = new ChangeLoop(this._doc, start, end - start);
+				} else if (this._cursor.mode == this._endMode) {
+					start = this._doc.song.loopStart;
+					end = this._doc.song.loopStart + this._doc.song.loopLength + Math.round(bar - this._cursor.startBar);
 					if (end == start) {
 						end = start + 1;
 					} else if (end < start) {
@@ -180,105 +178,88 @@ module beepbox {
 						end = temp;
 					}
 					if (start < 0) start = 0;
-					if (end >= doc.song.bars) end = doc.song.bars;
-					change = new ChangeLoop(doc, start, end - start);
-				} else if (cursor.mode == bothMode) {
-					const endPoints: Endpoints = findEndPoints(bar);
-					change = new ChangeLoop(doc, endPoints.start, endPoints.length);
+					if (end >= this._doc.song.bars) end = this._doc.song.bars;
+					this._change = new ChangeLoop(this._doc, start, end - start);
+				} else if (this._cursor.mode == this._bothMode) {
+					const endPoints: Endpoints = this._findEndPoints(bar);
+					this._change = new ChangeLoop(this._doc, endPoints.start, endPoints.length);
 				}
 			} else {
-				updateCursorStatus();
-				updatePreview();
+				this._updateCursorStatus();
+				this._updatePreview();
 			}
 		}
 		
-		function onCursorReleased(event: Event): void {
-			if (mouseDown) {
-				if (change != null) {
-					//if (doc.history.getRecentChange() is ChangeLoop) doc.history.undo();
-					doc.history.record(change);
-					change = null;
+		private _onCursorReleased = (event: Event): void => {
+			if (this._mouseDown) {
+				if (this._change != null) {
+					//if (this._doc.history.getRecentChange() is ChangeLoop) this._doc.history.undo();
+					this._doc.history.record(this._change);
+					this._change = null;
 				}
 			}
 			
-			mouseDown = false;
-			updateCursorStatus();
-			render();
+			this._mouseDown = false;
+			this._updateCursorStatus();
+			this._render();
 		}
 		
-		function updatePreview(): void {
-			previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
-			if (!mouseOver || mouseDown) return;
+		private _updatePreview(): void {
+			this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+			if (!this._mouseOver || this._mouseDown) return;
 			
-			const radius: number = editorHeight / 2;
-			if (cursor.mode == startMode) {
-				previewGraphics.fillStyle = "#ffffff";
-				previewGraphics.beginPath();
-				previewGraphics.arc((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-				previewGraphics.fill();
-			} else if (cursor.mode == endMode) {
-				previewGraphics.fillStyle = "#ffffff";
-				previewGraphics.beginPath();
-				previewGraphics.arc((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-				previewGraphics.fill();
-			} else if (cursor.mode == bothMode) {
-				const endPoints: Endpoints = findEndPoints(cursor.startBar);
-				previewGraphics.fillStyle = "#ffffff";
-				previewGraphics.beginPath();
-				previewGraphics.arc((endPoints.start - doc.barScrollPos) * barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-				previewGraphics.fill();
-				previewGraphics.fillStyle = "#ffffff";
-				previewGraphics.fillRect((endPoints.start - doc.barScrollPos) * barWidth + radius, 4, endPoints.length * barWidth - editorHeight, editorHeight - 8);
-				previewGraphics.fillStyle = "#ffffff";
-				previewGraphics.beginPath();
-				previewGraphics.arc((endPoints.start + endPoints.length - doc.barScrollPos) * barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-				previewGraphics.fill();
+			const radius: number = this._editorHeight / 2;
+			if (this._cursor.mode == this._startMode) {
+				this._previewGraphics.fillStyle = "#ffffff";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
+				this._previewGraphics.fill();
+			} else if (this._cursor.mode == this._endMode) {
+				this._previewGraphics.fillStyle = "#ffffff";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
+				this._previewGraphics.fill();
+			} else if (this._cursor.mode == this._bothMode) {
+				const endPoints: Endpoints = this._findEndPoints(this._cursor.startBar);
+				this._previewGraphics.fillStyle = "#ffffff";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.arc((endPoints.start - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
+				this._previewGraphics.fill();
+				this._previewGraphics.fillStyle = "#ffffff";
+				this._previewGraphics.fillRect((endPoints.start - this._doc.barScrollPos) * this._barWidth + radius, 4, endPoints.length * this._barWidth - this._editorHeight, this._editorHeight - 8);
+				this._previewGraphics.fillStyle = "#ffffff";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.arc((endPoints.start + endPoints.length - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
+				this._previewGraphics.fill();
 			}
 		}
 		
-		function documentChanged(): void {
-			render();
+		private _documentChanged = (): void => {
+			this._render();
 		}
 		
-		function render(): void {
-			graphics.clearRect(0, 0, editorWidth, editorHeight);
+		private _render(): void {
+			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
 			
-			const radius: number = editorHeight / 2;
-			graphics.fillStyle = "#7744ff";
-			graphics.beginPath();
-			graphics.arc((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius, 0, 2 * Math.PI);
-			graphics.fill();
-			graphics.fillRect((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, 0, doc.song.loopLength * barWidth - editorHeight, editorHeight);
-			graphics.beginPath();
-			graphics.arc((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius, 0, 2 * Math.PI);
-			graphics.fill();
-			graphics.fillStyle = "#000000";
-			graphics.beginPath();
-			graphics.arc((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-			graphics.fill();
-			graphics.fillRect((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, 4, doc.song.loopLength * barWidth - editorHeight, editorHeight - 8);
-			graphics.beginPath();
-			graphics.arc((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-			graphics.fill();
+			const radius: number = this._editorHeight / 2;
+			this._graphics.fillStyle = "#7744ff";
+			this._graphics.beginPath();
+			this._graphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius, 0, 2 * Math.PI);
+			this._graphics.fill();
+			this._graphics.fillRect((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, 0, this._doc.song.loopLength * this._barWidth - this._editorHeight, this._editorHeight);
+			this._graphics.beginPath();
+			this._graphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius, 0, 2 * Math.PI);
+			this._graphics.fill();
+			this._graphics.fillStyle = "#000000";
+			this._graphics.beginPath();
+			this._graphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
+			this._graphics.fill();
+			this._graphics.fillRect((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, 4, this._doc.song.loopLength * this._barWidth - this._editorHeight, this._editorHeight - 8);
+			this._graphics.beginPath();
+			this._graphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
+			this._graphics.fill();
 			
-			updatePreview();
+			this._updatePreview();
 		}
-		
-		updateCursorStatus();
-		render();
-		doc.watch(documentChanged);
-		
-		container.addEventListener("mousedown", onMousePressed);
-		document.addEventListener("mousemove", onMouseMoved);
-		document.addEventListener("mouseup", onCursorReleased);
-		container.addEventListener("mouseover", onMouseOver);
-		container.addEventListener("mouseout", onMouseOut);
-		document.addEventListener("keydown", onKeyPressed);
-		document.addEventListener("keyup", onKeyReleased);
-		
-		container.addEventListener("touchstart", onTouchPressed);
-		document.addEventListener("touchmove", onTouchMoved);
-		document.addEventListener("touchend", onCursorReleased);
-		document.addEventListener("touchcancel", onCursorReleased);
 	}
 }

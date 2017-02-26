@@ -44,8 +44,14 @@ module beepbox {
 		export function div(attributes?: Record<string, string | number>, children?: Node[]): HTMLDivElement {
 			return <HTMLDivElement> element("div", attributes, children);
 		}
+		export function span(attributes?: Record<string, string | number>, children?: Node[]): HTMLSpanElement {
+			return <HTMLSpanElement> element("span", attributes, children);
+		}
 		export function input(attributes?: Record<string, string | number>): HTMLInputElement {
 			return <HTMLInputElement> element("input", attributes);
+		}
+		export function br(): HTMLBRElement {
+			return <HTMLBRElement> element("br");
 		}
 		export function text(content: string): Text {
 			return document.createTextNode(content);
@@ -1337,6 +1343,7 @@ module beepbox {
 			let setStart: boolean = false;
 			let prevVolume: number = this._oldPins[0].volume;
 			let prevInterval: number = this._oldPins[0].interval;
+			let pushLastPin: boolean = true;
 			let i: number;
 			for (i = 0; i < this._oldPins.length; i++) {
 				const oldPin: TonePin = this._oldPins[i];
@@ -1350,7 +1357,8 @@ module beepbox {
 					this._newPins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
 					setStart = true;
 					if (oldPin.time == truncEnd) {
-						return;
+						pushLastPin = false;
+						break;
 					}
 				} else {
 					break;
@@ -1358,7 +1366,7 @@ module beepbox {
 				
 			}
 			
-			this._newPins.push(new TonePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
+			if (pushLastPin) this._newPins.push(new TonePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
 			
 			this._finishSetup();
 		}

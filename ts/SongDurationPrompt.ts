@@ -27,35 +27,113 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
-	export interface SongDurationPrompt {
-	}
-
-	export function SongDurationPrompt(doc: SongDocument, songEditor: SongEditor): void {
-		const container: HTMLElement = <HTMLElement>document.getElementById("songSizePrompt");
-		const beatsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("beatsStepper");
-		const barsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("barsStepper");
-		const patternsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("patternsStepper");
-		const instrumentsStepper: HTMLInputElement = <HTMLInputElement>document.getElementById("instrumentsStepper");
-		const songDurationOkayButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("songDurationOkayButton");
-		const songDurationCancelButton: HTMLButtonElement = <HTMLButtonElement>document.getElementById("songDurationCancelButton");
+	const {button, div, span, input, br, text} = html;
+	
+	export class SongDurationPrompt {
+		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1"});
+		private readonly _barsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1"});
+		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "32", step: "1"});
+		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "10", step: "1"});
+		private readonly _songDurationOkayButton: HTMLButtonElement = button({style: "width:125px; float: left;", type: "button"}, [text("Okay")]);
+		private readonly _songDurationCancelButton: HTMLButtonElement = button({style: "width:125px; float: right;", type: "button"}, [text("Cancel")]);
 		
+		public readonly container: HTMLDivElement = div({style: "position: absolute;"}, [
+			div({style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;"}, [
+				div({style: "margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
+					div({style: "font-size: 30px"}, [text("Custom Song Size")]),
+					div({style: "height: 30px;"}),
+					div({style: "vertical-align: middle; line-height: 46px;"}, [
+						span({style: "float: right;"}, [
+							div({style: "display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;"}, [
+								text("Beats per bar:"),
+								br(),
+								span({style: "color: #888888;"}, [text("(Multiples of 3 or 4 are recommended)")]),
+							]),
+							div({style: "display: inline-block; width: 20px; height: 1px;"}),
+							this._beatsStepper,
+						]),
+						div({style: "clear: both;"}),
+					]),
+					div({style: "vertical-align: middle; line-height: 46px;"}, [
+						span({style: "float: right;"}, [
+							div({style: "display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;"}, [
+								text("Bars per song:"),
+								br(),
+								span({style: "color: #888888;"}, [text("(Multiples of 2 or 4 are recommended)")]),
+							]),
+							div({style: "display: inline-block; width: 20px; height: 1px;"}),
+							this._barsStepper,
+						]),
+						div({style: "clear: both;"}),
+					]),
+					div({style: "vertical-align: middle; line-height: 46px;"}, [
+						span({style: "float: right;"}, [
+							text("Patterns per channel:"),
+							div({style: "display: inline-block; width: 20px; height: 1px;"}),
+							this._patternsStepper,
+						]),
+						div({style: "clear: both;"}),
+					]),
+					div({style: "vertical-align: middle; line-height: 46px;"}, [
+						span({style: "float: right;"}, [
+							text("Instruments per channel:"),
+							div({style: "display: inline-block; width: 20px; height: 1px;"}),
+							this._instrumentsStepper,
+						]),
+						div({style: "clear: both;"}),
+					]),
+					div({style: "height: 30px;"}),
+					this._songDurationOkayButton,
+					this._songDurationCancelButton,
+					div({style: "clear: both;"}),
+				]),
+			]),
+		]);
 		
-		function onClose(): void { 
-			container.style.display = "none";
-			songEditor.closePrompt();
-			songDurationOkayButton.removeEventListener("click", saveChanges);
-			songDurationCancelButton.removeEventListener("click", onClose);
-			beatsStepper.removeEventListener("keypress", validateKey);
-			barsStepper.removeEventListener("keypress", validateKey);
-			patternsStepper.removeEventListener("keypress", validateKey);
-			instrumentsStepper.removeEventListener("keypress", validateKey);
-			beatsStepper.removeEventListener("blur", validateNumber);
-			barsStepper.removeEventListener("blur", validateNumber);
-			patternsStepper.removeEventListener("blur", validateNumber);
-			instrumentsStepper.removeEventListener("blur", validateNumber);
+		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
+			this._beatsStepper.value = this._doc.song.beats + "";
+			this._beatsStepper.min = Music.beatsMin + "";
+			this._beatsStepper.max = Music.beatsMax + "";
+		
+			this._barsStepper.value = this._doc.song.bars + "";
+			this._barsStepper.min = Music.barsMin + "";
+			this._barsStepper.max = Music.barsMax + "";
+		
+			this._patternsStepper.value = this._doc.song.patterns + "";
+			this._patternsStepper.min = Music.patternsMin + "";
+			this._patternsStepper.max = Music.patternsMax + "";
+		
+			this._instrumentsStepper.value = this._doc.song.instruments + "";
+			this._instrumentsStepper.min = Music.instrumentsMin + "";
+			this._instrumentsStepper.max = Music.instrumentsMax + "";
+		
+			this._songDurationOkayButton.addEventListener("click", this._saveChanges);
+			this._songDurationCancelButton.addEventListener("click", this._onClose);
+			this._beatsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+			this._barsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+			this._patternsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+			this._instrumentsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+			this._beatsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
+			this._barsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
+			this._patternsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
+			this._instrumentsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
 		}
 		
-		function validateKey(event: KeyboardEvent): boolean {
+		private _onClose = (): void => { 
+			this._songEditor.closePrompt(this);
+			this._songDurationOkayButton.removeEventListener("click", this._saveChanges);
+			this._songDurationCancelButton.removeEventListener("click", this._onClose);
+			this._beatsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+			this._barsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+			this._patternsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+			this._instrumentsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+			this._beatsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+			this._barsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+			this._patternsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+			this._instrumentsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+		}
+		
+		private static _validateKey(event: KeyboardEvent): boolean {
 			const charCode = (event.which) ? event.which : event.keyCode;
 			if (charCode != 46 && charCode > 31 && (charCode < 48 || charCode > 57)) {
 				event.preventDefault();
@@ -64,52 +142,23 @@ module beepbox {
 			return false;
 		}
 		
-		function validateNumber(event: Event): void {
+		private static _validateNumber(event: Event): void {
 			const input: HTMLInputElement = <HTMLInputElement>event.target;
 			input.value = Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value)))) + "";
 		}
 		
-		function validate(input: HTMLInputElement): number {
+		private static _validate(input: HTMLInputElement): number {
 			return Math.floor(Number(input.value));
 		}
 		
-		function saveChanges(): void {
+		private _saveChanges = (): void => {
 			const sequence: ChangeSequence = new ChangeSequence();
-			sequence.append(new ChangeBeats(doc, validate(beatsStepper)));
-			sequence.append(new ChangeBars(doc, validate(barsStepper)));
-			sequence.append(new ChangePatterns(doc, validate(patternsStepper)));
-			sequence.append(new ChangeInstruments(doc, validate(instrumentsStepper)));
-			doc.history.record(sequence);
-			onClose();
+			sequence.append(new ChangeBeats(this._doc, SongDurationPrompt._validate(this._beatsStepper)));
+			sequence.append(new ChangeBars(this._doc, SongDurationPrompt._validate(this._barsStepper)));
+			sequence.append(new ChangePatterns(this._doc, SongDurationPrompt._validate(this._patternsStepper)));
+			sequence.append(new ChangeInstruments(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));
+			this._doc.history.record(sequence);
+			this._onClose();
 		}
-		
-		beatsStepper.value = doc.song.beats + "";
-		beatsStepper.min = Music.beatsMin + "";
-		beatsStepper.max = Music.beatsMax + "";
-		
-		barsStepper.value = doc.song.bars + "";
-		barsStepper.min = Music.barsMin + "";
-		barsStepper.max = Music.barsMax + "";
-		
-		patternsStepper.value = doc.song.patterns + "";
-		patternsStepper.min = Music.patternsMin + "";
-		patternsStepper.max = Music.patternsMax + "";
-		
-		instrumentsStepper.value = doc.song.instruments + "";
-		instrumentsStepper.min = Music.instrumentsMin + "";
-		instrumentsStepper.max = Music.instrumentsMax + "";
-		
-		songDurationOkayButton.addEventListener("click", saveChanges);
-		songDurationCancelButton.addEventListener("click", onClose);
-		beatsStepper.addEventListener("keypress", validateKey);
-		barsStepper.addEventListener("keypress", validateKey);
-		patternsStepper.addEventListener("keypress", validateKey);
-		instrumentsStepper.addEventListener("keypress", validateKey);
-		beatsStepper.addEventListener("blur", validateNumber);
-		barsStepper.addEventListener("blur", validateNumber);
-		patternsStepper.addEventListener("blur", validateNumber);
-		instrumentsStepper.addEventListener("blur", validateNumber);
-		
-		container.style.display = "block";
 	}
 }

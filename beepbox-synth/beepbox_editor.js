@@ -1666,10 +1666,18 @@ var beepbox;
             return element("div", attributes, children);
         }
         html.div = div;
+        function span(attributes, children) {
+            return element("span", attributes, children);
+        }
+        html.span = span;
         function input(attributes) {
             return element("input", attributes);
         }
         html.input = input;
+        function br() {
+            return element("br");
+        }
+        html.br = br;
         function text(content) {
             return document.createTextNode(content);
         }
@@ -2839,6 +2847,7 @@ var beepbox;
             var setStart = false;
             var prevVolume = _this._oldPins[0].volume;
             var prevInterval = _this._oldPins[0].interval;
+            var pushLastPin = true;
             var i;
             for (i = 0; i < _this._oldPins.length; i++) {
                 var oldPin = _this._oldPins[i];
@@ -2853,14 +2862,16 @@ var beepbox;
                     _this._newPins.push(new beepbox.TonePin(oldPin.interval, oldPin.time, oldPin.volume));
                     setStart = true;
                     if (oldPin.time == truncEnd) {
-                        return _this;
+                        pushLastPin = false;
+                        break;
                     }
                 }
                 else {
                     break;
                 }
             }
-            _this._newPins.push(new beepbox.TonePin(_this._oldPins[i].interval, truncEnd, _this._oldPins[i].volume));
+            if (pushLastPin)
+                _this._newPins.push(new beepbox.TonePin(_this._oldPins[i].interval, truncEnd, _this._oldPins[i].volume));
             _this._finishSetup();
             return _this;
         }
@@ -3141,105 +3152,314 @@ var beepbox;
 "use strict";
 var beepbox;
 (function (beepbox) {
-    function PatternEditor(doc) {
-        function prettyNumber(value) {
-            return value.toFixed(2).replace(/\.?0*$/, "");
+    var svgNS = "http://www.w3.org/2000/svg";
+    function prettyNumber(value) {
+        return value.toFixed(2).replace(/\.?0*$/, "");
+    }
+    function makeEmptyReplacementElement(node) {
+        var clone = node.cloneNode(false);
+        node.parentNode.replaceChild(clone, node);
+        return clone;
+    }
+    var PatternEditor = (function () {
+        function PatternEditor(_doc) {
+            var _this = this;
+            this._doc = _doc;
+            this._container = document.getElementById("patternEditorContainer");
+            this._svg = document.getElementById("patternEditorSvg");
+            this._svgPlayhead = document.getElementById("patternEditorPlayhead");
+            this._svgPreview = document.getElementById("patternEditorPreview");
+            this._svgNoteBackground = document.getElementById("patternEditorNoteBackground");
+            this._svgDrumBackground = document.getElementById("patternEditorDrumBackground");
+            this._svgBackground = document.getElementById("patternEditorBackground");
+            this._defaultNoteHeight = 13;
+            this._defaultDrumHeight = 40;
+            this._backgroundNoteRows = [];
+            this._backgroundDrumRow = document.createElementNS(svgNS, "rect");
+            this._defaultPinChannels = [
+                [new beepbox.TonePin(0, 0, 3), new beepbox.TonePin(0, 2, 3)],
+                [new beepbox.TonePin(0, 0, 3), new beepbox.TonePin(0, 2, 3)],
+                [new beepbox.TonePin(0, 0, 3), new beepbox.TonePin(0, 2, 3)],
+                [new beepbox.TonePin(0, 0, 3), new beepbox.TonePin(0, 2, 0)],
+            ];
+            this._svgNoteContainer = document.getElementById("patternEditorNoteContainer");
+            this._editorHeight = 481;
+            this._mouseDown = false;
+            this._mouseOver = false;
+            this._mouseDragging = false;
+            this._mouseHorizontal = false;
+            this._copiedPinChannels = this._defaultPinChannels.concat();
+            this._mouseXStart = 0;
+            this._mouseYStart = 0;
+            this._mouseXPrev = 0;
+            this._mouseYPrev = 0;
+            this._dragChange = null;
+            this._cursor = new beepbox.PatternCursor();
+            this._playheadX = 0.0;
+            this._octaveOffset = 0;
+            this.resetCopiedPins = function () {
+                _this._copiedPinChannels = _this._defaultPinChannels.concat();
+            };
+            this._onEnterFrame = function (timestamp) {
+                if (!_this._doc.synth.playing || _this._pattern == null || _this._doc.song.getPattern(_this._doc.channel, Math.floor(_this._doc.synth.playhead)) != _this._pattern) {
+                    _this._svgPlayhead.setAttribute("visibility", "hidden");
+                }
+                else {
+                    _this._svgPlayhead.setAttribute("visibility", "visible");
+                    var modPlayhead = _this._doc.synth.playhead - Math.floor(_this._doc.synth.playhead);
+                    if (Math.abs(modPlayhead - _this._playheadX) > 0.1) {
+                        _this._playheadX = modPlayhead;
+                    }
+                    else {
+                        _this._playheadX += (modPlayhead - _this._playheadX) * 0.2;
+                    }
+                    _this._svgPlayhead.setAttribute("x", "" + prettyNumber(_this._playheadX * _this._editorWidth - 2));
+                }
+                window.requestAnimationFrame(_this._onEnterFrame);
+            };
+            this._onMouseOver = function (event) {
+                _this._mouseOver = true;
+            };
+            this._onMouseOut = function (event) {
+                _this._mouseOver = false;
+            };
+            this._onMousePressed = function (event) {
+                event.preventDefault();
+                if (_this._pattern == null)
+                    return;
+                _this._mouseDown = true;
+                _this._mouseXStart = _this._mouseX;
+                _this._mouseYStart = _this._mouseY;
+                _this._mouseXPrev = _this._mouseX;
+                _this._mouseYPrev = _this._mouseY;
+                _this._updateCursorStatus();
+                _this._updatePreview();
+            };
+            this._onTouchPressed = function (event) {
+                event.preventDefault();
+                if (_this._pattern == null)
+                    return;
+                _this._mouseDown = true;
+                var boundingRect = _this._svg.getBoundingClientRect();
+                _this._mouseX = event.touches[0].clientX - boundingRect.left;
+                _this._mouseY = event.touches[0].clientY - boundingRect.top;
+                _this._mouseXStart = _this._mouseX;
+                _this._mouseYStart = _this._mouseY;
+                _this._mouseXPrev = _this._mouseX;
+                _this._mouseYPrev = _this._mouseY;
+                _this._updateCursorStatus();
+                _this._updatePreview();
+            };
+            this._onMouseMoved = function (event) {
+                var boundingRect = _this._svg.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+                _this._onCursorMoved();
+            };
+            this._onTouchMoved = function (event) {
+                if (!_this._mouseDown)
+                    return;
+                event.preventDefault();
+                var boundingRect = _this._svg.getBoundingClientRect();
+                _this._mouseX = event.touches[0].clientX - boundingRect.left;
+                _this._mouseY = event.touches[0].clientY - boundingRect.top;
+                _this._onCursorMoved();
+            };
+            this._onCursorReleased = function (event) {
+                if (!_this._cursor.valid)
+                    return;
+                if (_this._pattern == null)
+                    return;
+                if (_this._mouseDragging) {
+                    if (_this._dragChange != null) {
+                        _this._doc.history.record(_this._dragChange);
+                        _this._dragChange = null;
+                    }
+                }
+                else if (_this._mouseDown) {
+                    if (_this._cursor.curTone == null) {
+                        var tone = new beepbox.Tone(_this._cursor.note, _this._cursor.start, _this._cursor.end, 3, _this._doc.channel == 3);
+                        tone.pins = [];
+                        for (var _i = 0, _a = _this._cursor.pins; _i < _a.length; _i++) {
+                            var oldPin = _a[_i];
+                            tone.pins.push(new beepbox.TonePin(0, oldPin.time, oldPin.volume));
+                        }
+                        _this._doc.history.record(new beepbox.ChangeToneAdded(_this._doc, _this._pattern, tone, _this._cursor.curIndex));
+                    }
+                    else {
+                        if (_this._cursor.noteIndex == -1) {
+                            var sequence = new beepbox.ChangeSequence();
+                            if (_this._cursor.curTone.notes.length == 4) {
+                                sequence.append(new beepbox.ChangeNoteAdded(_this._doc, _this._pattern, _this._cursor.curTone, _this._cursor.curTone.notes[0], 0, true));
+                            }
+                            sequence.append(new beepbox.ChangeNoteAdded(_this._doc, _this._pattern, _this._cursor.curTone, _this._cursor.note, _this._cursor.curTone.notes.length));
+                            _this._doc.history.record(sequence);
+                            _this._copyPins(_this._cursor.curTone);
+                        }
+                        else {
+                            if (_this._cursor.curTone.notes.length == 1) {
+                                _this._doc.history.record(new beepbox.ChangeToneAdded(_this._doc, _this._pattern, _this._cursor.curTone, _this._cursor.curIndex, true));
+                            }
+                            else {
+                                _this._doc.history.record(new beepbox.ChangeNoteAdded(_this._doc, _this._pattern, _this._cursor.curTone, _this._cursor.note, _this._cursor.curTone.notes.indexOf(_this._cursor.note), true));
+                            }
+                        }
+                    }
+                }
+                _this._mouseDown = false;
+                _this._mouseDragging = false;
+                _this._updateCursorStatus();
+                _this._updatePreview();
+            };
+            this._documentChanged = function () {
+                _this._editorWidth = _this._doc.showLetters ? (_this._doc.showScrollBar ? 460 : 480) : (_this._doc.showScrollBar ? 492 : 512);
+                _this._pattern = _this._doc.getCurrentPattern();
+                _this._partWidth = _this._editorWidth / (_this._doc.song.beats * _this._doc.song.parts);
+                _this._noteHeight = _this._doc.channel == 3 ? _this._defaultDrumHeight : _this._defaultNoteHeight;
+                _this._noteCount = _this._doc.channel == 3 ? beepbox.Music.drumCount : beepbox.Music.noteCount;
+                _this._octaveOffset = _this._doc.song.channelOctaves[_this._doc.channel] * 12;
+                _this._copiedPins = _this._copiedPinChannels[_this._doc.channel];
+                _this._svg.setAttribute("width", "" + _this._editorWidth);
+                _this._svgBackground.setAttribute("width", "" + _this._editorWidth);
+                _this._svgNoteBackground.setAttribute("width", "" + (_this._editorWidth / _this._doc.song.beats));
+                _this._svgDrumBackground.setAttribute("width", "" + (_this._editorWidth / _this._doc.song.beats));
+                if (!_this._mouseDown)
+                    _this._updateCursorStatus();
+                _this._svgNoteContainer = makeEmptyReplacementElement(_this._svgNoteContainer);
+                _this._updatePreview();
+                if (_this._pattern == null) {
+                    _this._svg.setAttribute("visibility", "hidden");
+                    return;
+                }
+                _this._svg.setAttribute("visibility", "visible");
+                for (var j = 0; j < 12; j++) {
+                    var color = "#444444";
+                    if (j == 0)
+                        color = "#886644";
+                    if (j == 7 && _this._doc.showFifth)
+                        color = "#446688";
+                    var rectangle = _this._backgroundNoteRows[j];
+                    rectangle.setAttribute("width", "" + (_this._partWidth * _this._doc.song.parts - 2));
+                    rectangle.setAttribute("fill", color);
+                    rectangle.setAttribute("visibility", beepbox.Music.scaleFlags[_this._doc.song.scale][j] ? "visible" : "hidden");
+                }
+                _this._backgroundDrumRow.setAttribute("width", "" + (_this._partWidth * _this._doc.song.parts - 2));
+                if (_this._doc.channel == 3) {
+                    _this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
+                    _this._svgBackground.setAttribute("height", "" + (_this._defaultDrumHeight * beepbox.Music.drumCount));
+                    _this._svg.setAttribute("height", "" + (_this._defaultDrumHeight * beepbox.Music.drumCount));
+                }
+                else {
+                    _this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground)");
+                    _this._svgBackground.setAttribute("height", "" + _this._editorHeight);
+                    _this._svg.setAttribute("height", "" + _this._editorHeight);
+                }
+                if (_this._doc.channel != 3 && _this._doc.showChannels) {
+                    for (var channel = 2; channel >= 0; channel--) {
+                        if (channel == _this._doc.channel)
+                            continue;
+                        var pattern2 = _this._doc.song.getPattern(channel, _this._doc.bar);
+                        if (pattern2 == null)
+                            continue;
+                        for (var _i = 0, _a = pattern2.tones; _i < _a.length; _i++) {
+                            var tone = _a[_i];
+                            for (var _b = 0, _c = tone.notes; _b < _c.length; _b++) {
+                                var note = _c[_b];
+                                var notePath = document.createElementNS(svgNS, "path");
+                                notePath.setAttribute("fill", beepbox.SongEditor.noteColorsDim[channel]);
+                                notePath.setAttribute("pointer-events", "none");
+                                _this._drawNote(notePath, note, tone.start, tone.pins, _this._noteHeight / 2 - 4, false, _this._doc.song.channelOctaves[channel] * 12);
+                                _this._svgNoteContainer.appendChild(notePath);
+                            }
+                        }
+                    }
+                }
+                for (var _d = 0, _e = _this._pattern.tones; _d < _e.length; _d++) {
+                    var tone = _e[_d];
+                    for (var _f = 0, _g = tone.notes; _f < _g.length; _f++) {
+                        var note = _g[_f];
+                        var notePath = document.createElementNS(svgNS, "path");
+                        notePath.setAttribute("fill", beepbox.SongEditor.noteColorsDim[_this._doc.channel]);
+                        notePath.setAttribute("pointer-events", "none");
+                        _this._drawNote(notePath, note, tone.start, tone.pins, _this._noteHeight / 2 + 1, false, _this._octaveOffset);
+                        _this._svgNoteContainer.appendChild(notePath);
+                        notePath = document.createElementNS(svgNS, "path");
+                        notePath.setAttribute("fill", beepbox.SongEditor.noteColorsBright[_this._doc.channel]);
+                        notePath.setAttribute("pointer-events", "none");
+                        _this._drawNote(notePath, note, tone.start, tone.pins, _this._noteHeight / 2 + 1, true, _this._octaveOffset);
+                        _this._svgNoteContainer.appendChild(notePath);
+                    }
+                }
+            };
+            for (var i = 0; i < 12; i++) {
+                var y = (12 - i) % 12;
+                var rectangle = document.createElementNS(svgNS, "rect");
+                rectangle.setAttribute("x", "1");
+                rectangle.setAttribute("y", "" + (y * this._defaultNoteHeight + 1));
+                rectangle.setAttribute("height", "" + (this._defaultNoteHeight - 2));
+                this._svgNoteBackground.appendChild(rectangle);
+                this._backgroundNoteRows[i] = rectangle;
+            }
+            this._backgroundDrumRow.setAttribute("x", "1");
+            this._backgroundDrumRow.setAttribute("y", "1");
+            this._backgroundDrumRow.setAttribute("height", "" + (this._defaultDrumHeight - 2));
+            this._backgroundDrumRow.setAttribute("fill", "#444444");
+            this._svgDrumBackground.appendChild(this._backgroundDrumRow);
+            this._doc.watch(this._documentChanged);
+            this._documentChanged();
+            this._updateCursorStatus();
+            this._updatePreview();
+            window.requestAnimationFrame(this._onEnterFrame);
+            this._svg.addEventListener("mousedown", this._onMousePressed);
+            document.addEventListener("mousemove", this._onMouseMoved);
+            document.addEventListener("mouseup", this._onCursorReleased);
+            this._svg.addEventListener("mouseover", this._onMouseOver);
+            this._svg.addEventListener("mouseout", this._onMouseOut);
+            this._svg.addEventListener("touchstart", this._onTouchPressed);
+            document.addEventListener("touchmove", this._onTouchMoved);
+            document.addEventListener("touchend", this._onCursorReleased);
+            document.addEventListener("touchcancel", this._onCursorReleased);
         }
-        var container = document.getElementById("patternEditorContainer");
-        var svgNS = "http://www.w3.org/2000/svg";
-        var svg = document.getElementById("patternEditorSvg");
-        var svgPlayhead = document.getElementById("patternEditorPlayhead");
-        var svgNoteContainer = document.getElementById("patternEditorNoteContainer");
-        var svgPreview = document.getElementById("patternEditorPreview");
-        var svgNoteBackground = document.getElementById("patternEditorNoteBackground");
-        var svgDrumBackground = document.getElementById("patternEditorDrumBackground");
-        var svgBackground = document.getElementById("patternEditorBackground");
-        var editorWidth;
-        var editorHeight = 481;
-        var partWidth;
-        var noteHeight;
-        var noteCount;
-        var mouseX;
-        var mouseY;
-        var mouseDown = false;
-        var mouseOver = false;
-        var mouseDragging = false;
-        var mouseHorizontal = false;
-        var defaultPinChannels = [
-            [new beepbox.TonePin(0, 0, 3), new beepbox.TonePin(0, 2, 3)],
-            [new beepbox.TonePin(0, 0, 3), new beepbox.TonePin(0, 2, 3)],
-            [new beepbox.TonePin(0, 0, 3), new beepbox.TonePin(0, 2, 3)],
-            [new beepbox.TonePin(0, 0, 3), new beepbox.TonePin(0, 2, 0)],
-        ];
-        var copiedPinChannels = defaultPinChannels.concat();
-        var copiedPins;
-        var mouseXStart = 0;
-        var mouseYStart = 0;
-        var mouseXPrev = 0;
-        var mouseYPrev = 0;
-        var dragChange = null;
-        var cursor = new beepbox.PatternCursor();
-        var pattern;
-        var playheadX = 0.0;
-        var octaveOffset = 0;
-        var defaultNoteHeight = 13;
-        var defaultDrumHeight = 40;
-        var backgroundNoteRows = [];
-        for (var i = 0; i < 12; i++) {
-            var y = (12 - i) % 12;
-            var rectangle = document.createElementNS(svgNS, "rect");
-            rectangle.setAttribute("x", "1");
-            rectangle.setAttribute("y", "" + (y * defaultNoteHeight + 1));
-            rectangle.setAttribute("height", "" + (defaultNoteHeight - 2));
-            svgNoteBackground.appendChild(rectangle);
-            backgroundNoteRows[i] = rectangle;
-        }
-        var backgroundDrumRow = document.createElementNS(svgNS, "rect");
-        backgroundDrumRow.setAttribute("x", "1");
-        backgroundDrumRow.setAttribute("y", "1");
-        backgroundDrumRow.setAttribute("height", "" + (defaultDrumHeight - 2));
-        backgroundDrumRow.setAttribute("fill", "#444444");
-        svgDrumBackground.appendChild(backgroundDrumRow);
-        function updateCursorStatus() {
-            if (pattern == null)
+        PatternEditor.prototype._updateCursorStatus = function () {
+            if (this._pattern == null)
                 return;
-            cursor = new beepbox.PatternCursor();
-            if (mouseX < 0 || mouseX > editorWidth || mouseY < 0 || mouseY > editorHeight)
+            this._cursor = new beepbox.PatternCursor();
+            if (this._mouseX < 0 || this._mouseX > this._editorWidth || this._mouseY < 0 || this._mouseY > this._editorHeight)
                 return;
-            cursor.part = Math.floor(Math.max(0, Math.min(doc.song.beats * doc.song.parts - 1, mouseX / partWidth)));
-            for (var _i = 0, _a = pattern.tones; _i < _a.length; _i++) {
+            this._cursor.part = Math.floor(Math.max(0, Math.min(this._doc.song.beats * this._doc.song.parts - 1, this._mouseX / this._partWidth)));
+            for (var _i = 0, _a = this._pattern.tones; _i < _a.length; _i++) {
                 var tone = _a[_i];
-                if (tone.end <= cursor.part) {
-                    cursor.prevTone = tone;
-                    cursor.curIndex++;
+                if (tone.end <= this._cursor.part) {
+                    this._cursor.prevTone = tone;
+                    this._cursor.curIndex++;
                 }
-                else if (tone.start <= cursor.part && tone.end > cursor.part) {
-                    cursor.curTone = tone;
+                else if (tone.start <= this._cursor.part && tone.end > this._cursor.part) {
+                    this._cursor.curTone = tone;
                 }
-                else if (tone.start > cursor.part) {
-                    cursor.nextTone = tone;
+                else if (tone.start > this._cursor.part) {
+                    this._cursor.nextTone = tone;
                     break;
                 }
             }
-            var mousePitch = findMousePitch(mouseY);
-            if (cursor.curTone != null) {
-                cursor.start = cursor.curTone.start;
-                cursor.end = cursor.curTone.end;
-                cursor.pins = cursor.curTone.pins;
+            var mousePitch = this._findMousePitch(this._mouseY);
+            if (this._cursor.curTone != null) {
+                this._cursor.start = this._cursor.curTone.start;
+                this._cursor.end = this._cursor.curTone.end;
+                this._cursor.pins = this._cursor.curTone.pins;
                 var interval = void 0;
                 var error = void 0;
                 var prevPin = void 0;
-                var nextPin = cursor.curTone.pins[0];
-                for (var j = 1; j < cursor.curTone.pins.length; j++) {
+                var nextPin = this._cursor.curTone.pins[0];
+                for (var j = 1; j < this._cursor.curTone.pins.length; j++) {
                     prevPin = nextPin;
-                    nextPin = cursor.curTone.pins[j];
-                    var leftSide = partWidth * (cursor.curTone.start + prevPin.time);
-                    var rightSide = partWidth * (cursor.curTone.start + nextPin.time);
-                    if (mouseX > rightSide)
+                    nextPin = this._cursor.curTone.pins[j];
+                    var leftSide = this._partWidth * (this._cursor.curTone.start + prevPin.time);
+                    var rightSide = this._partWidth * (this._cursor.curTone.start + nextPin.time);
+                    if (this._mouseX > rightSide)
                         continue;
-                    if (mouseX < leftSide)
+                    if (this._mouseX < leftSide)
                         throw new Error();
-                    var intervalRatio = (mouseX - leftSide) / (rightSide - leftSide);
+                    var intervalRatio = (this._mouseX - leftSide) / (rightSide - leftSide);
                     var arc = Math.sqrt(1.0 / Math.sqrt(4.0) - Math.pow(intervalRatio - 0.5, 2.0)) - 0.5;
                     var bendHeight = Math.abs(nextPin.interval - prevPin.interval);
                     interval = prevPin.interval * (1.0 - intervalRatio) + nextPin.interval * intervalRatio;
@@ -3249,117 +3469,117 @@ var beepbox;
                 var minInterval = Number.MAX_VALUE;
                 var maxInterval = -Number.MAX_VALUE;
                 var bestDistance = Number.MAX_VALUE;
-                for (var _b = 0, _c = cursor.curTone.pins; _b < _c.length; _b++) {
+                for (var _b = 0, _c = this._cursor.curTone.pins; _b < _c.length; _b++) {
                     var pin = _c[_b];
                     if (minInterval > pin.interval)
                         minInterval = pin.interval;
                     if (maxInterval < pin.interval)
                         maxInterval = pin.interval;
-                    var pinDistance = Math.abs(cursor.curTone.start + pin.time - mouseX / partWidth);
+                    var pinDistance = Math.abs(this._cursor.curTone.start + pin.time - this._mouseX / this._partWidth);
                     if (bestDistance > pinDistance) {
                         bestDistance = pinDistance;
-                        cursor.nearPinIndex = cursor.curTone.pins.indexOf(pin);
+                        this._cursor.nearPinIndex = this._cursor.curTone.pins.indexOf(pin);
                     }
                 }
                 mousePitch -= interval;
-                cursor.note = snapToNote(mousePitch, -minInterval, (doc.channel == 3 ? beepbox.Music.drumCount - 1 : beepbox.Music.maxPitch) - maxInterval);
+                this._cursor.note = this._snapToNote(mousePitch, -minInterval, (this._doc.channel == 3 ? beepbox.Music.drumCount - 1 : beepbox.Music.maxPitch) - maxInterval);
                 var nearest = error;
-                for (var i = 0; i < cursor.curTone.notes.length; i++) {
-                    var distance = Math.abs(cursor.curTone.notes[i] - mousePitch + 0.5);
+                for (var i = 0; i < this._cursor.curTone.notes.length; i++) {
+                    var distance = Math.abs(this._cursor.curTone.notes[i] - mousePitch + 0.5);
                     if (distance > nearest)
                         continue;
                     nearest = distance;
-                    cursor.note = cursor.curTone.notes[i];
+                    this._cursor.note = this._cursor.curTone.notes[i];
                 }
-                for (var i = 0; i < cursor.curTone.notes.length; i++) {
-                    if (cursor.curTone.notes[i] == cursor.note) {
-                        cursor.noteIndex = i;
+                for (var i = 0; i < this._cursor.curTone.notes.length; i++) {
+                    if (this._cursor.curTone.notes[i] == this._cursor.note) {
+                        this._cursor.noteIndex = i;
                         break;
                     }
                 }
             }
             else {
-                cursor.note = snapToNote(mousePitch, 0, beepbox.Music.maxPitch);
-                var defaultLength = copiedPins[copiedPins.length - 1].time;
-                var quadBeats = Math.floor(cursor.part / doc.song.parts);
-                var modLength = defaultLength % doc.song.parts;
-                var modMouse = cursor.part % doc.song.parts;
+                this._cursor.note = this._snapToNote(mousePitch, 0, beepbox.Music.maxPitch);
+                var defaultLength = this._copiedPins[this._copiedPins.length - 1].time;
+                var quadBeats = Math.floor(this._cursor.part / this._doc.song.parts);
+                var modLength = defaultLength % this._doc.song.parts;
+                var modMouse = this._cursor.part % this._doc.song.parts;
                 if (defaultLength == 1) {
-                    cursor.start = cursor.part;
+                    this._cursor.start = this._cursor.part;
                 }
                 else if (modLength == 0) {
-                    cursor.start = quadBeats * doc.song.parts;
-                    if (doc.song.parts >> 1 == doc.song.parts / 2 && modMouse > doc.song.parts / 2 && defaultLength == doc.song.parts) {
-                        cursor.start += doc.song.parts / 2;
+                    this._cursor.start = quadBeats * this._doc.song.parts;
+                    if (this._doc.song.parts >> 1 == this._doc.song.parts / 2 && modMouse > this._doc.song.parts / 2 && defaultLength == this._doc.song.parts) {
+                        this._cursor.start += this._doc.song.parts / 2;
                     }
                 }
                 else {
-                    cursor.start = quadBeats * doc.song.parts;
-                    if (modLength == doc.song.parts / 2) {
-                        if (modMouse >= doc.song.parts / 2) {
-                            cursor.start += doc.song.parts - modLength;
+                    this._cursor.start = quadBeats * this._doc.song.parts;
+                    if (modLength == this._doc.song.parts / 2) {
+                        if (modMouse >= this._doc.song.parts / 2) {
+                            this._cursor.start += this._doc.song.parts - modLength;
                         }
                     }
                     else {
-                        if (modMouse > doc.song.parts / 2) {
-                            cursor.start += doc.song.parts - modLength;
+                        if (modMouse > this._doc.song.parts / 2) {
+                            this._cursor.start += this._doc.song.parts - modLength;
                         }
                     }
                 }
-                cursor.end = cursor.start + defaultLength;
+                this._cursor.end = this._cursor.start + defaultLength;
                 var forceStart = 0;
-                var forceEnd = doc.song.beats * doc.song.parts;
-                if (cursor.prevTone != null) {
-                    forceStart = cursor.prevTone.end;
+                var forceEnd = this._doc.song.beats * this._doc.song.parts;
+                if (this._cursor.prevTone != null) {
+                    forceStart = this._cursor.prevTone.end;
                 }
-                if (cursor.nextTone != null) {
-                    forceEnd = cursor.nextTone.start;
+                if (this._cursor.nextTone != null) {
+                    forceEnd = this._cursor.nextTone.start;
                 }
-                if (cursor.start < forceStart) {
-                    cursor.start = forceStart;
-                    cursor.end = cursor.start + defaultLength;
-                    if (cursor.end > forceEnd) {
-                        cursor.end = forceEnd;
+                if (this._cursor.start < forceStart) {
+                    this._cursor.start = forceStart;
+                    this._cursor.end = this._cursor.start + defaultLength;
+                    if (this._cursor.end > forceEnd) {
+                        this._cursor.end = forceEnd;
                     }
                 }
-                else if (cursor.end > forceEnd) {
-                    cursor.end = forceEnd;
-                    cursor.start = cursor.end - defaultLength;
-                    if (cursor.start < forceStart) {
-                        cursor.start = forceStart;
+                else if (this._cursor.end > forceEnd) {
+                    this._cursor.end = forceEnd;
+                    this._cursor.start = this._cursor.end - defaultLength;
+                    if (this._cursor.start < forceStart) {
+                        this._cursor.start = forceStart;
                     }
                 }
-                if (cursor.end - cursor.start == defaultLength) {
-                    cursor.pins = copiedPins;
+                if (this._cursor.end - this._cursor.start == defaultLength) {
+                    this._cursor.pins = this._copiedPins;
                 }
                 else {
-                    cursor.pins = [];
-                    for (var _d = 0, copiedPins_1 = copiedPins; _d < copiedPins_1.length; _d++) {
-                        var oldPin = copiedPins_1[_d];
-                        if (oldPin.time <= cursor.end - cursor.start) {
-                            cursor.pins.push(new beepbox.TonePin(0, oldPin.time, oldPin.volume));
-                            if (oldPin.time == cursor.end - cursor.start)
+                    this._cursor.pins = [];
+                    for (var _d = 0, _e = this._copiedPins; _d < _e.length; _d++) {
+                        var oldPin = _e[_d];
+                        if (oldPin.time <= this._cursor.end - this._cursor.start) {
+                            this._cursor.pins.push(new beepbox.TonePin(0, oldPin.time, oldPin.volume));
+                            if (oldPin.time == this._cursor.end - this._cursor.start)
                                 break;
                         }
                         else {
-                            cursor.pins.push(new beepbox.TonePin(0, cursor.end - cursor.start, oldPin.volume));
+                            this._cursor.pins.push(new beepbox.TonePin(0, this._cursor.end - this._cursor.start, oldPin.volume));
                             break;
                         }
                     }
                 }
             }
-            cursor.valid = true;
-        }
-        function findMousePitch(pixelY) {
-            return Math.max(0, Math.min(noteCount - 1, noteCount - (pixelY / noteHeight))) + octaveOffset;
-        }
-        function snapToNote(guess, min, max) {
+            this._cursor.valid = true;
+        };
+        PatternEditor.prototype._findMousePitch = function (pixelY) {
+            return Math.max(0, Math.min(this._noteCount - 1, this._noteCount - (pixelY / this._noteHeight))) + this._octaveOffset;
+        };
+        PatternEditor.prototype._snapToNote = function (guess, min, max) {
             if (guess < min)
                 guess = min;
             if (guess > max)
                 guess = max;
-            var scale = beepbox.Music.scaleFlags[doc.song.scale];
-            if (scale[Math.floor(guess) % 12] || doc.channel == 3) {
+            var scale = beepbox.Music.scaleFlags[this._doc.song.scale];
+            if (scale[Math.floor(guess) % 12] || this._doc.channel == 3) {
                 return Math.floor(guess);
             }
             else {
@@ -3392,131 +3612,63 @@ var beepbox;
                 }
                 return guess - bottomRange > topRange - guess ? topNote : bottomNote;
             }
-        }
-        function copyPins(tone) {
-            copiedPins = [];
+        };
+        PatternEditor.prototype._copyPins = function (tone) {
+            this._copiedPins = [];
             for (var _i = 0, _a = tone.pins; _i < _a.length; _i++) {
                 var oldPin = _a[_i];
-                copiedPins.push(new beepbox.TonePin(0, oldPin.time, oldPin.volume));
+                this._copiedPins.push(new beepbox.TonePin(0, oldPin.time, oldPin.volume));
             }
-            for (var i = 1; i < copiedPins.length - 1;) {
-                if (copiedPins[i - 1].volume == copiedPins[i].volume &&
-                    copiedPins[i].volume == copiedPins[i + 1].volume) {
-                    copiedPins.splice(i, 1);
+            for (var i = 1; i < this._copiedPins.length - 1;) {
+                if (this._copiedPins[i - 1].volume == this._copiedPins[i].volume &&
+                    this._copiedPins[i].volume == this._copiedPins[i + 1].volume) {
+                    this._copiedPins.splice(i, 1);
                 }
                 else {
                     i++;
                 }
             }
-            copiedPinChannels[doc.channel] = copiedPins;
-        }
-        this.resetCopiedPins = (function () {
-            copiedPinChannels = defaultPinChannels.concat();
-        });
-        function onEnterFrame(timestamp) {
-            if (!doc.synth.playing || pattern == null || doc.song.getPattern(doc.channel, Math.floor(doc.synth.playhead)) != pattern) {
-                svgPlayhead.setAttribute("visibility", "hidden");
-            }
-            else {
-                svgPlayhead.setAttribute("visibility", "visible");
-                var modPlayhead = doc.synth.playhead - Math.floor(doc.synth.playhead);
-                if (Math.abs(modPlayhead - playheadX) > 0.1) {
-                    playheadX = modPlayhead;
-                }
-                else {
-                    playheadX += (modPlayhead - playheadX) * 0.2;
-                }
-                svgPlayhead.setAttribute("x", "" + prettyNumber(playheadX * editorWidth - 2));
-            }
-            window.requestAnimationFrame(onEnterFrame);
-        }
-        function onMouseOver(event) {
-            mouseOver = true;
-        }
-        function onMouseOut(event) {
-            mouseOver = false;
-        }
-        function onMousePressed(event) {
-            event.preventDefault();
-            if (pattern == null)
-                return;
-            mouseDown = true;
-            mouseXStart = mouseX;
-            mouseYStart = mouseY;
-            mouseXPrev = mouseX;
-            mouseYPrev = mouseY;
-            updateCursorStatus();
-            updatePreview();
-        }
-        function onTouchPressed(event) {
-            event.preventDefault();
-            if (pattern == null)
-                return;
-            mouseDown = true;
-            var boundingRect = svg.getBoundingClientRect();
-            mouseX = event.touches[0].clientX - boundingRect.left;
-            mouseY = event.touches[0].clientY - boundingRect.top;
-            mouseXStart = mouseX;
-            mouseYStart = mouseY;
-            mouseXPrev = mouseX;
-            mouseYPrev = mouseY;
-            updateCursorStatus();
-            updatePreview();
-        }
-        function onMouseMoved(event) {
-            var boundingRect = svg.getBoundingClientRect();
-            mouseX = (event.clientX || event.pageX) - boundingRect.left;
-            mouseY = (event.clientY || event.pageY) - boundingRect.top;
-            onCursorMoved();
-        }
-        function onTouchMoved(event) {
-            if (!mouseDown)
-                return;
-            event.preventDefault();
-            var boundingRect = svg.getBoundingClientRect();
-            mouseX = event.touches[0].clientX - boundingRect.left;
-            mouseY = event.touches[0].clientY - boundingRect.top;
-            onCursorMoved();
-        }
-        function onCursorMoved() {
+            this._copiedPinChannels[this._doc.channel] = this._copiedPins;
+        };
+        PatternEditor.prototype._onCursorMoved = function () {
             var start;
             var end;
-            if (pattern == null)
+            if (this._pattern == null)
                 return;
-            if (mouseDown && cursor.valid) {
-                if (!mouseDragging) {
-                    var dx = mouseX - mouseXStart;
-                    var dy = mouseY - mouseYStart;
+            if (this._mouseDown && this._cursor.valid) {
+                if (!this._mouseDragging) {
+                    var dx = this._mouseX - this._mouseXStart;
+                    var dy = this._mouseY - this._mouseYStart;
                     if (Math.sqrt(dx * dx + dy * dy) > 5) {
-                        mouseDragging = true;
-                        mouseHorizontal = Math.abs(dx) >= Math.abs(dy);
+                        this._mouseDragging = true;
+                        this._mouseHorizontal = Math.abs(dx) >= Math.abs(dy);
                     }
                 }
-                if (mouseDragging) {
-                    if (dragChange != null) {
-                        dragChange.undo();
-                        dragChange = null;
+                if (this._mouseDragging) {
+                    if (this._dragChange != null) {
+                        this._dragChange.undo();
+                        this._dragChange = null;
                     }
-                    var currentPart = Math.floor(mouseX / partWidth);
+                    var currentPart = Math.floor(this._mouseX / this._partWidth);
                     var sequence = new beepbox.ChangeSequence();
-                    if (cursor.curTone == null) {
+                    if (this._cursor.curTone == null) {
                         var backwards = void 0;
                         var directLength = void 0;
-                        if (currentPart < cursor.start) {
+                        if (currentPart < this._cursor.start) {
                             backwards = true;
-                            directLength = cursor.start - currentPart;
+                            directLength = this._cursor.start - currentPart;
                         }
                         else {
                             backwards = false;
-                            directLength = currentPart - cursor.start + 1;
+                            directLength = currentPart - this._cursor.start + 1;
                         }
                         var defaultLength = 1;
-                        for (var i_1 = 0; i_1 <= doc.song.beats * doc.song.parts; i_1++) {
+                        for (var i_1 = 0; i_1 <= this._doc.song.beats * this._doc.song.parts; i_1++) {
                             if (i_1 >= 5 &&
-                                i_1 % doc.song.parts != 0 &&
-                                i_1 != doc.song.parts * 3.0 / 2.0 &&
-                                i_1 != doc.song.parts * 4.0 / 3.0 &&
-                                i_1 != doc.song.parts * 5.0 / 3.0) {
+                                i_1 % this._doc.song.parts != 0 &&
+                                i_1 != this._doc.song.parts * 3.0 / 2.0 &&
+                                i_1 != this._doc.song.parts * 4.0 / 3.0 &&
+                                i_1 != this._doc.song.parts * 5.0 / 3.0) {
                                 continue;
                             }
                             var blessedLength = i_1;
@@ -3537,268 +3689,137 @@ var beepbox;
                         if (defaultLength < directLength) {
                         }
                         if (backwards) {
-                            end = cursor.start;
+                            end = this._cursor.start;
                             start = end - defaultLength;
                         }
                         else {
-                            start = cursor.start;
+                            start = this._cursor.start;
                             end = start + defaultLength;
                         }
                         if (start < 0)
                             start = 0;
-                        if (end > doc.song.beats * doc.song.parts)
-                            end = doc.song.beats * doc.song.parts;
-                        sequence.append(new beepbox.ChangeToneTruncate(doc, pattern, start, end));
+                        if (end > this._doc.song.beats * this._doc.song.parts)
+                            end = this._doc.song.beats * this._doc.song.parts;
+                        sequence.append(new beepbox.ChangeToneTruncate(this._doc, this._pattern, start, end));
                         var i = void 0;
-                        for (i = 0; i < pattern.tones.length; i++) {
-                            if (pattern.tones[i].start >= end)
+                        for (i = 0; i < this._pattern.tones.length; i++) {
+                            if (this._pattern.tones[i].start >= end)
                                 break;
                         }
-                        var theTone = new beepbox.Tone(cursor.note, start, end, 3, doc.channel == 3);
-                        sequence.append(new beepbox.ChangeToneAdded(doc, pattern, theTone, i));
-                        copyPins(theTone);
+                        var theTone = new beepbox.Tone(this._cursor.note, start, end, 3, this._doc.channel == 3);
+                        sequence.append(new beepbox.ChangeToneAdded(this._doc, this._pattern, theTone, i));
+                        this._copyPins(theTone);
                     }
-                    else if (mouseHorizontal) {
-                        var shift = Math.round((mouseX - mouseXStart) / partWidth);
-                        var shiftedPin = cursor.curTone.pins[cursor.nearPinIndex];
-                        var shiftedTime = cursor.curTone.start + shiftedPin.time + shift;
+                    else if (this._mouseHorizontal) {
+                        var shift = Math.round((this._mouseX - this._mouseXStart) / this._partWidth);
+                        var shiftedPin = this._cursor.curTone.pins[this._cursor.nearPinIndex];
+                        var shiftedTime = this._cursor.curTone.start + shiftedPin.time + shift;
                         if (shiftedTime < 0)
                             shiftedTime = 0;
-                        if (shiftedTime > doc.song.beats * doc.song.parts)
-                            shiftedTime = doc.song.beats * doc.song.parts;
-                        if (shiftedTime <= cursor.curTone.start && cursor.nearPinIndex == cursor.curTone.pins.length - 1 ||
-                            shiftedTime >= cursor.curTone.end && cursor.nearPinIndex == 0) {
-                            sequence.append(new beepbox.ChangeToneAdded(doc, pattern, cursor.curTone, cursor.curIndex, true));
+                        if (shiftedTime > this._doc.song.beats * this._doc.song.parts)
+                            shiftedTime = this._doc.song.beats * this._doc.song.parts;
+                        if (shiftedTime <= this._cursor.curTone.start && this._cursor.nearPinIndex == this._cursor.curTone.pins.length - 1 ||
+                            shiftedTime >= this._cursor.curTone.end && this._cursor.nearPinIndex == 0) {
+                            sequence.append(new beepbox.ChangeToneAdded(this._doc, this._pattern, this._cursor.curTone, this._cursor.curIndex, true));
                         }
                         else {
-                            start = Math.min(cursor.curTone.start, shiftedTime);
-                            end = Math.max(cursor.curTone.end, shiftedTime);
-                            sequence.append(new beepbox.ChangeToneTruncate(doc, pattern, start, end, cursor.curTone));
-                            sequence.append(new beepbox.ChangePinTime(doc, cursor.curTone, cursor.nearPinIndex, shiftedTime));
-                            copyPins(cursor.curTone);
+                            start = Math.min(this._cursor.curTone.start, shiftedTime);
+                            end = Math.max(this._cursor.curTone.end, shiftedTime);
+                            sequence.append(new beepbox.ChangeToneTruncate(this._doc, this._pattern, start, end, this._cursor.curTone));
+                            sequence.append(new beepbox.ChangePinTime(this._doc, this._cursor.curTone, this._cursor.nearPinIndex, shiftedTime));
+                            this._copyPins(this._cursor.curTone);
                         }
                     }
-                    else if (cursor.noteIndex == -1) {
-                        var bendPart = Math.round(Math.max(cursor.curTone.start, Math.min(cursor.curTone.end, mouseX / partWidth))) - cursor.curTone.start;
+                    else if (this._cursor.noteIndex == -1) {
+                        var bendPart = Math.round(Math.max(this._cursor.curTone.start, Math.min(this._cursor.curTone.end, this._mouseX / this._partWidth))) - this._cursor.curTone.start;
                         var prevPin = void 0;
-                        var nextPin = cursor.curTone.pins[0];
+                        var nextPin = this._cursor.curTone.pins[0];
                         var bendVolume = void 0;
                         var bendInterval = void 0;
-                        for (var i = 1; i < cursor.curTone.pins.length; i++) {
+                        for (var i = 1; i < this._cursor.curTone.pins.length; i++) {
                             prevPin = nextPin;
-                            nextPin = cursor.curTone.pins[i];
+                            nextPin = this._cursor.curTone.pins[i];
                             if (bendPart > nextPin.time)
                                 continue;
                             if (bendPart < prevPin.time)
                                 throw new Error();
                             var volumeRatio = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
-                            bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((mouseYStart - mouseY) / 25.0));
+                            bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((this._mouseYStart - this._mouseY) / 25.0));
                             if (bendVolume < 0)
                                 bendVolume = 0;
                             if (bendVolume > 3)
                                 bendVolume = 3;
-                            bendInterval = snapToNote(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + cursor.curTone.notes[0], 0, beepbox.Music.maxPitch) - cursor.curTone.notes[0];
+                            bendInterval = this._snapToNote(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + this._cursor.curTone.notes[0], 0, beepbox.Music.maxPitch) - this._cursor.curTone.notes[0];
                             break;
                         }
-                        sequence.append(new beepbox.ChangeVolumeBend(doc, pattern, cursor.curTone, bendPart, bendVolume, bendInterval));
-                        copyPins(cursor.curTone);
+                        sequence.append(new beepbox.ChangeVolumeBend(this._doc, this._pattern, this._cursor.curTone, bendPart, bendVolume, bendInterval));
+                        this._copyPins(this._cursor.curTone);
                     }
                     else {
                         var bendStart = void 0;
                         var bendEnd = void 0;
-                        if (mouseX >= mouseXStart) {
-                            bendStart = cursor.part;
+                        if (this._mouseX >= this._mouseXStart) {
+                            bendStart = this._cursor.part;
                             bendEnd = currentPart + 1;
                         }
                         else {
-                            bendStart = cursor.part + 1;
+                            bendStart = this._cursor.part + 1;
                             bendEnd = currentPart;
                         }
                         if (bendEnd < 0)
                             bendEnd = 0;
-                        if (bendEnd > doc.song.beats * doc.song.parts)
-                            bendEnd = doc.song.beats * doc.song.parts;
-                        if (bendEnd > cursor.curTone.end) {
-                            sequence.append(new beepbox.ChangeToneTruncate(doc, pattern, cursor.curTone.start, bendEnd, cursor.curTone));
+                        if (bendEnd > this._doc.song.beats * this._doc.song.parts)
+                            bendEnd = this._doc.song.beats * this._doc.song.parts;
+                        if (bendEnd > this._cursor.curTone.end) {
+                            sequence.append(new beepbox.ChangeToneTruncate(this._doc, this._pattern, this._cursor.curTone.start, bendEnd, this._cursor.curTone));
                         }
-                        if (bendEnd < cursor.curTone.start) {
-                            sequence.append(new beepbox.ChangeToneTruncate(doc, pattern, bendEnd, cursor.curTone.end, cursor.curTone));
+                        if (bendEnd < this._cursor.curTone.start) {
+                            sequence.append(new beepbox.ChangeToneTruncate(this._doc, this._pattern, bendEnd, this._cursor.curTone.end, this._cursor.curTone));
                         }
                         var minNote = Number.MAX_VALUE;
                         var maxNote = -Number.MAX_VALUE;
-                        for (var _i = 0, _a = cursor.curTone.notes; _i < _a.length; _i++) {
+                        for (var _i = 0, _a = this._cursor.curTone.notes; _i < _a.length; _i++) {
                             var note = _a[_i];
                             if (minNote > note)
                                 minNote = note;
                             if (maxNote < note)
                                 maxNote = note;
                         }
-                        minNote -= cursor.curTone.notes[0];
-                        maxNote -= cursor.curTone.notes[0];
-                        var bendTo = snapToNote(findMousePitch(mouseY), -minNote, beepbox.Music.maxPitch - maxNote);
-                        sequence.append(new beepbox.ChangePitchBend(doc, cursor.curTone, bendStart, bendEnd, bendTo, cursor.noteIndex));
-                        copyPins(cursor.curTone);
+                        minNote -= this._cursor.curTone.notes[0];
+                        maxNote -= this._cursor.curTone.notes[0];
+                        var bendTo = this._snapToNote(this._findMousePitch(this._mouseY), -minNote, beepbox.Music.maxPitch - maxNote);
+                        sequence.append(new beepbox.ChangePitchBend(this._doc, this._cursor.curTone, bendStart, bendEnd, bendTo, this._cursor.noteIndex));
+                        this._copyPins(this._cursor.curTone);
                     }
-                    dragChange = sequence;
+                    this._dragChange = sequence;
                 }
-                mouseXPrev = mouseX;
-                mouseYPrev = mouseY;
+                this._mouseXPrev = this._mouseX;
+                this._mouseYPrev = this._mouseY;
             }
             else {
-                updateCursorStatus();
-                updatePreview();
+                this._updateCursorStatus();
+                this._updatePreview();
             }
-        }
-        function onCursorReleased(event) {
-            if (!cursor.valid)
-                return;
-            if (pattern == null)
-                return;
-            if (mouseDragging) {
-                if (dragChange != null) {
-                    doc.history.record(dragChange);
-                    dragChange = null;
-                }
-            }
-            else if (mouseDown) {
-                if (cursor.curTone == null) {
-                    var tone = new beepbox.Tone(cursor.note, cursor.start, cursor.end, 3, doc.channel == 3);
-                    tone.pins = [];
-                    for (var _i = 0, _a = cursor.pins; _i < _a.length; _i++) {
-                        var oldPin = _a[_i];
-                        tone.pins.push(new beepbox.TonePin(0, oldPin.time, oldPin.volume));
-                    }
-                    doc.history.record(new beepbox.ChangeToneAdded(doc, pattern, tone, cursor.curIndex));
-                }
-                else {
-                    if (cursor.noteIndex == -1) {
-                        var sequence = new beepbox.ChangeSequence();
-                        if (cursor.curTone.notes.length == 4) {
-                            sequence.append(new beepbox.ChangeNoteAdded(doc, pattern, cursor.curTone, cursor.curTone.notes[0], 0, true));
-                        }
-                        sequence.append(new beepbox.ChangeNoteAdded(doc, pattern, cursor.curTone, cursor.note, cursor.curTone.notes.length));
-                        doc.history.record(sequence);
-                        copyPins(cursor.curTone);
-                    }
-                    else {
-                        if (cursor.curTone.notes.length == 1) {
-                            doc.history.record(new beepbox.ChangeToneAdded(doc, pattern, cursor.curTone, cursor.curIndex, true));
-                        }
-                        else {
-                            doc.history.record(new beepbox.ChangeNoteAdded(doc, pattern, cursor.curTone, cursor.note, cursor.curTone.notes.indexOf(cursor.note), true));
-                        }
-                    }
-                }
-            }
-            mouseDown = false;
-            mouseDragging = false;
-            updateCursorStatus();
-            updatePreview();
-        }
-        function updatePreview() {
-            if (!mouseOver || mouseDown || !cursor.valid || pattern == null) {
-                svgPreview.setAttribute("visibility", "hidden");
+        };
+        PatternEditor.prototype._updatePreview = function () {
+            if (!this._mouseOver || this._mouseDown || !this._cursor.valid || this._pattern == null) {
+                this._svgPreview.setAttribute("visibility", "hidden");
             }
             else {
-                svgPreview.setAttribute("visibility", "visible");
-                drawNote(svgPreview, cursor.note, cursor.start, cursor.pins, noteHeight / 2 + 1, true, octaveOffset);
+                this._svgPreview.setAttribute("visibility", "visible");
+                this._drawNote(this._svgPreview, this._cursor.note, this._cursor.start, this._cursor.pins, this._noteHeight / 2 + 1, true, this._octaveOffset);
             }
-        }
-        function makeEmptyReplacementElement(node) {
-            var clone = node.cloneNode(false);
-            node.parentNode.replaceChild(clone, node);
-            return clone;
-        }
-        function documentChanged() {
-            editorWidth = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
-            pattern = doc.getCurrentPattern();
-            partWidth = editorWidth / (doc.song.beats * doc.song.parts);
-            noteHeight = doc.channel == 3 ? defaultDrumHeight : defaultNoteHeight;
-            noteCount = doc.channel == 3 ? beepbox.Music.drumCount : beepbox.Music.noteCount;
-            octaveOffset = doc.song.channelOctaves[doc.channel] * 12;
-            copiedPins = copiedPinChannels[doc.channel];
-            svg.setAttribute("width", "" + editorWidth);
-            svgBackground.setAttribute("width", "" + editorWidth);
-            svgNoteBackground.setAttribute("width", "" + (editorWidth / doc.song.beats));
-            svgDrumBackground.setAttribute("width", "" + (editorWidth / doc.song.beats));
-            if (!mouseDown)
-                updateCursorStatus();
-            svgNoteContainer = makeEmptyReplacementElement(svgNoteContainer);
-            updatePreview();
-            if (pattern == null) {
-                svg.setAttribute("visibility", "hidden");
-                return;
-            }
-            svg.setAttribute("visibility", "visible");
-            for (var j = 0; j < 12; j++) {
-                var color = "#444444";
-                if (j == 0)
-                    color = "#886644";
-                if (j == 7 && doc.showFifth)
-                    color = "#446688";
-                var rectangle = backgroundNoteRows[j];
-                rectangle.setAttribute("width", "" + (partWidth * doc.song.parts - 2));
-                rectangle.setAttribute("fill", color);
-                rectangle.setAttribute("visibility", beepbox.Music.scaleFlags[doc.song.scale][j] ? "visible" : "hidden");
-            }
-            backgroundDrumRow.setAttribute("width", "" + (partWidth * doc.song.parts - 2));
-            if (doc.channel == 3) {
-                svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
-                svgBackground.setAttribute("height", "" + (defaultDrumHeight * beepbox.Music.drumCount));
-                svg.setAttribute("height", "" + (defaultDrumHeight * beepbox.Music.drumCount));
-            }
-            else {
-                svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground)");
-                svgBackground.setAttribute("height", "" + editorHeight);
-                svg.setAttribute("height", "" + editorHeight);
-            }
-            if (doc.channel != 3 && doc.showChannels) {
-                for (var channel = 2; channel >= 0; channel--) {
-                    if (channel == doc.channel)
-                        continue;
-                    var pattern2 = doc.song.getPattern(channel, doc.bar);
-                    if (pattern2 == null)
-                        continue;
-                    for (var _i = 0, _a = pattern2.tones; _i < _a.length; _i++) {
-                        var tone = _a[_i];
-                        for (var _b = 0, _c = tone.notes; _b < _c.length; _b++) {
-                            var note = _c[_b];
-                            var notePath = document.createElementNS(svgNS, "path");
-                            notePath.setAttribute("fill", beepbox.SongEditor.noteColorsDim[channel]);
-                            notePath.setAttribute("pointer-events", "none");
-                            drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
-                            svgNoteContainer.appendChild(notePath);
-                        }
-                    }
-                }
-            }
-            for (var _d = 0, _e = pattern.tones; _d < _e.length; _d++) {
-                var tone = _e[_d];
-                for (var _f = 0, _g = tone.notes; _f < _g.length; _f++) {
-                    var note = _g[_f];
-                    var notePath = document.createElementNS(svgNS, "path");
-                    notePath.setAttribute("fill", beepbox.SongEditor.noteColorsDim[doc.channel]);
-                    notePath.setAttribute("pointer-events", "none");
-                    drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
-                    svgNoteContainer.appendChild(notePath);
-                    notePath = document.createElementNS(svgNS, "path");
-                    notePath.setAttribute("fill", beepbox.SongEditor.noteColorsBright[doc.channel]);
-                    notePath.setAttribute("pointer-events", "none");
-                    drawNote(notePath, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
-                    svgNoteContainer.appendChild(notePath);
-                }
-            }
-        }
-        function drawNote(svgElement, note, start, pins, radius, showVolume, offset) {
+        };
+        PatternEditor.prototype._drawNote = function (svgElement, note, start, pins, radius, showVolume, offset) {
             var nextPin = pins[0];
-            var pathString = "M " + prettyNumber(partWidth * (start + nextPin.time) + 1) + " " + prettyNumber(noteToPixelHeight(note - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
+            var pathString = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + 1) + " " + prettyNumber(this._noteToPixelHeight(note - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
             for (var i = 1; i < pins.length; i++) {
                 var prevPin = nextPin;
                 nextPin = pins[i];
-                var prevSide = partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
-                var nextSide = partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
-                var prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
-                var nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
+                var prevSide = this._partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
+                var nextSide = this._partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
+                var prevHeight = this._noteToPixelHeight(note + prevPin.interval - offset);
+                var nextHeight = this._noteToPixelHeight(note + nextPin.interval - offset);
                 var prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
                 var nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
                 pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
@@ -3811,10 +3832,10 @@ var beepbox;
             for (var i = pins.length - 2; i >= 0; i--) {
                 var prevPin = nextPin;
                 nextPin = pins[i];
-                var prevSide = partWidth * (start + prevPin.time) - (i == pins.length - 2 ? 1 : 0);
-                var nextSide = partWidth * (start + nextPin.time) + (i == 0 ? 1 : 0);
-                var prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
-                var nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
+                var prevSide = this._partWidth * (start + prevPin.time) - (i == pins.length - 2 ? 1 : 0);
+                var nextSide = this._partWidth * (start + nextPin.time) + (i == 0 ? 1 : 0);
+                var prevHeight = this._noteToPixelHeight(note + prevPin.interval - offset);
+                var nextHeight = this._noteToPixelHeight(note + nextPin.interval - offset);
                 var prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
                 var nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
                 pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
@@ -3826,362 +3847,375 @@ var beepbox;
             }
             pathString += "z";
             svgElement.setAttribute("d", pathString);
-        }
-        function noteToPixelHeight(note) {
-            return noteHeight * (noteCount - (note) - 0.5);
-        }
-        doc.watch(documentChanged);
-        documentChanged();
-        updateCursorStatus();
-        updatePreview();
-        window.requestAnimationFrame(onEnterFrame);
-        svg.addEventListener("mousedown", onMousePressed);
-        document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onCursorReleased);
-        svg.addEventListener("mouseover", onMouseOver);
-        svg.addEventListener("mouseout", onMouseOut);
-        svg.addEventListener("touchstart", onTouchPressed);
-        document.addEventListener("touchmove", onTouchMoved);
-        document.addEventListener("touchend", onCursorReleased);
-        document.addEventListener("touchcancel", onCursorReleased);
-    }
+        };
+        PatternEditor.prototype._noteToPixelHeight = function (note) {
+            return this._noteHeight * (this._noteCount - (note) - 0.5);
+        };
+        return PatternEditor;
+    }());
     beepbox.PatternEditor = PatternEditor;
 })(beepbox || (beepbox = {}));
 "use strict";
 var beepbox;
 (function (beepbox) {
-    function TrackEditor(doc, songEditor) {
-        var barWidth = 32;
-        var mouseX;
-        var mouseY;
-        var mainLayer = document.getElementById("mainLayer");
-        var container = document.getElementById("trackEditorContainer");
-        var canvas = document.getElementById("trackEditor");
-        var graphics = canvas.getContext("2d");
-        var playhead = document.getElementById("trackPlayhead");
-        var preview = document.getElementById("trackEditorPreview");
-        var previewGraphics = preview.getContext("2d");
-        var pattern;
-        var mouseOver = false;
-        var digits = "";
-        var editorWidth = 512;
-        var editorHeight = 128;
-        var channelHeight = 32;
-        function onEnterFrame(timestamp) {
-            playhead.style.left = (barWidth * (doc.synth.playhead - doc.barScrollPos) - 2) + "px";
-            window.requestAnimationFrame(onEnterFrame);
+    var TrackEditor = (function () {
+        function TrackEditor(_doc, _songEditor) {
+            var _this = this;
+            this._doc = _doc;
+            this._songEditor = _songEditor;
+            this._barWidth = 32;
+            this._mainLayer = document.getElementById("mainLayer");
+            this._container = document.getElementById("trackEditorContainer");
+            this._canvas = document.getElementById("trackEditor");
+            this._graphics = this._canvas.getContext("2d");
+            this._playhead = document.getElementById("trackPlayhead");
+            this._preview = document.getElementById("trackEditorPreview");
+            this._previewGraphics = this._preview.getContext("2d");
+            this._editorWidth = 512;
+            this._mouseOver = false;
+            this._digits = "";
+            this._editorHeight = 128;
+            this._channelHeight = 32;
+            this._onEnterFrame = function (timestamp) {
+                _this._playhead.style.left = (_this._barWidth * (_this._doc.synth.playhead - _this._doc.barScrollPos) - 2) + "px";
+                window.requestAnimationFrame(_this._onEnterFrame);
+            };
+            this._onKeyPressed = function (event) {
+                if (_this._songEditor.promptVisible)
+                    return;
+                switch (event.keyCode) {
+                    case 38:
+                        _this._setChannelBar((_this._doc.channel + 3) % beepbox.Music.numChannels, _this._doc.bar);
+                        event.preventDefault();
+                        break;
+                    case 40:
+                        _this._setChannelBar((_this._doc.channel + 1) % beepbox.Music.numChannels, _this._doc.bar);
+                        event.preventDefault();
+                        break;
+                    case 37:
+                        _this._setChannelBar(_this._doc.channel, (_this._doc.bar + _this._doc.song.bars - 1) % _this._doc.song.bars);
+                        event.preventDefault();
+                        break;
+                    case 39:
+                        _this._setChannelBar(_this._doc.channel, (_this._doc.bar + 1) % _this._doc.song.bars);
+                        event.preventDefault();
+                        break;
+                    case 48:
+                        _this._nextDigit("0");
+                        event.preventDefault();
+                        break;
+                    case 49:
+                        _this._nextDigit("1");
+                        event.preventDefault();
+                        break;
+                    case 50:
+                        _this._nextDigit("2");
+                        event.preventDefault();
+                        break;
+                    case 51:
+                        _this._nextDigit("3");
+                        event.preventDefault();
+                        break;
+                    case 52:
+                        _this._nextDigit("4");
+                        event.preventDefault();
+                        break;
+                    case 53:
+                        _this._nextDigit("5");
+                        event.preventDefault();
+                        break;
+                    case 54:
+                        _this._nextDigit("6");
+                        event.preventDefault();
+                        break;
+                    case 55:
+                        _this._nextDigit("7");
+                        event.preventDefault();
+                        break;
+                    case 56:
+                        _this._nextDigit("8");
+                        event.preventDefault();
+                        break;
+                    case 57:
+                        _this._nextDigit("9");
+                        event.preventDefault();
+                        break;
+                    default:
+                        _this._digits = "";
+                        break;
+                }
+            };
+            this._onKeyReleased = function (event) {
+            };
+            this._onMouseOver = function (event) {
+                _this._mouseOver = true;
+            };
+            this._onMouseOut = function (event) {
+                _this._mouseOver = false;
+            };
+            this._onMousePressed = function (event) {
+                event.preventDefault();
+                var channel = Math.floor(Math.min(beepbox.Music.numChannels - 1, Math.max(0, _this._mouseY / _this._channelHeight)));
+                var bar = Math.floor(Math.min(_this._doc.song.bars - 1, Math.max(0, _this._mouseX / _this._barWidth + _this._doc.barScrollPos)));
+                if (_this._doc.channel == channel && _this._doc.bar == bar) {
+                    var up = (_this._mouseY % _this._channelHeight) < _this._channelHeight / 2;
+                    var patternCount = _this._doc.song.channelPatterns[channel].length;
+                    _this._setBarPattern((_this._doc.song.channelBars[channel][bar] + (up ? 1 : patternCount)) % (patternCount + 1));
+                }
+                else {
+                    _this._setChannelBar(channel, bar);
+                }
+            };
+            this._onMouseMoved = function (event) {
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+                _this._updatePreview();
+            };
+            this._onMouseReleased = function (event) {
+            };
+            this._documentChanged = function () {
+                _this._pattern = _this._doc.getCurrentPattern();
+                _this._editorHeight = _this._doc.song.bars > 16 ? 108 : 128;
+                _this._canvas.height = _this._editorHeight;
+                _this._canvas.style.width = String(_this._editorHeight);
+                _this._channelHeight = _this._editorHeight / beepbox.Music.numChannels;
+                _this._render();
+            };
+            this._pattern = this._doc.getCurrentPattern();
+            this._render();
+            this._doc.watch(this._documentChanged);
+            window.requestAnimationFrame(this._onEnterFrame);
+            this._container.addEventListener("mousedown", this._onMousePressed);
+            document.addEventListener("mousemove", this._onMouseMoved);
+            document.addEventListener("mouseup", this._onMouseReleased);
+            this._container.addEventListener("mouseover", this._onMouseOver);
+            this._container.addEventListener("mouseout", this._onMouseOut);
+            this._mainLayer.addEventListener("keydown", this._onKeyPressed);
+            this._mainLayer.addEventListener("keyup", this._onKeyReleased);
         }
-        function setChannelBar(channel, bar) {
-            var oldBarScrollPos = doc.barScrollPos;
-            if (doc.history.getRecentChange() instanceof beepbox.ChangeChannelBar)
-                doc.history.undo();
-            doc.barScrollPos = oldBarScrollPos;
-            doc.history.record(new beepbox.ChangeChannelBar(doc, channel, bar));
-            digits = "";
-        }
-        function setBarPattern(pattern) {
-            if (doc.history.getRecentChange() instanceof beepbox.ChangeBarPattern)
-                doc.history.undo();
-            doc.history.record(new beepbox.ChangeBarPattern(doc, pattern));
-        }
-        function onKeyPressed(event) {
-            if (songEditor.promptVisible)
+        TrackEditor.prototype._setChannelBar = function (channel, bar) {
+            var oldBarScrollPos = this._doc.barScrollPos;
+            if (this._doc.history.getRecentChange() instanceof beepbox.ChangeChannelBar)
+                this._doc.history.undo();
+            this._doc.barScrollPos = oldBarScrollPos;
+            this._doc.history.record(new beepbox.ChangeChannelBar(this._doc, channel, bar));
+            this._digits = "";
+        };
+        TrackEditor.prototype._setBarPattern = function (pattern) {
+            if (this._doc.history.getRecentChange() instanceof beepbox.ChangeBarPattern)
+                this._doc.history.undo();
+            this._doc.history.record(new beepbox.ChangeBarPattern(this._doc, pattern));
+        };
+        TrackEditor.prototype._nextDigit = function (digit) {
+            this._digits += digit;
+            var parsed = parseInt(this._digits);
+            if (parsed <= this._doc.song.patterns) {
+                this._setBarPattern(parsed);
                 return;
-            switch (event.keyCode) {
-                case 38:
-                    setChannelBar((doc.channel + 3) % beepbox.Music.numChannels, doc.bar);
-                    event.preventDefault();
-                    break;
-                case 40:
-                    setChannelBar((doc.channel + 1) % beepbox.Music.numChannels, doc.bar);
-                    event.preventDefault();
-                    break;
-                case 37:
-                    setChannelBar(doc.channel, (doc.bar + doc.song.bars - 1) % doc.song.bars);
-                    event.preventDefault();
-                    break;
-                case 39:
-                    setChannelBar(doc.channel, (doc.bar + 1) % doc.song.bars);
-                    event.preventDefault();
-                    break;
-                case 48:
-                    nextDigit("0");
-                    event.preventDefault();
-                    break;
-                case 49:
-                    nextDigit("1");
-                    event.preventDefault();
-                    break;
-                case 50:
-                    nextDigit("2");
-                    event.preventDefault();
-                    break;
-                case 51:
-                    nextDigit("3");
-                    event.preventDefault();
-                    break;
-                case 52:
-                    nextDigit("4");
-                    event.preventDefault();
-                    break;
-                case 53:
-                    nextDigit("5");
-                    event.preventDefault();
-                    break;
-                case 54:
-                    nextDigit("6");
-                    event.preventDefault();
-                    break;
-                case 55:
-                    nextDigit("7");
-                    event.preventDefault();
-                    break;
-                case 56:
-                    nextDigit("8");
-                    event.preventDefault();
-                    break;
-                case 57:
-                    nextDigit("9");
-                    event.preventDefault();
-                    break;
-                default:
-                    digits = "";
-                    break;
             }
-        }
-        function nextDigit(digit) {
-            digits += digit;
-            var parsed = parseInt(digits);
-            if (parsed <= doc.song.patterns) {
-                setBarPattern(parsed);
+            this._digits = digit;
+            parsed = parseInt(this._digits);
+            if (parsed <= this._doc.song.patterns) {
+                this._setBarPattern(parsed);
                 return;
             }
-            digits = digit;
-            parsed = parseInt(digits);
-            if (parsed <= doc.song.patterns) {
-                setBarPattern(parsed);
+            this._digits = "";
+        };
+        TrackEditor.prototype._updatePreview = function () {
+            this._previewGraphics.clearRect(0, 0, 34, 34);
+            if (!this._mouseOver)
                 return;
-            }
-            digits = "";
-        }
-        function onKeyReleased(event) {
-        }
-        function onMouseOver(event) {
-            mouseOver = true;
-        }
-        function onMouseOut(event) {
-            mouseOver = false;
-        }
-        function onMousePressed(event) {
-            event.preventDefault();
-            var channel = Math.floor(Math.min(beepbox.Music.numChannels - 1, Math.max(0, mouseY / channelHeight)));
-            var bar = Math.floor(Math.min(doc.song.bars - 1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
-            if (doc.channel == channel && doc.bar == bar) {
-                var up = (mouseY % channelHeight) < channelHeight / 2;
-                var patternCount = doc.song.channelPatterns[channel].length;
-                setBarPattern((doc.song.channelBars[channel][bar] + (up ? 1 : patternCount)) % (patternCount + 1));
-            }
-            else {
-                setChannelBar(channel, bar);
-            }
-        }
-        function onMouseMoved(event) {
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = (event.clientX || event.pageX) - boundingRect.left;
-            mouseY = (event.clientY || event.pageY) - boundingRect.top;
-            updatePreview();
-        }
-        function onMouseReleased(event) {
-        }
-        function updatePreview() {
-            previewGraphics.clearRect(0, 0, 34, 34);
-            if (!mouseOver)
-                return;
-            var channel = Math.floor(Math.min(beepbox.Music.numChannels - 1, Math.max(0, mouseY / channelHeight)));
-            var bar = Math.floor(Math.min(doc.song.bars - 1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
-            preview.style.left = barWidth * (bar - doc.barScrollPos) + "px";
-            preview.style.top = channelHeight * channel + "px";
-            var selected = (bar == doc.bar && channel == doc.channel);
+            var channel = Math.floor(Math.min(beepbox.Music.numChannels - 1, Math.max(0, this._mouseY / this._channelHeight)));
+            var bar = Math.floor(Math.min(this._doc.song.bars - 1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
+            this._preview.style.left = this._barWidth * (bar - this._doc.barScrollPos) + "px";
+            this._preview.style.top = this._channelHeight * channel + "px";
+            var selected = (bar == this._doc.bar && channel == this._doc.channel);
             if (selected) {
-                var up = (mouseY % channelHeight) < channelHeight / 2;
-                var center = barWidth * 0.8;
-                var middle = channelHeight * 0.5;
-                var base = channelHeight * 0.1;
-                var tip = channelHeight * 0.4;
-                var width = channelHeight * 0.175;
-                previewGraphics.lineWidth = 1;
-                previewGraphics.strokeStyle = "#000000";
-                previewGraphics.fillStyle = up ? "#ffffff" : "#000000";
-                previewGraphics.beginPath();
-                previewGraphics.moveTo(center, middle - tip);
-                previewGraphics.lineTo(center + width, middle - base);
-                previewGraphics.lineTo(center - width, middle - base);
-                previewGraphics.lineTo(center, middle - tip);
-                previewGraphics.fill();
-                previewGraphics.stroke();
-                previewGraphics.fillStyle = !up ? "#ffffff" : "#000000";
-                previewGraphics.beginPath();
-                previewGraphics.moveTo(center, middle + tip);
-                previewGraphics.lineTo(center + width, middle + base);
-                previewGraphics.lineTo(center - width, middle + base);
-                previewGraphics.lineTo(center, middle + tip);
-                previewGraphics.fill();
-                previewGraphics.stroke();
+                var up = (this._mouseY % this._channelHeight) < this._channelHeight / 2;
+                var center = this._barWidth * 0.8;
+                var middle = this._channelHeight * 0.5;
+                var base = this._channelHeight * 0.1;
+                var tip = this._channelHeight * 0.4;
+                var width = this._channelHeight * 0.175;
+                this._previewGraphics.lineWidth = 1;
+                this._previewGraphics.strokeStyle = "#000000";
+                this._previewGraphics.fillStyle = up ? "#ffffff" : "#000000";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.moveTo(center, middle - tip);
+                this._previewGraphics.lineTo(center + width, middle - base);
+                this._previewGraphics.lineTo(center - width, middle - base);
+                this._previewGraphics.lineTo(center, middle - tip);
+                this._previewGraphics.fill();
+                this._previewGraphics.stroke();
+                this._previewGraphics.fillStyle = !up ? "#ffffff" : "#000000";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.moveTo(center, middle + tip);
+                this._previewGraphics.lineTo(center + width, middle + base);
+                this._previewGraphics.lineTo(center - width, middle + base);
+                this._previewGraphics.lineTo(center, middle + tip);
+                this._previewGraphics.fill();
+                this._previewGraphics.stroke();
             }
             else {
-                previewGraphics.lineWidth = 2;
-                previewGraphics.strokeStyle = "#ffffff";
-                previewGraphics.strokeRect(1, 1, barWidth - 2, channelHeight - 2);
+                this._previewGraphics.lineWidth = 2;
+                this._previewGraphics.strokeStyle = "#ffffff";
+                this._previewGraphics.strokeRect(1, 1, this._barWidth - 2, this._channelHeight - 2);
             }
-        }
-        function documentChanged() {
-            pattern = doc.getCurrentPattern();
-            editorHeight = doc.song.bars > 16 ? 108 : 128;
-            canvas.height = editorHeight;
-            canvas.style.width = String(editorHeight);
-            channelHeight = editorHeight / beepbox.Music.numChannels;
-            render();
-        }
-        function render() {
-            graphics.clearRect(0, 0, editorWidth, editorHeight);
-            var renderCount = Math.min(16, doc.song.bars);
+        };
+        TrackEditor.prototype._render = function () {
+            this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+            var renderCount = Math.min(16, this._doc.song.bars);
             for (var j = 0; j < beepbox.Music.numChannels; j++) {
                 var channelColor = beepbox.SongEditor.channelColorsBright[j];
                 var channelDim = beepbox.SongEditor.channelColorsDim[j];
                 for (var i = 0; i < renderCount; i++) {
-                    var pattern_1 = doc.song.getPattern(j, i + doc.barScrollPos);
-                    var selected = (i + doc.barScrollPos == doc.bar && j == doc.channel);
-                    if (selected || pattern_1 != null) {
-                        graphics.fillStyle = (selected ? channelColor : "#444444");
-                        graphics.fillRect(barWidth * i + 1, channelHeight * j + 1, barWidth - 2, channelHeight - 2);
+                    var pattern = this._doc.song.getPattern(j, i + this._doc.barScrollPos);
+                    var selected = (i + this._doc.barScrollPos == this._doc.bar && j == this._doc.channel);
+                    if (selected || pattern != null) {
+                        this._graphics.fillStyle = (selected ? channelColor : "#444444");
+                        this._graphics.fillRect(this._barWidth * i + 1, this._channelHeight * j + 1, this._barWidth - 2, this._channelHeight - 2);
                     }
-                    var text = String(doc.song.channelBars[j][i + doc.barScrollPos]);
-                    graphics.font = "bold 20px sans-serif";
-                    graphics.textAlign = 'center';
-                    graphics.textBaseline = 'middle';
-                    graphics.fillStyle = selected ? "#000000" : (pattern_1 == null || pattern_1.tones.length == 0 ? channelDim : channelColor);
-                    graphics.fillText(text, barWidth * (i + 0.5), channelHeight * (j + 0.5) + 1.0);
+                    var text = String(this._doc.song.channelBars[j][i + this._doc.barScrollPos]);
+                    this._graphics.font = "bold 20px sans-serif";
+                    this._graphics.textAlign = 'center';
+                    this._graphics.textBaseline = 'middle';
+                    this._graphics.fillStyle = selected ? "#000000" : (pattern == null || pattern.tones.length == 0 ? channelDim : channelColor);
+                    this._graphics.fillText(text, this._barWidth * (i + 0.5), this._channelHeight * (j + 0.5) + 1.0);
                 }
             }
-            updatePreview();
-        }
-        pattern = doc.getCurrentPattern();
-        render();
-        doc.watch(documentChanged);
-        window.requestAnimationFrame(onEnterFrame);
-        container.addEventListener("mousedown", onMousePressed);
-        document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onMouseReleased);
-        container.addEventListener("mouseover", onMouseOver);
-        container.addEventListener("mouseout", onMouseOut);
-        mainLayer.addEventListener("keydown", onKeyPressed);
-        mainLayer.addEventListener("keyup", onKeyReleased);
-    }
+            this._updatePreview();
+        };
+        return TrackEditor;
+    }());
     beepbox.TrackEditor = TrackEditor;
 })(beepbox || (beepbox = {}));
 "use strict";
 var beepbox;
 (function (beepbox) {
-    function LoopEditor(doc) {
-        var barWidth = 32;
-        var mouseX;
-        var mouseY;
-        var container = document.getElementById("loopEditorContainer");
-        var canvas = document.getElementById("loopEditor");
-        var graphics = canvas.getContext("2d");
-        var preview = document.getElementById("loopEditorPreview");
-        var previewGraphics = preview.getContext("2d");
-        var editorWidth = 512;
-        var editorHeight = 20;
-        var startMode = 0;
-        var endMode = 1;
-        var bothMode = 2;
-        var change;
-        var cursor = {};
-        var mouseDown = false;
-        var mouseOver = false;
-        function updateCursorStatus() {
-            var bar = mouseX / barWidth + doc.barScrollPos;
-            cursor.startBar = bar;
-            if (bar > doc.song.loopStart - 0.25 && bar < doc.song.loopStart + doc.song.loopLength + 0.25) {
-                if (bar - doc.song.loopStart < doc.song.loopLength * 0.5) {
-                    cursor.mode = startMode;
+    var LoopEditor = (function () {
+        function LoopEditor(_doc) {
+            var _this = this;
+            this._doc = _doc;
+            this._barWidth = 32;
+            this._container = document.getElementById("loopEditorContainer");
+            this._canvas = document.getElementById("loopEditor");
+            this._graphics = this._canvas.getContext("2d");
+            this._preview = document.getElementById("loopEditorPreview");
+            this._previewGraphics = this._preview.getContext("2d");
+            this._editorWidth = 512;
+            this._editorHeight = 20;
+            this._startMode = 0;
+            this._endMode = 1;
+            this._bothMode = 2;
+            this._cursor = {};
+            this._mouseDown = false;
+            this._mouseOver = false;
+            this._onMouseOver = function (event) {
+                _this._mouseOver = true;
+            };
+            this._onMouseOut = function (event) {
+                _this._mouseOver = false;
+            };
+            this._onMousePressed = function (event) {
+                event.preventDefault();
+                _this._mouseDown = true;
+                _this._updateCursorStatus();
+                _this._updatePreview();
+                _this._onMouseMoved(event);
+            };
+            this._onTouchPressed = function (event) {
+                event.preventDefault();
+                _this._mouseDown = true;
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = event.touches[0].clientX - boundingRect.left;
+                _this._mouseY = event.touches[0].clientY - boundingRect.top;
+                _this._updateCursorStatus();
+                _this._updatePreview();
+                _this._onTouchMoved(event);
+            };
+            this._onMouseMoved = function (event) {
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+                _this._onCursorMoved();
+            };
+            this._onTouchMoved = function (event) {
+                if (!_this._mouseDown)
+                    return;
+                event.preventDefault();
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = event.touches[0].clientX - boundingRect.left;
+                _this._mouseY = event.touches[0].clientY - boundingRect.top;
+                _this._onCursorMoved();
+            };
+            this._onCursorReleased = function (event) {
+                if (_this._mouseDown) {
+                    if (_this._change != null) {
+                        _this._doc.history.record(_this._change);
+                        _this._change = null;
+                    }
+                }
+                _this._mouseDown = false;
+                _this._updateCursorStatus();
+                _this._render();
+            };
+            this._documentChanged = function () {
+                _this._render();
+            };
+            this._updateCursorStatus();
+            this._render();
+            this._doc.watch(this._documentChanged);
+            this._container.addEventListener("mousedown", this._onMousePressed);
+            document.addEventListener("mousemove", this._onMouseMoved);
+            document.addEventListener("mouseup", this._onCursorReleased);
+            this._container.addEventListener("mouseover", this._onMouseOver);
+            this._container.addEventListener("mouseout", this._onMouseOut);
+            this._container.addEventListener("touchstart", this._onTouchPressed);
+            document.addEventListener("touchmove", this._onTouchMoved);
+            document.addEventListener("touchend", this._onCursorReleased);
+            document.addEventListener("touchcancel", this._onCursorReleased);
+        }
+        LoopEditor.prototype._updateCursorStatus = function () {
+            var bar = this._mouseX / this._barWidth + this._doc.barScrollPos;
+            this._cursor.startBar = bar;
+            if (bar > this._doc.song.loopStart - 0.25 && bar < this._doc.song.loopStart + this._doc.song.loopLength + 0.25) {
+                if (bar - this._doc.song.loopStart < this._doc.song.loopLength * 0.5) {
+                    this._cursor.mode = this._startMode;
                 }
                 else {
-                    cursor.mode = endMode;
+                    this._cursor.mode = this._endMode;
                 }
             }
             else {
-                cursor.mode = bothMode;
+                this._cursor.mode = this._bothMode;
             }
-        }
-        function findEndPoints(middle) {
-            var start = Math.round(middle - doc.song.loopLength / 2);
-            var end = start + doc.song.loopLength;
+        };
+        LoopEditor.prototype._findEndPoints = function (middle) {
+            var start = Math.round(middle - this._doc.song.loopLength / 2);
+            var end = start + this._doc.song.loopLength;
             if (start < 0) {
                 end -= start;
                 start = 0;
             }
-            if (end > doc.song.bars) {
-                start -= end - doc.song.bars;
-                end = doc.song.bars;
+            if (end > this._doc.song.bars) {
+                start -= end - this._doc.song.bars;
+                end = this._doc.song.bars;
             }
             return { start: start, length: end - start };
-        }
-        function onKeyPressed(event) {
-        }
-        function onKeyReleased(event) {
-        }
-        function onMouseOver(event) {
-            mouseOver = true;
-        }
-        function onMouseOut(event) {
-            mouseOver = false;
-        }
-        function onMousePressed(event) {
-            event.preventDefault();
-            mouseDown = true;
-            updateCursorStatus();
-            updatePreview();
-            onMouseMoved(event);
-        }
-        function onTouchPressed(event) {
-            event.preventDefault();
-            mouseDown = true;
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = event.touches[0].clientX - boundingRect.left;
-            mouseY = event.touches[0].clientY - boundingRect.top;
-            updateCursorStatus();
-            updatePreview();
-            onTouchMoved(event);
-        }
-        function onMouseMoved(event) {
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = (event.clientX || event.pageX) - boundingRect.left;
-            mouseY = (event.clientY || event.pageY) - boundingRect.top;
-            onCursorMoved();
-        }
-        function onTouchMoved(event) {
-            if (!mouseDown)
-                return;
-            event.preventDefault();
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = event.touches[0].clientX - boundingRect.left;
-            mouseY = event.touches[0].clientY - boundingRect.top;
-            onCursorMoved();
-        }
-        function onCursorMoved() {
-            if (mouseDown) {
-                if (change != null)
-                    change.undo();
-                change = null;
-                var bar = mouseX / barWidth + doc.barScrollPos;
+        };
+        LoopEditor.prototype._onCursorMoved = function () {
+            if (this._mouseDown) {
+                if (this._change != null)
+                    this._change.undo();
+                this._change = null;
+                var bar = this._mouseX / this._barWidth + this._doc.barScrollPos;
                 var start = void 0;
                 var end = void 0;
                 var temp = void 0;
-                if (cursor.mode == startMode) {
-                    start = doc.song.loopStart + Math.round(bar - cursor.startBar);
-                    end = doc.song.loopStart + doc.song.loopLength;
+                if (this._cursor.mode == this._startMode) {
+                    start = this._doc.song.loopStart + Math.round(bar - this._cursor.startBar);
+                    end = this._doc.song.loopStart + this._doc.song.loopLength;
                     if (start == end) {
                         start = end - 1;
                     }
@@ -4192,13 +4226,13 @@ var beepbox;
                     }
                     if (start < 0)
                         start = 0;
-                    if (end >= doc.song.bars)
-                        end = doc.song.bars;
-                    change = new beepbox.ChangeLoop(doc, start, end - start);
+                    if (end >= this._doc.song.bars)
+                        end = this._doc.song.bars;
+                    this._change = new beepbox.ChangeLoop(this._doc, start, end - start);
                 }
-                else if (cursor.mode == endMode) {
-                    start = doc.song.loopStart;
-                    end = doc.song.loopStart + doc.song.loopLength + Math.round(bar - cursor.startBar);
+                else if (this._cursor.mode == this._endMode) {
+                    start = this._doc.song.loopStart;
+                    end = this._doc.song.loopStart + this._doc.song.loopLength + Math.round(bar - this._cursor.startBar);
                     if (end == start) {
                         end = start + 1;
                     }
@@ -4209,491 +4243,558 @@ var beepbox;
                     }
                     if (start < 0)
                         start = 0;
-                    if (end >= doc.song.bars)
-                        end = doc.song.bars;
-                    change = new beepbox.ChangeLoop(doc, start, end - start);
+                    if (end >= this._doc.song.bars)
+                        end = this._doc.song.bars;
+                    this._change = new beepbox.ChangeLoop(this._doc, start, end - start);
                 }
-                else if (cursor.mode == bothMode) {
-                    var endPoints = findEndPoints(bar);
-                    change = new beepbox.ChangeLoop(doc, endPoints.start, endPoints.length);
+                else if (this._cursor.mode == this._bothMode) {
+                    var endPoints = this._findEndPoints(bar);
+                    this._change = new beepbox.ChangeLoop(this._doc, endPoints.start, endPoints.length);
                 }
             }
             else {
-                updateCursorStatus();
-                updatePreview();
+                this._updateCursorStatus();
+                this._updatePreview();
             }
-        }
-        function onCursorReleased(event) {
-            if (mouseDown) {
-                if (change != null) {
-                    doc.history.record(change);
-                    change = null;
-                }
-            }
-            mouseDown = false;
-            updateCursorStatus();
-            render();
-        }
-        function updatePreview() {
-            previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
-            if (!mouseOver || mouseDown)
+        };
+        LoopEditor.prototype._updatePreview = function () {
+            this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+            if (!this._mouseOver || this._mouseDown)
                 return;
-            var radius = editorHeight / 2;
-            if (cursor.mode == startMode) {
-                previewGraphics.fillStyle = "#ffffff";
-                previewGraphics.beginPath();
-                previewGraphics.arc((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-                previewGraphics.fill();
+            var radius = this._editorHeight / 2;
+            if (this._cursor.mode == this._startMode) {
+                this._previewGraphics.fillStyle = "#ffffff";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
+                this._previewGraphics.fill();
             }
-            else if (cursor.mode == endMode) {
-                previewGraphics.fillStyle = "#ffffff";
-                previewGraphics.beginPath();
-                previewGraphics.arc((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-                previewGraphics.fill();
+            else if (this._cursor.mode == this._endMode) {
+                this._previewGraphics.fillStyle = "#ffffff";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
+                this._previewGraphics.fill();
             }
-            else if (cursor.mode == bothMode) {
-                var endPoints = findEndPoints(cursor.startBar);
-                previewGraphics.fillStyle = "#ffffff";
-                previewGraphics.beginPath();
-                previewGraphics.arc((endPoints.start - doc.barScrollPos) * barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-                previewGraphics.fill();
-                previewGraphics.fillStyle = "#ffffff";
-                previewGraphics.fillRect((endPoints.start - doc.barScrollPos) * barWidth + radius, 4, endPoints.length * barWidth - editorHeight, editorHeight - 8);
-                previewGraphics.fillStyle = "#ffffff";
-                previewGraphics.beginPath();
-                previewGraphics.arc((endPoints.start + endPoints.length - doc.barScrollPos) * barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-                previewGraphics.fill();
+            else if (this._cursor.mode == this._bothMode) {
+                var endPoints = this._findEndPoints(this._cursor.startBar);
+                this._previewGraphics.fillStyle = "#ffffff";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.arc((endPoints.start - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
+                this._previewGraphics.fill();
+                this._previewGraphics.fillStyle = "#ffffff";
+                this._previewGraphics.fillRect((endPoints.start - this._doc.barScrollPos) * this._barWidth + radius, 4, endPoints.length * this._barWidth - this._editorHeight, this._editorHeight - 8);
+                this._previewGraphics.fillStyle = "#ffffff";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.arc((endPoints.start + endPoints.length - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
+                this._previewGraphics.fill();
             }
-        }
-        function documentChanged() {
-            render();
-        }
-        function render() {
-            graphics.clearRect(0, 0, editorWidth, editorHeight);
-            var radius = editorHeight / 2;
-            graphics.fillStyle = "#7744ff";
-            graphics.beginPath();
-            graphics.arc((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius, 0, 2 * Math.PI);
-            graphics.fill();
-            graphics.fillRect((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, 0, doc.song.loopLength * barWidth - editorHeight, editorHeight);
-            graphics.beginPath();
-            graphics.arc((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius, 0, 2 * Math.PI);
-            graphics.fill();
-            graphics.fillStyle = "#000000";
-            graphics.beginPath();
-            graphics.arc((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-            graphics.fill();
-            graphics.fillRect((doc.song.loopStart - doc.barScrollPos) * barWidth + radius, 4, doc.song.loopLength * barWidth - editorHeight, editorHeight - 8);
-            graphics.beginPath();
-            graphics.arc((doc.song.loopStart + doc.song.loopLength - doc.barScrollPos) * barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-            graphics.fill();
-            updatePreview();
-        }
-        updateCursorStatus();
-        render();
-        doc.watch(documentChanged);
-        container.addEventListener("mousedown", onMousePressed);
-        document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onCursorReleased);
-        container.addEventListener("mouseover", onMouseOver);
-        container.addEventListener("mouseout", onMouseOut);
-        document.addEventListener("keydown", onKeyPressed);
-        document.addEventListener("keyup", onKeyReleased);
-        container.addEventListener("touchstart", onTouchPressed);
-        document.addEventListener("touchmove", onTouchMoved);
-        document.addEventListener("touchend", onCursorReleased);
-        document.addEventListener("touchcancel", onCursorReleased);
-    }
+        };
+        LoopEditor.prototype._render = function () {
+            this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+            var radius = this._editorHeight / 2;
+            this._graphics.fillStyle = "#7744ff";
+            this._graphics.beginPath();
+            this._graphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius, 0, 2 * Math.PI);
+            this._graphics.fill();
+            this._graphics.fillRect((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, 0, this._doc.song.loopLength * this._barWidth - this._editorHeight, this._editorHeight);
+            this._graphics.beginPath();
+            this._graphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius, 0, 2 * Math.PI);
+            this._graphics.fill();
+            this._graphics.fillStyle = "#000000";
+            this._graphics.beginPath();
+            this._graphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
+            this._graphics.fill();
+            this._graphics.fillRect((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, 4, this._doc.song.loopLength * this._barWidth - this._editorHeight, this._editorHeight - 8);
+            this._graphics.beginPath();
+            this._graphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
+            this._graphics.fill();
+            this._updatePreview();
+        };
+        return LoopEditor;
+    }());
     beepbox.LoopEditor = LoopEditor;
 })(beepbox || (beepbox = {}));
 "use strict";
 var beepbox;
 (function (beepbox) {
-    function BarScrollBar(doc) {
-        var preview = document.getElementById("barScrollBarPreview");
-        var previewGraphics = preview.getContext("2d");
-        var mouseX;
-        var mouseY;
-        var container = document.getElementById("barScrollBarContainer");
-        var canvas = document.getElementById("barScrollBar");
-        var graphics = canvas.getContext("2d");
-        var editorWidth = 512;
-        var editorHeight = 20;
-        var mouseDown = false;
-        var mouseOver = false;
-        var dragging = false;
-        var dragStart;
-        var barWidth;
-        function onMouseOver(event) {
-            mouseOver = true;
+    var BarScrollBar = (function () {
+        function BarScrollBar(_doc) {
+            var _this = this;
+            this._doc = _doc;
+            this._preview = document.getElementById("barScrollBarPreview");
+            this._previewGraphics = this._preview.getContext("2d");
+            this._container = document.getElementById("barScrollBarContainer");
+            this._canvas = document.getElementById("barScrollBar");
+            this._graphics = this._canvas.getContext("2d");
+            this._editorWidth = 512;
+            this._editorHeight = 20;
+            this._mouseDown = false;
+            this._mouseOver = false;
+            this._dragging = false;
+            this._onMouseOver = function (event) {
+                _this._mouseOver = true;
+            };
+            this._onMouseOut = function (event) {
+                _this._mouseOver = false;
+            };
+            this._onMousePressed = function (event) {
+                event.preventDefault();
+                _this._mouseDown = true;
+                _this._updatePreview();
+                if (_this._mouseX >= _this._doc.barScrollPos * _this._barWidth && _this._mouseX <= (_this._doc.barScrollPos + 16) * _this._barWidth) {
+                    _this._dragging = true;
+                    _this._dragStart = _this._mouseX;
+                }
+            };
+            this._onTouchPressed = function (event) {
+                event.preventDefault();
+                _this._mouseDown = true;
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = event.touches[0].clientX - boundingRect.left;
+                _this._mouseY = event.touches[0].clientY - boundingRect.top;
+                _this._updatePreview();
+                if (_this._mouseX >= _this._doc.barScrollPos * _this._barWidth && _this._mouseX <= (_this._doc.barScrollPos + 16) * _this._barWidth) {
+                    _this._dragging = true;
+                    _this._dragStart = _this._mouseX;
+                }
+            };
+            this._onMouseMoved = function (event) {
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+                _this._onCursorMoved();
+            };
+            this._onTouchMoved = function (event) {
+                if (!_this._mouseDown)
+                    return;
+                event.preventDefault();
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = event.touches[0].clientX - boundingRect.left;
+                _this._mouseY = event.touches[0].clientY - boundingRect.top;
+                _this._onCursorMoved();
+            };
+            this._onCursorReleased = function (event) {
+                if (!_this._dragging && _this._mouseDown) {
+                    if (_this._mouseX < (_this._doc.barScrollPos + 8) * _this._barWidth) {
+                        if (_this._doc.barScrollPos > 0)
+                            _this._doc.barScrollPos--;
+                        _this._doc.changed();
+                    }
+                    else {
+                        if (_this._doc.barScrollPos < _this._doc.song.bars - 16)
+                            _this._doc.barScrollPos++;
+                        _this._doc.changed();
+                    }
+                }
+                _this._mouseDown = false;
+                _this._dragging = false;
+                _this._updatePreview();
+            };
+            this._documentChanged = function () {
+                _this._barWidth = (_this._editorWidth - 1) / Math.max(16, _this._doc.song.bars);
+                _this._render();
+            };
+            this._doc.watch(this._documentChanged);
+            this._documentChanged();
+            this._container.addEventListener("mousedown", this._onMousePressed);
+            document.addEventListener("mousemove", this._onMouseMoved);
+            document.addEventListener("mouseup", this._onCursorReleased);
+            this._container.addEventListener("mouseover", this._onMouseOver);
+            this._container.addEventListener("mouseout", this._onMouseOut);
+            this._container.addEventListener("touchstart", this._onTouchPressed);
+            document.addEventListener("touchmove", this._onTouchMoved);
+            document.addEventListener("touchend", this._onCursorReleased);
+            document.addEventListener("touchcancel", this._onCursorReleased);
         }
-        function onMouseOut(event) {
-            mouseOver = false;
-        }
-        function onMousePressed(event) {
-            event.preventDefault();
-            mouseDown = true;
-            updatePreview();
-            if (mouseX >= doc.barScrollPos * barWidth && mouseX <= (doc.barScrollPos + 16) * barWidth) {
-                dragging = true;
-                dragStart = mouseX;
-            }
-        }
-        function onTouchPressed(event) {
-            event.preventDefault();
-            mouseDown = true;
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = event.touches[0].clientX - boundingRect.left;
-            mouseY = event.touches[0].clientY - boundingRect.top;
-            updatePreview();
-            if (mouseX >= doc.barScrollPos * barWidth && mouseX <= (doc.barScrollPos + 16) * barWidth) {
-                dragging = true;
-                dragStart = mouseX;
-            }
-        }
-        function onMouseMoved(event) {
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = (event.clientX || event.pageX) - boundingRect.left;
-            mouseY = (event.clientY || event.pageY) - boundingRect.top;
-            onCursorMoved();
-        }
-        function onTouchMoved(event) {
-            if (!mouseDown)
-                return;
-            event.preventDefault();
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = event.touches[0].clientX - boundingRect.left;
-            mouseY = event.touches[0].clientY - boundingRect.top;
-            onCursorMoved();
-        }
-        function onCursorMoved() {
-            if (dragging) {
-                while (mouseX - dragStart < -barWidth * 0.5) {
-                    if (doc.barScrollPos > 0) {
-                        doc.barScrollPos--;
-                        dragStart -= barWidth;
-                        doc.changed();
+        BarScrollBar.prototype._onCursorMoved = function () {
+            if (this._dragging) {
+                while (this._mouseX - this._dragStart < -this._barWidth * 0.5) {
+                    if (this._doc.barScrollPos > 0) {
+                        this._doc.barScrollPos--;
+                        this._dragStart -= this._barWidth;
+                        this._doc.changed();
                     }
                     else {
                         break;
                     }
                 }
-                while (mouseX - dragStart > barWidth * 0.5) {
-                    if (doc.barScrollPos < doc.song.bars - 16) {
-                        doc.barScrollPos++;
-                        dragStart += barWidth;
-                        doc.changed();
+                while (this._mouseX - this._dragStart > this._barWidth * 0.5) {
+                    if (this._doc.barScrollPos < this._doc.song.bars - 16) {
+                        this._doc.barScrollPos++;
+                        this._dragStart += this._barWidth;
+                        this._doc.changed();
                     }
                     else {
                         break;
                     }
                 }
             }
-            updatePreview();
-        }
-        function onCursorReleased(event) {
-            if (!dragging && mouseDown) {
-                if (mouseX < (doc.barScrollPos + 8) * barWidth) {
-                    if (doc.barScrollPos > 0)
-                        doc.barScrollPos--;
-                    doc.changed();
-                }
-                else {
-                    if (doc.barScrollPos < doc.song.bars - 16)
-                        doc.barScrollPos++;
-                    doc.changed();
-                }
-            }
-            mouseDown = false;
-            dragging = false;
-            updatePreview();
-        }
-        function updatePreview() {
-            previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
-            if (!mouseOver || mouseDown)
+            this._updatePreview();
+        };
+        BarScrollBar.prototype._updatePreview = function () {
+            this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+            if (!this._mouseOver || this._mouseDown)
                 return;
-            var center = editorHeight * 0.5;
+            var center = this._editorHeight * 0.5;
             var base = 20;
             var tip = 9;
             var arrowHeight = 6;
-            if (mouseX < doc.barScrollPos * barWidth) {
-                previewGraphics.fillStyle = "#ffffff";
-                previewGraphics.beginPath();
-                previewGraphics.moveTo(tip, center);
-                previewGraphics.lineTo(base, center + arrowHeight);
-                previewGraphics.lineTo(base, center - arrowHeight);
-                previewGraphics.lineTo(tip, center);
-                previewGraphics.fill();
+            if (this._mouseX < this._doc.barScrollPos * this._barWidth) {
+                this._previewGraphics.fillStyle = "#ffffff";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.moveTo(tip, center);
+                this._previewGraphics.lineTo(base, center + arrowHeight);
+                this._previewGraphics.lineTo(base, center - arrowHeight);
+                this._previewGraphics.lineTo(tip, center);
+                this._previewGraphics.fill();
             }
-            else if (mouseX > (doc.barScrollPos + 16) * barWidth) {
-                previewGraphics.fillStyle = "#ffffff";
-                previewGraphics.beginPath();
-                previewGraphics.moveTo(editorWidth - tip, center);
-                previewGraphics.lineTo(editorWidth - base, center + arrowHeight);
-                previewGraphics.lineTo(editorWidth - base, center - arrowHeight);
-                previewGraphics.lineTo(editorWidth - tip, center);
-                previewGraphics.fill();
+            else if (this._mouseX > (this._doc.barScrollPos + 16) * this._barWidth) {
+                this._previewGraphics.fillStyle = "#ffffff";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.moveTo(this._editorWidth - tip, center);
+                this._previewGraphics.lineTo(this._editorWidth - base, center + arrowHeight);
+                this._previewGraphics.lineTo(this._editorWidth - base, center - arrowHeight);
+                this._previewGraphics.lineTo(this._editorWidth - tip, center);
+                this._previewGraphics.fill();
             }
             else {
-                previewGraphics.lineWidth = 2;
-                previewGraphics.strokeStyle = "#ffffff";
-                previewGraphics.strokeRect(doc.barScrollPos * barWidth, 1, 16 * barWidth, editorHeight - 2);
+                this._previewGraphics.lineWidth = 2;
+                this._previewGraphics.strokeStyle = "#ffffff";
+                this._previewGraphics.strokeRect(this._doc.barScrollPos * this._barWidth, 1, 16 * this._barWidth, this._editorHeight - 2);
             }
-        }
-        function documentChanged() {
-            barWidth = (editorWidth - 1) / Math.max(16, doc.song.bars);
-            render();
-        }
-        function render() {
-            graphics.clearRect(0, 0, editorWidth, editorHeight);
-            graphics.fillStyle = "#444444";
-            graphics.fillRect(barWidth * doc.barScrollPos, 2, barWidth * 16, editorHeight - 4);
-            for (var i = 0; i <= doc.song.bars; i++) {
+        };
+        BarScrollBar.prototype._render = function () {
+            this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+            this._graphics.fillStyle = "#444444";
+            this._graphics.fillRect(this._barWidth * this._doc.barScrollPos, 2, this._barWidth * 16, this._editorHeight - 4);
+            for (var i = 0; i <= this._doc.song.bars; i++) {
                 var lineWidth = (i % 16 == 0) ? 2 : 0;
-                var lineHeight = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? editorHeight / 8 : editorHeight / 3);
-                graphics.beginPath();
-                graphics.strokeStyle = "#444444";
-                graphics.lineWidth = lineWidth;
-                graphics.moveTo(i * barWidth, lineHeight);
-                graphics.lineTo(i * barWidth, editorHeight - lineHeight);
-                graphics.stroke();
+                var lineHeight = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
+                this._graphics.beginPath();
+                this._graphics.strokeStyle = "#444444";
+                this._graphics.lineWidth = lineWidth;
+                this._graphics.moveTo(i * this._barWidth, lineHeight);
+                this._graphics.lineTo(i * this._barWidth, this._editorHeight - lineHeight);
+                this._graphics.stroke();
             }
-            updatePreview();
-        }
-        doc.watch(documentChanged);
-        documentChanged();
-        container.addEventListener("mousedown", onMousePressed);
-        document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onCursorReleased);
-        container.addEventListener("mouseover", onMouseOver);
-        container.addEventListener("mouseout", onMouseOut);
-        container.addEventListener("touchstart", onTouchPressed);
-        document.addEventListener("touchmove", onTouchMoved);
-        document.addEventListener("touchend", onCursorReleased);
-        document.addEventListener("touchcancel", onCursorReleased);
-    }
+            this._updatePreview();
+        };
+        return BarScrollBar;
+    }());
     beepbox.BarScrollBar = BarScrollBar;
 })(beepbox || (beepbox = {}));
 "use strict";
 var beepbox;
 (function (beepbox) {
-    function OctaveScrollBar(doc) {
-        var preview = document.getElementById("octaveScrollBarPreview");
-        var previewGraphics = preview.getContext("2d");
-        var mouseX;
-        var mouseY;
-        var container = document.getElementById("octaveScrollBarContainer");
-        var canvas = document.getElementById("octaveScrollBar");
-        var graphics = canvas.getContext("2d");
-        var editorWidth = 20;
-        var editorHeight = 481;
-        var mouseDown = false;
-        var mouseOver = false;
-        var rootHeight = 4.0;
-        var octaveCount = 7;
-        var octaveHeight;
-        var barHeight;
-        var dragging = false;
-        var dragStart;
-        var currentOctave;
-        var barBottom;
-        function onMouseOver(event) {
-            mouseOver = true;
+    var OctaveScrollBar = (function () {
+        function OctaveScrollBar(_doc) {
+            var _this = this;
+            this._doc = _doc;
+            this._preview = document.getElementById("octaveScrollBarPreview");
+            this._previewGraphics = this._preview.getContext("2d");
+            this._container = document.getElementById("octaveScrollBarContainer");
+            this._canvas = document.getElementById("octaveScrollBar");
+            this._graphics = this._canvas.getContext("2d");
+            this._editorWidth = 20;
+            this._editorHeight = 481;
+            this._rootHeight = 4.0;
+            this._octaveCount = 7;
+            this._mouseDown = false;
+            this._mouseOver = false;
+            this._dragging = false;
+            this._onMouseOver = function (event) {
+                _this._mouseOver = true;
+            };
+            this._onMouseOut = function (event) {
+                _this._mouseOver = false;
+            };
+            this._onMousePressed = function (event) {
+                event.preventDefault();
+                _this._mouseDown = true;
+                if (_this._doc.channel == 3)
+                    return;
+                _this._updatePreview();
+                if (_this._mouseY >= _this._barBottom - _this._barHeight && _this._mouseY <= _this._barBottom) {
+                    _this._dragging = true;
+                    _this._dragStart = _this._mouseY;
+                }
+            };
+            this._onTouchPressed = function (event) {
+                event.preventDefault();
+                _this._mouseDown = true;
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = event.touches[0].clientX - boundingRect.left;
+                _this._mouseY = event.touches[0].clientY - boundingRect.top;
+                if (_this._doc.channel == 3)
+                    return;
+                _this._updatePreview();
+                if (_this._mouseY >= _this._barBottom - _this._barHeight && _this._mouseY <= _this._barBottom) {
+                    _this._dragging = true;
+                    _this._dragStart = _this._mouseY;
+                }
+            };
+            this._onMouseMoved = function (event) {
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+                _this._onCursorMoved();
+            };
+            this._onTouchMoved = function (event) {
+                if (!_this._mouseDown)
+                    return;
+                event.preventDefault();
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = event.touches[0].clientX - boundingRect.left;
+                _this._mouseY = event.touches[0].clientY - boundingRect.top;
+                _this._onCursorMoved();
+            };
+            this._onCursorReleased = function (event) {
+                if (_this._doc.channel != 3 && !_this._dragging && _this._mouseDown) {
+                    if (_this._mouseY < _this._barBottom - _this._barHeight * 0.5) {
+                        if (_this._currentOctave < 4)
+                            _this._doc.history.record(new beepbox.ChangeOctave(_this._doc, _this._currentOctave + 1));
+                    }
+                    else {
+                        if (_this._currentOctave > 0)
+                            _this._doc.history.record(new beepbox.ChangeOctave(_this._doc, _this._currentOctave - 1));
+                    }
+                }
+                _this._mouseDown = false;
+                _this._dragging = false;
+                _this._updatePreview();
+            };
+            this._documentChanged = function () {
+                _this._currentOctave = _this._doc.song.channelOctaves[_this._doc.channel];
+                _this._barBottom = _this._editorHeight - (_this._octaveHeight * _this._currentOctave);
+                _this._render();
+            };
+            this._doc.watch(this._documentChanged);
+            this._documentChanged();
+            this._octaveHeight = (this._editorHeight - this._rootHeight) / this._octaveCount;
+            this._barHeight = (this._octaveHeight * 3 + this._rootHeight);
+            this._container.addEventListener("mousedown", this._onMousePressed);
+            document.addEventListener("mousemove", this._onMouseMoved);
+            document.addEventListener("mouseup", this._onCursorReleased);
+            this._container.addEventListener("mouseover", this._onMouseOver);
+            this._container.addEventListener("mouseout", this._onMouseOut);
+            this._container.addEventListener("touchstart", this._onTouchPressed);
+            document.addEventListener("touchmove", this._onTouchMoved);
+            document.addEventListener("touchend", this._onCursorReleased);
+            document.addEventListener("touchcancel", this._onCursorReleased);
         }
-        function onMouseOut(event) {
-            mouseOver = false;
-        }
-        function onMousePressed(event) {
-            event.preventDefault();
-            mouseDown = true;
-            if (doc.channel == 3)
+        OctaveScrollBar.prototype._onCursorMoved = function () {
+            if (this._doc.channel == 3)
                 return;
-            updatePreview();
-            if (mouseY >= barBottom - barHeight && mouseY <= barBottom) {
-                dragging = true;
-                dragStart = mouseY;
-            }
-        }
-        function onTouchPressed(event) {
-            event.preventDefault();
-            mouseDown = true;
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = event.touches[0].clientX - boundingRect.left;
-            mouseY = event.touches[0].clientY - boundingRect.top;
-            if (doc.channel == 3)
-                return;
-            updatePreview();
-            if (mouseY >= barBottom - barHeight && mouseY <= barBottom) {
-                dragging = true;
-                dragStart = mouseY;
-            }
-        }
-        function onMouseMoved(event) {
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = (event.clientX || event.pageX) - boundingRect.left;
-            mouseY = (event.clientY || event.pageY) - boundingRect.top;
-            onCursorMoved();
-        }
-        function onTouchMoved(event) {
-            if (!mouseDown)
-                return;
-            event.preventDefault();
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = event.touches[0].clientX - boundingRect.left;
-            mouseY = event.touches[0].clientY - boundingRect.top;
-            onCursorMoved();
-        }
-        function onCursorMoved() {
-            if (doc.channel == 3)
-                return;
-            if (dragging) {
-                while (mouseY - dragStart < -octaveHeight * 0.5) {
-                    if (currentOctave < 4) {
-                        doc.history.record(new beepbox.ChangeOctave(doc, currentOctave + 1));
-                        dragStart -= octaveHeight;
+            if (this._dragging) {
+                while (this._mouseY - this._dragStart < -this._octaveHeight * 0.5) {
+                    if (this._currentOctave < 4) {
+                        this._doc.history.record(new beepbox.ChangeOctave(this._doc, this._currentOctave + 1));
+                        this._dragStart -= this._octaveHeight;
                     }
                     else {
                         break;
                     }
                 }
-                while (mouseY - dragStart > octaveHeight * 0.5) {
-                    if (currentOctave > 0) {
-                        doc.history.record(new beepbox.ChangeOctave(doc, currentOctave - 1));
-                        dragStart += octaveHeight;
+                while (this._mouseY - this._dragStart > this._octaveHeight * 0.5) {
+                    if (this._currentOctave > 0) {
+                        this._doc.history.record(new beepbox.ChangeOctave(this._doc, this._currentOctave - 1));
+                        this._dragStart += this._octaveHeight;
                     }
                     else {
                         break;
                     }
                 }
             }
-            updatePreview();
-        }
-        function onCursorReleased(event) {
-            if (doc.channel != 3 && !dragging && mouseDown) {
-                if (mouseY < barBottom - barHeight * 0.5) {
-                    if (currentOctave < 4)
-                        doc.history.record(new beepbox.ChangeOctave(doc, currentOctave + 1));
-                }
-                else {
-                    if (currentOctave > 0)
-                        doc.history.record(new beepbox.ChangeOctave(doc, currentOctave - 1));
-                }
-            }
-            mouseDown = false;
-            dragging = false;
-            updatePreview();
-        }
-        function updatePreview() {
-            previewGraphics.clearRect(0, 0, editorWidth, editorHeight);
-            if (doc.channel == 3)
+            this._updatePreview();
+        };
+        OctaveScrollBar.prototype._updatePreview = function () {
+            this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+            if (this._doc.channel == 3)
                 return;
-            if (!mouseOver || mouseDown)
+            if (!this._mouseOver || this._mouseDown)
                 return;
-            var center = editorWidth * 0.5;
+            var center = this._editorWidth * 0.5;
             var base = 20;
             var tip = 9;
             var arrowWidth = 6;
-            if (mouseY < barBottom - barHeight) {
-                previewGraphics.fillStyle = "#ffffff";
-                previewGraphics.beginPath();
-                previewGraphics.moveTo(center, tip);
-                previewGraphics.lineTo(center + arrowWidth, base);
-                previewGraphics.lineTo(center - arrowWidth, base);
-                previewGraphics.lineTo(center, tip);
-                previewGraphics.fill();
+            if (this._mouseY < this._barBottom - this._barHeight) {
+                this._previewGraphics.fillStyle = "#ffffff";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.moveTo(center, tip);
+                this._previewGraphics.lineTo(center + arrowWidth, base);
+                this._previewGraphics.lineTo(center - arrowWidth, base);
+                this._previewGraphics.lineTo(center, tip);
+                this._previewGraphics.fill();
             }
-            else if (mouseY > barBottom) {
-                previewGraphics.fillStyle = "#ffffff";
-                previewGraphics.beginPath();
-                previewGraphics.moveTo(center, editorHeight - tip);
-                previewGraphics.lineTo(center + arrowWidth, editorHeight - base);
-                previewGraphics.lineTo(center - arrowWidth, editorHeight - base);
-                previewGraphics.lineTo(center, editorHeight - tip);
-                previewGraphics.fill();
+            else if (this._mouseY > this._barBottom) {
+                this._previewGraphics.fillStyle = "#ffffff";
+                this._previewGraphics.beginPath();
+                this._previewGraphics.moveTo(center, this._editorHeight - tip);
+                this._previewGraphics.lineTo(center + arrowWidth, this._editorHeight - base);
+                this._previewGraphics.lineTo(center - arrowWidth, this._editorHeight - base);
+                this._previewGraphics.lineTo(center, this._editorHeight - tip);
+                this._previewGraphics.fill();
             }
             else {
-                previewGraphics.lineWidth = 2;
-                previewGraphics.strokeStyle = "#ffffff";
-                previewGraphics.strokeRect(1, barBottom, editorWidth - 2, -barHeight);
+                this._previewGraphics.lineWidth = 2;
+                this._previewGraphics.strokeStyle = "#ffffff";
+                this._previewGraphics.strokeRect(1, this._barBottom, this._editorWidth - 2, -this._barHeight);
             }
-        }
-        function documentChanged() {
-            currentOctave = doc.song.channelOctaves[doc.channel];
-            barBottom = editorHeight - (octaveHeight * currentOctave);
-            render();
-        }
-        function render() {
-            graphics.clearRect(0, 0, editorWidth, editorHeight);
-            if (doc.channel != 3) {
-                graphics.fillStyle = "#444444";
-                graphics.fillRect(2, barBottom, editorWidth - 4, -barHeight);
-                for (var i = 0; i <= octaveCount; i++) {
-                    graphics.fillStyle = "#886644";
-                    graphics.fillRect(0, i * octaveHeight, editorWidth, rootHeight);
+        };
+        OctaveScrollBar.prototype._render = function () {
+            this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+            if (this._doc.channel != 3) {
+                this._graphics.fillStyle = "#444444";
+                this._graphics.fillRect(2, this._barBottom, this._editorWidth - 4, -this._barHeight);
+                for (var i = 0; i <= this._octaveCount; i++) {
+                    this._graphics.fillStyle = "#886644";
+                    this._graphics.fillRect(0, i * this._octaveHeight, this._editorWidth, this._rootHeight);
                 }
             }
-            updatePreview();
-        }
-        doc.watch(documentChanged);
-        documentChanged();
-        octaveHeight = (editorHeight - rootHeight) / octaveCount;
-        barHeight = (octaveHeight * 3 + rootHeight);
-        container.addEventListener("mousedown", onMousePressed);
-        document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onCursorReleased);
-        container.addEventListener("mouseover", onMouseOver);
-        container.addEventListener("mouseout", onMouseOut);
-        container.addEventListener("touchstart", onTouchPressed);
-        document.addEventListener("touchmove", onTouchMoved);
-        document.addEventListener("touchend", onCursorReleased);
-        document.addEventListener("touchcancel", onCursorReleased);
-    }
+            this._updatePreview();
+        };
+        return OctaveScrollBar;
+    }());
     beepbox.OctaveScrollBar = OctaveScrollBar;
 })(beepbox || (beepbox = {}));
 "use strict";
 var beepbox;
 (function (beepbox) {
-    function Piano(doc) {
-        var noteHeight;
-        var noteCount;
-        var loadedCount = 0;
-        function onLoaded() {
-            loadedCount++;
-            if (loadedCount == 5)
-                render();
+    var loadedCount = 0;
+    var finishedLoadingImages = false;
+    function onLoaded() {
+        loadedCount++;
+        finishedLoadingImages = true;
+    }
+    var BlackKey = document.createElement("img");
+    BlackKey.onload = onLoaded;
+    BlackKey.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAANCAIAAABHKvtLAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6NEU3RTM2RTg0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NEU3RTM2RTk0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDozMzYxN0U3RDQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDozMzYxN0U3RTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PomGIaQAAABgSURBVHjaYpSWlmZhYWFmZgaSTExMQAYTGGAyIICRkRFIMhANWISFhdlggAUHANrBysoKNBfuCGKMvnjx4r59+xhp5wOg6UCSBM+SB0YtGLVgCFgAzDeMeOSGgAUAAQYAGgwJrOg8pdQAAAAASUVORK5CYII=";
+    var BlackKeyDisabled = document.createElement("img");
+    BlackKeyDisabled.onload = onLoaded;
+    BlackKeyDisabled.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAANCAIAAABHKvtLAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6NEU3RTM2RUM0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NEU3RTM2RUQ0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo0RTdFMzZFQTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo0RTdFMzZFQjQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PhURscAAAAB1SURBVHja7NPBCoAgDAZgnaMX8Oj7P2KKldXPhiR4CwwCv4PInPvxoA0hMLNzDisRYUPCCiMucVallJzzJnaBih5pp2mw936puKEZ2qQ3MeUQmLiKGGNKCZ1IQr2fDnb0C8gMNgNmwA8Cnt/0Tv91vw64BRgALUuP70jrlrwAAAAASUVORK5CYII=";
+    var WhiteKey = document.createElement("img");
+    WhiteKey.onload = onLoaded;
+    WhiteKey.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAANCAIAAABHKvtLAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MzM2MTdFNzc0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6MzM2MTdFNzg0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDozMzYxN0U3NTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDozMzYxN0U3NjQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgBmMXoAAACTSURBVHja7JQ7CgMhGIT3920M2Hko7+RJPYWViE0myi5sEXAhKQL7FcP8PmawkWKMjx2llNb60MNIKY0xnPPphRDbMsJ7/xw458wAodZa6PRQ5GIF0RjlYCU655xSEqWU3ntrrdb63RcgHcq2H3MX3AV/UEAhBL7DBkTEzmAFuzSY44UC/BDHtU+8z539esFLgAEAkZ4XCDjZXPEAAAAASUVORK5CYII=";
+    var WhiteKeyDisabled = document.createElement("img");
+    WhiteKeyDisabled.onload = onLoaded;
+    WhiteKeyDisabled.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAANCAIAAABHKvtLAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MzM2MTdFN0I0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6MzM2MTdFN0M0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDozMzYxN0U3OTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDozMzYxN0U3QTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PlZjoH4AAADHSURBVHja7JTNDoMgEIRBGq21iTcfyvd/DeNvJBYBp7uFEE+99NDE70AMMDPLYZRt2z4CeZ4XRcFrRkgphRD7vnvvX8RGdF03DEPf99M0LcuitcamMcZa6wkRuNV1/SSqqroTcC/LEu5KKQ6AEhq21oRzDl5bAME8DUjd3wHjOELPyu9fgNnneV7XNQ6OyNPsTCZ+zBVwBfxBgGyaRgViuWIt+ZIPuAAaZwh00BKxaKeuSfwhUsfI55g+WOMT2DEl3jm94BBgAAtY6T6d3wTNAAAAAElFTkSuQmCC";
+    var Drum = document.createElement("img");
+    Drum.onload = onLoaded;
+    Drum.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAArCAIAAACW3x1gAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDowMTgwMTE3NDA3MjA2ODExOUJCOEEzOUJCMkI3MTdFNCIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo5NzVEOTA1QzQ5MjMxMUUxOTM3RDhDNEI4QkIxQkFCNSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo5NzVEOTA1QjQ5MjMxMUUxOTM3RDhDNEI4QkIxQkFCNSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjAxODAxMTc0MDcyMDY4MTE5QkI4QTM5QkIyQjcxN0U0IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjAxODAxMTc0MDcyMDY4MTE5QkI4QTM5QkIyQjcxN0U0Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+dtFK5QAACbRJREFUeNrcV0lsG9cZnnmzcJdIcRHFRZtly5IVSVYSOcriNY7jqHHTBE2bJkCRNijQQ9re2kOBAj30kByKAm1PvQVF0RYIkLRpkiZuLMqyLVm7bGvlIpKiuHOGyww52+ubIbXYCYLk2P4ccobz3nzf+9f3D4b9rwv+5cOXL5x48crDT54b8Pr6jOZWQJoxKIi13WJ+Oziz+Z/r6x9N3AvMhb42gcWkf/P1Mz/40fkWz2iuAAsFrljkOK5crVYwTNTrcaMRNDURNhtl1Slrn9x55x+zf/5ooVIVvhLBq1ce+eXPLpt6RnZ22EIBmk1Oi8VuMFoMBgNF6RUMF2tcrVqscPlSKcGV4zaC85qNd25u/PHdm/+8tf5lBBRJ/Oan49/98cVEDmcYg9PZ09LSrjcYSRzHcAAxDGBQQfMgJiuyAiFUFMSUT23mtu9YxYxVgX/6YPa3796QZGUfk9i/Mhvo3//8W99443wwKtB0T1fXqM3m0en0iJUgSIIkKYoiKBL9A4QqAEcCSFJnbnI3uboqIpHP7D7T73WYDbfW4+IexwHB22+OX3zpsfAu5nI96vUM0gY9wqN0JEJG2AAATFs7hlABrhKgk3qJQwwCgrY4/ZiuaSceO+VvslkM11Yi9xG8+dLj33/tdDgLPB1POB09JE0RAOESFEEiVOWQaIZBPxCtX2MBUKVRMAXTWZyk2RaPRp440lIV5PngboPgZE/br16/kBJwR9dTTtdxQkejBzUOoHxO4P2CCAgcV+8iDSHUWWyA0ieDa4N++1J4N8VUVMVfvTCEm/S0vc/Z1g9IoKIjU6PHkCBvyrJ63hMJffZ+tQkyDnDVPThR18beM6zvHmky0i8/OYDAwTGvfXz0WKoCXL5BFVv1p0qgmULRMJTD0HVKWdqj1EZVS2meV+MNU1zHTmZE6tLJ7qOeFvLMQ504TRkt3SarC00j1aOBrhmksUxFu4PuNxytAqHAhZj2Bw2h6Kprgym40d5m9PXqmbXTA53gzIA/V+KaXZ3aTBSCuKrpniDMOo+yv/bGr3qCyv46VE8jDVCmIBT0t7mtK1fkn+rzgpPdrWy5arS2qloCXHMWdp8flYatZGVPm7rd7nc6psUV0BgQgsnhYbnacGcr8DltXE3UGZsxFNA4JAgcUzU/RHDoWsOFh2Pp8ES0OnX9anWAtNnK1wSf00paTIZG0UAhV19+4/uAHNCqc2Hj3n2CDCxDWRvU1FCLJuB43qijahyLiFG2wEZ5wr+gLOKac7USUX/+gVlQ1pahsdZKjEFHcxwPWIZpNus5JgUhPICqY+1B4XvAQItHrUjsDR6aiRRT9gAq2USzUccyLNhNpe0WI5uOYFrEoAPDDqHvoSJMcJ8Q+7f3J6rxIGP1hbKJsN1iQOAgtJNutZu5bKjEpmU1HNXQeABcKzsNIfeKqVbv8H0OLbCgamQIuXySS6y7rOZQIgO2M2WsxrealHRsSdEiW5Kkfez6uV47Dyg0+ANzgUbqIAfXDZBZn3eSoiJUorkyoMzW9bW1Tk+LkFtNJ1YQPApESZFAAxqAQ9jEYZK6aKPItJJaPdRPdmupGlnocDWvra4hcHCi7/jdxXtihe3yWFKx2+lsUJZESVKLxAH2F1A0wNEAsrooC5Ko5ggb38wsBbps+mqZXVxZHeg7Dvq7vYlo+c78vN9t7fSARPxmMrmuCKIgSfUqRnwxeEOQZQRBRnpDWcxur6QWPm3XcT67eX5uLrHD93V5SSOsWk2ttwMLNp9rePwiyZbC0Vs8X/R5T+gNFog41F2SOEjdevRrXhVFUS2sklTjSsmt21xw7ogZ8za3XEcyvdzS3KOXeeInlx9iC3IikqkKCZ2ROjr6kKXJVCjsRqMx9CRBGpHBkWXrW1g9nRG0pNpRRGav8Gw6thy995mhuHW81eSxmK4HpiYnrzNFU9+xXp/XQLz8aIel2RqeTZZrNVHYJYDi7u7s6OqkaaJQSEajYYbJ8xwvSgJaLDI3YuW5EsNkc7lIYmchEbtJC9tHHFS/z6GUuclrE4GJwG6BBpJ1bKy3WGXJ5WDs+WfOOX0t+UgmaqieOM1uXP2Xb/iUv+Nhv7+DYYRstlIoZLYj259rvMg2D+mwuq2ohjL81vTC8tQ0hyk7eRpyTd52W09P6/uBKXLmXuSlK7D3VM+tSAZugv7Lb3349otCOe3OxW3+oWb7gNXqwDAdhqHdX0I1BsNQ+8ZjWBXDOHQh88XY3EpoZml1ZjGdLP/ivX9cffcVtKcPDXdStHJ7bZtcjGS2Ntb7xwbDs2F2K4UX37rzMcOOQoN5RSpuNbnnjPYjlMkP6DaIm1AfpDZdQqlWSVVyMSYeTm5sJtZCHMOHd2q7O2T449+hXdPvd5wc7tpYX12OZslIEd6YWe4a7h+8PHT9D5/GVxhXEiTey2eC1aOnnINnUUuUx2vLtIGUqlKVq/FlgWf5ClstM1yF4Zk0F4zUIiGhkiLNgNxeLaDUfvzxXkAIgfmV7TJGcBJGSJUeFz36wllBlP/+6+suknQSlCGthGfyK7PpWKhcydckUYtRHBN5KZ/m4qHS+jK7OFNYmC6mNyRzlTIRSDlseT537uzApUvDk4HAX29s3C2olsUWk9K/r06jPBj94WmlJu68v4RuNpGEkzLCNJbbza98mL4qiowsj35vOLZVWL8VpnFcDwA6/AQt62FVwQSo7iVjj/WOP/fwzVs3PpicvVuAjcarJKhrawM5i8My+NoFqSxVtlKEApE1DQA4KKqd1nXrdb1Gw/jf/jL2/KPyO5+00bSVotCoorkexS9OkWPnB158eWxpbnYiEPgsrmyyh1rHGCOhztkF07SJOHrlrMnTVo3nFKaCdmgSRxs56kXU3a79lZ3NTz/JLORFXkG4yGwSVNFt7Y6nvzM2dubo7NTUxLVrEzH5Zgo+2PyGswJqarwUq0gV92ivf/wSbbFIGRayZVSP1WqM47pHbKH5TC3MCRW5TmBpt498e/TZN85RRHn6s4mF2flAVJ5Mavb6/K6K2pZvPuZ45ZK364jTfXzE2j5EQn95LsyvbJXWQ+VofDIci4vC00d9lMdlOuZ2DHndI242EgqjPJheiCdLE1vVqYSswC99wznVZ33hvOfKxQ5Ts6HJ3X0oD8xaHlQVoVCrJCq5OLMTSm5sJO4FObY6tVqcCnJrWfkrvaPpaXBxzP3sOd9zT3fYXSa9kab0lFhFVRPlAepAahUWJUEV5UE2XZ5azE6vl+YivCDDr/2WOdzfcmqkdWTINXDC4XXpzTqiWq7F42wwyKxuFO5sMneDxc0Ej/0/y38FGACBHjS0mkQ17AAAAABJRU5ErkJggg==";
+    var Piano = (function () {
+        function Piano(_doc) {
+            var _this = this;
+            this._doc = _doc;
+            this._container = document.getElementById("pianoContainer");
+            this._canvas = document.getElementById("piano");
+            this._graphics = this._canvas.getContext("2d");
+            this._preview = document.getElementById("pianoPreview");
+            this._previewGraphics = this._preview.getContext("2d");
+            this._editorWidth = 32;
+            this._editorHeight = 481;
+            this._mouseDown = false;
+            this._mouseOver = false;
+            this._onMouseOver = function (event) {
+                _this._mouseOver = true;
+            };
+            this._onMouseOut = function (event) {
+                _this._mouseOver = false;
+            };
+            this._onMousePressed = function (event) {
+                event.preventDefault();
+                _this._mouseDown = true;
+                _this._doc.synth.pianoPressed = true;
+                _this._updatePreview();
+            };
+            this._onMouseMoved = function (event) {
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+                _this._updateCursorNote();
+                _this._doc.synth.pianoNote = _this._cursorNote + _this._doc.song.channelOctaves[_this._doc.channel] * 12;
+                _this._updatePreview();
+            };
+            this._onMouseReleased = function (event) {
+                _this._mouseDown = false;
+                _this._doc.synth.pianoPressed = false;
+                _this._updatePreview();
+            };
+            this._documentChanged = function () {
+                _this._noteHeight = _this._doc.channel == 3 ? 40 : 13;
+                _this._noteCount = _this._doc.channel == 3 ? beepbox.Music.drumCount : beepbox.Music.noteCount;
+                _this._updateCursorNote();
+                _this._doc.synth.pianoNote = _this._cursorNote + _this._doc.song.channelOctaves[_this._doc.channel] * 12;
+                _this._doc.synth.pianoChannel = _this._doc.channel;
+                _this._render();
+            };
+            this._render = function () {
+                if (!finishedLoadingImages) {
+                    window.requestAnimationFrame(_this._render);
+                    return;
+                }
+                _this._graphics.clearRect(0, 0, _this._editorWidth, _this._editorHeight);
+                if (!_this._doc.showLetters)
+                    return;
+                var key;
+                for (var j = 0; j < _this._noteCount; j++) {
+                    var noteNameIndex = (j + beepbox.Music.keyTransposes[_this._doc.song.key]) % 12;
+                    if (_this._doc.channel == 3) {
+                        key = Drum;
+                        var scale = 1.0 - (j / _this._noteCount) * 0.35;
+                        var offset = (1.0 - scale) * 0.5;
+                        var x = key.width * offset;
+                        var y = key.height * offset + _this._noteHeight * (_this._noteCount - j - 1);
+                        var w = key.width * scale;
+                        var h = key.height * scale;
+                        _this._graphics.drawImage(key, x, y, w, h);
+                        var brightness = 1.0 + ((j - _this._noteCount / 2.0) / _this._noteCount) * 0.5;
+                        var imageData = _this._graphics.getImageData(x, y, w, h);
+                        var data = imageData.data;
+                        for (var i = 0; i < data.length; i += 4) {
+                            data[i + 0] *= brightness;
+                            data[i + 1] *= brightness;
+                            data[i + 2] *= brightness;
+                        }
+                        _this._graphics.putImageData(imageData, x, y);
+                    }
+                    else if (beepbox.Music.scaleFlags[_this._doc.song.scale][j % 12] == false) {
+                        key = beepbox.Music.pianoScaleFlags[noteNameIndex] ? WhiteKeyDisabled : BlackKeyDisabled;
+                        _this._graphics.drawImage(key, 0, _this._noteHeight * (_this._noteCount - j - 1));
+                    }
+                    else {
+                        var text = beepbox.Music.noteNames[noteNameIndex];
+                        if (text == null) {
+                            var shiftDir = beepbox.Music.blackKeyNameParents[j % 12];
+                            text = beepbox.Music.noteNames[(noteNameIndex + 12 + shiftDir) % 12];
+                            if (shiftDir == 1) {
+                                text += "♭";
+                            }
+                            else if (shiftDir == -1) {
+                                text += "♯";
+                            }
+                        }
+                        var textColor = beepbox.Music.pianoScaleFlags[noteNameIndex] ? "#000000" : "#ffffff";
+                        key = beepbox.Music.pianoScaleFlags[noteNameIndex] ? WhiteKey : BlackKey;
+                        _this._graphics.drawImage(key, 0, _this._noteHeight * (_this._noteCount - j - 1));
+                        _this._graphics.font = "bold 11px sans-serif";
+                        _this._graphics.fillStyle = textColor;
+                        _this._graphics.fillText(text, 15, _this._noteHeight * (_this._noteCount - j) - 3);
+                    }
+                }
+                _this._updatePreview();
+            };
+            this._doc.watch(this._documentChanged);
+            this._documentChanged();
+            this._container.addEventListener("mousedown", this._onMousePressed);
+            document.addEventListener("mousemove", this._onMouseMoved);
+            document.addEventListener("mouseup", this._onMouseReleased);
+            this._container.addEventListener("mouseover", this._onMouseOver);
+            this._container.addEventListener("mouseout", this._onMouseOut);
         }
-        var BlackKey = document.createElement("img");
-        BlackKey.onload = onLoaded;
-        BlackKey.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAANCAIAAABHKvtLAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6NEU3RTM2RTg0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NEU3RTM2RTk0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDozMzYxN0U3RDQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDozMzYxN0U3RTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PomGIaQAAABgSURBVHjaYpSWlmZhYWFmZgaSTExMQAYTGGAyIICRkRFIMhANWISFhdlggAUHANrBysoKNBfuCGKMvnjx4r59+xhp5wOg6UCSBM+SB0YtGLVgCFgAzDeMeOSGgAUAAQYAGgwJrOg8pdQAAAAASUVORK5CYII=";
-        var BlackKeyDisabled = document.createElement("img");
-        BlackKeyDisabled.onload = onLoaded;
-        BlackKeyDisabled.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAANCAIAAABHKvtLAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6NEU3RTM2RUM0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NEU3RTM2RUQ0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo0RTdFMzZFQTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo0RTdFMzZFQjQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PhURscAAAAB1SURBVHja7NPBCoAgDAZgnaMX8Oj7P2KKldXPhiR4CwwCv4PInPvxoA0hMLNzDisRYUPCCiMucVallJzzJnaBih5pp2mw936puKEZ2qQ3MeUQmLiKGGNKCZ1IQr2fDnb0C8gMNgNmwA8Cnt/0Tv91vw64BRgALUuP70jrlrwAAAAASUVORK5CYII=";
-        var WhiteKey = document.createElement("img");
-        WhiteKey.onload = onLoaded;
-        WhiteKey.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAANCAIAAABHKvtLAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MzM2MTdFNzc0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6MzM2MTdFNzg0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDozMzYxN0U3NTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDozMzYxN0U3NjQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgBmMXoAAACTSURBVHja7JQ7CgMhGIT3920M2Hko7+RJPYWViE0myi5sEXAhKQL7FcP8PmawkWKMjx2llNb60MNIKY0xnPPphRDbMsJ7/xw458wAodZa6PRQ5GIF0RjlYCU655xSEqWU3ntrrdb63RcgHcq2H3MX3AV/UEAhBL7DBkTEzmAFuzSY44UC/BDHtU+8z539esFLgAEAkZ4XCDjZXPEAAAAASUVORK5CYII=";
-        var WhiteKeyDisabled = document.createElement("img");
-        WhiteKeyDisabled.onload = onLoaded;
-        WhiteKeyDisabled.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAANCAIAAABHKvtLAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6MzM2MTdFN0I0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6MzM2MTdFN0M0NzBEMTFFMTgyMjBBREEyQTVGRDY5MjIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDozMzYxN0U3OTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDozMzYxN0U3QTQ3MEQxMUUxODIyMEFEQTJBNUZENjkyMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PlZjoH4AAADHSURBVHja7JTNDoMgEIRBGq21iTcfyvd/DeNvJBYBp7uFEE+99NDE70AMMDPLYZRt2z4CeZ4XRcFrRkgphRD7vnvvX8RGdF03DEPf99M0LcuitcamMcZa6wkRuNV1/SSqqroTcC/LEu5KKQ6AEhq21oRzDl5bAME8DUjd3wHjOELPyu9fgNnneV7XNQ6OyNPsTCZ+zBVwBfxBgGyaRgViuWIt+ZIPuAAaZwh00BKxaKeuSfwhUsfI55g+WOMT2DEl3jm94BBgAAtY6T6d3wTNAAAAAElFTkSuQmCC";
-        var Drum = document.createElement("img");
-        Drum.onload = onLoaded;
-        Drum.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAArCAIAAACW3x1gAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDowMTgwMTE3NDA3MjA2ODExOUJCOEEzOUJCMkI3MTdFNCIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo5NzVEOTA1QzQ5MjMxMUUxOTM3RDhDNEI4QkIxQkFCNSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo5NzVEOTA1QjQ5MjMxMUUxOTM3RDhDNEI4QkIxQkFCNSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IE1hY2ludG9zaCI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjAxODAxMTc0MDcyMDY4MTE5QkI4QTM5QkIyQjcxN0U0IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjAxODAxMTc0MDcyMDY4MTE5QkI4QTM5QkIyQjcxN0U0Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+dtFK5QAACbRJREFUeNrcV0lsG9cZnnmzcJdIcRHFRZtly5IVSVYSOcriNY7jqHHTBE2bJkCRNijQQ9re2kOBAj30kByKAm1PvQVF0RYIkLRpkiZuLMqyLVm7bGvlIpKiuHOGyww52+ubIbXYCYLk2P4ccobz3nzf+9f3D4b9rwv+5cOXL5x48crDT54b8Pr6jOZWQJoxKIi13WJ+Oziz+Z/r6x9N3AvMhb42gcWkf/P1Mz/40fkWz2iuAAsFrljkOK5crVYwTNTrcaMRNDURNhtl1Slrn9x55x+zf/5ooVIVvhLBq1ce+eXPLpt6RnZ22EIBmk1Oi8VuMFoMBgNF6RUMF2tcrVqscPlSKcGV4zaC85qNd25u/PHdm/+8tf5lBBRJ/Oan49/98cVEDmcYg9PZ09LSrjcYSRzHcAAxDGBQQfMgJiuyAiFUFMSUT23mtu9YxYxVgX/6YPa3796QZGUfk9i/Mhvo3//8W99443wwKtB0T1fXqM3m0en0iJUgSIIkKYoiKBL9A4QqAEcCSFJnbnI3uboqIpHP7D7T73WYDbfW4+IexwHB22+OX3zpsfAu5nI96vUM0gY9wqN0JEJG2AAATFs7hlABrhKgk3qJQwwCgrY4/ZiuaSceO+VvslkM11Yi9xG8+dLj33/tdDgLPB1POB09JE0RAOESFEEiVOWQaIZBPxCtX2MBUKVRMAXTWZyk2RaPRp440lIV5PngboPgZE/br16/kBJwR9dTTtdxQkejBzUOoHxO4P2CCAgcV+8iDSHUWWyA0ieDa4N++1J4N8VUVMVfvTCEm/S0vc/Z1g9IoKIjU6PHkCBvyrJ63hMJffZ+tQkyDnDVPThR18beM6zvHmky0i8/OYDAwTGvfXz0WKoCXL5BFVv1p0qgmULRMJTD0HVKWdqj1EZVS2meV+MNU1zHTmZE6tLJ7qOeFvLMQ504TRkt3SarC00j1aOBrhmksUxFu4PuNxytAqHAhZj2Bw2h6Kprgym40d5m9PXqmbXTA53gzIA/V+KaXZ3aTBSCuKrpniDMOo+yv/bGr3qCyv46VE8jDVCmIBT0t7mtK1fkn+rzgpPdrWy5arS2qloCXHMWdp8flYatZGVPm7rd7nc6psUV0BgQgsnhYbnacGcr8DltXE3UGZsxFNA4JAgcUzU/RHDoWsOFh2Pp8ES0OnX9anWAtNnK1wSf00paTIZG0UAhV19+4/uAHNCqc2Hj3n2CDCxDWRvU1FCLJuB43qijahyLiFG2wEZ5wr+gLOKac7USUX/+gVlQ1pahsdZKjEFHcxwPWIZpNus5JgUhPICqY+1B4XvAQItHrUjsDR6aiRRT9gAq2USzUccyLNhNpe0WI5uOYFrEoAPDDqHvoSJMcJ8Q+7f3J6rxIGP1hbKJsN1iQOAgtJNutZu5bKjEpmU1HNXQeABcKzsNIfeKqVbv8H0OLbCgamQIuXySS6y7rOZQIgO2M2WsxrealHRsSdEiW5Kkfez6uV47Dyg0+ANzgUbqIAfXDZBZn3eSoiJUorkyoMzW9bW1Tk+LkFtNJ1YQPApESZFAAxqAQ9jEYZK6aKPItJJaPdRPdmupGlnocDWvra4hcHCi7/jdxXtihe3yWFKx2+lsUJZESVKLxAH2F1A0wNEAsrooC5Ko5ggb38wsBbps+mqZXVxZHeg7Dvq7vYlo+c78vN9t7fSARPxmMrmuCKIgSfUqRnwxeEOQZQRBRnpDWcxur6QWPm3XcT67eX5uLrHD93V5SSOsWk2ttwMLNp9rePwiyZbC0Vs8X/R5T+gNFog41F2SOEjdevRrXhVFUS2sklTjSsmt21xw7ogZ8za3XEcyvdzS3KOXeeInlx9iC3IikqkKCZ2ROjr6kKXJVCjsRqMx9CRBGpHBkWXrW1g9nRG0pNpRRGav8Gw6thy995mhuHW81eSxmK4HpiYnrzNFU9+xXp/XQLz8aIel2RqeTZZrNVHYJYDi7u7s6OqkaaJQSEajYYbJ8xwvSgJaLDI3YuW5EsNkc7lIYmchEbtJC9tHHFS/z6GUuclrE4GJwG6BBpJ1bKy3WGXJ5WDs+WfOOX0t+UgmaqieOM1uXP2Xb/iUv+Nhv7+DYYRstlIoZLYj259rvMg2D+mwuq2ohjL81vTC8tQ0hyk7eRpyTd52W09P6/uBKXLmXuSlK7D3VM+tSAZugv7Lb3349otCOe3OxW3+oWb7gNXqwDAdhqHdX0I1BsNQ+8ZjWBXDOHQh88XY3EpoZml1ZjGdLP/ivX9cffcVtKcPDXdStHJ7bZtcjGS2Ntb7xwbDs2F2K4UX37rzMcOOQoN5RSpuNbnnjPYjlMkP6DaIm1AfpDZdQqlWSVVyMSYeTm5sJtZCHMOHd2q7O2T449+hXdPvd5wc7tpYX12OZslIEd6YWe4a7h+8PHT9D5/GVxhXEiTey2eC1aOnnINnUUuUx2vLtIGUqlKVq/FlgWf5ClstM1yF4Zk0F4zUIiGhkiLNgNxeLaDUfvzxXkAIgfmV7TJGcBJGSJUeFz36wllBlP/+6+suknQSlCGthGfyK7PpWKhcydckUYtRHBN5KZ/m4qHS+jK7OFNYmC6mNyRzlTIRSDlseT537uzApUvDk4HAX29s3C2olsUWk9K/r06jPBj94WmlJu68v4RuNpGEkzLCNJbbza98mL4qiowsj35vOLZVWL8VpnFcDwA6/AQt62FVwQSo7iVjj/WOP/fwzVs3PpicvVuAjcarJKhrawM5i8My+NoFqSxVtlKEApE1DQA4KKqd1nXrdb1Gw/jf/jL2/KPyO5+00bSVotCoorkexS9OkWPnB158eWxpbnYiEPgsrmyyh1rHGCOhztkF07SJOHrlrMnTVo3nFKaCdmgSRxs56kXU3a79lZ3NTz/JLORFXkG4yGwSVNFt7Y6nvzM2dubo7NTUxLVrEzH5Zgo+2PyGswJqarwUq0gV92ivf/wSbbFIGRayZVSP1WqM47pHbKH5TC3MCRW5TmBpt498e/TZN85RRHn6s4mF2flAVJ5Mavb6/K6K2pZvPuZ45ZK364jTfXzE2j5EQn95LsyvbJXWQ+VofDIci4vC00d9lMdlOuZ2DHndI242EgqjPJheiCdLE1vVqYSswC99wznVZ33hvOfKxQ5Ts6HJ3X0oD8xaHlQVoVCrJCq5OLMTSm5sJO4FObY6tVqcCnJrWfkrvaPpaXBxzP3sOd9zT3fYXSa9kab0lFhFVRPlAepAahUWJUEV5UE2XZ5azE6vl+YivCDDr/2WOdzfcmqkdWTINXDC4XXpzTqiWq7F42wwyKxuFO5sMneDxc0Ej/0/y38FGACBHjS0mkQ17AAAAABJRU5ErkJggg==";
-        var mouseX;
-        var mouseY;
-        var container = document.getElementById("pianoContainer");
-        var canvas = document.getElementById("piano");
-        var graphics = canvas.getContext("2d");
-        var preview = document.getElementById("pianoPreview");
-        var previewGraphics = preview.getContext("2d");
-        var editorWidth = 32;
-        var editorHeight = 481;
-        var mouseDown = false;
-        var mouseOver = false;
-        var cursorNote;
-        function updateCursorNote() {
-            var scale = beepbox.Music.scaleFlags[doc.song.scale];
-            var mouseNote = Math.max(0, Math.min(noteCount - 1, noteCount - (mouseY / noteHeight)));
-            if (scale[Math.floor(mouseNote) % 12] || doc.channel == 3) {
-                cursorNote = Math.floor(mouseNote);
+        Piano.prototype._updateCursorNote = function () {
+            var scale = beepbox.Music.scaleFlags[this._doc.song.scale];
+            var mouseNote = Math.max(0, Math.min(this._noteCount - 1, this._noteCount - (this._mouseY / this._noteHeight)));
+            if (scale[Math.floor(mouseNote) % 12] || this._doc.channel == 3) {
+                this._cursorNote = Math.floor(mouseNote);
             }
             else {
                 var topNote = Math.floor(mouseNote) + 1;
@@ -4712,189 +4813,152 @@ var beepbox;
                 if (bottomNote % 12 == 0 || bottomNote % 12 == 7) {
                     bottomRange += 0.5;
                 }
-                cursorNote = mouseNote - bottomRange > topRange - mouseNote ? topNote : bottomNote;
+                this._cursorNote = mouseNote - bottomRange > topRange - mouseNote ? topNote : bottomNote;
             }
-        }
-        function onMouseOver(event) {
-            mouseOver = true;
-        }
-        function onMouseOut(event) {
-            mouseOver = false;
-        }
-        function onMousePressed(event) {
-            event.preventDefault();
-            mouseDown = true;
-            doc.synth.pianoPressed = true;
-            updatePreview();
-        }
-        function onMouseMoved(event) {
-            var boundingRect = canvas.getBoundingClientRect();
-            mouseX = (event.clientX || event.pageX) - boundingRect.left;
-            mouseY = (event.clientY || event.pageY) - boundingRect.top;
-            updateCursorNote();
-            doc.synth.pianoNote = cursorNote + doc.song.channelOctaves[doc.channel] * 12;
-            updatePreview();
-        }
-        function onMouseReleased(event) {
-            mouseDown = false;
-            doc.synth.pianoPressed = false;
-            updatePreview();
-        }
-        function updatePreview() {
-            previewGraphics.clearRect(0, 0, 32, 40);
-            if (!mouseOver || mouseDown)
+        };
+        Piano.prototype._updatePreview = function () {
+            this._previewGraphics.clearRect(0, 0, 32, 40);
+            if (!this._mouseOver || this._mouseDown)
                 return;
-            preview.style.left = "0px";
-            preview.style.top = noteHeight * (noteCount - cursorNote - 1) + "px";
-            previewGraphics.lineWidth = 2;
-            previewGraphics.strokeStyle = "#ffffff";
-            previewGraphics.strokeRect(1, 1, editorWidth - 2, noteHeight - 2);
-        }
-        function documentChanged() {
-            noteHeight = doc.channel == 3 ? 40 : 13;
-            noteCount = doc.channel == 3 ? beepbox.Music.drumCount : beepbox.Music.noteCount;
-            updateCursorNote();
-            doc.synth.pianoNote = cursorNote + doc.song.channelOctaves[doc.channel] * 12;
-            doc.synth.pianoChannel = doc.channel;
-            render();
-        }
-        function render() {
-            if (loadedCount < 5)
-                return;
-            graphics.clearRect(0, 0, editorWidth, editorHeight);
-            if (!doc.showLetters)
-                return;
-            var key;
-            for (var j = 0; j < noteCount; j++) {
-                var noteNameIndex = (j + beepbox.Music.keyTransposes[doc.song.key]) % 12;
-                if (doc.channel == 3) {
-                    key = Drum;
-                    var scale = 1.0 - (j / noteCount) * 0.35;
-                    var offset = (1.0 - scale) * 0.5;
-                    var x = key.width * offset;
-                    var y = key.height * offset + noteHeight * (noteCount - j - 1);
-                    var w = key.width * scale;
-                    var h = key.height * scale;
-                    graphics.drawImage(key, x, y, w, h);
-                    var brightness = 1.0 + ((j - noteCount / 2.0) / noteCount) * 0.5;
-                    var imageData = graphics.getImageData(x, y, w, h);
-                    var data = imageData.data;
-                    for (var i = 0; i < data.length; i += 4) {
-                        data[i + 0] *= brightness;
-                        data[i + 1] *= brightness;
-                        data[i + 2] *= brightness;
-                    }
-                    graphics.putImageData(imageData, x, y);
-                }
-                else if (beepbox.Music.scaleFlags[doc.song.scale][j % 12] == false) {
-                    key = beepbox.Music.pianoScaleFlags[noteNameIndex] ? WhiteKeyDisabled : BlackKeyDisabled;
-                    graphics.drawImage(key, 0, noteHeight * (noteCount - j - 1));
-                }
-                else {
-                    var text = beepbox.Music.noteNames[noteNameIndex];
-                    if (text == null) {
-                        var shiftDir = beepbox.Music.blackKeyNameParents[j % 12];
-                        text = beepbox.Music.noteNames[(noteNameIndex + 12 + shiftDir) % 12];
-                        if (shiftDir == 1) {
-                            text += "♭";
-                        }
-                        else if (shiftDir == -1) {
-                            text += "♯";
-                        }
-                    }
-                    var textColor = beepbox.Music.pianoScaleFlags[noteNameIndex] ? "#000000" : "#ffffff";
-                    key = beepbox.Music.pianoScaleFlags[noteNameIndex] ? WhiteKey : BlackKey;
-                    graphics.drawImage(key, 0, noteHeight * (noteCount - j - 1));
-                    graphics.font = "bold 11px sans-serif";
-                    graphics.fillStyle = textColor;
-                    graphics.fillText(text, 15, noteHeight * (noteCount - j) - 3);
-                }
-            }
-            updatePreview();
-        }
-        doc.watch(documentChanged);
-        documentChanged();
-        container.addEventListener("mousedown", onMousePressed);
-        document.addEventListener("mousemove", onMouseMoved);
-        document.addEventListener("mouseup", onMouseReleased);
-        container.addEventListener("mouseover", onMouseOver);
-        container.addEventListener("mouseout", onMouseOut);
-    }
+            this._preview.style.left = "0px";
+            this._preview.style.top = this._noteHeight * (this._noteCount - this._cursorNote - 1) + "px";
+            this._previewGraphics.lineWidth = 2;
+            this._previewGraphics.strokeStyle = "#ffffff";
+            this._previewGraphics.strokeRect(1, 1, this._editorWidth - 2, this._noteHeight - 2);
+        };
+        return Piano;
+    }());
     beepbox.Piano = Piano;
 })(beepbox || (beepbox = {}));
 "use strict";
 var beepbox;
 (function (beepbox) {
-    function SongDurationPrompt(doc, songEditor) {
-        var container = document.getElementById("songSizePrompt");
-        var beatsStepper = document.getElementById("beatsStepper");
-        var barsStepper = document.getElementById("barsStepper");
-        var patternsStepper = document.getElementById("patternsStepper");
-        var instrumentsStepper = document.getElementById("instrumentsStepper");
-        var songDurationOkayButton = document.getElementById("songDurationOkayButton");
-        var songDurationCancelButton = document.getElementById("songDurationCancelButton");
-        function onClose() {
-            container.style.display = "none";
-            songEditor.closePrompt();
-            songDurationOkayButton.removeEventListener("click", saveChanges);
-            songDurationCancelButton.removeEventListener("click", onClose);
-            beatsStepper.removeEventListener("keypress", validateKey);
-            barsStepper.removeEventListener("keypress", validateKey);
-            patternsStepper.removeEventListener("keypress", validateKey);
-            instrumentsStepper.removeEventListener("keypress", validateKey);
-            beatsStepper.removeEventListener("blur", validateNumber);
-            barsStepper.removeEventListener("blur", validateNumber);
-            patternsStepper.removeEventListener("blur", validateNumber);
-            instrumentsStepper.removeEventListener("blur", validateNumber);
+    var button = beepbox.html.button, div = beepbox.html.div, span = beepbox.html.span, input = beepbox.html.input, br = beepbox.html.br, text = beepbox.html.text;
+    var SongDurationPrompt = (function () {
+        function SongDurationPrompt(_doc, _songEditor) {
+            var _this = this;
+            this._doc = _doc;
+            this._songEditor = _songEditor;
+            this._beatsStepper = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1" });
+            this._barsStepper = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1" });
+            this._patternsStepper = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "32", step: "1" });
+            this._instrumentsStepper = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "10", step: "1" });
+            this._songDurationOkayButton = button({ style: "width:125px; float: left;", type: "button" }, [text("Okay")]);
+            this._songDurationCancelButton = button({ style: "width:125px; float: right;", type: "button" }, [text("Cancel")]);
+            this.container = div({ style: "position: absolute;" }, [
+                div({ style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;" }, [
+                    div({ style: "margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
+                        div({ style: "font-size: 30px" }, [text("Custom Song Size")]),
+                        div({ style: "height: 30px;" }),
+                        div({ style: "vertical-align: middle; line-height: 46px;" }, [
+                            span({ style: "float: right;" }, [
+                                div({ style: "display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;" }, [
+                                    text("Beats per bar:"),
+                                    br(),
+                                    span({ style: "color: #888888;" }, [text("(Multiples of 3 or 4 are recommended)")]),
+                                ]),
+                                div({ style: "display: inline-block; width: 20px; height: 1px;" }),
+                                this._beatsStepper,
+                            ]),
+                            div({ style: "clear: both;" }),
+                        ]),
+                        div({ style: "vertical-align: middle; line-height: 46px;" }, [
+                            span({ style: "float: right;" }, [
+                                div({ style: "display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;" }, [
+                                    text("Bars per song:"),
+                                    br(),
+                                    span({ style: "color: #888888;" }, [text("(Multiples of 2 or 4 are recommended)")]),
+                                ]),
+                                div({ style: "display: inline-block; width: 20px; height: 1px;" }),
+                                this._barsStepper,
+                            ]),
+                            div({ style: "clear: both;" }),
+                        ]),
+                        div({ style: "vertical-align: middle; line-height: 46px;" }, [
+                            span({ style: "float: right;" }, [
+                                text("Patterns per channel:"),
+                                div({ style: "display: inline-block; width: 20px; height: 1px;" }),
+                                this._patternsStepper,
+                            ]),
+                            div({ style: "clear: both;" }),
+                        ]),
+                        div({ style: "vertical-align: middle; line-height: 46px;" }, [
+                            span({ style: "float: right;" }, [
+                                text("Instruments per channel:"),
+                                div({ style: "display: inline-block; width: 20px; height: 1px;" }),
+                                this._instrumentsStepper,
+                            ]),
+                            div({ style: "clear: both;" }),
+                        ]),
+                        div({ style: "height: 30px;" }),
+                        this._songDurationOkayButton,
+                        this._songDurationCancelButton,
+                        div({ style: "clear: both;" }),
+                    ]),
+                ]),
+            ]);
+            this._onClose = function () {
+                _this._songEditor.closePrompt(_this);
+                _this._songDurationOkayButton.removeEventListener("click", _this._saveChanges);
+                _this._songDurationCancelButton.removeEventListener("click", _this._onClose);
+                _this._beatsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+                _this._barsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+                _this._patternsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+                _this._instrumentsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+                _this._beatsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+                _this._barsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+                _this._patternsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+                _this._instrumentsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+            };
+            this._saveChanges = function () {
+                var sequence = new beepbox.ChangeSequence();
+                sequence.append(new beepbox.ChangeBeats(_this._doc, SongDurationPrompt._validate(_this._beatsStepper)));
+                sequence.append(new beepbox.ChangeBars(_this._doc, SongDurationPrompt._validate(_this._barsStepper)));
+                sequence.append(new beepbox.ChangePatterns(_this._doc, SongDurationPrompt._validate(_this._patternsStepper)));
+                sequence.append(new beepbox.ChangeInstruments(_this._doc, SongDurationPrompt._validate(_this._instrumentsStepper)));
+                _this._doc.history.record(sequence);
+                _this._onClose();
+            };
+            this._beatsStepper.value = this._doc.song.beats + "";
+            this._beatsStepper.min = beepbox.Music.beatsMin + "";
+            this._beatsStepper.max = beepbox.Music.beatsMax + "";
+            this._barsStepper.value = this._doc.song.bars + "";
+            this._barsStepper.min = beepbox.Music.barsMin + "";
+            this._barsStepper.max = beepbox.Music.barsMax + "";
+            this._patternsStepper.value = this._doc.song.patterns + "";
+            this._patternsStepper.min = beepbox.Music.patternsMin + "";
+            this._patternsStepper.max = beepbox.Music.patternsMax + "";
+            this._instrumentsStepper.value = this._doc.song.instruments + "";
+            this._instrumentsStepper.min = beepbox.Music.instrumentsMin + "";
+            this._instrumentsStepper.max = beepbox.Music.instrumentsMax + "";
+            this._songDurationOkayButton.addEventListener("click", this._saveChanges);
+            this._songDurationCancelButton.addEventListener("click", this._onClose);
+            this._beatsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+            this._barsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+            this._patternsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+            this._instrumentsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+            this._beatsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
+            this._barsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
+            this._patternsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
+            this._instrumentsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
         }
-        function validateKey(event) {
+        SongDurationPrompt._validateKey = function (event) {
             var charCode = (event.which) ? event.which : event.keyCode;
             if (charCode != 46 && charCode > 31 && (charCode < 48 || charCode > 57)) {
                 event.preventDefault();
                 return true;
             }
             return false;
-        }
-        function validateNumber(event) {
+        };
+        SongDurationPrompt._validateNumber = function (event) {
             var input = event.target;
             input.value = Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value)))) + "";
-        }
-        function validate(input) {
+        };
+        SongDurationPrompt._validate = function (input) {
             return Math.floor(Number(input.value));
-        }
-        function saveChanges() {
-            var sequence = new beepbox.ChangeSequence();
-            sequence.append(new beepbox.ChangeBeats(doc, validate(beatsStepper)));
-            sequence.append(new beepbox.ChangeBars(doc, validate(barsStepper)));
-            sequence.append(new beepbox.ChangePatterns(doc, validate(patternsStepper)));
-            sequence.append(new beepbox.ChangeInstruments(doc, validate(instrumentsStepper)));
-            doc.history.record(sequence);
-            onClose();
-        }
-        beatsStepper.value = doc.song.beats + "";
-        beatsStepper.min = beepbox.Music.beatsMin + "";
-        beatsStepper.max = beepbox.Music.beatsMax + "";
-        barsStepper.value = doc.song.bars + "";
-        barsStepper.min = beepbox.Music.barsMin + "";
-        barsStepper.max = beepbox.Music.barsMax + "";
-        patternsStepper.value = doc.song.patterns + "";
-        patternsStepper.min = beepbox.Music.patternsMin + "";
-        patternsStepper.max = beepbox.Music.patternsMax + "";
-        instrumentsStepper.value = doc.song.instruments + "";
-        instrumentsStepper.min = beepbox.Music.instrumentsMin + "";
-        instrumentsStepper.max = beepbox.Music.instrumentsMax + "";
-        songDurationOkayButton.addEventListener("click", saveChanges);
-        songDurationCancelButton.addEventListener("click", onClose);
-        beatsStepper.addEventListener("keypress", validateKey);
-        barsStepper.addEventListener("keypress", validateKey);
-        patternsStepper.addEventListener("keypress", validateKey);
-        instrumentsStepper.addEventListener("keypress", validateKey);
-        beatsStepper.addEventListener("blur", validateNumber);
-        barsStepper.addEventListener("blur", validateNumber);
-        patternsStepper.addEventListener("blur", validateNumber);
-        instrumentsStepper.addEventListener("blur", validateNumber);
-        container.style.display = "block";
-    }
+        };
+        return SongDurationPrompt;
+    }());
     beepbox.SongDurationPrompt = SongDurationPrompt;
 })(beepbox || (beepbox = {}));
 "use strict";
@@ -4951,530 +5015,535 @@ var beepbox;
             }
         };
     }
-    function ExportPrompt(doc, songEditor) {
-        var enableIntro = input({ type: "checkbox" });
-        var loopDropDown = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "4", step: "1" });
-        var enableOutro = input({ type: "checkbox" });
-        var exportWavButton = button({ style: "width:200px;", type: "button" }, [text("Export to .wav")]);
-        var exportMidiButton = button({ style: "width:200px;", type: "button" }, [text("Export to .midi")]);
-        var exportCancelButton = button({ style: "width:200px;", type: "button" }, [text("Cancel")]);
-        var container = div({ style: "position: absolute;" }, [
-            div({ style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;" }, [
-                div({ style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
-                    div({ style: "font-size: 30px" }, [text("Export Options")]),
-                    div({ style: "height: 30px;" }),
-                    div({ style: "display: table; width: 200px;" }, [
-                        div({ style: "display: table-row;" }, [
-                            div({ style: "display: table-cell;" }, [text("Intro:")]),
-                            div({ style: "display: table-cell;" }, [text("Loop Count:")]),
-                            div({ style: "display: table-cell;" }, [text("Outro:")]),
+    var ExportPrompt = (function () {
+        function ExportPrompt(_doc, _songEditor) {
+            var _this = this;
+            this._doc = _doc;
+            this._songEditor = _songEditor;
+            this._enableIntro = input({ type: "checkbox" });
+            this._loopDropDown = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "4", step: "1" });
+            this._enableOutro = input({ type: "checkbox" });
+            this._exportWavButton = button({ style: "width:200px;", type: "button" }, [text("Export to .wav")]);
+            this._exportMidiButton = button({ style: "width:200px;", type: "button" }, [text("Export to .midi")]);
+            this._exportCancelButton = button({ style: "width:200px;", type: "button" }, [text("Cancel")]);
+            this.container = div({ style: "position: absolute;" }, [
+                div({ style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;" }, [
+                    div({ style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
+                        div({ style: "font-size: 30px" }, [text("Export Options")]),
+                        div({ style: "height: 30px;" }),
+                        div({ style: "display: table; width: 200px;" }, [
+                            div({ style: "display: table-row;" }, [
+                                div({ style: "display: table-cell;" }, [text("Intro:")]),
+                                div({ style: "display: table-cell;" }, [text("Loop Count:")]),
+                                div({ style: "display: table-cell;" }, [text("Outro:")]),
+                            ]),
+                            div({ style: "display: table-row; height: 30px;" }, [
+                                div({ style: "display: table-cell; vertical-align: middle;" }, [this._enableIntro]),
+                                div({ style: "display: table-cell; vertical-align: middle;" }, [this._loopDropDown]),
+                                div({ style: "display: table-cell; vertical-align: middle;" }, [this._enableOutro]),
+                            ]),
                         ]),
-                        div({ style: "display: table-row; height: 30px;" }, [
-                            div({ style: "display: table-cell; vertical-align: middle;" }, [enableIntro]),
-                            div({ style: "display: table-cell; vertical-align: middle;" }, [loopDropDown]),
-                            div({ style: "display: table-cell; vertical-align: middle;" }, [enableOutro]),
-                        ]),
+                        div({ style: "height: 20px;" }),
+                        this._exportWavButton,
+                        div({ style: "height: 20px;" }),
+                        this._exportMidiButton,
+                        div({ style: "height: 20px;" }),
+                        this._exportCancelButton,
                     ]),
-                    div({ style: "height: 20px;" }),
-                    exportWavButton,
-                    div({ style: "height: 20px;" }),
-                    exportMidiButton,
-                    div({ style: "height: 20px;" }),
-                    exportCancelButton,
                 ]),
-            ]),
-        ]);
-        beepboxEditorContainer.children[0].appendChild(container);
-        function onClose() {
-            beepboxEditorContainer.children[0].removeChild(container);
-            songEditor.closePrompt();
-            loopDropDown.removeEventListener("keypress", validateKey);
-            loopDropDown.removeEventListener("blur", validateNumber);
-            exportWavButton.removeEventListener("click", onExportToWav);
-            exportMidiButton.removeEventListener("click", onExportToMidi);
-            exportCancelButton.removeEventListener("click", onClose);
+            ]);
+            this._onClose = function () {
+                _this._songEditor.closePrompt(_this);
+                _this._loopDropDown.removeEventListener("keypress", ExportPrompt._validateKey);
+                _this._loopDropDown.removeEventListener("blur", ExportPrompt._validateNumber);
+                _this._exportWavButton.removeEventListener("click", _this._onExportToWav);
+                _this._exportMidiButton.removeEventListener("click", _this._onExportToMidi);
+                _this._exportCancelButton.removeEventListener("click", _this._onClose);
+            };
+            this._onExportToWav = function () {
+                var synth = new beepbox.Synth(_this._doc.song);
+                synth.enableIntro = _this._enableIntro.checked;
+                synth.enableOutro = _this._enableOutro.checked;
+                synth.loopCount = Number(_this._loopDropDown.value);
+                if (!synth.enableIntro) {
+                    for (var introIter = 0; introIter < _this._doc.song.loopStart; introIter++) {
+                        synth.nextBar();
+                    }
+                }
+                var sampleFrames = synth.totalSamples;
+                var recordedSamples = new Float32Array(sampleFrames);
+                synth.synthesize(recordedSamples, sampleFrames);
+                var srcChannelCount = 1;
+                var wavChannelCount = 1;
+                var sampleRate = 44100;
+                var bytesPerSample = 2;
+                var bitsPerSample = 8 * bytesPerSample;
+                var sampleCount = wavChannelCount * sampleFrames;
+                var totalFileSize = 44 + sampleCount * bytesPerSample;
+                var index = 0;
+                var arrayBuffer = new ArrayBuffer(totalFileSize);
+                var data = new DataView(arrayBuffer);
+                data.setUint32(index, 0x52494646, false);
+                index += 4;
+                data.setUint32(index, 36 + sampleCount * bytesPerSample, true);
+                index += 4;
+                data.setUint32(index, 0x57415645, false);
+                index += 4;
+                data.setUint32(index, 0x666D7420, false);
+                index += 4;
+                data.setUint32(index, 0x00000010, true);
+                index += 4;
+                data.setUint16(index, 0x0001, true);
+                index += 2;
+                data.setUint16(index, wavChannelCount, true);
+                index += 2;
+                data.setUint32(index, sampleRate, true);
+                index += 4;
+                data.setUint32(index, sampleRate * bytesPerSample * wavChannelCount, true);
+                index += 4;
+                data.setUint16(index, bytesPerSample, true);
+                index += 2;
+                data.setUint16(index, bitsPerSample, true);
+                index += 2;
+                data.setUint32(index, 0x64617461, false);
+                index += 4;
+                data.setUint32(index, sampleCount * bytesPerSample, true);
+                index += 4;
+                var stride;
+                var repeat;
+                if (srcChannelCount == wavChannelCount) {
+                    stride = 1;
+                    repeat = 1;
+                }
+                else {
+                    stride = srcChannelCount;
+                    repeat = wavChannelCount;
+                }
+                var val;
+                if (bytesPerSample > 1) {
+                    for (var i = 0; i < sampleFrames; i++) {
+                        val = Math.floor(recordedSamples[i * stride] * ((1 << (bitsPerSample - 1)) - 1));
+                        for (var k = 0; k < repeat; k++) {
+                            if (bytesPerSample == 2) {
+                                data.setInt16(index, val, true);
+                                index += 2;
+                            }
+                            else if (bytesPerSample == 4) {
+                                data.setInt32(index, val, true);
+                                index += 4;
+                            }
+                            else {
+                                throw new Error("unsupported sample size");
+                            }
+                        }
+                    }
+                }
+                else {
+                    for (var i = 0; i < sampleFrames; i++) {
+                        val = Math.floor(recordedSamples[i * stride] * 127 + 128);
+                        for (var k = 0; k < repeat; k++) {
+                            data.setUint8(index, val > 255 ? 255 : (val < 0 ? 0 : val));
+                            index++;
+                        }
+                    }
+                }
+                var blob = new Blob([arrayBuffer], { type: "audio/wav" });
+                saveAs(blob, "song.wav");
+                _this._onClose();
+            };
+            this._onExportToMidi = function () {
+                var writeIndex = 0;
+                var fileSize = 0;
+                var arrayBuffer = new ArrayBuffer(1024);
+                var data = new DataView(arrayBuffer);
+                function addBytes(numBytes) {
+                    fileSize += numBytes;
+                    if (fileSize > arrayBuffer.byteLength) {
+                        arrayBuffer = ArrayBuffer.transfer(arrayBuffer, Math.max(arrayBuffer.byteLength * 2, fileSize));
+                        data = new DataView(arrayBuffer);
+                    }
+                }
+                function writeUint32(value) {
+                    value = value >>> 0;
+                    addBytes(4);
+                    data.setUint32(writeIndex, value, false);
+                    writeIndex = fileSize;
+                }
+                function writeUint24(value) {
+                    value = value >>> 0;
+                    addBytes(3);
+                    data.setUint8(writeIndex, (value >> 16) & 0xff);
+                    data.setUint8(writeIndex + 1, (value >> 8) & 0xff);
+                    data.setUint8(writeIndex + 2, (value) & 0xff);
+                    writeIndex = fileSize;
+                }
+                function writeUint16(value) {
+                    value = value >>> 0;
+                    addBytes(2);
+                    data.setUint16(writeIndex, value, false);
+                    writeIndex = fileSize;
+                }
+                function writeUint8(value) {
+                    value = value >>> 0;
+                    addBytes(1);
+                    data.setUint8(writeIndex, value);
+                    writeIndex = fileSize;
+                }
+                function writeFlagAnd7Bits(flag, value) {
+                    value = ((value >>> 0) & 0x7f) | ((flag & 0x01) << 7);
+                    addBytes(1);
+                    data.setUint8(writeIndex, value);
+                    writeIndex = fileSize;
+                }
+                function writeVariableLength(value) {
+                    value = value >>> 0;
+                    if (value > 0x0fffffff)
+                        throw new Error("writeVariableLength value too big.");
+                    var startWriting = false;
+                    for (var i = 0; i < 4; i++) {
+                        var shift = 21 - i * 7;
+                        var bits = (value >>> shift) & 0x7f;
+                        if (bits != 0 || i == 3)
+                            startWriting = true;
+                        if (startWriting)
+                            writeFlagAnd7Bits(i == 3 ? 0 : 1, bits);
+                    }
+                }
+                function writeAscii(string) {
+                    writeVariableLength(string.length);
+                    for (var i = 0; i < string.length; i++) {
+                        var charCode = string.charCodeAt(i);
+                        if (charCode > 0x7f)
+                            throw new Error("Trying to write unicode character as ascii.");
+                        writeUint8(charCode);
+                    }
+                }
+                var song = _this._doc.song;
+                var ticksPerBeat = 96;
+                var ticksPerPart = ticksPerBeat / song.parts;
+                var ticksPerArpeggio = ticksPerPart / 4;
+                var secondsPerMinute = 60;
+                var microsecondsPerMinute = secondsPerMinute * 1000000;
+                var beatsPerMinute = song.getBeatsPerMinute();
+                var microsecondsPerBeat = Math.round(microsecondsPerMinute / beatsPerMinute);
+                var secondsPerTick = secondsPerMinute / (ticksPerBeat * beatsPerMinute);
+                var ticksPerBar = ticksPerBeat * song.beats;
+                var unrolledBars = [];
+                if (_this._enableIntro.checked) {
+                    for (var bar = 0; bar < song.loopStart; bar++) {
+                        unrolledBars.push(bar);
+                    }
+                }
+                for (var loopIndex = 0; loopIndex < Number(_this._loopDropDown.value); loopIndex++) {
+                    for (var bar = song.loopStart; bar < song.loopStart + song.loopLength; bar++) {
+                        unrolledBars.push(bar);
+                    }
+                }
+                if (_this._enableOutro.checked) {
+                    for (var bar = song.loopStart + song.loopLength; bar < song.bars; bar++) {
+                        unrolledBars.push(bar);
+                    }
+                }
+                var tracks = [
+                    { isMeta: true, channel: -1, midiChannel: -1, isChorus: false, isDrums: false },
+                    { isMeta: false, channel: 0, midiChannel: 0, isChorus: false, isDrums: false },
+                    { isMeta: false, channel: 0, midiChannel: 1, isChorus: true, isDrums: false },
+                    { isMeta: false, channel: 1, midiChannel: 2, isChorus: false, isDrums: false },
+                    { isMeta: false, channel: 1, midiChannel: 3, isChorus: true, isDrums: false },
+                    { isMeta: false, channel: 2, midiChannel: 4, isChorus: false, isDrums: false },
+                    { isMeta: false, channel: 2, midiChannel: 5, isChorus: true, isDrums: false },
+                    { isMeta: false, channel: 3, midiChannel: 6, isChorus: false, isDrums: true },
+                ];
+                writeUint32(0x4D546864);
+                writeUint32(6);
+                writeUint16(1);
+                writeUint16(tracks.length);
+                writeUint16(ticksPerBeat);
+                var _loop_2 = function (track) {
+                    writeUint32(0x4D54726B);
+                    var isMeta = track.isMeta, channel = track.channel, midiChannel = track.midiChannel, isChorus = track.isChorus, isDrums = track.isDrums;
+                    var trackLengthIndex = writeIndex;
+                    fileSize += 4;
+                    writeIndex = fileSize;
+                    var prevTime = 0;
+                    var barStartTime = 0;
+                    var writeEventTime = function (time) {
+                        if (time < prevTime)
+                            throw new Error("Midi event time cannot go backwards.");
+                        writeVariableLength(time - prevTime);
+                        prevTime = time;
+                    };
+                    if (isMeta) {
+                        writeEventTime(0);
+                        writeUint16(0xFF01);
+                        writeAscii("http://www.beepbox.co/" + _this._doc.song.toString());
+                        writeEventTime(0);
+                        writeUint24(0xFF5103);
+                        writeUint24(microsecondsPerBeat);
+                        writeEventTime(0);
+                        writeUint24(0xFF5804);
+                        writeUint8(_this._doc.song.beats);
+                        writeUint8(2);
+                        writeUint8(24);
+                        writeUint8(8);
+                        var isMinor = (_this._doc.song.scale < 10) && ((_this._doc.song.scale & 1) == 1);
+                        var key = 11 - _this._doc.song.key;
+                        var numSharps = key;
+                        if ((key & 1) == 1)
+                            numSharps += 6;
+                        if (isMinor)
+                            numSharps += 9;
+                        while (numSharps > 6)
+                            numSharps -= 12;
+                        writeEventTime(0);
+                        writeUint24(0xFF5902);
+                        writeUint8(numSharps);
+                        writeUint8(isMinor ? 1 : 0);
+                        if (_this._enableIntro.checked)
+                            barStartTime += ticksPerBar * song.loopStart;
+                        writeEventTime(barStartTime);
+                        writeUint16(0xFF06);
+                        writeAscii("Loop Start");
+                        for (var loopIndex = 0; loopIndex < Number(_this._loopDropDown.value); loopIndex++) {
+                            barStartTime += ticksPerBar * song.loopLength;
+                            writeEventTime(barStartTime);
+                            writeUint16(0xFF06);
+                            writeAscii(loopIndex < Number(_this._loopDropDown.value) - 1 ? "Loop Repeat" : "Loop End");
+                        }
+                        if (_this._enableOutro.checked)
+                            barStartTime += ticksPerBar * (song.bars - song.loopStart - song.loopLength);
+                        if (barStartTime != ticksPerBar * unrolledBars.length)
+                            throw new Error("Miscalculated number of bars.");
+                    }
+                    else {
+                        var channelName = ["blue channel", "yellow channel", "orange channel", "gray channel"][channel];
+                        if (isChorus)
+                            channelName += " chorus";
+                        writeEventTime(0);
+                        writeUint16(0xFF03);
+                        writeAscii(channelName);
+                        writeEventTime(barStartTime);
+                        writeUint8(0xB0 | midiChannel);
+                        writeFlagAnd7Bits(0, 0x7E);
+                        writeFlagAnd7Bits(0, 1);
+                        writeEventTime(barStartTime);
+                        writeUint8(0xB0 | midiChannel);
+                        writeFlagAnd7Bits(0, 0x44);
+                        writeFlagAnd7Bits(0, 0x7f);
+                        var prevInstrument = -1;
+                        var prevPitchBend = -1;
+                        var prevExpression = -1;
+                        var channelRoot = isDrums ? 33 : beepbox.Music.keyTransposes[_this._doc.song.key];
+                        var intervalScale = isDrums ? beepbox.Music.drumInterval : 1;
+                        for (var _i = 0, unrolledBars_1 = unrolledBars; _i < unrolledBars_1.length; _i++) {
+                            var bar = unrolledBars_1[_i];
+                            var pattern = _this._doc.song.getPattern(channel, bar);
+                            if (pattern != null) {
+                                var nextInstrument = pattern.instrument;
+                                if (isChorus && _this._doc.song.instrumentChorus[channel][nextInstrument] == 0) {
+                                    barStartTime += ticksPerBar;
+                                    continue;
+                                }
+                                if (prevInstrument != nextInstrument) {
+                                    prevInstrument = nextInstrument;
+                                    writeEventTime(barStartTime);
+                                    writeUint16(0xFF04);
+                                    if (isDrums) {
+                                        var description = "noise: " + beepbox.Music.drumNames[_this._doc.song.instrumentWaves[channel][nextInstrument]];
+                                        description += ", volume: " + beepbox.Music.volumeNames[_this._doc.song.instrumentVolumes[channel][nextInstrument]];
+                                        description += ", envelope: " + beepbox.Music.attackNames[_this._doc.song.instrumentAttacks[channel][nextInstrument]];
+                                        writeAscii(description);
+                                        writeEventTime(barStartTime);
+                                        writeUint8(0xC0 | midiChannel);
+                                        writeFlagAnd7Bits(0, 0x7E);
+                                    }
+                                    else {
+                                        var description = "wave: " + beepbox.Music.waveNames[_this._doc.song.instrumentWaves[channel][nextInstrument]];
+                                        description += ", volume: " + beepbox.Music.volumeNames[_this._doc.song.instrumentVolumes[channel][nextInstrument]];
+                                        description += ", envelope: " + beepbox.Music.attackNames[_this._doc.song.instrumentAttacks[channel][nextInstrument]];
+                                        description += ", filter: " + beepbox.Music.filterNames[_this._doc.song.instrumentFilters[channel][nextInstrument]];
+                                        description += ", chorus: " + beepbox.Music.chorusNames[_this._doc.song.instrumentChorus[channel][nextInstrument]];
+                                        description += ", effect: " + beepbox.Music.effectNames[_this._doc.song.instrumentEffects[channel][nextInstrument]];
+                                        writeAscii(description);
+                                        var sustainInstruments = [
+                                            0x47,
+                                            0x50,
+                                            0x46,
+                                            0x44,
+                                            0x51,
+                                            0x51,
+                                            0x51,
+                                            0x51,
+                                            0x4A,
+                                        ];
+                                        var decayInstruments = [
+                                            0x2E,
+                                            0x2E,
+                                            0x06,
+                                            0x18,
+                                            0x19,
+                                            0x19,
+                                            0x6A,
+                                            0x6A,
+                                            0x21,
+                                        ];
+                                        var filterInstruments = _this._doc.song.instrumentFilters[channel][nextInstrument] < 3 ? sustainInstruments : decayInstruments;
+                                        writeEventTime(barStartTime);
+                                        writeUint8(0xC0 | midiChannel);
+                                        writeFlagAnd7Bits(0, filterInstruments[_this._doc.song.instrumentWaves[channel][nextInstrument]]);
+                                    }
+                                    var instrumentVolumeChoice = _this._doc.song.instrumentVolumes[channel][nextInstrument];
+                                    var channelVolume = (5 - instrumentVolumeChoice) / 5;
+                                    writeEventTime(barStartTime);
+                                    writeUint8(0xB0 | midiChannel);
+                                    writeFlagAnd7Bits(0, 0x07);
+                                    writeFlagAnd7Bits(0, Math.round(0x7f * channelVolume));
+                                }
+                                var effectChoice = _this._doc.song.instrumentEffects[channel][nextInstrument];
+                                var effectVibrato = beepbox.Music.effectVibratos[effectChoice];
+                                var effectTremelo = beepbox.Music.effectTremelos[effectChoice];
+                                var effectDuration = 0.14;
+                                var chorusOffset = beepbox.Music.chorusValues[_this._doc.song.instrumentChorus[channel][nextInstrument]];
+                                if (!isChorus)
+                                    chorusOffset *= -1;
+                                chorusOffset += beepbox.Music.chorusOffsets[_this._doc.song.instrumentChorus[channel][nextInstrument]];
+                                for (var toneIndex = 0; toneIndex < pattern.tones.length; toneIndex++) {
+                                    var tone = pattern.tones[toneIndex];
+                                    var toneStartTime = barStartTime + tone.start * ticksPerPart;
+                                    var pinTime = toneStartTime;
+                                    var pinVolume = tone.pins[0].volume;
+                                    var pinInterval = tone.pins[0].interval;
+                                    var pitch = channelRoot + tone.notes[0] * intervalScale;
+                                    for (var pinIndex = 1; pinIndex < tone.pins.length; pinIndex++) {
+                                        var nextPinTime = toneStartTime + tone.pins[pinIndex].time * ticksPerPart;
+                                        var nextPinVolume = tone.pins[pinIndex].volume;
+                                        var nextPinInterval = tone.pins[pinIndex].interval;
+                                        var length_1 = nextPinTime - pinTime;
+                                        for (var tick = 0; tick < length_1; tick++) {
+                                            var tickTime = pinTime + tick;
+                                            var linearVolume = beepbox.lerp(pinVolume, nextPinVolume, tick / length_1);
+                                            var linearInterval = beepbox.lerp(pinInterval, nextPinInterval, tick / length_1);
+                                            var arpeggio = Math.floor(tick / ticksPerArpeggio) % 4;
+                                            var nextPitch = void 0;
+                                            if (tone.notes.length == 2) {
+                                                nextPitch = tone.notes[arpeggio >> 1];
+                                            }
+                                            else if (tone.notes.length == 3) {
+                                                nextPitch = tone.notes[arpeggio == 3 ? 1 : arpeggio];
+                                            }
+                                            else if (tone.notes.length == 4) {
+                                                nextPitch = tone.notes[arpeggio];
+                                            }
+                                            else {
+                                                nextPitch = tone.notes[0];
+                                            }
+                                            var fractionalPitch = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
+                                            nextPitch = Math.round(fractionalPitch);
+                                            var pitchOffset = fractionalPitch - nextPitch;
+                                            var effectCurve = Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / effectDuration);
+                                            if (effectChoice != 2 || tickTime - toneStartTime >= 3 * ticksPerPart) {
+                                                pitchOffset += effectVibrato * effectCurve;
+                                            }
+                                            var pitchBend = Math.max(0, Math.min(0x3fff, Math.round(0x2000 + 0x1000 * pitchOffset)));
+                                            var volume = linearVolume / 3;
+                                            var tremelo = 1.0 + effectTremelo * (effectCurve - 1.0);
+                                            var expression = Math.round(0x7f * volume * tremelo);
+                                            if (pitchBend != prevPitchBend) {
+                                                writeEventTime(tickTime);
+                                                writeUint8(0xE0 | midiChannel);
+                                                writeFlagAnd7Bits(0, pitchBend & 0x7f);
+                                                writeFlagAnd7Bits(0, (pitchBend >> 7) & 0x7f);
+                                                prevPitchBend = pitchBend;
+                                            }
+                                            if (expression != prevExpression) {
+                                                writeEventTime(tickTime);
+                                                writeUint8(0xB0 | midiChannel);
+                                                writeFlagAnd7Bits(0, 0x0B);
+                                                writeFlagAnd7Bits(0, expression);
+                                                prevExpression = expression;
+                                            }
+                                            if (tickTime == toneStartTime) {
+                                                writeEventTime(tickTime);
+                                                writeUint8(0x90 | midiChannel);
+                                                writeFlagAnd7Bits(0, nextPitch);
+                                                writeFlagAnd7Bits(0, 0x40);
+                                            }
+                                            else if (nextPitch != pitch) {
+                                                writeEventTime(tickTime);
+                                                writeUint8(0x90 | midiChannel);
+                                                writeFlagAnd7Bits(0, nextPitch);
+                                                writeFlagAnd7Bits(0, 0x40);
+                                                writeEventTime(tickTime);
+                                                writeUint8(0x80 | midiChannel);
+                                                writeFlagAnd7Bits(0, pitch);
+                                                writeFlagAnd7Bits(0, 0x40);
+                                            }
+                                            pitch = nextPitch;
+                                        }
+                                        pinTime = nextPinTime;
+                                        pinVolume = nextPinVolume;
+                                        pinInterval = nextPinInterval;
+                                    }
+                                    writeEventTime(barStartTime + tone.end * ticksPerPart);
+                                    writeUint8(0x80 | midiChannel);
+                                    writeFlagAnd7Bits(0, pitch);
+                                    writeFlagAnd7Bits(0, 0x40);
+                                }
+                            }
+                            barStartTime += ticksPerBar;
+                        }
+                    }
+                    writeEventTime(barStartTime);
+                    writeUint24(0xFF2F00);
+                    data.setUint32(trackLengthIndex, writeIndex - trackLengthIndex - 4, false);
+                };
+                for (var _i = 0, tracks_1 = tracks; _i < tracks_1.length; _i++) {
+                    var track = tracks_1[_i];
+                    _loop_2(track);
+                }
+                arrayBuffer = ArrayBuffer.transfer(arrayBuffer, fileSize);
+                var blob = new Blob([arrayBuffer], { type: "audio/midi" });
+                saveAs(blob, "song.midi");
+                _this._onClose();
+            };
+            this._loopDropDown.value = "1";
+            if (this._doc.song.loopStart == 0) {
+                this._enableIntro.checked = false;
+                this._enableIntro.disabled = true;
+            }
+            else {
+                this._enableIntro.checked = true;
+                this._enableIntro.disabled = false;
+            }
+            if (this._doc.song.loopStart + this._doc.song.loopLength == this._doc.song.bars) {
+                this._enableOutro.checked = false;
+                this._enableOutro.disabled = true;
+            }
+            else {
+                this._enableOutro.checked = true;
+                this._enableOutro.disabled = false;
+            }
+            this._loopDropDown.addEventListener("keypress", ExportPrompt._validateKey);
+            this._loopDropDown.addEventListener("blur", ExportPrompt._validateNumber);
+            this._exportWavButton.addEventListener("click", this._onExportToWav);
+            this._exportMidiButton.addEventListener("click", this._onExportToMidi);
+            this._exportCancelButton.addEventListener("click", this._onClose);
+            this.container.style.display = "block";
         }
-        function validateKey(event) {
+        ExportPrompt._validateKey = function (event) {
             var charCode = (event.which) ? event.which : event.keyCode;
             if (charCode != 46 && charCode > 31 && (charCode < 48 || charCode > 57)) {
                 event.preventDefault();
                 return true;
             }
             return false;
-        }
-        function validateNumber(event) {
+        };
+        ExportPrompt._validateNumber = function (event) {
             var input = event.target;
             input.value = Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value)))) + "";
-        }
-        function onExportToWav() {
-            var synth = new beepbox.Synth(doc.song);
-            synth.enableIntro = enableIntro.checked;
-            synth.enableOutro = enableOutro.checked;
-            synth.loopCount = Number(loopDropDown.value);
-            if (!synth.enableIntro) {
-                for (var introIter = 0; introIter < doc.song.loopStart; introIter++) {
-                    synth.nextBar();
-                }
-            }
-            var sampleFrames = synth.totalSamples;
-            var recordedSamples = new Float32Array(sampleFrames);
-            synth.synthesize(recordedSamples, sampleFrames);
-            var srcChannelCount = 1;
-            var wavChannelCount = 1;
-            var sampleRate = 44100;
-            var bytesPerSample = 2;
-            var bitsPerSample = 8 * bytesPerSample;
-            var sampleCount = wavChannelCount * sampleFrames;
-            var totalFileSize = 44 + sampleCount * bytesPerSample;
-            var index = 0;
-            var arrayBuffer = new ArrayBuffer(totalFileSize);
-            var data = new DataView(arrayBuffer);
-            data.setUint32(index, 0x52494646, false);
-            index += 4;
-            data.setUint32(index, 36 + sampleCount * bytesPerSample, true);
-            index += 4;
-            data.setUint32(index, 0x57415645, false);
-            index += 4;
-            data.setUint32(index, 0x666D7420, false);
-            index += 4;
-            data.setUint32(index, 0x00000010, true);
-            index += 4;
-            data.setUint16(index, 0x0001, true);
-            index += 2;
-            data.setUint16(index, wavChannelCount, true);
-            index += 2;
-            data.setUint32(index, sampleRate, true);
-            index += 4;
-            data.setUint32(index, sampleRate * bytesPerSample * wavChannelCount, true);
-            index += 4;
-            data.setUint16(index, bytesPerSample, true);
-            index += 2;
-            data.setUint16(index, bitsPerSample, true);
-            index += 2;
-            data.setUint32(index, 0x64617461, false);
-            index += 4;
-            data.setUint32(index, sampleCount * bytesPerSample, true);
-            index += 4;
-            var stride;
-            var repeat;
-            if (srcChannelCount == wavChannelCount) {
-                stride = 1;
-                repeat = 1;
-            }
-            else {
-                stride = srcChannelCount;
-                repeat = wavChannelCount;
-            }
-            var val;
-            if (bytesPerSample > 1) {
-                for (var i = 0; i < sampleFrames; i++) {
-                    val = Math.floor(recordedSamples[i * stride] * ((1 << (bitsPerSample - 1)) - 1));
-                    for (var k = 0; k < repeat; k++) {
-                        if (bytesPerSample == 2) {
-                            data.setInt16(index, val, true);
-                            index += 2;
-                        }
-                        else if (bytesPerSample == 4) {
-                            data.setInt32(index, val, true);
-                            index += 4;
-                        }
-                        else {
-                            throw new Error("unsupported sample size");
-                        }
-                    }
-                }
-            }
-            else {
-                for (var i = 0; i < sampleFrames; i++) {
-                    val = Math.floor(recordedSamples[i * stride] * 127 + 128);
-                    for (var k = 0; k < repeat; k++) {
-                        data.setUint8(index, val > 255 ? 255 : (val < 0 ? 0 : val));
-                        index++;
-                    }
-                }
-            }
-            var blob = new Blob([arrayBuffer], { type: "audio/wav" });
-            saveAs(blob, "song.wav");
-            onClose();
-        }
-        function onExportToMidi() {
-            var writeIndex = 0;
-            var fileSize = 0;
-            var arrayBuffer = new ArrayBuffer(1024);
-            var data = new DataView(arrayBuffer);
-            function addBytes(numBytes) {
-                fileSize += numBytes;
-                if (fileSize > arrayBuffer.byteLength) {
-                    arrayBuffer = ArrayBuffer.transfer(arrayBuffer, Math.max(arrayBuffer.byteLength * 2, fileSize));
-                    data = new DataView(arrayBuffer);
-                }
-            }
-            function writeUint32(value) {
-                value = value >>> 0;
-                addBytes(4);
-                data.setUint32(writeIndex, value, false);
-                writeIndex = fileSize;
-            }
-            function writeUint24(value) {
-                value = value >>> 0;
-                addBytes(3);
-                data.setUint8(writeIndex, (value >> 16) & 0xff);
-                data.setUint8(writeIndex + 1, (value >> 8) & 0xff);
-                data.setUint8(writeIndex + 2, (value) & 0xff);
-                writeIndex = fileSize;
-            }
-            function writeUint16(value) {
-                value = value >>> 0;
-                addBytes(2);
-                data.setUint16(writeIndex, value, false);
-                writeIndex = fileSize;
-            }
-            function writeUint8(value) {
-                value = value >>> 0;
-                addBytes(1);
-                data.setUint8(writeIndex, value);
-                writeIndex = fileSize;
-            }
-            function writeFlagAnd7Bits(flag, value) {
-                value = ((value >>> 0) & 0x7f) | ((flag & 0x01) << 7);
-                addBytes(1);
-                data.setUint8(writeIndex, value);
-                writeIndex = fileSize;
-            }
-            function writeVariableLength(value) {
-                value = value >>> 0;
-                if (value > 0x0fffffff)
-                    throw new Error("writeVariableLength value too big.");
-                var startWriting = false;
-                for (var i = 0; i < 4; i++) {
-                    var shift = 21 - i * 7;
-                    var bits = (value >>> shift) & 0x7f;
-                    if (bits != 0 || i == 3)
-                        startWriting = true;
-                    if (startWriting)
-                        writeFlagAnd7Bits(i == 3 ? 0 : 1, bits);
-                }
-            }
-            function writeAscii(string) {
-                writeVariableLength(string.length);
-                for (var i = 0; i < string.length; i++) {
-                    var charCode = string.charCodeAt(i);
-                    if (charCode > 0x7f)
-                        throw new Error("Trying to write unicode character as ascii.");
-                    writeUint8(charCode);
-                }
-            }
-            var ticksPerBeat = 96;
-            var ticksPerPart = ticksPerBeat / doc.song.parts;
-            var ticksPerArpeggio = ticksPerPart / 4;
-            var secondsPerMinute = 60;
-            var microsecondsPerMinute = secondsPerMinute * 1000000;
-            var beatsPerMinute = doc.song.getBeatsPerMinute();
-            var microsecondsPerBeat = Math.round(microsecondsPerMinute / beatsPerMinute);
-            var secondsPerTick = secondsPerMinute / (ticksPerBeat * beatsPerMinute);
-            var ticksPerBar = ticksPerBeat * doc.song.beats;
-            var unrolledBars = [];
-            if (enableIntro.checked) {
-                for (var bar = 0; bar < doc.song.loopStart; bar++) {
-                    unrolledBars.push(bar);
-                }
-            }
-            for (var loopIndex = 0; loopIndex < Number(loopDropDown.value); loopIndex++) {
-                for (var bar = doc.song.loopStart; bar < doc.song.loopStart + doc.song.loopLength; bar++) {
-                    unrolledBars.push(bar);
-                }
-            }
-            if (enableOutro.checked) {
-                for (var bar = doc.song.loopStart + doc.song.loopLength; bar < doc.song.bars; bar++) {
-                    unrolledBars.push(bar);
-                }
-            }
-            var tracks = [
-                { isMeta: true, channel: -1, midiChannel: -1, isChorus: false, isDrums: false },
-                { isMeta: false, channel: 0, midiChannel: 0, isChorus: false, isDrums: false },
-                { isMeta: false, channel: 0, midiChannel: 1, isChorus: true, isDrums: false },
-                { isMeta: false, channel: 1, midiChannel: 2, isChorus: false, isDrums: false },
-                { isMeta: false, channel: 1, midiChannel: 3, isChorus: true, isDrums: false },
-                { isMeta: false, channel: 2, midiChannel: 4, isChorus: false, isDrums: false },
-                { isMeta: false, channel: 2, midiChannel: 5, isChorus: true, isDrums: false },
-                { isMeta: false, channel: 3, midiChannel: 6, isChorus: false, isDrums: true },
-            ];
-            writeUint32(0x4D546864);
-            writeUint32(6);
-            writeUint16(1);
-            writeUint16(tracks.length);
-            writeUint16(ticksPerBeat);
-            var _loop_2 = function (track) {
-                writeUint32(0x4D54726B);
-                var isMeta = track.isMeta, channel = track.channel, midiChannel = track.midiChannel, isChorus = track.isChorus, isDrums = track.isDrums;
-                var trackLengthIndex = writeIndex;
-                fileSize += 4;
-                writeIndex = fileSize;
-                var prevTime = 0;
-                var barStartTime = 0;
-                var writeEventTime = function (time) {
-                    if (time < prevTime)
-                        throw new Error("Midi event time cannot go backwards.");
-                    writeVariableLength(time - prevTime);
-                    prevTime = time;
-                };
-                if (isMeta) {
-                    writeEventTime(0);
-                    writeUint16(0xFF01);
-                    writeAscii("http://www.beepbox.co/" + doc.song.toString());
-                    writeEventTime(0);
-                    writeUint24(0xFF5103);
-                    writeUint24(microsecondsPerBeat);
-                    writeEventTime(0);
-                    writeUint24(0xFF5804);
-                    writeUint8(doc.song.beats);
-                    writeUint8(2);
-                    writeUint8(24);
-                    writeUint8(8);
-                    var isMinor = (doc.song.scale < 10) && ((doc.song.scale & 1) == 1);
-                    var key = 11 - doc.song.key;
-                    var numSharps = key;
-                    if ((key & 1) == 1)
-                        numSharps += 6;
-                    if (isMinor)
-                        numSharps += 9;
-                    while (numSharps > 6)
-                        numSharps -= 12;
-                    writeEventTime(0);
-                    writeUint24(0xFF5902);
-                    writeUint8(numSharps);
-                    writeUint8(isMinor ? 1 : 0);
-                    if (enableIntro.checked)
-                        barStartTime += ticksPerBar * doc.song.loopStart;
-                    writeEventTime(barStartTime);
-                    writeUint16(0xFF06);
-                    writeAscii("Loop Start");
-                    for (var loopIndex = 0; loopIndex < Number(loopDropDown.value); loopIndex++) {
-                        barStartTime += ticksPerBar * doc.song.loopLength;
-                        writeEventTime(barStartTime);
-                        writeUint16(0xFF06);
-                        writeAscii(loopIndex < Number(loopDropDown.value) - 1 ? "Loop Repeat" : "Loop End");
-                    }
-                    if (enableOutro.checked)
-                        barStartTime += ticksPerBar * (doc.song.bars - doc.song.loopStart - doc.song.loopLength);
-                    if (barStartTime != ticksPerBar * unrolledBars.length)
-                        throw new Error("Miscalculated number of bars.");
-                }
-                else {
-                    var channelName = ["blue channel", "yellow channel", "orange channel", "gray channel"][channel];
-                    if (isChorus)
-                        channelName += " chorus";
-                    writeEventTime(0);
-                    writeUint16(0xFF03);
-                    writeAscii(channelName);
-                    writeEventTime(barStartTime);
-                    writeUint8(0xB0 | midiChannel);
-                    writeFlagAnd7Bits(0, 0x7E);
-                    writeFlagAnd7Bits(0, 1);
-                    writeEventTime(barStartTime);
-                    writeUint8(0xB0 | midiChannel);
-                    writeFlagAnd7Bits(0, 0x44);
-                    writeFlagAnd7Bits(0, 0x7f);
-                    var prevInstrument = -1;
-                    var prevPitchBend = -1;
-                    var prevExpression = -1;
-                    var channelRoot = isDrums ? 33 : beepbox.Music.keyTransposes[doc.song.key];
-                    var intervalScale = isDrums ? beepbox.Music.drumInterval : 1;
-                    for (var _i = 0, unrolledBars_1 = unrolledBars; _i < unrolledBars_1.length; _i++) {
-                        var bar = unrolledBars_1[_i];
-                        var pattern = doc.song.getPattern(channel, bar);
-                        if (pattern != null) {
-                            var nextInstrument = pattern.instrument;
-                            if (isChorus && doc.song.instrumentChorus[channel][nextInstrument] == 0) {
-                                barStartTime += ticksPerBar;
-                                continue;
-                            }
-                            if (prevInstrument != nextInstrument) {
-                                prevInstrument = nextInstrument;
-                                writeEventTime(barStartTime);
-                                writeUint16(0xFF04);
-                                if (isDrums) {
-                                    var description = "noise: " + beepbox.Music.drumNames[doc.song.instrumentWaves[channel][nextInstrument]];
-                                    description += ", volume: " + beepbox.Music.volumeNames[doc.song.instrumentVolumes[channel][nextInstrument]];
-                                    description += ", envelope: " + beepbox.Music.attackNames[doc.song.instrumentAttacks[channel][nextInstrument]];
-                                    writeAscii(description);
-                                    writeEventTime(barStartTime);
-                                    writeUint8(0xC0 | midiChannel);
-                                    writeFlagAnd7Bits(0, 0x7E);
-                                }
-                                else {
-                                    var description = "wave: " + beepbox.Music.waveNames[doc.song.instrumentWaves[channel][nextInstrument]];
-                                    description += ", volume: " + beepbox.Music.volumeNames[doc.song.instrumentVolumes[channel][nextInstrument]];
-                                    description += ", envelope: " + beepbox.Music.attackNames[doc.song.instrumentAttacks[channel][nextInstrument]];
-                                    description += ", filter: " + beepbox.Music.filterNames[doc.song.instrumentFilters[channel][nextInstrument]];
-                                    description += ", chorus: " + beepbox.Music.chorusNames[doc.song.instrumentChorus[channel][nextInstrument]];
-                                    description += ", effect: " + beepbox.Music.effectNames[doc.song.instrumentEffects[channel][nextInstrument]];
-                                    writeAscii(description);
-                                    var sustainInstruments = [
-                                        0x47,
-                                        0x50,
-                                        0x46,
-                                        0x44,
-                                        0x51,
-                                        0x51,
-                                        0x51,
-                                        0x51,
-                                        0x4A,
-                                    ];
-                                    var decayInstruments = [
-                                        0x2E,
-                                        0x2E,
-                                        0x06,
-                                        0x18,
-                                        0x19,
-                                        0x19,
-                                        0x6A,
-                                        0x6A,
-                                        0x21,
-                                    ];
-                                    var filterInstruments = doc.song.instrumentFilters[channel][nextInstrument] < 3 ? sustainInstruments : decayInstruments;
-                                    writeEventTime(barStartTime);
-                                    writeUint8(0xC0 | midiChannel);
-                                    writeFlagAnd7Bits(0, filterInstruments[doc.song.instrumentWaves[channel][nextInstrument]]);
-                                }
-                                var instrumentVolumeChoice = doc.song.instrumentVolumes[channel][nextInstrument];
-                                var channelVolume = (5 - instrumentVolumeChoice) / 5;
-                                writeEventTime(barStartTime);
-                                writeUint8(0xB0 | midiChannel);
-                                writeFlagAnd7Bits(0, 0x07);
-                                writeFlagAnd7Bits(0, Math.round(0x7f * channelVolume));
-                            }
-                            var effectChoice = doc.song.instrumentEffects[channel][nextInstrument];
-                            var effectVibrato = beepbox.Music.effectVibratos[effectChoice];
-                            var effectTremelo = beepbox.Music.effectTremelos[effectChoice];
-                            var effectDuration = 0.14;
-                            var chorusOffset = beepbox.Music.chorusValues[doc.song.instrumentChorus[channel][nextInstrument]];
-                            if (!isChorus)
-                                chorusOffset *= -1;
-                            chorusOffset += beepbox.Music.chorusOffsets[doc.song.instrumentChorus[channel][nextInstrument]];
-                            for (var toneIndex = 0; toneIndex < pattern.tones.length; toneIndex++) {
-                                var tone = pattern.tones[toneIndex];
-                                var toneStartTime = barStartTime + tone.start * ticksPerPart;
-                                var pinTime = toneStartTime;
-                                var pinVolume = tone.pins[0].volume;
-                                var pinInterval = tone.pins[0].interval;
-                                var pitch = channelRoot + tone.notes[0] * intervalScale;
-                                for (var pinIndex = 1; pinIndex < tone.pins.length; pinIndex++) {
-                                    var nextPinTime = toneStartTime + tone.pins[pinIndex].time * ticksPerPart;
-                                    var nextPinVolume = tone.pins[pinIndex].volume;
-                                    var nextPinInterval = tone.pins[pinIndex].interval;
-                                    var length_1 = nextPinTime - pinTime;
-                                    for (var tick = 0; tick < length_1; tick++) {
-                                        var tickTime = pinTime + tick;
-                                        var linearVolume = beepbox.lerp(pinVolume, nextPinVolume, tick / length_1);
-                                        var linearInterval = beepbox.lerp(pinInterval, nextPinInterval, tick / length_1);
-                                        var arpeggio = Math.floor(tick / ticksPerArpeggio) % 4;
-                                        var nextPitch = void 0;
-                                        if (tone.notes.length == 2) {
-                                            nextPitch = tone.notes[arpeggio >> 1];
-                                        }
-                                        else if (tone.notes.length == 3) {
-                                            nextPitch = tone.notes[arpeggio == 3 ? 1 : arpeggio];
-                                        }
-                                        else if (tone.notes.length == 4) {
-                                            nextPitch = tone.notes[arpeggio];
-                                        }
-                                        else {
-                                            nextPitch = tone.notes[0];
-                                        }
-                                        var fractionalPitch = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
-                                        nextPitch = Math.round(fractionalPitch);
-                                        var pitchOffset = fractionalPitch - nextPitch;
-                                        var effectCurve = Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / effectDuration);
-                                        if (effectChoice != 2 || tickTime - toneStartTime >= 3 * ticksPerPart) {
-                                            pitchOffset += effectVibrato * effectCurve;
-                                        }
-                                        var pitchBend = Math.max(0, Math.min(0x3fff, Math.round(0x2000 + 0x1000 * pitchOffset)));
-                                        var volume = linearVolume / 3;
-                                        var tremelo = 1.0 + effectTremelo * (effectCurve - 1.0);
-                                        var expression = Math.round(0x7f * volume * tremelo);
-                                        if (pitchBend != prevPitchBend) {
-                                            writeEventTime(tickTime);
-                                            writeUint8(0xE0 | midiChannel);
-                                            writeFlagAnd7Bits(0, pitchBend & 0x7f);
-                                            writeFlagAnd7Bits(0, (pitchBend >> 7) & 0x7f);
-                                            prevPitchBend = pitchBend;
-                                        }
-                                        if (expression != prevExpression) {
-                                            writeEventTime(tickTime);
-                                            writeUint8(0xB0 | midiChannel);
-                                            writeFlagAnd7Bits(0, 0x0B);
-                                            writeFlagAnd7Bits(0, expression);
-                                            prevExpression = expression;
-                                        }
-                                        if (tickTime == toneStartTime) {
-                                            writeEventTime(tickTime);
-                                            writeUint8(0x90 | midiChannel);
-                                            writeFlagAnd7Bits(0, nextPitch);
-                                            writeFlagAnd7Bits(0, 0x40);
-                                        }
-                                        else if (nextPitch != pitch) {
-                                            writeEventTime(tickTime);
-                                            writeUint8(0x90 | midiChannel);
-                                            writeFlagAnd7Bits(0, nextPitch);
-                                            writeFlagAnd7Bits(0, 0x40);
-                                            writeEventTime(tickTime);
-                                            writeUint8(0x80 | midiChannel);
-                                            writeFlagAnd7Bits(0, pitch);
-                                            writeFlagAnd7Bits(0, 0x40);
-                                        }
-                                        pitch = nextPitch;
-                                    }
-                                    pinTime = nextPinTime;
-                                    pinVolume = nextPinVolume;
-                                    pinInterval = nextPinInterval;
-                                }
-                                writeEventTime(barStartTime + tone.end * ticksPerPart);
-                                writeUint8(0x80 | midiChannel);
-                                writeFlagAnd7Bits(0, pitch);
-                                writeFlagAnd7Bits(0, 0x40);
-                            }
-                        }
-                        barStartTime += ticksPerBar;
-                    }
-                }
-                writeEventTime(barStartTime);
-                writeUint24(0xFF2F00);
-                data.setUint32(trackLengthIndex, writeIndex - trackLengthIndex - 4, false);
-            };
-            for (var _i = 0, tracks_1 = tracks; _i < tracks_1.length; _i++) {
-                var track = tracks_1[_i];
-                _loop_2(track);
-            }
-            arrayBuffer = ArrayBuffer.transfer(arrayBuffer, fileSize);
-            var blob = new Blob([arrayBuffer], { type: "audio/midi" });
-            saveAs(blob, "song.midi");
-            onClose();
-        }
-        loopDropDown.value = "1";
-        if (doc.song.loopStart == 0) {
-            enableIntro.checked = false;
-            enableIntro.disabled = true;
-        }
-        else {
-            enableIntro.checked = true;
-            enableIntro.disabled = false;
-        }
-        if (doc.song.loopStart + doc.song.loopLength == doc.song.bars) {
-            enableOutro.checked = false;
-            enableOutro.disabled = true;
-        }
-        else {
-            enableOutro.checked = true;
-            enableOutro.disabled = false;
-        }
-        loopDropDown.addEventListener("keypress", validateKey);
-        loopDropDown.addEventListener("blur", validateNumber);
-        exportWavButton.addEventListener("click", onExportToWav);
-        exportMidiButton.addEventListener("click", onExportToMidi);
-        exportCancelButton.addEventListener("click", onClose);
-        container.style.display = "block";
-    }
+        };
+        return ExportPrompt;
+    }());
     beepbox.ExportPrompt = ExportPrompt;
 })(beepbox || (beepbox = {}));
 var saveAs = saveAs || function (e) {
@@ -5544,392 +5613,395 @@ else if (typeof define !== "undefined" && define !== null && define.amd !== null
 "use strict";
 var beepbox;
 (function (beepbox) {
-    beepbox.SongEditor = function (doc) {
-        var _this = this;
-        var width = 700;
-        var height = 645;
-        var patternEditor = new beepbox.PatternEditor(doc);
-        var trackEditor = new beepbox.TrackEditor(doc, this);
-        var loopEditor = new beepbox.LoopEditor(doc);
-        var barScrollBar = new beepbox.BarScrollBar(doc);
-        var octaveScrollBar = new beepbox.OctaveScrollBar(doc);
-        var piano = new beepbox.Piano(doc);
-        var copyTones;
-        var copyBeats = 0;
-        var copyParts = 0;
-        var copyDrums = false;
-        var wasPlaying;
-        this.promptVisible = false;
-        function BuildOptions(items) {
-            var result = "";
-            for (var i = 0; i < items.length; i++) {
-                result = result + '<option value="' + items[i] + '">' + items[i] + '</option>';
-            }
-            return result;
+    function BuildOptions(items) {
+        var result = "";
+        for (var i = 0; i < items.length; i++) {
+            result = result + '<option value="' + items[i] + '">' + items[i] + '</option>';
         }
-        function BuildOptionsWithTitle(items, title) {
-            var result = "";
-            result = result + '<option value="' + title + '" selected="selected" disabled="disabled">' + title + '</option>';
-            for (var i = 0; i < items.length; i++) {
-                result = result + '<option value="' + items[i][1] + '">' + items[i][0] + '</option>';
-            }
-            return result;
+        return result;
+    }
+    function BuildOptionsWithTitle(items, title) {
+        var result = "";
+        result = result + '<option value="' + title + '" selected="selected" disabled="disabled">' + title + '</option>';
+        for (var i = 0; i < items.length; i++) {
+            result = result + '<option value="' + items[i][1] + '">' + items[i][0] + '</option>';
         }
-        var promptBackground = document.getElementById("promptBackground");
-        var editButton = document.getElementById("editButton");
-        var optionsButton = document.getElementById("optionsButton");
-        var mainLayer = document.getElementById("mainLayer");
-        var editorBox = document.getElementById("editorBox");
-        var patternContainerContainer = document.getElementById("patternContainerContainer");
-        var patternEditorContainer = document.getElementById("patternEditorContainer");
-        var pianoContainer = document.getElementById("pianoContainer");
-        var octaveScrollBarContainer = document.getElementById("octaveScrollBarContainer");
-        var trackEditorContainer = document.getElementById("trackEditorContainer");
-        var barScrollBarContainer = document.getElementById("barScrollBarContainer");
-        var playButton = document.getElementById("playButton");
-        var exportButton = document.getElementById("exportButton");
-        var volumeSlider = document.getElementById("volumeSlider");
-        var filterDropDownGroup = document.getElementById("filterDropDownGroup");
-        var chorusDropDownGroup = document.getElementById("chorusDropDownGroup");
-        var effectDropDownGroup = document.getElementById("effectDropDownGroup");
-        var patternSettingsLabel = document.getElementById("patternSettingsLabel");
-        var instrumentDropDownGroup = document.getElementById("instrumentDropDownGroup");
-        var scaleDropDown = document.getElementById("scaleDropDown");
-        var keyDropDown = document.getElementById("keyDropDown");
-        var tempoSlider = document.getElementById("tempoSlider");
-        var partDropDown = document.getElementById("partDropDown");
-        var instrumentDropDown = document.getElementById("instrumentDropDown");
-        var channelVolumeSlider = document.getElementById("channelVolumeSlider");
-        var waveDropDown = document.getElementById("waveDropDown");
-        var attackDropDown = document.getElementById("attackDropDown");
-        var filterDropDown = document.getElementById("filterDropDown");
-        var chorusDropDown = document.getElementById("chorusDropDown");
-        var effectDropDown = document.getElementById("effectDropDown");
-        var editCommands = [
-            ["Undo (Z)", "undo"],
-            ["Redo (Y)", "redo"],
-            ["Copy Pattern (C)", "copy"],
-            ["Paste Pattern (V)", "paste"],
-            ["Shift Notes Up (+)", "transposeUp"],
-            ["Shift Notes Down (-)", "transposeDown"],
-            ["Custom song size...", "duration"],
-            ["Clean Slate", "clean"],
-        ];
-        editButton.innerHTML = BuildOptionsWithTitle(editCommands, "Edit Menu");
-        scaleDropDown.innerHTML = BuildOptions(beepbox.Music.scaleNames);
-        keyDropDown.innerHTML = BuildOptions(beepbox.Music.keyNames);
-        partDropDown.innerHTML = BuildOptions(beepbox.Music.partNames);
-        filterDropDown.innerHTML = BuildOptions(beepbox.Music.filterNames);
-        attackDropDown.innerHTML = BuildOptions(beepbox.Music.attackNames);
-        effectDropDown.innerHTML = BuildOptions(beepbox.Music.effectNames);
-        chorusDropDown.innerHTML = BuildOptions(beepbox.Music.chorusNames);
-        var waveNames = BuildOptions(beepbox.Music.waveNames);
-        var drumNames = BuildOptions(beepbox.Music.drumNames);
-        function setPrompt(newPrompt) {
-            if (_this.promptVisible)
-                return;
-            wasPlaying = doc.synth.playing;
-            if (wasPlaying)
-                togglePlay();
-            promptBackground.style.display = "block";
-            new newPrompt(doc, _this);
-            _this.promptVisible = true;
-        }
-        this.closePrompt = (function () {
-            _this.promptVisible = false;
-            promptBackground.style.display = "none";
-            if (wasPlaying)
-                togglePlay();
-            mainLayer.focus();
-        });
-        function refocusStage(event) {
-            mainLayer.focus();
-        }
-        function onUpdated() {
-            var optionCommands = [
-                [(doc.showLetters ? "✓ " : "") + "Show Piano", "showLetters"],
-                [(doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes", "showFifth"],
-                [(doc.showChannels ? "✓ " : "") + "Show All Channels", "showChannels"],
-                [(doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar", "showScrollBar"],
+        return result;
+    }
+    var SongEditor = (function () {
+        function SongEditor(_doc) {
+            var _this = this;
+            this._doc = _doc;
+            this.promptVisible = false;
+            this._width = 700;
+            this._height = 645;
+            this._patternEditor = new beepbox.PatternEditor(this._doc);
+            this._trackEditor = new beepbox.TrackEditor(this._doc, this);
+            this._loopEditor = new beepbox.LoopEditor(this._doc);
+            this._barScrollBar = new beepbox.BarScrollBar(this._doc);
+            this._octaveScrollBar = new beepbox.OctaveScrollBar(this._doc);
+            this._piano = new beepbox.Piano(this._doc);
+            this._promptBackground = document.getElementById("promptBackground");
+            this._editButton = document.getElementById("editButton");
+            this._optionsButton = document.getElementById("optionsButton");
+            this._mainLayer = document.getElementById("mainLayer");
+            this._editorBox = document.getElementById("editorBox");
+            this._patternContainerContainer = document.getElementById("patternContainerContainer");
+            this._patternEditorContainer = document.getElementById("patternEditorContainer");
+            this._pianoContainer = document.getElementById("pianoContainer");
+            this._octaveScrollBarContainer = document.getElementById("octaveScrollBarContainer");
+            this._trackEditorContainer = document.getElementById("trackEditorContainer");
+            this._barScrollBarContainer = document.getElementById("barScrollBarContainer");
+            this._playButton = document.getElementById("playButton");
+            this._exportButton = document.getElementById("exportButton");
+            this._volumeSlider = document.getElementById("volumeSlider");
+            this._filterDropDownGroup = document.getElementById("filterDropDownGroup");
+            this._chorusDropDownGroup = document.getElementById("chorusDropDownGroup");
+            this._effectDropDownGroup = document.getElementById("effectDropDownGroup");
+            this._patternSettingsLabel = document.getElementById("patternSettingsLabel");
+            this._instrumentDropDownGroup = document.getElementById("instrumentDropDownGroup");
+            this._scaleDropDown = document.getElementById("scaleDropDown");
+            this._keyDropDown = document.getElementById("keyDropDown");
+            this._tempoSlider = document.getElementById("tempoSlider");
+            this._partDropDown = document.getElementById("partDropDown");
+            this._instrumentDropDown = document.getElementById("instrumentDropDown");
+            this._channelVolumeSlider = document.getElementById("channelVolumeSlider");
+            this._waveDropDown = document.getElementById("waveDropDown");
+            this._attackDropDown = document.getElementById("attackDropDown");
+            this._filterDropDown = document.getElementById("filterDropDown");
+            this._chorusDropDown = document.getElementById("chorusDropDown");
+            this._effectDropDown = document.getElementById("effectDropDown");
+            this._waveNames = BuildOptions(beepbox.Music.waveNames);
+            this._drumNames = BuildOptions(beepbox.Music.drumNames);
+            this._editCommands = [
+                ["Undo (Z)", "undo"],
+                ["Redo (Y)", "redo"],
+                ["Copy Pattern (C)", "copy"],
+                ["Paste Pattern (V)", "paste"],
+                ["Shift Notes Up (+)", "transposeUp"],
+                ["Shift Notes Down (-)", "transposeDown"],
+                ["Custom song size...", "duration"],
+                ["Clean Slate", "clean"],
             ];
-            optionsButton.innerHTML = BuildOptionsWithTitle(optionCommands, "Preferences Menu");
-            scaleDropDown.selectedIndex = doc.song.scale;
-            keyDropDown.selectedIndex = doc.song.key;
-            tempoSlider.value = "" + doc.song.tempo;
-            partDropDown.selectedIndex = beepbox.Music.partCounts.indexOf(doc.song.parts);
-            if (doc.channel == 3) {
-                filterDropDownGroup.style.visibility = "hidden";
-                chorusDropDownGroup.style.visibility = "hidden";
-                effectDropDownGroup.style.visibility = "hidden";
-                waveDropDown.innerHTML = drumNames;
-            }
-            else {
-                filterDropDownGroup.style.visibility = "visible";
-                chorusDropDownGroup.style.visibility = "visible";
-                effectDropDownGroup.style.visibility = "visible";
-                waveDropDown.innerHTML = waveNames;
-            }
-            var pattern = doc.getCurrentPattern();
-            patternSettingsLabel.style.visibility = (doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
-            instrumentDropDownGroup.style.visibility = (doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
-            var instrumentList = [];
-            for (var i = 0; i < doc.song.instruments; i++) {
-                instrumentList.push(i + 1);
-            }
-            instrumentDropDown.innerHTML = BuildOptions(instrumentList);
-            var instrument = doc.getCurrentInstrument();
-            waveDropDown.selectedIndex = doc.song.instrumentWaves[doc.channel][instrument];
-            filterDropDown.selectedIndex = doc.song.instrumentFilters[doc.channel][instrument];
-            attackDropDown.selectedIndex = doc.song.instrumentAttacks[doc.channel][instrument];
-            effectDropDown.selectedIndex = doc.song.instrumentEffects[doc.channel][instrument];
-            chorusDropDown.selectedIndex = doc.song.instrumentChorus[doc.channel][instrument];
-            channelVolumeSlider.value = -doc.song.instrumentVolumes[doc.channel][instrument] + "";
-            instrumentDropDown.selectedIndex = instrument;
-            pianoContainer.style.display = doc.showLetters ? "table-cell" : "none";
-            octaveScrollBarContainer.style.display = doc.showScrollBar ? "table-cell" : "none";
-            barScrollBarContainer.style.display = doc.song.bars > 16 ? "table-row" : "none";
-            var patternWidth = 512;
-            if (doc.showLetters)
-                patternWidth -= 32;
-            if (doc.showScrollBar)
-                patternWidth -= 20;
-            patternEditorContainer.style.width = String(patternWidth) + "px";
-            var trackHeight = 128;
-            if (doc.song.bars > 16)
-                trackHeight -= 20;
-            trackEditorContainer.style.height = String(trackHeight) + "px";
-            volumeSlider.value = String(doc.volume);
-            if (doc.synth.playing) {
-                playButton.innerHTML = "Pause";
-            }
-            else {
-                playButton.innerHTML = "Play";
-            }
+            this._copyBeats = 0;
+            this._copyParts = 0;
+            this._copyDrums = false;
+            this._refocusStage = function (event) {
+                _this._mainLayer.focus();
+            };
+            this._onUpdated = function () {
+                var optionCommands = [
+                    [(_this._doc.showLetters ? "✓ " : "") + "Show Piano", "showLetters"],
+                    [(_this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes", "showFifth"],
+                    [(_this._doc.showChannels ? "✓ " : "") + "Show All Channels", "showChannels"],
+                    [(_this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar", "showScrollBar"],
+                ];
+                _this._optionsButton.innerHTML = BuildOptionsWithTitle(optionCommands, "Preferences Menu");
+                _this._scaleDropDown.selectedIndex = _this._doc.song.scale;
+                _this._keyDropDown.selectedIndex = _this._doc.song.key;
+                _this._tempoSlider.value = "" + _this._doc.song.tempo;
+                _this._partDropDown.selectedIndex = beepbox.Music.partCounts.indexOf(_this._doc.song.parts);
+                if (_this._doc.channel == 3) {
+                    _this._filterDropDownGroup.style.visibility = "hidden";
+                    _this._chorusDropDownGroup.style.visibility = "hidden";
+                    _this._effectDropDownGroup.style.visibility = "hidden";
+                    _this._waveDropDown.innerHTML = _this._drumNames;
+                }
+                else {
+                    _this._filterDropDownGroup.style.visibility = "visible";
+                    _this._chorusDropDownGroup.style.visibility = "visible";
+                    _this._effectDropDownGroup.style.visibility = "visible";
+                    _this._waveDropDown.innerHTML = _this._waveNames;
+                }
+                var pattern = _this._doc.getCurrentPattern();
+                _this._patternSettingsLabel.style.visibility = (_this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
+                _this._instrumentDropDownGroup.style.visibility = (_this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
+                var instrumentList = [];
+                for (var i = 0; i < _this._doc.song.instruments; i++) {
+                    instrumentList.push(i + 1);
+                }
+                _this._instrumentDropDown.innerHTML = BuildOptions(instrumentList);
+                var instrument = _this._doc.getCurrentInstrument();
+                _this._waveDropDown.selectedIndex = _this._doc.song.instrumentWaves[_this._doc.channel][instrument];
+                _this._filterDropDown.selectedIndex = _this._doc.song.instrumentFilters[_this._doc.channel][instrument];
+                _this._attackDropDown.selectedIndex = _this._doc.song.instrumentAttacks[_this._doc.channel][instrument];
+                _this._effectDropDown.selectedIndex = _this._doc.song.instrumentEffects[_this._doc.channel][instrument];
+                _this._chorusDropDown.selectedIndex = _this._doc.song.instrumentChorus[_this._doc.channel][instrument];
+                _this._channelVolumeSlider.value = -_this._doc.song.instrumentVolumes[_this._doc.channel][instrument] + "";
+                _this._instrumentDropDown.selectedIndex = instrument;
+                _this._pianoContainer.style.display = _this._doc.showLetters ? "table-cell" : "none";
+                _this._octaveScrollBarContainer.style.display = _this._doc.showScrollBar ? "table-cell" : "none";
+                _this._barScrollBarContainer.style.display = _this._doc.song.bars > 16 ? "table-row" : "none";
+                var patternWidth = 512;
+                if (_this._doc.showLetters)
+                    patternWidth -= 32;
+                if (_this._doc.showScrollBar)
+                    patternWidth -= 20;
+                _this._patternEditorContainer.style.width = String(patternWidth) + "px";
+                var trackHeight = 128;
+                if (_this._doc.song.bars > 16)
+                    trackHeight -= 20;
+                _this._trackEditorContainer.style.height = String(trackHeight) + "px";
+                _this._volumeSlider.value = String(_this._doc.volume);
+                if (_this._doc.synth.playing) {
+                    _this._playButton.innerHTML = "Pause";
+                }
+                else {
+                    _this._playButton.innerHTML = "Play";
+                }
+            };
+            this._onKeyPressed = function (event) {
+                if (_this.promptVisible)
+                    return;
+                switch (event.keyCode) {
+                    case 32:
+                        _this._togglePlay();
+                        event.preventDefault();
+                        break;
+                    case 90:
+                        if (event.shiftKey) {
+                            _this._doc.history.redo();
+                        }
+                        else {
+                            _this._doc.history.undo();
+                        }
+                        event.preventDefault();
+                        break;
+                    case 89:
+                        _this._doc.history.redo();
+                        event.preventDefault();
+                        break;
+                    case 67:
+                        _this._copy();
+                        event.preventDefault();
+                        break;
+                    case 86:
+                        _this._paste();
+                        event.preventDefault();
+                        break;
+                    case 219:
+                        _this._doc.synth.prevBar();
+                        event.preventDefault();
+                        break;
+                    case 221:
+                        _this._doc.synth.nextBar();
+                        event.preventDefault();
+                        break;
+                    case 71:
+                        _this._doc.synth.stutterPressed = true;
+                        event.preventDefault();
+                        break;
+                    case 189:
+                    case 173:
+                        _this._transpose(false);
+                        event.preventDefault();
+                        break;
+                    case 187:
+                    case 61:
+                        _this._transpose(true);
+                        event.preventDefault();
+                        break;
+                }
+            };
+            this._onKeyReleased = function (event) {
+                switch (event.keyCode) {
+                    case 71:
+                        _this._doc.synth.stutterPressed = false;
+                        break;
+                }
+            };
+            this._togglePlay = function () {
+                if (_this._doc.synth.playing) {
+                    _this._doc.synth.pause();
+                    _this._doc.synth.snapToBar();
+                    _this._playButton.innerHTML = "Play";
+                }
+                else {
+                    _this._doc.synth.play();
+                    _this._playButton.innerHTML = "Pause";
+                }
+            };
+            this._setVolumeSlider = function () {
+                _this._doc.setVolume(Number(_this._volumeSlider.value));
+            };
+            this._openExportPrompt = function () {
+                _this._setPrompt(new beepbox.ExportPrompt(_this._doc, _this));
+            };
+            this._copyToClipboard = function () {
+            };
+            this._onSetScale = function () {
+                _this._doc.history.record(new beepbox.ChangeScale(_this._doc, _this._scaleDropDown.selectedIndex));
+            };
+            this._onSetKey = function () {
+                _this._doc.history.record(new beepbox.ChangeKey(_this._doc, _this._keyDropDown.selectedIndex));
+            };
+            this._onSetTempo = function () {
+                _this._doc.history.record(new beepbox.ChangeTempo(_this._doc, parseInt(_this._tempoSlider.value)));
+            };
+            this._onSetParts = function () {
+                _this._doc.history.record(new beepbox.ChangeParts(_this._doc, beepbox.Music.partCounts[_this._partDropDown.selectedIndex]));
+            };
+            this._onSetWave = function () {
+                _this._doc.history.record(new beepbox.ChangeWave(_this._doc, _this._waveDropDown.selectedIndex));
+            };
+            this._onSetFilter = function () {
+                _this._doc.history.record(new beepbox.ChangeFilter(_this._doc, _this._filterDropDown.selectedIndex));
+            };
+            this._onSetAttack = function () {
+                _this._doc.history.record(new beepbox.ChangeAttack(_this._doc, _this._attackDropDown.selectedIndex));
+            };
+            this._onSetEffect = function () {
+                _this._doc.history.record(new beepbox.ChangeEffect(_this._doc, _this._effectDropDown.selectedIndex));
+            };
+            this._onSetChorus = function () {
+                _this._doc.history.record(new beepbox.ChangeChorus(_this._doc, _this._chorusDropDown.selectedIndex));
+            };
+            this._onSetVolume = function () {
+                _this._doc.history.record(new beepbox.ChangeVolume(_this._doc, -parseInt(_this._channelVolumeSlider.value)));
+            };
+            this._onSetInstrument = function () {
+                if (_this._doc.getCurrentPattern() == null)
+                    return;
+                _this._doc.history.record(new beepbox.ChangePatternInstrument(_this._doc, _this._instrumentDropDown.selectedIndex));
+            };
+            this._editMenuHandler = function (event) {
+                switch (_this._editButton.value) {
+                    case "undo":
+                        _this._doc.history.undo();
+                        break;
+                    case "redo":
+                        _this._doc.history.redo();
+                        break;
+                    case "copy":
+                        _this._copy();
+                        break;
+                    case "paste":
+                        _this._paste();
+                        break;
+                    case "transposeUp":
+                        _this._transpose(true);
+                        break;
+                    case "transposeDown":
+                        _this._transpose(false);
+                        break;
+                    case "clean":
+                        _this._cleanSlate();
+                        break;
+                    case "duration":
+                        _this._setPrompt(new beepbox.SongDurationPrompt(_this._doc, _this));
+                        break;
+                }
+                _this._editButton.selectedIndex = 0;
+            };
+            this._optionsMenuHandler = function (event) {
+                switch (_this._optionsButton.value) {
+                    case "showLetters":
+                        _this._doc.showLetters = !_this._doc.showLetters;
+                        break;
+                    case "showFifth":
+                        _this._doc.showFifth = !_this._doc.showFifth;
+                        break;
+                    case "showChannels":
+                        _this._doc.showChannels = !_this._doc.showChannels;
+                        break;
+                    case "showScrollBar":
+                        _this._doc.showScrollBar = !_this._doc.showScrollBar;
+                        break;
+                }
+                _this._optionsButton.selectedIndex = 0;
+                _this._doc.changed();
+                _this._doc.savePreferences();
+            };
+            this._editButton.innerHTML = BuildOptionsWithTitle(this._editCommands, "Edit Menu");
+            this._scaleDropDown.innerHTML = BuildOptions(beepbox.Music.scaleNames);
+            this._keyDropDown.innerHTML = BuildOptions(beepbox.Music.keyNames);
+            this._partDropDown.innerHTML = BuildOptions(beepbox.Music.partNames);
+            this._filterDropDown.innerHTML = BuildOptions(beepbox.Music.filterNames);
+            this._attackDropDown.innerHTML = BuildOptions(beepbox.Music.attackNames);
+            this._effectDropDown.innerHTML = BuildOptions(beepbox.Music.effectNames);
+            this._chorusDropDown.innerHTML = BuildOptions(beepbox.Music.chorusNames);
+            this._doc.watch(this._onUpdated);
+            this._onUpdated();
+            this._editButton.addEventListener("change", this._editMenuHandler);
+            this._optionsButton.addEventListener("change", this._optionsMenuHandler);
+            this._scaleDropDown.addEventListener("change", this._onSetScale);
+            this._keyDropDown.addEventListener("change", this._onSetKey);
+            this._tempoSlider.addEventListener("input", this._onSetTempo);
+            this._partDropDown.addEventListener("change", this._onSetParts);
+            this._instrumentDropDown.addEventListener("change", this._onSetInstrument);
+            this._channelVolumeSlider.addEventListener("input", this._onSetVolume);
+            this._waveDropDown.addEventListener("change", this._onSetWave);
+            this._attackDropDown.addEventListener("change", this._onSetAttack);
+            this._filterDropDown.addEventListener("change", this._onSetFilter);
+            this._chorusDropDown.addEventListener("change", this._onSetChorus);
+            this._effectDropDown.addEventListener("change", this._onSetEffect);
+            this._playButton.addEventListener("click", this._togglePlay);
+            this._exportButton.addEventListener("click", this._openExportPrompt);
+            this._volumeSlider.addEventListener("input", this._setVolumeSlider);
+            this._editorBox.addEventListener("mousedown", this._refocusStage);
+            this._mainLayer.addEventListener("keydown", this._onKeyPressed);
+            this._mainLayer.addEventListener("keyup", this._onKeyReleased);
         }
-        function onKeyPressed(event) {
-            if (_this.promptVisible)
+        SongEditor.prototype._setPrompt = function (prompt) {
+            if (this.promptVisible)
                 return;
-            switch (event.keyCode) {
-                case 32:
-                    togglePlay();
-                    event.preventDefault();
-                    break;
-                case 90:
-                    if (event.shiftKey) {
-                        doc.history.redo();
-                    }
-                    else {
-                        doc.history.undo();
-                    }
-                    event.preventDefault();
-                    break;
-                case 89:
-                    doc.history.redo();
-                    event.preventDefault();
-                    break;
-                case 67:
-                    copy();
-                    event.preventDefault();
-                    break;
-                case 86:
-                    paste();
-                    event.preventDefault();
-                    break;
-                case 219:
-                    doc.synth.prevBar();
-                    event.preventDefault();
-                    break;
-                case 221:
-                    doc.synth.nextBar();
-                    event.preventDefault();
-                    break;
-                case 71:
-                    doc.synth.stutterPressed = true;
-                    event.preventDefault();
-                    break;
-                case 189:
-                case 173:
-                    transpose(false);
-                    event.preventDefault();
-                    break;
-                case 187:
-                case 61:
-                    transpose(true);
-                    event.preventDefault();
-                    break;
-            }
-        }
-        function onKeyReleased(event) {
-            switch (event.keyCode) {
-                case 71:
-                    doc.synth.stutterPressed = false;
-                    break;
-            }
-        }
-        function togglePlay() {
-            if (doc.synth.playing) {
-                doc.synth.pause();
-                doc.synth.snapToBar();
-                playButton.innerHTML = "Play";
-            }
-            else {
-                doc.synth.play();
-                playButton.innerHTML = "Pause";
-            }
-        }
-        function setVolumeSlider() {
-            doc.setVolume(Number(volumeSlider.value));
-        }
-        function copy() {
-            var pattern = doc.getCurrentPattern();
+            this._wasPlaying = this._doc.synth.playing;
+            if (this._wasPlaying)
+                this._togglePlay();
+            this._promptBackground.style.display = "block";
+            this._mainLayer.appendChild(prompt.container);
+            this.promptVisible = true;
+        };
+        SongEditor.prototype.closePrompt = function (prompt) {
+            this.promptVisible = false;
+            this._promptBackground.style.display = "none";
+            if (this._wasPlaying)
+                this._togglePlay();
+            this._mainLayer.removeChild(prompt.container);
+            this._mainLayer.focus();
+        };
+        ;
+        SongEditor.prototype._copy = function () {
+            var pattern = this._doc.getCurrentPattern();
             if (pattern == null)
                 return;
-            copyTones = pattern.cloneTones();
-            copyBeats = doc.song.beats;
-            copyParts = doc.song.parts;
-            copyDrums = doc.channel == 3;
-        }
-        function paste() {
-            if (!canPaste())
+            this._copyTones = pattern.cloneTones();
+            this._copyBeats = this._doc.song.beats;
+            this._copyParts = this._doc.song.parts;
+            this._copyDrums = this._doc.channel == 3;
+        };
+        SongEditor.prototype._paste = function () {
+            if (!this._canPaste())
                 return;
-            doc.history.record(new beepbox.ChangePaste(doc, copyTones));
-        }
-        function canPaste() {
-            return doc.getCurrentPattern() != null && copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts && copyDrums == (doc.channel == 3);
-        }
-        function cleanSlate() {
-            doc.history.record(new beepbox.ChangeSong(doc, null));
-            patternEditor.resetCopiedPins();
-        }
-        function transpose(upward) {
-            var pattern = doc.getCurrentPattern();
+            this._doc.history.record(new beepbox.ChangePaste(this._doc, this._copyTones));
+        };
+        SongEditor.prototype._canPaste = function () {
+            return this._doc.getCurrentPattern() != null && this._copyTones != null && this._copyBeats == this._doc.song.beats && this._copyParts == this._doc.song.parts && this._copyDrums == (this._doc.channel == 3);
+        };
+        SongEditor.prototype._cleanSlate = function () {
+            this._doc.history.record(new beepbox.ChangeSong(this._doc, null));
+            this._patternEditor.resetCopiedPins();
+        };
+        SongEditor.prototype._transpose = function (upward) {
+            var pattern = this._doc.getCurrentPattern();
             if (pattern == null)
                 return;
-            doc.history.record(new beepbox.ChangeTranspose(doc, pattern, upward));
-        }
-        function openPublishPrompt() {
-        }
-        function openExportPrompt() {
-            setPrompt(beepbox.ExportPrompt);
-        }
-        function copyToClipboard() {
-        }
-        function onSetScale() {
-            doc.history.record(new beepbox.ChangeScale(doc, scaleDropDown.selectedIndex));
-        }
-        function onSetKey() {
-            doc.history.record(new beepbox.ChangeKey(doc, keyDropDown.selectedIndex));
-        }
-        function onSetTempo() {
-            doc.history.record(new beepbox.ChangeTempo(doc, parseInt(tempoSlider.value)));
-        }
-        function onSetParts() {
-            doc.history.record(new beepbox.ChangeParts(doc, beepbox.Music.partCounts[partDropDown.selectedIndex]));
-        }
-        function onSetWave() {
-            doc.history.record(new beepbox.ChangeWave(doc, waveDropDown.selectedIndex));
-        }
-        function onSetFilter() {
-            doc.history.record(new beepbox.ChangeFilter(doc, filterDropDown.selectedIndex));
-        }
-        function onSetAttack() {
-            doc.history.record(new beepbox.ChangeAttack(doc, attackDropDown.selectedIndex));
-        }
-        function onSetEffect() {
-            doc.history.record(new beepbox.ChangeEffect(doc, effectDropDown.selectedIndex));
-        }
-        function onSetChorus() {
-            doc.history.record(new beepbox.ChangeChorus(doc, chorusDropDown.selectedIndex));
-        }
-        function onSetVolume() {
-            doc.history.record(new beepbox.ChangeVolume(doc, -parseInt(channelVolumeSlider.value)));
-        }
-        function onSetInstrument() {
-            if (doc.getCurrentPattern() == null)
-                return;
-            doc.history.record(new beepbox.ChangePatternInstrument(doc, instrumentDropDown.selectedIndex));
-        }
-        function editMenuHandler(event) {
-            switch (editButton.value) {
-                case "undo":
-                    doc.history.undo();
-                    break;
-                case "redo":
-                    doc.history.redo();
-                    break;
-                case "copy":
-                    copy();
-                    break;
-                case "paste":
-                    paste();
-                    break;
-                case "transposeUp":
-                    transpose(true);
-                    break;
-                case "transposeDown":
-                    transpose(false);
-                    break;
-                case "clean":
-                    cleanSlate();
-                    break;
-                case "duration":
-                    setPrompt(beepbox.SongDurationPrompt);
-                    break;
-            }
-            editButton.selectedIndex = 0;
-        }
-        function optionsMenuHandler(event) {
-            switch (optionsButton.value) {
-                case "showLetters":
-                    doc.showLetters = !doc.showLetters;
-                    break;
-                case "showFifth":
-                    doc.showFifth = !doc.showFifth;
-                    break;
-                case "showChannels":
-                    doc.showChannels = !doc.showChannels;
-                    break;
-                case "showScrollBar":
-                    doc.showScrollBar = !doc.showScrollBar;
-                    break;
-            }
-            optionsButton.selectedIndex = 0;
-            doc.changed();
-            doc.savePreferences();
-        }
-        doc.watch(onUpdated);
-        onUpdated();
-        editButton.addEventListener("change", editMenuHandler);
-        optionsButton.addEventListener("change", optionsMenuHandler);
-        scaleDropDown.addEventListener("change", onSetScale);
-        keyDropDown.addEventListener("change", onSetKey);
-        tempoSlider.addEventListener("input", onSetTempo);
-        partDropDown.addEventListener("change", onSetParts);
-        instrumentDropDown.addEventListener("change", onSetInstrument);
-        channelVolumeSlider.addEventListener("input", onSetVolume);
-        waveDropDown.addEventListener("change", onSetWave);
-        attackDropDown.addEventListener("change", onSetAttack);
-        filterDropDown.addEventListener("change", onSetFilter);
-        chorusDropDown.addEventListener("change", onSetChorus);
-        effectDropDown.addEventListener("change", onSetEffect);
-        playButton.addEventListener("click", togglePlay);
-        exportButton.addEventListener("click", openExportPrompt);
-        volumeSlider.addEventListener("input", setVolumeSlider);
-        editorBox.addEventListener("mousedown", refocusStage);
-        mainLayer.addEventListener("keydown", onKeyPressed);
-        mainLayer.addEventListener("keyup", onKeyReleased);
-    };
-    beepbox.SongEditor.channelColorsDim = ["#0099a1", "#a1a100", "#c75000", "#6f6f6f"];
-    beepbox.SongEditor.channelColorsBright = ["#25f3ff", "#ffff25", "#ff9752", "#aaaaaa"];
-    beepbox.SongEditor.noteColorsDim = ["#00bdc7", "#c7c700", "#ff771c", "#aaaaaa"];
-    beepbox.SongEditor.noteColorsBright = ["#92f9ff", "#ffff92", "#ffcdab", "#eeeeee"];
+            this._doc.history.record(new beepbox.ChangeTranspose(this._doc, pattern, upward));
+        };
+        return SongEditor;
+    }());
+    SongEditor.channelColorsDim = ["#0099a1", "#a1a100", "#c75000", "#6f6f6f"];
+    SongEditor.channelColorsBright = ["#25f3ff", "#ffff25", "#ff9752", "#aaaaaa"];
+    SongEditor.noteColorsDim = ["#00bdc7", "#c7c700", "#ff771c", "#aaaaaa"];
+    SongEditor.noteColorsBright = ["#92f9ff", "#ffff92", "#ffcdab", "#eeeeee"];
+    beepbox.SongEditor = SongEditor;
 })(beepbox || (beepbox = {}));
 var styleSheet = document.createElement('style');
 styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode("\n#mainLayer div {\n\tmargin: 0;\n\tpadding: 0;\n}\n#mainLayer canvas {\n\toverflow: hidden;\n\tposition: absolute;\n\tdisplay: block;\n}\n\n#mainLayer .selectRow {\n\twidth:100%;\n\tcolor: #bbbbbb;\n\tmargin: 0;\n\tvertical-align: middle;\n\tline-height: 27px;\n}\n\n/* slider style designed with http://danielstern.ca/range.css/ */\ninput[type=range].beepBoxSlider {\n\t-webkit-appearance: none;\n\twidth: 100%;\n\tmargin: 4px 0;\n}\ninput[type=range].beepBoxSlider:focus {\n\toutline: none;\n}\ninput[type=range].beepBoxSlider::-webkit-slider-runnable-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-webkit-slider-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\t-webkit-appearance: none;\n\tmargin-top: -5px;\n}\ninput[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {\n\tbackground: #d6d6d6;\n}\ninput[type=range].beepBoxSlider::-moz-range-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-moz-range-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n}\ninput[type=range].beepBoxSlider::-ms-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: transparent;\n\tborder-color: transparent;\n\tcolor: transparent;\n}\ninput[type=range].beepBoxSlider::-ms-fill-lower {\n\tbackground: #8a8a8a;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-fill-upper {\n\tbackground: #b0b0b0;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\theight: 6px;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-lower {\n\tbackground: #b0b0b0;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-upper {\n\tbackground: #d6d6d6;\n}\n"));
 document.head.appendChild(styleSheet);
 var beepboxEditorContainer = document.getElementById("beepboxEditorContainer");
-beepboxEditorContainer.innerHTML = "\n<div id=\"mainLayer\" tabindex=\"0\" style=\"width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;\">\n\t<div id=\"editorBox\" style=\"width: 512px; height: 645px; float: left;\">\n\t\t<div id=\"patternContainerContainer\" style=\"width: 512px; height: 481px; display: table; table-layout: fixed;\">\n\t\t\t<div id=\"pianoContainer\" style=\"width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"piano\" width=\"32\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"pianoPreview\" width=\"32\" height=\"40\"></canvas>\n\t\t\t</div>\n\t\t\t<div id=\"patternEditorContainer\"  style=\"height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<svg id=\"patternEditorSvg\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background-color: #000000; touch-action: none; position: absolute;\" width=\"512\" height=\"481\">\n\t\t\t\t\t<defs id=\"patternEditorDefs\">\n\t\t\t\t\t\t<pattern id=\"patternEditorNoteBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"156\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t\t<pattern id=\"patternEditorDrumBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"40\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t</defs>\n\t\t\t\t\t<rect id=\"patternEditorBackground\" x=\"0\" y=\"0\" width=\"512\" height=\"481\" pointer-events=\"none\" fill=\"url(#patternEditorNoteBackground)\"></rect>\n\t\t\t\t\t<svg id=\"patternEditorNoteContainer\"></svg>\n\t\t\t\t\t<path id=\"patternEditorPreview\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" pointer-events=\"none\"></path>\n\t\t\t\t\t<rect id=\"patternEditorPlayhead\" x=\"0\" y=\"0\" width=\"4\" height=\"481\" fill=\"white\" pointer-events=\"none\"></rect>\n\t\t\t\t</svg>\n\t\t\t</div>\n\t\t\t<div id=\"octaveScrollBarContainer\" style=\"width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"octaveScrollBar\" width=\"20\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"octaveScrollBarPreview\" width=\"20\" height=\"481\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t\t<div style=\"width: 512px; height: 6px; clear: both;\"></div>\n\t\t<div id=\"trackContainerContainer\" style=\"width: 512px; height: 158px;\">\n\t\t\t<div id=\"trackEditorContainer\" style=\"width: 512px; height: 128px; position: relative; overflow:hidden;\">\n\t\t\t\t<canvas id=\"trackEditor\" width=\"512\" height=\"128\"></canvas>\n\t\t\t\t<canvas id=\"trackEditorPreview\" width=\"32\" height=\"32\"></canvas>\n\t\t\t\t<div id=\"trackPlayhead\" style=\"width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;\"></div>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"loopEditorContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"loopEditor\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"loopEditorPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"barScrollBarContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"barScrollBar\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"barScrollBarPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div style=\"float: left; width: 6px; height: 645px;\"></div>\n\t\n\t<div style=\"float: left; width: 182px; height: 645px; font-size: 12px;\">\n\t\t<div style=\"width:100%; text-align: center; color: #bbbbbb;\">\n\t\t\tBeepBox 2.1.1\n\t\t</div>\n\t\t\n\t\t<div style=\"width:100%; margin: 5px 0;\">\n\t\t\t<button id=\"playButton\" style=\"width: 75px; float: left; margin: 0px\" type=\"button\">Play</button>\n\t\t\t<div style=\"float: left; width: 4px; height: 10px;\"></div>\n\t\t\t<input class=\"beepBoxSlider\" id=\"volumeSlider\" style=\"float: left; width: 101px; margin: 0px;\" type=\"range\" min=\"0\" max=\"100\" value=\"50\" step=\"1\" />\n\t\t\t<div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<select id=\"editButton\" style=\"width:100%; margin: 5px 0;\">Edit Menu</select>\n\t\t<select id=\"optionsButton\" style=\"width:100%; margin: 5px 0;\">Preferences Menu</select>\n\t\t<!--<button id=\"publishButton\" style=\"width:100%\" type=\"button\">Publishing Panel...</button>-->\n\t\t<button id=\"exportButton\" style=\"width:100%; margin: 5px 0;\" type=\"button\">Export</button>\n\t\t<!--<button id=\"copyButton\" style=\"width:100%\" type=\"button\">Copy URL to Clipboard</button>-->\n\t\t\n\t\t<div style=\"width: 100%; height: 110px;\"></div>\n\t\t\n\t\t<div style=\"width:100%; margin: 3px 0;\">\n\t\t\tSong Settings:\n\t\t</div>\n\t\t\n\t\t<div class=\"selectRow\">\n\t\t\tScale: <span style=\"float: right;\"><select id=\"scaleDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tKey: <span style=\"float: right;\"><select id=\"keyDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tTempo: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"tempoSlider\" style=\"width: 90px; margin: 0px;\" type=\"range\" min=\"0\" max=\"11\" value=\"7\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tRhythm: <span style=\"float: right;\"><select id=\"partDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"patternSettingsLabel\" style=\"visibility: hidden; width:100%; margin: 3px 0;\">\n\t\t\tPattern Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"instrumentDropDownGroup\" style=\"width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;\">\n\t\t\tInstrument: <span style=\"float: right;\"><select id=\"instrumentDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"instrumentSettingsLabel\" style=\"clear: both; width:100%; margin: 3px 0;\">\n\t\t\tInstrument Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"channelVolumeSliderGroup\" class=\"selectRow\">\n\t\t\tVolume: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"channelVolumeSlider\" style=\"width: 120px; margin: 0px;\" type=\"range\" min=\"-5\" max=\"0\" value=\"0\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"waveDropDownGroup\" class=\"selectRow\">\n\t\t\tWave: <span style=\"float: right;\"><select id=\"waveDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"attackDropDownGroup\" class=\"selectRow\">\n\t\t\tEnvelope: <span style=\"float: right;\"><select id=\"attackDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"filterDropDownGroup\" class=\"selectRow\">\n\t\t\tFilter: <span style=\"float: right;\"><select id=\"filterDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"chorusDropDownGroup\" class=\"selectRow\">\n\t\t\tChorus: <span style=\"float: right;\"><select id=\"chorusDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"effectDropDownGroup\" class=\"selectRow\">\n\t\t\tEffect: <span style=\"float: right;\"><select id=\"effectDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t</div>\n\t\n\t<div id=\"promptBackground\" style=\"position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;\"></div>\n\t\n\t<div id=\"songSizePrompt\" style=\"position: absolute; display: none;\">\n\t\t<div style=\"display: table-cell; vertical-align: middle; width: 700px; height: 645px;\">\n\t\t\t<div style=\"margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;\">\n\t\t\t\t<div style=\"font-size: 30px\">Custom Song Size</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Beats per bar:<br /><span style=\"color: #888888;\">(Multiples of 3 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"beatsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\"><div style=\"display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;\">Bars per song:<br /><span style=\"color: #888888;\">(Multiples of 2 or 4 are recommended)</span></div><div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"barsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"128\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Patterns per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"patternsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"32\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t<div style=\"vertical-align: middle; line-height: 46px;\">\n\t\t\t\t\t<span style=\"float: right;\">Instruments per channel:<div style=\"display: inline-block; width: 20px; height: 1px;\"></div><input id=\"instrumentsStepper\" style=\"width: 40px; height: 16px;\" type=\"number\" min=\"1\" max=\"10\" step=\"1\" /></span>\n\t\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t\t</div>\n\t\t\t\t\n\t\t\t\t<div style=\"height: 30px;\"></div>\n\t\t\t\t\n\t\t\t\t<button id=\"songDurationOkayButton\" style=\"width:125px; float: left;\" type=\"button\">Okay</button>\n\t\t\t\t<button id=\"songDurationCancelButton\" style=\"width:125px; float: right;\" type=\"button\">Cancel</button>\n\t\t\t\t<div style=\"clear: both;\"></div>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n</div>\n";
+beepboxEditorContainer.innerHTML = "\n<div id=\"mainLayer\" tabindex=\"0\" style=\"width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;\">\n\t<div id=\"editorBox\" style=\"width: 512px; height: 645px; float: left;\">\n\t\t<div id=\"patternContainerContainer\" style=\"width: 512px; height: 481px; display: table; table-layout: fixed;\">\n\t\t\t<div id=\"pianoContainer\" style=\"width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"piano\" width=\"32\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"pianoPreview\" width=\"32\" height=\"40\"></canvas>\n\t\t\t</div>\n\t\t\t<div id=\"patternEditorContainer\"  style=\"height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<svg id=\"patternEditorSvg\" xmlns=\"http://www.w3.org/2000/svg\" style=\"background-color: #000000; touch-action: none; position: absolute;\" width=\"512\" height=\"481\">\n\t\t\t\t\t<defs id=\"patternEditorDefs\">\n\t\t\t\t\t\t<pattern id=\"patternEditorNoteBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"156\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t\t<pattern id=\"patternEditorDrumBackground\" x=\"0\" y=\"0\" width=\"64\" height=\"40\" patternUnits=\"userSpaceOnUse\"></pattern>\n\t\t\t\t\t</defs>\n\t\t\t\t\t<rect id=\"patternEditorBackground\" x=\"0\" y=\"0\" width=\"512\" height=\"481\" pointer-events=\"none\" fill=\"url(#patternEditorNoteBackground)\"></rect>\n\t\t\t\t\t<svg id=\"patternEditorNoteContainer\"></svg>\n\t\t\t\t\t<path id=\"patternEditorPreview\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" pointer-events=\"none\"></path>\n\t\t\t\t\t<rect id=\"patternEditorPlayhead\" x=\"0\" y=\"0\" width=\"4\" height=\"481\" fill=\"white\" pointer-events=\"none\"></rect>\n\t\t\t\t</svg>\n\t\t\t</div>\n\t\t\t<div id=\"octaveScrollBarContainer\" style=\"width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;\">\n\t\t\t\t<canvas id=\"octaveScrollBar\" width=\"20\" height=\"481\"></canvas>\n\t\t\t\t<canvas id=\"octaveScrollBarPreview\" width=\"20\" height=\"481\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t\t<div style=\"width: 512px; height: 6px; clear: both;\"></div>\n\t\t<div id=\"trackContainerContainer\" style=\"width: 512px; height: 158px;\">\n\t\t\t<div id=\"trackEditorContainer\" style=\"width: 512px; height: 128px; position: relative; overflow:hidden;\">\n\t\t\t\t<canvas id=\"trackEditor\" width=\"512\" height=\"128\"></canvas>\n\t\t\t\t<canvas id=\"trackEditorPreview\" width=\"32\" height=\"32\"></canvas>\n\t\t\t\t<div id=\"trackPlayhead\" style=\"width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;\"></div>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"loopEditorContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"loopEditor\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"loopEditorPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t\t<div style=\"width: 512px; height: 5px;\"></div>\n\t\t\t<div id=\"barScrollBarContainer\" style=\"width: 512px; height: 20px; position: relative;\">\n\t\t\t\t<canvas id=\"barScrollBar\" width=\"512\" height=\"20\"></canvas>\n\t\t\t\t<canvas id=\"barScrollBarPreview\" width=\"512\" height=\"20\"></canvas>\n\t\t\t</div>\n\t\t</div>\n\t</div>\n\t\n\t<div style=\"float: left; width: 6px; height: 645px;\"></div>\n\t\n\t<div style=\"float: left; width: 182px; height: 645px; font-size: 12px;\">\n\t\t<div style=\"width:100%; text-align: center; color: #bbbbbb;\">\n\t\t\tBeepBox 2.1.1\n\t\t</div>\n\t\t\n\t\t<div style=\"width:100%; margin: 5px 0;\">\n\t\t\t<button id=\"playButton\" style=\"width: 75px; float: left; margin: 0px\" type=\"button\">Play</button>\n\t\t\t<div style=\"float: left; width: 4px; height: 10px;\"></div>\n\t\t\t<input class=\"beepBoxSlider\" id=\"volumeSlider\" style=\"float: left; width: 101px; margin: 0px;\" type=\"range\" min=\"0\" max=\"100\" value=\"50\" step=\"1\" />\n\t\t\t<div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<select id=\"editButton\" style=\"width:100%; margin: 5px 0;\">Edit Menu</select>\n\t\t<select id=\"optionsButton\" style=\"width:100%; margin: 5px 0;\">Preferences Menu</select>\n\t\t<!--<button id=\"publishButton\" style=\"width:100%\" type=\"button\">Publishing Panel...</button>-->\n\t\t<button id=\"exportButton\" style=\"width:100%; margin: 5px 0;\" type=\"button\">Export</button>\n\t\t<!--<button id=\"copyButton\" style=\"width:100%\" type=\"button\">Copy URL to Clipboard</button>-->\n\t\t\n\t\t<div style=\"width: 100%; height: 110px;\"></div>\n\t\t\n\t\t<div style=\"width:100%; margin: 3px 0;\">\n\t\t\tSong Settings:\n\t\t</div>\n\t\t\n\t\t<div class=\"selectRow\">\n\t\t\tScale: <span style=\"float: right;\"><select id=\"scaleDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tKey: <span style=\"float: right;\"><select id=\"keyDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tTempo: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"tempoSlider\" style=\"width: 90px; margin: 0px;\" type=\"range\" min=\"0\" max=\"11\" value=\"7\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div class=\"selectRow\">\n\t\t\tRhythm: <span style=\"float: right;\"><select id=\"partDropDown\" style=\"width:90px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"patternSettingsLabel\" style=\"visibility: hidden; width:100%; margin: 3px 0;\">\n\t\t\tPattern Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"instrumentDropDownGroup\" style=\"width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;\">\n\t\t\tInstrument: <span style=\"float: right;\"><select id=\"instrumentDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t\n\t\t<div style=\"width: 100%; height: 25px;\"></div>\n\t\t\n\t\t<div id=\"instrumentSettingsLabel\" style=\"clear: both; width:100%; margin: 3px 0;\">\n\t\t\tInstrument Settings:\n\t\t</div>\n\t\t\n\t\t<div id=\"channelVolumeSliderGroup\" class=\"selectRow\">\n\t\t\tVolume: \n\t\t\t<span style=\"float: right;\">\n\t\t\t\t<input class=\"beepBoxSlider\" id=\"channelVolumeSlider\" style=\"width: 120px; margin: 0px;\" type=\"range\" min=\"-5\" max=\"0\" value=\"0\" step=\"1\" />\n\t\t\t</span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"waveDropDownGroup\" class=\"selectRow\">\n\t\t\tWave: <span style=\"float: right;\"><select id=\"waveDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"attackDropDownGroup\" class=\"selectRow\">\n\t\t\tEnvelope: <span style=\"float: right;\"><select id=\"attackDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"filterDropDownGroup\" class=\"selectRow\">\n\t\t\tFilter: <span style=\"float: right;\"><select id=\"filterDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"chorusDropDownGroup\" class=\"selectRow\">\n\t\t\tChorus: <span style=\"float: right;\"><select id=\"chorusDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t\t<div id=\"effectDropDownGroup\" class=\"selectRow\">\n\t\t\tEffect: <span style=\"float: right;\"><select id=\"effectDropDown\" style=\"width:120px;\"></select></span><div style=\"clear: both;\"></div> \n\t\t</div>\n\t</div>\n\t\n\t<div id=\"promptBackground\" style=\"position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;\"></div>\n</div>\n";
 var prevHash = "**blank**";
 var doc = new beepbox.SongDocument();
 var wokeUp = false;

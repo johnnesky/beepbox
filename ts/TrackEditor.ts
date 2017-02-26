@@ -27,263 +27,261 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
-	export interface TrackEditor {
-	}
-
-	export function TrackEditor(doc: SongDocument, songEditor: SongEditor): void {
-		const barWidth: number = 32;
-		let mouseX: number;
-		let mouseY: number;
-		const mainLayer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("mainLayer");
-		const container: HTMLElement = <HTMLElement>document.getElementById("trackEditorContainer");
-		const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditor");
-		const graphics: CanvasRenderingContext2D = canvas.getContext("2d");
-		const playhead: HTMLElement = document.getElementById("trackPlayhead");
-		const preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditorPreview");
-		const previewGraphics: CanvasRenderingContext2D = preview.getContext("2d");
+	export class TrackEditor {
+		private readonly _barWidth: number = 32;
+		private readonly _mainLayer: HTMLSelectElement = <HTMLSelectElement>document.getElementById("mainLayer");
+		private readonly _container: HTMLElement = <HTMLElement>document.getElementById("trackEditorContainer");
+		private readonly _canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditor");
+		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
+		private readonly _playhead: HTMLElement = document.getElementById("trackPlayhead");
+		private readonly _preview: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("trackEditorPreview");
+		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
+		private readonly _editorWidth: number = 512;
 		
-		let pattern: BarPattern;
-		let mouseOver: boolean = false;
-		let digits: string = "";
-		const editorWidth: number = 512;
-		let editorHeight: number = 128;
-		let channelHeight: number = 32;
+		private _mouseX: number;
+		private _mouseY: number;
+		private _pattern: BarPattern;
+		private _mouseOver: boolean = false;
+		private _digits: string = "";
+		private _editorHeight: number = 128;
+		private _channelHeight: number = 32;
 		
-		function onEnterFrame(timestamp: number): void {
-			playhead.style.left = (barWidth * (doc.synth.playhead - doc.barScrollPos) - 2) + "px";
-			window.requestAnimationFrame(onEnterFrame);
+		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
+			this._pattern = this._doc.getCurrentPattern();
+			/*
+			this._graphics.mozImageSmoothingEnabled = false;
+			this._graphics.webkitImageSmoothingEnabled = false;
+			this._graphics.msImageSmoothingEnabled = false;
+			this._graphics.imageSmoothingEnabled = false;
+			*/
+			
+			this._render();
+			this._doc.watch(this._documentChanged);
+			
+			window.requestAnimationFrame(this._onEnterFrame);
+			this._container.addEventListener("mousedown", this._onMousePressed);
+			document.addEventListener("mousemove", this._onMouseMoved);
+			document.addEventListener("mouseup", this._onMouseReleased);
+			this._container.addEventListener("mouseover", this._onMouseOver);
+			this._container.addEventListener("mouseout", this._onMouseOut);
+			this._mainLayer.addEventListener("keydown", this._onKeyPressed);
+			this._mainLayer.addEventListener("keyup", this._onKeyReleased);
 		}
 		
-		function setChannelBar(channel: number, bar: number): void {
-			const oldBarScrollPos: number = doc.barScrollPos;
-			if (doc.history.getRecentChange() instanceof ChangeChannelBar) doc.history.undo();
-			doc.barScrollPos = oldBarScrollPos;
-			doc.history.record(new ChangeChannelBar(doc, channel, bar));
-			digits = "";
+		private _onEnterFrame = (timestamp: number): void => {
+			this._playhead.style.left = (this._barWidth * (this._doc.synth.playhead - this._doc.barScrollPos) - 2) + "px";
+			window.requestAnimationFrame(this._onEnterFrame);
 		}
 		
-		function setBarPattern(pattern: number): void {
-			if (doc.history.getRecentChange() instanceof ChangeBarPattern) doc.history.undo();
-			doc.history.record(new ChangeBarPattern(doc, pattern));
+		private _setChannelBar(channel: number, bar: number): void {
+			const oldBarScrollPos: number = this._doc.barScrollPos;
+			if (this._doc.history.getRecentChange() instanceof ChangeChannelBar) this._doc.history.undo();
+			this._doc.barScrollPos = oldBarScrollPos;
+			this._doc.history.record(new ChangeChannelBar(this._doc, channel, bar));
+			this._digits = "";
 		}
 		
-		function onKeyPressed(event: KeyboardEvent): void {
-			if (songEditor.promptVisible) return;
+		private _setBarPattern(pattern: number): void {
+			if (this._doc.history.getRecentChange() instanceof ChangeBarPattern) this._doc.history.undo();
+			this._doc.history.record(new ChangeBarPattern(this._doc, pattern));
+		}
+		
+		private _onKeyPressed = (event: KeyboardEvent): void => {
+			if (this._songEditor.promptVisible) return;
 			//if (event.ctrlKey)
 			switch (event.keyCode) {
 				case 38: // up
-					setChannelBar((doc.channel + 3) % Music.numChannels, doc.bar);
+					this._setChannelBar((this._doc.channel + 3) % Music.numChannels, this._doc.bar);
 					event.preventDefault();
 					break;
 				case 40: // down
-					setChannelBar((doc.channel + 1) % Music.numChannels, doc.bar);
+					this._setChannelBar((this._doc.channel + 1) % Music.numChannels, this._doc.bar);
 					event.preventDefault();
 					break;
 				case 37: // left
-					setChannelBar(doc.channel, (doc.bar + doc.song.bars - 1) % doc.song.bars);
+					this._setChannelBar(this._doc.channel, (this._doc.bar + this._doc.song.bars - 1) % this._doc.song.bars);
 					event.preventDefault();
 					break;
 				case 39: // right
-					setChannelBar(doc.channel, (doc.bar + 1) % doc.song.bars);
+					this._setChannelBar(this._doc.channel, (this._doc.bar + 1) % this._doc.song.bars);
 					event.preventDefault();
 					break;
 				case 48: // 0
-					nextDigit("0");
+					this._nextDigit("0");
 					event.preventDefault();
 					break;
 				case 49: // 1
-					nextDigit("1");
+					this._nextDigit("1");
 					event.preventDefault();
 					break;
 				case 50: // 2
-					nextDigit("2");
+					this._nextDigit("2");
 					event.preventDefault();
 					break;
 				case 51: // 3
-					nextDigit("3");
+					this._nextDigit("3");
 					event.preventDefault();
 					break;
 				case 52: // 4
-					nextDigit("4");
+					this._nextDigit("4");
 					event.preventDefault();
 					break;
 				case 53: // 5
-					nextDigit("5");
+					this._nextDigit("5");
 					event.preventDefault();
 					break;
 				case 54: // 6
-					nextDigit("6");
+					this._nextDigit("6");
 					event.preventDefault();
 					break;
 				case 55: // 7
-					nextDigit("7");
+					this._nextDigit("7");
 					event.preventDefault();
 					break;
 				case 56: // 8
-					nextDigit("8");
+					this._nextDigit("8");
 					event.preventDefault();
 					break;
 				case 57: // 9
-					nextDigit("9");
+					this._nextDigit("9");
 					event.preventDefault();
 					break;
 				default:
-					digits = "";
+					this._digits = "";
 					break;
 			}
 		}
 		
-		function nextDigit(digit: string): void {
-			digits += digit;
-			let parsed: number = parseInt(digits);
-			if (parsed <= doc.song.patterns) {
-				setBarPattern(parsed);
+		private _nextDigit(digit: string): void {
+			this._digits += digit;
+			let parsed: number = parseInt(this._digits);
+			if (parsed <= this._doc.song.patterns) {
+				this._setBarPattern(parsed);
 				return;
 			}
 				
-			digits = digit;
-			parsed = parseInt(digits);
-			if (parsed <= doc.song.patterns) {
-				setBarPattern(parsed);
+			this._digits = digit;
+			parsed = parseInt(this._digits);
+			if (parsed <= this._doc.song.patterns) {
+				this._setBarPattern(parsed);
 				return;
 			}
 			
-			digits = "";
+			this._digits = "";
 		}
 		
-		function onKeyReleased(event: KeyboardEvent): void {
+		private _onKeyReleased = (event: KeyboardEvent): void => {
 		}
 		
-		function onMouseOver(event: MouseEvent): void {
-			mouseOver = true;
+		private _onMouseOver = (event: MouseEvent): void => {
+			this._mouseOver = true;
 		}
 		
-		function onMouseOut(event: MouseEvent): void {
-			mouseOver = false;
+		private _onMouseOut = (event: MouseEvent): void => {
+			this._mouseOver = false;
 		}
 		
-		function onMousePressed(event: MouseEvent): void {
+		private _onMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
-			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, mouseY / channelHeight)));
-			const bar: number = Math.floor(Math.min(doc.song.bars-1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
-			if (doc.channel == channel && doc.bar == bar) {
-				const up: boolean = (mouseY % channelHeight) < channelHeight / 2;
-				const patternCount: number = doc.song.channelPatterns[channel].length;
-				setBarPattern((doc.song.channelBars[channel][bar] + (up ? 1 : patternCount)) % (patternCount + 1));
+			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, this._mouseY / this._channelHeight)));
+			const bar: number = Math.floor(Math.min(this._doc.song.bars-1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
+			if (this._doc.channel == channel && this._doc.bar == bar) {
+				const up: boolean = (this._mouseY % this._channelHeight) < this._channelHeight / 2;
+				const patternCount: number = this._doc.song.channelPatterns[channel].length;
+				this._setBarPattern((this._doc.song.channelBars[channel][bar] + (up ? 1 : patternCount)) % (patternCount + 1));
 			} else {
-				setChannelBar(channel, bar);
+				this._setChannelBar(channel, bar);
 			}
 		}
 		
-		function onMouseMoved(event: MouseEvent): void {
-			const boundingRect: ClientRect = canvas.getBoundingClientRect();
-    		mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    mouseY = (event.clientY || event.pageY) - boundingRect.top;
-			updatePreview();
+		private _onMouseMoved = (event: MouseEvent): void => {
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+			this._updatePreview();
 		}
 		
-		function onMouseReleased(event: MouseEvent): void {
+		private _onMouseReleased = (event: MouseEvent): void => {
 		}
 		
-		function updatePreview(): void {
-			previewGraphics.clearRect(0, 0, 34, 34);
-			if (!mouseOver) return;
+		private _updatePreview(): void {
+			this._previewGraphics.clearRect(0, 0, 34, 34);
+			if (!this._mouseOver) return;
 			
-			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, mouseY / channelHeight)));
-			const bar: number = Math.floor(Math.min(doc.song.bars-1, Math.max(0, mouseX / barWidth + doc.barScrollPos)));
+			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, this._mouseY / this._channelHeight)));
+			const bar: number = Math.floor(Math.min(this._doc.song.bars-1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
 			
-			preview.style.left = barWidth * (bar - doc.barScrollPos) + "px";
-			preview.style.top = channelHeight * channel + "px";
+			this._preview.style.left = this._barWidth * (bar - this._doc.barScrollPos) + "px";
+			this._preview.style.top = this._channelHeight * channel + "px";
 			
-			const selected: boolean = (bar == doc.bar && channel == doc.channel);
+			const selected: boolean = (bar == this._doc.bar && channel == this._doc.channel);
 			if (selected) {
-				const up: boolean = (mouseY % channelHeight) < channelHeight / 2;
-				const center: number = barWidth * 0.8;
-				const middle: number = channelHeight * 0.5;
-				const base: number = channelHeight * 0.1;
-				const tip: number = channelHeight * 0.4;
-				const width: number = channelHeight * 0.175;
+				const up: boolean = (this._mouseY % this._channelHeight) < this._channelHeight / 2;
+				const center: number = this._barWidth * 0.8;
+				const middle: number = this._channelHeight * 0.5;
+				const base: number = this._channelHeight * 0.1;
+				const tip: number = this._channelHeight * 0.4;
+				const width: number = this._channelHeight * 0.175;
 				
-				previewGraphics.lineWidth = 1;
-				previewGraphics.strokeStyle = "#000000";
-				previewGraphics.fillStyle = up ? "#ffffff" : "#000000";
-				previewGraphics.beginPath();
-				previewGraphics.moveTo(center, middle - tip);
-				previewGraphics.lineTo(center + width, middle - base);
-				previewGraphics.lineTo(center - width, middle - base);
-				previewGraphics.lineTo(center, middle - tip);
-				previewGraphics.fill();
-				previewGraphics.stroke();
-				previewGraphics.fillStyle = !up ? "#ffffff" : "#000000";
-				previewGraphics.beginPath();
-				previewGraphics.moveTo(center, middle + tip);
-				previewGraphics.lineTo(center + width, middle + base);
-				previewGraphics.lineTo(center - width, middle + base);
-				previewGraphics.lineTo(center, middle + tip);
-				previewGraphics.fill();
-				previewGraphics.stroke();
+				this._previewGraphics.lineWidth = 1;
+				this._previewGraphics.strokeStyle = "#000000";
+				this._previewGraphics.fillStyle = up ? "#ffffff" : "#000000";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.moveTo(center, middle - tip);
+				this._previewGraphics.lineTo(center + width, middle - base);
+				this._previewGraphics.lineTo(center - width, middle - base);
+				this._previewGraphics.lineTo(center, middle - tip);
+				this._previewGraphics.fill();
+				this._previewGraphics.stroke();
+				this._previewGraphics.fillStyle = !up ? "#ffffff" : "#000000";
+				this._previewGraphics.beginPath();
+				this._previewGraphics.moveTo(center, middle + tip);
+				this._previewGraphics.lineTo(center + width, middle + base);
+				this._previewGraphics.lineTo(center - width, middle + base);
+				this._previewGraphics.lineTo(center, middle + tip);
+				this._previewGraphics.fill();
+				this._previewGraphics.stroke();
 			} else {
-				previewGraphics.lineWidth = 2;
-				previewGraphics.strokeStyle = "#ffffff";
-				previewGraphics.strokeRect(1, 1, barWidth - 2, channelHeight - 2);
+				this._previewGraphics.lineWidth = 2;
+				this._previewGraphics.strokeStyle = "#ffffff";
+				this._previewGraphics.strokeRect(1, 1, this._barWidth - 2, this._channelHeight - 2);
 			}
 		}
 		
-		function documentChanged(): void {
-			pattern = doc.getCurrentPattern();
-			editorHeight = doc.song.bars > 16 ? 108 : 128;
-			canvas.height = editorHeight;
-			canvas.style.width = String(editorHeight);
-			channelHeight = editorHeight / Music.numChannels;
-			//scrollRect = new Rectangle(0, 0, width, editorHeight);
-			render();
+		private _documentChanged = (): void => {
+			this._pattern = this._doc.getCurrentPattern();
+			this._editorHeight = this._doc.song.bars > 16 ? 108 : 128;
+			this._canvas.height = this._editorHeight;
+			this._canvas.style.width = String(this._editorHeight);
+			this._channelHeight = this._editorHeight / Music.numChannels;
+			this._render();
 		}
 		
-		function render(): void {
-			graphics.clearRect(0, 0, editorWidth, editorHeight);
+		private _render(): void {
+			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
 			
-			const renderCount: number = Math.min(16, doc.song.bars);
+			const renderCount: number = Math.min(16, this._doc.song.bars);
 			for (let j: number = 0; j < Music.numChannels; j++) {
 				const channelColor: string = SongEditor.channelColorsBright[j];
 				const channelDim: string   = SongEditor.channelColorsDim[j];
 				for (let i: number = 0; i < renderCount; i++) {
-					const pattern: BarPattern = doc.song.getPattern(j, i + doc.barScrollPos);
-					const selected: boolean = (i + doc.barScrollPos == doc.bar && j == doc.channel);
+					const pattern: BarPattern = this._doc.song.getPattern(j, i + this._doc.barScrollPos);
+					const selected: boolean = (i + this._doc.barScrollPos == this._doc.bar && j == this._doc.channel);
 					if (selected || pattern != null) {
-						graphics.fillStyle = (selected ? channelColor : "#444444");
-						graphics.fillRect(barWidth * i + 1, channelHeight * j + 1, barWidth - 2, channelHeight - 2);
+						this._graphics.fillStyle = (selected ? channelColor : "#444444");
+						this._graphics.fillRect(this._barWidth * i + 1, this._channelHeight * j + 1, this._barWidth - 2, this._channelHeight - 2);
 					}
 					
-					const text = String(doc.song.channelBars[j][i + doc.barScrollPos]);
-					graphics.font = "bold 20px sans-serif";
-					graphics.textAlign = 'center';
-					graphics.textBaseline = 'middle';
-				    graphics.fillStyle = selected ? "#000000" : (pattern == null || pattern.tones.length == 0 ? channelDim : channelColor);
-				    graphics.fillText(text, barWidth * (i + 0.5), channelHeight * (j + 0.5) + 1.0);
+					const text = String(this._doc.song.channelBars[j][i + this._doc.barScrollPos]);
+					this._graphics.font = "bold 20px sans-serif";
+					this._graphics.textAlign = 'center';
+					this._graphics.textBaseline = 'middle';
+				    this._graphics.fillStyle = selected ? "#000000" : (pattern == null || pattern.tones.length == 0 ? channelDim : channelColor);
+				    this._graphics.fillText(text, this._barWidth * (i + 0.5), this._channelHeight * (j + 0.5) + 1.0);
 				}
 			}
 			
-			updatePreview();
+			this._updatePreview();
 		}
-		
-		pattern = doc.getCurrentPattern();
-		/*
-		graphics.mozImageSmoothingEnabled = false;
-		graphics.webkitImageSmoothingEnabled = false;
-		graphics.msImageSmoothingEnabled = false;
-		graphics.imageSmoothingEnabled = false;
-		*/
-		
-		render();
-		doc.watch(documentChanged);
-		
-		window.requestAnimationFrame(onEnterFrame);
-		container.addEventListener("mousedown", onMousePressed);
-		document.addEventListener("mousemove", onMouseMoved);
-		document.addEventListener("mouseup", onMouseReleased);
-		container.addEventListener("mouseover", onMouseOver);
-		container.addEventListener("mouseout", onMouseOut);
-		mainLayer.addEventListener("keydown", onKeyPressed);
-		mainLayer.addEventListener("keyup", onKeyReleased);
 	}
 }
