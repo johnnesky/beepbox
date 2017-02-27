@@ -30,6 +30,7 @@ SOFTWARE.
 /// <reference path="Piano.ts" />
 /// <reference path="SongDurationPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
+/// <reference path="ImportPrompt.ts" />
 
 "use strict";
 
@@ -73,6 +74,7 @@ module beepbox {
 			[ "Shift Notes Up (+)", "transposeUp" ],
 			[ "Shift Notes Down (-)", "transposeDown" ],
 			[ "Custom song size...", "duration" ],
+			[ "Import JSON...", "importJson" ],
 			[ "Clean Slate", "clean" ],
 		];
 		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
@@ -118,11 +120,11 @@ module beepbox {
 		private readonly _effectDropDown: HTMLSelectElement = select({style: "width:120px;"});
 		private readonly _effectDropDownGroup: HTMLElement = div({className: "selectRow"}, [text("Effect: "), span({style: "float: right;"}, [this._effectDropDown])]);
 		private readonly _promptBackground: HTMLDivElement = div({style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;"});
-		private readonly _mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;"}, [
+		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;"}, [
 			this._editorBox,
 			div({style: "float: left; width: 6px; height: 645px;"}),
 			div({style: "float: left; width: 182px; height: 645px; font-size: 12px;"}, [
-				div({style: "width:100%; text-align: center; color: #bbbbbb;"}, [text("BeepBox 2.1.1")]),
+				div({style: "width:100%; text-align: center; color: #bbbbbb;"}, [text("BeepBox 2.1.2")]),
 				div({style: "width:100%; margin: 5px 0;"}, [
 					this._playButton,
 					div({style: "float: left; width: 4px; height: 10px;"}),
@@ -181,10 +183,6 @@ module beepbox {
 		private _wasPlaying: boolean;
 		
 		constructor(private _doc: SongDocument) {
-			///@TODO: Expose the "mainLayer" instead and let the caller appendChild.
-			const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer");
-			beepboxEditorContainer.appendChild(this._mainLayer);
-			
 			this._editButton.innerHTML  = BuildOptionsWithTitle(this._editCommands, "Edit Menu");
 			this._scaleDropDown.innerHTML  = BuildOptions(Music.scaleNames);
 			this._keyDropDown.innerHTML    = BuildOptions(Music.keyNames);
@@ -215,8 +213,8 @@ module beepbox {
 			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
-			this._mainLayer.addEventListener("keydown", this._onKeyPressed);
-			this._mainLayer.addEventListener("keyup", this._onKeyReleased);
+			this.mainLayer.addEventListener("keydown", this._onKeyPressed);
+			this.mainLayer.addEventListener("keyup", this._onKeyReleased);
 		}
 		
 		private _setPrompt(prompt: {container: HTMLElement}): void {
@@ -224,7 +222,7 @@ module beepbox {
 			this._wasPlaying = this._doc.synth.playing;
 			if (this._wasPlaying) this._togglePlay();
 			this._promptBackground.style.display = "block";
-			this._mainLayer.appendChild(prompt.container);
+			this.mainLayer.appendChild(prompt.container);
 			this.promptVisible = true;
 		}
 		
@@ -232,12 +230,12 @@ module beepbox {
 			this.promptVisible = false;
 			this._promptBackground.style.display = "none";
 			if (this._wasPlaying) this._togglePlay();
-			this._mainLayer.removeChild(prompt.container);
-			this._mainLayer.focus();
+			this.mainLayer.removeChild(prompt.container);
+			this.mainLayer.focus();
 		};
 		
 		private _refocusStage = (event: Event): void => {
-			this._mainLayer.focus();
+			this.mainLayer.focus();
 		}
 		
 		private _onUpdated = (): void => {
@@ -406,7 +404,7 @@ module beepbox {
 		}
 		
 		private _cleanSlate(): void {
-			this._doc.history.record(new ChangeSong(this._doc, null));
+			this._doc.history.record(new ChangeSong(this._doc, new Song()));
 			this._patternEditor.resetCopiedPins();
 		}
 		
@@ -489,6 +487,9 @@ module beepbox {
 					break;
 				case "transposeDown":
 					this._transpose(false);
+					break;
+				case "importJson":
+					this._setPrompt(new ImportPrompt(this._doc, this));
 					break;
 				case "clean":
 					this._cleanSlate();
@@ -631,14 +632,14 @@ document.head.appendChild(styleSheet);
 
 
 let prevHash: string = "**blank**";
-const doc: beepbox.SongDocument = new beepbox.SongDocument();
+const doc: SongDocument = new SongDocument();
 let wokeUp: boolean = false;
 
 function checkHash(): void {
 	if (prevHash != location.hash) {
 		prevHash = location.hash;
 		if (prevHash != "") {
-			doc.history.record(new beepbox.ChangeSong(doc, prevHash));
+			doc.history.record(new ChangeSong(doc, new Song(prevHash)));
 		}
 	}
 	
@@ -652,7 +653,7 @@ function checkHash(): void {
 		doc.changed();
 	}
 	
-	beepbox.Model.updateAll();
+	Model.updateAll();
 	window.requestAnimationFrame(checkHash);
 }
 
@@ -664,7 +665,10 @@ function onUpdated (): void {
 	}
 }
 
-new beepbox.SongEditor(doc);
+const editor = new SongEditor(doc);
+
+const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer");
+beepboxEditorContainer.appendChild(editor.mainLayer);
 
 doc.history.watch(onUpdated);
 

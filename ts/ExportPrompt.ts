@@ -31,7 +31,7 @@ interface ArrayBufferConstructor {
 }
 
 module beepbox {
-	const {button, div, input, text} = html;
+	const {button, div, span, input, text} = html;
 	
 	// Polyfill for ArrayBuffer.transfer.
 	///@TODO: Check if ArrayBuffer.transfer is widely implemented.
@@ -87,18 +87,30 @@ module beepbox {
 	}
 
 	export class ExportPrompt {
+		private readonly _fileName: HTMLInputElement = input({type: "text", value: "BeepBox-Song", maxlength: 250, size: 15});
 		private readonly _enableIntro: HTMLInputElement = input({type: "checkbox"});
 		private readonly _loopDropDown: HTMLInputElement = input({style:"width: 40px; height: 16px;", type: "number", min: "1", max: "4", step: "1"});
 		private readonly _enableOutro: HTMLInputElement = input({type: "checkbox"});
-		private readonly _exportWavButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .wav")]);
-		private readonly _exportMidiButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .midi")]);
-		private readonly _exportCancelButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Cancel")]);
+		private readonly _exportWavButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .wav file")]);
+		private readonly _exportMidiButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .midi file")]);
+		private readonly _exportJsonButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .json file")]);
+		private readonly _cancelButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Cancel")]);
 		
 		public readonly container: HTMLDivElement = div({style: "position: absolute;"}, [
 			div({style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;"}, [
 				div({style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
 					div({style: "font-size: 30px"}, [text("Export Options")]),
-					div({style: "height: 30px;"}),
+					div({style: "height: 20px;"}),
+					div({style: "vertical-align: middle; line-height: 46px;"}, [
+						span({style: "float: right;"}, [
+							div({style: "display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;"}, [
+								text("File name:"),
+							]),
+							div({style: "display: inline-block; width: 20px; height: 1px;"}),
+							this._fileName,
+						]),
+						div({style: "clear: both;"}),
+					]),
 					div({style: "display: table; width: 200px;"}, [
 						div({style: "display: table-row;"}, [
 							div({style: "display: table-cell;"}, [text("Intro:")]),
@@ -116,14 +128,16 @@ module beepbox {
 					div({style: "height: 20px;"}),
 					this._exportMidiButton,
 					div({style: "height: 20px;"}),
-					this._exportCancelButton,
+					this._exportJsonButton,
+					div({style: "height: 20px;"}),
+					this._cancelButton,
 				]),
 			]),
 		]);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._loopDropDown.value = "1";
-		
+			
 			if (this._doc.song.loopStart == 0) {
 				this._enableIntro.checked = false;
 				this._enableIntro.disabled = true;
@@ -138,32 +152,34 @@ module beepbox {
 				this._enableOutro.checked = true;
 				this._enableOutro.disabled = false;
 			}
-		
-			this._loopDropDown.addEventListener("keypress", ExportPrompt._validateKey);
+			
+			this._fileName.addEventListener("input", ExportPrompt._validateFileName);
 			this._loopDropDown.addEventListener("blur", ExportPrompt._validateNumber);
 			this._exportWavButton.addEventListener("click", this._onExportToWav);
 			this._exportMidiButton.addEventListener("click", this._onExportToMidi);
-			this._exportCancelButton.addEventListener("click", this._onClose);
-		
-			this.container.style.display = "block";
+			this._exportJsonButton.addEventListener("click", this._onExportToJson);
+			this._cancelButton.addEventListener("click", this._onClose);
 		}
 		
 		private _onClose = (): void => { 
 			this._songEditor.closePrompt(this);
-			this._loopDropDown.removeEventListener("keypress", ExportPrompt._validateKey);
+			this._fileName.removeEventListener("input", ExportPrompt._validateFileName);
 			this._loopDropDown.removeEventListener("blur", ExportPrompt._validateNumber);
 			this._exportWavButton.removeEventListener("click", this._onExportToWav);
 			this._exportMidiButton.removeEventListener("click", this._onExportToMidi);
-			this._exportCancelButton.removeEventListener("click", this._onClose);
+			this._exportJsonButton.removeEventListener("click", this._onExportToJson);
+			this._cancelButton.removeEventListener("click", this._onClose);
 		}
 		
-		private static _validateKey(event: KeyboardEvent): boolean {
-			const charCode = (event.which) ? event.which : event.keyCode;
-			if (charCode != 46 && charCode > 31 && (charCode < 48 || charCode > 57)) {
-				event.preventDefault();
-				return true;
+		private static _validateFileName(event: Event): void {
+			const input: HTMLInputElement = <HTMLInputElement>event.target;
+			const deleteChars = /[\+\*\$\?\|\{\}\\\/<>#%!`&'"=:@]/gi;
+			if (deleteChars.test(input.value)) {
+				let cursorPos: number = input.selectionStart;
+				input.value = input.value.replace(deleteChars, "");
+				cursorPos--;
+				input.setSelectionRange(cursorPos, cursorPos);
 			}
-			return false;
 		}
 		
 		private static _validateNumber(event: Event): void {
@@ -249,7 +265,7 @@ module beepbox {
 			}
 			
 			const blob = new Blob([arrayBuffer], {type: "audio/wav"});
-			saveAs(blob, "song.wav");
+			saveAs(blob, this._fileName.value.trim() + ".wav");
 			
 			this._onClose();
 		}
@@ -322,24 +338,6 @@ module beepbox {
 				}
 			}
 			
-			/*
-			function writeUnicode(string): void {
-				if (TextEncoder) {
-					const stringBytes: Uint8Array = new TextEncoder().encode(string);
-					writeVariableLength(stringBytes.length);
-					for (let i = 0; i < stringBytes.length; i++) {
-						writeUint8(stringBytes[i]);
-					}
-				} else {
-					writeVariableLength(2 + 2 * string.length);
-					writeUint16(0xFEFF); // unicode 16 byte order mark to indicate endianness. (it'll be big endian.)
-					for (let i = 0; i < string.length; i++) {
-						writeUint16(string.charCodeAt(i));
-					}
-				}
-			}
-			*/
-			
 			const song: Song = this._doc.song;
 			const ticksPerBeat: number = 96;
 			const ticksPerPart: number = ticksPerBeat / song.parts;
@@ -408,7 +406,7 @@ module beepbox {
 					
 					writeEventTime(0);
 					writeUint16(0xFF01); // text meta event. 
-					writeAscii("http://www.beepbox.co/" + this._doc.song.toString());
+					writeAscii("http://www.beepbox.co/" + song.toString());
 					
 					writeEventTime(0);
 					writeUint24(0xFF5103); // tempo meta event. data is 3 bytes.
@@ -416,13 +414,13 @@ module beepbox {
 					
 					writeEventTime(0);
 					writeUint24(0xFF5804); // time signature meta event. data is 4 bytes.
-					writeUint8(this._doc.song.beats); // numerator. @TODO: turn 8/4 into 4/4? 
+					writeUint8(song.beats); // numerator. @TODO: turn 8/4 into 4/4? 
 					writeUint8(2); // denominator exponent in 2^E. 2^2 = 4, and we will always use "quarter" notes.
 					writeUint8(24); // MIDI Clocks per metronome tick (should match beats), standard is 24
 					writeUint8(8); // number of 1/32 notes per 24 MIDI Clocks, standard is 8, meaning 24 clocks per "quarter" note.
 					
-					const isMinor: boolean = (this._doc.song.scale < 10) && ((this._doc.song.scale & 1) == 1);
-					const key: number = 11 - this._doc.song.key; // convert to scale where C=0, C#=1, counting up to B=11
+					const isMinor: boolean = (song.scale < 10) && ((song.scale & 1) == 1);
+					const key: number = 11 - song.key; // convert to scale where C=0, C#=1, counting up to B=11
 					let numSharps: number = key; // For even key values in major scale, number of sharps/flats is same...
 					if ((key & 1) == 1) numSharps += 6; // For odd key values (consider circle of fifths) rotate around the circle... kinda... Look conventional key signatures are just weird, okay?
 					if (isMinor) numSharps += 9; // A minor A scale has zero sharps, shift it appropriately
@@ -471,17 +469,17 @@ module beepbox {
 					let prevPitchBend: number = -1;
 					let prevExpression: number = -1;
 					//let prevTremelo: number = -1;
-					const channelRoot: number = isDrums ? 33 : Music.keyTransposes[this._doc.song.key];
+					const channelRoot: number = isDrums ? 33 : Music.keyTransposes[song.key];
 					const intervalScale: number = isDrums ? Music.drumInterval : 1;
 					
 					for (const bar of unrolledBars) {
-						const pattern: BarPattern | null = this._doc.song.getPattern(channel, bar);
+						const pattern: BarPattern | null = song.getPattern(channel, bar);
 						
 						if (pattern != null) {
 							
 							const nextInstrument: number = pattern.instrument;
 							
-							if (isChorus && this._doc.song.instrumentChorus[channel][nextInstrument] == 0) {
+							if (isChorus && song.instrumentChorus[channel][nextInstrument] == 0) {
 								barStartTime += ticksPerBar;
 								continue;
 							}
@@ -492,9 +490,9 @@ module beepbox {
 								writeEventTime(barStartTime);
 								writeUint16(0xFF04); // instrument event. 
 								if (isDrums) {
-									let description = "noise: " + Music.drumNames[this._doc.song.instrumentWaves[channel][nextInstrument]];
-									description += ", volume: " + Music.volumeNames[this._doc.song.instrumentVolumes[channel][nextInstrument]];
-									description += ", envelope: " + Music.attackNames[this._doc.song.instrumentAttacks[channel][nextInstrument]];
+									let description = "noise: " + Music.drumNames[song.instrumentWaves[channel][nextInstrument]];
+									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
+									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
 									writeAscii(description);
 									
 									// Program (instrument) change event:
@@ -502,12 +500,12 @@ module beepbox {
 									writeUint8(0xC0 | midiChannel); // program change event for given channel
 									writeFlagAnd7Bits(0, 0x7E); // seashore, applause
 								} else {
-									let description = "wave: " + Music.waveNames[this._doc.song.instrumentWaves[channel][nextInstrument]];
-									description += ", volume: " + Music.volumeNames[this._doc.song.instrumentVolumes[channel][nextInstrument]];
-									description += ", envelope: " + Music.attackNames[this._doc.song.instrumentAttacks[channel][nextInstrument]];
-									description += ", filter: " + Music.filterNames[this._doc.song.instrumentFilters[channel][nextInstrument]];
-									description += ", chorus: " + Music.chorusNames[this._doc.song.instrumentChorus[channel][nextInstrument]];
-									description += ", effect: " + Music.effectNames[this._doc.song.instrumentEffects[channel][nextInstrument]];
+									let description = "wave: " + Music.waveNames[song.instrumentWaves[channel][nextInstrument]];
+									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
+									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
+									description += ", filter: " + Music.filterNames[song.instrumentFilters[channel][nextInstrument]];
+									description += ", chorus: " + Music.chorusNames[song.instrumentChorus[channel][nextInstrument]];
+									description += ", effect: " + Music.effectNames[song.instrumentEffects[channel][nextInstrument]];
 									writeAscii(description);
 									
 									const sustainInstruments: number[] = [
@@ -534,15 +532,15 @@ module beepbox {
 										0x21, // plateau -> fingered bass
 									];
 									
-									const filterInstruments: number[] = this._doc.song.instrumentFilters[channel][nextInstrument] < 3 ? sustainInstruments : decayInstruments;
+									const filterInstruments: number[] = song.instrumentFilters[channel][nextInstrument] < 3 ? sustainInstruments : decayInstruments;
 									
 									// Program (instrument) change event:
 									writeEventTime(barStartTime);
 									writeUint8(0xC0 | midiChannel); // program change event for given channel
-									writeFlagAnd7Bits(0, filterInstruments[this._doc.song.instrumentWaves[channel][nextInstrument]]); // instrument program
+									writeFlagAnd7Bits(0, filterInstruments[song.instrumentWaves[channel][nextInstrument]]); // instrument program
 								}
 								
-								const instrumentVolumeChoice: number = this._doc.song.instrumentVolumes[channel][nextInstrument];
+								const instrumentVolumeChoice: number = song.instrumentVolumes[channel][nextInstrument];
 								//const channelVolume: number = (instrumentVolumeChoice == 5 ? 0 : Math.pow(2, -instrumentVolumeChoice));
 								const channelVolume: number = (5 - instrumentVolumeChoice) / 5;
 								writeEventTime(barStartTime);
@@ -551,14 +549,14 @@ module beepbox {
 								writeFlagAnd7Bits(0, Math.round(0x7f * channelVolume)); // volume
 							}
 							
-							const effectChoice: number = this._doc.song.instrumentEffects[channel][nextInstrument];
+							const effectChoice: number = song.instrumentEffects[channel][nextInstrument];
 							const effectVibrato: number = Music.effectVibratos[effectChoice];
 							const effectTremelo: number = Music.effectTremelos[effectChoice];
 							const effectDuration: number = 0.14;
 							
-							let chorusOffset: number = Music.chorusValues[this._doc.song.instrumentChorus[channel][nextInstrument]];
+							let chorusOffset: number = Music.chorusValues[song.instrumentChorus[channel][nextInstrument]];
 							if (!isChorus) chorusOffset *= -1;
-							chorusOffset += Music.chorusOffsets[this._doc.song.instrumentChorus[channel][nextInstrument]];
+							chorusOffset += Music.chorusOffsets[song.instrumentChorus[channel][nextInstrument]];
 							
 							for (let toneIndex: number = 0; toneIndex < pattern.tones.length; toneIndex++) {
 								const tone: Tone = pattern.tones[toneIndex];
@@ -669,8 +667,16 @@ module beepbox {
 			arrayBuffer = ArrayBuffer.transfer(arrayBuffer, fileSize);
 			
 			const blob = new Blob([arrayBuffer], {type: "audio/midi"});
-			saveAs(blob, "song.midi");
+			saveAs(blob, this._fileName.value.trim() + ".midi");
 			
+			this._onClose();
+		}
+		
+		private _onExportToJson = (): void => {
+			const jsonObject: Object = this._doc.song.toJsonObject(this._enableIntro.checked, Number(this._loopDropDown.value), this._enableOutro.checked);
+			const jsonString: string = JSON.stringify(jsonObject, null, '\t');
+			const blob = new Blob([jsonString], {type: "application/json"});
+			saveAs(blob, this._fileName.value.trim() + ".json");
 			this._onClose();
 		}
 	}

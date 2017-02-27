@@ -1249,26 +1249,18 @@ module beepbox {
 	
 	export class ChangeSong extends Change {
 		private _document: SongDocument;
-		private _oldSong: string;
-		private _newSong: string;
-		private _oldPatterns: BarPattern[][];
-		private _newPatterns: BarPattern[][];
+		private _oldSong: Song;
+		private _newSong: Song;
 		private _oldBar: number;
 		private _newBar: number;
-		constructor(document: SongDocument, song: string) {
+		constructor(document: SongDocument, newSong: Song) {
 			super(false);
 			this._document = document;
-			this._oldSong = document.song.toString();
-			this._oldPatterns = document.song.channelPatterns;
+			this._oldSong = document.song;
 			this._oldBar = document.bar;
-			if (song != null) {
-				this._newSong = song;
-				document.song.fromString(this._newSong, false);
-			} else {
-				document.song.initToDefault(false);
-				this._newSong = document.song.toString();
-			}
-			this._newPatterns = document.song.channelPatterns;
+			document.song = newSong;
+			document.synth.setSong(newSong);
+			this._newSong = newSong;
 			this._newBar = Math.max(0, Math.min(document.song.bars - 1, this._oldBar));
 			document.bar = this._newBar;
 			document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
@@ -1278,8 +1270,8 @@ module beepbox {
 		}
 		
 		protected _doForwards(): void {
-			this._document.song.fromString(this._newSong, true);
-			this._document.song.channelPatterns = this._newPatterns;
+			this._document.song = this._newSong;
+			this._document.synth.setSong(this._document.song);
 			this._document.bar = this._newBar;
 			this._document.barScrollPos = Math.max(0, Math.min(this._document.song.bars - 16, this._document.barScrollPos));
 			this._document.barScrollPos = Math.min(this._document.bar, Math.max(this._document.bar - 15, this._document.barScrollPos));
@@ -1287,8 +1279,8 @@ module beepbox {
 		}
 		
 		protected _doBackwards(): void {
-			this._document.song.fromString(this._oldSong, true);
-			this._document.song.channelPatterns = this._oldPatterns;
+			this._document.song = this._oldSong;
+			this._document.synth.setSong(this._document.song);
 			this._document.bar = this._oldBar;
 			this._document.barScrollPos = Math.max(0, Math.min(this._document.song.bars - 16, this._document.barScrollPos));
 			this._document.barScrollPos = Math.min(this._document.bar, Math.max(this._document.bar - 15, this._document.barScrollPos));

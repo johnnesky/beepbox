@@ -308,21 +308,19 @@ module beepbox {
 		
 		constructor(string: string = null) {
 			if (string != null) {
-				this.fromString(string, false);
+				this.fromString(string);
 			} else {
-				this.initToDefault(false);
+				this.initToDefault();
 			}
 		}
 		
-		public initToDefault(skipPatterns: boolean = false): void {
-			if (!skipPatterns) {
-				this.channelPatterns = [
-					[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
-					[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
-					[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
-					[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
-				];
-			}
+		public initToDefault(): void {
+			this.channelPatterns = [
+				[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
+				[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
+				[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
+				[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
+			];
 			this.channelBars = [
 				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -537,10 +535,18 @@ module beepbox {
 			return result;
 		}
 		
-		public fromString(compressed: string, skipPatterns: boolean = false): void {
-			this.initToDefault(skipPatterns);
-			if (compressed == null || compressed.length == 0) return;
+		public fromString(compressed: string): void {
+			compressed = compressed.trim();
+			if (compressed == null || compressed.length == 0) {
+				this.initToDefault();
+				return;
+			}
 			if (compressed.charAt(0) == "#") compressed = compressed.substring(1);
+			if (compressed.charAt(0) == "{") {
+				this.fromJsonObject(JSON.parse(compressed));
+				return;
+			}
+			this.initToDefault();
 			let charIndex: number = 0;
 			const version: number = Song._newBase64.indexOf(compressed.charAt(charIndex++));
 			if (version == -1 || version > Song._latestVersion || version < Song._oldestVersion) return;
@@ -577,7 +583,7 @@ module beepbox {
 					} else {
 						this.tempo = base64.indexOf(compressed.charAt(charIndex++));
 					}
-					this.tempo = Math.max(0, Math.min(Music.tempoNames.length, this.tempo));
+					this.tempo = this._clip(0, Music.tempoNames.length, this.tempo);
 				} else if (command == "a") {
 					if (beforeThree) {
 						this.beats = [6, 7, 8, 9, 10][base64.indexOf(compressed.charAt(charIndex++))];
@@ -691,6 +697,7 @@ module beepbox {
 						subStringLength = Math.ceil(Music.numChannels * this.bars * neededBits / 6);
 						bits.load(compressed.substr(charIndex, subStringLength));
 						for (channel = 0; channel < Music.numChannels; channel++) {
+							this.channelBars[channel].length = this.bars;
 							for (let i: number = 0; i < this.bars; i++) {
 								this.channelBars[channel][i] = bits.read(neededBits) + 1;
 							}
@@ -702,6 +709,7 @@ module beepbox {
 						subStringLength = Math.ceil(Music.numChannels * this.bars * neededBits2 / 6);
 						bits.load(compressed.substr(charIndex, subStringLength));
 						for (channel = 0; channel < Music.numChannels; channel++) {
+							this.channelBars[channel].length = this.bars;
 							for (let i: number = 0; i < this.bars; i++) {
 								this.channelBars[channel][i] = bits.read(neededBits2);
 							}
@@ -731,141 +739,437 @@ module beepbox {
 					bits.load(compressed.substr(charIndex, bitStringLength));
 					charIndex += bitStringLength;
 					
-					if (!skipPatterns) {
-						let neededInstrumentBits: number = 0;
-						while ((1 << neededInstrumentBits) < this.instruments) neededInstrumentBits++;
-						while (true) {
-							this.channelPatterns[channel] = [];
-							
-							const octaveOffset: number = channel == 3 ? 0 : this.channelOctaves[channel] * 12;
-							let tone: Tone = null;
-							let pin: TonePin = null;
-							let lastNote: number = (channel == 3 ? 4 : 12) + octaveOffset;
-							const recentNotes: number[] = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
-							const recentShapes: any[] = [];
-							for (let i: number = 0; i < recentNotes.length; i++) {
-								recentNotes[i] += octaveOffset;
-							}
-							for (let i: number = 0; i < this.patterns; i++) {
-								const newPattern: BarPattern | null = new BarPattern();
-								newPattern.instrument = bits.read(neededInstrumentBits);
-								this.channelPatterns[channel][i] = newPattern;
-								
-								if (!beforeThree && bits.read(1) == 0) continue;
-								
-								let curPart: number = 0;
-								const newTones: Tone[] = [];
-								while (curPart < this.beats * this.parts) {
-									
-									const useOldShape: boolean = bits.read(1) == 1;
-									let newTone: boolean = false;
-									let shapeIndex: number = 0;
-									if (useOldShape) {
-										shapeIndex = bits.readLongTail(0, 0);
-									} else {
-										newTone = bits.read(1) == 1;
-									}
-									
-									if (!useOldShape && !newTone) {
-										const restLength: number = bits.readPartDuration();
-										curPart += restLength;
-									} else {
-										let shape: any;
-										let pinObj: any;
-										let note: number;
-										if (useOldShape) {
-											shape = recentShapes[shapeIndex];
-											recentShapes.splice(shapeIndex, 1);
-										} else {
-											shape = {};
-											
-											shape.noteCount = 1;
-											while (shape.noteCount < 4 && bits.read(1) == 1) shape.noteCount++;
-											
-											shape.pinCount = bits.readPinCount();
-											shape.initialVolume = bits.read(2);
-											
-											shape.pins = [];
-											shape.length = 0;
-											shape.bendCount = 0;
-											for (let j: number = 0; j < shape.pinCount; j++) {
-												pinObj = {};
-												pinObj.pitchBend = bits.read(1) == 1;
-												if (pinObj.pitchBend) shape.bendCount++;
-												shape.length += bits.readPartDuration();
-												pinObj.time = shape.length;
-												pinObj.volume = bits.read(2);
-												shape.pins.push(pinObj);
-											}
-										}
-										recentShapes.unshift(shape);
-										if (recentShapes.length > 10) recentShapes.pop();
-										
-										tone = new Tone(0,curPart,curPart + shape.length, shape.initialVolume);
-										tone.notes = [];
-										tone.pins.length = 1;
-										const pitchBends: number[] = [];
-										for (let j: number = 0; j < shape.noteCount + shape.bendCount; j++) {
-											const useOldNote: boolean = bits.read(1) == 1;
-											if (!useOldNote) {
-												const interval: number = bits.readNoteInterval();
-												note = lastNote;
-												let intervalIter: number = interval;
-												while (intervalIter > 0) {
-													note++;
-													while (recentNotes.indexOf(note) != -1) note++;
-													intervalIter--;
-												}
-												while (intervalIter < 0) {
-													note--;
-													while (recentNotes.indexOf(note) != -1) note--;
-													intervalIter++;
-												}
-											} else {
-												const noteIndex: number = bits.read(3);
-												note = recentNotes[noteIndex];
-												recentNotes.splice(noteIndex, 1);
-											}
-											
-											recentNotes.unshift(note);
-											if (recentNotes.length > 8) recentNotes.pop();
-											
-											if (j < shape.noteCount) {
-												tone.notes.push(note);
-											} else {
-												pitchBends.push(note);
-											}
-											
-											if (j == shape.noteCount - 1) {
-												lastNote = tone.notes[0];
-											} else {
-												lastNote = note;
-											}
-										}
-										
-										pitchBends.unshift(tone.notes[0]);
-										
-										for (const pinObj of shape.pins) {
-											if (pinObj.pitchBend) pitchBends.shift();
-											pin = new TonePin(pitchBends[0] - tone.notes[0], pinObj.time, pinObj.volume);
-											tone.pins.push(pin);
-										}
-										curPart = tone.end;
-										newTones.push(tone);
-									}
-								}
-								newPattern.tones = newTones;
-							} // for (let i: number = 0; i < patterns; i++) {
-							
-							if (beforeThree) {
-								break;
-							} else {
-								channel++;
-								if (channel >= Music.numChannels) break;
-							}
-						} // while (true)
+					let neededInstrumentBits: number = 0;
+					while ((1 << neededInstrumentBits) < this.instruments) neededInstrumentBits++;
+					while (true) {
+						this.channelPatterns[channel] = [];
 						
+						const octaveOffset: number = channel == 3 ? 0 : this.channelOctaves[channel] * 12;
+						let tone: Tone = null;
+						let pin: TonePin = null;
+						let lastNote: number = (channel == 3 ? 4 : 12) + octaveOffset;
+						const recentNotes: number[] = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+						const recentShapes: any[] = [];
+						for (let i: number = 0; i < recentNotes.length; i++) {
+							recentNotes[i] += octaveOffset;
+						}
+						for (let i: number = 0; i < this.patterns; i++) {
+							const newPattern: BarPattern | null = new BarPattern();
+							newPattern.instrument = bits.read(neededInstrumentBits);
+							this.channelPatterns[channel][i] = newPattern;
+							
+							if (!beforeThree && bits.read(1) == 0) continue;
+							
+							let curPart: number = 0;
+							const newTones: Tone[] = [];
+							while (curPart < this.beats * this.parts) {
+								
+								const useOldShape: boolean = bits.read(1) == 1;
+								let newTone: boolean = false;
+								let shapeIndex: number = 0;
+								if (useOldShape) {
+									shapeIndex = bits.readLongTail(0, 0);
+								} else {
+									newTone = bits.read(1) == 1;
+								}
+								
+								if (!useOldShape && !newTone) {
+									const restLength: number = bits.readPartDuration();
+									curPart += restLength;
+								} else {
+									let shape: any;
+									let pinObj: any;
+									let note: number;
+									if (useOldShape) {
+										shape = recentShapes[shapeIndex];
+										recentShapes.splice(shapeIndex, 1);
+									} else {
+										shape = {};
+										
+										shape.noteCount = 1;
+										while (shape.noteCount < 4 && bits.read(1) == 1) shape.noteCount++;
+										
+										shape.pinCount = bits.readPinCount();
+										shape.initialVolume = bits.read(2);
+										
+										shape.pins = [];
+										shape.length = 0;
+										shape.bendCount = 0;
+										for (let j: number = 0; j < shape.pinCount; j++) {
+											pinObj = {};
+											pinObj.pitchBend = bits.read(1) == 1;
+											if (pinObj.pitchBend) shape.bendCount++;
+											shape.length += bits.readPartDuration();
+											pinObj.time = shape.length;
+											pinObj.volume = bits.read(2);
+											shape.pins.push(pinObj);
+										}
+									}
+									recentShapes.unshift(shape);
+									if (recentShapes.length > 10) recentShapes.pop();
+									
+									tone = new Tone(0,curPart,curPart + shape.length, shape.initialVolume);
+									tone.notes = [];
+									tone.pins.length = 1;
+									const pitchBends: number[] = [];
+									for (let j: number = 0; j < shape.noteCount + shape.bendCount; j++) {
+										const useOldNote: boolean = bits.read(1) == 1;
+										if (!useOldNote) {
+											const interval: number = bits.readNoteInterval();
+											note = lastNote;
+											let intervalIter: number = interval;
+											while (intervalIter > 0) {
+												note++;
+												while (recentNotes.indexOf(note) != -1) note++;
+												intervalIter--;
+											}
+											while (intervalIter < 0) {
+												note--;
+												while (recentNotes.indexOf(note) != -1) note--;
+												intervalIter++;
+											}
+										} else {
+											const noteIndex: number = bits.read(3);
+											note = recentNotes[noteIndex];
+											recentNotes.splice(noteIndex, 1);
+										}
+										
+										recentNotes.unshift(note);
+										if (recentNotes.length > 8) recentNotes.pop();
+										
+										if (j < shape.noteCount) {
+											tone.notes.push(note);
+										} else {
+											pitchBends.push(note);
+										}
+										
+										if (j == shape.noteCount - 1) {
+											lastNote = tone.notes[0];
+										} else {
+											lastNote = note;
+										}
+									}
+									
+									pitchBends.unshift(tone.notes[0]);
+									
+									for (const pinObj of shape.pins) {
+										if (pinObj.pitchBend) pitchBends.shift();
+										pin = new TonePin(pitchBends[0] - tone.notes[0], pinObj.time, pinObj.volume);
+										tone.pins.push(pin);
+									}
+									curPart = tone.end;
+									newTones.push(tone);
+								}
+							}
+							newPattern.tones = newTones;
+						} // for (let i: number = 0; i < patterns; i++) {
+						
+						if (beforeThree) {
+							break;
+						} else {
+							channel++;
+							if (channel >= Music.numChannels) break;
+						}
+					} // while (true)
+				}
+			}
+		}
+		
+		public toJsonObject(enableIntro: boolean = true, loopCount: number = 1, enableOutro: boolean = true): Object {
+			const channelArray: Object[] = [];
+			for (let channel: number = 0; channel < Music.numChannels; channel++) {
+				const instrumentArray: Object[] = [];
+				for (let i: number = 0; i < this.instruments; i++) {
+					if (channel == 3) {
+						instrumentArray.push({
+							volume: (5 - this.instrumentVolumes[channel][i]) * 20,
+							wave: Music.drumNames[this.instrumentWaves[channel][i]],
+							envelope: Music.attackNames[this.instrumentAttacks[channel][i]],
+						});
+					} else {
+						instrumentArray.push({
+							volume: (5 - this.instrumentVolumes[channel][i]) * 20,
+							wave: Music.waveNames[this.instrumentWaves[channel][i]],
+							envelope: Music.attackNames[this.instrumentAttacks[channel][i]],
+							filter: Music.filterNames[this.instrumentFilters[channel][i]],
+							chorus: Music.chorusNames[this.instrumentChorus[channel][i]],
+							effect: Music.effectNames[this.instrumentEffects[channel][i]],
+						});
 					}
+				}
+				
+				const patternArray: Object[] = [];
+				for (const pattern of this.channelPatterns[channel]) {
+					const noteArray: Object[] = [];
+					for (const tone of pattern.tones) {
+						const pointArray: Object[] = [];
+						for (const pin of tone.pins) {
+							pointArray.push({
+								tick: pin.time + tone.start,
+								pitchBend: pin.interval,
+								volume: Math.round(pin.volume * 100 / 3),
+							});
+						}
+						
+						noteArray.push({
+							pitches: tone.notes,
+							points: pointArray,
+						});
+					}
+					
+					patternArray.push({
+						instrument: pattern.instrument + 1,
+						notes: noteArray, 
+					});
+				}
+				
+				const sequenceArray: number[] = [];
+				if (enableIntro) for (let i: number = 0; i < this.loopStart; i++) {
+					sequenceArray.push(this.channelBars[channel][i]);
+				}
+				for (let l: number = 0; l < loopCount; l++) for (let i: number = this.loopStart; i < this.loopStart + this.loopLength; i++) {
+					sequenceArray.push(this.channelBars[channel][i]);
+				}
+				if (enableOutro) for (let i: number = this.loopStart + this.loopLength; i < this.bars; i++) {
+					sequenceArray.push(this.channelBars[channel][i]);
+				}
+				
+				channelArray.push({
+					octaveScrollBar: this.channelOctaves[channel],
+					instruments: instrumentArray,
+					patterns: patternArray,
+					sequence: sequenceArray,
+				});
+			}
+			
+			return {
+				version: Song._latestVersion,
+				scale: Music.scaleNames[this.scale],
+				key: Music.keyNames[this.key],
+				introBars: this.loopStart,
+				loopBars: this.loopLength,
+				beatsPerBar: this.beats,
+				ticksPerBeat: this.parts,
+				beatsPerMinute: this.getBeatsPerMinute(), // represents tempo
+				//outroBars: this.bars - this.loopStart - this.loopLength; // derive this from bar arrays?
+				//patternCount: this.patterns, // derive this from pattern arrays?
+				//instrumentsPerChannel: this.instruments, //derive this from instrument arrays?
+				channels: channelArray,
+			};
+		}
+		
+		public fromJsonObject(jsonObject: any): void {
+			this.initToDefault();
+			if (!jsonObject) return;
+			const version: any = jsonObject.version;
+			if (version !== 5) return;
+			
+			this.scale = 11; // default to expert.
+			if (jsonObject.scale != undefined) {
+				const scale: number = Music.scaleNames.indexOf(jsonObject.scale);
+				if (scale != -1) this.scale = scale;
+			}
+			
+			if (jsonObject.key != undefined) {
+				if (typeof(jsonObject.key) == "number") {
+					this.key = Music.keyNames.length - 1 - (((jsonObject.key + 1200) >>> 0) % Music.keyNames.length);
+				} else if (typeof(jsonObject.key) == "string") {
+					const key: string = jsonObject.key;
+					const letter: string = key.charAt(0).toUpperCase();
+					const symbol: string = key.charAt(1).toLowerCase();
+					let index: number | undefined = {"C": 11, "D": 9, "E": 7, "F": 6, "G": 4, "A": 2, "B": 0}[letter];
+					const offset: number | undefined = {"#": -1, "♯": -1, "b": 1, "♭": 1}[symbol];
+					if (index != undefined) {
+						if (offset != undefined) index += offset;
+						if (index < 0) index += 12;
+						index = index % 12;
+						this.key = index;
+					}
+				}
+			}
+			
+			if (jsonObject.beatsPerMinute != undefined) {
+				const bpm: number = jsonObject.beatsPerMinute | 0;
+				this.tempo = Math.round(4.0 + 9.0 * Math.log(bpm / 120) / Math.LN2);
+				this.tempo = this._clip(0, Music.tempoNames.length, this.tempo);
+			}
+			
+			if (jsonObject.beatsPerBar != undefined) {
+				this.beats = Math.max(Music.beatsMin, Math.min(Music.beatsMax, jsonObject.beatsPerBar | 0));
+			}
+			
+			if (jsonObject.ticksPerBeat != undefined) {
+				this.parts = Math.max(3, Math.min(4, jsonObject.ticksPerBeat | 0));
+			}
+			
+			let maxInstruments: number = 1;
+			let maxPatterns: number = 1;
+			let maxBars: number = 1;
+			for (let channel: number = 0; channel < Music.numChannels; channel++) {
+				if (jsonObject.channels && jsonObject.channels[channel]) {
+					const channelObject: any = jsonObject.channels[channel];
+					if (channelObject.instruments) maxInstruments = Math.max(maxInstruments, channelObject.instruments.length | 0);
+					if (channelObject.patterns) maxPatterns = Math.max(maxPatterns, channelObject.patterns.length | 0);
+					if (channelObject.sequence) maxBars = Math.max(maxBars, channelObject.sequence.length | 0);
+				}
+			}
+			
+			this.instruments = maxInstruments;
+			this.patterns = maxPatterns;
+			this.bars = maxBars;
+			
+			if (jsonObject.introBars != undefined) {
+				this.loopStart = this._clip(0, this.bars, jsonObject.introBars | 0);
+			}
+			if (jsonObject.loopBars != undefined) {
+				this.loopLength = this._clip(1, this.bars - this.loopStart + 1, jsonObject.loopBars | 0);
+			}
+			
+			for (let channel: number = 0; channel < Music.numChannels; channel++) {
+				let channelObject: any = undefined;
+				if (jsonObject.channels) channelObject = jsonObject.channels[channel];
+				if (channelObject == undefined) channelObject = {};
+				
+				if (channelObject.octaveScrollBar != undefined) {
+					this.channelOctaves[channel] = this._clip(0, 5, channelObject.octaveScrollBar | 0);
+				}
+				
+				this.instrumentVolumes[channel].length = this.instruments;
+				this.instrumentWaves[channel].length = this.instruments;
+				this.instrumentAttacks[channel].length = this.instruments;
+				this.instrumentFilters[channel].length = this.instruments;
+				this.instrumentChorus[channel].length = this.instruments;
+				this.instrumentEffects[channel].length = this.instruments;
+				this.channelPatterns[channel].length = this.patterns;
+				this.channelBars[channel].length = this.bars;
+				
+				for (let i: number = 0; i < this.instruments; i++) {
+					let instrumentObject: any = undefined;
+					if (channelObject.instruments) instrumentObject = channelObject.instruments[i];
+					if (instrumentObject == undefined) instrumentObject = {};
+					if (instrumentObject.volume != undefined) {
+						this.instrumentVolumes[channel][i] = this._clip(0, Music.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
+					} else {
+						this.instrumentVolumes[channel][i] = 0;
+					}
+					this.instrumentAttacks[channel][i] = Music.attackNames.indexOf(instrumentObject.envelope);
+					if (this.instrumentAttacks[channel][i] == -1) this.instrumentAttacks[channel][i] = 1;
+					if (channel == 3) {
+						this.instrumentWaves[channel][i] = Music.drumNames.indexOf(instrumentObject.wave);
+						if (this.instrumentWaves[channel][i] == -1) this.instrumentWaves[channel][i] = 0;
+						this.instrumentFilters[channel][i] = 0;
+						this.instrumentChorus[channel][i] = 0;
+						this.instrumentEffects[channel][i] = 0;
+					} else {
+						this.instrumentWaves[channel][i] = Music.waveNames.indexOf(instrumentObject.wave);
+						if (this.instrumentWaves[channel][i] == -1) this.instrumentWaves[channel][i] = 1;
+						this.instrumentFilters[channel][i] = Music.filterNames.indexOf(instrumentObject.filter);
+						if (this.instrumentFilters[channel][i] == -1) this.instrumentFilters[channel][i] = 0;
+						this.instrumentChorus[channel][i] = Music.chorusNames.indexOf(instrumentObject.chorus);
+						if (this.instrumentChorus[channel][i] == -1) this.instrumentChorus[channel][i] = 0;
+						this.instrumentEffects[channel][i] = Music.effectNames.indexOf(instrumentObject.effect);
+						if (this.instrumentEffects[channel][i] == -1) this.instrumentEffects[channel][i] = 0;
+					}
+				}
+				
+				for (let i: number = 0; i < this.patterns; i++) {
+					const pattern: BarPattern = new BarPattern();
+					this.channelPatterns[channel][i] = pattern;
+					
+					let patternObject: any = undefined;
+					if (channelObject.patterns) patternObject = channelObject.patterns[i];
+					if (patternObject == undefined) continue;
+					
+					pattern.instrument = this._clip(0, this.instruments, (patternObject.instrument | 0) - 1);
+					
+					if (patternObject.notes && patternObject.notes.length > 0) {
+						const maxToneCount: number = Math.min(this.beats * this.parts, patternObject.notes.length >>> 0);
+						
+						///@TODO: Consider supporting notes specified in any timing order, sorting them and truncating as necessary. 
+						let tickClock: number = 0;
+						for (let j: number = 0; j < patternObject.notes.length; j++) {
+							if (j >= maxToneCount) break;
+							
+							const noteObject = patternObject.notes[j];
+							if (!noteObject || !noteObject.pitches || !(noteObject.pitches.length >= 1) || !noteObject.points || !(noteObject.points.length >= 2)) {
+								continue;
+							}
+							
+							const tone: Tone = new Tone(0, 0, 0, 0);
+							tone.notes = [];
+							tone.pins = [];
+							
+							for (let k: number = 0; k < noteObject.pitches.length; k++) {
+								const pitch: number = noteObject.pitches[k] | 0;
+								if (tone.notes.indexOf(pitch) != -1) continue;
+								tone.notes.push(pitch);
+								if (tone.notes.length >= 4) break;
+							}
+							if (tone.notes.length < 1) continue;
+							
+							let toneClock: number = tickClock;
+							let startInterval: number = 0;
+							for (let k: number = 0; k < noteObject.points.length; k++) {
+								const pointObject: any = noteObject.points[k];
+								if (pointObject == undefined || pointObject.tick == undefined) continue;
+								const interval: number = (pointObject.pitchBend == undefined) ? 0 : (pointObject.pitchBend | 0);
+								const time: number = pointObject.tick | 0;
+								const volume: number = (pointObject.volume == undefined) ? 3 : Math.max(0, Math.min(3, Math.round((pointObject.volume | 0) * 3 / 100)));
+								
+								if (time > this.beats * this.parts) continue;
+								if (tone.pins.length == 0) {
+									if (time < toneClock) continue;
+									tone.start = time;
+									startInterval = interval;
+								} else {
+									if (time <= toneClock) continue;
+								}
+								toneClock = time;
+								
+								tone.pins.push(new TonePin(interval - startInterval, time - tone.start, volume));
+							}
+							if (tone.pins.length < 2) continue;
+							
+							tone.end = tone.pins[tone.pins.length - 1].time + tone.start;
+							
+							const maxPitch: number = channel == 3 ? Music.drumCount - 1 : Music.maxPitch;
+							let lowestPitch: number = maxPitch;
+							let highestPitch: number = 0;
+							for (let k: number = 0; k < tone.notes.length; k++) {
+								tone.notes[k] += startInterval;
+								if (tone.notes[k] < 0 || tone.notes[k] > maxPitch) {
+									tone.notes.splice(k, 1);
+									k--;
+								}
+								if (tone.notes[k] < lowestPitch) lowestPitch = tone.notes[k];
+								if (tone.notes[k] > highestPitch) highestPitch = tone.notes[k];
+							}
+							if (tone.notes.length < 1) continue;
+							
+							for (let k: number = 0; k < tone.pins.length; k++) {
+								const pin: TonePin = tone.pins[k];
+								if (pin.interval + lowestPitch < 0) pin.interval = -lowestPitch;
+								if (pin.interval + highestPitch > maxPitch) pin.interval = maxPitch - highestPitch;
+								if (k >= 2) {
+									if (pin.interval == tone.pins[k-1].interval && 
+									    pin.interval == tone.pins[k-2].interval && 
+									    pin.volume == tone.pins[k-1].volume && 
+									    pin.volume == tone.pins[k-2].volume)
+									{
+										tone.pins.splice(k-1, 1);
+										k--;
+									}    
+								}
+							}
+							
+							pattern.tones.push(tone);
+							tickClock = tone.end;
+						}
+					}
+				}
+				
+				for (let i: number = 0; i < this.bars; i++) {
+					this.channelBars[channel][i] = channelObject.sequence ? Math.min(this.patterns, channelObject.sequence[i] >>> 0) : 0;
 				}
 			}
 		}
