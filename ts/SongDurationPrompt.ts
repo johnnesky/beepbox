@@ -34,8 +34,8 @@ module beepbox {
 		private readonly _barsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1"});
 		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "32", step: "1"});
 		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "10", step: "1"});
-		private readonly _songDurationOkayButton: HTMLButtonElement = button({style: "width:125px; float: left;", type: "button"}, [text("Okay")]);
-		private readonly _songDurationCancelButton: HTMLButtonElement = button({style: "width:125px; float: right;", type: "button"}, [text("Cancel")]);
+		private readonly _okayButton: HTMLButtonElement = button({style: "width:125px; float: left;", type: "button"}, [text("Okay")]);
+		private readonly _cancelButton: HTMLButtonElement = button({style: "width:125px; float: right;", type: "button"}, [text("Cancel")]);
 		
 		public readonly container: HTMLDivElement = div({style: "position: absolute;"}, [
 			div({style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;"}, [
@@ -83,8 +83,8 @@ module beepbox {
 						div({style: "clear: both;"}),
 					]),
 					div({style: "height: 30px;"}),
-					this._songDurationOkayButton,
-					this._songDurationCancelButton,
+					this._okayButton,
+					this._cancelButton,
 					div({style: "clear: both;"}),
 				]),
 			]),
@@ -94,21 +94,21 @@ module beepbox {
 			this._beatsStepper.value = this._doc.song.beats + "";
 			this._beatsStepper.min = Music.beatsMin + "";
 			this._beatsStepper.max = Music.beatsMax + "";
-		
+			
 			this._barsStepper.value = this._doc.song.bars + "";
 			this._barsStepper.min = Music.barsMin + "";
 			this._barsStepper.max = Music.barsMax + "";
-		
+			
 			this._patternsStepper.value = this._doc.song.patterns + "";
 			this._patternsStepper.min = Music.patternsMin + "";
 			this._patternsStepper.max = Music.patternsMax + "";
-		
+			
 			this._instrumentsStepper.value = this._doc.song.instruments + "";
 			this._instrumentsStepper.min = Music.instrumentsMin + "";
 			this._instrumentsStepper.max = Music.instrumentsMax + "";
-		
-			this._songDurationOkayButton.addEventListener("click", this._saveChanges);
-			this._songDurationCancelButton.addEventListener("click", this._onClose);
+			
+			this._okayButton.addEventListener("click", this._saveChanges);
+			this._cancelButton.addEventListener("click", this._onClose);
 			this._beatsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._barsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._patternsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
@@ -121,8 +121,8 @@ module beepbox {
 		
 		private _onClose = (): void => { 
 			this._songEditor.closePrompt(this);
-			this._songDurationOkayButton.removeEventListener("click", this._saveChanges);
-			this._songDurationCancelButton.removeEventListener("click", this._onClose);
+			this._okayButton.removeEventListener("click", this._saveChanges);
+			this._cancelButton.removeEventListener("click", this._onClose);
 			this._beatsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._barsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._patternsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
