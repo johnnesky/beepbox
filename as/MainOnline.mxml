@@ -108,7 +108,7 @@ SOFTWARE.
 				prevHash = myhash;
 				//fragment.text = myhash;
 				if (myhash != "") {
-					doc.history.record(new ChangeSong(doc, prevHash));
+					doc.history.record(new ChangeSong(doc, new Song(prevHash)));
 				}
 				
 				if (!wokeUp) {

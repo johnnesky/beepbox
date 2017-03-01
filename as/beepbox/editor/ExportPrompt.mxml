@@ -44,11 +44,7 @@ SOFTWARE.
 		import mx.collections.ArrayCollection;
 		import mx.controls.Menu;
 		import mx.events.MenuEvent;
-		/*
-		import com.hurlant.util.Hex;
-		import com.hurlant.crypto.hash.SHA256;
-		import com.hurlant.crypto.rsa.RSAKey;
-		*/
+		
 		import beepbox.synth.*;
 		
 		[Bindable]
@@ -88,7 +84,7 @@ SOFTWARE.
 			event.stopPropagation();
 		}
 		
-		private function onExport(): void {
+		private function onExportToWav(): void {
 			var synth: Synth = new Synth(doc.song)
 			synth.enableIntro = enableIntro.selected;
 			synth.enableOutro = enableOutro.selected;
@@ -169,8 +165,397 @@ SOFTWARE.
 				}
 			}
 			
-			new FileReference().save(data, "song.wav");
+			new FileReference().save(data, "BeepBox-Song.wav");
 			
+			onClose();
+		}
+		
+		private function onExportToMidi(): void {
+			var data: ByteArray = new ByteArray();
+			data.endian = Endian.BIG_ENDIAN;
+			
+			function writeUint32(value: uint): void {
+				data.writeUnsignedInt(value);
+			}
+			function writeUint24(value: uint): void {
+				data.writeByte((value>>16)&0xff);
+				data.writeByte((value>> 8)&0xff);
+				data.writeByte((value    )&0xff);
+			}
+			function writeUint16(value: uint): void {
+				data.writeByte((value>> 8)&0xff);
+				data.writeByte((value    )&0xff);
+			}
+			function writeUint8(value: uint): void {
+				data.writeByte(value);
+			}
+			function writeFlagAnd7Bits(flag: uint, value: uint): void {
+				value = (value & 0x7f) | ((flag & 0x01) << 7);
+				data.writeByte(value);
+			}
+			
+			function writeVariableLength(value: uint): void {
+				if (value > 0x0fffffff) throw new Error("writeVariableLength value too big.");
+				var startWriting: Boolean = false;
+				for (var i: int = 0; i < 4; i++) {
+					const shift: int = 21 - i * 7;
+					const bits: uint = (value >>> shift) & 0x7f;
+					if (bits != 0 || i == 3) startWriting = true; // skip leading zero bytes, but always write the last byte even if it's zero. 
+					if (startWriting) writeFlagAnd7Bits(i == 3 ? 0 : 1, bits);
+				}
+			}
+			
+			function writeAscii(string: String): void {
+				writeVariableLength(string.length);
+				for (var i: int = 0; i < string.length; i++) {
+					const charCode: int = string.charCodeAt(i);
+					if (charCode > 0x7f) throw new Error("Trying to write unicode character as ascii.");
+					writeUint8(charCode); // technically charCodeAt returns 2 byte values, but this string should contain exclusively 1 byte values.
+				}
+			}
+			
+			const song: Song = doc.song;
+			const ticksPerBeat: int = 96;
+			const ticksPerPart: int = ticksPerBeat / song.parts;
+			const ticksPerArpeggio: int = ticksPerPart / 4;
+			const secondsPerMinute: int = 60;
+			const microsecondsPerMinute: int = secondsPerMinute * 1000000;
+			const beatsPerMinute: int = song.getBeatsPerMinute();
+			const microsecondsPerBeat: int = Math.round(Number(microsecondsPerMinute) / beatsPerMinute);
+			const secondsPerTick: Number = secondsPerMinute / Number(ticksPerBeat * beatsPerMinute);
+			const ticksPerBar: int = ticksPerBeat * song.beats;
+			
+			const unrolledBars: Array = [];
+			if (enableIntro.selected) {
+				for (var bar: int = 0; bar < song.loopStart; bar++) {
+					unrolledBars.push(bar);
+				}
+			}
+			for (var loopIndex: int = 0; loopIndex < loopDropDown.selectedIndex + 1; loopIndex++) {
+				for (var bar: int = song.loopStart; bar < song.loopStart + song.loopLength; bar++) {
+					unrolledBars.push(bar);
+				}
+			}
+			if (enableOutro.selected) {
+				for (var bar: int = song.loopStart + song.loopLength; bar < song.bars; bar++) {
+					unrolledBars.push(bar);
+				}
+			}
+			
+			const tracks: Array = [
+				{isMeta:  true, channel: -1, midiChannel: -1, isChorus: false, isDrums: false},
+				{isMeta: false, channel:  0, midiChannel:  0, isChorus: false, isDrums: false},
+				{isMeta: false, channel:  0, midiChannel:  1, isChorus:  true, isDrums: false},
+				{isMeta: false, channel:  1, midiChannel:  2, isChorus: false, isDrums: false},
+				{isMeta: false, channel:  1, midiChannel:  3, isChorus:  true, isDrums: false},
+				{isMeta: false, channel:  2, midiChannel:  4, isChorus: false, isDrums: false},
+				{isMeta: false, channel:  2, midiChannel:  5, isChorus:  true, isDrums: false},
+				{isMeta: false, channel:  3, midiChannel:  6, isChorus: false, isDrums:  true},
+			];
+			
+			writeUint32(0x4D546864); // "MThd": Header chunk type
+			writeUint32(6); // length of headers is 6 bytes
+			writeUint16(1); // file format is 1, meaning multiple simultaneous tracks
+			writeUint16(tracks.length);
+			writeUint16(ticksPerBeat); // number of "ticks" per beat, independent of tempo
+			
+			for each (var track: Object in tracks) {
+				writeUint32(0x4D54726B); // "MTrk": Track chunk type
+				
+				const isMeta: Boolean = track.isMeta;
+				const channel: int = track.channel;
+				const midiChannel: int = track.midiChannel;
+				const isChorus: Boolean = track.isChorus;
+				const isDrums: Boolean = track.isDrums;
+				
+				// We're gonna come back here once we know how many bytes this track is.
+				const trackLengthIndex: int = data.position;
+				data.writeUnsignedInt(0); // placeholder for track size
+				
+				var prevTime: int = 0;
+				var barStartTime: int = 0;
+				function writeEventTime(time: int): void {
+					if (time < prevTime) throw new Error("Midi event time cannot go backwards.");
+					writeVariableLength(time - prevTime);
+					prevTime = time;
+				}
+				
+				if (isMeta) {
+					// for first midi track, include tempo, time signature, and key signature information.
+					
+					writeEventTime(0);
+					writeUint16(0xFF01); // text meta event. 
+					writeAscii("http://www.beepbox.co/" + song.toString());
+					
+					writeEventTime(0);
+					writeUint24(0xFF5103); // tempo meta event. data is 3 bytes.
+					writeUint24(microsecondsPerBeat); // Tempo in microseconds per "quarter" note, commonly known as a "beat"
+					
+					writeEventTime(0);
+					writeUint24(0xFF5804); // time signature meta event. data is 4 bytes.
+					writeUint8(song.beats); // numerator. @TODO: turn 8/4 into 4/4? 
+					writeUint8(2); // denominator exponent in 2^E. 2^2 = 4, and we will always use "quarter" notes.
+					writeUint8(24); // MIDI Clocks per metronome tick (should match beats), standard is 24
+					writeUint8(8); // number of 1/32 notes per 24 MIDI Clocks, standard is 8, meaning 24 clocks per "quarter" note.
+					
+					const isMinor: Boolean = (song.scale < 10) && ((song.scale & 1) == 1);
+					const key: int = 11 - song.key; // convert to scale where C=0, C#=1, counting up to B=11
+					var numSharps: int = key; // For even key values in major scale, number of sharps/flats is same...
+					if ((key & 1) == 1) numSharps += 6; // For odd key values (consider circle of fifths) rotate around the circle... kinda... Look conventional key signatures are just weird, okay?
+					if (isMinor) numSharps += 9; // A minor A scale has zero sharps, shift it appropriately
+					while (numSharps > 6) numSharps -= 12; // Range is (modulo 12) - 5. Midi supports -7 to +7, but I only have 12 options.
+					
+					writeEventTime(0);
+					writeUint24(0xFF5902); // time signature meta event. data is 2 bytes.
+					writeUint8(numSharps); // see above calculation. or don't, it doesn't actually make sense anyway. This is a really lame way to define key signature IMHO.
+					writeUint8(isMinor ? 1 : 0); // 0: major, 1: minor
+					
+					if (enableIntro.selected) barStartTime += ticksPerBar * song.loopStart;
+					writeEventTime(barStartTime);
+					writeUint16(0xFF06); // marker meta event. 
+					writeAscii("Loop Start");
+					
+					for (var loopIndex: int = 0; loopIndex < loopDropDown.selectedIndex + 1; loopIndex++) {
+						barStartTime += ticksPerBar * song.loopLength;
+						writeEventTime(barStartTime);
+						writeUint16(0xFF06); // marker meta event. 
+						writeAscii(loopIndex < loopDropDown.selectedIndex ? "Loop Repeat" : "Loop End");
+					}
+					
+					if (enableOutro.selected) barStartTime += ticksPerBar * (song.bars - song.loopStart - song.loopLength);
+					if (barStartTime != ticksPerBar * unrolledBars.length) throw new Error("Miscalculated number of bars.");
+					
+				} else {
+					// For tracks 0, 1, 2, and 3, set up the instruments and write the notes:
+					
+					var channelName: String = ["blue channel", "yellow channel", "orange channel", "gray channel"][channel];
+					if (isChorus) channelName += " chorus";
+					writeEventTime(0);
+					writeUint16(0xFF03); // track name meta event.
+					writeAscii(channelName);
+					
+					writeEventTime(barStartTime);
+					writeUint8(0xB0 | midiChannel); // control event for mono mode for given channel
+					writeFlagAnd7Bits(0, 0x7E); // mono mode
+					writeFlagAnd7Bits(0, 1); // enable for one channel. @TODO: Should I enable for multiple channels at once?
+					
+					writeEventTime(barStartTime);
+					writeUint8(0xB0 | midiChannel); // control event for legato mode for given channel
+					writeFlagAnd7Bits(0, 0x44); // legato mode
+					writeFlagAnd7Bits(0, 0x7f); // enable.
+					
+					var prevInstrument: int = -1;
+					var prevPitchBend: int = -1;
+					var prevExpression: int = -1;
+					//var prevTremelo: int = -1;
+					const channelRoot: int = isDrums ? 33 : Music.keyTransposes[song.key];
+					const intervalScale: int = isDrums ? Music.drumInterval : 1;
+					
+					for each (var bar: int in unrolledBars) {
+						const pattern: BarPattern = song.getPattern(channel, bar);
+						
+						if (pattern != null) {
+							
+							const nextInstrument: int = pattern.instrument;
+							
+							if (isChorus && song.instrumentChorus[channel][nextInstrument] == 0) {
+								barStartTime += ticksPerBar;
+								continue;
+							}
+							
+							if (prevInstrument != nextInstrument) {
+								prevInstrument = nextInstrument;
+								
+								writeEventTime(barStartTime);
+								writeUint16(0xFF04); // instrument event. 
+								if (isDrums) {
+									var description: String = "noise: " + Music.drumNames[song.instrumentWaves[channel][nextInstrument]];
+									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
+									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
+									writeAscii(description);
+									
+									// Program (instrument) change event:
+									writeEventTime(barStartTime);
+									writeUint8(0xC0 | midiChannel); // program change event for given channel
+									writeFlagAnd7Bits(0, 0x7E); // seashore, applause
+								} else {
+									var description: String = "wave: " + Music.waveNames[song.instrumentWaves[channel][nextInstrument]];
+									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
+									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
+									description += ", filter: " + Music.filterNames[song.instrumentFilters[channel][nextInstrument]];
+									description += ", chorus: " + Music.chorusNames[song.instrumentChorus[channel][nextInstrument]];
+									description += ", effect: " + Music.effectNames[song.instrumentEffects[channel][nextInstrument]];
+									writeAscii(description);
+									
+									const sustainInstruments: Array = [
+										0x47, // triangle -> clarinet
+										0x50, // square -> square wave
+										0x46, // pulse wide -> bassoon
+										0x44, // pulse narrow -> oboe
+										0x51, // sawtooth -> sawtooth wave
+										0x51, // double saw -> sawtooth wave
+										0x51, // double pulse -> sawtooth wave
+										0x51, // spiky -> sawtooth wave
+										0x4A, // plateau -> recorder
+									];
+									
+									const decayInstruments: Array = [
+										0x2E, // triangle -> harp
+										0x2E, // square -> harp
+										0x06, // pulse wide -> harpsichord
+										0x18, // pulse narrow -> nylon guitar
+										0x19, // sawtooth -> steel guitar
+										0x19, // double saw -> steel guitar
+										0x6A, // double pulse -> shamisen
+										0x6A, // spiky -> shamisen
+										0x21, // plateau -> fingered bass
+									];
+									
+									const filterInstruments: Array = song.instrumentFilters[channel][nextInstrument] < 3 ? sustainInstruments : decayInstruments;
+									
+									// Program (instrument) change event:
+									writeEventTime(barStartTime);
+									writeUint8(0xC0 | midiChannel); // program change event for given channel
+									writeFlagAnd7Bits(0, filterInstruments[song.instrumentWaves[channel][nextInstrument]]); // instrument program
+								}
+								
+								const instrumentVolumeChoice: int = song.instrumentVolumes[channel][nextInstrument];
+								//const channelVolume: Number = (instrumentVolumeChoice == 5 ? 0 : Math.pow(2, -instrumentVolumeChoice));
+								const channelVolume: Number = (5 - instrumentVolumeChoice) / 5.0;
+								writeEventTime(barStartTime);
+								writeUint8(0xB0 | midiChannel); // control event for channel volume for given channel
+								writeFlagAnd7Bits(0, 0x07); // channel volume controller (most significant bits)
+								writeFlagAnd7Bits(0, Math.round(0x7f * channelVolume)); // volume
+							}
+							
+							const effectChoice: int = song.instrumentEffects[channel][nextInstrument];
+							const effectVibrato: Number = Music.effectVibratos[effectChoice];
+							const effectTremelo: Number = Music.effectTremelos[effectChoice];
+							const effectDuration: Number = 0.14;
+							
+							var chorusOffset: Number = Music.chorusValues[song.instrumentChorus[channel][nextInstrument]];
+							if (!isChorus) chorusOffset *= -1;
+							chorusOffset += Music.chorusOffsets[song.instrumentChorus[channel][nextInstrument]];
+							
+							for (var toneIndex: int = 0; toneIndex < pattern.tones.length; toneIndex++) {
+								const tone: Tone = pattern.tones[toneIndex];
+								
+								const toneStartTime: int = barStartTime + tone.start * ticksPerPart;
+								var pinTime: int = toneStartTime;
+								var pinVolume: int = tone.pins[0].volume;
+								var pinInterval: int = tone.pins[0].interval;
+								var pitch: int = channelRoot + tone.notes[0] * intervalScale;
+								
+								for (var pinIndex: int = 1; pinIndex < tone.pins.length; pinIndex++) {
+									const nextPinTime: int = toneStartTime + tone.pins[pinIndex].time * ticksPerPart;
+									const nextPinVolume: int = tone.pins[pinIndex].volume;
+									const nextPinInterval: int = tone.pins[pinIndex].interval;
+									
+									const length: int = nextPinTime - pinTime;
+									for (var tick: int = 0; tick < length; tick++) {
+										const tickTime: int = pinTime + tick;
+										function lerp(low: Number, high: Number, t: Number): Number {
+											return low + t * (high - low);
+										}
+										const linearVolume: Number = lerp(pinVolume, nextPinVolume, Number(tick) / length);
+										const linearInterval: Number = lerp(pinInterval, nextPinInterval, Number(tick) / length);
+										
+										const arpeggio: int = Math.floor(Number(tick) / ticksPerArpeggio) % 4;
+										var nextPitch: int;
+										if (tone.notes.length == 2) {
+											nextPitch = tone.notes[arpeggio >> 1];
+										} else if (tone.notes.length == 3) {
+											nextPitch = tone.notes[arpeggio == 3 ? 1 : arpeggio];
+										} else if (tone.notes.length == 4) {
+											nextPitch = tone.notes[arpeggio];
+										} else {
+											nextPitch = tone.notes[0];
+										}
+										const fractionalPitch: Number = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
+										nextPitch = Math.round(fractionalPitch);
+										var pitchOffset: Number = fractionalPitch - nextPitch;
+										
+										const effectCurve: Number = Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / effectDuration);
+										if (effectChoice != 2 || tickTime - toneStartTime >= 3 * ticksPerPart) {
+											pitchOffset += effectVibrato * effectCurve;
+										}
+										const pitchBend: int = Math.max(0, Math.min(0x3fff, Math.round(0x2000 + 0x1000 * pitchOffset)));
+										
+										//const volume: Number = Math.pow(linearVolume / 3.0, 1.5);
+										const volume: Number = linearVolume / 3.0;
+										const tremelo: Number = 1.0 + effectTremelo * (effectCurve - 1.0);
+										var expression: int = Math.round(0x7f * volume * tremelo);
+										
+										if (pitchBend != prevPitchBend) {
+											writeEventTime(tickTime);
+											writeUint8(0xE0 | midiChannel); // pitch bend event
+											writeFlagAnd7Bits(0, pitchBend & 0x7f); // least significant bits
+											writeFlagAnd7Bits(0, (pitchBend >> 7) & 0x7f); // most significant bits
+											prevPitchBend = pitchBend;
+										}
+										
+										if (expression != prevExpression) {
+											writeEventTime(tickTime);
+											writeUint8(0xB0 | midiChannel); // control event for expression for given channel
+											writeFlagAnd7Bits(0, 0x0B); // expression controller (most significant bits)
+											writeFlagAnd7Bits(0, expression); // pressure, most significant bits
+											prevExpression = expression;
+										}
+										
+										if (tickTime == toneStartTime) {
+											writeEventTime(tickTime);
+											writeUint8(0x90 | midiChannel); // note on event for given channel
+											writeFlagAnd7Bits(0, nextPitch); // pitch
+											writeFlagAnd7Bits(0, 0x40); // pressure
+										} else if (nextPitch != pitch) {
+											writeEventTime(tickTime);
+											writeUint8(0x90 | midiChannel); // note on event for given channel
+											writeFlagAnd7Bits(0, nextPitch); // new pitch
+											writeFlagAnd7Bits(0, 0x40); // pressure
+											
+											writeEventTime(tickTime);
+											writeUint8(0x80 | midiChannel); // note off event for given channel
+											writeFlagAnd7Bits(0, pitch); // old pitch
+											writeFlagAnd7Bits(0, 0x40); // pressure
+										}
+										
+										pitch = nextPitch;
+									}
+									
+									pinTime = nextPinTime;
+									pinVolume = nextPinVolume;
+									pinInterval = nextPinInterval;
+								}
+								
+								writeEventTime(barStartTime + tone.end * ticksPerPart);
+								writeUint8(0x80 | midiChannel); // note off event for given channel
+								writeFlagAnd7Bits(0, pitch); // pitch
+								writeFlagAnd7Bits(0, 0x40); // pressure
+							}
+						}
+						
+						barStartTime += ticksPerBar;
+					}
+				}
+				
+				writeEventTime(barStartTime);
+				writeUint24(0xFF2F00); // end of track
+				
+				// Finally, write the length of the track in bytes at the front of the track.
+				data.position = trackLengthIndex;
+				data.writeUnsignedInt(data.length - trackLengthIndex - 4);
+				data.position = data.length;
+			}
+			
+			new FileReference().save(data, "BeepBox-Song.midi");
+			
+			onClose();
+		}
+		
+		private function onExportToJson(): void {
+			const jsonObject: Object = doc.song.toJsonObject(enableIntro.selected, loopDropDown.selectedIndex + 1, enableOutro.selected);
+			const jsonString: String = JSON.stringify(jsonObject, null, '\t');
+			new FileReference().save(jsonString, "BeepBox-Song.json");
 			onClose();
 		}
 	]]></fx:Script>
@@ -195,7 +580,9 @@ SOFTWARE.
 				</s:VGroup>
 			</s:HGroup>
 		</s:VGroup>
-		<s:Button id="exportButton" label="Export" click="onExport();" width="200"/>
+		<s:Button id="exportWavButton" label="Export to .wav file" click="onExportToWav();" width="200"/>
+		<s:Button id="exportMidiButton" label="Export to .midi file" click="onExportToMidi();" width="200"/>
+		<s:Button id="exportJsonButton" label="Export to .json file" click="onExportToJson();" width="200"/>
 		<s:Button id="closeButton" label="Cancel" click="onClose();" width="200"/>
 	</s:VGroup>
 </s:BorderContainer>

@@ -43,7 +43,7 @@ package beepbox.synth {
 		public static const keyTransposes: Array = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
 		public static const tempoNames: Array = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
 		public static const beatsMin: int = 3;
-		public static const beatsMax: int = 12;
+		public static const beatsMax: int = 15;
 		public static const barsMin: int = 1;
 		public static const barsMax: int = 128;
 		public static const patternsMin: int = 1;
@@ -74,7 +74,7 @@ package beepbox.synth {
 		public static const channelVolumes: Array = [0.27, 0.27, 0.27, 0.19];
 		public static const drumInterval: int = 6;
 		public static const numChannels: int = 4;
-		public static const drumCount: int = 11;
+		public static const drumCount: int = 12;
 		public static const noteCount: int = 37;
 		public static const maxPitch: int = 84;
 	}

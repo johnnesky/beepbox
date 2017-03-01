@@ -559,7 +559,7 @@ package beepbox.editor {
 			editorWidth = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
 			pattern = doc.getCurrentPattern();
 			partWidth = editorWidth / (doc.song.beats * doc.song.parts);
-			noteHeight = doc.channel == 3 ? 43 : 13;
+			noteHeight = doc.channel == 3 ? 40 : 13;
 			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
 			octaveOffset = doc.song.channelOctaves[doc.channel] * 12;
 			scrollRect = new Rectangle(0, 0, editorWidth, editorHeight);

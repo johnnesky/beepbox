@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (C) 2012 John Nesky
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+-->
+
+<s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+                   xmlns:mx="library://ns.adobe.com/flex/mx"
+                   xmlns:s="library://ns.adobe.com/flex/spark"
+                   xmlns="beepbox.editor.*"
+                   horizontalCenter="0" verticalCenter="0"
+                   backgroundColor="0x000000"
+                   borderColor="0x444444"
+                   borderWeight="4"
+                   cornerRadius="15"
+                   creationComplete="init()">
+	<fx:Script><![CDATA[
+		import flash.display.*;
+		import flash.events.*;
+		import flash.geom.*;
+		import flash.media.*;
+		import flash.text.*;
+		import flash.ui.*;
+		import flash.utils.*;
+		import flash.net.*;
+		
+		import mx.collections.ArrayCollection;
+		import mx.controls.Menu;
+		import mx.events.MenuEvent;
+		
+		import beepbox.synth.*;
+		
+		[Bindable]
+		private var doc: Document;
+		
+		[Bindable]
+		private var onClose: Function;
+		
+		public static function make(doc: Document, onClose: Function): ImportPrompt {
+			var prompt: ImportPrompt = new ImportPrompt();
+			prompt.doc = doc;
+			prompt.onClose = onClose;
+			return prompt;
+		}
+		
+		private function init():void {
+			addEventListener(KeyboardEvent.KEY_DOWN, catchKeys);
+			addEventListener(KeyboardEvent.KEY_UP, catchKeys);
+		}
+		
+		private function catchKeys(event: KeyboardEvent): void {
+			event.stopPropagation();
+		}
+		
+		private function onImport(): void {
+            var file: FileReference = new FileReference();
+            
+            function onFileSelect(event: Event): void {
+                file.load();
+            }
+			function onLoadComplete(event: Event): void {
+				var data: ByteArray = file.data;
+				var jsonString: String = data.readUTFBytes(data.bytesAvailable);
+				doc.history.record(new ChangeSong(doc, new Song(jsonString)));
+				onClose();
+			}
+			
+			file.addEventListener(Event.SELECT, onFileSelect);
+			file.addEventListener(Event.COMPLETE, onLoadComplete);
+			file.browse([new FileFilter("BeepBox JSON", "*.json")]);
+		}
+	]]></fx:Script>
+	<s:VGroup horizontalAlign="center" gap="30"
+	          paddingTop="20" paddingBottom="20" paddingLeft="20" paddingRight="20">
+		<s:Label text="Import" color="0xffffff" fontSize="30"/>
+		<s:Label text="BeepBox songs can be exported and re-imported as .json files. You could also use other means to make .json files for BeepBox as long as they follow the same structure." color="0xffffff" width="200"/>
+		<s:Button id="importButton" label="Import from .json file" click="onImport();" width="200"/>
+		<s:Button id="closeButton" label="Cancel" click="onClose();" width="200"/>
+	</s:VGroup>
+</s:BorderContainer>

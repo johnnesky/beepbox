@@ -25,26 +25,18 @@ package beepbox.editor {
 	
 	public class ChangeSong extends Change {
 		private var document: Document;
-		private var oldSong: String;
-		private var newSong: String;
-		private var oldPatterns: Array;
-		private var newPatterns: Array;
+		private var oldSong: Song;
+		private var newSong: Song;
 		private var oldBar: int;
 		private var newBar: int;
-		public function ChangeSong(document: Document, song: String) {
+		public function ChangeSong(document: Document, newSong: Song) {
 			super(false);
 			this.document = document;
-			oldSong = document.song.toString();
-			oldPatterns = document.song.channelPatterns;
+			oldSong = document.song;
 			oldBar = document.bar;
-			if (song != null) {
-				newSong = song;
-				document.song.fromString(newSong, false);
-			} else {
-				document.song.initToDefault(false);
-				newSong = document.song.toString();
-			}
-			newPatterns = document.song.channelPatterns;
+			document.song = newSong;
+			document.synth.setSong(newSong);
+			this.newSong = newSong;
 			newBar = Math.max(0, Math.min(document.song.bars - 1, oldBar));
 			document.bar = newBar;
 			document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
@@ -54,8 +46,8 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			document.song.fromString(newSong, true);
-			document.song.channelPatterns = newPatterns;
+			document.song = newSong;
+			document.synth.setSong(document.song);
 			document.bar = newBar;
 			document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
 			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
@@ -63,8 +55,8 @@ package beepbox.editor {
 		}
 		
 		protected override function doBackwards(): void {
-			document.song.fromString(oldSong, true);
-			document.song.channelPatterns = oldPatterns;
+			document.song = oldSong;
+			document.synth.setSong(document.song);
 			document.bar = oldBar;
 			document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
 			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
