@@ -74,7 +74,7 @@ module beepbox {
 			[ "Shift Notes Up (+)", "transposeUp" ],
 			[ "Shift Notes Down (-)", "transposeDown" ],
 			[ "Custom song size...", "duration" ],
-			[ "Import JSON...", "importJson" ],
+			[ "Import JSON...", "import" ],
 			[ "Clean Slate", "clean" ],
 		];
 		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
@@ -488,7 +488,7 @@ module beepbox {
 				case "transposeDown":
 					this._transpose(false);
 					break;
-				case "importJson":
+				case "import":
 					this._setPrompt(new ImportPrompt(this._doc, this));
 					break;
 				case "clean":

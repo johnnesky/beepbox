@@ -609,7 +609,7 @@ package beepbox.synth {
 						if (channel == 3) {
 							if (song.instrumentWaves[3][pattern.instrument] > 0) {
 								drumFilter = Math.min(1.0, startFreq * sampleTime * 8.0);
-								trace(drumFilter);
+								//trace(drumFilter);
 								pitchDamping = 24.0;
 							} else {
 								pitchDamping = 60.0;
@@ -775,10 +775,11 @@ package beepbox.synth {
 					samples--;
 				}
 				
-				if ( effectYMult * effectY - prevEffectY > prevEffectY )
+				if ( effectYMult * effectY - prevEffectY > prevEffectY ) {
 					effectPeriod = Math.asin( effectY );
-				else
+				} else {
 					effectPeriod = Math.PI - Math.asin( effectY );
+				}
 				
 				if (arpeggioSamples == 0) {
 					arpeggio++;
@@ -829,7 +830,7 @@ package beepbox.synth {
 		
 		private function getSamplesPerArpeggio(): int {
 			if (song == null) return 0;
-			var beatsPerMinute: Number = Math.round(120.0 * Math.pow(2.0, (-4.0 + song.tempo) / 9.0));
+			var beatsPerMinute: Number = song.getBeatsPerMinute();
 			var beatsPerSecond: Number = beatsPerMinute / 60.0;
 			var partsPerSecond: Number = beatsPerSecond * song.parts;
 			var arpeggioPerSecond: Number = partsPerSecond * 4.0;

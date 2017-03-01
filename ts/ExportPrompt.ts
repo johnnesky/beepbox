@@ -284,13 +284,13 @@ module beepbox {
 				}
 			}
 			
-			function writeUint32(value): void {
+			function writeUint32(value: number): void {
 				value = value >>> 0;
 				addBytes(4);
 				data.setUint32(writeIndex, value, false);
 				writeIndex = fileSize;
 			}
-			function writeUint24(value): void {
+			function writeUint24(value: number): void {
 				value = value >>> 0;
 				addBytes(3);
 				data.setUint8(writeIndex  , (value>>16)&0xff);
@@ -298,26 +298,26 @@ module beepbox {
 				data.setUint8(writeIndex+2, (value    )&0xff);
 				writeIndex = fileSize;
 			}
-			function writeUint16(value): void {
+			function writeUint16(value: number): void {
 				value = value >>> 0;
 				addBytes(2);
 				data.setUint16(writeIndex, value, false);
 				writeIndex = fileSize;
 			}
-			function writeUint8(value): void {
+			function writeUint8(value: number): void {
 				value = value >>> 0;
 				addBytes(1);
 				data.setUint8(writeIndex, value);
 				writeIndex = fileSize;
 			}
-			function writeFlagAnd7Bits(flag, value): void {
+			function writeFlagAnd7Bits(flag: number, value: number): void {
 				value = ((value >>> 0) & 0x7f) | ((flag & 0x01) << 7);
 				addBytes(1);
 				data.setUint8(writeIndex, value);
 				writeIndex = fileSize;
 			}
 			
-			function writeVariableLength(value): void {
+			function writeVariableLength(value: number): void {
 				value = value >>> 0;
 				if (value > 0x0fffffff) throw new Error("writeVariableLength value too big.");
 				let startWriting: boolean = false;
@@ -329,9 +329,9 @@ module beepbox {
 				}
 			}
 			
-			function writeAscii(string): void {
+			function writeAscii(string: string): void {
 				writeVariableLength(string.length);
-				for (let i = 0; i < string.length; i++) {
+				for (let i: number = 0; i < string.length; i++) {
 					const charCode: number = string.charCodeAt(i);
 					if (charCode > 0x7f) throw new Error("Trying to write unicode character as ascii.");
 					writeUint8(charCode); // technically charCodeAt returns 2 byte values, but this string should contain exclusively 1 byte values.
@@ -390,12 +390,12 @@ module beepbox {
 				
 				// We're gonna come back here once we know how many bytes this track is.
 				const trackLengthIndex: number = writeIndex;
-				fileSize += 4;
+				fileSize += 4; // placeholder for track size
 				writeIndex = fileSize;
 				
 				let prevTime: number = 0;
 				let barStartTime: number = 0;
-				const writeEventTime = function(time): void {
+				const writeEventTime = function(time: number): void {
 					if (time < prevTime) throw new Error("Midi event time cannot go backwards.");
 					writeVariableLength(time - prevTime);
 					prevTime = time;
@@ -449,7 +449,7 @@ module beepbox {
 				} else {
 					// For tracks 0, 1, 2, and 3, set up the instruments and write the notes:
 					
-					let channelName = ["blue channel", "yellow channel", "orange channel", "gray channel"][channel];
+					let channelName: string = ["blue channel", "yellow channel", "orange channel", "gray channel"][channel];
 					if (isChorus) channelName += " chorus";
 					writeEventTime(0);
 					writeUint16(0xFF03); // track name meta event.
@@ -490,7 +490,7 @@ module beepbox {
 								writeEventTime(barStartTime);
 								writeUint16(0xFF04); // instrument event. 
 								if (isDrums) {
-									let description = "noise: " + Music.drumNames[song.instrumentWaves[channel][nextInstrument]];
+									let description: string = "noise: " + Music.drumNames[song.instrumentWaves[channel][nextInstrument]];
 									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
 									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
 									writeAscii(description);
@@ -500,7 +500,7 @@ module beepbox {
 									writeUint8(0xC0 | midiChannel); // program change event for given channel
 									writeFlagAnd7Bits(0, 0x7E); // seashore, applause
 								} else {
-									let description = "wave: " + Music.waveNames[song.instrumentWaves[channel][nextInstrument]];
+									let description: string = "wave: " + Music.waveNames[song.instrumentWaves[channel][nextInstrument]];
 									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
 									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
 									description += ", filter: " + Music.filterNames[song.instrumentFilters[channel][nextInstrument]];
@@ -578,7 +578,7 @@ module beepbox {
 										const linearVolume: number = lerp(pinVolume, nextPinVolume, tick / length);
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, tick / length);
 										
-										const arpeggio = Math.floor(tick / ticksPerArpeggio) % 4;
+										const arpeggio: number = Math.floor(tick / ticksPerArpeggio) % 4;
 										let nextPitch: number;
 										if (tone.notes.length == 2) {
 											nextPitch = tone.notes[arpeggio >> 1];
@@ -589,9 +589,9 @@ module beepbox {
 										} else {
 											nextPitch = tone.notes[0];
 										}
-										const fractionalPitch = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
+										const fractionalPitch: number = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
 										nextPitch = Math.round(fractionalPitch);
-										let pitchOffset = fractionalPitch - nextPitch;
+										let pitchOffset: number = fractionalPitch - nextPitch;
 										
 										const effectCurve: number = Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / effectDuration);
 										if (effectChoice != 2 || tickTime - toneStartTime >= 3 * ticksPerPart) {
@@ -601,7 +601,7 @@ module beepbox {
 										
 										//const volume: number = Math.pow(linearVolume / 3.0, 1.5);
 										const volume: number = linearVolume / 3;
-										const tremelo = 1.0 + effectTremelo * (effectCurve - 1.0);
+										const tremelo: number = 1.0 + effectTremelo * (effectCurve - 1.0);
 										let expression: number = Math.round(0x7f * volume * tremelo);
 										
 										if (pitchBend != prevPitchBend) {

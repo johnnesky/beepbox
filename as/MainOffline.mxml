@@ -101,7 +101,7 @@ SOFTWARE.
 		
 		private function onFragmentPaste(): void {
 			fragment.text = Clipboard.generalClipboard.getData(ClipboardFormats.TEXT_FORMAT) as String;
-			doc.history.record(new ChangeSong(doc, fragment.text));
+			doc.history.record(new ChangeSong(doc, new Song(fragment.text)));
 		}
 		
 		private function hashUpdatedExternally(myhash: String): void {

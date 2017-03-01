@@ -282,7 +282,7 @@ SOFTWARE.
 		}
 		
 		private function cleanSlate(): void {
-			doc.history.record(new ChangeSong(doc, null));
+			doc.history.record(new ChangeSong(doc, new Song()));
 			patternEditor.resetCopiedPins();
 		}
 		
@@ -386,6 +386,9 @@ SOFTWARE.
 				case "transposeDown":
 					transpose(false);
 					break;
+				case "import":
+					setPrompt(ImportPrompt.make(doc, closePrompt));
+					break;
 				case "clean":
 					cleanSlate();
 					break;
@@ -447,7 +450,7 @@ SOFTWARE.
 			<s:VGroup id="songSettings" height="100%" width="100%">
 				<s:HGroup width="100%" verticalAlign="middle">
 					<s:Spacer width="50%"/>
-					<s:Label text="BeepBox version 1.1.4" color="0xbbbbbb" right="0"/>
+					<s:Label text="BeepBox version 1.1.5" color="0xbbbbbb" right="0"/>
 					<s:Spacer width="50%"/>
 				</s:HGroup>
 				<s:HGroup width="100%" verticalAlign="middle">
@@ -457,7 +460,7 @@ SOFTWARE.
 				<s:Button id="editButton" label="Edit Menu" click="openEditMenu();" width="100%"/>
 				<s:Button id="optionsButton" label="Preferences Menu" click="openOptionsMenu();" width="100%"/>
 				<!--<s:Button id="publishButton" label="Publishing Panel..." click="openPublishPrompt();" width="100%"/>-->
-				<s:Button id="exportButton" label="Export to .wav File" click="openExportPrompt();" width="100%"/>
+				<s:Button id="exportButton" label="Export" click="openExportPrompt();" width="100%"/>
 				<s:Button id="copyButton" label="Copy URL to Clipboard" click="copyToClipboard();" width="100%"/>
 				<s:Spacer height="100%"/>
 				<s:Label text="Song Settings:" color="0xffffff"/>
@@ -552,6 +555,7 @@ SOFTWARE.
 				<menuitem label="Shift Notes Up (+)" eventName="transposeUp"/>
 				<menuitem label="Shift Notes Down (-)" eventName="transposeDown"/>
 				<menuitem label="Custom song size..." eventName="duration"/>
+				<menuitem label="Import JSON..." eventName="import"/>
 				<menuitem label="Clean Slate" eventName="clean"/>
 			</root>
 		</fx:XML>

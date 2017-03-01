@@ -1718,15 +1718,14 @@ module beepbox {
 						
 						let startPin: TonePin = null;
 						let endPin: TonePin = null;
-						tone.pins.every(function(pin: TonePin): boolean {
+						for (const pin of tone.pins) {
 							if (pin.time + tone.start <= time) {
 								startPin = pin;
 							} else {
 								endPin = pin;
-								return false;
+								break;
 							}
-							return true;
-						}, this);
+						}
 						
 						const toneStart: number = tone.start * 4;
 						const toneEnd:   number = tone.end   * 4;
@@ -1953,13 +1952,8 @@ module beepbox {
 					if (this._limit < abs) this._limit = abs;
 					sample /= this._limit * 0.75 + 0.25;
 					sample *= this.volume;
-					
-					//data.writeFloat(sample);
-					//data.writeFloat(sample);
-					
 					data[bufferIndex] = sample;
 					bufferIndex = bufferIndex + 1;
-					
 					samples--;
 				}
 				

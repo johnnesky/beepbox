@@ -1639,12 +1639,12 @@ var beepbox;
                 var drumVolume;
                 var drumVolumeDelta;
                 var time = this._part + this._beat * this.song.parts;
-                var _loop_1 = function (channel) {
-                    var pattern = this_1.song.getPattern(channel, this_1._bar);
-                    var attack = pattern == null ? 0 : this_1.song.instrumentAttacks[channel][pattern.instrument];
-                    tone = null;
-                    prevTone = null;
-                    nextTone = null;
+                for (var channel = 0; channel < 4; channel++) {
+                    var pattern = this.song.getPattern(channel, this._bar);
+                    var attack = pattern == null ? 0 : this.song.instrumentAttacks[channel][pattern.instrument];
+                    var tone = null;
+                    var prevTone = null;
+                    var nextTone = null;
                     if (pattern != null) {
                         for (var i = 0; i < pattern.tones.length; i++) {
                             if (pattern.tones[i].end <= time) {
@@ -1663,7 +1663,7 @@ var beepbox;
                         prevTone = null;
                     if (tone != null && nextTone != null && nextTone.start != tone.end)
                         nextTone = null;
-                    var channelRoot = channel == 3 ? 69 : Music.keyTransposes[this_1.song.key];
+                    var channelRoot = channel == 3 ? 69 : Music.keyTransposes[this.song.key];
                     var intervalScale = channel == 3 ? Music.drumInterval : 1;
                     var periodDelta = void 0;
                     var periodDeltaScale = void 0;
@@ -1673,11 +1673,11 @@ var beepbox;
                     var filterScale = void 0;
                     var vibratoScale = void 0;
                     var resetPeriod = false;
-                    if (this_1.pianoPressed && channel == this_1.pianoChannel) {
-                        var pianoFreq = this_1._frequencyFromPitch(channelRoot + this_1.pianoNote * intervalScale);
+                    if (this.pianoPressed && channel == this.pianoChannel) {
+                        var pianoFreq = this._frequencyFromPitch(channelRoot + this.pianoNote * intervalScale);
                         var pianoPitchDamping = void 0;
                         if (channel == 3) {
-                            if (this_1.song.instrumentWaves[3][pattern.instrument] > 0) {
+                            if (this.song.instrumentWaves[3][pattern.instrument] > 0) {
                                 drumFilter = Math.min(1.0, pianoFreq * sampleTime * 8.0);
                                 pianoPitchDamping = 24.0;
                             }
@@ -1690,11 +1690,11 @@ var beepbox;
                         }
                         periodDelta = pianoFreq * sampleTime;
                         periodDeltaScale = 1.0;
-                        toneVolume = Math.pow(2.0, -this_1.pianoNote * intervalScale / pianoPitchDamping);
+                        toneVolume = Math.pow(2.0, -this.pianoNote * intervalScale / pianoPitchDamping);
                         volumeDelta = 0.0;
                         filter = 1.0;
                         filterScale = 1.0;
-                        vibratoScale = Math.pow(2.0, Music.effectVibratos[this_1.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
+                        vibratoScale = Math.pow(2.0, Music.effectVibratos[this.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
                     }
                     else if (tone == null) {
                         periodDelta = 0.0;
@@ -1709,43 +1709,43 @@ var beepbox;
                     else {
                         var pitch = void 0;
                         if (tone.notes.length == 2) {
-                            pitch = tone.notes[this_1._arpeggio >> 1];
+                            pitch = tone.notes[this._arpeggio >> 1];
                         }
                         else if (tone.notes.length == 3) {
-                            pitch = tone.notes[this_1._arpeggio == 3 ? 1 : this_1._arpeggio];
+                            pitch = tone.notes[this._arpeggio == 3 ? 1 : this._arpeggio];
                         }
                         else if (tone.notes.length == 4) {
-                            pitch = tone.notes[this_1._arpeggio];
+                            pitch = tone.notes[this._arpeggio];
                         }
                         else {
                             pitch = tone.notes[0];
                         }
-                        var startPin_1 = null;
-                        var endPin_1 = null;
-                        tone.pins.every(function (pin) {
+                        var startPin = null;
+                        var endPin = null;
+                        for (var _i = 0, _a = tone.pins; _i < _a.length; _i++) {
+                            var pin = _a[_i];
                             if (pin.time + tone.start <= time) {
-                                startPin_1 = pin;
+                                startPin = pin;
                             }
                             else {
-                                endPin_1 = pin;
-                                return false;
+                                endPin = pin;
+                                break;
                             }
-                            return true;
-                        }, this_1);
+                        }
                         var toneStart = tone.start * 4;
                         var toneEnd = tone.end * 4;
-                        var pinStart = (tone.start + startPin_1.time) * 4;
-                        var pinEnd = (tone.start + endPin_1.time) * 4;
-                        var arpeggioStart = time * 4 + this_1._arpeggio;
-                        var arpeggioEnd = time * 4 + this_1._arpeggio + 1;
+                        var pinStart = (tone.start + startPin.time) * 4;
+                        var pinEnd = (tone.start + endPin.time) * 4;
+                        var arpeggioStart = time * 4 + this._arpeggio;
+                        var arpeggioEnd = time * 4 + this._arpeggio + 1;
                         var arpeggioRatioStart = (arpeggioStart - pinStart) / (pinEnd - pinStart);
                         var arpeggioRatioEnd = (arpeggioEnd - pinStart) / (pinEnd - pinStart);
-                        var arpeggioVolumeStart = startPin_1.volume * (1.0 - arpeggioRatioStart) + endPin_1.volume * arpeggioRatioStart;
-                        var arpeggioVolumeEnd = startPin_1.volume * (1.0 - arpeggioRatioEnd) + endPin_1.volume * arpeggioRatioEnd;
-                        var arpeggioIntervalStart = startPin_1.interval * (1.0 - arpeggioRatioStart) + endPin_1.interval * arpeggioRatioStart;
-                        var arpeggioIntervalEnd = startPin_1.interval * (1.0 - arpeggioRatioEnd) + endPin_1.interval * arpeggioRatioEnd;
-                        var arpeggioFilterTimeStart = startPin_1.time * (1.0 - arpeggioRatioStart) + endPin_1.time * arpeggioRatioStart;
-                        var arpeggioFilterTimeEnd = startPin_1.time * (1.0 - arpeggioRatioEnd) + endPin_1.time * arpeggioRatioEnd;
+                        var arpeggioVolumeStart = startPin.volume * (1.0 - arpeggioRatioStart) + endPin.volume * arpeggioRatioStart;
+                        var arpeggioVolumeEnd = startPin.volume * (1.0 - arpeggioRatioEnd) + endPin.volume * arpeggioRatioEnd;
+                        var arpeggioIntervalStart = startPin.interval * (1.0 - arpeggioRatioStart) + endPin.interval * arpeggioRatioStart;
+                        var arpeggioIntervalEnd = startPin.interval * (1.0 - arpeggioRatioEnd) + endPin.interval * arpeggioRatioEnd;
+                        var arpeggioFilterTimeStart = startPin.time * (1.0 - arpeggioRatioStart) + endPin.time * arpeggioRatioStart;
+                        var arpeggioFilterTimeEnd = startPin.time * (1.0 - arpeggioRatioEnd) + endPin.time * arpeggioRatioEnd;
                         var inhibitRestart = false;
                         if (arpeggioStart == toneStart) {
                             if (attack == 0) {
@@ -1785,17 +1785,17 @@ var beepbox;
                                 }
                             }
                         }
-                        var startRatio = 1.0 - (this_1._arpeggioSamples + samples) / samplesPerArpeggio;
-                        var endRatio = 1.0 - (this_1._arpeggioSamples) / samplesPerArpeggio;
+                        var startRatio = 1.0 - (this._arpeggioSamples + samples) / samplesPerArpeggio;
+                        var endRatio = 1.0 - (this._arpeggioSamples) / samplesPerArpeggio;
                         var startInterval = arpeggioIntervalStart * (1.0 - startRatio) + arpeggioIntervalEnd * startRatio;
                         var endInterval = arpeggioIntervalStart * (1.0 - endRatio) + arpeggioIntervalEnd * endRatio;
                         var startFilterTime = arpeggioFilterTimeStart * (1.0 - startRatio) + arpeggioFilterTimeEnd * startRatio;
                         var endFilterTime = arpeggioFilterTimeStart * (1.0 - endRatio) + arpeggioFilterTimeEnd * endRatio;
-                        var startFreq = this_1._frequencyFromPitch(channelRoot + (pitch + startInterval) * intervalScale);
-                        var endFreq = this_1._frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
+                        var startFreq = this._frequencyFromPitch(channelRoot + (pitch + startInterval) * intervalScale);
+                        var endFreq = this._frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
                         var pitchDamping = void 0;
                         if (channel == 3) {
-                            if (this_1.song.instrumentWaves[3][pattern.instrument] > 0) {
+                            if (this.song.instrumentWaves[3][pattern.instrument] > 0) {
                                 drumFilter = Math.min(1.0, startFreq * sampleTime * 8.0);
                                 //console.log(drumFilter);
                                 pitchDamping = 24.0;
@@ -1809,21 +1809,21 @@ var beepbox;
                         }
                         var startVol = Math.pow(2.0, -(pitch + startInterval) * intervalScale / pitchDamping);
                         var endVol = Math.pow(2.0, -(pitch + endInterval) * intervalScale / pitchDamping);
-                        startVol *= this_1._volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);
-                        endVol *= this_1._volumeConversion(arpeggioVolumeStart * (1.0 - endRatio) + arpeggioVolumeEnd * endRatio);
+                        startVol *= this._volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);
+                        endVol *= this._volumeConversion(arpeggioVolumeStart * (1.0 - endRatio) + arpeggioVolumeEnd * endRatio);
                         var freqScale = endFreq / startFreq;
                         periodDelta = startFreq * sampleTime;
                         periodDeltaScale = Math.pow(freqScale, 1.0 / samples);
                         toneVolume = startVol;
                         volumeDelta = (endVol - startVol) / samples;
-                        var timeSinceStart = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / this_1.samplesPerSecond;
+                        var timeSinceStart = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / this.samplesPerSecond;
                         if (timeSinceStart == 0.0 && !inhibitRestart)
                             resetPeriod = true;
-                        var filterScaleRate = Music.filterDecays[this_1.song.instrumentFilters[channel][pattern.instrument]];
-                        filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / this_1.samplesPerSecond);
-                        var endFilter = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / this_1.samplesPerSecond);
+                        var filterScaleRate = Music.filterDecays[this.song.instrumentFilters[channel][pattern.instrument]];
+                        filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / this.samplesPerSecond);
+                        var endFilter = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / this.samplesPerSecond);
                         filterScale = Math.pow(endFilter / filter, 1.0 / samples);
-                        vibratoScale = (this_1.song.instrumentEffects[channel][pattern.instrument] == 2 && time - tone.start < 3) ? 0.0 : Math.pow(2.0, Music.effectVibratos[this_1.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
+                        vibratoScale = (this.song.instrumentEffects[channel][pattern.instrument] == 2 && time - tone.start < 3) ? 0.0 : Math.pow(2.0, Music.effectVibratos[this.song.instrumentEffects[channel][pattern.instrument]] / 12.0) - 1.0;
                     }
                     if (channel == 0) {
                         leadPeriodDelta = periodDelta;
@@ -1834,9 +1834,9 @@ var beepbox;
                         leadFilterScale = filterScale;
                         leadVibratoScale = vibratoScale;
                         if (resetPeriod) {
-                            this_1._leadSample = 0.0;
-                            this_1._leadPeriodA = 0.0;
-                            this_1._leadPeriodB = 0.0;
+                            this._leadSample = 0.0;
+                            this._leadPeriodA = 0.0;
+                            this._leadPeriodB = 0.0;
                         }
                     }
                     else if (channel == 1) {
@@ -1848,9 +1848,9 @@ var beepbox;
                         harmonyFilterScale = filterScale;
                         harmonyVibratoScale = vibratoScale;
                         if (resetPeriod) {
-                            this_1._harmonySample = 0.0;
-                            this_1._harmonyPeriodA = 0.0;
-                            this_1._harmonyPeriodB = 0.0;
+                            this._harmonySample = 0.0;
+                            this._harmonyPeriodA = 0.0;
+                            this._harmonyPeriodB = 0.0;
                         }
                     }
                     else if (channel == 2) {
@@ -1862,9 +1862,9 @@ var beepbox;
                         bassFilterScale = filterScale;
                         bassVibratoScale = vibratoScale;
                         if (resetPeriod) {
-                            this_1._bassSample = 0.0;
-                            this_1._bassPeriodA = 0.0;
-                            this_1._bassPeriodB = 0.0;
+                            this._bassSample = 0.0;
+                            this._bassPeriodA = 0.0;
+                            this._bassPeriodB = 0.0;
                         }
                     }
                     else if (channel == 3) {
@@ -1873,10 +1873,6 @@ var beepbox;
                         drumVolume = toneVolume * maxDrumVolume;
                         drumVolumeDelta = volumeDelta * maxDrumVolume;
                     }
-                };
-                var this_1 = this, tone, prevTone, nextTone;
-                for (var channel = 0; channel < 4; channel++) {
-                    _loop_1(channel);
                 }
                 var effectY = Math.sin(this._effectPeriod);
                 var prevEffectY = Math.sin(this._effectPeriod - this._effectAngle);
@@ -1958,8 +1954,6 @@ var beepbox;
                         this._limit = abs;
                     sample /= this._limit * 0.75 + 0.25;
                     sample *= this.volume;
-                    //data.writeFloat(sample);
-                    //data.writeFloat(sample);
                     data[bufferIndex] = sample;
                     bufferIndex = bufferIndex + 1;
                     samples--;
