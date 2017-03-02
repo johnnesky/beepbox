@@ -54,7 +54,7 @@ module beepbox {
 			this._svgPreview,
 			this._svgPlayhead,
 		]);
-		public readonly container: HTMLDivElement = html.div({style: "height: 481px; display: table-cell; overflow:hidden; position: relative;"}, [this._svg]);
+		public readonly container: HTMLDivElement = html.div({style: "height: 481px; overflow:hidden; position: relative;"}, [this._svg]);
 		
 		private readonly _defaultNoteHeight: number = 13;
 		private readonly _defaultDrumHeight: number = 40;
