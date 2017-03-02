@@ -96,42 +96,37 @@ module beepbox {
 		private readonly _exportJsonButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .json file")]);
 		private readonly _cancelButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Cancel")]);
 		
-		public readonly container: HTMLDivElement = div({style: "position: absolute;"}, [
-			div({style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;"}, [
-				div({style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
-					div({style: "font-size: 30px"}, [text("Export Options")]),
-					div({style: "height: 20px;"}),
-					div({style: "vertical-align: middle; line-height: 46px;"}, [
-						span({style: "float: right;"}, [
-							div({style: "display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;"}, [
-								text("File name:"),
-							]),
-							div({style: "display: inline-block; width: 20px; height: 1px;"}),
-							this._fileName,
-						]),
-						div({style: "clear: both;"}),
+		public readonly container: HTMLDivElement = div({style: "position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;"}, [
+			div({style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
+				div({style: "font-size: 30px"}, [text("Export Options")]),
+				div({style: "height: 20px;"}),
+				div({style: "line-height: 46px;"}, [
+					div({style: "display: inline-block;text-align: right; line-height: 18px;"}, [
+						text("File name:"),
 					]),
-					div({style: "display: table; width: 200px;"}, [
-						div({style: "display: table-row;"}, [
-							div({style: "display: table-cell;"}, [text("Intro:")]),
-							div({style: "display: table-cell;"}, [text("Loop Count:")]),
-							div({style: "display: table-cell;"}, [text("Outro:")]),
-						]),
-						div({style: "display: table-row; height: 30px;"}, [
-							div({style: "display: table-cell; vertical-align: middle;"}, [this._enableIntro]),
-							div({style: "display: table-cell; vertical-align: middle;"}, [this._loopDropDown]),
-							div({style: "display: table-cell; vertical-align: middle;"}, [this._enableOutro]),
-						]),
-					]),
-					div({style: "height: 20px;"}),
-					this._exportWavButton,
-					div({style: "height: 20px;"}),
-					this._exportMidiButton,
-					div({style: "height: 20px;"}),
-					this._exportJsonButton,
-					div({style: "height: 20px;"}),
-					this._cancelButton,
+					div({style: "display: inline-block; width: 20px; height: 1px;"}),
+					this._fileName,
 				]),
+				div({style: "display: table; width: 200px;"}, [
+					div({style: "display: table-row;"}, [
+						div({style: "display: table-cell;"}, [text("Intro:")]),
+						div({style: "display: table-cell;"}, [text("Loop Count:")]),
+						div({style: "display: table-cell;"}, [text("Outro:")]),
+					]),
+					div({style: "display: table-row; height: 30px;"}, [
+						div({style: "display: table-cell; vertical-align: middle;"}, [this._enableIntro]),
+						div({style: "display: table-cell; vertical-align: middle;"}, [this._loopDropDown]),
+						div({style: "display: table-cell; vertical-align: middle;"}, [this._enableOutro]),
+					]),
+				]),
+				div({style: "height: 20px;"}),
+				this._exportWavButton,
+				div({style: "height: 20px;"}),
+				this._exportMidiButton,
+				div({style: "height: 20px;"}),
+				this._exportJsonButton,
+				div({style: "height: 20px;"}),
+				this._cancelButton,
 			]),
 		]);
 		

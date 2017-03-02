@@ -29,7 +29,7 @@ module beepbox {
 	export class OctaveScrollBar {
 		private readonly _canvas: HTMLCanvasElement = html.canvas({width: "20", height: "481"});
 		private readonly _preview: HTMLCanvasElement = html.canvas({width: "20", height: "481"});
-		public readonly container: HTMLDivElement = html.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; display: table-cell; overflow:hidden; position: relative;"}, [
+		public readonly container: HTMLDivElement = html.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow:hidden; position: relative;"}, [
 			this._canvas,
 			this._preview,
 		]);

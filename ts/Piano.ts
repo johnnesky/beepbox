@@ -52,7 +52,7 @@ module beepbox {
 	export class Piano {
 		private readonly _canvas: HTMLCanvasElement = html.canvas({width: "32", height: "481"});
 		private readonly _preview: HTMLCanvasElement = html.canvas({width: "32", height: "40"});
-		public readonly container: HTMLDivElement = html.div({style: "width: 32px; height: 481px; display: table-cell; overflow:hidden; position: relative;"}, [
+		public readonly container: HTMLDivElement = html.div({style: "width: 32px; height: 481px; overflow:hidden; position: relative;"}, [
 			this._canvas,
 			this._preview,
 		]);

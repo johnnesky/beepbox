@@ -34,58 +34,45 @@ module beepbox {
 		private readonly _barsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1"});
 		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "32", step: "1"});
 		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "10", step: "1"});
-		private readonly _okayButton: HTMLButtonElement = button({style: "width:125px; float: left;", type: "button"}, [text("Okay")]);
-		private readonly _cancelButton: HTMLButtonElement = button({style: "width:125px; float: right;", type: "button"}, [text("Cancel")]);
+		private readonly _okayButton: HTMLButtonElement = button({style: "width:125px;", type: "button"}, [text("Okay")]);
+		private readonly _cancelButton: HTMLButtonElement = button({style: "width:125px;", type: "button"}, [text("Cancel")]);
 		
-		public readonly container: HTMLDivElement = div({style: "position: absolute;"}, [
-			div({style: "display: table-cell; vertical-align: middle; width: 700px; height: 645px;"}, [
-				div({style: "margin: auto; text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
-					div({style: "font-size: 30px"}, [text("Custom Song Size")]),
-					div({style: "height: 30px;"}),
-					div({style: "vertical-align: middle; line-height: 46px;"}, [
-						span({style: "float: right;"}, [
-							div({style: "display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;"}, [
-								text("Beats per bar:"),
-								br(),
-								span({style: "color: #888888;"}, [text("(Multiples of 3 or 4 are recommended)")]),
-							]),
-							div({style: "display: inline-block; width: 20px; height: 1px;"}),
-							this._beatsStepper,
-						]),
-						div({style: "clear: both;"}),
+		public readonly container: HTMLDivElement = div({style: "position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;"}, [
+			div({style: "text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
+				div({style: "font-size: 30px"}, [text("Custom Song Size")]),
+				div({style: "height: 30px;"}),
+				div({style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;"}, [
+					div({style: "text-align: right; line-height: 18px;"}, [
+						text("Beats per bar:"),
+						br(),
+						span({style: "color: #888888;"}, [text("(Multiples of 3 or 4 are recommended)")]),
 					]),
-					div({style: "vertical-align: middle; line-height: 46px;"}, [
-						span({style: "float: right;"}, [
-							div({style: "display: inline-block; vertical-align: middle; text-align: right; line-height: 18px;"}, [
-								text("Bars per song:"),
-								br(),
-								span({style: "color: #888888;"}, [text("(Multiples of 2 or 4 are recommended)")]),
-							]),
-							div({style: "display: inline-block; width: 20px; height: 1px;"}),
-							this._barsStepper,
-						]),
-						div({style: "clear: both;"}),
+					div({style: "display: inline-block; width: 20px; height: 1px;"}),
+					this._beatsStepper,
+				]),
+				div({style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;"}, [
+					div({style: "display: inline-block; text-align: right; line-height: 18px;"}, [
+						text("Bars per song:"),
+						br(),
+						span({style: "color: #888888;"}, [text("(Multiples of 2 or 4 are recommended)")]),
 					]),
-					div({style: "vertical-align: middle; line-height: 46px;"}, [
-						span({style: "float: right;"}, [
-							text("Patterns per channel:"),
-							div({style: "display: inline-block; width: 20px; height: 1px;"}),
-							this._patternsStepper,
-						]),
-						div({style: "clear: both;"}),
-					]),
-					div({style: "vertical-align: middle; line-height: 46px;"}, [
-						span({style: "float: right;"}, [
-							text("Instruments per channel:"),
-							div({style: "display: inline-block; width: 20px; height: 1px;"}),
-							this._instrumentsStepper,
-						]),
-						div({style: "clear: both;"}),
-					]),
-					div({style: "height: 30px;"}),
+					div({style: "display: inline-block; width: 20px; height: 1px;"}),
+					this._barsStepper,
+				]),
+				div({style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;"}, [
+					text("Patterns per channel:"),
+					div({style: "display: inline-block; width: 20px; height: 1px;"}),
+					this._patternsStepper,
+				]),
+				div({style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;"}, [
+					text("Instruments per channel:"),
+					div({style: "display: inline-block; width: 20px; height: 1px;"}),
+					this._instrumentsStepper,
+				]),
+				div({style: "height: 30px;"}),
+				div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
 					this._okayButton,
 					this._cancelButton,
-					div({style: "clear: both;"}),
 				]),
 			]),
 		]);
