@@ -551,7 +551,9 @@ styleSheet.appendChild(document.createTextNode(`
 input[type=range].beepBoxSlider {
 	-webkit-appearance: none;
 	width: 100%;
+	height: 18px;
 	margin: 4px 0;
+	background-color: black;
 }
 input[type=range].beepBoxSlider:focus {
 	outline: none;
