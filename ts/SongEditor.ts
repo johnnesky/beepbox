@@ -123,7 +123,7 @@ module beepbox {
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; display: flex; flex-direction: row; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;"}, [
 			this._editorBox,
 			div({style: "width: 6px; height: 645px;"}),
-			div({style: "width: 182px; height: 645px; font-size: 12px;"}, [
+			div({className: "editor-right-side"}, [
 				div({style: "width:100%; text-align: center; color: #bbbbbb;"}, [text("BeepBox 2.1.2")]),
 				div({style: "width:100%; margin: 5px 0; display: flex; flex-direction: row; align-items: center;"}, [
 					this._playButton,
@@ -133,7 +133,7 @@ module beepbox {
 				this._editButton,
 				this._optionsButton,
 				this._exportButton,
-				div({style: "width: 100%; height: 110px;"}),
+				div({style: "width: 100%; height: 110px; flex-shrink: 1;"}),
 				div({style: "width:100%; margin: 3px 0;"}, [text("Song Settings:")]),
 				div({className: "selectRow"}, [
 					text("Scale: "),
@@ -151,10 +151,10 @@ module beepbox {
 					text("Rhythm: "),
 					this._partDropDown,
 				]),
-				div({style: "width: 100%; height: 25px;"}),
+				div({style: "width: 100%; height: 25px; flex-shrink: 1;"}),
 				this._patternSettingsLabel,
 				this._instrumentDropDownGroup,
-				div({style: "width: 100%; height: 25px;"}),
+				div({style: "width: 100%; height: 25px; flex-shrink: 1;"}),
 				div({style: "width:100%; margin: 3px 0;"}, [text("Instrument Settings: ")]),
 				div({className: "selectRow"}, [
 					text("Volume: "),
@@ -545,6 +545,18 @@ styleSheet.appendChild(document.createTextNode(`
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
+}
+
+.editor-right-side {
+	width: 182px;
+	height: 645px;
+	font-size: 12px;
+	display: flex;
+	flex-direction: column;
+}
+
+.editor-right-side > * {
+	flex-shrink: 0;
 }
 
 /* slider style designed with http://danielstern.ca/range.css/ */
