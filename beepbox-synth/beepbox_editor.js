@@ -4650,19 +4650,25 @@ var beepbox;
         function BarScrollBar(_doc) {
             var _this = this;
             this._doc = _doc;
-            this._canvas = beepbox.html.canvas({ width: "512", height: "20" });
-            this._preview = beepbox.html.canvas({ width: "512", height: "20" });
-            this.container = beepbox.html.div({ style: "width: 512px; height: 20px; position: relative;" }, [
-                this._canvas,
-                this._preview,
-            ]);
-            this._graphics = this._canvas.getContext("2d");
-            this._previewGraphics = this._preview.getContext("2d");
             this._editorWidth = 512;
             this._editorHeight = 20;
+            this._notches = beepbox.svgElement("svg", { "pointer-events": "none" });
+            this._handle = beepbox.svgElement("rect", { fill: "#444444", x: 0, y: 2, width: 10, height: this._editorHeight - 4 });
+            this._handleHighlight = beepbox.svgElement("rect", { fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 0, y: 1, width: 10, height: this._editorHeight - 2 });
+            this._leftHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
+            this._rightHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
+            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight }, [
+                this._notches,
+                this._handle,
+                this._handleHighlight,
+                this._leftHighlight,
+                this._rightHighlight,
+            ]);
+            this.container = beepbox.html.div({ style: "width: 512px; height: 20px; overflow: hidden; position: relative;" }, [this._svg]);
             this._mouseDown = false;
             this._mouseOver = false;
             this._dragging = false;
+            this._renderedNotchCount = -1;
             this._onMouseOver = function (event) {
                 _this._mouseOver = true;
             };
@@ -4672,6 +4678,9 @@ var beepbox;
             this._onMousePressed = function (event) {
                 event.preventDefault();
                 _this._mouseDown = true;
+                var boundingRect = _this._svg.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 _this._updatePreview();
                 if (_this._mouseX >= _this._doc.barScrollPos * _this._barWidth && _this._mouseX <= (_this._doc.barScrollPos + 16) * _this._barWidth) {
                     _this._dragging = true;
@@ -4681,7 +4690,7 @@ var beepbox;
             this._onTouchPressed = function (event) {
                 event.preventDefault();
                 _this._mouseDown = true;
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = event.touches[0].clientX - boundingRect.left;
                 _this._mouseY = event.touches[0].clientY - boundingRect.top;
                 _this._updatePreview();
@@ -4691,7 +4700,7 @@ var beepbox;
                 }
             };
             this._onMouseMoved = function (event) {
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
                 _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 _this._onCursorMoved();
@@ -4700,7 +4709,7 @@ var beepbox;
                 if (!_this._mouseDown)
                     return;
                 event.preventDefault();
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = event.touches[0].clientX - boundingRect.left;
                 _this._mouseY = event.touches[0].clientY - boundingRect.top;
                 _this._onCursorMoved();
@@ -4728,6 +4737,12 @@ var beepbox;
             };
             this._doc.watch(this._documentChanged);
             this._documentChanged();
+            var center = this._editorHeight * 0.5;
+            var base = 20;
+            var tip = 9;
+            var arrowHeight = 6;
+            this._leftHighlight.setAttribute("d", "M " + tip + " " + center + " L " + base + " " + (center + arrowHeight) + " L " + base + " " + (center - arrowHeight) + " z");
+            this._rightHighlight.setAttribute("d", "M " + (this._editorWidth - tip) + " " + center + " L " + (this._editorWidth - base) + " " + (center + arrowHeight) + " L " + (this._editorWidth - base) + " " + (center - arrowHeight) + " z");
             this.container.addEventListener("mousedown", this._onMousePressed);
             document.addEventListener("mousemove", this._onMouseMoved);
             document.addEventListener("mouseup", this._onCursorReleased);
@@ -4764,50 +4779,38 @@ var beepbox;
             this._updatePreview();
         };
         BarScrollBar.prototype._updatePreview = function () {
-            this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
-            if (!this._mouseOver || this._mouseDown)
-                return;
-            var center = this._editorHeight * 0.5;
-            var base = 20;
-            var tip = 9;
-            var arrowHeight = 6;
-            if (this._mouseX < this._doc.barScrollPos * this._barWidth) {
-                this._previewGraphics.fillStyle = "#ffffff";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.moveTo(tip, center);
-                this._previewGraphics.lineTo(base, center + arrowHeight);
-                this._previewGraphics.lineTo(base, center - arrowHeight);
-                this._previewGraphics.lineTo(tip, center);
-                this._previewGraphics.fill();
+            var showHighlight = this._mouseOver && !this._mouseDown;
+            var showleftHighlight = false;
+            var showRightHighlight = false;
+            var showHandleHighlight = false;
+            if (showHighlight) {
+                if (this._mouseX < this._doc.barScrollPos * this._barWidth) {
+                    showleftHighlight = true;
+                }
+                else if (this._mouseX > (this._doc.barScrollPos + 16) * this._barWidth) {
+                    showRightHighlight = true;
+                }
+                else {
+                    showHandleHighlight = true;
+                }
             }
-            else if (this._mouseX > (this._doc.barScrollPos + 16) * this._barWidth) {
-                this._previewGraphics.fillStyle = "#ffffff";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.moveTo(this._editorWidth - tip, center);
-                this._previewGraphics.lineTo(this._editorWidth - base, center + arrowHeight);
-                this._previewGraphics.lineTo(this._editorWidth - base, center - arrowHeight);
-                this._previewGraphics.lineTo(this._editorWidth - tip, center);
-                this._previewGraphics.fill();
-            }
-            else {
-                this._previewGraphics.lineWidth = 2;
-                this._previewGraphics.strokeStyle = "#ffffff";
-                this._previewGraphics.strokeRect(this._doc.barScrollPos * this._barWidth, 1, 16 * this._barWidth, this._editorHeight - 2);
-            }
+            this._leftHighlight.style.visibility = showleftHighlight ? "visible" : "hidden";
+            this._rightHighlight.style.visibility = showRightHighlight ? "visible" : "hidden";
+            this._handleHighlight.style.visibility = showHandleHighlight ? "visible" : "hidden";
+            this._handleHighlight.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
+            this._handleHighlight.setAttribute("width", "" + (this._barWidth * 16));
         };
         BarScrollBar.prototype._render = function () {
-            this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
-            this._graphics.fillStyle = "#444444";
-            this._graphics.fillRect(this._barWidth * this._doc.barScrollPos, 2, this._barWidth * 16, this._editorHeight - 4);
-            for (var i = 0; i <= this._doc.song.bars; i++) {
-                var lineWidth = (i % 16 == 0) ? 2 : 0;
-                var lineHeight = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
-                this._graphics.beginPath();
-                this._graphics.strokeStyle = "#444444";
-                this._graphics.lineWidth = lineWidth;
-                this._graphics.moveTo(i * this._barWidth, lineHeight);
-                this._graphics.lineTo(i * this._barWidth, this._editorHeight - lineHeight);
-                this._graphics.stroke();
+            this._handle.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
+            this._handle.setAttribute("width", "" + (this._barWidth * 16));
+            if (this._renderedNotchCount != this._doc.song.bars) {
+                this._renderedNotchCount = this._doc.song.bars;
+                while (this._notches.firstChild)
+                    this._notches.removeChild(this._notches.firstChild);
+                for (var i = 0; i <= this._doc.song.bars; i++) {
+                    var lineHeight = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
+                    this._notches.appendChild(beepbox.svgElement("rect", { fill: "#444444", x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2 }));
+                }
             }
             this._updatePreview();
         };
@@ -4829,11 +4832,11 @@ var beepbox;
             this._octaveHeight = (this._editorHeight - this._notchHeight) / this._octaveCount;
             this._barHeight = (this._octaveHeight * 3 + this._notchHeight);
             this._handle = beepbox.svgElement("rect", { fill: "#444444", x: 2, y: 0, width: this._editorWidth - 4, height: this._barHeight });
-            this._handleHighlight = beepbox.svgElement("rect", { fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight });
+            this._handleHighlight = beepbox.svgElement("rect", { fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight });
             this._upHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
             this._downHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
             this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight });
-            this.container = beepbox.html.div({ id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow:hidden; position: relative;" }, [this._svg]);
+            this.container = beepbox.html.div({ id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow: hidden; position: relative;" }, [this._svg]);
             this._mouseDown = false;
             this._mouseOver = false;
             this._dragging = false;
