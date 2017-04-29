@@ -35,12 +35,12 @@ module beepbox {
 		private readonly _barHeight: number = (this._octaveHeight * 3 + this._notchHeight);
 		
 		private readonly _handle = <SVGRectElement> svgElement("rect", {fill: "#444444", x: 2, y: 0, width: this._editorWidth - 4, height: this._barHeight});
-		private readonly _handleHighlight = <SVGRectElement> svgElement("rect", {fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight});
+		private readonly _handleHighlight = <SVGRectElement> svgElement("rect", {fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight});
 		private readonly _upHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		private readonly _downHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		
 		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight});
-		public readonly container: HTMLDivElement = html.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow:hidden; position: relative;"}, [this._svg]);
+		public readonly container: HTMLDivElement = html.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow: hidden; position: relative;"}, [this._svg]);
 		
 		private _mouseX: number;
 		private _mouseY: number;

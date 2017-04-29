@@ -27,28 +27,44 @@ SOFTWARE.
 
 module beepbox {
 	export class BarScrollBar {
-		private readonly _canvas: HTMLCanvasElement = html.canvas({width: "512", height: "20"});
-		private readonly _preview: HTMLCanvasElement = html.canvas({width: "512", height: "20"});
-		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 20px; position: relative;"}, [
-			this._canvas,
-			this._preview,
-		]);
-		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
-		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
 		private readonly _editorWidth: number = 512;
+		private readonly _editorHeight: number = 20;
+		
+		private readonly _notches = <SVGSVGElement> svgElement("svg", {"pointer-events": "none"});
+		private readonly _handle = <SVGRectElement> svgElement("rect", {fill: "#444444", x: 0, y: 2, width: 10, height: this._editorHeight - 4});
+		private readonly _handleHighlight = <SVGRectElement> svgElement("rect", {fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 0, y: 1, width: 10, height: this._editorHeight - 2});
+		private readonly _leftHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
+		private readonly _rightHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
+		
+		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight}, [
+			this._notches,
+			this._handle,
+			this._handleHighlight,
+			this._leftHighlight,
+			this._rightHighlight,
+		]);
+		
+		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 20px; overflow: hidden; position: relative;"}, [this._svg]);
 		
 		private _mouseX: number;
 		private _mouseY: number;
-		private _editorHeight: number = 20;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _dragging: boolean = false;
 		private _dragStart: number;
 		private _barWidth: number;
+		private _renderedNotchCount: number = -1;
 		
 		constructor(private _doc: SongDocument) {
 			this._doc.watch(this._documentChanged);
 			this._documentChanged();
+			
+			const center: number = this._editorHeight * 0.5;
+			const base: number = 20;
+			const tip: number = 9;
+			const arrowHeight: number = 6;
+			this._leftHighlight.setAttribute("d", `M ${tip} ${center} L ${base} ${center + arrowHeight} L ${base} ${center - arrowHeight} z`);
+			this._rightHighlight.setAttribute("d", `M ${this._editorWidth - tip} ${center} L ${this._editorWidth - base} ${center + arrowHeight} L ${this._editorWidth - base} ${center - arrowHeight} z`);
 			
 			this.container.addEventListener("mousedown", this._onMousePressed);
 			document.addEventListener("mousemove", this._onMouseMoved);
@@ -73,6 +89,9 @@ module beepbox {
 		private _onMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
 			this._mouseDown = true;
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
+    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updatePreview();
 			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + 16) * this._barWidth) {
 				this._dragging = true;
@@ -83,7 +102,7 @@ module beepbox {
 		private _onTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
 			this._mouseDown = true;
-			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
 			this._updatePreview();
@@ -94,7 +113,7 @@ module beepbox {
 		}
 		
 		private _onMouseMoved = (event: MouseEvent): void => {
-			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 		    this._onCursorMoved();
@@ -103,7 +122,7 @@ module beepbox {
 		private _onTouchMoved = (event: TouchEvent): void => {
 			if (!this._mouseDown) return;
 			event.preventDefault();
-			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
 		    this._onCursorMoved();
@@ -149,34 +168,26 @@ module beepbox {
 		}
 		
 		private _updatePreview(): void {
-			this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
-			if (!this._mouseOver || this._mouseDown) return;
+			const showHighlight: boolean = this._mouseOver && !this._mouseDown;
+			let showleftHighlight: boolean = false;
+			let showRightHighlight: boolean = false;
+			let showHandleHighlight: boolean = false;
 			
-			const center: number = this._editorHeight * 0.5;
-			const base: number = 20;
-			const tip: number = 9;
-			const arrowHeight: number = 6;
-			if (this._mouseX < this._doc.barScrollPos * this._barWidth) {
-				this._previewGraphics.fillStyle = "#ffffff";
-				this._previewGraphics.beginPath();
-				this._previewGraphics.moveTo(tip, center);
-				this._previewGraphics.lineTo(base, center + arrowHeight);
-				this._previewGraphics.lineTo(base, center - arrowHeight);
-				this._previewGraphics.lineTo(tip, center);
-				this._previewGraphics.fill();
-			} else if (this._mouseX > (this._doc.barScrollPos + 16) * this._barWidth) {
-				this._previewGraphics.fillStyle = "#ffffff";
-				this._previewGraphics.beginPath();
-				this._previewGraphics.moveTo(this._editorWidth - tip, center);
-				this._previewGraphics.lineTo(this._editorWidth - base, center + arrowHeight);
-				this._previewGraphics.lineTo(this._editorWidth - base, center - arrowHeight);
-				this._previewGraphics.lineTo(this._editorWidth - tip, center);
-				this._previewGraphics.fill();
-			} else {
-				this._previewGraphics.lineWidth = 2;
-				this._previewGraphics.strokeStyle = "#ffffff";
-				this._previewGraphics.strokeRect(this._doc.barScrollPos * this._barWidth, 1, 16 * this._barWidth, this._editorHeight - 2);
+			if (showHighlight) {
+				if (this._mouseX < this._doc.barScrollPos * this._barWidth) {
+					showleftHighlight = true;
+				} else if (this._mouseX > (this._doc.barScrollPos + 16) * this._barWidth) {
+					showRightHighlight = true;
+				} else {
+					showHandleHighlight = true;
+				}
 			}
+			
+			this._leftHighlight.style.visibility = showleftHighlight ? "visible" : "hidden";
+			this._rightHighlight.style.visibility = showRightHighlight ? "visible" : "hidden";
+			this._handleHighlight.style.visibility = showHandleHighlight ? "visible" : "hidden";
+			this._handleHighlight.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
+			this._handleHighlight.setAttribute("width", "" + (this._barWidth * 16));
 		}
 		
 		private _documentChanged = (): void => {
@@ -185,20 +196,18 @@ module beepbox {
 		}
 		
 		private _render(): void {
-			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+			this._handle.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
+			this._handle.setAttribute("width", "" + (this._barWidth * 16));
 			
-			this._graphics.fillStyle = "#444444";
-			this._graphics.fillRect(this._barWidth * this._doc.barScrollPos, 2, this._barWidth * 16, this._editorHeight - 4);
-			
-			for (let i: number = 0; i <= this._doc.song.bars; i++) {
-				const lineWidth: number = (i % 16 == 0) ? 2 : 0;
-				const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
-				this._graphics.beginPath();
-				this._graphics.strokeStyle = "#444444";
-				this._graphics.lineWidth = lineWidth;
-				this._graphics.moveTo(i * this._barWidth, lineHeight);
-				this._graphics.lineTo(i * this._barWidth, this._editorHeight - lineHeight);
-				this._graphics.stroke();
+			if (this._renderedNotchCount != this._doc.song.bars) {
+				this._renderedNotchCount = this._doc.song.bars;
+				
+				while (this._notches.firstChild) this._notches.removeChild(this._notches.firstChild);
+				
+				for (let i: number = 0; i <= this._doc.song.bars; i++) {
+					const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
+					this._notches.appendChild(svgElement("rect", {fill: "#444444", x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2}));
+				}
 			}
 			
 			this._updatePreview();
