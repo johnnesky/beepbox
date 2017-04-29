@@ -44,7 +44,7 @@ module beepbox {
 		private _svgNoteContainer: SVGSVGElement = <SVGSVGElement> svgElement("svg");
 		private readonly _svgPlayhead: SVGRectElement = <SVGRectElement> svgElement("rect", {id: "", x: "0", y: "0", width: "4", height: "481", fill: "white", "pointer-events": "none"});
 		private readonly _svgPreview: SVGPathElement = <SVGPathElement> svgElement("path", {fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none"});
-		private readonly _svg: SVGSVGElement = <SVGSVGElement> svgElement("svg", {xmlns: "http://www.w3.org/2000/svg", style: "background-color: #000000; touch-action: none; position: absolute;", width: "512", height: "481"}, [
+		private readonly _svg: SVGSVGElement = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: "512", height: "481"}, [
 			svgElement("defs", undefined, [
 				this._svgNoteBackground,
 				this._svgDrumBackground,
