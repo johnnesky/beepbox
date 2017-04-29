@@ -3492,7 +3492,7 @@ var beepbox;
             this._svgNoteContainer = beepbox.svgElement("svg");
             this._svgPlayhead = beepbox.svgElement("rect", { id: "", x: "0", y: "0", width: "4", height: "481", fill: "white", "pointer-events": "none" });
             this._svgPreview = beepbox.svgElement("path", { fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none" });
-            this._svg = beepbox.svgElement("svg", { xmlns: "http://www.w3.org/2000/svg", style: "background-color: #000000; touch-action: none; position: absolute;", width: "512", height: "481" }, [
+            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: "512", height: "481" }, [
                 beepbox.svgElement("defs", undefined, [
                     this._svgNoteBackground,
                     this._svgDrumBackground,
@@ -4822,18 +4822,18 @@ var beepbox;
         function OctaveScrollBar(_doc) {
             var _this = this;
             this._doc = _doc;
-            this._canvas = beepbox.html.canvas({ width: "20", height: "481" });
-            this._preview = beepbox.html.canvas({ width: "20", height: "481" });
-            this.container = beepbox.html.div({ id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow:hidden; position: relative;" }, [
-                this._canvas,
-                this._preview,
-            ]);
-            this._previewGraphics = this._preview.getContext("2d");
-            this._graphics = this._canvas.getContext("2d");
             this._editorWidth = 20;
             this._editorHeight = 481;
-            this._rootHeight = 4.0;
+            this._notchHeight = 4.0;
             this._octaveCount = 7;
+            this._octaveHeight = (this._editorHeight - this._notchHeight) / this._octaveCount;
+            this._barHeight = (this._octaveHeight * 3 + this._notchHeight);
+            this._handle = beepbox.svgElement("rect", { fill: "#444444", x: 2, y: 0, width: this._editorWidth - 4, height: this._barHeight });
+            this._handleHighlight = beepbox.svgElement("rect", { fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight });
+            this._upHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
+            this._downHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
+            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight });
+            this.container = beepbox.html.div({ id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow:hidden; position: relative;" }, [this._svg]);
             this._mouseDown = false;
             this._mouseOver = false;
             this._dragging = false;
@@ -4846,6 +4846,9 @@ var beepbox;
             this._onMousePressed = function (event) {
                 event.preventDefault();
                 _this._mouseDown = true;
+                var boundingRect = _this._svg.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 if (_this._doc.channel == 3)
                     return;
                 _this._updatePreview();
@@ -4857,7 +4860,7 @@ var beepbox;
             this._onTouchPressed = function (event) {
                 event.preventDefault();
                 _this._mouseDown = true;
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = event.touches[0].clientX - boundingRect.left;
                 _this._mouseY = event.touches[0].clientY - boundingRect.top;
                 if (_this._doc.channel == 3)
@@ -4869,7 +4872,7 @@ var beepbox;
                 }
             };
             this._onMouseMoved = function (event) {
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
                 _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 _this._onCursorMoved();
@@ -4878,7 +4881,7 @@ var beepbox;
                 if (!_this._mouseDown)
                     return;
                 event.preventDefault();
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = event.touches[0].clientX - boundingRect.left;
                 _this._mouseY = event.touches[0].clientY - boundingRect.top;
                 _this._onCursorMoved();
@@ -4905,8 +4908,19 @@ var beepbox;
             };
             this._doc.watch(this._documentChanged);
             this._documentChanged();
-            this._octaveHeight = (this._editorHeight - this._rootHeight) / this._octaveCount;
-            this._barHeight = (this._octaveHeight * 3 + this._rootHeight);
+            this._svg.appendChild(this._handle);
+            for (var i = 0; i <= this._octaveCount; i++) {
+                this._svg.appendChild(beepbox.svgElement("rect", { fill: "#886644", x: 0, y: i * this._octaveHeight, width: this._editorWidth, height: this._notchHeight }));
+            }
+            this._svg.appendChild(this._handleHighlight);
+            this._svg.appendChild(this._upHighlight);
+            this._svg.appendChild(this._downHighlight);
+            var center = this._editorWidth * 0.5;
+            var base = 20;
+            var tip = 9;
+            var arrowWidth = 6;
+            this._upHighlight.setAttribute("d", "M " + center + " " + tip + " L " + (center + arrowWidth) + " " + base + " L " + (center - arrowWidth) + " " + base + " z");
+            this._downHighlight.setAttribute("d", "M " + center + " " + (this._editorHeight - tip) + " L " + (center + arrowWidth) + " " + (this._editorHeight - base) + " L " + (center - arrowWidth) + " " + (this._editorHeight - base) + " z");
             this.container.addEventListener("mousedown", this._onMousePressed);
             document.addEventListener("mousemove", this._onMouseMoved);
             document.addEventListener("mouseup", this._onCursorReleased);
@@ -4943,49 +4957,29 @@ var beepbox;
             this._updatePreview();
         };
         OctaveScrollBar.prototype._updatePreview = function () {
-            this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
-            if (this._doc.channel == 3)
-                return;
-            if (!this._mouseOver || this._mouseDown)
-                return;
-            var center = this._editorWidth * 0.5;
-            var base = 20;
-            var tip = 9;
-            var arrowWidth = 6;
-            if (this._mouseY < this._barBottom - this._barHeight) {
-                this._previewGraphics.fillStyle = "#ffffff";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.moveTo(center, tip);
-                this._previewGraphics.lineTo(center + arrowWidth, base);
-                this._previewGraphics.lineTo(center - arrowWidth, base);
-                this._previewGraphics.lineTo(center, tip);
-                this._previewGraphics.fill();
-            }
-            else if (this._mouseY > this._barBottom) {
-                this._previewGraphics.fillStyle = "#ffffff";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.moveTo(center, this._editorHeight - tip);
-                this._previewGraphics.lineTo(center + arrowWidth, this._editorHeight - base);
-                this._previewGraphics.lineTo(center - arrowWidth, this._editorHeight - base);
-                this._previewGraphics.lineTo(center, this._editorHeight - tip);
-                this._previewGraphics.fill();
-            }
-            else {
-                this._previewGraphics.lineWidth = 2;
-                this._previewGraphics.strokeStyle = "#ffffff";
-                this._previewGraphics.strokeRect(1, this._barBottom, this._editorWidth - 2, -this._barHeight);
-            }
-        };
-        OctaveScrollBar.prototype._render = function () {
-            this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
-            if (this._doc.channel != 3) {
-                this._graphics.fillStyle = "#444444";
-                this._graphics.fillRect(2, this._barBottom, this._editorWidth - 4, -this._barHeight);
-                for (var i = 0; i <= this._octaveCount; i++) {
-                    this._graphics.fillStyle = "#886644";
-                    this._graphics.fillRect(0, i * this._octaveHeight, this._editorWidth, this._rootHeight);
+            var showHighlight = this._mouseOver && !this._mouseDown;
+            var showUpHighlight = false;
+            var showDownHighlight = false;
+            var showHandleHighlight = false;
+            if (showHighlight) {
+                if (this._mouseY < this._barBottom - this._barHeight) {
+                    showUpHighlight = true;
+                }
+                else if (this._mouseY > this._barBottom) {
+                    showDownHighlight = true;
+                }
+                else {
+                    showHandleHighlight = true;
                 }
             }
+            this._upHighlight.style.visibility = showUpHighlight ? "visible" : "hidden";
+            this._downHighlight.style.visibility = showDownHighlight ? "visible" : "hidden";
+            this._handleHighlight.style.visibility = showHandleHighlight ? "visible" : "hidden";
+            this._handleHighlight.setAttribute("y", "" + (this._barBottom - this._barHeight));
+        };
+        OctaveScrollBar.prototype._render = function () {
+            this._svg.style.visibility = (this._doc.channel == 3) ? "hidden" : "visible";
+            this._handle.setAttribute("y", "" + (this._barBottom - this._barHeight));
             this._updatePreview();
         };
         return OctaveScrollBar;
