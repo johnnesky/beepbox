@@ -41,8 +41,8 @@ module beepbox {
 		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
 		private readonly _editorWidth: number = 512;
 		
-		private _mouseX: number;
-		private _mouseY: number;
+		private _mouseX: number = 0;
+		private _mouseY: number = 0;
 		private _pattern: BarPattern;
 		private _mouseOver: boolean = false;
 		private _digits: string = "";
@@ -170,15 +170,20 @@ module beepbox {
 		}
 		
 		private _onMouseOver = (event: MouseEvent): void => {
+			if (this._mouseOver) return;
 			this._mouseOver = true;
 		}
 		
 		private _onMouseOut = (event: MouseEvent): void => {
+			if (!this._mouseOver) return;
 			this._mouseOver = false;
 		}
 		
 		private _onMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, this._mouseY / this._channelHeight)));
 			const bar: number = Math.floor(Math.min(this._doc.song.bars-1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
 			if (this._doc.channel == channel && this._doc.bar == bar) {

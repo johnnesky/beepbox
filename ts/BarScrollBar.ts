@@ -46,8 +46,8 @@ module beepbox {
 		
 		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 20px; overflow: hidden; position: relative;"}, [this._svg]);
 		
-		private _mouseX: number;
-		private _mouseY: number;
+		private _mouseX: number = 0;
+		private _mouseY: number = 0;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _dragging: boolean = false;
