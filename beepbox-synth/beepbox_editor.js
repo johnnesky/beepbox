@@ -1979,6 +1979,17 @@ var beepbox;
             return element("select", attributes, children);
         }
         html.select = select;
+        function option(value, display, selected, disabled) {
+            if (selected === void 0) { selected = false; }
+            if (disabled === void 0) { disabled = false; }
+            var o = document.createElement("option");
+            o.value = value;
+            o.selected = selected;
+            o.disabled = disabled;
+            o.appendChild(text(display));
+            return o;
+        }
+        html.option = option;
         function canvas(attributes) {
             return element("canvas", attributes);
         }
@@ -4669,11 +4680,18 @@ var beepbox;
             this._mouseOver = false;
             this._dragging = false;
             this._renderedNotchCount = -1;
+            this._renderedBarPos = -1;
             this._onMouseOver = function (event) {
+                if (_this._mouseOver)
+                    return;
                 _this._mouseOver = true;
+                _this._updatePreview();
             };
             this._onMouseOut = function (event) {
+                if (!_this._mouseOver)
+                    return;
                 _this._mouseOver = false;
+                _this._updatePreview();
             };
             this._onMousePressed = function (event) {
                 event.preventDefault();
@@ -4776,7 +4794,8 @@ var beepbox;
                     }
                 }
             }
-            this._updatePreview();
+            if (this._mouseOver)
+                this._updatePreview();
         };
         BarScrollBar.prototype._updatePreview = function () {
             var showHighlight = this._mouseOver && !this._mouseDown;
@@ -4797,13 +4816,10 @@ var beepbox;
             this._leftHighlight.style.visibility = showleftHighlight ? "visible" : "hidden";
             this._rightHighlight.style.visibility = showRightHighlight ? "visible" : "hidden";
             this._handleHighlight.style.visibility = showHandleHighlight ? "visible" : "hidden";
-            this._handleHighlight.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
-            this._handleHighlight.setAttribute("width", "" + (this._barWidth * 16));
         };
         BarScrollBar.prototype._render = function () {
-            this._handle.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
-            this._handle.setAttribute("width", "" + (this._barWidth * 16));
-            if (this._renderedNotchCount != this._doc.song.bars) {
+            var resized = this._renderedNotchCount != this._doc.song.bars;
+            if (resized) {
                 this._renderedNotchCount = this._doc.song.bars;
                 while (this._notches.firstChild)
                     this._notches.removeChild(this._notches.firstChild);
@@ -4811,6 +4827,13 @@ var beepbox;
                     var lineHeight = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
                     this._notches.appendChild(beepbox.svgElement("rect", { fill: "#444444", x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2 }));
                 }
+            }
+            if (resized || this._renderedBarPos != this._doc.barScrollPos) {
+                this._renderedBarPos = this._doc.barScrollPos;
+                this._handle.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
+                this._handle.setAttribute("width", "" + (this._barWidth * 16));
+                this._handleHighlight.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
+                this._handleHighlight.setAttribute("width", "" + (this._barWidth * 16));
             }
             this._updatePreview();
         };
@@ -4840,11 +4863,18 @@ var beepbox;
             this._mouseDown = false;
             this._mouseOver = false;
             this._dragging = false;
+            this._renderedBarBottom = -1;
             this._onMouseOver = function (event) {
+                if (_this._mouseOver)
+                    return;
                 _this._mouseOver = true;
+                _this._updatePreview();
             };
             this._onMouseOut = function (event) {
+                if (!_this._mouseOver)
+                    return;
                 _this._mouseOver = false;
+                _this._updatePreview();
             };
             this._onMousePressed = function (event) {
                 event.preventDefault();
@@ -4957,7 +4987,8 @@ var beepbox;
                     }
                 }
             }
-            this._updatePreview();
+            if (this._mouseOver)
+                this._updatePreview();
         };
         OctaveScrollBar.prototype._updatePreview = function () {
             var showHighlight = this._mouseOver && !this._mouseDown;
@@ -4978,11 +5009,14 @@ var beepbox;
             this._upHighlight.style.visibility = showUpHighlight ? "visible" : "hidden";
             this._downHighlight.style.visibility = showDownHighlight ? "visible" : "hidden";
             this._handleHighlight.style.visibility = showHandleHighlight ? "visible" : "hidden";
-            this._handleHighlight.setAttribute("y", "" + (this._barBottom - this._barHeight));
         };
         OctaveScrollBar.prototype._render = function () {
             this._svg.style.visibility = (this._doc.channel == 3) ? "hidden" : "visible";
-            this._handle.setAttribute("y", "" + (this._barBottom - this._barHeight));
+            if (this._renderedBarBottom != this._barBottom) {
+                this._renderedBarBottom = this._barBottom;
+                this._handle.setAttribute("y", "" + (this._barBottom - this._barHeight));
+                this._handleHighlight.setAttribute("y", "" + (this._barBottom - this._barHeight));
+            }
             this._updatePreview();
         };
         return OctaveScrollBar;
@@ -5943,21 +5977,17 @@ var beepbox;
 "use strict";
 var beepbox;
 (function (beepbox) {
-    var button = beepbox.html.button, div = beepbox.html.div, span = beepbox.html.span, select = beepbox.html.select, canvas = beepbox.html.canvas, input = beepbox.html.input, text = beepbox.html.text;
-    function BuildOptions(items) {
-        var result = "";
-        for (var i = 0; i < items.length; i++) {
-            result = result + '<option value="' + items[i] + '">' + items[i] + '</option>';
+    var button = beepbox.html.button, div = beepbox.html.div, span = beepbox.html.span, select = beepbox.html.select, option = beepbox.html.option, input = beepbox.html.input, text = beepbox.html.text;
+    function buildOptions(menu, items) {
+        for (var _i = 0, items_1 = items; _i < items_1.length; _i++) {
+            var item = items_1[_i];
+            menu.appendChild(option(item, item, false, false));
         }
-        return result;
+        return menu;
     }
-    function BuildOptionsWithTitle(items, title) {
-        var result = "";
-        result = result + '<option value="' + title + '" selected="selected" disabled="disabled">' + title + '</option>';
-        for (var i = 0; i < items.length; i++) {
-            result = result + '<option value="' + items[i][1] + '">' + items[i][0] + '</option>';
-        }
-        return result;
+    function setSelectedIndex(menu, index) {
+        if (menu.selectedIndex != index)
+            menu.selectedIndex = index;
     }
     var SongEditor = (function () {
         function SongEditor(_doc) {
@@ -5966,19 +5996,6 @@ var beepbox;
             this.promptVisible = false;
             this._width = 700;
             this._height = 645;
-            this._waveNames = BuildOptions(beepbox.Music.waveNames);
-            this._drumNames = BuildOptions(beepbox.Music.drumNames);
-            this._editCommands = [
-                ["Undo (Z)", "undo"],
-                ["Redo (Y)", "redo"],
-                ["Copy Pattern (C)", "copy"],
-                ["Paste Pattern (V)", "paste"],
-                ["Shift Notes Up (+)", "transposeUp"],
-                ["Shift Notes Down (-)", "transposeDown"],
-                ["Custom song size...", "duration"],
-                ["Import JSON...", "import"],
-                ["Clean Slate", "clean"],
-            ];
             this._patternEditor = new beepbox.PatternEditor(this._doc);
             this._trackEditor = new beepbox.TrackEditor(this._doc, this);
             this._loopEditor = new beepbox.LoopEditor(this._doc);
@@ -6002,24 +6019,42 @@ var beepbox;
             ]);
             this._playButton = button({ style: "width: 75px; margin: 0px", type: "button" }, [text("Play")]);
             this._volumeSlider = input({ className: "beepBoxSlider", style: "width: 101px; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1" });
-            this._editButton = select({ style: "width:100%; margin: 5px 0;" });
-            this._optionsButton = select({ style: "width:100%; margin: 5px 0;" }, [text("Preferences Menu")]);
+            this._editButton = select({ style: "width:100%; margin: 5px 0;" }, [
+                option("", "Edit Menu", true, true),
+                option("undo", "Undo (Z)", false, false),
+                option("redo", "Redo (Y)", false, false),
+                option("copy", "Copy Pattern (C)", false, false),
+                option("paste", "Paste Pattern (V)", false, false),
+                option("transposeUp", "Shift Notes Up (+)", false, false),
+                option("transposeDown", "Shift Notes Down (-)", false, false),
+                option("duration", "Custom song size...", false, false),
+                option("import", "Import JSON...", false, false),
+                option("clean", "Clean Slate", false, false),
+            ]);
+            this._optionsButton = select({ style: "width:100%; margin: 5px 0;" }, [
+                option("", "Preferences Menu", true, true),
+                option("showLetters", "Show Piano", false, false),
+                option("showFifth", "Highlight 'Fifth' Notes", false, false),
+                option("showChannels", "Show All Channels", false, false),
+                option("showScrollBar", "Octave Scroll Bar", false, false),
+            ]);
             this._exportButton = button({ style: "width:100%; margin: 5px 0;", type: "button" }, [text("Export")]);
-            this._scaleDropDown = select({ style: "width:90px;" });
-            this._keyDropDown = select({ style: "width:90px;" });
+            this._scaleDropDown = buildOptions(select({ style: "width:90px;" }), beepbox.Music.scaleNames);
+            this._keyDropDown = buildOptions(select({ style: "width:90px;" }), beepbox.Music.keyNames);
             this._tempoSlider = input({ className: "beepBoxSlider", style: "width: 90px; margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1" });
-            this._partDropDown = select({ style: "width:90px;" });
+            this._partDropDown = buildOptions(select({ style: "width:90px;" }), beepbox.Music.partNames);
             this._patternSettingsLabel = div({ style: "visibility: hidden; width:100%; margin: 3px 0;" }, [text("Pattern Settings:")]);
             this._instrumentDropDown = select({ style: "width:120px;" });
             this._instrumentDropDownGroup = div({ className: "selectRow", styleasdf: "width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;" }, [text("Instrument: "), this._instrumentDropDown]);
             this._channelVolumeSlider = input({ className: "beepBoxSlider", style: "width: 120px; margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1" });
-            this._waveDropDown = select({ style: "width:120px;" });
-            this._attackDropDown = select({ style: "width:120px;" });
-            this._filterDropDown = select({ style: "width:120px;" });
+            this._waveNames = buildOptions(select({ style: "width:120px;" }), beepbox.Music.waveNames);
+            this._drumNames = buildOptions(select({ style: "width:120px;" }), beepbox.Music.drumNames);
+            this._attackDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.attackNames);
+            this._filterDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.filterNames);
             this._filterDropDownGroup = div({ className: "selectRow" }, [text("Filter: "), this._filterDropDown]);
-            this._chorusDropDown = select({ style: "width:120px;" });
+            this._chorusDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.chorusNames);
             this._chorusDropDownGroup = div({ className: "selectRow" }, [text("Chorus: "), this._chorusDropDown]);
-            this._effectDropDown = select({ style: "width:120px;" });
+            this._effectDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.effectNames);
             this._effectDropDownGroup = div({ className: "selectRow" }, [text("Effect: "), this._effectDropDown]);
             this._promptBackground = div({ style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; left: 0; display: none;" });
             this.mainLayer = div({ className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; display: flex; flex-direction: row; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;" }, [
@@ -6064,7 +6099,8 @@ var beepbox;
                     ]),
                     div({ className: "selectRow" }, [
                         text("Wave: "),
-                        this._waveDropDown,
+                        this._waveNames,
+                        this._drumNames,
                     ]),
                     div({ className: "selectRow" }, [
                         text("Envelope: "),
@@ -6084,44 +6120,55 @@ var beepbox;
             };
             this._onUpdated = function () {
                 var optionCommands = [
-                    [(_this._doc.showLetters ? "✓ " : "") + "Show Piano", "showLetters"],
-                    [(_this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes", "showFifth"],
-                    [(_this._doc.showChannels ? "✓ " : "") + "Show All Channels", "showChannels"],
-                    [(_this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar", "showScrollBar"],
+                    (_this._doc.showLetters ? "✓ " : "") + "Show Piano",
+                    (_this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes",
+                    (_this._doc.showChannels ? "✓ " : "") + "Show All Channels",
+                    (_this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
                 ];
-                _this._optionsButton.innerHTML = BuildOptionsWithTitle(optionCommands, "Preferences Menu");
-                _this._scaleDropDown.selectedIndex = _this._doc.song.scale;
-                _this._keyDropDown.selectedIndex = _this._doc.song.key;
+                for (var i = 0; i < optionCommands.length; i++) {
+                    var option_1 = _this._optionsButton.children[i + 1];
+                    if (option_1.innerText != optionCommands[i])
+                        option_1.innerText = optionCommands[i];
+                }
+                setSelectedIndex(_this._scaleDropDown, _this._doc.song.scale);
+                setSelectedIndex(_this._keyDropDown, _this._doc.song.key);
                 _this._tempoSlider.value = "" + _this._doc.song.tempo;
-                _this._partDropDown.selectedIndex = beepbox.Music.partCounts.indexOf(_this._doc.song.parts);
+                setSelectedIndex(_this._partDropDown, beepbox.Music.partCounts.indexOf(_this._doc.song.parts));
                 if (_this._doc.channel == 3) {
                     _this._filterDropDownGroup.style.visibility = "hidden";
                     _this._chorusDropDownGroup.style.visibility = "hidden";
                     _this._effectDropDownGroup.style.visibility = "hidden";
-                    _this._waveDropDown.innerHTML = _this._drumNames;
+                    _this._waveNames.style.display = "none";
+                    _this._drumNames.style.display = "inline-block";
                 }
                 else {
                     _this._filterDropDownGroup.style.visibility = "visible";
                     _this._chorusDropDownGroup.style.visibility = "visible";
                     _this._effectDropDownGroup.style.visibility = "visible";
-                    _this._waveDropDown.innerHTML = _this._waveNames;
+                    _this._waveNames.style.display = "inline-block";
+                    _this._drumNames.style.display = "none";
                 }
                 var pattern = _this._doc.getCurrentPattern();
                 _this._patternSettingsLabel.style.visibility = (_this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
                 _this._instrumentDropDownGroup.style.visibility = (_this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
-                var instrumentList = [];
-                for (var i = 0; i < _this._doc.song.instruments; i++) {
-                    instrumentList.push(i + 1);
+                if (_this._instrumentDropDown.children.length != _this._doc.song.instruments) {
+                    while (_this._instrumentDropDown.firstChild)
+                        _this._instrumentDropDown.removeChild(_this._instrumentDropDown.firstChild);
+                    var instrumentList = [];
+                    for (var i = 0; i < _this._doc.song.instruments; i++) {
+                        instrumentList.push(i + 1);
+                    }
+                    buildOptions(_this._instrumentDropDown, instrumentList);
                 }
-                _this._instrumentDropDown.innerHTML = BuildOptions(instrumentList);
                 var instrument = _this._doc.getCurrentInstrument();
-                _this._waveDropDown.selectedIndex = _this._doc.song.instrumentWaves[_this._doc.channel][instrument];
-                _this._filterDropDown.selectedIndex = _this._doc.song.instrumentFilters[_this._doc.channel][instrument];
-                _this._attackDropDown.selectedIndex = _this._doc.song.instrumentAttacks[_this._doc.channel][instrument];
-                _this._effectDropDown.selectedIndex = _this._doc.song.instrumentEffects[_this._doc.channel][instrument];
-                _this._chorusDropDown.selectedIndex = _this._doc.song.instrumentChorus[_this._doc.channel][instrument];
+                setSelectedIndex(_this._waveNames, _this._doc.song.instrumentWaves[_this._doc.channel][instrument]);
+                setSelectedIndex(_this._drumNames, _this._doc.song.instrumentWaves[_this._doc.channel][instrument]);
+                setSelectedIndex(_this._filterDropDown, _this._doc.song.instrumentFilters[_this._doc.channel][instrument]);
+                setSelectedIndex(_this._attackDropDown, _this._doc.song.instrumentAttacks[_this._doc.channel][instrument]);
+                setSelectedIndex(_this._effectDropDown, _this._doc.song.instrumentEffects[_this._doc.channel][instrument]);
+                setSelectedIndex(_this._chorusDropDown, _this._doc.song.instrumentChorus[_this._doc.channel][instrument]);
                 _this._channelVolumeSlider.value = -_this._doc.song.instrumentVolumes[_this._doc.channel][instrument] + "";
-                _this._instrumentDropDown.selectedIndex = instrument;
+                setSelectedIndex(_this._instrumentDropDown, instrument);
                 _this._piano.container.style.display = _this._doc.showLetters ? "block" : "none";
                 _this._octaveScrollBar.container.style.display = _this._doc.showScrollBar ? "block" : "none";
                 _this._barScrollBar.container.style.display = _this._doc.song.bars > 16 ? "block" : "none";
@@ -6137,10 +6184,12 @@ var beepbox;
                 _this._trackEditor.container.style.height = String(trackHeight) + "px";
                 _this._volumeSlider.value = String(_this._doc.volume);
                 if (_this._doc.synth.playing) {
-                    _this._playButton.innerHTML = "Pause";
+                    if (_this._playButton.innerText != "Pause")
+                        _this._playButton.innerText = "Pause";
                 }
                 else {
-                    _this._playButton.innerHTML = "Play";
+                    if (_this._playButton.innerText != "Play")
+                        _this._playButton.innerText = "Play";
                 }
             };
             this._onKeyPressed = function (event) {
@@ -6236,7 +6285,10 @@ var beepbox;
                 _this._doc.history.record(new beepbox.ChangeParts(_this._doc, beepbox.Music.partCounts[_this._partDropDown.selectedIndex]));
             };
             this._onSetWave = function () {
-                _this._doc.history.record(new beepbox.ChangeWave(_this._doc, _this._waveDropDown.selectedIndex));
+                _this._doc.history.record(new beepbox.ChangeWave(_this._doc, _this._waveNames.selectedIndex));
+            };
+            this._onSetDrum = function () {
+                _this._doc.history.record(new beepbox.ChangeWave(_this._doc, _this._drumNames.selectedIndex));
             };
             this._onSetFilter = function () {
                 _this._doc.history.record(new beepbox.ChangeFilter(_this._doc, _this._filterDropDown.selectedIndex));
@@ -6309,14 +6361,6 @@ var beepbox;
                 _this._doc.changed();
                 _this._doc.savePreferences();
             };
-            this._editButton.innerHTML = BuildOptionsWithTitle(this._editCommands, "Edit Menu");
-            this._scaleDropDown.innerHTML = BuildOptions(beepbox.Music.scaleNames);
-            this._keyDropDown.innerHTML = BuildOptions(beepbox.Music.keyNames);
-            this._partDropDown.innerHTML = BuildOptions(beepbox.Music.partNames);
-            this._filterDropDown.innerHTML = BuildOptions(beepbox.Music.filterNames);
-            this._attackDropDown.innerHTML = BuildOptions(beepbox.Music.attackNames);
-            this._effectDropDown.innerHTML = BuildOptions(beepbox.Music.effectNames);
-            this._chorusDropDown.innerHTML = BuildOptions(beepbox.Music.chorusNames);
             this._doc.watch(this._onUpdated);
             this._onUpdated();
             this._editButton.addEventListener("change", this._editMenuHandler);
@@ -6327,7 +6371,8 @@ var beepbox;
             this._partDropDown.addEventListener("change", this._onSetParts);
             this._instrumentDropDown.addEventListener("change", this._onSetInstrument);
             this._channelVolumeSlider.addEventListener("input", this._onSetVolume);
-            this._waveDropDown.addEventListener("change", this._onSetWave);
+            this._waveNames.addEventListener("change", this._onSetWave);
+            this._drumNames.addEventListener("change", this._onSetDrum);
             this._attackDropDown.addEventListener("change", this._onSetAttack);
             this._filterDropDown.addEventListener("change", this._onSetFilter);
             this._chorusDropDown.addEventListener("change", this._onSetChorus);
@@ -6394,7 +6439,7 @@ var beepbox;
     beepbox.SongEditor = SongEditor;
     var styleSheet = document.createElement('style');
     styleSheet.type = "text/css";
-    styleSheet.appendChild(document.createTextNode("\n.beepboxEditor div {\n\tmargin: 0;\n\tpadding: 0;\n}\n\n.beepboxEditor canvas {\n\toverflow: hidden;\n\tposition: absolute;\n\tdisplay: block;\n}\n\n.beepboxEditor .selectRow {\n\twidth:100%;\n\tcolor: #bbbbbb;\n\tmargin: 0;\n\tline-height: 27px;\n\tdisplay: flex;\n\tflex-direction: row;\n\talign-items: center;\n\tjustify-content: space-between;\n}\n\n.editor-right-side {\n\twidth: 182px;\n\theight: 645px;\n\tfont-size: 12px;\n\tdisplay: flex;\n\tflex-direction: column;\n}\n\n.editor-right-side > * {\n\tflex-shrink: 0;\n}\n\n/* slider style designed with http://danielstern.ca/range.css/ */\ninput[type=range].beepBoxSlider {\n\t-webkit-appearance: none;\n\twidth: 100%;\n\theight: 18px;\n\tmargin: 4px 0;\n\tbackground-color: black;\n}\ninput[type=range].beepBoxSlider:focus {\n\toutline: none;\n}\ninput[type=range].beepBoxSlider::-webkit-slider-runnable-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-webkit-slider-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\t-webkit-appearance: none;\n\tmargin-top: -5px;\n}\ninput[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {\n\tbackground: #d6d6d6;\n}\ninput[type=range].beepBoxSlider::-moz-range-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-moz-range-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n}\ninput[type=range].beepBoxSlider::-ms-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: transparent;\n\tborder-color: transparent;\n\tcolor: transparent;\n}\ninput[type=range].beepBoxSlider::-ms-fill-lower {\n\tbackground: #8a8a8a;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-fill-upper {\n\tbackground: #b0b0b0;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\theight: 6px;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-lower {\n\tbackground: #b0b0b0;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-upper {\n\tbackground: #d6d6d6;\n}\n"));
+    styleSheet.appendChild(document.createTextNode("\n/* For some reason the default focus outline effect causes the entire editor to get repainted when any part of it changes. Border doesn't do that. */\n.beepboxEditor {\n\tmargin: -3px;\n\tborder: 3px solid transparent;\n}\n.beepboxEditor:focus {\n\toutline: none;\n\tborder-color: #555555;\n}\n\n.beepboxEditor div {\n\tmargin: 0;\n\tpadding: 0;\n}\n\n.beepboxEditor canvas {\n\toverflow: hidden;\n\tposition: absolute;\n\tdisplay: block;\n}\n\n.beepboxEditor .selectRow {\n\twidth:100%;\n\tcolor: #bbbbbb;\n\tmargin: 0;\n\tline-height: 27px;\n\tdisplay: flex;\n\tflex-direction: row;\n\talign-items: center;\n\tjustify-content: space-between;\n}\n\n.editor-right-side {\n\twidth: 182px;\n\theight: 645px;\n\tfont-size: 12px;\n\tdisplay: flex;\n\tflex-direction: column;\n}\n\n.editor-right-side > * {\n\tflex-shrink: 0;\n}\n\n/* slider style designed with http://danielstern.ca/range.css/ */\ninput[type=range].beepBoxSlider {\n\t-webkit-appearance: none;\n\twidth: 100%;\n\theight: 18px;\n\tmargin: 4px 0;\n\tbackground-color: black;\n}\ninput[type=range].beepBoxSlider:focus {\n\toutline: none;\n}\ninput[type=range].beepBoxSlider::-webkit-slider-runnable-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-webkit-slider-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\t-webkit-appearance: none;\n\tmargin-top: -5px;\n}\ninput[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {\n\tbackground: #d6d6d6;\n}\ninput[type=range].beepBoxSlider::-moz-range-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #b0b0b0;\n\tborder-radius: 0.1px;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n}\ninput[type=range].beepBoxSlider::-moz-range-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n}\ninput[type=range].beepBoxSlider::-ms-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: transparent;\n\tborder-color: transparent;\n\tcolor: transparent;\n}\ninput[type=range].beepBoxSlider::-ms-fill-lower {\n\tbackground: #8a8a8a;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-fill-upper {\n\tbackground: #b0b0b0;\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\tborder-radius: 0.2px;\n}\ninput[type=range].beepBoxSlider::-ms-thumb {\n\tbox-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5);\n\tborder: 1px solid rgba(0, 0, 0, 0.5);\n\theight: 14px;\n\twidth: 14px;\n\tborder-radius: 8px;\n\tbackground: #f0f0f0;\n\tcursor: pointer;\n\theight: 6px;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-lower {\n\tbackground: #b0b0b0;\n}\ninput[type=range].beepBoxSlider:focus::-ms-fill-upper {\n\tbackground: #d6d6d6;\n}\n"));
     document.head.appendChild(styleSheet);
     var prevHash = "**blank**";
     var doc = new beepbox.SongDocument();

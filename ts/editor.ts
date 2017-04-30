@@ -50,6 +50,14 @@ module beepbox {
 		export function select(attributes?: Record<string, string | number>, children?: Node[]): HTMLSelectElement {
 			return <HTMLSelectElement> element("select", attributes, children);
 		}
+		export function option(value, display, selected = false, disabled = false): HTMLOptionElement {
+			const o = <HTMLOptionElement> document.createElement("option");
+			o.value = value;
+			o.selected = selected;
+			o.disabled = disabled;
+			o.appendChild(text(display));
+			return o;
+		}
 		export function canvas(attributes?: Record<string, string | number>): HTMLCanvasElement {
 			return <HTMLCanvasElement> element("canvas", attributes);
 		}
