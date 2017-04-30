@@ -63,8 +63,8 @@ module beepbox {
 		
 		private _noteHeight: number;
 		private _noteCount: number;
-		private _mouseX: number;
-		private _mouseY: number;
+		private _mouseX: number = 0;
+		private _mouseY: number = 0;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _cursorNote: number;
@@ -108,16 +108,23 @@ module beepbox {
 		}
 		
 		private _onMouseOver = (event: MouseEvent): void => {
+			if (this._mouseOver) return;
 			this._mouseOver = true;
+			this._updatePreview();
 		}
 		
 		private _onMouseOut = (event: MouseEvent): void => {
+			if (!this._mouseOver) return;
 			this._mouseOver = false;
+			this._updatePreview();
 		}
 		
 		private _onMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
 			this._mouseDown = true;
+			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._doc.synth.pianoPressed = true;
 			this._updatePreview();
 		}

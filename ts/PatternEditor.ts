@@ -72,8 +72,8 @@ module beepbox {
 		private _partWidth: number;
 		private _noteHeight: number;
 		private _noteCount: number;
-		private _mouseX: number;
-		private _mouseY: number;
+		private _mouseX: number = 0;
+		private _mouseY: number = 0;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _mouseDragging: boolean = false;
@@ -348,16 +348,21 @@ module beepbox {
 		}
 		
 		private _onMouseOver = (event: MouseEvent): void => {
+			if (this._mouseOver) return;
 			this._mouseOver = true;
 		}
 		
 		private _onMouseOut = (event: MouseEvent): void => {
+			if (!this._mouseOver) return;
 			this._mouseOver = false;
 		}
 		
 		private _onMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
 			if (this._pattern == null) return;
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
+    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._mouseDown = true;
 			this._mouseXStart = this._mouseX;
 			this._mouseYStart = this._mouseY;

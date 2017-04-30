@@ -42,8 +42,8 @@ module beepbox {
 		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight});
 		public readonly container: HTMLDivElement = html.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow: hidden; position: relative;"}, [this._svg]);
 		
-		private _mouseX: number;
-		private _mouseY: number;
+		private _mouseX: number = 0;
+		private _mouseY: number = 0;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _dragging: boolean = false;

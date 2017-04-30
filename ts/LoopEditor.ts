@@ -31,20 +31,12 @@ interface Cursor {
 }
 
 interface Endpoints {
-	start?: number;
-	length?: number;
+	start: number;
+	length: number;
 }
 
 module beepbox {
 	export class LoopEditor {
-		private readonly _canvas: HTMLCanvasElement = html.canvas({width: "512", height: "20"});
-		private readonly _preview: HTMLCanvasElement = html.canvas({width: "512", height: "20"});
-		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 20px; position: relative;"}, [
-			this._canvas,
-			this._preview,
-		]);
-		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
-		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
 		private readonly _barWidth: number = 32;
 		private readonly _editorWidth: number = 512;
 		private readonly _editorHeight: number = 20;
@@ -52,12 +44,26 @@ module beepbox {
 		private readonly _endMode:     number = 1;
 		private readonly _bothMode:    number = 2;
 		
+		private readonly _loop = <SVGPathElement> svgElement("path", {fill: "none", stroke: "#7744ff", "stroke-width": 4});
+		private readonly _highlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
+		
+		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight}, [
+			this._loop,
+			this._highlight,
+		]);
+		
+		private readonly _canvas: HTMLCanvasElement = html.canvas({width: "512", height: "20"});
+		private readonly _preview: HTMLCanvasElement = html.canvas({width: "512", height: "20"});
+		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 20px; position: relative;"}, [this._svg]);
+		
 		private _change: ChangeLoop;
 		private _cursor: Cursor = {};
-		private _mouseX: number;
-		private _mouseY: number;
+		private _mouseX: number = 0;
+		private _mouseY: number = 0;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
+		private _renderedLoopStart: number = -1;
+		private _renderedLoopStop: number = -1;
 		
 		constructor(private _doc: SongDocument) {
 			this._updateCursorStatus();
@@ -106,16 +112,23 @@ module beepbox {
 		}
 		
 		private _onMouseOver = (event: MouseEvent): void => {
+			if (this._mouseOver) return;
 			this._mouseOver = true;
+			this._updatePreview();
 		}
 		
 		private _onMouseOut = (event: MouseEvent): void => {
+			if (!this._mouseOver) return;
 			this._mouseOver = false;
+			this._updatePreview();
 		}
 		
 		private _onMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
 			this._mouseDown = true;
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
+    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updateCursorStatus();
 			this._updatePreview();
 			this._onMouseMoved(event);
@@ -124,7 +137,7 @@ module beepbox {
 		private _onTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
 			this._mouseDown = true;
-			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
 			this._updateCursorStatus();
@@ -133,7 +146,7 @@ module beepbox {
 		}
 		
 		private _onMouseMoved = (event: MouseEvent): void => {
-			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 		    this._onCursorMoved();
@@ -142,7 +155,7 @@ module beepbox {
 		private _onTouchMoved = (event: TouchEvent): void => {
 			if (!this._mouseDown) return;
 			event.preventDefault();
-			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
 		    this._onCursorMoved();
@@ -208,32 +221,32 @@ module beepbox {
 		}
 		
 		private _updatePreview(): void {
-			this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
-			if (!this._mouseOver || this._mouseDown) return;
+			const showHighlight: boolean = this._mouseOver && !this._mouseDown;
+			this._highlight.style.visibility = showHighlight ? "visible" : "hidden";
 			
-			const radius: number = this._editorHeight / 2;
-			if (this._cursor.mode == this._startMode) {
-				this._previewGraphics.fillStyle = "#ffffff";
-				this._previewGraphics.beginPath();
-				this._previewGraphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-				this._previewGraphics.fill();
-			} else if (this._cursor.mode == this._endMode) {
-				this._previewGraphics.fillStyle = "#ffffff";
-				this._previewGraphics.beginPath();
-				this._previewGraphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-				this._previewGraphics.fill();
-			} else if (this._cursor.mode == this._bothMode) {
-				const endPoints: Endpoints = this._findEndPoints(this._cursor.startBar);
-				this._previewGraphics.fillStyle = "#ffffff";
-				this._previewGraphics.beginPath();
-				this._previewGraphics.arc((endPoints.start - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-				this._previewGraphics.fill();
-				this._previewGraphics.fillStyle = "#ffffff";
-				this._previewGraphics.fillRect((endPoints.start - this._doc.barScrollPos) * this._barWidth + radius, 4, endPoints.length * this._barWidth - this._editorHeight, this._editorHeight - 8);
-				this._previewGraphics.fillStyle = "#ffffff";
-				this._previewGraphics.beginPath();
-				this._previewGraphics.arc((endPoints.start + endPoints.length - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-				this._previewGraphics.fill();
+			if (showHighlight) {
+				const radius: number = this._editorHeight / 2;
+				
+				let highlightStart: number = (this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth;
+				let highlightStop: number = (this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth;
+				if (this._cursor.mode == this._startMode) {
+					highlightStop = (this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius * 2;
+				} else if (this._cursor.mode == this._endMode) {
+					highlightStart = (this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius * 2;
+				} else {
+					const endPoints: Endpoints = this._findEndPoints(this._cursor.startBar);
+					highlightStart = (endPoints.start - this._doc.barScrollPos) * this._barWidth;
+					highlightStop = (endPoints.start + endPoints.length - this._doc.barScrollPos) * this._barWidth;
+				}
+				
+				this._highlight.setAttribute("d", 
+					`M ${highlightStart + radius} ${4} ` +
+					`L ${highlightStop - radius} ${4} ` +
+					`A ${radius - 4} ${radius - 4} ${0} ${0} ${1} ${highlightStop - radius} ${this._editorHeight - 4} ` +
+					`L ${highlightStart + radius} ${this._editorHeight - 4} ` +
+					`A ${radius - 4} ${radius - 4} ${0} ${0} ${1} ${highlightStart + radius} ${4} ` +
+					`z`
+				);
 			}
 		}
 		
@@ -242,25 +255,22 @@ module beepbox {
 		}
 		
 		private _render(): void {
-			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
-			
 			const radius: number = this._editorHeight / 2;
-			this._graphics.fillStyle = "#7744ff";
-			this._graphics.beginPath();
-			this._graphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius, 0, 2 * Math.PI);
-			this._graphics.fill();
-			this._graphics.fillRect((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, 0, this._doc.song.loopLength * this._barWidth - this._editorHeight, this._editorHeight);
-			this._graphics.beginPath();
-			this._graphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius, 0, 2 * Math.PI);
-			this._graphics.fill();
-			this._graphics.fillStyle = "#000000";
-			this._graphics.beginPath();
-			this._graphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-			this._graphics.fill();
-			this._graphics.fillRect((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, 4, this._doc.song.loopLength * this._barWidth - this._editorHeight, this._editorHeight - 8);
-			this._graphics.beginPath();
-			this._graphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-			this._graphics.fill();
+			const loopStart: number = (this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth;
+			const loopStop: number = (this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth;
+			
+			if (this._renderedLoopStart != loopStart || this._renderedLoopStop != loopStop) {
+				this._renderedLoopStart = loopStart;
+				this._renderedLoopStop = loopStop;
+				this._loop.setAttribute("d", 
+					`M ${loopStart + radius} ${2} ` +
+					`L ${loopStop - radius} ${2} ` +
+					`A ${radius - 2} ${radius - 2} ${0} ${0} ${1} ${loopStop - radius} ${this._editorHeight - 2} ` +
+					`L ${loopStart + radius} ${this._editorHeight - 2} ` +
+					`A ${radius - 2} ${radius - 2} ${0} ${0} ${1} ${loopStart + radius} ${2} ` +
+					`z`
+				);
+			}
 			
 			this._updatePreview();
 		}

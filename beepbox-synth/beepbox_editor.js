@@ -3525,6 +3525,8 @@ var beepbox;
                 [new beepbox.TonePin(0, 0, 3), new beepbox.TonePin(0, 2, 0)],
             ];
             this._editorHeight = 481;
+            this._mouseX = 0;
+            this._mouseY = 0;
             this._mouseDown = false;
             this._mouseOver = false;
             this._mouseDragging = false;
@@ -3559,15 +3561,22 @@ var beepbox;
                 window.requestAnimationFrame(_this._onEnterFrame);
             };
             this._onMouseOver = function (event) {
+                if (_this._mouseOver)
+                    return;
                 _this._mouseOver = true;
             };
             this._onMouseOut = function (event) {
+                if (!_this._mouseOver)
+                    return;
                 _this._mouseOver = false;
             };
             this._onMousePressed = function (event) {
                 event.preventDefault();
                 if (_this._pattern == null)
                     return;
+                var boundingRect = _this._svg.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 _this._mouseDown = true;
                 _this._mouseXStart = _this._mouseX;
                 _this._mouseYStart = _this._mouseY;
@@ -4216,6 +4225,8 @@ var beepbox;
             this._graphics = this._canvas.getContext("2d");
             this._previewGraphics = this._preview.getContext("2d");
             this._editorWidth = 512;
+            this._mouseX = 0;
+            this._mouseY = 0;
             this._mouseOver = false;
             this._digits = "";
             this._editorHeight = 128;
@@ -4225,13 +4236,20 @@ var beepbox;
                 window.requestAnimationFrame(_this._onEnterFrame);
             };
             this._onMouseOver = function (event) {
+                if (_this._mouseOver)
+                    return;
                 _this._mouseOver = true;
             };
             this._onMouseOut = function (event) {
+                if (!_this._mouseOver)
+                    return;
                 _this._mouseOver = false;
             };
             this._onMousePressed = function (event) {
                 event.preventDefault();
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 var channel = Math.floor(Math.min(beepbox.Music.numChannels - 1, Math.max(0, _this._mouseY / _this._channelHeight)));
                 var bar = Math.floor(Math.min(_this._doc.song.bars - 1, Math.max(0, _this._mouseX / _this._barWidth + _this._doc.barScrollPos)));
                 if (_this._doc.channel == channel && _this._doc.bar == bar) {
@@ -4435,32 +4453,46 @@ var beepbox;
         function LoopEditor(_doc) {
             var _this = this;
             this._doc = _doc;
-            this._canvas = beepbox.html.canvas({ width: "512", height: "20" });
-            this._preview = beepbox.html.canvas({ width: "512", height: "20" });
-            this.container = beepbox.html.div({ style: "width: 512px; height: 20px; position: relative;" }, [
-                this._canvas,
-                this._preview,
-            ]);
-            this._graphics = this._canvas.getContext("2d");
-            this._previewGraphics = this._preview.getContext("2d");
             this._barWidth = 32;
             this._editorWidth = 512;
             this._editorHeight = 20;
             this._startMode = 0;
             this._endMode = 1;
             this._bothMode = 2;
+            this._loop = beepbox.svgElement("path", { fill: "none", stroke: "#7744ff", "stroke-width": 4 });
+            this._highlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
+            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight }, [
+                this._loop,
+                this._highlight,
+            ]);
+            this._canvas = beepbox.html.canvas({ width: "512", height: "20" });
+            this._preview = beepbox.html.canvas({ width: "512", height: "20" });
+            this.container = beepbox.html.div({ style: "width: 512px; height: 20px; position: relative;" }, [this._svg]);
             this._cursor = {};
+            this._mouseX = 0;
+            this._mouseY = 0;
             this._mouseDown = false;
             this._mouseOver = false;
+            this._renderedLoopStart = -1;
+            this._renderedLoopStop = -1;
             this._onMouseOver = function (event) {
+                if (_this._mouseOver)
+                    return;
                 _this._mouseOver = true;
+                _this._updatePreview();
             };
             this._onMouseOut = function (event) {
+                if (!_this._mouseOver)
+                    return;
                 _this._mouseOver = false;
+                _this._updatePreview();
             };
             this._onMousePressed = function (event) {
                 event.preventDefault();
                 _this._mouseDown = true;
+                var boundingRect = _this._svg.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 _this._updateCursorStatus();
                 _this._updatePreview();
                 _this._onMouseMoved(event);
@@ -4468,7 +4500,7 @@ var beepbox;
             this._onTouchPressed = function (event) {
                 event.preventDefault();
                 _this._mouseDown = true;
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = event.touches[0].clientX - boundingRect.left;
                 _this._mouseY = event.touches[0].clientY - boundingRect.top;
                 _this._updateCursorStatus();
@@ -4476,7 +4508,7 @@ var beepbox;
                 _this._onTouchMoved(event);
             };
             this._onMouseMoved = function (event) {
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
                 _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 _this._onCursorMoved();
@@ -4485,7 +4517,7 @@ var beepbox;
                 if (!_this._mouseDown)
                     return;
                 event.preventDefault();
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = event.touches[0].clientX - boundingRect.left;
                 _this._mouseY = event.touches[0].clientY - boundingRect.top;
                 _this._onCursorMoved();
@@ -4599,55 +4631,45 @@ var beepbox;
             }
         };
         LoopEditor.prototype._updatePreview = function () {
-            this._previewGraphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
-            if (!this._mouseOver || this._mouseDown)
-                return;
-            var radius = this._editorHeight / 2;
-            if (this._cursor.mode == this._startMode) {
-                this._previewGraphics.fillStyle = "#ffffff";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-                this._previewGraphics.fill();
-            }
-            else if (this._cursor.mode == this._endMode) {
-                this._previewGraphics.fillStyle = "#ffffff";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-                this._previewGraphics.fill();
-            }
-            else if (this._cursor.mode == this._bothMode) {
-                var endPoints = this._findEndPoints(this._cursor.startBar);
-                this._previewGraphics.fillStyle = "#ffffff";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.arc((endPoints.start - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-                this._previewGraphics.fill();
-                this._previewGraphics.fillStyle = "#ffffff";
-                this._previewGraphics.fillRect((endPoints.start - this._doc.barScrollPos) * this._barWidth + radius, 4, endPoints.length * this._barWidth - this._editorHeight, this._editorHeight - 8);
-                this._previewGraphics.fillStyle = "#ffffff";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.arc((endPoints.start + endPoints.length - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-                this._previewGraphics.fill();
+            var showHighlight = this._mouseOver && !this._mouseDown;
+            this._highlight.style.visibility = showHighlight ? "visible" : "hidden";
+            if (showHighlight) {
+                var radius = this._editorHeight / 2;
+                var highlightStart = (this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth;
+                var highlightStop = (this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth;
+                if (this._cursor.mode == this._startMode) {
+                    highlightStop = (this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius * 2;
+                }
+                else if (this._cursor.mode == this._endMode) {
+                    highlightStart = (this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius * 2;
+                }
+                else {
+                    var endPoints = this._findEndPoints(this._cursor.startBar);
+                    highlightStart = (endPoints.start - this._doc.barScrollPos) * this._barWidth;
+                    highlightStop = (endPoints.start + endPoints.length - this._doc.barScrollPos) * this._barWidth;
+                }
+                this._highlight.setAttribute("d", "M " + (highlightStart + radius) + " " + 4 + " " +
+                    ("L " + (highlightStop - radius) + " " + 4 + " ") +
+                    ("A " + (radius - 4) + " " + (radius - 4) + " " + 0 + " " + 0 + " " + 1 + " " + (highlightStop - radius) + " " + (this._editorHeight - 4) + " ") +
+                    ("L " + (highlightStart + radius) + " " + (this._editorHeight - 4) + " ") +
+                    ("A " + (radius - 4) + " " + (radius - 4) + " " + 0 + " " + 0 + " " + 1 + " " + (highlightStart + radius) + " " + 4 + " ") +
+                    "z");
             }
         };
         LoopEditor.prototype._render = function () {
-            this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
             var radius = this._editorHeight / 2;
-            this._graphics.fillStyle = "#7744ff";
-            this._graphics.beginPath();
-            this._graphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius, 0, 2 * Math.PI);
-            this._graphics.fill();
-            this._graphics.fillRect((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, 0, this._doc.song.loopLength * this._barWidth - this._editorHeight, this._editorHeight);
-            this._graphics.beginPath();
-            this._graphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius, 0, 2 * Math.PI);
-            this._graphics.fill();
-            this._graphics.fillStyle = "#000000";
-            this._graphics.beginPath();
-            this._graphics.arc((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, radius, radius - 4, 0, 2 * Math.PI);
-            this._graphics.fill();
-            this._graphics.fillRect((this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius, 4, this._doc.song.loopLength * this._barWidth - this._editorHeight, this._editorHeight - 8);
-            this._graphics.beginPath();
-            this._graphics.arc((this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius, radius, radius - 4, 0, 2 * Math.PI);
-            this._graphics.fill();
+            var loopStart = (this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth;
+            var loopStop = (this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth;
+            if (this._renderedLoopStart != loopStart || this._renderedLoopStop != loopStop) {
+                this._renderedLoopStart = loopStart;
+                this._renderedLoopStop = loopStop;
+                this._loop.setAttribute("d", "M " + (loopStart + radius) + " " + 2 + " " +
+                    ("L " + (loopStop - radius) + " " + 2 + " ") +
+                    ("A " + (radius - 2) + " " + (radius - 2) + " " + 0 + " " + 0 + " " + 1 + " " + (loopStop - radius) + " " + (this._editorHeight - 2) + " ") +
+                    ("L " + (loopStart + radius) + " " + (this._editorHeight - 2) + " ") +
+                    ("A " + (radius - 2) + " " + (radius - 2) + " " + 0 + " " + 0 + " " + 1 + " " + (loopStart + radius) + " " + 2 + " ") +
+                    "z");
+            }
             this._updatePreview();
         };
         return LoopEditor;
@@ -4676,6 +4698,8 @@ var beepbox;
                 this._rightHighlight,
             ]);
             this.container = beepbox.html.div({ style: "width: 512px; height: 20px; overflow: hidden; position: relative;" }, [this._svg]);
+            this._mouseX = 0;
+            this._mouseY = 0;
             this._mouseDown = false;
             this._mouseOver = false;
             this._dragging = false;
@@ -4860,6 +4884,8 @@ var beepbox;
             this._downHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
             this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight });
             this.container = beepbox.html.div({ id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow: hidden; position: relative;" }, [this._svg]);
+            this._mouseX = 0;
+            this._mouseY = 0;
             this._mouseDown = false;
             this._mouseOver = false;
             this._dragging = false;
@@ -5061,17 +5087,28 @@ var beepbox;
             this._previewGraphics = this._preview.getContext("2d");
             this._editorWidth = 32;
             this._editorHeight = 481;
+            this._mouseX = 0;
+            this._mouseY = 0;
             this._mouseDown = false;
             this._mouseOver = false;
             this._onMouseOver = function (event) {
+                if (_this._mouseOver)
+                    return;
                 _this._mouseOver = true;
+                _this._updatePreview();
             };
             this._onMouseOut = function (event) {
+                if (!_this._mouseOver)
+                    return;
                 _this._mouseOver = false;
+                _this._updatePreview();
             };
             this._onMousePressed = function (event) {
                 event.preventDefault();
                 _this._mouseDown = true;
+                var boundingRect = _this._canvas.getBoundingClientRect();
+                _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+                _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 _this._doc.synth.pianoPressed = true;
                 _this._updatePreview();
             };
