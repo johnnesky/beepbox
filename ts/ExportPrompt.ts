@@ -33,6 +33,14 @@ interface ArrayBufferConstructor {
 module beepbox {
 	const {button, div, span, input, text} = html;
 	
+	const save = function(blob, name) {
+		const anchor: HTMLAnchorElement = window.document.createElement("a");
+		anchor.href = window.URL.createObjectURL(blob);
+		anchor.download = name;
+		anchor.dispatchEvent(new MouseEvent("click"));
+		setTimeout(function() { window.URL.revokeObjectURL(anchor.href); }, 60000);
+	}
+	
 	// Polyfill for ArrayBuffer.transfer.
 	///@TODO: Check if ArrayBuffer.transfer is widely implemented.
 	if (!ArrayBuffer.transfer) {
@@ -96,7 +104,7 @@ module beepbox {
 		private readonly _exportJsonButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .json file")]);
 		private readonly _cancelButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Cancel")]);
 		
-		public readonly container: HTMLDivElement = div({style: "position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;"}, [
+		public readonly container: HTMLDivElement = div({style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;"}, [
 			div({style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
 				div({style: "font-size: 30px"}, [text("Export Options")]),
 				div({style: "height: 20px;"}),
@@ -260,7 +268,7 @@ module beepbox {
 			}
 			
 			const blob = new Blob([arrayBuffer], {type: "audio/wav"});
-			saveAs(blob, this._fileName.value.trim() + ".wav");
+			save(blob, this._fileName.value.trim() + ".wav");
 			
 			this._onClose();
 		}
@@ -662,7 +670,7 @@ module beepbox {
 			arrayBuffer = ArrayBuffer.transfer(arrayBuffer, fileSize);
 			
 			const blob = new Blob([arrayBuffer], {type: "audio/midi"});
-			saveAs(blob, this._fileName.value.trim() + ".midi");
+			save(blob, this._fileName.value.trim() + ".midi");
 			
 			this._onClose();
 		}
@@ -671,11 +679,8 @@ module beepbox {
 			const jsonObject: Object = this._doc.song.toJsonObject(this._enableIntro.checked, Number(this._loopDropDown.value), this._enableOutro.checked);
 			const jsonString: string = JSON.stringify(jsonObject, null, '\t');
 			const blob = new Blob([jsonString], {type: "application/json"});
-			saveAs(blob, this._fileName.value.trim() + ".json");
+			save(blob, this._fileName.value.trim() + ".json");
 			this._onClose();
 		}
 	}
 }
-
-/*! @source https://github.com/eligrey/FileSaver.js/blob/master/FileSaver.min.js */
-var saveAs=saveAs||function(e){"use strict";if(typeof e==="undefined"||typeof navigator!=="undefined"&&/MSIE [1-9]\./.test(navigator.userAgent)){return}let t=e.document,n=function(){return e.URL||e.webkitURL||e},r=t.createElementNS("http://www.w3.org/1999/xhtml","a"),o="download"in r,i=function(e){let t=new MouseEvent("click");e.dispatchEvent(t)},a=/constructor/i.test(e.HTMLElement),f=/CriOS\/[\d]+/.test(navigator.userAgent),u=function(t){(e.setImmediate||e.setTimeout)(function(){throw t},0)},d="application/octet-stream",s=1e3*40,c=function(e){let t=function(){if(typeof e==="string"){n().revokeObjectURL(e)}else{e.remove()}};setTimeout(t,s)},l=function(e,t,n){t=[].concat(t);let r=t.length;while(r--){let o=e["on"+t[r]];if(typeof o==="function"){try{o.call(e,n||e)}catch(i){u(i)}}}},p=function(e){if(/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(e.type)){return new Blob([String.fromCharCode(65279),e],{type:e.type})}return e},v=function(t,u,s){if(!s){t=p(t)}let v=this,w=t.type,m=w===d,y,h=function(){l(v,"writestart progress write writeend".split(" "))},S=function(){if((f||m&&a)&&e.FileReader){let r=new FileReader;r.onloadend=function(){let t=f?r.result:r.result.replace(/^data:[^;]*;/,"data:attachment/file;");let n=e.open(t,"_blank");if(!n)e.location.href=t;t=undefined;v.readyState=v.DONE;h()};r.readAsDataURL(t);v.readyState=v.INIT;return}if(!y){y=n().createObjectURL(t)}if(m){e.location.href=y}else{let o=e.open(y,"_blank");if(!o){e.location.href=y}}v.readyState=v.DONE;h();c(y)};v.readyState=v.INIT;if(o){y=n().createObjectURL(t);setTimeout(function(){r.href=y;r.download=u;i(r);h();c(y);v.readyState=v.DONE});return}S()},w=v.prototype,m=function(e,t,n){return new v(e,t||e.name||"download",n)};if(typeof navigator!=="undefined"&&navigator.msSaveOrOpenBlob){return function(e,t,n){t=t||e.name||"download";if(!n){e=p(e)}return navigator.msSaveOrOpenBlob(e,t)}}w.abort=function(){};w.readyState=w.INIT=0;w.WRITING=1;w.DONE=2;w.error=w.onwritestart=w.onprogress=w.onwrite=w.onabort=w.onerror=w.onwriteend=null;return m}(typeof self!=="undefined"&&self||typeof window!=="undefined"&&window||this.content);if(typeof module!=="undefined"&&module.exports){module.exports.saveAs=saveAs}else if(typeof define!=="undefined"&&define!==null&&define.amd!==null){define([],function(){return saveAs})}

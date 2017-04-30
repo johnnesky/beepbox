@@ -33,7 +33,7 @@ module beepbox {
 		private readonly _fileInput: HTMLInputElement = input({style: "width:200px;", type: "file", accept: ".json,application/json"});
 		private readonly _cancelButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Cancel")]);
 		
-		public readonly container: HTMLDivElement = div({style: "position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;"}, [
+		public readonly container: HTMLDivElement = div({style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;"}, [
 			div({style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
 				div({style: "font-size: 30px"}, [text("Import")]),
 				div({style: "height: 30px;"}),

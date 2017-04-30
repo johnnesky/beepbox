@@ -119,7 +119,7 @@ module beepbox {
 		private readonly _chorusDropDownGroup: HTMLElement = div({className: "selectRow"}, [text("Chorus: "), this._chorusDropDown]);
 		private readonly _effectDropDown: HTMLSelectElement = select({style: "width:120px;"});
 		private readonly _effectDropDownGroup: HTMLElement = div({className: "selectRow"}, [text("Effect: "), this._effectDropDown]);
-		private readonly _promptBackground: HTMLDivElement = div({style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;"});
+		private readonly _promptBackground: HTMLDivElement = div({style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; left: 0; display: none;"});
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; display: flex; flex-direction: row; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;"}, [
 			this._editorBox,
 			div({style: "width: 6px; height: 645px;"}),

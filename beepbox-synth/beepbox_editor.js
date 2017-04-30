@@ -5181,7 +5181,7 @@ var beepbox;
             this._instrumentsStepper = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "10", step: "1" });
             this._okayButton = button({ style: "width:125px;", type: "button" }, [text("Okay")]);
             this._cancelButton = button({ style: "width:125px;", type: "button" }, [text("Cancel")]);
-            this.container = div({ style: "position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;" }, [
+            this.container = div({ style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;" }, [
                 div({ style: "text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
                     div({ style: "font-size: 30px" }, [text("Custom Song Size")]),
                     div({ style: "height: 30px;" }),
@@ -5288,6 +5288,13 @@ var beepbox;
 var beepbox;
 (function (beepbox) {
     var button = beepbox.html.button, div = beepbox.html.div, span = beepbox.html.span, input = beepbox.html.input, text = beepbox.html.text;
+    var save = function (blob, name) {
+        var anchor = window.document.createElement("a");
+        anchor.href = window.URL.createObjectURL(blob);
+        anchor.download = name;
+        anchor.dispatchEvent(new MouseEvent("click"));
+        setTimeout(function () { window.URL.revokeObjectURL(anchor.href); }, 60000);
+    };
     if (!ArrayBuffer.transfer) {
         ArrayBuffer.transfer = function (source, length) {
             source = Object(source);
@@ -5351,7 +5358,7 @@ var beepbox;
             this._exportMidiButton = button({ style: "width:200px;", type: "button" }, [text("Export to .midi file")]);
             this._exportJsonButton = button({ style: "width:200px;", type: "button" }, [text("Export to .json file")]);
             this._cancelButton = button({ style: "width:200px;", type: "button" }, [text("Cancel")]);
-            this.container = div({ style: "position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;" }, [
+            this.container = div({ style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;" }, [
                 div({ style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
                     div({ style: "font-size: 30px" }, [text("Export Options")]),
                     div({ style: "height: 20px;" }),
@@ -5481,7 +5488,7 @@ var beepbox;
                     }
                 }
                 var blob = new Blob([arrayBuffer], { type: "audio/wav" });
-                saveAs(blob, _this._fileName.value.trim() + ".wav");
+                save(blob, _this._fileName.value.trim() + ".wav");
                 _this._onClose();
             };
             this._onExportToMidi = function () {
@@ -5836,14 +5843,14 @@ var beepbox;
                 }
                 arrayBuffer = ArrayBuffer.transfer(arrayBuffer, fileSize);
                 var blob = new Blob([arrayBuffer], { type: "audio/midi" });
-                saveAs(blob, _this._fileName.value.trim() + ".midi");
+                save(blob, _this._fileName.value.trim() + ".midi");
                 _this._onClose();
             };
             this._onExportToJson = function () {
                 var jsonObject = _this._doc.song.toJsonObject(_this._enableIntro.checked, Number(_this._loopDropDown.value), _this._enableOutro.checked);
                 var jsonString = JSON.stringify(jsonObject, null, '\t');
                 var blob = new Blob([jsonString], { type: "application/json" });
-                saveAs(blob, _this._fileName.value.trim() + ".json");
+                save(blob, _this._fileName.value.trim() + ".json");
                 _this._onClose();
             };
             this._loopDropDown.value = "1";
@@ -5888,70 +5895,6 @@ var beepbox;
     }());
     beepbox.ExportPrompt = ExportPrompt;
 })(beepbox || (beepbox = {}));
-var saveAs = saveAs || function (e) {
-    "use strict";
-    if (typeof e === "undefined" || typeof navigator !== "undefined" && /MSIE [1-9]\./.test(navigator.userAgent)) {
-        return;
-    }
-    var t = e.document, n = function () { return e.URL || e.webkitURL || e; }, r = t.createElementNS("http://www.w3.org/1999/xhtml", "a"), o = "download" in r, i = function (e) { var t = new MouseEvent("click"); e.dispatchEvent(t); }, a = /constructor/i.test(e.HTMLElement), f = /CriOS\/[\d]+/.test(navigator.userAgent), u = function (t) { (e.setImmediate || e.setTimeout)(function () { throw t; }, 0); }, d = "application/octet-stream", s = 1e3 * 40, c = function (e) { var t = function () { if (typeof e === "string") {
-        n().revokeObjectURL(e);
-    }
-    else {
-        e.remove();
-    } }; setTimeout(t, s); }, l = function (e, t, n) { t = [].concat(t); var r = t.length; while (r--) {
-        var o_1 = e["on" + t[r]];
-        if (typeof o_1 === "function") {
-            try {
-                o_1.call(e, n || e);
-            }
-            catch (i) {
-                u(i);
-            }
-        }
-    } }, p = function (e) { if (/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(e.type)) {
-        return new Blob([String.fromCharCode(65279), e], { type: e.type });
-    } return e; }, v = function (t, u, s) { if (!s) {
-        t = p(t);
-    } var v = this, w = t.type, m = w === d, y, h = function () { l(v, "writestart progress write writeend".split(" ")); }, S = function () { if ((f || m && a) && e.FileReader) {
-        var r_1 = new FileReader;
-        r_1.onloadend = function () { var t = f ? r_1.result : r_1.result.replace(/^data:[^;]*;/, "data:attachment/file;"); var n = e.open(t, "_blank"); if (!n)
-            e.location.href = t; t = undefined; v.readyState = v.DONE; h(); };
-        r_1.readAsDataURL(t);
-        v.readyState = v.INIT;
-        return;
-    } if (!y) {
-        y = n().createObjectURL(t);
-    } if (m) {
-        e.location.href = y;
-    }
-    else {
-        var o_2 = e.open(y, "_blank");
-        if (!o_2) {
-            e.location.href = y;
-        }
-    } v.readyState = v.DONE; h(); c(y); }; v.readyState = v.INIT; if (o) {
-        y = n().createObjectURL(t);
-        setTimeout(function () { r.href = y; r.download = u; i(r); h(); c(y); v.readyState = v.DONE; });
-        return;
-    } S(); }, w = v.prototype, m = function (e, t, n) { return new v(e, t || e.name || "download", n); };
-    if (typeof navigator !== "undefined" && navigator.msSaveOrOpenBlob) {
-        return function (e, t, n) { t = t || e.name || "download"; if (!n) {
-            e = p(e);
-        } return navigator.msSaveOrOpenBlob(e, t); };
-    }
-    w.abort = function () { };
-    w.readyState = w.INIT = 0;
-    w.WRITING = 1;
-    w.DONE = 2;
-    w.error = w.onwritestart = w.onprogress = w.onwrite = w.onabort = w.onerror = w.onwriteend = null;
-    return m;
-}(typeof self !== "undefined" && self || typeof window !== "undefined" && window || this.content);
-if (typeof module !== "undefined" && module.exports) {
-    module.exports.saveAs = saveAs;
-}
-else if (typeof define !== "undefined" && define !== null && define.amd !== null) {
-    define([], function () { return saveAs; });
-}
 "use strict";
 var beepbox;
 (function (beepbox) {
@@ -5963,7 +5906,7 @@ var beepbox;
             this._songEditor = _songEditor;
             this._fileInput = input({ style: "width:200px;", type: "file", accept: ".json,application/json" });
             this._cancelButton = button({ style: "width:200px;", type: "button" }, [text("Cancel")]);
-            this.container = div({ style: "position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;" }, [
+            this.container = div({ style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;" }, [
                 div({ style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
                     div({ style: "font-size: 30px" }, [text("Import")]),
                     div({ style: "height: 30px;" }),
@@ -6078,7 +6021,7 @@ var beepbox;
             this._chorusDropDownGroup = div({ className: "selectRow" }, [text("Chorus: "), this._chorusDropDown]);
             this._effectDropDown = select({ style: "width:120px;" });
             this._effectDropDownGroup = div({ className: "selectRow" }, [text("Effect: "), this._effectDropDown]);
-            this._promptBackground = div({ style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; display: none;" });
+            this._promptBackground = div({ style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; left: 0; display: none;" });
             this.mainLayer = div({ className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; display: flex; flex-direction: row; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;" }, [
                 this._editorBox,
                 div({ style: "width: 6px; height: 645px;" }),
