@@ -50,6 +50,7 @@ module beepbox {
 		private _dragStart: number;
 		private _currentOctave: number;
 		private _barBottom: number;
+		private _renderedBarBottom: number = -1;
 		
 		constructor(private _doc: SongDocument) {
 			this._doc.watch(this._documentChanged);
@@ -86,11 +87,15 @@ module beepbox {
 		}
 		
 		private _onMouseOver = (event: MouseEvent): void => {
+			if (this._mouseOver) return;
 			this._mouseOver = true;
+			this._updatePreview();
 		}
 		
 		private _onMouseOut = (event: MouseEvent): void => {
+			if (!this._mouseOver) return;
 			this._mouseOver = false;
+			this._updatePreview();
 		}
 		
 		private _onMousePressed = (event: MouseEvent): void => {
@@ -160,7 +165,7 @@ module beepbox {
 				}
 			}
 			
-			this._updatePreview();
+			if (this._mouseOver) this._updatePreview();
 		}
 		
 		private _onCursorReleased = (event: Event): void => {
@@ -195,7 +200,6 @@ module beepbox {
 			this._upHighlight.style.visibility = showUpHighlight ? "visible" : "hidden";
 			this._downHighlight.style.visibility = showDownHighlight ? "visible" : "hidden";
 			this._handleHighlight.style.visibility = showHandleHighlight ? "visible" : "hidden";
-			this._handleHighlight.setAttribute("y", "" + (this._barBottom - this._barHeight));
 		}
 		
 		private _documentChanged = (): void => {
@@ -206,7 +210,11 @@ module beepbox {
 		
 		private _render(): void {
 			this._svg.style.visibility = (this._doc.channel == 3) ? "hidden" : "visible";
-			this._handle.setAttribute("y", "" + (this._barBottom - this._barHeight));
+			if (this._renderedBarBottom != this._barBottom) {
+				this._renderedBarBottom = this._barBottom;
+				this._handle.setAttribute("y", "" + (this._barBottom - this._barHeight));
+				this._handleHighlight.setAttribute("y", "" + (this._barBottom - this._barHeight));
+			}
 			this._updatePreview();
 		}
 	}

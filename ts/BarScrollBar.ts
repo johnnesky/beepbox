@@ -54,6 +54,7 @@ module beepbox {
 		private _dragStart: number;
 		private _barWidth: number;
 		private _renderedNotchCount: number = -1;
+		private _renderedBarPos: number = -1;
 		
 		constructor(private _doc: SongDocument) {
 			this._doc.watch(this._documentChanged);
@@ -79,11 +80,15 @@ module beepbox {
 		}
 		
 		private _onMouseOver = (event: MouseEvent): void => {
+			if (this._mouseOver) return;
 			this._mouseOver = true;
+			this._updatePreview();
 		}
 		
 		private _onMouseOut = (event: MouseEvent): void => {
+			if (!this._mouseOver) return;
 			this._mouseOver = false;
+			this._updatePreview();
 		}
 		
 		private _onMousePressed = (event: MouseEvent): void => {
@@ -149,7 +154,7 @@ module beepbox {
 					}
 				}
 			}
-			this._updatePreview();
+			if (this._mouseOver) this._updatePreview();
 		}
 		
 		private _onCursorReleased = (event: Event): void => {
@@ -186,8 +191,6 @@ module beepbox {
 			this._leftHighlight.style.visibility = showleftHighlight ? "visible" : "hidden";
 			this._rightHighlight.style.visibility = showRightHighlight ? "visible" : "hidden";
 			this._handleHighlight.style.visibility = showHandleHighlight ? "visible" : "hidden";
-			this._handleHighlight.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
-			this._handleHighlight.setAttribute("width", "" + (this._barWidth * 16));
 		}
 		
 		private _documentChanged = (): void => {
@@ -196,10 +199,8 @@ module beepbox {
 		}
 		
 		private _render(): void {
-			this._handle.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
-			this._handle.setAttribute("width", "" + (this._barWidth * 16));
-			
-			if (this._renderedNotchCount != this._doc.song.bars) {
+			const resized: boolean = this._renderedNotchCount != this._doc.song.bars;
+			if (resized) {
 				this._renderedNotchCount = this._doc.song.bars;
 				
 				while (this._notches.firstChild) this._notches.removeChild(this._notches.firstChild);
@@ -208,6 +209,14 @@ module beepbox {
 					const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
 					this._notches.appendChild(svgElement("rect", {fill: "#444444", x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2}));
 				}
+			}
+			
+			if (resized || this._renderedBarPos != this._doc.barScrollPos) {
+				this._renderedBarPos = this._doc.barScrollPos;
+				this._handle.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
+				this._handle.setAttribute("width", "" + (this._barWidth * 16));
+				this._handleHighlight.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
+				this._handleHighlight.setAttribute("width", "" + (this._barWidth * 16));
 			}
 			
 			this._updatePreview();

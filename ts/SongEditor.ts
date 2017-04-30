@@ -35,23 +35,17 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
-	const {button, div, span, select, canvas, input, text} = html;
+	const {button, div, span, select, option, input, text} = html;
 	
-	function BuildOptions(items: ReadonlyArray<string | number>): string {
-		let result: string = "";
-		for (let i: number = 0; i < items.length; i++) {
-			result = result + '<option value="' + items[i] + '">' + items[i] + '</option>';
+	function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
+		for (const item of items) {
+			menu.appendChild(option(item, item, false, false));
 		}
-		return result;
+		return menu;
 	}
 	
-	function BuildOptionsWithTitle(items: ReadonlyArray<ReadonlyArray<string>>, title: string): string {
-		let result: string = "";
-		result = result + '<option value="' + title + '" selected="selected" disabled="disabled">' + title + '</option>';
-		for (let i: number = 0; i < items.length; i++) {
-			result = result + '<option value="' + items[i][1] + '">' + items[i][0] + '</option>';
-		}
-		return result;
+	function setSelectedIndex(menu: HTMLSelectElement, index: number): void {
+		if (menu.selectedIndex != index) menu.selectedIndex = index;
 	}
 	
 	export class SongEditor {
@@ -64,19 +58,6 @@ module beepbox {
 		
 		private readonly _width: number = 700;
 		private readonly _height: number = 645;
-		private readonly _waveNames: string = BuildOptions(Music.waveNames);
-		private readonly _drumNames: string = BuildOptions(Music.drumNames);
-		private readonly _editCommands: ReadonlyArray<ReadonlyArray<string>> = [
-			[ "Undo (Z)", "undo" ],
-			[ "Redo (Y)", "redo" ],
-			[ "Copy Pattern (C)", "copy" ],
-			[ "Paste Pattern (V)", "paste" ],
-			[ "Shift Notes Up (+)", "transposeUp" ],
-			[ "Shift Notes Down (-)", "transposeDown" ],
-			[ "Custom song size...", "duration" ],
-			[ "Import JSON...", "import" ],
-			[ "Clean Slate", "clean" ],
-		];
 		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
 		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
 		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
@@ -100,24 +81,42 @@ module beepbox {
 		]);
 		private readonly _playButton: HTMLButtonElement = button({style: "width: 75px; margin: 0px", type: "button"}, [text("Play")]);
 		private readonly _volumeSlider: HTMLInputElement = input({className: "beepBoxSlider", style: "width: 101px; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1"});
-		private readonly _editButton: HTMLSelectElement = select({style: "width:100%; margin: 5px 0;"});
-		private readonly _optionsButton: HTMLSelectElement = select({style: "width:100%; margin: 5px 0;"}, [text("Preferences Menu")]);
+		private readonly _editButton: HTMLSelectElement = select({style: "width:100%; margin: 5px 0;"}, [
+			option("", "Edit Menu", true, true),
+			option("undo", "Undo (Z)", false, false),
+			option("redo", "Redo (Y)", false, false),
+			option("copy", "Copy Pattern (C)", false, false),
+			option("paste", "Paste Pattern (V)", false, false),
+			option("transposeUp", "Shift Notes Up (+)", false, false),
+			option("transposeDown", "Shift Notes Down (-)", false, false),
+			option("duration", "Custom song size...", false, false),
+			option("import", "Import JSON...", false, false),
+			option("clean", "Clean Slate", false, false),
+		]);
+		private readonly _optionsButton: HTMLSelectElement = select({style: "width:100%; margin: 5px 0;"}, [
+			option("", "Preferences Menu", true, true),
+			option("showLetters", "Show Piano", false, false),
+			option("showFifth", "Highlight 'Fifth' Notes", false, false),
+			option("showChannels", "Show All Channels", false, false),
+			option("showScrollBar", "Octave Scroll Bar", false, false),
+		]);
 		private readonly _exportButton: HTMLButtonElement = button({style: "width:100%; margin: 5px 0;", type: "button"}, [text("Export")]);
-		private readonly _scaleDropDown: HTMLSelectElement = select({style: "width:90px;"});
-		private readonly _keyDropDown: HTMLSelectElement = select({style: "width:90px;"});
+		private readonly _scaleDropDown: HTMLSelectElement = buildOptions(select({style: "width:90px;"}), Music.scaleNames);
+		private readonly _keyDropDown: HTMLSelectElement = buildOptions(select({style: "width:90px;"}), Music.keyNames);
 		private readonly _tempoSlider: HTMLInputElement = input({className: "beepBoxSlider", style: "width: 90px; margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1"});
-		private readonly _partDropDown: HTMLSelectElement = select({style: "width:90px;"});
+		private readonly _partDropDown: HTMLSelectElement = buildOptions(select({style: "width:90px;"}), Music.partNames);
 		private readonly _patternSettingsLabel: HTMLDivElement = div({style: "visibility: hidden; width:100%; margin: 3px 0;"}, [text("Pattern Settings:")]);
 		private readonly _instrumentDropDown: HTMLSelectElement = select({style: "width:120px;"});
 		private readonly _instrumentDropDownGroup: HTMLDivElement = div({className: "selectRow", styleasdf: "width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;"}, [text("Instrument: "), this._instrumentDropDown]);
 		private readonly _channelVolumeSlider: HTMLInputElement = input({className: "beepBoxSlider", style: "width: 120px; margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"});
-		private readonly _waveDropDown: HTMLSelectElement = select({style: "width:120px;"});
-		private readonly _attackDropDown: HTMLSelectElement = select({style: "width:120px;"});
-		private readonly _filterDropDown: HTMLSelectElement = select({style: "width:120px;"});
+		private readonly _waveNames: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.waveNames);
+		private readonly _drumNames: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.drumNames);
+		private readonly _attackDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.attackNames);
+		private readonly _filterDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.filterNames);
 		private readonly _filterDropDownGroup: HTMLDivElement = div({className: "selectRow"}, [text("Filter: "), this._filterDropDown]);
-		private readonly _chorusDropDown: HTMLSelectElement = select({style: "width:120px;"});
+		private readonly _chorusDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.chorusNames);
 		private readonly _chorusDropDownGroup: HTMLElement = div({className: "selectRow"}, [text("Chorus: "), this._chorusDropDown]);
-		private readonly _effectDropDown: HTMLSelectElement = select({style: "width:120px;"});
+		private readonly _effectDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.effectNames);
 		private readonly _effectDropDownGroup: HTMLElement = div({className: "selectRow"}, [text("Effect: "), this._effectDropDown]);
 		private readonly _promptBackground: HTMLDivElement = div({style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; left: 0; display: none;"});
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; display: flex; flex-direction: row; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;"}, [
@@ -162,7 +161,8 @@ module beepbox {
 				]),
 				div({className: "selectRow"}, [
 					text("Wave: "),
-					this._waveDropDown,
+					this._waveNames,
+					this._drumNames,
 				]),
 				div({className: "selectRow"}, [
 					text("Envelope: "),
@@ -182,15 +182,6 @@ module beepbox {
 		private _wasPlaying: boolean;
 		
 		constructor(private _doc: SongDocument) {
-			this._editButton.innerHTML  = BuildOptionsWithTitle(this._editCommands, "Edit Menu");
-			this._scaleDropDown.innerHTML  = BuildOptions(Music.scaleNames);
-			this._keyDropDown.innerHTML    = BuildOptions(Music.keyNames);
-			this._partDropDown.innerHTML   = BuildOptions(Music.partNames);
-			this._filterDropDown.innerHTML = BuildOptions(Music.filterNames);
-			this._attackDropDown.innerHTML = BuildOptions(Music.attackNames);
-			this._effectDropDown.innerHTML = BuildOptions(Music.effectNames);
-			this._chorusDropDown.innerHTML = BuildOptions(Music.chorusNames);
-			
 			this._doc.watch(this._onUpdated);
 			this._onUpdated();
 			
@@ -202,7 +193,8 @@ module beepbox {
 			this._partDropDown.addEventListener("change", this._onSetParts);
 			this._instrumentDropDown.addEventListener("change", this._onSetInstrument);
 			this._channelVolumeSlider.addEventListener("input", this._onSetVolume);
-			this._waveDropDown.addEventListener("change", this._onSetWave);
+			this._waveNames.addEventListener("change", this._onSetWave);
+			this._drumNames.addEventListener("change", this._onSetDrum);
 			this._attackDropDown.addEventListener("change", this._onSetAttack);
 			this._filterDropDown.addEventListener("change", this._onSetFilter);
 			this._chorusDropDown.addEventListener("change", this._onSetChorus);
@@ -238,48 +230,57 @@ module beepbox {
 		}
 		
 		private _onUpdated = (): void => {
-			const optionCommands: string[][] = [
-				[ (this._doc.showLetters ? "✓ " : "") + "Show Piano", "showLetters" ],
-				[ (this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes", "showFifth" ],
-				[ (this._doc.showChannels ? "✓ " : "") + "Show All Channels", "showChannels" ],
-				[ (this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar", "showScrollBar" ],
+			const optionCommands: ReadonlyArray<string> = [
+				(this._doc.showLetters ? "✓ " : "") + "Show Piano",
+				(this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes",
+				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
+				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
 			]
-			this._optionsButton.innerHTML  = BuildOptionsWithTitle(optionCommands, "Preferences Menu");
+			for (let i: number = 0; i < optionCommands.length; i++) {
+				const option: HTMLOptionElement = <HTMLOptionElement> this._optionsButton.children[i + 1];
+				if (option.innerText != optionCommands[i]) option.innerText = optionCommands[i];
+			}
 			
-			this._scaleDropDown.selectedIndex = this._doc.song.scale;
-			this._keyDropDown.selectedIndex = this._doc.song.key;
-			this._tempoSlider.value = ""+this._doc.song.tempo;
-			this._partDropDown.selectedIndex = Music.partCounts.indexOf(this._doc.song.parts);
+			setSelectedIndex(this._scaleDropDown, this._doc.song.scale);
+			setSelectedIndex(this._keyDropDown, this._doc.song.key);
+			this._tempoSlider.value = "" + this._doc.song.tempo;
+			setSelectedIndex(this._partDropDown, Music.partCounts.indexOf(this._doc.song.parts));
 			if (this._doc.channel == 3) {
 				this._filterDropDownGroup.style.visibility = "hidden";
 				this._chorusDropDownGroup.style.visibility = "hidden";
 				this._effectDropDownGroup.style.visibility = "hidden";
-				this._waveDropDown.innerHTML = this._drumNames;
+				this._waveNames.style.display = "none";
+				this._drumNames.style.display = "inline-block";
 			} else {
 				this._filterDropDownGroup.style.visibility = "visible";
 				this._chorusDropDownGroup.style.visibility = "visible";
 				this._effectDropDownGroup.style.visibility = "visible";
-				this._waveDropDown.innerHTML = this._waveNames;
+				this._waveNames.style.display = "inline-block";
+				this._drumNames.style.display = "none";
 			}
 			
 			const pattern: BarPattern | null = this._doc.getCurrentPattern();
 			
 			this._patternSettingsLabel.style.visibility    = (this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
 			this._instrumentDropDownGroup.style.visibility = (this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
-			const instrumentList: number[] = [];
-			for (let i: number = 0; i < this._doc.song.instruments; i++) {
-				instrumentList.push(i + 1);
+			if (this._instrumentDropDown.children.length != this._doc.song.instruments) {
+				while (this._instrumentDropDown.firstChild) this._instrumentDropDown.removeChild(this._instrumentDropDown.firstChild);
+				const instrumentList: number[] = [];
+				for (let i: number = 0; i < this._doc.song.instruments; i++) {
+					instrumentList.push(i + 1);
+				}
+				buildOptions(this._instrumentDropDown, instrumentList);
 			}
-			this._instrumentDropDown.innerHTML = BuildOptions(instrumentList);
 			
 			const instrument: number = this._doc.getCurrentInstrument();
-			this._waveDropDown.selectedIndex   = this._doc.song.instrumentWaves[this._doc.channel][instrument];
-			this._filterDropDown.selectedIndex = this._doc.song.instrumentFilters[this._doc.channel][instrument];
-			this._attackDropDown.selectedIndex = this._doc.song.instrumentAttacks[this._doc.channel][instrument];
-			this._effectDropDown.selectedIndex = this._doc.song.instrumentEffects[this._doc.channel][instrument];
-			this._chorusDropDown.selectedIndex = this._doc.song.instrumentChorus[this._doc.channel][instrument];
+			setSelectedIndex(this._waveNames, this._doc.song.instrumentWaves[this._doc.channel][instrument]);
+			setSelectedIndex(this._drumNames, this._doc.song.instrumentWaves[this._doc.channel][instrument]);
+			setSelectedIndex(this._filterDropDown, this._doc.song.instrumentFilters[this._doc.channel][instrument]);
+			setSelectedIndex(this._attackDropDown, this._doc.song.instrumentAttacks[this._doc.channel][instrument]);
+			setSelectedIndex(this._effectDropDown, this._doc.song.instrumentEffects[this._doc.channel][instrument]);
+			setSelectedIndex(this._chorusDropDown, this._doc.song.instrumentChorus[this._doc.channel][instrument]);
 			this._channelVolumeSlider.value = -this._doc.song.instrumentVolumes[this._doc.channel][instrument]+"";
-			this._instrumentDropDown.selectedIndex = instrument;
+			setSelectedIndex(this._instrumentDropDown, instrument);
 			
 			//currentState = this._doc.showLetters ? (this._doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (this._doc.showScrollBar ? "showScrollBar" : "hideAll");
 			this._piano.container.style.display = this._doc.showLetters ? "block" : "none";
@@ -298,9 +299,9 @@ module beepbox {
 			this._volumeSlider.value = String(this._doc.volume);
 			
 			if (this._doc.synth.playing) {
-				this._playButton.innerHTML = "Pause";
+				if (this._playButton.innerText != "Pause") this._playButton.innerText = "Pause";
 			} else {
-				this._playButton.innerHTML = "Play";
+				if (this._playButton.innerText != "Play") this._playButton.innerText = "Play";
 			}
 		}
 		
@@ -439,7 +440,11 @@ module beepbox {
 		}
 		
 		private _onSetWave = (): void => {
-			this._doc.history.record(new ChangeWave(this._doc, this._waveDropDown.selectedIndex));
+			this._doc.history.record(new ChangeWave(this._doc, this._waveNames.selectedIndex));
+		}
+		
+		private _onSetDrum = (): void => {
+			this._doc.history.record(new ChangeWave(this._doc, this._drumNames.selectedIndex));
 		}
 		
 		private _onSetFilter = (): void => {
@@ -525,6 +530,16 @@ module beepbox {
 const styleSheet = document.createElement('style');
 styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode(`
+/* For some reason the default focus outline effect causes the entire editor to get repainted when any part of it changes. Border doesn't do that. */
+.beepboxEditor {
+	margin: -3px;
+	border: 3px solid transparent;
+}
+.beepboxEditor:focus {
+	outline: none;
+	border-color: #555555;
+}
+
 .beepboxEditor div {
 	margin: 0;
 	padding: 0;
