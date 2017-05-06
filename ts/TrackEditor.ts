@@ -27,20 +27,77 @@ SOFTWARE.
 "use strict";
 
 module beepbox {
-	export class TrackEditor {
-		private readonly _barWidth: number = 32;
-		private readonly _canvas: HTMLCanvasElement = html.canvas({width: "512", height: "128"});
-		private readonly _preview: HTMLCanvasElement = html.canvas({width: "32", height: "32"});
-		private readonly _playhead: HTMLElement = html.div({style: "width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;"});
-		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 128px; position: relative; overflow:hidden;"}, [
-			this._canvas,
-			this._preview,
-			this._playhead,
-		]);
-		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
-		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
-		private readonly _editorWidth: number = 512;
+	class Box {
+		private readonly _text: Text = html.text("1");
+		private readonly _label = <SVGTextElement> svgElement("text", {x: 16, y: 23, "font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red"}, [this._text]);
+		private readonly _rect = <SVGRectElement> svgElement("rect", {width: 30, height: 30, x: 1, y: 1});
+		public readonly container = <SVGSVGElement> svgElement("svg", undefined, [this._rect, this._label]);
+		private _renderedIndex: number = 1;
+		private _renderedDim: boolean = false;
+		private _renderedSelected: boolean = false;
+		constructor(channel: number, x: number, y: number) {
+			this.container.setAttribute("x", "" + (x * 32));
+			this.container.setAttribute("y", "" + (y * 32));
+			this._rect.setAttribute("fill", "#444444");
+			this._label.setAttribute("fill", SongEditor.channelColorsDim[y]);
+		}
 		
+		public setSquashed(squashed: boolean, y: number): void {
+			if (squashed) {
+				this.container.setAttribute("y", "" + (y * 27));
+				this._rect.setAttribute("height", "" + 25);
+				this._label.setAttribute("y", "" + 21);
+			} else {
+				this.container.setAttribute("y", "" + (y * 32));
+				this._rect.setAttribute("height", "" + 30);
+				this._label.setAttribute("y", "" + 23);
+			}
+		}
+		
+		public setIndex(index: number, dim: boolean, selected: boolean, y: number): void {
+			if (this._renderedIndex != index) {
+				if (!this._renderedSelected && ((index == 0) != (this._renderedIndex == 0))) {
+					this._rect.setAttribute("fill", (index == 0) ? "#000000" : "#444444");
+				}
+			
+				this._renderedIndex = index;
+				this._text.data = ""+index;
+			}
+			
+			if (this._renderedDim != dim) {
+				this._renderedDim = dim;
+				if (selected) {
+					this._label.setAttribute("fill", "#000000");
+				} else {
+					this._label.setAttribute("fill", dim ? SongEditor.channelColorsDim[y] : SongEditor.channelColorsBright[y]);
+				}
+			}
+			
+			if (this._renderedSelected != selected) {
+				this._renderedSelected = selected;
+				if (selected) {
+					this._rect.setAttribute("fill", SongEditor.channelColorsBright[y]);
+					this._label.setAttribute("fill", "#000000");
+				} else {
+					this._rect.setAttribute("fill", (this._renderedIndex == 0) ? "#000000" : "#444444");
+					this._label.setAttribute("fill", dim ? SongEditor.channelColorsDim[y] : SongEditor.channelColorsBright[y]);
+				}
+			}
+		}
+	}
+	
+	export class TrackEditor {
+		private readonly _editorWidth: number = 512;
+		private readonly _barWidth: number = 32;
+		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: 128});
+		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 128px; position: relative; overflow:hidden;"}, [this._svg]);
+		
+		private readonly _playhead = <SVGRectElement> svgElement("rect", {fill: "white", x: 0, y: 0, width: 4, height: 128});
+		private readonly _boxHighlight = <SVGRectElement> svgElement("rect", {fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
+		private readonly _upHighlight = <SVGPathElement> svgElement("path", {fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
+		private readonly _downHighlight = <SVGPathElement> svgElement("path", {fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
+		
+		private readonly _grid: Box[][] = [[], [], [], []];
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
 		private _pattern: BarPattern;
@@ -48,15 +105,24 @@ module beepbox {
 		private _digits: string = "";
 		private _editorHeight: number = 128;
 		private _channelHeight: number = 32;
+		private _renderedSquashed: boolean = false;
+		private _renderedPlayhead: number = -1;
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._pattern = this._doc.getCurrentPattern();
-			/*
-			this._graphics.mozImageSmoothingEnabled = false;
-			this._graphics.webkitImageSmoothingEnabled = false;
-			this._graphics.msImageSmoothingEnabled = false;
-			this._graphics.imageSmoothingEnabled = false;
-			*/
+			
+			for (let y: number = 0; y < Music.numChannels; y++) {
+				for (let x: number = 0; x < 16; x++) {
+					const box: Box = new Box(y, x, y);
+					this._svg.appendChild(box.container);
+					this._grid[y][x] = box;
+				}
+			}
+			
+			this._svg.appendChild(this._boxHighlight);
+			this._svg.appendChild(this._upHighlight);
+			this._svg.appendChild(this._downHighlight);
+			this._svg.appendChild(this._playhead);
 			
 			this._render();
 			this._doc.watch(this._documentChanged);
@@ -70,7 +136,11 @@ module beepbox {
 		}
 		
 		private _onEnterFrame = (timestamp: number): void => {
-			this._playhead.style.left = (this._barWidth * (this._doc.synth.playhead - this._doc.barScrollPos) - 2) + "px";
+			const playhead = (this._barWidth * (this._doc.synth.playhead - this._doc.barScrollPos) - 2);
+			if (this._renderedPlayhead != playhead) {
+				this._renderedPlayhead = playhead;
+				this._playhead.setAttribute("x", "" + playhead);
+			}
 			window.requestAnimationFrame(this._onEnterFrame);
 		}
 		
@@ -181,7 +251,7 @@ module beepbox {
 		
 		private _onMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
-			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, this._mouseY / this._channelHeight)));
@@ -196,7 +266,7 @@ module beepbox {
 		}
 		
 		private _onMouseMoved = (event: MouseEvent): void => {
-			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
+			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updatePreview();
@@ -206,79 +276,80 @@ module beepbox {
 		}
 		
 		private _updatePreview(): void {
-			this._previewGraphics.clearRect(0, 0, 34, 34);
-			if (!this._mouseOver) return;
-			
 			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, this._mouseY / this._channelHeight)));
 			const bar: number = Math.floor(Math.min(this._doc.song.bars-1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
-			
-			this._preview.style.left = this._barWidth * (bar - this._doc.barScrollPos) + "px";
-			this._preview.style.top = this._channelHeight * channel + "px";
-			
 			const selected: boolean = (bar == this._doc.bar && channel == this._doc.channel);
-			if (selected) {
+			
+			if (this._mouseOver && !selected) {
+				this._boxHighlight.setAttribute("x", "" + (1 + this._barWidth * (bar - this._doc.barScrollPos)));
+				this._boxHighlight.setAttribute("y", "" + (1 + (this._channelHeight * channel)));
+				this._boxHighlight.setAttribute("height", "" + (this._channelHeight - 2));
+				this._boxHighlight.style.visibility = "visible";
+			} else {
+				this._boxHighlight.style.visibility = "hidden";
+			}
+			
+			if (this._mouseOver && selected) {
 				const up: boolean = (this._mouseY % this._channelHeight) < this._channelHeight / 2;
-				const center: number = this._barWidth * 0.8;
-				const middle: number = this._channelHeight * 0.5;
+				const center: number = this._barWidth * (bar - this._doc.barScrollPos + 0.8);
+				const middle: number = this._channelHeight * (channel + 0.5);
 				const base: number = this._channelHeight * 0.1;
 				const tip: number = this._channelHeight * 0.4;
 				const width: number = this._channelHeight * 0.175;
 				
-				this._previewGraphics.lineWidth = 1;
-				this._previewGraphics.strokeStyle = "#000000";
-				this._previewGraphics.fillStyle = up ? "#ffffff" : "#000000";
-				this._previewGraphics.beginPath();
-				this._previewGraphics.moveTo(center, middle - tip);
-				this._previewGraphics.lineTo(center + width, middle - base);
-				this._previewGraphics.lineTo(center - width, middle - base);
-				this._previewGraphics.lineTo(center, middle - tip);
-				this._previewGraphics.fill();
-				this._previewGraphics.stroke();
-				this._previewGraphics.fillStyle = !up ? "#ffffff" : "#000000";
-				this._previewGraphics.beginPath();
-				this._previewGraphics.moveTo(center, middle + tip);
-				this._previewGraphics.lineTo(center + width, middle + base);
-				this._previewGraphics.lineTo(center - width, middle + base);
-				this._previewGraphics.lineTo(center, middle + tip);
-				this._previewGraphics.fill();
-				this._previewGraphics.stroke();
+				this._upHighlight.setAttribute("fill", up ? "#fff" : "#000");
+				this._downHighlight.setAttribute("fill", !up ? "#fff" : "#000");
+				
+				this._upHighlight.setAttribute("d", `M ${center} ${middle - tip} L ${center + width} ${middle - base} L ${center - width} ${middle - base} z`);
+				this._downHighlight.setAttribute("d", `M ${center} ${middle + tip} L ${center + width} ${middle + base} L ${center - width} ${middle + base} z`);
+				
+				this._upHighlight.style.visibility = "visible";
+				this._downHighlight.style.visibility = "visible";
 			} else {
-				this._previewGraphics.lineWidth = 2;
-				this._previewGraphics.strokeStyle = "#ffffff";
-				this._previewGraphics.strokeRect(1, 1, this._barWidth - 2, this._channelHeight - 2);
+				this._upHighlight.style.visibility = "hidden";
+				this._downHighlight.style.visibility = "hidden";
 			}
 		}
 		
 		private _documentChanged = (): void => {
 			this._pattern = this._doc.getCurrentPattern();
-			this._editorHeight = this._doc.song.bars > 16 ? 108 : 128;
-			this._canvas.height = this._editorHeight;
-			this._canvas.style.width = String(this._editorHeight);
-			this._channelHeight = this._editorHeight / Music.numChannels;
+			const editorHeight = this._doc.song.bars > 16 ? 108 : 128;
+			if (this._editorHeight != editorHeight) {
+				this._editorHeight = this._doc.song.bars > 16 ? 108 : 128;
+				this._svg.setAttribute("height", ""+this._editorHeight);
+				this.container.style.height = ""+this._editorHeight;
+				this._channelHeight = this._editorHeight / Music.numChannels;
+			}
 			this._render();
 		}
 		
 		private _render(): void {
-			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+			const squashed: boolean = (this._doc.song.bars > 16);
+			if (this._renderedSquashed != squashed) {
+				this._renderedSquashed = squashed;
+				for (let y: number = 0; y < Music.numChannels; y++) {
+					for (let x: number = 0; x < 16; x++) {
+						this._grid[y][x].setSquashed(squashed, y);
+					}
+				}
+			}
 			
 			const renderCount: number = Math.min(16, this._doc.song.bars);
 			for (let j: number = 0; j < Music.numChannels; j++) {
 				const channelColor: string = SongEditor.channelColorsBright[j];
 				const channelDim: string   = SongEditor.channelColorsDim[j];
-				for (let i: number = 0; i < renderCount; i++) {
+				for (let i: number = 0; i < 16; i++) {
 					const pattern: BarPattern = this._doc.song.getPattern(j, i + this._doc.barScrollPos);
 					const selected: boolean = (i + this._doc.barScrollPos == this._doc.bar && j == this._doc.channel);
-					if (selected || pattern != null) {
-						this._graphics.fillStyle = (selected ? channelColor : "#444444");
-						this._graphics.fillRect(this._barWidth * i + 1, this._channelHeight * j + 1, this._barWidth - 2, this._channelHeight - 2);
-					}
+					const dim: boolean = (pattern == null || pattern.tones.length == 0);
 					
-					const text = String(this._doc.song.channelBars[j][i + this._doc.barScrollPos]);
-					this._graphics.font = "bold 20px sans-serif";
-					this._graphics.textAlign = 'center';
-					this._graphics.textBaseline = 'middle';
-				    this._graphics.fillStyle = selected ? "#000000" : (pattern == null || pattern.tones.length == 0 ? channelDim : channelColor);
-				    this._graphics.fillText(text, this._barWidth * (i + 0.5), this._channelHeight * (j + 0.5) + 1.0);
+					const box: Box = this._grid[j][i];
+					if (i < this._doc.song.bars) {
+						box.setIndex(this._doc.song.channelBars[j][i + this._doc.barScrollPos], dim, selected, j);
+						box.container.style.visibility = "visible";
+					} else {
+						box.container.style.visibility = "hidden";
+					}
 				}
 			}
 			
