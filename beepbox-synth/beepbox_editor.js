@@ -4208,31 +4208,91 @@ var beepbox;
 "use strict";
 var beepbox;
 (function (beepbox) {
+    var Box = (function () {
+        function Box(channel, x, y) {
+            this._text = beepbox.html.text("1");
+            this._label = beepbox.svgElement("text", { x: 16, y: 23, "font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red" }, [this._text]);
+            this._rect = beepbox.svgElement("rect", { width: 30, height: 30, x: 1, y: 1 });
+            this.container = beepbox.svgElement("svg", undefined, [this._rect, this._label]);
+            this._renderedIndex = 1;
+            this._renderedDim = false;
+            this._renderedSelected = false;
+            this.container.setAttribute("x", "" + (x * 32));
+            this.container.setAttribute("y", "" + (y * 32));
+            this._rect.setAttribute("fill", "#444444");
+            this._label.setAttribute("fill", beepbox.SongEditor.channelColorsDim[y]);
+        }
+        Box.prototype.setSquashed = function (squashed, y) {
+            if (squashed) {
+                this.container.setAttribute("y", "" + (y * 27));
+                this._rect.setAttribute("height", "" + 25);
+                this._label.setAttribute("y", "" + 21);
+            }
+            else {
+                this.container.setAttribute("y", "" + (y * 32));
+                this._rect.setAttribute("height", "" + 30);
+                this._label.setAttribute("y", "" + 23);
+            }
+        };
+        Box.prototype.setIndex = function (index, dim, selected, y) {
+            if (this._renderedIndex != index) {
+                if (!this._renderedSelected && ((index == 0) != (this._renderedIndex == 0))) {
+                    this._rect.setAttribute("fill", (index == 0) ? "#000000" : "#444444");
+                }
+                this._renderedIndex = index;
+                this._text.data = "" + index;
+            }
+            if (this._renderedDim != dim) {
+                this._renderedDim = dim;
+                if (selected) {
+                    this._label.setAttribute("fill", "#000000");
+                }
+                else {
+                    this._label.setAttribute("fill", dim ? beepbox.SongEditor.channelColorsDim[y] : beepbox.SongEditor.channelColorsBright[y]);
+                }
+            }
+            if (this._renderedSelected != selected) {
+                this._renderedSelected = selected;
+                if (selected) {
+                    this._rect.setAttribute("fill", beepbox.SongEditor.channelColorsBright[y]);
+                    this._label.setAttribute("fill", "#000000");
+                }
+                else {
+                    this._rect.setAttribute("fill", (this._renderedIndex == 0) ? "#000000" : "#444444");
+                    this._label.setAttribute("fill", dim ? beepbox.SongEditor.channelColorsDim[y] : beepbox.SongEditor.channelColorsBright[y]);
+                }
+            }
+        };
+        return Box;
+    }());
     var TrackEditor = (function () {
         function TrackEditor(_doc, _songEditor) {
             var _this = this;
             this._doc = _doc;
             this._songEditor = _songEditor;
-            this._barWidth = 32;
-            this._canvas = beepbox.html.canvas({ width: "512", height: "128" });
-            this._preview = beepbox.html.canvas({ width: "32", height: "32" });
-            this._playhead = beepbox.html.div({ style: "width: 4px; height: 100%; overflow:hidden; position: absolute; background: #ffffff;" });
-            this.container = beepbox.html.div({ style: "width: 512px; height: 128px; position: relative; overflow:hidden;" }, [
-                this._canvas,
-                this._preview,
-                this._playhead,
-            ]);
-            this._graphics = this._canvas.getContext("2d");
-            this._previewGraphics = this._preview.getContext("2d");
             this._editorWidth = 512;
+            this._barWidth = 32;
+            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: 128 });
+            this.container = beepbox.html.div({ style: "width: 512px; height: 128px; position: relative; overflow:hidden;" }, [this._svg]);
+            this._playhead = beepbox.svgElement("rect", { fill: "white", x: 0, y: 0, width: 4, height: 128 });
+            this._boxHighlight = beepbox.svgElement("rect", { fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30 });
+            this._upHighlight = beepbox.svgElement("path", { fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none" });
+            this._downHighlight = beepbox.svgElement("path", { fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none" });
+            this._grid = [[], [], [], []];
             this._mouseX = 0;
             this._mouseY = 0;
             this._mouseOver = false;
             this._digits = "";
             this._editorHeight = 128;
             this._channelHeight = 32;
+            this._renderedSquashed = false;
+            this._renderedPlayhead = -1;
             this._onEnterFrame = function (timestamp) {
-                _this._playhead.style.left = (_this._barWidth * (_this._doc.synth.playhead - _this._doc.barScrollPos) - 2) + "px";
+                var playhead = (_this._barWidth * (_this._doc.synth.playhead - _this._doc.barScrollPos) - 2);
+                if (_this._renderedPlayhead != playhead) {
+                    _this._renderedPlayhead = playhead;
+                    _this._playhead.setAttribute("x", "" + playhead);
+                }
                 window.requestAnimationFrame(_this._onEnterFrame);
             };
             this._onMouseOver = function (event) {
@@ -4247,7 +4307,7 @@ var beepbox;
             };
             this._onMousePressed = function (event) {
                 event.preventDefault();
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
                 _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 var channel = Math.floor(Math.min(beepbox.Music.numChannels - 1, Math.max(0, _this._mouseY / _this._channelHeight)));
@@ -4262,7 +4322,7 @@ var beepbox;
                 }
             };
             this._onMouseMoved = function (event) {
-                var boundingRect = _this._canvas.getBoundingClientRect();
+                var boundingRect = _this._svg.getBoundingClientRect();
                 _this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
                 _this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
                 _this._updatePreview();
@@ -4271,13 +4331,27 @@ var beepbox;
             };
             this._documentChanged = function () {
                 _this._pattern = _this._doc.getCurrentPattern();
-                _this._editorHeight = _this._doc.song.bars > 16 ? 108 : 128;
-                _this._canvas.height = _this._editorHeight;
-                _this._canvas.style.width = String(_this._editorHeight);
-                _this._channelHeight = _this._editorHeight / beepbox.Music.numChannels;
+                var editorHeight = _this._doc.song.bars > 16 ? 108 : 128;
+                if (_this._editorHeight != editorHeight) {
+                    _this._editorHeight = _this._doc.song.bars > 16 ? 108 : 128;
+                    _this._svg.setAttribute("height", "" + _this._editorHeight);
+                    _this.container.style.height = "" + _this._editorHeight;
+                    _this._channelHeight = _this._editorHeight / beepbox.Music.numChannels;
+                }
                 _this._render();
             };
             this._pattern = this._doc.getCurrentPattern();
+            for (var y = 0; y < beepbox.Music.numChannels; y++) {
+                for (var x = 0; x < 16; x++) {
+                    var box = new Box(y, x, y);
+                    this._svg.appendChild(box.container);
+                    this._grid[y][x] = box;
+                }
+            }
+            this._svg.appendChild(this._boxHighlight);
+            this._svg.appendChild(this._upHighlight);
+            this._svg.appendChild(this._downHighlight);
+            this._svg.appendChild(this._playhead);
             this._render();
             this._doc.watch(this._documentChanged);
             window.requestAnimationFrame(this._onEnterFrame);
@@ -4379,65 +4453,63 @@ var beepbox;
             this._digits = "";
         };
         TrackEditor.prototype._updatePreview = function () {
-            this._previewGraphics.clearRect(0, 0, 34, 34);
-            if (!this._mouseOver)
-                return;
             var channel = Math.floor(Math.min(beepbox.Music.numChannels - 1, Math.max(0, this._mouseY / this._channelHeight)));
             var bar = Math.floor(Math.min(this._doc.song.bars - 1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
-            this._preview.style.left = this._barWidth * (bar - this._doc.barScrollPos) + "px";
-            this._preview.style.top = this._channelHeight * channel + "px";
             var selected = (bar == this._doc.bar && channel == this._doc.channel);
-            if (selected) {
+            if (this._mouseOver && !selected) {
+                this._boxHighlight.setAttribute("x", "" + (1 + this._barWidth * (bar - this._doc.barScrollPos)));
+                this._boxHighlight.setAttribute("y", "" + (1 + (this._channelHeight * channel)));
+                this._boxHighlight.setAttribute("height", "" + (this._channelHeight - 2));
+                this._boxHighlight.style.visibility = "visible";
+            }
+            else {
+                this._boxHighlight.style.visibility = "hidden";
+            }
+            if (this._mouseOver && selected) {
                 var up = (this._mouseY % this._channelHeight) < this._channelHeight / 2;
-                var center = this._barWidth * 0.8;
-                var middle = this._channelHeight * 0.5;
+                var center = this._barWidth * (bar - this._doc.barScrollPos + 0.8);
+                var middle = this._channelHeight * (channel + 0.5);
                 var base = this._channelHeight * 0.1;
                 var tip = this._channelHeight * 0.4;
                 var width = this._channelHeight * 0.175;
-                this._previewGraphics.lineWidth = 1;
-                this._previewGraphics.strokeStyle = "#000000";
-                this._previewGraphics.fillStyle = up ? "#ffffff" : "#000000";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.moveTo(center, middle - tip);
-                this._previewGraphics.lineTo(center + width, middle - base);
-                this._previewGraphics.lineTo(center - width, middle - base);
-                this._previewGraphics.lineTo(center, middle - tip);
-                this._previewGraphics.fill();
-                this._previewGraphics.stroke();
-                this._previewGraphics.fillStyle = !up ? "#ffffff" : "#000000";
-                this._previewGraphics.beginPath();
-                this._previewGraphics.moveTo(center, middle + tip);
-                this._previewGraphics.lineTo(center + width, middle + base);
-                this._previewGraphics.lineTo(center - width, middle + base);
-                this._previewGraphics.lineTo(center, middle + tip);
-                this._previewGraphics.fill();
-                this._previewGraphics.stroke();
+                this._upHighlight.setAttribute("fill", up ? "#fff" : "#000");
+                this._downHighlight.setAttribute("fill", !up ? "#fff" : "#000");
+                this._upHighlight.setAttribute("d", "M " + center + " " + (middle - tip) + " L " + (center + width) + " " + (middle - base) + " L " + (center - width) + " " + (middle - base) + " z");
+                this._downHighlight.setAttribute("d", "M " + center + " " + (middle + tip) + " L " + (center + width) + " " + (middle + base) + " L " + (center - width) + " " + (middle + base) + " z");
+                this._upHighlight.style.visibility = "visible";
+                this._downHighlight.style.visibility = "visible";
             }
             else {
-                this._previewGraphics.lineWidth = 2;
-                this._previewGraphics.strokeStyle = "#ffffff";
-                this._previewGraphics.strokeRect(1, 1, this._barWidth - 2, this._channelHeight - 2);
+                this._upHighlight.style.visibility = "hidden";
+                this._downHighlight.style.visibility = "hidden";
             }
         };
         TrackEditor.prototype._render = function () {
-            this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
+            var squashed = (this._doc.song.bars > 16);
+            if (this._renderedSquashed != squashed) {
+                this._renderedSquashed = squashed;
+                for (var y = 0; y < beepbox.Music.numChannels; y++) {
+                    for (var x = 0; x < 16; x++) {
+                        this._grid[y][x].setSquashed(squashed, y);
+                    }
+                }
+            }
             var renderCount = Math.min(16, this._doc.song.bars);
             for (var j = 0; j < beepbox.Music.numChannels; j++) {
                 var channelColor = beepbox.SongEditor.channelColorsBright[j];
                 var channelDim = beepbox.SongEditor.channelColorsDim[j];
-                for (var i = 0; i < renderCount; i++) {
+                for (var i = 0; i < 16; i++) {
                     var pattern = this._doc.song.getPattern(j, i + this._doc.barScrollPos);
                     var selected = (i + this._doc.barScrollPos == this._doc.bar && j == this._doc.channel);
-                    if (selected || pattern != null) {
-                        this._graphics.fillStyle = (selected ? channelColor : "#444444");
-                        this._graphics.fillRect(this._barWidth * i + 1, this._channelHeight * j + 1, this._barWidth - 2, this._channelHeight - 2);
+                    var dim = (pattern == null || pattern.tones.length == 0);
+                    var box = this._grid[j][i];
+                    if (i < this._doc.song.bars) {
+                        box.setIndex(this._doc.song.channelBars[j][i + this._doc.barScrollPos], dim, selected, j);
+                        box.container.style.visibility = "visible";
                     }
-                    var text = String(this._doc.song.channelBars[j][i + this._doc.barScrollPos]);
-                    this._graphics.font = "bold 20px sans-serif";
-                    this._graphics.textAlign = 'center';
-                    this._graphics.textBaseline = 'middle';
-                    this._graphics.fillStyle = selected ? "#000000" : (pattern == null || pattern.tones.length == 0 ? channelDim : channelColor);
-                    this._graphics.fillText(text, this._barWidth * (i + 0.5), this._channelHeight * (j + 0.5) + 1.0);
+                    else {
+                        box.container.style.visibility = "hidden";
+                    }
                 }
             }
             this._updatePreview();
