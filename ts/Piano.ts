@@ -145,8 +145,9 @@ module beepbox {
 		}
 		
 		private _updatePreview(): void {
-			this._previewGraphics.clearRect(0, 0, 32, 40);
+			this._preview.style.visibility = (!this._mouseOver || this._mouseDown) ? "hidden" : "visible";
 			if (!this._mouseOver || this._mouseDown) return;
+			this._previewGraphics.clearRect(0, 0, 32, 40);
 			this._preview.style.left = "0px";
 			this._preview.style.top = this._noteHeight * (this._noteCount - this._cursorNote - 1) + "px";
 			this._previewGraphics.lineWidth = 2;
