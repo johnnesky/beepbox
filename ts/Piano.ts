@@ -68,6 +68,8 @@ module beepbox {
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _cursorNote: number;
+		private _renderedScale: number = -1;
+		private _renderedKey: number = -1;
 		
 		constructor(private _doc: SongDocument) {
 			this._doc.watch(this._documentChanged);
@@ -170,9 +172,13 @@ module beepbox {
 				return;
 			}
 			
-			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
-			
 			if (!this._doc.showLetters) return;
+			
+			if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key) return;
+			this._renderedScale = this._doc.song.scale;
+			this._renderedKey = this._doc.song.key;
+			
+			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
 			
 			let key: HTMLImageElement;
 			for (let j: number = 0; j < this._noteCount; j++) {
