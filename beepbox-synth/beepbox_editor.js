@@ -5163,6 +5163,8 @@ var beepbox;
             this._mouseY = 0;
             this._mouseDown = false;
             this._mouseOver = false;
+            this._renderedScale = -1;
+            this._renderedKey = -1;
             this._onMouseOver = function (event) {
                 if (_this._mouseOver)
                     return;
@@ -5210,9 +5212,13 @@ var beepbox;
                     window.requestAnimationFrame(_this._render);
                     return;
                 }
-                _this._graphics.clearRect(0, 0, _this._editorWidth, _this._editorHeight);
                 if (!_this._doc.showLetters)
                     return;
+                if (_this._renderedScale == _this._doc.song.scale && _this._renderedKey == _this._doc.song.key)
+                    return;
+                _this._renderedScale = _this._doc.song.scale;
+                _this._renderedKey = _this._doc.song.key;
+                _this._graphics.clearRect(0, 0, _this._editorWidth, _this._editorHeight);
                 var key;
                 for (var j = 0; j < _this._noteCount; j++) {
                     var noteNameIndex = (j + beepbox.Music.keyTransposes[_this._doc.song.key]) % 12;
