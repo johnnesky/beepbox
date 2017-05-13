@@ -3540,6 +3540,10 @@ var beepbox;
             this._cursor = new beepbox.PatternCursor();
             this._playheadX = 0.0;
             this._octaveOffset = 0;
+            this._renderedWidth = -1;
+            this._renderedBeatWidth = -1;
+            this._renderedFifths = false;
+            this._renderedDrums = false;
             this.resetCopiedPins = function () {
                 _this._copiedPinChannels = _this._defaultPinChannels.concat();
             };
@@ -3669,40 +3673,52 @@ var beepbox;
                 _this._noteCount = _this._doc.channel == 3 ? beepbox.Music.drumCount : beepbox.Music.noteCount;
                 _this._octaveOffset = _this._doc.song.channelOctaves[_this._doc.channel] * 12;
                 _this._copiedPins = _this._copiedPinChannels[_this._doc.channel];
-                _this._svg.setAttribute("width", "" + _this._editorWidth);
-                _this._svgBackground.setAttribute("width", "" + _this._editorWidth);
-                _this._svgNoteBackground.setAttribute("width", "" + (_this._editorWidth / _this._doc.song.beats));
-                _this._svgDrumBackground.setAttribute("width", "" + (_this._editorWidth / _this._doc.song.beats));
+                if (_this._renderedWidth != _this._editorWidth) {
+                    _this._renderedWidth = _this._editorWidth;
+                    _this._svg.setAttribute("width", "" + _this._editorWidth);
+                    _this._svgBackground.setAttribute("width", "" + _this._editorWidth);
+                }
+                var beatWidth = _this._editorWidth / _this._doc.song.beats;
+                if (_this._renderedBeatWidth != beatWidth) {
+                    _this._renderedBeatWidth = beatWidth;
+                    _this._svgNoteBackground.setAttribute("width", "" + beatWidth);
+                    _this._svgDrumBackground.setAttribute("width", "" + beatWidth);
+                    _this._backgroundDrumRow.setAttribute("width", "" + (beatWidth - 2));
+                    for (var j = 0; j < 12; j++) {
+                        _this._backgroundNoteRows[j].setAttribute("width", "" + (beatWidth - 2));
+                    }
+                }
                 if (!_this._mouseDown)
                     _this._updateCursorStatus();
                 _this._svgNoteContainer = makeEmptyReplacementElement(_this._svgNoteContainer);
                 _this._updatePreview();
                 if (_this._pattern == null) {
-                    _this._svg.setAttribute("visibility", "hidden");
+                    _this._svg.style.visibility = "hidden";
                     return;
                 }
-                _this._svg.setAttribute("visibility", "visible");
-                for (var j = 0; j < 12; j++) {
-                    var color = "#444444";
-                    if (j == 0)
-                        color = "#886644";
-                    if (j == 7 && _this._doc.showFifth)
-                        color = "#446688";
-                    var rectangle = _this._backgroundNoteRows[j];
-                    rectangle.setAttribute("width", "" + (_this._partWidth * _this._doc.song.parts - 2));
-                    rectangle.setAttribute("fill", color);
-                    rectangle.setAttribute("visibility", beepbox.Music.scaleFlags[_this._doc.song.scale][j] ? "visible" : "hidden");
+                _this._svg.style.visibility = "visible";
+                if (_this._renderedFifths != _this._doc.showFifth) {
+                    _this._renderedFifths = _this._doc.showFifth;
+                    _this._backgroundNoteRows[7].setAttribute("fill", _this._doc.showFifth ? "#446688" : "#444444");
                 }
-                _this._backgroundDrumRow.setAttribute("width", "" + (_this._partWidth * _this._doc.song.parts - 2));
+                for (var j = 0; j < 12; j++) {
+                    _this._backgroundNoteRows[j].style.visibility = beepbox.Music.scaleFlags[_this._doc.song.scale][j] ? "visible" : "hidden";
+                }
                 if (_this._doc.channel == 3) {
-                    _this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
-                    _this._svgBackground.setAttribute("height", "" + (_this._defaultDrumHeight * beepbox.Music.drumCount));
-                    _this._svg.setAttribute("height", "" + (_this._defaultDrumHeight * beepbox.Music.drumCount));
+                    if (!_this._renderedDrums) {
+                        _this._renderedDrums = true;
+                        _this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
+                        _this._svgBackground.setAttribute("height", "" + (_this._defaultDrumHeight * beepbox.Music.drumCount));
+                        _this._svg.setAttribute("height", "" + (_this._defaultDrumHeight * beepbox.Music.drumCount));
+                    }
                 }
                 else {
-                    _this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground)");
-                    _this._svgBackground.setAttribute("height", "" + _this._editorHeight);
-                    _this._svg.setAttribute("height", "" + _this._editorHeight);
+                    if (_this._renderedDrums) {
+                        _this._renderedDrums = false;
+                        _this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground)");
+                        _this._svgBackground.setAttribute("height", "" + _this._editorHeight);
+                        _this._svg.setAttribute("height", "" + _this._editorHeight);
+                    }
                 }
                 if (_this._doc.channel != 3 && _this._doc.showChannels) {
                     for (var channel = 2; channel >= 0; channel--) {
@@ -3747,6 +3763,7 @@ var beepbox;
                 rectangle.setAttribute("x", "1");
                 rectangle.setAttribute("y", "" + (y * this._defaultNoteHeight + 1));
                 rectangle.setAttribute("height", "" + (this._defaultNoteHeight - 2));
+                rectangle.setAttribute("fill", (i == 0) ? "#886644" : "#444444");
                 this._svgNoteBackground.appendChild(rectangle);
                 this._backgroundNoteRows[i] = rectangle;
             }

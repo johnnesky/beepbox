@@ -91,6 +91,10 @@ module beepbox {
 		private _pattern: BarPattern;
 		private _playheadX: number = 0.0;
 		private _octaveOffset: number = 0;
+		private _renderedWidth: number = -1;
+		private _renderedBeatWidth: number = -1;
+		private _renderedFifths: boolean = false;
+		private _renderedDrums: boolean = false;
 		
 		constructor(private _doc: SongDocument) {
 			for (let i: number = 0; i < 12; i++) {
@@ -99,10 +103,11 @@ module beepbox {
 				rectangle.setAttribute("x", "1");
 				rectangle.setAttribute("y", "" + (y * this._defaultNoteHeight + 1));
 				rectangle.setAttribute("height", "" + (this._defaultNoteHeight - 2));
+				rectangle.setAttribute("fill", (i == 0) ? "#886644" : "#444444");
 				this._svgNoteBackground.appendChild(rectangle);
 				this._backgroundNoteRows[i] = rectangle;
 			}
-			
+
 			this._backgroundDrumRow.setAttribute("x", "1");
 			this._backgroundDrumRow.setAttribute("y", "1");
 			this._backgroundDrumRow.setAttribute("height", "" + (this._defaultDrumHeight - 2));
@@ -629,10 +634,22 @@ module beepbox {
 			this._octaveOffset = this._doc.song.channelOctaves[this._doc.channel] * 12;
 			this._copiedPins = this._copiedPinChannels[this._doc.channel];
 			
-			this._svg.setAttribute("width", "" + this._editorWidth);
-			this._svgBackground.setAttribute("width", "" + this._editorWidth);
-			this._svgNoteBackground.setAttribute("width", "" + (this._editorWidth / this._doc.song.beats));
-			this._svgDrumBackground.setAttribute("width", "" + (this._editorWidth / this._doc.song.beats));
+			if (this._renderedWidth != this._editorWidth) {
+				this._renderedWidth = this._editorWidth;
+				this._svg.setAttribute("width", "" + this._editorWidth);
+				this._svgBackground.setAttribute("width", "" + this._editorWidth);
+			}
+			
+			const beatWidth = this._editorWidth / this._doc.song.beats;
+			if (this._renderedBeatWidth != beatWidth) {
+				this._renderedBeatWidth = beatWidth;
+				this._svgNoteBackground.setAttribute("width", "" + beatWidth);
+				this._svgDrumBackground.setAttribute("width", "" + beatWidth);
+				this._backgroundDrumRow.setAttribute("width", "" + (beatWidth - 2));
+				for (let j: number = 0; j < 12; j++) {
+					this._backgroundNoteRows[j].setAttribute("width", "" + (beatWidth - 2));
+				}
+			}
 			
 			if (!this._mouseDown) this._updateCursorStatus();
 			
@@ -641,31 +658,34 @@ module beepbox {
 			this._updatePreview();
 			
 			if (this._pattern == null) {
-				this._svg.setAttribute("visibility", "hidden");
+				this._svg.style.visibility = "hidden";
 				return;
 			}
-			this._svg.setAttribute("visibility", "visible");
+			this._svg.style.visibility = "visible";
 			
-			for (let j: number = 0; j < 12; j++) {
-				let color: string = "#444444";
-				if (j == 0) color = "#886644";
-				if (j == 7 && this._doc.showFifth) color = "#446688";
-				const rectangle: SVGRectElement = this._backgroundNoteRows[j];
-				rectangle.setAttribute("width", "" + (this._partWidth * this._doc.song.parts - 2));
-				rectangle.setAttribute("fill", color);
-				rectangle.setAttribute("visibility", Music.scaleFlags[this._doc.song.scale][j] ? "visible" : "hidden");
+			if (this._renderedFifths != this._doc.showFifth) {
+				this._renderedFifths = this._doc.showFifth;
+				this._backgroundNoteRows[7].setAttribute("fill", this._doc.showFifth ? "#446688" : "#444444");
 			}
 			
-			this._backgroundDrumRow.setAttribute("width", "" + (this._partWidth * this._doc.song.parts - 2));
+			for (let j: number = 0; j < 12; j++) {
+				this._backgroundNoteRows[j].style.visibility = Music.scaleFlags[this._doc.song.scale][j] ? "visible" : "hidden";
+			}
 			
 			if (this._doc.channel == 3) {
-				this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
-				this._svgBackground.setAttribute("height", "" + (this._defaultDrumHeight * Music.drumCount));
-				this._svg.setAttribute("height", "" + (this._defaultDrumHeight * Music.drumCount));
+				if (!this._renderedDrums) {
+					this._renderedDrums = true;
+					this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
+					this._svgBackground.setAttribute("height", "" + (this._defaultDrumHeight * Music.drumCount));
+					this._svg.setAttribute("height", "" + (this._defaultDrumHeight * Music.drumCount));
+				}
 			} else {
-				this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground)");
-				this._svgBackground.setAttribute("height", "" + this._editorHeight);
-				this._svg.setAttribute("height", "" + this._editorHeight);
+				if (this._renderedDrums) {
+					this._renderedDrums = false;
+					this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground)");
+					this._svgBackground.setAttribute("height", "" + this._editorHeight);
+					this._svg.setAttribute("height", "" + this._editorHeight);
+				}
 			}
 			
 			if (this._doc.channel != 3 && this._doc.showChannels) {
