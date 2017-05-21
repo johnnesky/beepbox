@@ -32,8 +32,6 @@ SOFTWARE.
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
 
-"use strict";
-
 module beepbox {
 	const {button, div, span, select, option, input, text} = html;
 	
@@ -80,7 +78,7 @@ module beepbox {
 			]),
 		]);
 		private readonly _playButton: HTMLButtonElement = button({style: "width: 34px; margin: 0px", type: "button"});
-		private readonly _volumeSlider: HTMLInputElement = input({className: "beepBoxSlider", style: "width: 120px; flex-shrink: 0; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1"});
+		private readonly _volumeSlider: HTMLInputElement = input({style: "width: 9em; flex-shrink: 0; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1"});
 		private readonly _editButton: HTMLSelectElement = select({style: "width:100%;"}, [
 			option("", "Edit Menu", true, true),
 			option("undo", "Undo (Z)", false, false),
@@ -100,38 +98,54 @@ module beepbox {
 			option("showChannels", "Show All Channels", false, false),
 			option("showScrollBar", "Octave Scroll Bar", false, false),
 		]);
-		private readonly _exportButton: HTMLButtonElement = button({style: "width:100%; margin: 5px 0;", type: "button"}, [text("Export")]);
-		private readonly _scaleDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.scaleNames);
-		private readonly _keyDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.keyNames);
-		private readonly _tempoSlider: HTMLInputElement = input({className: "beepBoxSlider", style: "width: 120px; margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1"});
-		private readonly _partDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.partNames);
-		private readonly _patternSettingsLabel: HTMLDivElement = div({style: "visibility: hidden; width:100%; margin: 3px 0; text-align: center;"}, [text("Pattern Settings")]);
-		private readonly _instrumentDropDown: HTMLSelectElement = select({style: "width:120px;"});
-		private readonly _instrumentDropDownGroup: HTMLDivElement = div({className: "selectRow", styleasdf: "width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;"}, [text("Instrument: "), this._instrumentDropDown]);
-		private readonly _channelVolumeSlider: HTMLInputElement = input({className: "beepBoxSlider", style: "width: 120px; margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"});
-		private readonly _waveNames: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.waveNames);
-		private readonly _drumNames: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.drumNames);
-		private readonly _attackDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.attackNames);
-		private readonly _filterDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.filterNames);
-		private readonly _filterDropDownGroup: HTMLDivElement = div({className: "selectRow"}, [text("Filter: "), div({className: "selectContainer"}, [this._filterDropDown])]);
-		private readonly _chorusDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.chorusNames);
-		private readonly _chorusDropDownGroup: HTMLElement = div({className: "selectRow"}, [text("Chorus: "), div({className: "selectContainer"}, [this._chorusDropDown])]);
-		private readonly _effectDropDown: HTMLSelectElement = buildOptions(select({style: "width:120px;"}), Music.effectNames);
-		private readonly _effectDropDownGroup: HTMLElement = div({className: "selectRow"}, [text("Effect: "), div({className: "selectContainer"}, [this._effectDropDown])]);
-		private readonly _promptBackground: HTMLDivElement = div({style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; left: 0; display: none;"});
-		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; display: flex; flex-direction: row; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;"}, [
+		private readonly _exportButton: HTMLButtonElement = button({style: "margin: 5px 0;", type: "button"}, [text("Export")]);
+		private readonly _scaleDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.scaleNames);
+		private readonly _keyDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.keyNames);
+		private readonly _tempoSlider: HTMLInputElement = input({style: "width: 9em; margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1"});
+		private readonly _partDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.partNames);
+		private readonly _patternSettingsLabel: HTMLDivElement = div({style: "visibility: hidden; margin: 3px 0; text-align: center;"}, [text("Pattern Settings")]);
+		private readonly _instrumentDropDown: HTMLSelectElement = select({style: "width:9em;"});
+		private readonly _instrumentDropDownGroup: HTMLDivElement = div({className: "selectRow", style: "visibility: hidden;"}, [span({}, [text("Instrument: ")]), div({className: "selectContainer"}, [this._instrumentDropDown])]);
+		private readonly _instrumentSettingsLabel: HTMLDivElement = div({style: "margin: 3px 0; text-align: center;"}, [text("Instrument Settings")]);
+		private readonly _channelVolumeSlider: HTMLInputElement = input({style: "width: 9em; margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"});
+		private readonly _waveNames: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.waveNames);
+		private readonly _drumNames: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.drumNames);
+		private readonly _attackDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.attackNames);
+		private readonly _filterDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.filterNames);
+		private readonly _filterDropDownGroup: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Filter: ")]), div({className: "selectContainer"}, [this._filterDropDown])]);
+		private readonly _chorusDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.chorusNames);
+		private readonly _chorusDropDownGroup: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chorus: ")]), div({className: "selectContainer"}, [this._chorusDropDown])]);
+		private readonly _effectDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.effectNames);
+		private readonly _effectDropDownGroup: HTMLElement = div({className: "selectRow"}, [span({}, [text("Effect: ")]), div({className: "selectContainer"}, [this._effectDropDown])]);
+		private readonly _instrumentSettingsGroup: HTMLDivElement = div({}, [
+			div({className: "selectRow"}, [
+				span({}, [text("Volume: ")]),
+				this._channelVolumeSlider,
+			]),
+			div({className: "selectRow"}, [
+				span({}, [text("Wave: ")]),
+				div({className: "selectContainer"}, [this._waveNames, this._drumNames]),
+			]),
+			div({className: "selectRow"}, [
+				span({}, [text("Envelope: ")]),
+				div({className: "selectContainer"}, [this._attackDropDown]),
+			]),
+			this._filterDropDownGroup,
+			this._chorusDropDownGroup,
+			this._effectDropDownGroup,
+		]);
+		private readonly _promptContainer: HTMLDivElement = div({className: "promptContainer", style: "display: none;"});
+		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"}, [
 			this._editorBox,
-			div({style: "width: 6px; height: 645px;"}),
 			div({className: "editor-right-side"}, [
-				div({style: "width:100%; text-align: center; color: #999;"}, [text("BeepBox 2.1.3")]),
-				div({style: "width:100%; margin: 5px 0; display: flex; flex-direction: row; align-items: center;"}, [
+				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.1.3")]),
+				div({style: "margin: 5px 0; display: flex; flex-direction: row; align-items: center;"}, [
 					this._playButton,
 					div({style: "width: 4px; height: 10px;"}),
+					// Volume speaker icon:
 					svgElement("svg", {width: "20", height: "20"}, [
-						//svgElement("path", {d: "M 0 14 L 0 6 L 4 6 L 8 2 L 8 18 L 4 14 z", fill: "#777"}),
 						svgElement("path", {d: "M 1 14 L 1 6 L 5 6 L 9 2 L 9 18 L 5 14 z", fill: "#777"}),
-						//svgElement("path", {d: "M 10 10 L 12 8 A 2.8 2.8 0 0 1 12 12 z", fill: "#777"}),
-						svgElement("path", {d: "M 11 9 L 13 7 A 4.2 4.2 0 0 1 13 13 L 11 11 A 1.4 1.4 0 0 0 11 9 z", fill: "#777"}),
+						svgElement("path", {d: "M 12 8 L 13 7 A 4.2 4.2 0 0 1 13 13 L 12 12 A 2.8 2.8 0 0 0 12 8 z", fill: "#777"}),
 						svgElement("path", {d: "M 15 5 L 16 4 A 8.5 8.5 0 0 1 16 16 L 15 15 A 7.1 7.1 0 0 0 15 5 z", fill: "#777"}),
 					]),
 					div({style: "width: 4px; height: 10px;"}),
@@ -140,46 +154,32 @@ module beepbox {
 				div({className: "selectContainer", style: "margin: 5px 0;"}, [this._editButton]),
 				div({className: "selectContainer", style: "margin: 5px 0;"}, [this._optionsButton]),
 				this._exportButton,
-				div({style: "width: 100%; height: 110px; flex-shrink: 1;"}),
-				div({style: "width:100%; margin: 3px 0; text-align: center;"}, [text("Song Settings")]),
+				div({style: "flex: 1 1 110px;"}),
+				div({style: "margin: 3px 0; text-align: center;"}, [text("Song Settings")]),
 				div({className: "selectRow"}, [
-					text("Scale: "),
+					span({}, [text("Scale: ")]),
 					div({className: "selectContainer"}, [this._scaleDropDown]),
 				]),
 				div({className: "selectRow"}, [
-					text("Key: "),
+					span({}, [text("Key: ")]),
 					div({className: "selectContainer"}, [this._keyDropDown]),
 				]),
 				div({className: "selectRow"}, [
-					text("Tempo: "),
+					span({}, [text("Tempo: ")]),
 					this._tempoSlider,
 				]),
 				div({className: "selectRow"}, [
-					text("Rhythm: "),
+					span({}, [text("Rhythm: ")]),
 					div({className: "selectContainer"}, [this._partDropDown]),
 				]),
-				div({style: "width: 100%; height: 25px; flex-shrink: 1;"}),
+				div({style: "flex: 1 1 25px;"}),
 				this._patternSettingsLabel,
 				this._instrumentDropDownGroup,
-				div({style: "width: 100%; height: 25px; flex-shrink: 1;"}),
-				div({style: "width:100%; margin: 3px 0; text-align: center;"}, [text("Instrument Settings")]),
-				div({className: "selectRow"}, [
-					text("Volume: "),
-					this._channelVolumeSlider,
-				]),
-				div({className: "selectRow"}, [
-					text("Wave: "),
-					div({className: "selectContainer"}, [this._waveNames, this._drumNames]),
-				]),
-				div({className: "selectRow"}, [
-					text("Envelope: "),
-					div({className: "selectContainer"}, [this._attackDropDown]),
-				]),
-				this._filterDropDownGroup,
-				this._chorusDropDownGroup,
-				this._effectDropDownGroup,
+				div({style: "flex: 1 1 25px;"}),
+				this._instrumentSettingsLabel,
+				this._instrumentSettingsGroup,
 			]),
-			this._promptBackground,
+			this._promptContainer,
 		]);
 		
 		private _copyTones: Tone[];
@@ -219,16 +219,16 @@ module beepbox {
 			if (this.promptVisible) return;
 			this._wasPlaying = this._doc.synth.playing;
 			if (this._wasPlaying) this._togglePlay();
-			this._promptBackground.style.display = "block";
-			this.mainLayer.appendChild(prompt.container);
+			this._promptContainer.style.display = null;
+			this._promptContainer.appendChild(prompt.container);
 			this.promptVisible = true;
 		}
 		
 		public closePrompt(prompt: {container: HTMLElement}) {
 			this.promptVisible = false;
-			this._promptBackground.style.display = "none";
 			if (this._wasPlaying) this._togglePlay();
-			this.mainLayer.removeChild(prompt.container);
+			this._promptContainer.style.display = "none";
+			this._promptContainer.removeChild(prompt.container);
 			this.mainLayer.focus();
 		};
 		
@@ -278,6 +278,8 @@ module beepbox {
 				}
 				buildOptions(this._instrumentDropDown, instrumentList);
 			}
+			
+			this._instrumentSettingsGroup.style.color = SongEditor.noteColorsBright[this._doc.channel];
 			
 			const instrument: number = this._doc.getCurrentInstrument();
 			setSelectedIndex(this._waveNames, this._doc.song.instrumentWaves[this._doc.channel][instrument]);
@@ -544,19 +546,61 @@ module beepbox {
 const styleSheet = document.createElement('style');
 styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode(`
-/* For some reason the default focus outline effect causes the entire editor to get repainted when any part of it changes. Border doesn't do that. */
 .beepboxEditor {
+	/* For some reason the default focus outline effect causes the entire editor to get repainted when any part of it changes. Border doesn't do that. */
 	margin: -3px;
 	border: 3px solid transparent;
+	width: 700px;
+	height: 645px;
+	display: flex;
+	flex-direction: row;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	position: relative;
+	touch-action: manipulation;
+	cursor: default;
+	font-size: small;
 }
 .beepboxEditor:focus {
 	outline: none;
-	border-color: #555555;
+	border-color: #555;
 }
 
 .beepboxEditor div {
 	margin: 0;
 	padding: 0;
+}
+
+.beepboxEditor .promptContainer {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0,0,0,0.5);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.beepboxEditor .prompt {
+	margin: auto;
+	text-align: center;
+	background: #000;
+	border-radius: 15px;
+	border: 4px solid #444;
+	color: #fff;
+	padding: 20px;
+	display: flex;
+	flex-direction: column;
+}
+
+.beepboxEditor .prompt > *:not(:first-child) {
+	margin-top: 1.5em;
 }
 
 /* Use psuedo-elements to add cross-browser up & down arrows to select elements: */
@@ -566,33 +610,34 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor .selectContainer::before {
 	content: "";
 	position: absolute;
-	right: 5px;
-	top: 4px;
-	border-bottom: 4px solid white;
-	border-left: 3px solid transparent;
-	border-right: 3px solid transparent;
+	right: 0.5em;
+	top: 0.4em;
+	border-bottom: 0.4em solid currentColor;
+	border-left: 0.3em solid transparent;
+	border-right: 0.3em solid transparent;
 	pointer-events: none;
 }
 .beepboxEditor .selectContainer::after {
 	content: "";
 	position: absolute;
-	right: 5px;
-	top: 12px;
-	border-top: 4px solid white;
-	border-left: 3px solid transparent;
-	border-right: 3px solid transparent;
+	right: 0.5em;
+	bottom: 0.4em;
+	border-top: 0.4em solid currentColor;
+	border-left: 0.3em solid transparent;
+	border-right: 0.3em solid transparent;
 	pointer-events: none;
 }
 .beepboxEditor select {
 	margin: 0;
-	padding: 0 5px;
+	padding: 0 0.5em;
 	display: block;
-	height: 20px;
+	height: 2em;
 	border: none;
-	border-radius: 4px;
+	border-radius: 0.4em;
 	background: #444444;
-	color: white;
+	color: inherit;
 	font-size: inherit;
+	cursor: pointer;
 	
 	-webkit-appearance:none;
 	-moz-appearance: none;
@@ -610,15 +655,16 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor button {
 	margin: 0;
 	position: relative;
-	height: 20px;
+	height: 2em;
 	border: none;
-	border-radius: 4px;
-	background: #444444;
-	color: white;
+	border-radius: 0.4em;
+	background: #444;
+	color: inherit;
 	font-size: inherit;
+	cursor: pointer;
 }
 .beepboxEditor button:focus {
-	background: #777777;
+	background: #777;
 	outline: none;
 }
 .beepboxEditor button.playButton::before {
@@ -626,11 +672,11 @@ styleSheet.appendChild(document.createTextNode(`
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	margin-left: -5px;
-	margin-top: -6px;
-	border-left: 10px solid white;
-	border-top: 6px solid transparent;
-	border-bottom: 6px solid transparent;
+	margin-left: -0.45em;
+	margin-top: -0.65em;
+	border-left: 1em solid currentColor;
+	border-top: 0.65em solid transparent;
+	border-bottom: 0.65em solid transparent;
 	pointer-events: none;
 }
 .beepboxEditor button.pauseButton::before {
@@ -638,11 +684,11 @@ styleSheet.appendChild(document.createTextNode(`
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	margin-left: -5px;
-	margin-top: -6px;
-	width: 3px;
-	height: 12px;
-	background: white;
+	margin-left: -0.5em;
+	margin-top: -0.65em;
+	width: 0.3em;
+	height: 1.3em;
+	background: currentColor;
 	pointer-events: none;
 }
 .beepboxEditor button.pauseButton::after {
@@ -650,11 +696,11 @@ styleSheet.appendChild(document.createTextNode(`
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	margin-left: 2px;
-	margin-top: -6px;
-	width: 3px;
-	height: 12px;
-	background: white;
+	margin-left: 0.2em;
+	margin-top: -0.65em;
+	width: 0.3em;
+	height: 1.3em;
+	background: currentColor;
 	pointer-events: none;
 }
 
@@ -665,89 +711,103 @@ styleSheet.appendChild(document.createTextNode(`
 }
 
 .beepboxEditor .selectRow {
-	width:100%;
-	color: #999;
 	margin: 0;
-	line-height: 27px;
+	height: 2.5em;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
 }
 
-.editor-right-side {
+.beepboxEditor .selectRow > span {
+	color: #999;
+}
+
+.beepboxEditor .editor-right-side {
+	margin-left: 6px;
 	width: 182px;
 	height: 645px;
-	font-size: 12px;
 	display: flex;
 	flex-direction: column;
 }
 
-.editor-right-side > * {
+.beepboxEditor .editor-right-side > * {
 	flex-shrink: 0;
 }
 
-/* slider style designed with http://danielstern.ca/range.css/ */
-input[type=range].beepBoxSlider {
+.beepboxEditor input[type=text], .beepboxEditor input[type=number] {
+	font-size: inherit;
+	background: transparent;
+	border: 1px solid #777;
+	color: white;
+}
+
+.beepboxEditor input[type=checkbox] {
+  transform: scale(1.5);
+}
+
+.beepboxEditor input[type=range] {
 	-webkit-appearance: none;
+	color: inherit;
 	width: 100%;
-	height: 18px;
-	margin: 4px 0;
+	height: 2em;
+	margin: 0;
 	cursor: pointer;
 	background-color: black;
 }
-input[type=range].beepBoxSlider:focus {
+.beepboxEditor input[type=range]:focus {
 	outline: none;
 }
-input[type=range].beepBoxSlider::-webkit-slider-runnable-track {
+.beepboxEditor input[type=range]::-webkit-slider-runnable-track {
 	width: 100%;
-	height: 6px;
+	height: 0.5em;
 	cursor: pointer;
 	background: #444;
 }
-input[type=range].beepBoxSlider::-webkit-slider-thumb {
-	height: 16px;
-	width: 6px;
-	border-radius: 3px;
-	background: #fff;
+.beepboxEditor input[type=range]::-webkit-slider-thumb {
+	height: 2em;
+	width: 0.5em;
+	border-radius: 0.25em;
+	background: currentColor;
 	cursor: pointer;
 	-webkit-appearance: none;
-	margin-top: -5px;
+	margin-top: -0.75em;
 }
-input[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {
+.beepboxEditor input[type=range]:focus::-webkit-slider-runnable-track {
 	background: #777;
 }
-input[type=range].beepBoxSlider::-moz-range-track {
+.beepboxEditor input[type=range]::-moz-range-track {
 	width: 100%;
-	height: 6px;
+	height: 0.5em;
 	cursor: pointer;
 	background: #444;
 }
-input[type=range].beepBoxSlider:focus::-moz-range-track {
+.beepboxEditor input[type=range]:focus::-moz-range-track {
 	background: #777;
 }
-input[type=range].beepBoxSlider::-moz-range-thumb {
-	height: 16px;
-	width: 6px;
-	border-radius: 3px;
-	background: #fff;
+.beepboxEditor input[type=range]::-moz-range-thumb {
+	height: 2em;
+	width: 0.5em;
+	border-radius: 0.25em;
+	border: none;
+	background: currentColor;
 	cursor: pointer;
 }
-input[type=range].beepBoxSlider::-ms-track {
+.beepboxEditor input[type=range]::-ms-track {
 	width: 100%;
-	height: 6px;
+	height: 0.5em;
 	cursor: pointer;
 	background: #444;
 	border-color: transparent;
 }
-input[type=range].beepBoxSlider:focus::-ms-track {
+.beepboxEditor input[type=range]:focus::-ms-track {
 	background: #777;
 }
-input[type=range].beepBoxSlider::-ms-thumb {
-	height: 16px;
-	width: 6px;
-	border-radius: 3px;
-	background: #fff;
+.beepboxEditor input[type=range]::-ms-thumb {
+	height: 2em;
+	width: 0.5em;
+	border-radius: 0.25em;
+	background: currentColor;
 	cursor: pointer;
 }
 `));

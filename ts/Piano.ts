@@ -23,8 +23,6 @@ SOFTWARE.
 /// <reference path="synth.ts" />
 /// <reference path="editor.ts" />
 
-"use strict";
-
 module beepbox {
 	let loadedCount: number = 0;
 	let finishedLoadingImages: boolean = false;

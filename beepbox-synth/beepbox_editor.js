@@ -3,7 +3,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-"use strict";
 var beepbox;
 (function (beepbox) {
     var BitField = (function () {
@@ -1936,7 +1935,6 @@ var beepbox;
     }());
     beepbox.Synth = Synth;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     function lerp(low, high, t) {
@@ -3482,7 +3480,6 @@ var beepbox;
     }());
     beepbox.PatternCursor = PatternCursor;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     function prettyNumber(value) {
@@ -4222,7 +4219,6 @@ var beepbox;
     }());
     beepbox.PatternEditor = PatternEditor;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     var Box = (function () {
@@ -4289,7 +4285,7 @@ var beepbox;
             this._songEditor = _songEditor;
             this._editorWidth = 512;
             this._barWidth = 32;
-            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: 128 });
+            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; position: absolute;", width: this._editorWidth, height: 128 });
             this.container = beepbox.html.div({ style: "width: 512px; height: 128px; position: relative; overflow:hidden;" }, [this._svg]);
             this._playhead = beepbox.svgElement("rect", { fill: "white", x: 0, y: 0, width: 4, height: 128 });
             this._boxHighlight = beepbox.svgElement("rect", { fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30 });
@@ -4535,7 +4531,6 @@ var beepbox;
     }());
     beepbox.TrackEditor = TrackEditor;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     var LoopEditor = (function () {
@@ -4550,7 +4545,7 @@ var beepbox;
             this._bothMode = 2;
             this._loop = beepbox.svgElement("path", { fill: "none", stroke: "#7744ff", "stroke-width": 4 });
             this._highlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
-            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight }, [
+            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: pan-y; position: absolute;", width: this._editorWidth, height: this._editorHeight }, [
                 this._loop,
                 this._highlight,
             ]);
@@ -4765,7 +4760,6 @@ var beepbox;
     }());
     beepbox.LoopEditor = LoopEditor;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     var BarScrollBar = (function () {
@@ -4779,7 +4773,7 @@ var beepbox;
             this._handleHighlight = beepbox.svgElement("rect", { fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 0, y: 1, width: 10, height: this._editorHeight - 2 });
             this._leftHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
             this._rightHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
-            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight }, [
+            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: pan-y; position: absolute;", width: this._editorWidth, height: this._editorHeight }, [
                 this._notches,
                 this._handle,
                 this._handleHighlight,
@@ -4954,7 +4948,6 @@ var beepbox;
     }());
     beepbox.BarScrollBar = BarScrollBar;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     var OctaveScrollBar = (function () {
@@ -4971,7 +4964,7 @@ var beepbox;
             this._handleHighlight = beepbox.svgElement("rect", { fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight });
             this._upHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
             this._downHighlight = beepbox.svgElement("path", { fill: "white", "pointer-events": "none" });
-            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight });
+            this._svg = beepbox.svgElement("svg", { style: "background-color: #000000; touch-action: pan-x; position: absolute;", width: this._editorWidth, height: this._editorHeight });
             this.container = beepbox.html.div({ id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow: hidden; position: relative;" }, [this._svg]);
             this._mouseX = 0;
             this._mouseY = 0;
@@ -5138,7 +5131,6 @@ var beepbox;
     }());
     beepbox.OctaveScrollBar = OctaveScrollBar;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     var loadedCount = 0;
@@ -5333,7 +5325,6 @@ var beepbox;
     }());
     beepbox.Piano = Piano;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     var button = beepbox.html.button, div = beepbox.html.div, span = beepbox.html.span, input = beepbox.html.input, br = beepbox.html.br, text = beepbox.html.text;
@@ -5342,49 +5333,41 @@ var beepbox;
             var _this = this;
             this._doc = _doc;
             this._songEditor = _songEditor;
-            this._beatsStepper = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1" });
-            this._barsStepper = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1" });
-            this._patternsStepper = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "32", step: "1" });
-            this._instrumentsStepper = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "10", step: "1" });
-            this._okayButton = button({ style: "width:125px;", type: "button" }, [text("Okay")]);
-            this._cancelButton = button({ style: "width:125px;", type: "button" }, [text("Cancel")]);
-            this.container = div({ style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;" }, [
-                div({ style: "text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
-                    div({ style: "font-size: 30px" }, [text("Custom Song Size")]),
-                    div({ style: "height: 30px;" }),
-                    div({ style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;" }, [
-                        div({ style: "text-align: right; line-height: 18px;" }, [
-                            text("Beats per bar:"),
-                            br(),
-                            span({ style: "color: #888888;" }, [text("(Multiples of 3 or 4 are recommended)")]),
-                        ]),
-                        div({ style: "display: inline-block; width: 20px; height: 1px;" }),
-                        this._beatsStepper,
+            this._beatsStepper = input({ style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "128", step: "1" });
+            this._barsStepper = input({ style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "128", step: "1" });
+            this._patternsStepper = input({ style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "32", step: "1" });
+            this._instrumentsStepper = input({ style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "10", step: "1" });
+            this._okayButton = button({ style: "width:45%;" }, [text("Okay")]);
+            this._cancelButton = button({ style: "width:45%;" }, [text("Cancel")]);
+            this.container = div({ className: "prompt", style: "width: 250px;" }, [
+                div({ style: "font-size: 2em" }, [text("Custom Song Size")]),
+                div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" }, [
+                    div({ style: "text-align: right;" }, [
+                        text("Beats per bar:"),
+                        br(),
+                        span({ style: "font-size: smaller; color: #888888;" }, [text("(Multiples of 3 or 4 are recommended)")]),
                     ]),
-                    div({ style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;" }, [
-                        div({ style: "display: inline-block; text-align: right; line-height: 18px;" }, [
-                            text("Bars per song:"),
-                            br(),
-                            span({ style: "color: #888888;" }, [text("(Multiples of 2 or 4 are recommended)")]),
-                        ]),
-                        div({ style: "display: inline-block; width: 20px; height: 1px;" }),
-                        this._barsStepper,
+                    this._beatsStepper,
+                ]),
+                div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" }, [
+                    div({ style: "display: inline-block; text-align: right;" }, [
+                        text("Bars per song:"),
+                        br(),
+                        span({ style: "font-size: smaller; color: #888888;" }, [text("(Multiples of 2 or 4 are recommended)")]),
                     ]),
-                    div({ style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;" }, [
-                        text("Patterns per channel:"),
-                        div({ style: "display: inline-block; width: 20px; height: 1px;" }),
-                        this._patternsStepper,
-                    ]),
-                    div({ style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;" }, [
-                        text("Instruments per channel:"),
-                        div({ style: "display: inline-block; width: 20px; height: 1px;" }),
-                        this._instrumentsStepper,
-                    ]),
-                    div({ style: "height: 30px;" }),
-                    div({ style: "display: flex; flex-direction: row; justify-content: space-between;" }, [
-                        this._okayButton,
-                        this._cancelButton,
-                    ]),
+                    this._barsStepper,
+                ]),
+                div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" }, [
+                    text("Patterns per channel:"),
+                    this._patternsStepper,
+                ]),
+                div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" }, [
+                    text("Instruments per channel:"),
+                    this._instrumentsStepper,
+                ]),
+                div({ style: "display: flex; flex-direction: row; justify-content: space-between;" }, [
+                    this._okayButton,
+                    this._cancelButton,
                 ]),
             ]);
             this._onClose = function () {
@@ -5451,7 +5434,6 @@ var beepbox;
     }());
     beepbox.SongDurationPrompt = SongDurationPrompt;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     var button = beepbox.html.button, div = beepbox.html.div, span = beepbox.html.span, input = beepbox.html.input, text = beepbox.html.text;
@@ -5517,46 +5499,36 @@ var beepbox;
             var _this = this;
             this._doc = _doc;
             this._songEditor = _songEditor;
-            this._fileName = input({ type: "text", value: "BeepBox-Song", maxlength: 250, size: 15 });
+            this._fileName = input({ type: "text", style: "width: 10em;", value: "BeepBox-Song", maxlength: 250 });
             this._enableIntro = input({ type: "checkbox" });
-            this._loopDropDown = input({ style: "width: 40px; height: 16px;", type: "number", min: "1", max: "4", step: "1" });
+            this._loopDropDown = input({ style: "width: 2em;", type: "number", min: "1", max: "4", step: "1" });
             this._enableOutro = input({ type: "checkbox" });
-            this._exportWavButton = button({ style: "width:200px;", type: "button" }, [text("Export to .wav file")]);
-            this._exportMidiButton = button({ style: "width:200px;", type: "button" }, [text("Export to .midi file")]);
-            this._exportJsonButton = button({ style: "width:200px;", type: "button" }, [text("Export to .json file")]);
-            this._cancelButton = button({ style: "width:200px;", type: "button" }, [text("Cancel")]);
-            this.container = div({ style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;" }, [
-                div({ style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
-                    div({ style: "font-size: 30px" }, [text("Export Options")]),
-                    div({ style: "height: 20px;" }),
-                    div({ style: "line-height: 46px;" }, [
-                        div({ style: "display: inline-block;text-align: right; line-height: 18px;" }, [
-                            text("File name:"),
-                        ]),
-                        div({ style: "display: inline-block; width: 20px; height: 1px;" }),
-                        this._fileName,
-                    ]),
-                    div({ style: "display: table; width: 200px;" }, [
-                        div({ style: "display: table-row;" }, [
-                            div({ style: "display: table-cell;" }, [text("Intro:")]),
-                            div({ style: "display: table-cell;" }, [text("Loop Count:")]),
-                            div({ style: "display: table-cell;" }, [text("Outro:")]),
-                        ]),
-                        div({ style: "display: table-row; height: 30px;" }, [
-                            div({ style: "display: table-cell; vertical-align: middle;" }, [this._enableIntro]),
-                            div({ style: "display: table-cell; vertical-align: middle;" }, [this._loopDropDown]),
-                            div({ style: "display: table-cell; vertical-align: middle;" }, [this._enableOutro]),
-                        ]),
-                    ]),
-                    div({ style: "height: 20px;" }),
-                    this._exportWavButton,
-                    div({ style: "height: 20px;" }),
-                    this._exportMidiButton,
-                    div({ style: "height: 20px;" }),
-                    this._exportJsonButton,
-                    div({ style: "height: 20px;" }),
-                    this._cancelButton,
+            this._exportWavButton = button({}, [text("Export to .wav file")]);
+            this._exportMidiButton = button({}, [text("Export to .midi file")]);
+            this._exportJsonButton = button({}, [text("Export to .json file")]);
+            this._cancelButton = button({}, [text("Cancel")]);
+            this.container = div({ className: "prompt", style: "width: 200px;" }, [
+                div({ style: "font-size: 2em" }, [text("Export Options")]),
+                div({ style: "display: flex; flex-direction: row; align-items: center; justify-content: space-between;" }, [
+                    text("File name:"),
+                    this._fileName,
                 ]),
+                div({ style: "display: table; width: 100%;" }, [
+                    div({ style: "display: table-row;" }, [
+                        div({ style: "display: table-cell;" }, [text("Intro:")]),
+                        div({ style: "display: table-cell;" }, [text("Loop Count:")]),
+                        div({ style: "display: table-cell;" }, [text("Outro:")]),
+                    ]),
+                    div({ style: "display: table-row;" }, [
+                        div({ style: "display: table-cell; vertical-align: middle;" }, [this._enableIntro]),
+                        div({ style: "display: table-cell; vertical-align: middle;" }, [this._loopDropDown]),
+                        div({ style: "display: table-cell; vertical-align: middle;" }, [this._enableOutro]),
+                    ]),
+                ]),
+                this._exportWavButton,
+                this._exportMidiButton,
+                this._exportJsonButton,
+                this._cancelButton,
             ]);
             this._onClose = function () {
                 _this._songEditor.closePrompt(_this);
@@ -6062,7 +6034,6 @@ var beepbox;
     }());
     beepbox.ExportPrompt = ExportPrompt;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     var button = beepbox.html.button, div = beepbox.html.div, input = beepbox.html.input, text = beepbox.html.text;
@@ -6071,18 +6042,13 @@ var beepbox;
             var _this = this;
             this._doc = _doc;
             this._songEditor = _songEditor;
-            this._fileInput = input({ style: "width:200px;", type: "file", accept: ".json,application/json" });
-            this._cancelButton = button({ style: "width:200px;", type: "button" }, [text("Cancel")]);
-            this.container = div({ style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;" }, [
-                div({ style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;" }, [
-                    div({ style: "font-size: 30px" }, [text("Import")]),
-                    div({ style: "height: 30px;" }),
-                    div(undefined, [text("BeepBox songs can be exported and re-imported as .json files. You could also use other means to make .json files for BeepBox as long as they follow the same structure.")]),
-                    div({ style: "height: 20px;" }),
-                    this._fileInput,
-                    div({ style: "height: 20px;" }),
-                    this._cancelButton,
-                ]),
+            this._fileInput = input({ type: "file", accept: ".json,application/json" });
+            this._cancelButton = button({}, [text("Cancel")]);
+            this.container = div({ className: "prompt", style: "width: 200px;" }, [
+                div({ style: "font-size: 2em" }, [text("Import")]),
+                div(undefined, [text("BeepBox songs can be exported and re-imported as .json files. You could also use other means to make .json files for BeepBox as long as they follow the same structure.")]),
+                this._fileInput,
+                this._cancelButton,
             ]);
             this._onClose = function () {
                 _this._songEditor.closePrompt(_this);
@@ -6107,7 +6073,6 @@ var beepbox;
     }());
     beepbox.ImportPrompt = ImportPrompt;
 })(beepbox || (beepbox = {}));
-"use strict";
 var beepbox;
 (function (beepbox) {
     var button = beepbox.html.button, div = beepbox.html.div, span = beepbox.html.span, select = beepbox.html.select, option = beepbox.html.option, input = beepbox.html.input, text = beepbox.html.text;
@@ -6151,7 +6116,7 @@ var beepbox;
                 ]),
             ]);
             this._playButton = button({ style: "width: 34px; margin: 0px", type: "button" });
-            this._volumeSlider = input({ className: "beepBoxSlider", style: "width: 120px; flex-shrink: 0; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1" });
+            this._volumeSlider = input({ style: "width: 9em; flex-shrink: 0; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1" });
             this._editButton = select({ style: "width:100%;" }, [
                 option("", "Edit Menu", true, true),
                 option("undo", "Undo (Z)", false, false),
@@ -6171,36 +6136,53 @@ var beepbox;
                 option("showChannels", "Show All Channels", false, false),
                 option("showScrollBar", "Octave Scroll Bar", false, false),
             ]);
-            this._exportButton = button({ style: "width:100%; margin: 5px 0;", type: "button" }, [text("Export")]);
-            this._scaleDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.scaleNames);
-            this._keyDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.keyNames);
-            this._tempoSlider = input({ className: "beepBoxSlider", style: "width: 120px; margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1" });
-            this._partDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.partNames);
-            this._patternSettingsLabel = div({ style: "visibility: hidden; width:100%; margin: 3px 0; text-align: center;" }, [text("Pattern Settings")]);
-            this._instrumentDropDown = select({ style: "width:120px;" });
-            this._instrumentDropDownGroup = div({ className: "selectRow", styleasdf: "width:100%; color: #bbbbbb; visibility: hidden; margin: 0; vertical-align: middle; line-height: 27px;" }, [text("Instrument: "), this._instrumentDropDown]);
-            this._channelVolumeSlider = input({ className: "beepBoxSlider", style: "width: 120px; margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1" });
-            this._waveNames = buildOptions(select({ style: "width:120px;" }), beepbox.Music.waveNames);
-            this._drumNames = buildOptions(select({ style: "width:120px;" }), beepbox.Music.drumNames);
-            this._attackDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.attackNames);
-            this._filterDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.filterNames);
-            this._filterDropDownGroup = div({ className: "selectRow" }, [text("Filter: "), div({ className: "selectContainer" }, [this._filterDropDown])]);
-            this._chorusDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.chorusNames);
-            this._chorusDropDownGroup = div({ className: "selectRow" }, [text("Chorus: "), div({ className: "selectContainer" }, [this._chorusDropDown])]);
-            this._effectDropDown = buildOptions(select({ style: "width:120px;" }), beepbox.Music.effectNames);
-            this._effectDropDownGroup = div({ className: "selectRow" }, [text("Effect: "), div({ className: "selectContainer" }, [this._effectDropDown])]);
-            this._promptBackground = div({ style: "position: absolute; background: #000000; opacity: 0.5; width: 100%; height: 100%; left: 0; display: none;" });
-            this.mainLayer = div({ className: "beepboxEditor", tabIndex: "0", style: "width: 700px; height: 645px; display: flex; flex-direction: row; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: relative;" }, [
+            this._exportButton = button({ style: "margin: 5px 0;", type: "button" }, [text("Export")]);
+            this._scaleDropDown = buildOptions(select({ style: "width:9em;" }), beepbox.Music.scaleNames);
+            this._keyDropDown = buildOptions(select({ style: "width:9em;" }), beepbox.Music.keyNames);
+            this._tempoSlider = input({ style: "width: 9em; margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1" });
+            this._partDropDown = buildOptions(select({ style: "width:9em;" }), beepbox.Music.partNames);
+            this._patternSettingsLabel = div({ style: "visibility: hidden; margin: 3px 0; text-align: center;" }, [text("Pattern Settings")]);
+            this._instrumentDropDown = select({ style: "width:9em;" });
+            this._instrumentDropDownGroup = div({ className: "selectRow", style: "visibility: hidden;" }, [span({}, [text("Instrument: ")]), div({ className: "selectContainer" }, [this._instrumentDropDown])]);
+            this._instrumentSettingsLabel = div({ style: "margin: 3px 0; text-align: center;" }, [text("Instrument Settings")]);
+            this._channelVolumeSlider = input({ style: "width: 9em; margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1" });
+            this._waveNames = buildOptions(select({ style: "width:9em;" }), beepbox.Music.waveNames);
+            this._drumNames = buildOptions(select({ style: "width:9em;" }), beepbox.Music.drumNames);
+            this._attackDropDown = buildOptions(select({ style: "width:9em;" }), beepbox.Music.attackNames);
+            this._filterDropDown = buildOptions(select({ style: "width:9em;" }), beepbox.Music.filterNames);
+            this._filterDropDownGroup = div({ className: "selectRow" }, [span({}, [text("Filter: ")]), div({ className: "selectContainer" }, [this._filterDropDown])]);
+            this._chorusDropDown = buildOptions(select({ style: "width:9em;" }), beepbox.Music.chorusNames);
+            this._chorusDropDownGroup = div({ className: "selectRow" }, [span({}, [text("Chorus: ")]), div({ className: "selectContainer" }, [this._chorusDropDown])]);
+            this._effectDropDown = buildOptions(select({ style: "width:9em;" }), beepbox.Music.effectNames);
+            this._effectDropDownGroup = div({ className: "selectRow" }, [span({}, [text("Effect: ")]), div({ className: "selectContainer" }, [this._effectDropDown])]);
+            this._instrumentSettingsGroup = div({}, [
+                div({ className: "selectRow" }, [
+                    span({}, [text("Volume: ")]),
+                    this._channelVolumeSlider,
+                ]),
+                div({ className: "selectRow" }, [
+                    span({}, [text("Wave: ")]),
+                    div({ className: "selectContainer" }, [this._waveNames, this._drumNames]),
+                ]),
+                div({ className: "selectRow" }, [
+                    span({}, [text("Envelope: ")]),
+                    div({ className: "selectContainer" }, [this._attackDropDown]),
+                ]),
+                this._filterDropDownGroup,
+                this._chorusDropDownGroup,
+                this._effectDropDownGroup,
+            ]);
+            this._promptContainer = div({ className: "promptContainer", style: "display: none;" });
+            this.mainLayer = div({ className: "beepboxEditor", tabIndex: "0" }, [
                 this._editorBox,
-                div({ style: "width: 6px; height: 645px;" }),
                 div({ className: "editor-right-side" }, [
-                    div({ style: "width:100%; text-align: center; color: #999;" }, [text("BeepBox 2.1.3")]),
-                    div({ style: "width:100%; margin: 5px 0; display: flex; flex-direction: row; align-items: center;" }, [
+                    div({ style: "text-align: center; color: #999;" }, [text("BeepBox 2.1.3")]),
+                    div({ style: "margin: 5px 0; display: flex; flex-direction: row; align-items: center;" }, [
                         this._playButton,
                         div({ style: "width: 4px; height: 10px;" }),
                         beepbox.svgElement("svg", { width: "20", height: "20" }, [
                             beepbox.svgElement("path", { d: "M 1 14 L 1 6 L 5 6 L 9 2 L 9 18 L 5 14 z", fill: "#777" }),
-                            beepbox.svgElement("path", { d: "M 11 9 L 13 7 A 4.2 4.2 0 0 1 13 13 L 11 11 A 1.4 1.4 0 0 0 11 9 z", fill: "#777" }),
+                            beepbox.svgElement("path", { d: "M 12 8 L 13 7 A 4.2 4.2 0 0 1 13 13 L 12 12 A 2.8 2.8 0 0 0 12 8 z", fill: "#777" }),
                             beepbox.svgElement("path", { d: "M 15 5 L 16 4 A 8.5 8.5 0 0 1 16 16 L 15 15 A 7.1 7.1 0 0 0 15 5 z", fill: "#777" }),
                         ]),
                         div({ style: "width: 4px; height: 10px;" }),
@@ -6209,46 +6191,32 @@ var beepbox;
                     div({ className: "selectContainer", style: "margin: 5px 0;" }, [this._editButton]),
                     div({ className: "selectContainer", style: "margin: 5px 0;" }, [this._optionsButton]),
                     this._exportButton,
-                    div({ style: "width: 100%; height: 110px; flex-shrink: 1;" }),
-                    div({ style: "width:100%; margin: 3px 0; text-align: center;" }, [text("Song Settings")]),
+                    div({ style: "flex: 1 1 110px;" }),
+                    div({ style: "margin: 3px 0; text-align: center;" }, [text("Song Settings")]),
                     div({ className: "selectRow" }, [
-                        text("Scale: "),
+                        span({}, [text("Scale: ")]),
                         div({ className: "selectContainer" }, [this._scaleDropDown]),
                     ]),
                     div({ className: "selectRow" }, [
-                        text("Key: "),
+                        span({}, [text("Key: ")]),
                         div({ className: "selectContainer" }, [this._keyDropDown]),
                     ]),
                     div({ className: "selectRow" }, [
-                        text("Tempo: "),
+                        span({}, [text("Tempo: ")]),
                         this._tempoSlider,
                     ]),
                     div({ className: "selectRow" }, [
-                        text("Rhythm: "),
+                        span({}, [text("Rhythm: ")]),
                         div({ className: "selectContainer" }, [this._partDropDown]),
                     ]),
-                    div({ style: "width: 100%; height: 25px; flex-shrink: 1;" }),
+                    div({ style: "flex: 1 1 25px;" }),
                     this._patternSettingsLabel,
                     this._instrumentDropDownGroup,
-                    div({ style: "width: 100%; height: 25px; flex-shrink: 1;" }),
-                    div({ style: "width:100%; margin: 3px 0; text-align: center;" }, [text("Instrument Settings")]),
-                    div({ className: "selectRow" }, [
-                        text("Volume: "),
-                        this._channelVolumeSlider,
-                    ]),
-                    div({ className: "selectRow" }, [
-                        text("Wave: "),
-                        div({ className: "selectContainer" }, [this._waveNames, this._drumNames]),
-                    ]),
-                    div({ className: "selectRow" }, [
-                        text("Envelope: "),
-                        div({ className: "selectContainer" }, [this._attackDropDown]),
-                    ]),
-                    this._filterDropDownGroup,
-                    this._chorusDropDownGroup,
-                    this._effectDropDownGroup,
+                    div({ style: "flex: 1 1 25px;" }),
+                    this._instrumentSettingsLabel,
+                    this._instrumentSettingsGroup,
                 ]),
-                this._promptBackground,
+                this._promptContainer,
             ]);
             this._copyBeats = 0;
             this._copyParts = 0;
@@ -6298,6 +6266,7 @@ var beepbox;
                     }
                     buildOptions(_this._instrumentDropDown, instrumentList);
                 }
+                _this._instrumentSettingsGroup.style.color = SongEditor.noteColorsBright[_this._doc.channel];
                 var instrument = _this._doc.getCurrentInstrument();
                 setSelectedIndex(_this._waveNames, _this._doc.song.instrumentWaves[_this._doc.channel][instrument]);
                 setSelectedIndex(_this._drumNames, _this._doc.song.instrumentWaves[_this._doc.channel][instrument]);
@@ -6520,16 +6489,16 @@ var beepbox;
             this._wasPlaying = this._doc.synth.playing;
             if (this._wasPlaying)
                 this._togglePlay();
-            this._promptBackground.style.display = "block";
-            this.mainLayer.appendChild(prompt.container);
+            this._promptContainer.style.display = null;
+            this._promptContainer.appendChild(prompt.container);
             this.promptVisible = true;
         };
         SongEditor.prototype.closePrompt = function (prompt) {
             this.promptVisible = false;
-            this._promptBackground.style.display = "none";
             if (this._wasPlaying)
                 this._togglePlay();
-            this.mainLayer.removeChild(prompt.container);
+            this._promptContainer.style.display = "none";
+            this._promptContainer.removeChild(prompt.container);
             this.mainLayer.focus();
         };
         ;
@@ -6579,7 +6548,7 @@ var beepbox;
     beepbox.SongEditor = SongEditor;
     var styleSheet = document.createElement('style');
     styleSheet.type = "text/css";
-    styleSheet.appendChild(document.createTextNode("\n/* For some reason the default focus outline effect causes the entire editor to get repainted when any part of it changes. Border doesn't do that. */\n.beepboxEditor {\n\tmargin: -3px;\n\tborder: 3px solid transparent;\n}\n.beepboxEditor:focus {\n\toutline: none;\n\tborder-color: #555555;\n}\n\n.beepboxEditor div {\n\tmargin: 0;\n\tpadding: 0;\n}\n\n/* Use psuedo-elements to add cross-browser up & down arrows to select elements: */\n.beepboxEditor .selectContainer {\n\tposition: relative;\n}\n.beepboxEditor .selectContainer::before {\n\tcontent: \"\";\n\tposition: absolute;\n\tright: 5px;\n\ttop: 4px;\n\tborder-bottom: 4px solid white;\n\tborder-left: 3px solid transparent;\n\tborder-right: 3px solid transparent;\n\tpointer-events: none;\n}\n.beepboxEditor .selectContainer::after {\n\tcontent: \"\";\n\tposition: absolute;\n\tright: 5px;\n\ttop: 12px;\n\tborder-top: 4px solid white;\n\tborder-left: 3px solid transparent;\n\tborder-right: 3px solid transparent;\n\tpointer-events: none;\n}\n.beepboxEditor select {\n\tmargin: 0;\n\tpadding: 0 5px;\n\tdisplay: block;\n\theight: 20px;\n\tborder: none;\n\tborder-radius: 4px;\n\tbackground: #444444;\n\tcolor: white;\n\tfont-size: inherit;\n\t\n\t-webkit-appearance:none;\n\t-moz-appearance: none;\n\tappearance: none;\n}\n.beepboxEditor select:focus {\n\tbackground: #777777;\n\toutline: none;\n}\n/* This makes it look better in firefox on my computer... What about others?\n@-moz-document url-prefix() {\n    .beepboxEditor select { padding: 0 2px; }\n}\n*/\n.beepboxEditor button {\n\tmargin: 0;\n\tposition: relative;\n\theight: 20px;\n\tborder: none;\n\tborder-radius: 4px;\n\tbackground: #444444;\n\tcolor: white;\n\tfont-size: inherit;\n}\n.beepboxEditor button:focus {\n\tbackground: #777777;\n\toutline: none;\n}\n.beepboxEditor button.playButton::before {\n\tcontent: \"\";\n\tposition: absolute;\n\tleft: 50%;\n\ttop: 50%;\n\tmargin-left: -5px;\n\tmargin-top: -6px;\n\tborder-left: 10px solid white;\n\tborder-top: 6px solid transparent;\n\tborder-bottom: 6px solid transparent;\n\tpointer-events: none;\n}\n.beepboxEditor button.pauseButton::before {\n\tcontent: \"\";\n\tposition: absolute;\n\tleft: 50%;\n\ttop: 50%;\n\tmargin-left: -5px;\n\tmargin-top: -6px;\n\twidth: 3px;\n\theight: 12px;\n\tbackground: white;\n\tpointer-events: none;\n}\n.beepboxEditor button.pauseButton::after {\n\tcontent: \"\";\n\tposition: absolute;\n\tleft: 50%;\n\ttop: 50%;\n\tmargin-left: 2px;\n\tmargin-top: -6px;\n\twidth: 3px;\n\theight: 12px;\n\tbackground: white;\n\tpointer-events: none;\n}\n\n.beepboxEditor canvas {\n\toverflow: hidden;\n\tposition: absolute;\n\tdisplay: block;\n}\n\n.beepboxEditor .selectRow {\n\twidth:100%;\n\tcolor: #999;\n\tmargin: 0;\n\tline-height: 27px;\n\tdisplay: flex;\n\tflex-direction: row;\n\talign-items: center;\n\tjustify-content: space-between;\n}\n\n.editor-right-side {\n\twidth: 182px;\n\theight: 645px;\n\tfont-size: 12px;\n\tdisplay: flex;\n\tflex-direction: column;\n}\n\n.editor-right-side > * {\n\tflex-shrink: 0;\n}\n\n/* slider style designed with http://danielstern.ca/range.css/ */\ninput[type=range].beepBoxSlider {\n\t-webkit-appearance: none;\n\twidth: 100%;\n\theight: 18px;\n\tmargin: 4px 0;\n\tcursor: pointer;\n\tbackground-color: black;\n}\ninput[type=range].beepBoxSlider:focus {\n\toutline: none;\n}\ninput[type=range].beepBoxSlider::-webkit-slider-runnable-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #444;\n}\ninput[type=range].beepBoxSlider::-webkit-slider-thumb {\n\theight: 16px;\n\twidth: 6px;\n\tborder-radius: 3px;\n\tbackground: #fff;\n\tcursor: pointer;\n\t-webkit-appearance: none;\n\tmargin-top: -5px;\n}\ninput[type=range].beepBoxSlider:focus::-webkit-slider-runnable-track {\n\tbackground: #777;\n}\ninput[type=range].beepBoxSlider::-moz-range-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #444;\n}\ninput[type=range].beepBoxSlider:focus::-moz-range-track {\n\tbackground: #777;\n}\ninput[type=range].beepBoxSlider::-moz-range-thumb {\n\theight: 16px;\n\twidth: 6px;\n\tborder-radius: 3px;\n\tbackground: #fff;\n\tcursor: pointer;\n}\ninput[type=range].beepBoxSlider::-ms-track {\n\twidth: 100%;\n\theight: 6px;\n\tcursor: pointer;\n\tbackground: #444;\n\tborder-color: transparent;\n}\ninput[type=range].beepBoxSlider:focus::-ms-track {\n\tbackground: #777;\n}\ninput[type=range].beepBoxSlider::-ms-thumb {\n\theight: 16px;\n\twidth: 6px;\n\tborder-radius: 3px;\n\tbackground: #fff;\n\tcursor: pointer;\n}\n"));
+    styleSheet.appendChild(document.createTextNode("\n.beepboxEditor {\n\t/* For some reason the default focus outline effect causes the entire editor to get repainted when any part of it changes. Border doesn't do that. */\n\tmargin: -3px;\n\tborder: 3px solid transparent;\n\twidth: 700px;\n\theight: 645px;\n\tdisplay: flex;\n\tflex-direction: row;\n\t-webkit-touch-callout: none;\n\t-webkit-user-select: none;\n\t-khtml-user-select: none;\n\t-moz-user-select: none;\n\t-ms-user-select: none;\n\tuser-select: none;\n\tposition: relative;\n\ttouch-action: manipulation;\n\tcursor: default;\n\tfont-size: small;\n}\n.beepboxEditor:focus {\n\toutline: none;\n\tborder-color: #555;\n}\n\n.beepboxEditor div {\n\tmargin: 0;\n\tpadding: 0;\n}\n\n.beepboxEditor .promptContainer {\n\tposition: absolute;\n\ttop: 0;\n\tleft: 0;\n\twidth: 100%;\n\theight: 100%;\n\tbackground: rgba(0,0,0,0.5);\n\tdisplay: flex;\n\tjustify-content: center;\n\talign-items: center;\n}\n\n.beepboxEditor .prompt {\n\tmargin: auto;\n\ttext-align: center;\n\tbackground: #000;\n\tborder-radius: 15px;\n\tborder: 4px solid #444;\n\tcolor: #fff;\n\tpadding: 20px;\n\tdisplay: flex;\n\tflex-direction: column;\n}\n\n.beepboxEditor .prompt > *:not(:first-child) {\n\tmargin-top: 1.5em;\n}\n\n/* Use psuedo-elements to add cross-browser up & down arrows to select elements: */\n.beepboxEditor .selectContainer {\n\tposition: relative;\n}\n.beepboxEditor .selectContainer::before {\n\tcontent: \"\";\n\tposition: absolute;\n\tright: 0.5em;\n\ttop: 0.4em;\n\tborder-bottom: 0.4em solid currentColor;\n\tborder-left: 0.3em solid transparent;\n\tborder-right: 0.3em solid transparent;\n\tpointer-events: none;\n}\n.beepboxEditor .selectContainer::after {\n\tcontent: \"\";\n\tposition: absolute;\n\tright: 0.5em;\n\tbottom: 0.4em;\n\tborder-top: 0.4em solid currentColor;\n\tborder-left: 0.3em solid transparent;\n\tborder-right: 0.3em solid transparent;\n\tpointer-events: none;\n}\n.beepboxEditor select {\n\tmargin: 0;\n\tpadding: 0 0.5em;\n\tdisplay: block;\n\theight: 2em;\n\tborder: none;\n\tborder-radius: 0.4em;\n\tbackground: #444444;\n\tcolor: inherit;\n\tfont-size: inherit;\n\tcursor: pointer;\n\t\n\t-webkit-appearance:none;\n\t-moz-appearance: none;\n\tappearance: none;\n}\n.beepboxEditor select:focus {\n\tbackground: #777777;\n\toutline: none;\n}\n/* This makes it look better in firefox on my computer... What about others?\n@-moz-document url-prefix() {\n    .beepboxEditor select { padding: 0 2px; }\n}\n*/\n.beepboxEditor button {\n\tmargin: 0;\n\tposition: relative;\n\theight: 2em;\n\tborder: none;\n\tborder-radius: 0.4em;\n\tbackground: #444;\n\tcolor: inherit;\n\tfont-size: inherit;\n\tcursor: pointer;\n}\n.beepboxEditor button:focus {\n\tbackground: #777;\n\toutline: none;\n}\n.beepboxEditor button.playButton::before {\n\tcontent: \"\";\n\tposition: absolute;\n\tleft: 50%;\n\ttop: 50%;\n\tmargin-left: -0.45em;\n\tmargin-top: -0.65em;\n\tborder-left: 1em solid currentColor;\n\tborder-top: 0.65em solid transparent;\n\tborder-bottom: 0.65em solid transparent;\n\tpointer-events: none;\n}\n.beepboxEditor button.pauseButton::before {\n\tcontent: \"\";\n\tposition: absolute;\n\tleft: 50%;\n\ttop: 50%;\n\tmargin-left: -0.5em;\n\tmargin-top: -0.65em;\n\twidth: 0.3em;\n\theight: 1.3em;\n\tbackground: currentColor;\n\tpointer-events: none;\n}\n.beepboxEditor button.pauseButton::after {\n\tcontent: \"\";\n\tposition: absolute;\n\tleft: 50%;\n\ttop: 50%;\n\tmargin-left: 0.2em;\n\tmargin-top: -0.65em;\n\twidth: 0.3em;\n\theight: 1.3em;\n\tbackground: currentColor;\n\tpointer-events: none;\n}\n\n.beepboxEditor canvas {\n\toverflow: hidden;\n\tposition: absolute;\n\tdisplay: block;\n}\n\n.beepboxEditor .selectRow {\n\tmargin: 0;\n\theight: 2.5em;\n\tdisplay: flex;\n\tflex-direction: row;\n\talign-items: center;\n\tjustify-content: space-between;\n}\n\n.beepboxEditor .selectRow > span {\n\tcolor: #999;\n}\n\n.beepboxEditor .editor-right-side {\n\tmargin-left: 6px;\n\twidth: 182px;\n\theight: 645px;\n\tdisplay: flex;\n\tflex-direction: column;\n}\n\n.beepboxEditor .editor-right-side > * {\n\tflex-shrink: 0;\n}\n\n.beepboxEditor input[type=text], .beepboxEditor input[type=number] {\n\tfont-size: inherit;\n\tbackground: transparent;\n\tborder: 1px solid #777;\n\tcolor: white;\n}\n\n.beepboxEditor input[type=checkbox] {\n  transform: scale(1.5);\n}\n\n.beepboxEditor input[type=range] {\n\t-webkit-appearance: none;\n\tcolor: inherit;\n\twidth: 100%;\n\theight: 2em;\n\tmargin: 0;\n\tcursor: pointer;\n\tbackground-color: black;\n}\n.beepboxEditor input[type=range]:focus {\n\toutline: none;\n}\n.beepboxEditor input[type=range]::-webkit-slider-runnable-track {\n\twidth: 100%;\n\theight: 0.5em;\n\tcursor: pointer;\n\tbackground: #444;\n}\n.beepboxEditor input[type=range]::-webkit-slider-thumb {\n\theight: 2em;\n\twidth: 0.5em;\n\tborder-radius: 0.25em;\n\tbackground: currentColor;\n\tcursor: pointer;\n\t-webkit-appearance: none;\n\tmargin-top: -0.75em;\n}\n.beepboxEditor input[type=range]:focus::-webkit-slider-runnable-track {\n\tbackground: #777;\n}\n.beepboxEditor input[type=range]::-moz-range-track {\n\twidth: 100%;\n\theight: 0.5em;\n\tcursor: pointer;\n\tbackground: #444;\n}\n.beepboxEditor input[type=range]:focus::-moz-range-track {\n\tbackground: #777;\n}\n.beepboxEditor input[type=range]::-moz-range-thumb {\n\theight: 2em;\n\twidth: 0.5em;\n\tborder-radius: 0.25em;\n\tborder: none;\n\tbackground: currentColor;\n\tcursor: pointer;\n}\n.beepboxEditor input[type=range]::-ms-track {\n\twidth: 100%;\n\theight: 0.5em;\n\tcursor: pointer;\n\tbackground: #444;\n\tborder-color: transparent;\n}\n.beepboxEditor input[type=range]:focus::-ms-track {\n\tbackground: #777;\n}\n.beepboxEditor input[type=range]::-ms-thumb {\n\theight: 2em;\n\twidth: 0.5em;\n\tborder-radius: 0.25em;\n\tbackground: currentColor;\n\tcursor: pointer;\n}\n"));
     document.head.appendChild(styleSheet);
     var prevHash = "**blank**";
     var doc = new beepbox.SongDocument();

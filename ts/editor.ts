@@ -22,8 +22,6 @@ SOFTWARE.
 
 /// <reference path="synth.ts" />
 
-"use strict";
-
 module beepbox {
 	export function lerp(low: number, high: number, t: number): number {
 		return low + t * (high - low);

@@ -23,8 +23,6 @@ SOFTWARE.
 /// <reference path="synth.ts" />
 /// <reference path="editor.ts" />
 
-"use strict";
-
 interface Cursor {
 	startBar?: number;
 	mode?: number;
@@ -47,7 +45,7 @@ module beepbox {
 		private readonly _loop = <SVGPathElement> svgElement("path", {fill: "none", stroke: "#7744ff", "stroke-width": 4});
 		private readonly _highlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		
-		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight}, [
+		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: pan-y; position: absolute;", width: this._editorWidth, height: this._editorHeight}, [
 			this._loop,
 			this._highlight,
 		]);

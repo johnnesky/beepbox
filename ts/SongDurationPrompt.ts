@@ -24,56 +24,46 @@ SOFTWARE.
 /// <reference path="editor.ts" />
 /// <reference path="SongEditor.ts" />
 
-"use strict";
-
 module beepbox {
 	const {button, div, span, input, br, text} = html;
 	
 	export class SongDurationPrompt {
-		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1"});
-		private readonly _barsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "128", step: "1"});
-		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "32", step: "1"});
-		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 40px; height: 16px;", type: "number", min: "1", max: "10", step: "1"});
-		private readonly _okayButton: HTMLButtonElement = button({style: "width:125px;", type: "button"}, [text("Okay")]);
-		private readonly _cancelButton: HTMLButtonElement = button({style: "width:125px;", type: "button"}, [text("Cancel")]);
+		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "128", step: "1"});
+		private readonly _barsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "128", step: "1"});
+		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "32", step: "1"});
+		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "10", step: "1"});
+		private readonly _okayButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Okay")]);
+		private readonly _cancelButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Cancel")]);
 		
-		public readonly container: HTMLDivElement = div({style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;"}, [
-			div({style: "text-align: center; background: #000000; width: 274px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
-				div({style: "font-size: 30px"}, [text("Custom Song Size")]),
-				div({style: "height: 30px;"}),
-				div({style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;"}, [
-					div({style: "text-align: right; line-height: 18px;"}, [
-						text("Beats per bar:"),
-						br(),
-						span({style: "color: #888888;"}, [text("(Multiples of 3 or 4 are recommended)")]),
-					]),
-					div({style: "display: inline-block; width: 20px; height: 1px;"}),
-					this._beatsStepper,
+		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
+			div({style: "font-size: 2em"}, [text("Custom Song Size")]),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
+				div({style: "text-align: right;"}, [
+					text("Beats per bar:"),
+					br(),
+					span({style: "font-size: smaller; color: #888888;"}, [text("(Multiples of 3 or 4 are recommended)")]),
 				]),
-				div({style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;"}, [
-					div({style: "display: inline-block; text-align: right; line-height: 18px;"}, [
-						text("Bars per song:"),
-						br(),
-						span({style: "color: #888888;"}, [text("(Multiples of 2 or 4 are recommended)")]),
-					]),
-					div({style: "display: inline-block; width: 20px; height: 1px;"}),
-					this._barsStepper,
+				this._beatsStepper,
+			]),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
+				div({style: "display: inline-block; text-align: right;"}, [
+					text("Bars per song:"),
+					br(),
+					span({style: "font-size: smaller; color: #888888;"}, [text("(Multiples of 2 or 4 are recommended)")]),
 				]),
-				div({style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;"}, [
-					text("Patterns per channel:"),
-					div({style: "display: inline-block; width: 20px; height: 1px;"}),
-					this._patternsStepper,
-				]),
-				div({style: "display: flex; flex-direction: row; height: 46px; align-items: center; width: 100%; justify-content: flex-end;"}, [
-					text("Instruments per channel:"),
-					div({style: "display: inline-block; width: 20px; height: 1px;"}),
-					this._instrumentsStepper,
-				]),
-				div({style: "height: 30px;"}),
-				div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
-					this._okayButton,
-					this._cancelButton,
-				]),
+				this._barsStepper,
+			]),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
+				text("Patterns per channel:"),
+				this._patternsStepper,
+			]),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
+				text("Instruments per channel:"),
+				this._instrumentsStepper,
+			]),
+			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
+				this._okayButton,
+				this._cancelButton,
 			]),
 		]);
 		

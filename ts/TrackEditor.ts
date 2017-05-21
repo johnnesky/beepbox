@@ -24,8 +24,6 @@ SOFTWARE.
 /// <reference path="editor.ts" />
 /// <reference path="SongEditor.ts" />
 
-"use strict";
-
 module beepbox {
 	class Box {
 		private readonly _text: Text = html.text("1");
@@ -89,7 +87,7 @@ module beepbox {
 	export class TrackEditor {
 		private readonly _editorWidth: number = 512;
 		private readonly _barWidth: number = 32;
-		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: 128});
+		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; position: absolute;", width: this._editorWidth, height: 128});
 		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 128px; position: relative; overflow:hidden;"}, [this._svg]);
 		
 		private readonly _playhead = <SVGRectElement> svgElement("rect", {fill: "white", x: 0, y: 0, width: 4, height: 128});

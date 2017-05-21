@@ -24,8 +24,6 @@ SOFTWARE.
 /// <reference path="editor.ts" />
 /// <reference path="SongEditor.ts" />
 
-"use strict";
-
 interface ArrayBufferConstructor {
 	transfer: any;
 }
@@ -95,47 +93,37 @@ module beepbox {
 	}
 
 	export class ExportPrompt {
-		private readonly _fileName: HTMLInputElement = input({type: "text", value: "BeepBox-Song", maxlength: 250, size: 15});
+		private readonly _fileName: HTMLInputElement = input({type: "text", style: "width: 10em;", value: "BeepBox-Song", maxlength: 250});
 		private readonly _enableIntro: HTMLInputElement = input({type: "checkbox"});
-		private readonly _loopDropDown: HTMLInputElement = input({style:"width: 40px; height: 16px;", type: "number", min: "1", max: "4", step: "1"});
+		private readonly _loopDropDown: HTMLInputElement = input({style:"width: 2em;", type: "number", min: "1", max: "4", step: "1"});
 		private readonly _enableOutro: HTMLInputElement = input({type: "checkbox"});
-		private readonly _exportWavButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .wav file")]);
-		private readonly _exportMidiButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .midi file")]);
-		private readonly _exportJsonButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Export to .json file")]);
-		private readonly _cancelButton: HTMLButtonElement = button({style: "width:200px;", type: "button"}, [text("Cancel")]);
+		private readonly _exportWavButton: HTMLButtonElement = button({}, [text("Export to .wav file")]);
+		private readonly _exportMidiButton: HTMLButtonElement = button({}, [text("Export to .midi file")]);
+		private readonly _exportJsonButton: HTMLButtonElement = button({}, [text("Export to .json file")]);
+		private readonly _cancelButton: HTMLButtonElement = button({}, [text("Cancel")]);
 		
-		public readonly container: HTMLDivElement = div({style: "position: absolute; width: 100%; height: 100%; left: 0; display: flex; justify-content: center; align-items: center;"}, [
-			div({style: "margin: auto; text-align: center; background: #000000; width: 200px; border-radius: 15px; border: 4px solid #444444; color: #ffffff; font-size: 12px; padding: 20px;"}, [
-				div({style: "font-size: 30px"}, [text("Export Options")]),
-				div({style: "height: 20px;"}),
-				div({style: "line-height: 46px;"}, [
-					div({style: "display: inline-block;text-align: right; line-height: 18px;"}, [
-						text("File name:"),
-					]),
-					div({style: "display: inline-block; width: 20px; height: 1px;"}),
-					this._fileName,
-				]),
-				div({style: "display: table; width: 200px;"}, [
-					div({style: "display: table-row;"}, [
-						div({style: "display: table-cell;"}, [text("Intro:")]),
-						div({style: "display: table-cell;"}, [text("Loop Count:")]),
-						div({style: "display: table-cell;"}, [text("Outro:")]),
-					]),
-					div({style: "display: table-row; height: 30px;"}, [
-						div({style: "display: table-cell; vertical-align: middle;"}, [this._enableIntro]),
-						div({style: "display: table-cell; vertical-align: middle;"}, [this._loopDropDown]),
-						div({style: "display: table-cell; vertical-align: middle;"}, [this._enableOutro]),
-					]),
-				]),
-				div({style: "height: 20px;"}),
-				this._exportWavButton,
-				div({style: "height: 20px;"}),
-				this._exportMidiButton,
-				div({style: "height: 20px;"}),
-				this._exportJsonButton,
-				div({style: "height: 20px;"}),
-				this._cancelButton,
+		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 200px;"}, [
+			div({style: "font-size: 2em"}, [text("Export Options")]),
+			div({style: "display: flex; flex-direction: row; align-items: center; justify-content: space-between;"}, [
+				text("File name:"),
+				this._fileName,
 			]),
+			div({style: "display: table; width: 100%;"}, [
+				div({style: "display: table-row;"}, [
+					div({style: "display: table-cell;"}, [text("Intro:")]),
+					div({style: "display: table-cell;"}, [text("Loop Count:")]),
+					div({style: "display: table-cell;"}, [text("Outro:")]),
+				]),
+				div({style: "display: table-row;"}, [
+					div({style: "display: table-cell; vertical-align: middle;"}, [this._enableIntro]),
+					div({style: "display: table-cell; vertical-align: middle;"}, [this._loopDropDown]),
+					div({style: "display: table-cell; vertical-align: middle;"}, [this._enableOutro]),
+				]),
+			]),
+			this._exportWavButton,
+			this._exportMidiButton,
+			this._exportJsonButton,
+			this._cancelButton,
 		]);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
