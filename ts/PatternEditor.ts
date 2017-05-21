@@ -24,8 +24,6 @@ SOFTWARE.
 /// <reference path="editor.ts" />
 /// <reference path="SongEditor.ts" />
 
-"use strict";
-
 module beepbox {
 	function prettyNumber(value: number): string {
 		return value.toFixed(2).replace(/\.?0*$/, "");

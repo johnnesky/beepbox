@@ -23,8 +23,6 @@ SOFTWARE.
 /// <reference path="synth.ts" />
 /// <reference path="editor.ts" />
 
-"use strict";
-
 module beepbox {
 	export class OctaveScrollBar {
 		private readonly _editorWidth: number = 20;
@@ -39,7 +37,7 @@ module beepbox {
 		private readonly _upHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		private readonly _downHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		
-		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight});
+		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: pan-x; position: absolute;", width: this._editorWidth, height: this._editorHeight});
 		public readonly container: HTMLDivElement = html.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow: hidden; position: relative;"}, [this._svg]);
 		
 		private _mouseX: number = 0;

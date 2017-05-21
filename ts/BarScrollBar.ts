@@ -23,8 +23,6 @@ SOFTWARE.
 /// <reference path="synth.ts" />
 /// <reference path="editor.ts" />
 
-"use strict";
-
 module beepbox {
 	export class BarScrollBar {
 		private readonly _editorWidth: number = 512;
@@ -36,7 +34,7 @@ module beepbox {
 		private readonly _leftHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		private readonly _rightHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		
-		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: this._editorWidth, height: this._editorHeight}, [
+		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: pan-y; position: absolute;", width: this._editorWidth, height: this._editorHeight}, [
 			this._notches,
 			this._handle,
 			this._handleHighlight,
