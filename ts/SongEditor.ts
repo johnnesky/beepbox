@@ -751,6 +751,7 @@ styleSheet.appendChild(document.createTextNode(`
 	color: inherit;
 	width: 100%;
 	height: 2em;
+	font-size: inherit;
 	margin: 0;
 	cursor: pointer;
 	background-color: black;

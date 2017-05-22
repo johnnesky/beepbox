@@ -215,10 +215,10 @@ module beepbox {
 		public static effectNames: string[] = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
 		public static effectVibratos: number[] = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
 		public static effectTremelos: number[] = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-		public static chorusNames: string[] = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves"];
-		public static chorusValues: number[] = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6];
-		public static chorusOffsets: number[] = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6];
-		public static chorusVolumes: number[] = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8];
+		public static chorusNames: string[] = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed"];
+		public static chorusValues: number[] = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02];
+		public static chorusOffsets: number[] = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0];
+		public static chorusVolumes: number[] = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0];
 		public static volumeNames: string[] = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
 		public static volumeValues: number[] = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
 		public static channelVolumes: number[] = [0.27, 0.27, 0.27, 0.19];
@@ -1559,6 +1559,9 @@ module beepbox {
 			let leadChorusB:    number;
 			let harmonyChorusB: number;
 			let bassChorusB:    number;
+			let leadChorusSign: number;
+			let harmonyChorusSign: number;
+			let bassChorusSign: number;
 			
 			let updateInstruments: ()=>void = ()=>{
 				const instrumentLead: number    = this.song.getPatternInstrument(0, this._bar);
@@ -1595,6 +1598,9 @@ module beepbox {
 				leadChorusB    = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[0][instrumentLead]] - Music.chorusValues[this.song.instrumentChorus[0][instrumentLead]]) / 12.0 );
 				harmonyChorusB = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[1][instrumentHarmony]] - Music.chorusValues[this.song.instrumentChorus[1][instrumentHarmony]]) / 12.0 );
 				bassChorusB    = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[2][instrumentBass]] - Music.chorusValues[this.song.instrumentChorus[2][instrumentBass]]) / 12.0 );
+				leadChorusSign = (this.song.instrumentChorus[0][instrumentLead] == 7) ? -1.0 : 1.0;
+				harmonyChorusSign = (this.song.instrumentChorus[1][instrumentHarmony] == 7) ? -1.0 : 1.0;
+				bassChorusSign = (this.song.instrumentChorus[2][instrumentBass] == 7) ? -1.0 : 1.0;
 				if (this.song.instrumentChorus[0][instrumentLead] == 0) this._leadPeriodB = this._leadPeriodA;
 				if (this.song.instrumentChorus[1][instrumentHarmony] == 0) this._harmonyPeriodB = this._harmonyPeriodA;
 				if (this.song.instrumentChorus[2][instrumentBass] == 0) this._bassPeriodB = this._bassPeriodA;
@@ -1878,7 +1884,7 @@ module beepbox {
 					effectY = this._effectYMult * effectY - prevEffectY;
 					prevEffectY = temp;
 					
-					this._leadSample += ((leadWave[Math.floor(this._leadPeriodA * leadWaveLength)] + leadWave[Math.floor(this._leadPeriodB * leadWaveLength)]) * leadVolume * leadTremelo - this._leadSample) * leadFilter;
+					this._leadSample += ((leadWave[Math.floor(this._leadPeriodA * leadWaveLength)] + leadWave[Math.floor(this._leadPeriodB * leadWaveLength)] * leadChorusSign) * leadVolume * leadTremelo - this._leadSample) * leadFilter;
 					leadVolume += leadVolumeDelta;
 					this._leadPeriodA += leadPeriodDelta * leadVibrato * leadChorusA;
 					this._leadPeriodB += leadPeriodDelta * leadVibrato * leadChorusB;
@@ -1888,7 +1894,7 @@ module beepbox {
 					leadFilter *= leadFilterScale;
 					sample += this._leadSample;
 					
-					this._harmonySample += ((harmonyWave[Math.floor(this._harmonyPeriodA * harmonyWaveLength)] + harmonyWave[Math.floor(this._harmonyPeriodB * harmonyWaveLength)]) * harmonyVolume * harmonyTremelo - this._harmonySample) * harmonyFilter;
+					this._harmonySample += ((harmonyWave[Math.floor(this._harmonyPeriodA * harmonyWaveLength)] + harmonyWave[Math.floor(this._harmonyPeriodB * harmonyWaveLength)] * harmonyChorusSign) * harmonyVolume * harmonyTremelo - this._harmonySample) * harmonyFilter;
 					harmonyVolume += harmonyVolumeDelta;
 					this._harmonyPeriodA += harmonyPeriodDelta * harmonyVibrato * harmonyChorusA;
 					this._harmonyPeriodB += harmonyPeriodDelta * harmonyVibrato * harmonyChorusB;
@@ -1898,7 +1904,7 @@ module beepbox {
 					harmonyFilter *= harmonyFilterScale;
 					sample += this._harmonySample;
 					
-					this._bassSample += ((bassWave[Math.floor(this._bassPeriodA * bassWaveLength)] + bassWave[Math.floor(this._bassPeriodB * bassWaveLength)]) * bassVolume * bassTremelo - this._bassSample) * bassFilter;
+					this._bassSample += ((bassWave[Math.floor(this._bassPeriodA * bassWaveLength)] + bassWave[Math.floor(this._bassPeriodB * bassWaveLength)] * bassChorusSign) * bassVolume * bassTremelo - this._bassSample) * bassFilter;
 					bassVolume += bassVolumeDelta;
 					this._bassPeriodA += bassPeriodDelta * bassVibrato * bassChorusA;
 					this._bassPeriodB += bassPeriodDelta * bassVibrato * bassChorusB;
