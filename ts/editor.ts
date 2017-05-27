@@ -1320,6 +1320,32 @@ module beepbox {
 		}
 	}
 	
+	export class ChangeReverb extends Change {
+		private _document: SongDocument;
+		private _oldReverb: number;
+		private _newReverb: number;
+		constructor(document: SongDocument, reverb: number) {
+			super(false);
+			this._document = document;
+			this._oldReverb = document.song.reverb;
+			this._newReverb = reverb;
+			if (this._oldReverb != this._newReverb) {
+				this._didSomething();
+				this.redo();
+			}
+		}
+		
+		protected _doForwards(): void {
+			this._document.song.reverb = this._newReverb;
+			this._document.changed();
+		}
+		
+		protected _doBackwards(): void {
+			this._document.song.reverb = this._oldReverb;
+			this._document.changed();
+		}
+	}
+	
 	export class ChangeToneAdded extends Change {
 		private _document: SongDocument;
 		private _bar: BarPattern;

@@ -193,6 +193,7 @@ module beepbox {
 		public static keyNames: string[] = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
 		public static keyTransposes: number[] = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
 		public static tempoNames: string[] = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
+		public static reverbRange: number = 4;
 		public static beatsMin: number = 3;
 		public static beatsMax: number = 15;
 		public static barsMin: number = 1;
@@ -287,6 +288,7 @@ module beepbox {
 		public scale: number;
 		public key: number;
 		public tempo: number;
+		public reverb: number;
 		public beats: number;
 		public bars: number;
 		public patterns: number;
@@ -337,6 +339,7 @@ module beepbox {
 			this.loopStart = 0;
 			this.loopLength = 4;
 			this.tempo = 7;
+			this.reverb = 0;
 			this.beats = 8;
 			this.bars = 16;
 			this.patterns = 8;
@@ -356,6 +359,7 @@ module beepbox {
 			result += "l" + base64[this.loopStart >> 6] + base64[this.loopStart & 0x3f];
 			result += "e" + base64[(this.loopLength - 1) >> 6] + base64[(this.loopLength - 1) & 0x3f];
 			result += "t" + base64[this.tempo];
+			result += "m" + base64[this.reverb];
 			result += "a" + base64[this.beats - 1];
 			result += "g" + base64[(this.bars - 1) >> 6] + base64[(this.bars - 1) & 0x3f];
 			result += "j" + base64[this.patterns - 1];
@@ -582,6 +586,9 @@ module beepbox {
 						this.tempo = base64.indexOf(compressed.charAt(charIndex++));
 					}
 					this.tempo = this._clip(0, Music.tempoNames.length, this.tempo);
+				} else if (command == "m") {
+					this.reverb = base64.indexOf(compressed.charAt(charIndex++));
+					this.reverb = this._clip(0, Music.reverbRange, this.reverb);
 				} else if (command == "a") {
 					if (beforeThree) {
 						this.beats = [6, 7, 8, 9, 10][base64.indexOf(compressed.charAt(charIndex++))];
@@ -949,6 +956,7 @@ module beepbox {
 				beatsPerBar: this.beats,
 				ticksPerBeat: this.parts,
 				beatsPerMinute: this.getBeatsPerMinute(), // represents tempo
+				reverb: this.reverb,
 				//outroBars: this.bars - this.loopStart - this.loopLength; // derive this from bar arrays?
 				//patternCount: this.patterns, // derive this from pattern arrays?
 				//instrumentsPerChannel: this.instruments, //derive this from instrument arrays?
@@ -990,6 +998,10 @@ module beepbox {
 				const bpm: number = jsonObject.beatsPerMinute | 0;
 				this.tempo = Math.round(4.0 + 9.0 * Math.log(bpm / 120) / Math.LN2);
 				this.tempo = this._clip(0, Music.tempoNames.length, this.tempo);
+			}
+			
+			if (jsonObject.reverb != undefined) {
+				this.reverb = this._clip(0, Music.reverbRange, jsonObject.reverb | 0);
 			}
 			
 			if (jsonObject.beatsPerBar != undefined) {
@@ -1216,7 +1228,7 @@ module beepbox {
 			new Float64Array([1.0, -1.0, 1.0, -1.0, 1.0, 0.0]),
 			new Float64Array([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2, ]),
 		];
-		private _drumWaves: Float64Array[] = [ new Float64Array(32767), new Float64Array(32767) ];
+		private _drumWaves: Float32Array[] = [ new Float32Array(32767), new Float32Array(32767) ];
 		
 		public song: Song = null;
 		public stutterPressed: boolean = false;
@@ -1253,14 +1265,16 @@ module beepbox {
 		//private timer: Timer = new Timer(200, 0);
 		private _effectPeriod: number = 0.0;
 		private _limit: number = 0.0;
-		/*
-		private _reverbDelay1: number[] = [];
-		private _reverbDelayIndex1: number = 0;
-		private _reverbDelay2: number[] = [];
-		private _reverbDelayIndex2: number = 0;
-		private _reverbDelay3: number[] = [];
-		private _reverbDelayIndex3: number = 0;
-		*/
+		
+		
+		private _delayLine: Float32Array = new Float32Array(16384);
+		private _delayPos: number = 0;
+		private _delayFeedback0: number = 0.0;
+		private _delayFeedback1: number = 0.0;
+		private _delayFeedback2: number = 0.0;
+		private _delayFeedback3: number = 0.0;
+		
+		
 		private _audioCtx: any;
 		private _scriptNode: any;
 		
@@ -1304,7 +1318,7 @@ module beepbox {
 			}
 			
 			for (let index: number = 0; index < this._drumWaves.length; index++) {
-				const wave: Float64Array = this._drumWaves[index];
+				const wave: Float32Array = this._drumWaves[index];
 				if (index == 0) {
 					let drumBuffer: number = 1;
 					for (let i: number = 0; i < 32767; i++) {
@@ -1326,17 +1340,6 @@ module beepbox {
 			if (song != null) {
 				this.setSong(song);
 			}
-			/*
-			reverbDelay1.length = 1024;
-			reverbDelay1.fixed = true;
-			for (let i: number = 0; i < reverbDelay1.length; i++) reverbDelay1[i] = 0.0;
-			reverbDelay2.length = 1024;
-			reverbDelay2.fixed = true;
-			for (let i: number = 0; i < reverbDelay2.length; i++) reverbDelay2[i] = 0.0;
-			reverbDelay3.length = 1024;
-			reverbDelay3.fixed = true;
-			for (let i: number = 0; i < reverbDelay3.length; i++) reverbDelay3[i] = 0.0;
-			*/
 		}
 		
 		public setSong(song: any): void {
@@ -1388,6 +1391,17 @@ module beepbox {
 			this._arpeggio = 0;
 			this._arpeggioSamples = 0;
 			this._effectPeriod = 0.0;
+			
+			this._leadSample = 0.0;
+			this._harmonySample = 0.0;
+			this._bassSample = 0.0;
+			this._drumSample = 0.0;
+			this._delayPos = 0;
+			this._delayFeedback0 = 0.0;
+			this._delayFeedback1 = 0.0;
+			this._delayFeedback2 = 0.0;
+			this._delayFeedback3 = 0.0;
+			for (let i: number = 0; i < this._delayLine.length; i++) this._delayLine[i] = 0.0;
 		}
 		
 		public nextBar(): void {
@@ -1443,6 +1457,13 @@ module beepbox {
 		}
 		*/
 		public synthesize(data: Float32Array, totalSamples: number): void {
+			if (this.song == null) {
+				for (let i: number = 0; i < totalSamples; i++) {
+					data[i] = 0.0;
+				}
+				return;
+			}
+			
 			let bufferIndex: number = 0;
 			
 			let stutterFunction: ()=>void;
@@ -1489,16 +1510,13 @@ module beepbox {
 				}
 			}
 			
-			
 			const sampleTime: number = 1.0 / this.samplesPerSecond;
 			const samplesPerArpeggio: number = this._getSamplesPerArpeggio();
-			
-			if (this.song == null) {
-				for (let i: number = 0; i < totalSamples; i++) {
-					data[i] = 0.0;
-				}
-				return;
-			}
+			const effectYMult = this._effectYMult;
+			const limitDecay: number = this._limitDecay;
+			const volume: number = this.volume;
+			const delayLine: Float32Array = this._delayLine;
+			const reverb: number = Math.pow(this.song.reverb / Music.reverbRange, 0.667) * 0.375;
 			
 			// Check the bounds of the playhead:
 			if (this._arpeggioSamples == 0 || this._arpeggioSamples > samplesPerArpeggio) {
@@ -1530,79 +1548,79 @@ module beepbox {
 				this.enableIntro = false;
 			}
 			
-			let maxLeadVolume:    number;
-			let maxHarmonyVolume: number;
-			let maxBassVolume:    number;
-			let maxDrumVolume:    number;
+			let maxLeadVolume: number;
+			let maxHarmVolume: number;
+			let maxBassVolume: number;
+			let maxDrumVolume: number;
 			
-			let leadWave:    Float64Array;
-			let harmonyWave: Float64Array;
-			let bassWave:    Float64Array;
-			let drumWave:    Float64Array;
+			let leadWave: Float64Array;
+			let harmWave: Float64Array;
+			let bassWave: Float64Array;
+			let drumWave: Float32Array;
 			
-			let leadWaveLength:    number;
-			let harmonyWaveLength: number;
-			let bassWaveLength:    number;
+			let leadWaveLength: number;
+			let harmWaveLength: number;
+			let bassWaveLength: number;
 			
-			let leadFilterBase:    number;
-			let harmonyFilterBase: number;
-			let bassFilterBase:    number;
+			let leadFilterBase: number;
+			let harmFilterBase: number;
+			let bassFilterBase: number;
 			let drumFilter: number;
 			
-			let leadTremeloScale:    number;
-			let harmonyTremeloScale: number;
-			let bassTremeloScale:    number;
+			let leadTremeloScale: number;
+			let harmTremeloScale: number;
+			let bassTremeloScale: number;
 			
-			let leadChorusA:    number;
-			let harmonyChorusA: number;
-			let bassChorusA:    number;
-			let leadChorusB:    number;
-			let harmonyChorusB: number;
-			let bassChorusB:    number;
+			let leadChorusA: number;
+			let harmChorusA: number;
+			let bassChorusA: number;
+			let leadChorusB: number;
+			let harmChorusB: number;
+			let bassChorusB: number;
 			let leadChorusSign: number;
-			let harmonyChorusSign: number;
+			let harmChorusSign: number;
 			let bassChorusSign: number;
 			
 			let updateInstruments: ()=>void = ()=>{
-				const instrumentLead: number    = this.song.getPatternInstrument(0, this._bar);
-				const instrumentHarmony: number = this.song.getPatternInstrument(1, this._bar);
-				const instrumentBass: number    = this.song.getPatternInstrument(2, this._bar);
-				const instrumentDrum: number    = this.song.getPatternInstrument(3, this._bar);
+				const instrumentLead: number = this.song.getPatternInstrument(0, this._bar);
+				const instrumentHarm: number = this.song.getPatternInstrument(1, this._bar);
+				const instrumentBass: number = this.song.getPatternInstrument(2, this._bar);
+				const instrumentDrum: number = this.song.getPatternInstrument(3, this._bar);
 				
-				maxLeadVolume    = Music.channelVolumes[0] * (this.song.instrumentVolumes[0][instrumentLead] == 5 ? 0.0 :    Math.pow(2, -Music.volumeValues[this.song.instrumentVolumes[0][instrumentLead]]))    * Music.waveVolumes[this.song.instrumentWaves[0][instrumentLead]]    * Music.filterVolumes[this.song.instrumentFilters[0][instrumentLead]]    * Music.chorusVolumes[this.song.instrumentChorus[0][instrumentLead]]    * 0.5;
-				maxHarmonyVolume = Music.channelVolumes[1] * (this.song.instrumentVolumes[1][instrumentHarmony] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[this.song.instrumentVolumes[1][instrumentHarmony]])) * Music.waveVolumes[this.song.instrumentWaves[1][instrumentHarmony]] * Music.filterVolumes[this.song.instrumentFilters[1][instrumentHarmony]] * Music.chorusVolumes[this.song.instrumentChorus[0][instrumentHarmony]] * 0.5;
-				maxBassVolume    = Music.channelVolumes[2] * (this.song.instrumentVolumes[2][instrumentBass] == 5 ? 0.0 :    Math.pow(2, -Music.volumeValues[this.song.instrumentVolumes[2][instrumentBass]]))    * Music.waveVolumes[this.song.instrumentWaves[2][instrumentBass]]    * Music.filterVolumes[this.song.instrumentFilters[2][instrumentBass]]    * Music.chorusVolumes[this.song.instrumentChorus[0][instrumentBass]]    * 0.5;
-				maxDrumVolume    = Music.channelVolumes[3] * (this.song.instrumentVolumes[3][instrumentDrum] == 5 ? 0.0 :    Math.pow(2, -Music.volumeValues[this.song.instrumentVolumes[3][instrumentDrum]]))    * Music.drumVolumes[this.song.instrumentWaves[3][instrumentDrum]];
+				maxLeadVolume = Music.channelVolumes[0] * (this.song.instrumentVolumes[0][instrumentLead] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[this.song.instrumentVolumes[0][instrumentLead]])) * Music.waveVolumes[this.song.instrumentWaves[0][instrumentLead]] * Music.filterVolumes[this.song.instrumentFilters[0][instrumentLead]] * Music.chorusVolumes[this.song.instrumentChorus[0][instrumentLead]] * 0.5;
+				maxHarmVolume = Music.channelVolumes[1] * (this.song.instrumentVolumes[1][instrumentHarm] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[this.song.instrumentVolumes[1][instrumentHarm]])) * Music.waveVolumes[this.song.instrumentWaves[1][instrumentHarm]] * Music.filterVolumes[this.song.instrumentFilters[1][instrumentHarm]] * Music.chorusVolumes[this.song.instrumentChorus[0][instrumentHarm]] * 0.5;
+				maxBassVolume = Music.channelVolumes[2] * (this.song.instrumentVolumes[2][instrumentBass] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[this.song.instrumentVolumes[2][instrumentBass]])) * Music.waveVolumes[this.song.instrumentWaves[2][instrumentBass]] * Music.filterVolumes[this.song.instrumentFilters[2][instrumentBass]] * Music.chorusVolumes[this.song.instrumentChorus[0][instrumentBass]] * 0.5;
+				maxDrumVolume = Music.channelVolumes[3] * (this.song.instrumentVolumes[3][instrumentDrum] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[this.song.instrumentVolumes[3][instrumentDrum]])) * Music.drumVolumes[this.song.instrumentWaves[3][instrumentDrum]];
 				
-				leadWave    = this._waves[this.song.instrumentWaves[0][instrumentLead]];
-				harmonyWave = this._waves[this.song.instrumentWaves[1][instrumentHarmony]];
-				bassWave    = this._waves[this.song.instrumentWaves[2][instrumentBass]];
-				drumWave    = this._drumWaves[this.song.instrumentWaves[3][instrumentDrum]];
+				leadWave = this._waves[this.song.instrumentWaves[0][instrumentLead]];
+				harmWave = this._waves[this.song.instrumentWaves[1][instrumentHarm]];
+				bassWave = this._waves[this.song.instrumentWaves[2][instrumentBass]];
+				drumWave = this._drumWaves[this.song.instrumentWaves[3][instrumentDrum]];
 				
-				leadWaveLength    = leadWave.length;
-				harmonyWaveLength = harmonyWave.length;
-				bassWaveLength    = bassWave.length;
+				leadWaveLength = leadWave.length;
+				harmWaveLength = harmWave.length;
+				bassWaveLength = bassWave.length;
 				
-				leadFilterBase    = Math.pow(2, -Music.filterBases[this.song.instrumentFilters[0][instrumentLead]]);
-				harmonyFilterBase = Math.pow(2, -Music.filterBases[this.song.instrumentFilters[1][instrumentHarmony]]);
-				bassFilterBase    = Math.pow(2, -Music.filterBases[this.song.instrumentFilters[2][instrumentBass]]);
+				leadFilterBase = Math.pow(2, -Music.filterBases[this.song.instrumentFilters[0][instrumentLead]]);
+				harmFilterBase = Math.pow(2, -Music.filterBases[this.song.instrumentFilters[1][instrumentHarm]]);
+				bassFilterBase = Math.pow(2, -Music.filterBases[this.song.instrumentFilters[2][instrumentBass]]);
 				drumFilter = 1.0;
 				
-				leadTremeloScale    = Music.effectTremelos[this.song.instrumentEffects[0][instrumentLead]];
-				harmonyTremeloScale = Music.effectTremelos[this.song.instrumentEffects[1][instrumentHarmony]];
-				bassTremeloScale    = Music.effectTremelos[this.song.instrumentEffects[2][instrumentBass]];
+				leadTremeloScale = Music.effectTremelos[this.song.instrumentEffects[0][instrumentLead]];
+				harmTremeloScale = Music.effectTremelos[this.song.instrumentEffects[1][instrumentHarm]];
+				bassTremeloScale = Music.effectTremelos[this.song.instrumentEffects[2][instrumentBass]];
 				
-				leadChorusA    = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[0][instrumentLead]] + Music.chorusValues[this.song.instrumentChorus[0][instrumentLead]]) / 12.0 );
-				harmonyChorusA = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[1][instrumentHarmony]] + Music.chorusValues[this.song.instrumentChorus[1][instrumentHarmony]]) / 12.0 );
-				bassChorusA    = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[2][instrumentBass]] + Music.chorusValues[this.song.instrumentChorus[2][instrumentBass]]) / 12.0 );
-				leadChorusB    = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[0][instrumentLead]] - Music.chorusValues[this.song.instrumentChorus[0][instrumentLead]]) / 12.0 );
-				harmonyChorusB = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[1][instrumentHarmony]] - Music.chorusValues[this.song.instrumentChorus[1][instrumentHarmony]]) / 12.0 );
-				bassChorusB    = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[2][instrumentBass]] - Music.chorusValues[this.song.instrumentChorus[2][instrumentBass]]) / 12.0 );
+				leadChorusA = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[0][instrumentLead]] + Music.chorusValues[this.song.instrumentChorus[0][instrumentLead]]) / 12.0 );
+				harmChorusA = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[1][instrumentHarm]] + Music.chorusValues[this.song.instrumentChorus[1][instrumentHarm]]) / 12.0 );
+				bassChorusA = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[2][instrumentBass]] + Music.chorusValues[this.song.instrumentChorus[2][instrumentBass]]) / 12.0 );
+				leadChorusB = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[0][instrumentLead]] - Music.chorusValues[this.song.instrumentChorus[0][instrumentLead]]) / 12.0 );
+				harmChorusB = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[1][instrumentHarm]] - Music.chorusValues[this.song.instrumentChorus[1][instrumentHarm]]) / 12.0 );
+				bassChorusB = Math.pow( 2.0, (Music.chorusOffsets[this.song.instrumentChorus[2][instrumentBass]] - Music.chorusValues[this.song.instrumentChorus[2][instrumentBass]]) / 12.0 );
 				leadChorusSign = (this.song.instrumentChorus[0][instrumentLead] == 7) ? -1.0 : 1.0;
-				harmonyChorusSign = (this.song.instrumentChorus[1][instrumentHarmony] == 7) ? -1.0 : 1.0;
+				harmChorusSign = (this.song.instrumentChorus[1][instrumentHarm] == 7) ? -1.0 : 1.0;
 				bassChorusSign = (this.song.instrumentChorus[2][instrumentBass] == 7) ? -1.0 : 1.0;
 				if (this.song.instrumentChorus[0][instrumentLead] == 0) this._leadPeriodB = this._leadPeriodA;
-				if (this.song.instrumentChorus[1][instrumentHarmony] == 0) this._harmonyPeriodB = this._harmonyPeriodA;
+				if (this.song.instrumentChorus[1][instrumentHarm] == 0) this._harmonyPeriodB = this._harmonyPeriodA;
 				if (this.song.instrumentChorus[2][instrumentBass] == 0) this._bassPeriodB = this._bassPeriodA;
 			}
 			
@@ -1626,13 +1644,13 @@ module beepbox {
 				var leadFilter: number;
 				var leadFilterScale: number;
 				var leadVibratoScale: number;
-				var harmonyPeriodDelta: number;
-				var harmonyPeriodDeltaScale: number;
-				var harmonyVolume: number;
-				var harmonyVolumeDelta: number;
-				var harmonyFilter: number;
-				var harmonyFilterScale: number;
-				var harmonyVibratoScale: number;
+				var harmPeriodDelta: number;
+				var harmPeriodDeltaScale: number;
+				var harmVolume: number;
+				var harmVolumeDelta: number;
+				var harmFilter: number;
+				var harmFilterScale: number;
+				var harmVibratoScale: number;
 				var bassPeriodDelta: number;
 				var bassPeriodDeltaScale: number;
 				var bassVolume: number;
@@ -1836,13 +1854,13 @@ module beepbox {
 							this._leadPeriodB = 0.0;
 						}
 					} else if (channel == 1) {
-						harmonyPeriodDelta = periodDelta;
-						harmonyPeriodDeltaScale = periodDeltaScale;
-						harmonyVolume = toneVolume * maxHarmonyVolume;
-						harmonyVolumeDelta = volumeDelta * maxHarmonyVolume;
-						harmonyFilter = filter * harmonyFilterBase;
-						harmonyFilterScale = filterScale;
-						harmonyVibratoScale = vibratoScale;
+						harmPeriodDelta = periodDelta;
+						harmPeriodDeltaScale = periodDeltaScale;
+						harmVolume = toneVolume * maxHarmVolume;
+						harmVolumeDelta = volumeDelta * maxHarmVolume;
+						harmFilter = filter * harmFilterBase;
+						harmFilterScale = filterScale;
+						harmVibratoScale = vibratoScale;
 						if (resetPeriod) {
 							this._harmonySample = 0.0;
 							this._harmonyPeriodA = 0.0;
@@ -1872,96 +1890,122 @@ module beepbox {
 				let effectY:     number = Math.sin(this._effectPeriod);
 				let prevEffectY: number = Math.sin(this._effectPeriod - this._effectAngle);
 				
-				while (samples > 0) {
-					let sample: number = 0.0;
-					const leadVibrato:    number = 1.0 + leadVibratoScale    * effectY;
-					const harmonyVibrato: number = 1.0 + harmonyVibratoScale * effectY;
-					const bassVibrato:    number = 1.0 + bassVibratoScale    * effectY;
-					const leadTremelo:    number = 1.0 + leadTremeloScale    * (effectY - 1.0);
-					const harmonyTremelo: number = 1.0 + harmonyTremeloScale * (effectY - 1.0);
-					const bassTremelo:    number = 1.0 + bassTremeloScale    * (effectY - 1.0);
+				let leadSample: number = +this._leadSample;
+				let leadPeriodA: number = +this._leadPeriodA;
+				let leadPeriodB: number = +this._leadPeriodB;
+				let harmSample: number = +this._harmonySample;
+				let harmPeriodA: number = +this._harmonyPeriodA;
+				let harmPeriodB: number = +this._harmonyPeriodB;
+				let bassSample: number = +this._bassSample;
+				let bassPeriodA: number = +this._bassPeriodA;
+				let bassPeriodB: number = +this._bassPeriodB;
+				let drumSample: number = +this._drumSample;
+				let drumPeriod: number = +this._drumPeriod;
+				let delayPos: number = 0|this._delayPos;
+				let delayFeedback0: number = +this._delayFeedback0;
+				let delayFeedback1: number = +this._delayFeedback1;
+				let delayFeedback2: number = +this._delayFeedback2;
+				let delayFeedback3: number = +this._delayFeedback3;
+				let limit: number = +this._limit;
+				
+				while (samples) {
+					const leadVibrato: number = 1.0 + leadVibratoScale    * effectY;
+					const harmVibrato: number = 1.0 + harmVibratoScale * effectY;
+					const bassVibrato: number = 1.0 + bassVibratoScale    * effectY;
+					const leadTremelo: number = 1.0 + leadTremeloScale    * (effectY - 1.0);
+					const harmTremelo: number = 1.0 + harmTremeloScale * (effectY - 1.0);
+					const bassTremelo: number = 1.0 + bassTremeloScale    * (effectY - 1.0);
 					const temp: number = effectY;
-					effectY = this._effectYMult * effectY - prevEffectY;
+					effectY = effectYMult * effectY - prevEffectY;
 					prevEffectY = temp;
 					
-					this._leadSample += ((leadWave[Math.floor(this._leadPeriodA * leadWaveLength)] + leadWave[Math.floor(this._leadPeriodB * leadWaveLength)] * leadChorusSign) * leadVolume * leadTremelo - this._leadSample) * leadFilter;
+					leadSample += ((leadWave[0|(leadPeriodA * leadWaveLength)] + leadWave[0|(leadPeriodB * leadWaveLength)] * leadChorusSign) * leadVolume * leadTremelo - leadSample) * leadFilter;
+					harmSample += ((harmWave[0|(harmPeriodA * harmWaveLength)] + harmWave[0|(harmPeriodB * harmWaveLength)] * harmChorusSign) * harmVolume * harmTremelo - harmSample) * harmFilter;
+					bassSample += ((bassWave[0|(bassPeriodA * bassWaveLength)] + bassWave[0|(bassPeriodB * bassWaveLength)] * bassChorusSign) * bassVolume * bassTremelo - bassSample) * bassFilter;
+					drumSample += (drumWave[0|(drumPeriod * 32767.0)] * drumVolume - drumSample) * drumFilter;
 					leadVolume += leadVolumeDelta;
-					this._leadPeriodA += leadPeriodDelta * leadVibrato * leadChorusA;
-					this._leadPeriodB += leadPeriodDelta * leadVibrato * leadChorusB;
-					leadPeriodDelta *= leadPeriodDeltaScale;
-					this._leadPeriodA -= Math.floor(this._leadPeriodA);
-					this._leadPeriodB -= Math.floor(this._leadPeriodB);
-					leadFilter *= leadFilterScale;
-					sample += this._leadSample;
-					
-					this._harmonySample += ((harmonyWave[Math.floor(this._harmonyPeriodA * harmonyWaveLength)] + harmonyWave[Math.floor(this._harmonyPeriodB * harmonyWaveLength)] * harmonyChorusSign) * harmonyVolume * harmonyTremelo - this._harmonySample) * harmonyFilter;
-					harmonyVolume += harmonyVolumeDelta;
-					this._harmonyPeriodA += harmonyPeriodDelta * harmonyVibrato * harmonyChorusA;
-					this._harmonyPeriodB += harmonyPeriodDelta * harmonyVibrato * harmonyChorusB;
-					harmonyPeriodDelta *= harmonyPeriodDeltaScale;
-					this._harmonyPeriodA -= Math.floor(this._harmonyPeriodA);
-					this._harmonyPeriodB -= Math.floor(this._harmonyPeriodB);
-					harmonyFilter *= harmonyFilterScale;
-					sample += this._harmonySample;
-					
-					this._bassSample += ((bassWave[Math.floor(this._bassPeriodA * bassWaveLength)] + bassWave[Math.floor(this._bassPeriodB * bassWaveLength)] * bassChorusSign) * bassVolume * bassTremelo - this._bassSample) * bassFilter;
+					harmVolume += harmVolumeDelta;
 					bassVolume += bassVolumeDelta;
-					this._bassPeriodA += bassPeriodDelta * bassVibrato * bassChorusA;
-					this._bassPeriodB += bassPeriodDelta * bassVibrato * bassChorusB;
-					bassPeriodDelta *= bassPeriodDeltaScale;
-					this._bassPeriodA -= Math.floor(this._bassPeriodA);
-					this._bassPeriodB -= Math.floor(this._bassPeriodB);
-					bassFilter *= bassFilterScale;
-					sample += this._bassSample;
-					
-					this._drumSample += (drumWave[Math.floor(this._drumPeriod * 32767.0)] * drumVolume - this._drumSample) * drumFilter;
 					drumVolume += drumVolumeDelta;
-					this._drumPeriod += drumPeriodDelta;
+					leadPeriodA += leadPeriodDelta * leadVibrato * leadChorusA;
+					leadPeriodB += leadPeriodDelta * leadVibrato * leadChorusB;
+					harmPeriodA += harmPeriodDelta * harmVibrato * harmChorusA;
+					harmPeriodB += harmPeriodDelta * harmVibrato * harmChorusB;
+					bassPeriodA += bassPeriodDelta * bassVibrato * bassChorusA;
+					bassPeriodB += bassPeriodDelta * bassVibrato * bassChorusB;
+					drumPeriod  += drumPeriodDelta;
+					leadPeriodDelta *= leadPeriodDeltaScale;
+					harmPeriodDelta *= harmPeriodDeltaScale;
+					bassPeriodDelta *= bassPeriodDeltaScale;
 					drumPeriodDelta *= drumPeriodDeltaScale;
-					this._drumPeriod -= Math.floor(this._drumPeriod);
+					leadFilter *= leadFilterScale;
+					harmFilter *= harmFilterScale;
+					bassFilter *= bassFilterScale;
+					leadPeriodA -= 0|leadPeriodA;
+					leadPeriodB -= 0|leadPeriodB;
+					harmPeriodA -= 0|harmPeriodA;
+					harmPeriodB -= 0|harmPeriodB;
+					bassPeriodA -= 0|bassPeriodA;
+					bassPeriodB -= 0|bassPeriodB;
+					drumPeriod  -= 0|drumPeriod;
 					
-					sample += this._drumSample;
+					const instrumentSample: number = leadSample + harmSample + bassSample + drumSample;
 					
-					/*
-					const g: number = 0.9;
-					let reverbSample: number;
+					// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
+					const delaySample0: number = delayLine[delayPos] + instrumentSample;
+					const delaySample1: number = delayLine[(delayPos + 2399) & 0x3FFF];
+					const delaySample2: number = delayLine[(delayPos + 5070) & 0x3FFF];
+					const delaySample3: number = delayLine[(delayPos + 9391) & 0x3FFF];
+					const delayTemp0: number = -delaySample0 + delaySample1;
+					const delayTemp1: number = -delaySample0 - delaySample1;
+					const delayTemp2: number = -delaySample2 + delaySample3;
+					const delayTemp3: number = -delaySample2 - delaySample3;
+					delayFeedback0 += ((delayTemp0 + delayTemp2) * reverb - delayFeedback0) * 0.5;
+					delayFeedback1 += ((delayTemp1 + delayTemp3) * reverb - delayFeedback1) * 0.5;
+					delayFeedback2 += ((delayTemp0 - delayTemp2) * reverb - delayFeedback2) * 0.5;
+					delayFeedback3 += ((delayTemp1 - delayTemp3) * reverb - delayFeedback3) * 0.5;
+					delayLine[(delayPos +  2399) & 0x3FFF] = delayFeedback0;
+					delayLine[(delayPos +  5070) & 0x3FFF] = delayFeedback1;
+					delayLine[(delayPos +  9391) & 0x3FFF] = delayFeedback2;
+					delayLine[(delayPos + 16382) & 0x3FFF] = delayFeedback3;
+					delayPos = (delayPos + 1) & 0x3FFF;
 					
-					reverbSample = reverbDelay1[reverbDelayIndex1];
-					sample += reverbSample * g;
-					reverbDelay1[reverbDelayIndex1] = sample;
-					//reverbDelayIndex1 = (reverbDelayIndex1 + 1) & 0x3ff;
-					reverbDelayIndex1 = (reverbDelayIndex1 + 1) % 1021;
-					sample *= -g;
-					sample += reverbSample;
+					// 2399 2671 4321 6991
+					// 2399 5070 9391 16382 / 16384
+					// 1987 2803 3217 4093
+					// 1987 4790 8007 12100
 					
-					reverbSample = reverbDelay2[reverbDelayIndex2];
-					sample += reverbSample * g;
-					reverbDelay2[reverbDelayIndex2] = sample;
-					//reverbDelayIndex2 = (reverbDelayIndex2 + 1) & 0x3ff;
-					reverbDelayIndex2 = (reverbDelayIndex2 + 1) % 317;
-					sample *= -g;
-					sample += reverbSample;
-					
-					reverbSample = reverbDelay3[reverbDelayIndex3];
-					sample += reverbSample * g;
-					reverbDelay3[reverbDelayIndex3] = sample;
-					//reverbDelayIndex3 = (reverbDelayIndex3 + 1) & 0x3ff;
-					reverbDelayIndex3 = (reverbDelayIndex3 + 1) % 89;
-					sample *= -g;
-					sample += reverbSample;
-					*/
+					let sample: number = delaySample0 + delaySample1 + delaySample2 + delaySample3;
 					
 					const abs: number = sample < 0.0 ? -sample : sample;
-					this._limit -= this._limitDecay;
-					if (this._limit < abs) this._limit = abs;
-					sample /= this._limit * 0.75 + 0.25;
-					sample *= this.volume;
+					limit -= limitDecay;
+					if (limit < abs) limit = abs;
+					sample /= limit * 0.75 + 0.25;
+					sample *= volume;
 					data[bufferIndex] = sample;
 					bufferIndex = bufferIndex + 1;
 					samples--;
 				}
 				
-				if ( this._effectYMult * effectY - prevEffectY > prevEffectY ) {
+				this._leadSample = leadSample;
+				this._leadPeriodA = leadPeriodA;
+				this._leadPeriodB = leadPeriodB;
+				this._harmonySample = harmSample;
+				this._harmonyPeriodA = harmPeriodA;
+				this._harmonyPeriodB = harmPeriodB;
+				this._bassSample = bassSample;
+				this._bassPeriodA = bassPeriodA;
+				this._bassPeriodB = bassPeriodB;
+				this._drumSample = drumSample;
+				this._drumPeriod = drumPeriod;
+				this._delayPos = delayPos;
+				this._delayFeedback0 = delayFeedback0;
+				this._delayFeedback1 = delayFeedback1;
+				this._delayFeedback2 = delayFeedback2;
+				this._delayFeedback3 = delayFeedback3;
+				this._limit = limit;
+				
+				if ( effectYMult * effectY - prevEffectY > prevEffectY ) {
 					this._effectPeriod = Math.asin( effectY );
 				} else {
 					this._effectPeriod = Math.PI - Math.asin( effectY );

@@ -102,6 +102,7 @@ module beepbox {
 		private readonly _scaleDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.scaleNames);
 		private readonly _keyDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.keyNames);
 		private readonly _tempoSlider: HTMLInputElement = input({style: "width: 9em; margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1"});
+		private readonly _reverbSlider: HTMLInputElement = input({style: "width: 9em; margin: 0px;", type: "range", min: "0", max: "3", value: "0", step: "1"});
 		private readonly _partDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.partNames);
 		private readonly _patternSettingsLabel: HTMLDivElement = div({style: "visibility: hidden; margin: 3px 0; text-align: center;"}, [text("Pattern Settings")]);
 		private readonly _instrumentDropDown: HTMLSelectElement = select({style: "width:9em;"});
@@ -169,6 +170,10 @@ module beepbox {
 					this._tempoSlider,
 				]),
 				div({className: "selectRow"}, [
+					span({}, [text("Reverb: ")]),
+					this._reverbSlider,
+				]),
+				div({className: "selectRow"}, [
 					span({}, [text("Rhythm: ")]),
 					div({className: "selectContainer"}, [this._partDropDown]),
 				]),
@@ -197,6 +202,7 @@ module beepbox {
 			this._scaleDropDown.addEventListener("change", this._onSetScale);
 			this._keyDropDown.addEventListener("change", this._onSetKey);
 			this._tempoSlider.addEventListener("input", this._onSetTempo);
+			this._reverbSlider.addEventListener("input", this._onSetReverb);
 			this._partDropDown.addEventListener("change", this._onSetParts);
 			this._instrumentDropDown.addEventListener("change", this._onSetInstrument);
 			this._channelVolumeSlider.addEventListener("input", this._onSetVolume);
@@ -251,6 +257,7 @@ module beepbox {
 			setSelectedIndex(this._scaleDropDown, this._doc.song.scale);
 			setSelectedIndex(this._keyDropDown, this._doc.song.key);
 			this._tempoSlider.value = "" + this._doc.song.tempo;
+			this._reverbSlider.value = "" + this._doc.song.reverb;
 			setSelectedIndex(this._partDropDown, Music.partCounts.indexOf(this._doc.song.parts));
 			if (this._doc.channel == 3) {
 				this._filterDropDownGroup.style.visibility = "hidden";
@@ -449,6 +456,10 @@ module beepbox {
 		
 		private _onSetTempo = (): void => {
 			this._doc.history.record(new ChangeTempo(this._doc, parseInt(this._tempoSlider.value)));
+		}
+		
+		private _onSetReverb = (): void => {
+			this._doc.history.record(new ChangeReverb(this._doc, parseInt(this._reverbSlider.value)));
 		}
 		
 		private _onSetParts = (): void => {
