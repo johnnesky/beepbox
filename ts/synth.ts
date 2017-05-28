@@ -1952,10 +1952,12 @@ module beepbox {
 					const instrumentSample: number = leadSample + harmSample + bassSample + drumSample;
 					
 					// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
+					// Delay lengths:  3037 + 3373 + 4493 + 5471
+					// Buffer offsets: 3037   6410  10903  16374
 					const delaySample0: number = delayLine[delayPos] + instrumentSample;
-					const delaySample1: number = delayLine[(delayPos + 2399) & 0x3FFF];
-					const delaySample2: number = delayLine[(delayPos + 5070) & 0x3FFF];
-					const delaySample3: number = delayLine[(delayPos + 9391) & 0x3FFF];
+					const delaySample1: number = delayLine[(delayPos + 3037) & 0x3FFF];
+					const delaySample2: number = delayLine[(delayPos + 6410) & 0x3FFF];
+					const delaySample3: number = delayLine[(delayPos + 10903) & 0x3FFF];
 					const delayTemp0: number = -delaySample0 + delaySample1;
 					const delayTemp1: number = -delaySample0 - delaySample1;
 					const delayTemp2: number = -delaySample2 + delaySample3;
@@ -1964,16 +1966,11 @@ module beepbox {
 					delayFeedback1 += ((delayTemp1 + delayTemp3) * reverb - delayFeedback1) * 0.5;
 					delayFeedback2 += ((delayTemp0 - delayTemp2) * reverb - delayFeedback2) * 0.5;
 					delayFeedback3 += ((delayTemp1 - delayTemp3) * reverb - delayFeedback3) * 0.5;
-					delayLine[(delayPos +  2399) & 0x3FFF] = delayFeedback0;
-					delayLine[(delayPos +  5070) & 0x3FFF] = delayFeedback1;
-					delayLine[(delayPos +  9391) & 0x3FFF] = delayFeedback2;
-					delayLine[(delayPos + 16382) & 0x3FFF] = delayFeedback3;
+					delayLine[(delayPos +  3037) & 0x3FFF] = delayFeedback0;
+					delayLine[(delayPos +  6410) & 0x3FFF] = delayFeedback1;
+					delayLine[(delayPos + 10903) & 0x3FFF] = delayFeedback2;
+					delayLine[(delayPos + 16374) & 0x3FFF] = delayFeedback3;
 					delayPos = (delayPos + 1) & 0x3FFF;
-					
-					// 2399 2671 4321 6991
-					// 2399 5070 9391 16382 / 16384
-					// 1987 2803 3217 4093
-					// 1987 4790 8007 12100
 					
 					let sample: number = delaySample0 + delaySample1 + delaySample2 + delaySample3;
 					
