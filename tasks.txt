@@ -153,6 +153,16 @@
 √ wav export intro, loop count, outro
 √ disable intro and outro checkboxes when the loop encompasses the entire song
 √ javascript mobile support!
+√ fix those flex dropdowns so they stop throwing errors
+√ Reverb
+√ optimize those Math functions in Synth
+√ make play and volume controls prettier
+√ MIDI export
+
+- octave scroll dragging should just be one History change. 
+- can I improve the interaction for volume envelope dragging and pitch dragging?
+- remember recent songs in cookies or local shared object.
+- save most recent song to localSO so that it doesn't accidentally get lost when window closes
 
 - document synth api
 - minify
@@ -166,7 +176,6 @@ http://www.html5rocks.com/en/mobile/touchandmouse/
 http://www.html5rocks.com/en/mobile/touch/
 - responsive design layout?
 
-? fix those goddamn flex dropdowns so they stop throwing errors
 - new preferences: follow playhead, play at load?
 - fade in/out checkboxes
 - pitch bends mixed with arpeggios don’t properly check min/max bounds
@@ -174,8 +183,6 @@ http://www.html5rocks.com/en/mobile/touch/
 - piano should still play when song is paused
 - more “effect” keys like stutter, scratch, scrub, drag playhead, speedmult, whatever.
 - asynchronous wav export
-
-
 
 
 
@@ -203,7 +210,6 @@ NEXT VERSION:
 - make sure bots ignore embed.html
 - sharing menu uses localSharedObject to remember your settings, maybe even password
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 
-- octave scroll dragging should just be one History change. 
 - make sure there's only one beep box player playing simultaneously. 
 - move "song settings" section down, and fit a "pattern settings" between that and the "instrument settings". The pattern has a colored number and the instrument has a colored letter in the title, if there are at least two instruments.
 - example songs on the website. Mario overworld?
@@ -211,7 +217,6 @@ NEXT VERSION:
 - fix it so that the browser back button isn't useless. save state before and after pasting new song. 
 - when starting at a bar where all tones are at the end of the bar, go ahead and skip the beginning of the bar, up to maybe one beat before the first tone.
 - illustrate volume envelope dragging to make it less confusing. 
-- remember recent songs in cookies or local shared object.
 - put songs in browser history before/after pasting new songs.
 - offsite album player, with scrolling notes. hashbang urls, bot indexable. 
 - main website should break out of iframe for security: http://usablelayout.com/articles/automatically-break-out-iframe
@@ -220,13 +225,10 @@ NEXT VERSION:
 - allow drums to be divided into shorter parts, crucial for songs like the mario overworld
 - it would be awesome to have a couple of modes where when you drag the playhead, it overrides the tempo of the song to match the motion of your mouse. In one mode it distorts the pitch like a DJ table, in the other it plays the normal pitch like SoundSPEAR.
 - Distortion applying to green and yellow channels
-- Reverb
-- optimize those Math functions in Synth
 - Dim the column occupied by a tone to communicate mono voice?
 - rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
 - snap to tone edges from other channels, to help making NES style harmonies. 
 - new song setting: distortion, nonlinear mixing of channels...
-- save most recent song to localSO so that it doesn't accidentally get lost when window closes
 - If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
 - compacting and concatenating songs!
 - tooltips
@@ -239,7 +241,6 @@ MORE FEATURES:
 - get in touch with http://youcanmakevideogames.com/resources/music
 - check to see if the drum frequency range could be usefully extended
 - when pasting into the debug text field, re select the text after parsing.
-- make play and volume controls prettier
 - illustrate arpeggio texture on tones with multiple notes
 - visual feedback when a note is played
 - make the static file handler cache expiration longer than 10 minutes.
@@ -253,7 +254,6 @@ MAYBE:
 - automatic flash projector for offline version without causing the vvvvvv/machinarium file type issue.
 - double number of beat divisions
 - preload some common tone shapes into the recentShape list. increment format number.
-- MIDI export
 - 5 parts per beat?
 - make some button to bookmark the song in your browser
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
