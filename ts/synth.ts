@@ -1516,7 +1516,7 @@ module beepbox {
 			const limitDecay: number = this._limitDecay;
 			const volume: number = this.volume;
 			const delayLine: Float32Array = this._delayLine;
-			const reverb: number = Math.pow(this.song.reverb / Music.reverbRange, 0.667) * 0.375;
+			const reverb: number = Math.pow(this.song.reverb / Music.reverbRange, 0.667) * 0.425;
 			
 			// Check the bounds of the playhead:
 			if (this._arpeggioSamples == 0 || this._arpeggioSamples > samplesPerArpeggio) {
@@ -1949,7 +1949,7 @@ module beepbox {
 					bassPeriodB -= 0|bassPeriodB;
 					drumPeriod  -= 0|drumPeriod;
 					
-					const instrumentSample: number = leadSample + harmSample + bassSample + drumSample;
+					const instrumentSample: number = leadSample + harmSample + bassSample;
 					
 					// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
 					// Delay lengths:  3037 + 3373 + 4493 + 5471
@@ -1972,7 +1972,7 @@ module beepbox {
 					delayLine[(delayPos + 16374) & 0x3FFF] = delayFeedback3;
 					delayPos = (delayPos + 1) & 0x3FFF;
 					
-					let sample: number = delaySample0 + delaySample1 + delaySample2 + delaySample3;
+					let sample: number = delaySample0 + delaySample1 + delaySample2 + delaySample3 + drumSample;
 					
 					const abs: number = sample < 0.0 ? -sample : sample;
 					limit -= limitDecay;
