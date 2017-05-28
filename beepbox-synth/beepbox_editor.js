@@ -1485,7 +1485,7 @@ var beepbox;
             var limitDecay = this._limitDecay;
             var volume = this.volume;
             var delayLine = this._delayLine;
-            var reverb = Math.pow(this.song.reverb / Music.reverbRange, 0.667) * 0.375;
+            var reverb = Math.pow(this.song.reverb / Music.reverbRange, 0.667) * 0.425;
             if (this._arpeggioSamples == 0 || this._arpeggioSamples > samplesPerArpeggio) {
                 this._arpeggioSamples = samplesPerArpeggio;
             }
@@ -1910,7 +1910,7 @@ var beepbox;
                     bassPeriodA -= 0 | bassPeriodA;
                     bassPeriodB -= 0 | bassPeriodB;
                     drumPeriod -= 0 | drumPeriod;
-                    var instrumentSample = leadSample + harmSample + bassSample + drumSample;
+                    var instrumentSample = leadSample + harmSample + bassSample;
                     var delaySample0 = delayLine[delayPos] + instrumentSample;
                     var delaySample1 = delayLine[(delayPos + 3037) & 0x3FFF];
                     var delaySample2 = delayLine[(delayPos + 6410) & 0x3FFF];
@@ -1928,7 +1928,7 @@ var beepbox;
                     delayLine[(delayPos + 10903) & 0x3FFF] = delayFeedback2;
                     delayLine[(delayPos + 16374) & 0x3FFF] = delayFeedback3;
                     delayPos = (delayPos + 1) & 0x3FFF;
-                    var sample = delaySample0 + delaySample1 + delaySample2 + delaySample3;
+                    var sample = delaySample0 + delaySample1 + delaySample2 + delaySample3 + drumSample;
                     var abs = sample < 0.0 ? -sample : sample;
                     limit -= limitDecay;
                     if (limit < abs)
