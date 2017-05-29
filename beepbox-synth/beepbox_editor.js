@@ -5284,6 +5284,7 @@ var beepbox;
             this._mouseDown = false;
             this._mouseOver = false;
             this._renderedScale = -1;
+            this._renderedDrums = false;
             this._renderedKey = -1;
             this._onMouseOver = function (event) {
                 if (_this._mouseOver)
@@ -5334,10 +5335,11 @@ var beepbox;
                 }
                 if (!_this._doc.showLetters)
                     return;
-                if (_this._renderedScale == _this._doc.song.scale && _this._renderedKey == _this._doc.song.key)
+                if (_this._renderedScale == _this._doc.song.scale && _this._renderedKey == _this._doc.song.key && _this._renderedDrums == (_this._doc.channel == 3))
                     return;
                 _this._renderedScale = _this._doc.song.scale;
                 _this._renderedKey = _this._doc.song.key;
+                _this._renderedDrums = (_this._doc.channel == 3);
                 _this._graphics.clearRect(0, 0, _this._editorWidth, _this._editorHeight);
                 var key;
                 for (var j = 0; j < _this._noteCount; j++) {

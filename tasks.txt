@@ -159,34 +159,53 @@
 √ make play and volume controls prettier
 √ MIDI export
 
-- octave scroll dragging should just be one History change. 
+- Put beepbox in focus on page load.
+- Make the standalone version use js.
+- Update the mobile instructions, "vibrate switch" isn't a thing anymore.
+- update flash version to include bowed chorus and reverb.
 - can I improve the interaction for volume envelope dragging and pitch dragging?
+- use the canvas size thing to make the svg volume icon scalable.
+- responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
+- highlight note edge extensions on touch
+- do audio worker threads work yet? "AudioWorkerNode" vs "AudioWorkletNode"???
+- on linux chrome, select menus use same background color as select element, it's a bit too bright when highlighted.
+- the method for cycling patterns on a bar is inadequate on touchscreen... use select menu?
+- the mobile back button is "effectively" undo... but actually extends the undo history, rather than backtracks. Can I make it perform the correct undo? (wait, what if you undo past the start and go back to a different page altogether, do you lose your undo history?)
+- octave scroll dragging should just be one History change. 
+- it would be nice if dragging sliders didn't generate a bunch of undo history events.
+- It would be nice if "escape" closed modal dialogs/prompts. 
+- multitouch?
+- manifests to allow installing web app as mobile app
+- new preferences: follow playhead, play at load?
+- pitch bends mixed with arpeggios don’t properly check min/max bounds
+- minify
+- export mp3 and ogg?
+- translation
+- tooltips
+- a way to pre-generate a javascript sound buffer.
+- Get in touch with ludum dare about linking to beepbox: http://www.ludumdare.com/compo/tools/
+- get in touch with http://youcanmakevideogames.com/resources/music
+- illustrate arpeggio texture on tones with multiple notes, striped fill
+- under the file menu make a "share" button that displays a link that can be copied easily on mobile. 
 - remember recent songs in cookies or local shared object.
-- save most recent song to localSO so that it doesn't accidentally get lost when window closes
+- Allow mobile to start playing on first interaction?
+- Make an embeddable song player. (See below.)
+- Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
+
 
 - document synth api
-- minify
-- export audio, mp3 and ogg?
 - detect vibrate switch
 - circle of fifths display
 - disable canvas pixel blurring in high dpi? why doesn't it work yet?
 - show playhead on loop editor?
-- multitouch?
-http://www.html5rocks.com/en/mobile/touchandmouse/
-http://www.html5rocks.com/en/mobile/touch/
-- responsive design layout?
-
-- new preferences: follow playhead, play at load?
 - fade in/out checkboxes
-- pitch bends mixed with arpeggios don’t properly check min/max bounds
 - derive song length from number of bars with non-zero patterns
 - piano should still play when song is paused
 - more “effect” keys like stutter, scratch, scrub, drag playhead, speedmult, whatever.
-- asynchronous wav export
+- asynchronous export
 
 
-
-NEXT VERSION:
+Signing and embed player:
 - round trip to server auth. How are the link, iframe html, and twitter button presented?
 - author, password, website
 - red close button in corner
@@ -221,37 +240,26 @@ NEXT VERSION:
 - offsite album player, with scrolling notes. hashbang urls, bot indexable. 
 - main website should break out of iframe for security: http://usablelayout.com/articles/automatically-break-out-iframe
 
-NEXT VERSION:
+
+MAYBE:
 - allow drums to be divided into shorter parts, crucial for songs like the mario overworld
 - it would be awesome to have a couple of modes where when you drag the playhead, it overrides the tempo of the song to match the motion of your mouse. In one mode it distorts the pitch like a DJ table, in the other it plays the normal pitch like SoundSPEAR.
-- Distortion applying to green and yellow channels
+- Distortion applying to blue and yellow channels
 - Dim the column occupied by a tone to communicate mono voice?
 - rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
 - snap to tone edges from other channels, to help making NES style harmonies. 
 - new song setting: distortion, nonlinear mixing of channels...
 - If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
 - compacting and concatenating songs!
-- tooltips
 - make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
-
-MORE FEATURES:
-- a way to convert a byte array to a first class Flash Sound object. 
-- Get in touch with wonderfl about supporting beepbox
-- Get in touch with ludum dare about linking to beepbox: http://www.ludumdare.com/compo/tools/
-- get in touch with http://youcanmakevideogames.com/resources/music
 - check to see if the drum frequency range could be usefully extended
 - when pasting into the debug text field, re select the text after parsing.
-- illustrate arpeggio texture on tones with multiple notes
 - visual feedback when a note is played
-- make the static file handler cache expiration longer than 10 minutes.
-
-MAYBE:
 - when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - options for timing offset
 - phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
 - adjust drop down menu widths to fit the size of their contents, mostly so that they're not all the same size, to give you an extra visual cue to find the menu you're looking for
 - a facebook app to put songs in your profile
-- automatic flash projector for offline version without causing the vvvvvv/machinarium file type issue.
 - double number of beat divisions
 - preload some common tone shapes into the recentShape list. increment format number.
 - 5 parts per beat?
