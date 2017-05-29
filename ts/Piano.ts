@@ -67,6 +67,7 @@ module beepbox {
 		private _mouseOver: boolean = false;
 		private _cursorNote: number;
 		private _renderedScale: number = -1;
+		private _renderedDrums: boolean = false;
 		private _renderedKey: number = -1;
 		
 		constructor(private _doc: SongDocument) {
@@ -172,9 +173,10 @@ module beepbox {
 			
 			if (!this._doc.showLetters) return;
 			
-			if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key) return;
+			if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key && this._renderedDrums == (this._doc.channel == 3)) return;
 			this._renderedScale = this._doc.song.scale;
 			this._renderedKey = this._doc.song.key;
+			this._renderedDrums = (this._doc.channel == 3);
 			
 			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
 			
