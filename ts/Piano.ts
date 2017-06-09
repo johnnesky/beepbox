@@ -90,10 +90,10 @@ module beepbox {
 			} else {
 				let topNote: number = Math.floor(mouseNote) + 1;
 				let bottomNote: number = Math.floor(mouseNote) - 1;
-				while (scale[topNote % 12] == false) {
+				while (!scale[topNote % 12]) {
 					topNote++;
 				}
-				while (scale[(bottomNote) % 12] == false) {
+				while (!scale[(bottomNote) % 12]) {
 					bottomNote--;
 				}
 				let topRange: number = topNote;
@@ -202,7 +202,7 @@ module beepbox {
 						data[i + 2] *= brightness;
 					}
 					this._graphics.putImageData(imageData, x, y);
-				} else if (Music.scaleFlags[this._doc.song.scale][j%12] == false) {
+				} else if (!Music.scaleFlags[this._doc.song.scale][j%12]) {
 					key = Music.pianoScaleFlags[noteNameIndex] ? WhiteKeyDisabled : BlackKeyDisabled;
 				    this._graphics.drawImage(key, 0, this._noteHeight * (this._noteCount - j - 1));
 				} else {

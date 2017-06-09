@@ -6,15 +6,7 @@ default_expiration: "3h"
 
 #skip_files:
 #- ^(.*/)?app\.yaml
-#- ^(.*/)?app\.yml
 #- ^(.*/)?index\.yaml
-#- ^(.*/)?index\.yml
-#- ^(.*/)?#.*#
-#- ^(.*/)?.*~
-#- ^(.*/)?.*\.py[co]
-#- ^(.*/)?.*/RCS/.*
-#- ^(.*/)?\..*
-#- ^Crypto/
 
 handlers:
 
@@ -23,21 +15,17 @@ handlers:
   upload: BeepBoxOnline\.swf
   expiration: "12h"
 
-- url: /BeepBoxOffline\.swf
-  static_files: BeepBoxOffline.swf
-  upload: BeepBoxOffline\.swf
-
-- url: /BeepBoxEmbedded\.swf
-  static_files: BeepBoxEmbedded.swf
-  upload: BeepBoxEmbedded\.swf
-
 - url: /beepbox_editor\.js
   static_files: beepbox_editor.js
-  upload: beepbox_editor.js
+  upload: beepbox_editor\.js
+
+- url: /beepbox_editor\.min\.js
+  static_files: beepbox_editor.min.js
+  upload: beepbox_editor\.min\.js
 
 - url: /beepbox_synth\.js
   static_files: beepbox_synth.js
-  upload: beepbox_synth.js
+  upload: beepbox_synth\.js
 
 - url: /favicon\.ico
   static_files: favicon.ico
@@ -51,22 +39,13 @@ handlers:
   static_files: index.html
   upload: index\.html
 
-- url: /embed\.html
-  static_files: embed.html
-  upload: embed\.html
-
-- url: /test\.html
-  static_files: test.html
-  upload: test\.html
-
-- url: /js\.html
-  static_files: js.html
-  upload: js\.html
-
-- url: /flash\.html
-  static_files: flash.html
-  upload: flash\.html
-
 - url: /synth_example\.html
   static_files: synth_example.html
   upload: synth_example\.html
+
+- url: /beepbox_offline\.html
+  static_files: beepbox_offline.html
+  upload: beepbox_offline\.html
+  http_headers:
+    Content-Type: text/html
+    Content-Disposition: "attachment; filename=beepbox_offline.html"

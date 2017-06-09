@@ -158,11 +158,15 @@
 √ optimize those Math functions in Synth
 √ make play and volume controls prettier
 √ MIDI export
+√ I broke safari export? (Did it work before? Apparently so? Either fix it or add warning)
+√ Put beepbox in focus on page load.
+√ Make the standalone version use js.
+√ minify
 
-- Put beepbox in focus on page load.
-- Make the standalone version use js.
 - Update the mobile instructions, "vibrate switch" isn't a thing anymore.
-- update flash version to include bowed chorus and reverb.
+- manifests to allow installing web app as mobile app
+- Make an embeddable song player. (See below.)
+- update flash version to include bowed chorus and reverb? does anyone still care?
 - can I improve the interaction for volume envelope dragging and pitch dragging?
 - use the canvas size thing to make the svg volume icon scalable.
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
@@ -175,12 +179,11 @@
 - it would be nice if dragging sliders didn't generate a bunch of undo history events.
 - It would be nice if "escape" closed modal dialogs/prompts. 
 - multitouch?
-- manifests to allow installing web app as mobile app
 - new preferences: follow playhead, play at load?
+- custom number of channels?
 - pitch bends mixed with arpeggios don’t properly check min/max bounds
-- minify
 - export mp3 and ogg?
-- translation
+- translation/localization
 - tooltips
 - a way to pre-generate a javascript sound buffer.
 - Get in touch with ludum dare about linking to beepbox: http://www.ludumdare.com/compo/tools/
@@ -189,7 +192,6 @@
 - under the file menu make a "share" button that displays a link that can be copied easily on mobile. 
 - remember recent songs in cookies or local shared object.
 - Allow mobile to start playing on first interaction?
-- Make an embeddable song player. (See below.)
 - Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
 
 

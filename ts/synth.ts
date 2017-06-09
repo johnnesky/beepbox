@@ -149,7 +149,7 @@ module beepbox {
 		}
 		
 		public toString(): string {
-			const paddedBits: boolean[] = this._bits.concat([false, false, false, false, false, false]);
+			//const paddedBits: boolean[] = this._bits.concat([false, false, false, false, false, false]);
 			let result: string = "";
 			for (let i: number = 0; i < this._bits.length; i += 6) {
 				let value: number = 0;
@@ -725,7 +725,9 @@ module beepbox {
 					let bitStringLength: number = 0;
 					if (beforeThree) {
 						channel = base64.indexOf(compressed.charAt(charIndex++));
-						let patternCount: number = base64.indexOf(compressed.charAt(charIndex++));
+						
+						// The old format used the next character to represent the number of patterns in the channel, which is usually eight, the default. 
+						charIndex++; //let patternCount: number = base64.indexOf(compressed.charAt(charIndex++));
 						
 						bitStringLength = base64.indexOf(compressed.charAt(charIndex++));
 						bitStringLength = bitStringLength << 6;
@@ -983,8 +985,10 @@ module beepbox {
 					const key: string = jsonObject.key;
 					const letter: string = key.charAt(0).toUpperCase();
 					const symbol: string = key.charAt(1).toLowerCase();
-					let index: number | undefined = {"C": 11, "D": 9, "E": 7, "F": 6, "G": 4, "A": 2, "B": 0}[letter];
-					const offset: number | undefined = {"#": -1, "♯": -1, "b": 1, "♭": 1}[symbol];
+					const letterMap: Record<string, number> = {"C": 11, "D": 9, "E": 7, "F": 6, "G": 4, "A": 2, "B": 0};
+					const accidentalMap: Record<string, number> = {"#": -1, "♯": -1, "b": 1, "♭": 1};
+					let index: number | undefined = letterMap[letter];
+					const offset: number | undefined = accidentalMap[symbol];
 					if (index != undefined) {
 						if (offset != undefined) index += offset;
 						if (index < 0) index += 12;
@@ -1307,8 +1311,6 @@ module beepbox {
 		}
 		
 		constructor(song: any = null) {
-			let wave: number[];
-			
 			for (const wave of this._waves) {
 				//wave.fixed = true;
 				let sum: number = 0.0;
