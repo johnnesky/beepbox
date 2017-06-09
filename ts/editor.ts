@@ -48,12 +48,12 @@ module beepbox {
 		export function select(attributes?: Record<string, string | number>, children?: Node[]): HTMLSelectElement {
 			return <HTMLSelectElement> element("select", attributes, children);
 		}
-		export function option(value, display, selected = false, disabled = false): HTMLOptionElement {
+		export function option(value: string | number, display: string | number, selected = false, disabled = false): HTMLOptionElement {
 			const o = <HTMLOptionElement> document.createElement("option");
-			o.value = value;
+			o.value = <string> value;
 			o.selected = selected;
 			o.disabled = disabled;
-			o.appendChild(text(display));
+			o.appendChild(text(<string> display));
 			return o;
 		}
 		export function canvas(attributes?: Record<string, string | number>): HTMLCanvasElement {
@@ -98,7 +98,7 @@ module beepbox {
 		}
 		
 		public changed(): void {
-			if (this._dirty == false) {
+			if (!this._dirty) {
 				this._dirty = true;
 				Model._waitingForFrame.push(this);
 				/*for (const parentModel of this._parentModels) {
@@ -1461,14 +1461,14 @@ module beepbox {
 				let note: number = this._oldNotes[i];
 				if (upward) {
 					for (let j: number = note + 1; j <= maxPitch; j++) {
-						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12] == true) {
+						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12]) {
 							note = j;
 							break;
 						}
 					}
 				} else {
 					for (let j: number = note - 1; j >= 0; j--) {
-						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12] == true) {
+						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12]) {
 							note = j;
 							break;
 						}
@@ -1501,14 +1501,14 @@ module beepbox {
 				if (interval > max) interval = max;
 				if (upward) {
 					for (let i: number = interval + 1; i <= max; i++) {
-						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][i%12] == true) {
+						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][i%12]) {
 							interval = i;
 							break;
 						}
 					}
 				} else {
 					for (let i: number = interval - 1; i >= min; i--) {
-						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][i%12] == true) {
+						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][i%12]) {
 							interval = i;
 							break;
 						}

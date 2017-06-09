@@ -332,10 +332,7 @@ module beepbox {
 				}
 			}
 			
-			const renderCount: number = Math.min(16, this._doc.song.bars);
 			for (let j: number = 0; j < Music.numChannels; j++) {
-				const channelColor: string = SongEditor.channelColorsBright[j];
-				const channelDim: string   = SongEditor.channelColorsDim[j];
 				for (let i: number = 0; i < 16; i++) {
 					const pattern: BarPattern = this._doc.song.getPattern(j, i + this._doc.barScrollPos);
 					const selected: boolean = (i + this._doc.barScrollPos == this._doc.bar && j == this._doc.channel);

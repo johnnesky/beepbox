@@ -29,21 +29,41 @@ interface ArrayBufferConstructor {
 }
 
 module beepbox {
-	const {button, div, span, input, text} = html;
+	const {button, div, input, text} = html;
 	
-	const save = function(blob, name) {
-		const anchor: HTMLAnchorElement = window.document.createElement("a");
-		anchor.href = window.URL.createObjectURL(blob);
-		anchor.download = name;
-		anchor.dispatchEvent(new MouseEvent("click"));
-		setTimeout(function() { window.URL.revokeObjectURL(anchor.href); }, 60000);
+	const save = function(blob: Blob, name: string): void {
+		if (navigator.msSaveOrOpenBlob) {
+			navigator.msSaveOrOpenBlob(blob, name);
+			return;
+		}
+	
+		const anchor: HTMLAnchorElement = document.createElement("a");
+		if (anchor.download != undefined) {
+			const url: string = URL.createObjectURL(blob);
+			setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+			anchor.href = url;
+			anchor.download = name;
+			anchor.dispatchEvent(new MouseEvent("click"));
+		} else if (navigator.vendor.indexOf("Apple") > -1) {
+			// Safari 10.1 doesn't need this hack, delete it later.
+			var reader = new FileReader();
+			reader.onloadend = function() {
+				console.log(reader.result);
+				var url = reader.result.replace(/^data:[^;]*;/, 'data:attachment/file;');
+				if (!window.open(url, "_blank")) window.location.href = url;
+			};
+			reader.readAsDataURL(blob);
+		} else {
+			const url: string = URL.createObjectURL(blob);
+			setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+			if (!window.open(url, "_blank")) window.location.href = url;
+		}
 	}
 	
 	// Polyfill for ArrayBuffer.transfer.
 	///@TODO: Check if ArrayBuffer.transfer is widely implemented.
 	if (!ArrayBuffer.transfer) {
-		ArrayBuffer.transfer = function(source, length) {
-			source = Object(source);
+		ArrayBuffer.transfer = function(source: ArrayBuffer, length: number) {
 			const dest = new ArrayBuffer(length);
 			if (!(source instanceof ArrayBuffer) || !(dest instanceof ArrayBuffer)) {
 				throw new TypeError('Source and destination must be ArrayBuffer instances');
@@ -59,7 +79,7 @@ module beepbox {
 				}
 			}
 			return dest;
-			function transferWith(wordSize, source, dest, nextOffset, leftBytes) {
+			function transferWith(wordSize: number, source: ArrayBuffer, dest: ArrayBuffer, nextOffset: number, leftBytes: number) {
 				let ViewClass = Uint8Array;
 				switch (wordSize) {
 					case 8:

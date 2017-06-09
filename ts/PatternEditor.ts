@@ -286,10 +286,10 @@ module beepbox {
 			} else {
 				let topNote: number = Math.floor(guess) + 1;
 				let bottomNote: number = Math.floor(guess) - 1;
-				while (scale[topNote % 12] == false) {
+				while (!scale[topNote % 12]) {
 					topNote++;
 				}
-				while (scale[(bottomNote) % 12] == false) {
+				while (!scale[(bottomNote) % 12]) {
 					bottomNote--;
 				}
 				if (topNote > max) {
@@ -468,10 +468,12 @@ module beepbox {
 							}
 						}
 						
+						/*
 						if (defaultLength < directLength) {
 							// See if I can find a better match by snapping to an existing tone...
 							// E.G. in another channel
 						}
+						*/
 						
 						if (backwards) {
 							end = this._cursor.start;

@@ -864,6 +864,7 @@ const editor = new SongEditor(doc);
 
 const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer");
 beepboxEditorContainer.appendChild(editor.mainLayer);
+editor.mainLayer.focus();
 
 doc.history.watch(onUpdated);
 
