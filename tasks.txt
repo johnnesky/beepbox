@@ -162,18 +162,20 @@
 √ Put beepbox in focus on page load.
 √ Make the standalone version use js.
 √ minify
+√ Update the mobile instructions, "vibrate switch" isn't a thing anymore.
 
-- Update the mobile instructions, "vibrate switch" isn't a thing anymore.
-- manifests to allow installing web app as mobile app
-- Make an embeddable song player. (See below.)
+- Chrome seems to be stuttering a lot on startup when going from one beepbox tab to a new one. Maybe delay it a bit before playing?
+- Make an embeddable song player. (See below.) 
 - update flash version to include bowed chorus and reverb? does anyone still care?
-- can I improve the interaction for volume envelope dragging and pitch dragging?
 - use the canvas size thing to make the svg volume icon scalable.
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
 - highlight note edge extensions on touch
+- manifests to allow installing web app as mobile app
+- can I improve the interaction for volume envelope dragging and pitch dragging?
 - do audio worker threads work yet? "AudioWorkerNode" vs "AudioWorkletNode"???
 - on linux chrome, select menus use same background color as select element, it's a bit too bright when highlighted.
 - the method for cycling patterns on a bar is inadequate on touchscreen... use select menu?
+- fix it so that the browser back button isn't useless. save state before and after pasting new song. 
 - the mobile back button is "effectively" undo... but actually extends the undo history, rather than backtracks. Can I make it perform the correct undo? (wait, what if you undo past the start and go back to a different page altogether, do you lose your undo history?)
 - octave scroll dragging should just be one History change. 
 - it would be nice if dragging sliders didn't generate a bunch of undo history events.
@@ -193,58 +195,60 @@
 - remember recent songs in cookies or local shared object.
 - Allow mobile to start playing on first interaction?
 - Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
-
-
-- document synth api
-- detect vibrate switch
-- circle of fifths display
-- disable canvas pixel blurring in high dpi? why doesn't it work yet?
-- show playhead on loop editor?
-- fade in/out checkboxes
-- derive song length from number of bars with non-zero patterns
 - piano should still play when song is paused
-- more “effect” keys like stutter, scratch, scrub, drag playhead, speedmult, whatever.
 - asynchronous export
+- document synth api
+- disable canvas pixel blurring in high dpi? why doesn't it work yet? (or just replace piano/drums with svg)
+- show playhead on loop editor?
 
-
-Signing and embed player:
-- round trip to server auth. How are the link, iframe html, and twitter button presented?
-- author, password, website
+EMBEDDED PLAYER:
+- add "Share" or "HTML Embed" button under export? or "File" menu. Include "title" and "author" fields.
+- volume control
+- make a random guid on startup. When clicked play, set it to a variable in sessionStorage or localStorage. periodically check to make sure that it's still set to that, otherwise pause. (maybe add preferences to ignore it.)
+- should I support both flash and js embedded players?
+- make sure there's only one beep box player playing simultaneously. 
+- sharing menu uses localSharedObject to remember your settings
+- make sure bots ignore embed.html
+- simple mode just plays the song. advanced mode has title, author, cc license...
+- cc license choices
+- link to cc website for more info
 - red close button in corner
-- show light "http://" or "http://www.beepbox.com/" in url fields while empty
 - button to add more songs to list extracted from urls
-- non-editable songs in list from pre-published playlists
 - add titles to songs
 - update embed player to show all songs
 - song rearranging
 - song loop count
 - song fade-in/out
-- key stretching, salt, at least partially on server
-- cc license choices
-- link to cc website for more info
-- cc license enforcement
-- store author/password is localSO or cookie, if "remember me" is flagged
-- flag to reveal password, otherwise show dots
-- "inspire me" button for passwords, shows prompt with a random button that gives you three-ish words, and requests that you personalize your password by adding some more words and punctuation to complete the thought. 
-- underline author name as URL in embed player
-- volume control
-- make sure bots ignore embed.html
-- sharing menu uses localSharedObject to remember your settings, maybe even password
-- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
-- make sure there's only one beep box player playing simultaneously. 
-- move "song settings" section down, and fit a "pattern settings" between that and the "instrument settings". The pattern has a colored number and the instrument has a colored letter in the title, if there are at least two instruments.
-- example songs on the website. Mario overworld?
+- example songs on the website. Mario overworld? Tetris is basically public domain...
 - rapid document/fragment changes due to undo cause undefined state
-- fix it so that the browser back button isn't useless. save state before and after pasting new song. 
 - when starting at a bar where all tones are at the end of the bar, go ahead and skip the beginning of the bar, up to maybe one beat before the first tone.
 - illustrate volume envelope dragging to make it less confusing. 
 - put songs in browser history before/after pasting new songs.
 - offsite album player, with scrolling notes. hashbang urls, bot indexable. 
+
+AUTHENTICATION:
+- show light "http://" or "http://www.beepbox.com/" in url fields while empty
+- round trip to server auth. How are the link, iframe html, and twitter button presented?
+- author, password, website
+- non-editable songs in list from pre-published playlists
+- key stretching, salt, at least partially on server
+- cc license enforcement
+- store author/password is localSO or cookie, if "remember me" is flagged
+- flag to reveal password, otherwise show dots
+- underline author name as URL in embed player
+- "inspire me" button for passwords, shows prompt with a random button that gives you three-ish words, and requests that you personalize your password by adding some more words and punctuation to complete the thought. 
 - main website should break out of iframe for security: http://usablelayout.com/articles/automatically-break-out-iframe
 
-
 MAYBE:
+- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
+- fade in/out checkboxes
+- derive song length from number of bars with non-zero patterns
+- more “effect” keys like stutter, scratch, scrub, drag playhead, speedmult, whatever.
+- detect vibrate switch
+- circle of fifths display
 - allow drums to be divided into shorter parts, crucial for songs like the mario overworld
+- 5 parts per beat?
+- double number of beat divisions
 - it would be awesome to have a couple of modes where when you drag the playhead, it overrides the tempo of the song to match the motion of your mouse. In one mode it distorts the pitch like a DJ table, in the other it plays the normal pitch like SoundSPEAR.
 - Distortion applying to blue and yellow channels
 - Dim the column occupied by a tone to communicate mono voice?
@@ -253,18 +257,12 @@ MAYBE:
 - new song setting: distortion, nonlinear mixing of channels...
 - If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
 - compacting and concatenating songs!
-- make a svn-free copy of the synth source tree that you can download directly from google code hosting, a stable copy
 - check to see if the drum frequency range could be usefully extended
-- when pasting into the debug text field, re select the text after parsing.
 - visual feedback when a note is played
 - when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - options for timing offset
 - phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
-- adjust drop down menu widths to fit the size of their contents, mostly so that they're not all the same size, to give you an extra visual cue to find the menu you're looking for
 - a facebook app to put songs in your profile
-- double number of beat divisions
 - preload some common tone shapes into the recentShape list. increment format number.
-- 5 parts per beat?
 - make some button to bookmark the song in your browser
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 
-
