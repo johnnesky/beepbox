@@ -1954,12 +1954,13 @@ module beepbox {
 					const instrumentSample: number = leadSample + harmSample + bassSample;
 					
 					// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
-					// Delay lengths:  3037 + 3373 + 4493 + 5471
-					// Buffer offsets: 3037   6410  10903  16374
+					// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
+					// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
+					// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
 					const delaySample0: number = delayLine[delayPos] + instrumentSample;
-					const delaySample1: number = delayLine[(delayPos + 3037) & 0x3FFF];
-					const delaySample2: number = delayLine[(delayPos + 6410) & 0x3FFF];
-					const delaySample3: number = delayLine[(delayPos + 10903) & 0x3FFF];
+					const delaySample1: number = delayLine[(delayPos +  3041) & 0x3FFF];
+					const delaySample2: number = delayLine[(delayPos +  6426) & 0x3FFF];
+					const delaySample3: number = delayLine[(delayPos + 10907) & 0x3FFF];
 					const delayTemp0: number = -delaySample0 + delaySample1;
 					const delayTemp1: number = -delaySample0 - delaySample1;
 					const delayTemp2: number = -delaySample2 + delaySample3;
@@ -1968,10 +1969,10 @@ module beepbox {
 					delayFeedback1 += ((delayTemp1 + delayTemp3) * reverb - delayFeedback1) * 0.5;
 					delayFeedback2 += ((delayTemp0 - delayTemp2) * reverb - delayFeedback2) * 0.5;
 					delayFeedback3 += ((delayTemp1 - delayTemp3) * reverb - delayFeedback3) * 0.5;
-					delayLine[(delayPos +  3037) & 0x3FFF] = delayFeedback0;
-					delayLine[(delayPos +  6410) & 0x3FFF] = delayFeedback1;
-					delayLine[(delayPos + 10903) & 0x3FFF] = delayFeedback2;
-					delayLine[(delayPos + 16374) & 0x3FFF] = delayFeedback3;
+					delayLine[(delayPos +  3041) & 0x3FFF] = delayFeedback0;
+					delayLine[(delayPos +  6426) & 0x3FFF] = delayFeedback1;
+					delayLine[(delayPos + 10907) & 0x3FFF] = delayFeedback2;
+					delayLine[delayPos] = delayFeedback3;
 					delayPos = (delayPos + 1) & 0x3FFF;
 					
 					let sample: number = delaySample0 + delaySample1 + delaySample2 + delaySample3 + drumSample;
