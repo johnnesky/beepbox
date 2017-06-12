@@ -32,6 +32,7 @@ package beepbox.synth {
 		public var scale: int;
 		public var key: int;
 		public var tempo: int;
+		public var reverb: int;
 		public var beats: int;
 		public var bars: int;
 		public var patterns: int;
@@ -82,6 +83,7 @@ package beepbox.synth {
 			loopStart = 0;
 			loopLength = 4;
 			tempo = 7;
+			reverb = 0;
 			beats = 8;
 			bars = 16;
 			patterns = 8;
@@ -102,6 +104,7 @@ package beepbox.synth {
 			result += "l" + base64[loopStart >> 6] + base64[loopStart & 0x3f];
 			result += "e" + base64[(loopLength - 1) >> 6] + base64[(loopLength - 1) & 0x3f];
 			result += "t" + base64[tempo];
+			result += "m" + base64[reverb];
 			result += "a" + base64[beats - 1];
 			result += "g" + base64[(bars - 1) >> 6] + base64[(bars - 1) & 0x3f];
 			result += "j" + base64[patterns - 1];
@@ -330,6 +333,9 @@ package beepbox.synth {
 						tempo = base64.indexOf(compressed.charAt(charIndex++));
 					}
 					tempo = clip(0, Music.tempoNames.length, tempo);
+				} else if (command == "m") {
+					reverb = base64.indexOf(compressed.charAt(charIndex++));
+					reverb = clip(0, Music.reverbRange, reverb);
 				} else if (command == "a") {
 					if (beforeThree) {
 						beats = [6, 7, 8, 9, 10][base64.indexOf(compressed.charAt(charIndex++))];
@@ -697,6 +703,7 @@ package beepbox.synth {
 				beatsPerBar: this.beats,
 				ticksPerBeat: this.parts,
 				beatsPerMinute: this.getBeatsPerMinute(), // represents tempo
+				reverb: this.reverb,
 				//outroBars: this.bars - this.loopStart - this.loopLength; // derive this from bar arrays?
 				//patternCount: this.patterns, // derive this from pattern arrays?
 				//instrumentsPerChannel: this.instruments, //derive this from instrument arrays?
@@ -738,6 +745,10 @@ package beepbox.synth {
 				const bpm: Number = int(jsonObject.beatsPerMinute);
 				this.tempo = Math.round(4.0 + 9.0 * Math.log(bpm / 120.0) / Math.LN2);
 				this.tempo = clip(0, Music.tempoNames.length, this.tempo);
+			}
+			
+			if (jsonObject.reverb != undefined) {
+				this.reverb = clip(0, Music.reverbRange, int(jsonObject.reverb));
 			}
 			
 			if (jsonObject.beatsPerBar != undefined) {

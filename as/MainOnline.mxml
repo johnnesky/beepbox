@@ -74,6 +74,8 @@ SOFTWARE.
 			doc.history.watch(onUpdated);
 			
 			ExternalInterface.addCallback("hashUpdatedExternally", hashUpdatedExternally);
+			Security.allowDomain("www.beepbox.co");
+			Security.allowDomain("beepbox.co");
 		}
 		
 		private function onEnterFrame(event: Event): void {

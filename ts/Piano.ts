@@ -82,7 +82,7 @@ module beepbox {
 		}
 		
 		private _updateCursorNote(): void {
-			const scale: boolean[] = Music.scaleFlags[this._doc.song.scale];
+			const scale: ReadonlyArray<boolean> = Music.scaleFlags[this._doc.song.scale];
 			
 			const mouseNote: number = Math.max(0, Math.min(this._noteCount-1, this._noteCount - (this._mouseY / this._noteHeight)));
 			if (scale[Math.floor(mouseNote) % 12] || this._doc.channel == 3) {

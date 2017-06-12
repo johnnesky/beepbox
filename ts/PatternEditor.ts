@@ -280,7 +280,7 @@ module beepbox {
 		private _snapToNote(guess: number, min: number, max: number): number {
 			if (guess < min) guess = min;
 			if (guess > max) guess = max;
-			const scale: boolean[] = Music.scaleFlags[this._doc.song.scale];
+			const scale: ReadonlyArray<boolean> = Music.scaleFlags[this._doc.song.scale];
 			if (scale[Math.floor(guess) % 12] || this._doc.channel == 3) {
 				return Math.floor(guess);
 			} else {

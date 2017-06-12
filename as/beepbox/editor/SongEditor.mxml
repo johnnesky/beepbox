@@ -147,6 +147,7 @@ SOFTWARE.
 			scaleDropDown.selectedIndex = doc.song.scale;
 			keyDropDown.selectedIndex = doc.song.key;
 			tempoSlider.value = doc.song.tempo;
+			reverbSlider.value = doc.song.reverb;
 			partDropDown.selectedIndex = Music.partCounts.indexOf(doc.song.parts);
 			if (doc.channel == 3) {
 				filterDropDownGroup.visible = false;
@@ -317,6 +318,10 @@ SOFTWARE.
 			doc.history.record(new ChangeTempo(doc, tempoSlider.value));
 		}
 		
+		private function onSetReverb(): void {
+			doc.history.record(new ChangeReverb(doc, reverbSlider.value));
+		}
+		
 		private function onSetParts(): void {
 			doc.history.record(new ChangeParts(doc, Music.partCounts[partDropDown.selectedIndex]));
 		}
@@ -482,6 +487,11 @@ SOFTWARE.
 					<s:Label text="Tempo:" color="0xbbbbbb"/>
 					<s:Spacer width="100%"/>
 					<s:HSlider id="tempoSlider" width="90" minimum="0" maximum="11" value="7" stepSize="1" snapInterval="1" liveDragging="true" showDataTip="false" change="onSetTempo(); stage.focus = stage"/>
+				</s:HGroup>
+				<s:HGroup width="100%" gap="0" verticalAlign="middle">
+					<s:Label text="Reverb:" color="0xbbbbbb"/>
+					<s:Spacer width="100%"/>
+					<s:HSlider id="reverbSlider" width="90" minimum="0" maximum="3" value="0" stepSize="1" snapInterval="1" liveDragging="true" showDataTip="false" change="onSetReverb(); stage.focus = stage"/>
 				</s:HGroup>
 				<s:HGroup width="100%" gap="0" verticalAlign="middle">
 					<s:Label text="Rhythm:" color="0xbbbbbb"/>

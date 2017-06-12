@@ -142,14 +142,14 @@ module beepbox {
 				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.1.3")]),
 				div({style: "margin: 5px 0; display: flex; flex-direction: row; align-items: center;"}, [
 					this._playButton,
-					div({style: "width: 4px; height: 10px;"}),
+					div({style: "width: 1px; height: 10px;"}),
 					// Volume speaker icon:
-					svgElement("svg", {width: "20", height: "20"}, [
-						svgElement("path", {d: "M 1 14 L 1 6 L 5 6 L 9 2 L 9 18 L 5 14 z", fill: "#777"}),
-						svgElement("path", {d: "M 12 8 L 13 7 A 4.2 4.2 0 0 1 13 13 L 12 12 A 2.8 2.8 0 0 0 12 8 z", fill: "#777"}),
-						svgElement("path", {d: "M 15 5 L 16 4 A 8.5 8.5 0 0 1 16 16 L 15 15 A 7.1 7.1 0 0 0 15 5 z", fill: "#777"}),
+					svgElement("svg", {width: "2em", height: "2em", viewBox: "0 0 26 26"}, [
+						svgElement("path", {d: "M 4 17 L 4 9 L 8 9 L 12 5 L 12 21 L 8 17 z", fill: "#777"}),
+						svgElement("path", {d: "M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z", fill: "#777"}),
+						svgElement("path", {d: "M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777"}),
 					]),
-					div({style: "width: 4px; height: 10px;"}),
+					div({style: "width: 1px; height: 10px;"}),
 					this._volumeSlider,
 				]),
 				div({className: "selectContainer", style: "margin: 5px 0;"}, [this._editButton]),

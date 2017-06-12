@@ -163,11 +163,11 @@
 √ Make the standalone version use js.
 √ minify
 √ Update the mobile instructions, "vibrate switch" isn't a thing anymore.
+√ use the viewBox size thing to make the svg volume icon scalable.
 
+- update flash version to include bowed chorus and reverb? does anyone still care? I can't even get it to recognize the hash. Seems like 1% of users are loading the flash version.
 - Chrome seems to be stuttering a lot on startup when going from one beepbox tab to a new one. Maybe delay it a bit before playing?
 - Make an embeddable song player. (See below.) 
-- update flash version to include bowed chorus and reverb? does anyone still care?
-- use the canvas size thing to make the svg volume icon scalable.
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
 - highlight note edge extensions on touch
 - manifests to allow installing web app as mobile app

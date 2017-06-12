@@ -42,6 +42,7 @@ package beepbox.synth {
 		public static const keyNames: Array = ["B", "A#", "A", "G#", "G", "F#", "F", "E", "D#", "D", "C#", "C"];
 		public static const keyTransposes: Array = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
 		public static const tempoNames: Array = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
+		public static const reverbRange: int = 4;
 		public static const beatsMin: int = 3;
 		public static const beatsMax: int = 15;
 		public static const barsMin: int = 1;
@@ -65,10 +66,10 @@ package beepbox.synth {
 		public static const effectNames: Array = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
 		public static const effectVibratos: Array = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
 		public static const effectTremelos: Array = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-		public static const chorusNames: Array = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves"];
-		public static const chorusValues: Array = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6];
-		public static const chorusOffsets: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6];
-		public static const chorusVolumes: Array = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8];
+		public static const chorusNames: Array = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed"];
+		public static const chorusValues: Array = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02];
+		public static const chorusOffsets: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0];
+		public static const chorusVolumes: Array = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0];
 		public static const volumeNames: Array = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
 		public static const volumeValues: Array = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
 		public static const channelVolumes: Array = [0.27, 0.27, 0.27, 0.19];
