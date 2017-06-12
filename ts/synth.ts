@@ -171,8 +171,8 @@ module beepbox {
 	}
 
 	export class Music {
-		public static scaleNames: string[] = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "romani :)", "romani :(", "enigma", "expert"];
-		public static scaleFlags: boolean[][] = [
+		public static readonly scaleNames: ReadonlyArray<string> = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "romani :)", "romani :(", "enigma", "expert"];
+		public static readonly scaleFlags: ReadonlyArray<ReadonlyArray<boolean>> = [
 			[ true, false,  true, false,  true, false, false,  true, false,  true, false, false],
 			[ true, false, false,  true, false,  true, false,  true, false, false,  true, false],
 			[ true, false, false, false,  true,  true, false,  true, false, false, false,  true],
@@ -186,48 +186,48 @@ module beepbox {
 			[ true, false,  true, false,  true, false,  true, false,  true, false,  true, false],
 			[ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true],
 		];
-		public static pianoScaleFlags: boolean[] = [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true];
+		public static readonly pianoScaleFlags: ReadonlyArray<boolean> = [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true];
 		// C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
-		public static blackKeyNameParents: number[] = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
-		public static noteNames: string[] = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
-		public static keyNames: string[] = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
-		public static keyTransposes: number[] = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
-		public static tempoNames: string[] = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
-		public static reverbRange: number = 4;
-		public static beatsMin: number = 3;
-		public static beatsMax: number = 15;
-		public static barsMin: number = 1;
-		public static barsMax: number = 128;
-		public static patternsMin: number = 1;
-		public static patternsMax: number = 64;
-		public static instrumentsMin: number = 1;
-		public static instrumentsMax: number = 10;
-		public static partNames: string[] = ["triples", "standard"];
-		public static partCounts: number[] = [3, 4];
-		public static waveNames: string[] = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
-		public static waveVolumes: number[] = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
-		public static drumNames: string[] = ["retro", "white"];
-		public static drumVolumes: number[] = [0.25, 1.0];
-		public static filterNames: string[] = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
-		public static filterBases: number[] = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
-		public static filterDecays: number[] = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
-		public static filterVolumes: number[] = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
-		public static attackNames: string[] = ["binary", "sudden", "smooth", "slide"];
-		public static effectNames: string[] = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
-		public static effectVibratos: number[] = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
-		public static effectTremelos: number[] = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-		public static chorusNames: string[] = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed"];
-		public static chorusValues: number[] = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02];
-		public static chorusOffsets: number[] = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0];
-		public static chorusVolumes: number[] = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0];
-		public static volumeNames: string[] = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
-		public static volumeValues: number[] = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
-		public static channelVolumes: number[] = [0.27, 0.27, 0.27, 0.19];
-		public static drumInterval: number = 6;
-		public static numChannels: number = 4;
-		public static drumCount: number = 12;
-		public static noteCount: number = 37;
-		public static maxPitch: number = 84;
+		public static readonly blackKeyNameParents: ReadonlyArray<number> = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
+		public static readonly noteNames: ReadonlyArray<string> = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
+		public static readonly keyNames: ReadonlyArray<string> = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
+		public static readonly keyTransposes: ReadonlyArray<number> = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
+		public static readonly tempoNames: ReadonlyArray<string> = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
+		public static readonly reverbRange: number = 4;
+		public static readonly beatsMin: number = 3;
+		public static readonly beatsMax: number = 15;
+		public static readonly barsMin: number = 1;
+		public static readonly barsMax: number = 128;
+		public static readonly patternsMin: number = 1;
+		public static readonly patternsMax: number = 64;
+		public static readonly instrumentsMin: number = 1;
+		public static readonly instrumentsMax: number = 10;
+		public static readonly partNames: ReadonlyArray<string> = ["triples", "standard"];
+		public static readonly partCounts: ReadonlyArray<number> = [3, 4];
+		public static readonly waveNames: ReadonlyArray<string> = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
+		public static readonly waveVolumes: ReadonlyArray<number> = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
+		public static readonly drumNames: ReadonlyArray<string> = ["retro", "white"];
+		public static readonly drumVolumes: ReadonlyArray<number> = [0.25, 1.0];
+		public static readonly filterNames: ReadonlyArray<string> = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
+		public static readonly filterBases: ReadonlyArray<number> = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
+		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
+		public static readonly filterVolumes: ReadonlyArray<number> = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
+		public static readonly attackNames: ReadonlyArray<string> = ["binary", "sudden", "smooth", "slide"];
+		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
+		public static readonly effectVibratos: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
+		public static readonly effectTremelos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
+		public static readonly chorusNames: ReadonlyArray<string> = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed"];
+		public static readonly chorusValues: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02];
+		public static readonly chorusOffsets: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0];
+		public static readonly chorusVolumes: ReadonlyArray<number> = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0];
+		public static readonly volumeNames: ReadonlyArray<string> = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
+		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
+		public static readonly channelVolumes: ReadonlyArray<number> = [0.27, 0.27, 0.27, 0.19];
+		public static readonly drumInterval: number = 6;
+		public static readonly numChannels: number = 4;
+		public static readonly drumCount: number = 12;
+		public static readonly noteCount: number = 37;
+		public static readonly maxPitch: number = 84;
 	}
 
 	export class TonePin {

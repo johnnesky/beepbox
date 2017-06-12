@@ -86,14 +86,13 @@ package beepbox.synth {
 		private var timer: Timer = new Timer(200, 0);
 		private var effectPeriod: Number = 0.0;
 		private var limit: Number = 0.0;
-		/*
-		private var reverbDelay1: Vector.<Number> = new Vector.<Number>();
-		private var reverbDelayIndex1: int = 0;
-		private var reverbDelay2: Vector.<Number> = new Vector.<Number>();
-		private var reverbDelayIndex2: int = 0;
-		private var reverbDelay3: Vector.<Number> = new Vector.<Number>();
-		private var reverbDelayIndex3: int = 0;
-		*/
+		
+		private var delayLine: Vector.<Number> = new Vector.<Number>(16384, true);
+		private var delayPos: int = 0;
+		private var delayFeedback0: Number = 0.0;
+		private var delayFeedback1: Number = 0.0;
+		private var delayFeedback2: Number = 0.0;
+		private var delayFeedback3: Number = 0.0;
 		
 		public function get playing(): Boolean {
 			return !paused;
@@ -162,17 +161,6 @@ package beepbox.synth {
 			if (song != null) {
 				setSong(song);
 			}
-			/*
-			reverbDelay1.length = 1024;
-			reverbDelay1.fixed = true;
-			for (i = 0; i < reverbDelay1.length; i++) reverbDelay1[i] = 0.0;
-			reverbDelay2.length = 1024;
-			reverbDelay2.fixed = true;
-			for (i = 0; i < reverbDelay2.length; i++) reverbDelay2[i] = 0.0;
-			reverbDelay3.length = 1024;
-			reverbDelay3.fixed = true;
-			for (i = 0; i < reverbDelay3.length; i++) reverbDelay3[i] = 0.0;
-			*/
 		}
 		
 		public function setSong(song: *): void {
@@ -213,6 +201,17 @@ package beepbox.synth {
 			arpeggio = 0;
 			arpeggioSamples = 0;
 			effectPeriod = 0.0;
+			
+			leadSample = 0.0;
+			harmonySample = 0.0;
+			bassSample = 0.0;
+			drumSample = 0.0;
+			delayPos = 0;
+			delayFeedback0 = 0.0;
+			delayFeedback1 = 0.0;
+			delayFeedback2 = 0.0;
+			delayFeedback3 = 0.0;
+			for (var i: int = 0; i < delayLine.length; i++) delayLine[i] = 0.0;
 		}
 		
 		public function nextBar(): void {
@@ -263,6 +262,14 @@ package beepbox.synth {
 		}
 		
 		public function synthesize(data: ByteArray, totalSamples: int): void {
+			if (song == null) {
+				for (i = 0; i < totalSamples; i++) {
+					data.writeFloat(0.0);
+					data.writeFloat(0.0);
+				}
+				return;
+			}
+			
 			var stutterFunction: Function;
 			if (stutterPressed) {
 				var barOld: int = bar;
@@ -313,14 +320,8 @@ package beepbox.synth {
 			var sampleTime: Number = 1.0 / samplesPerSecond;
 			var samplesPerArpeggio: int = getSamplesPerArpeggio();
 			
-			if (song == null) {
-				for (i = 0; i < totalSamples; i++) {
-					data.writeFloat(0.0);
-					data.writeFloat(0.0);
-				}
-				return;
-			}
-			
+			var reverb: Number = Math.pow(song.reverb / Music.reverbRange, 0.667) * 0.375;
+
 			// Check the bounds of the playhead:
 			if (arpeggioSamples == 0 || arpeggioSamples > samplesPerArpeggio) {
 				arpeggioSamples = samplesPerArpeggio;
@@ -380,6 +381,9 @@ package beepbox.synth {
 			var leadChorusB:    Number;
 			var harmonyChorusB: Number;
 			var bassChorusB:    Number;
+			var leadChorusSign: Number;
+			var harmonyChorusSign: Number;
+			var bassChorusSign: Number;
 			
 			var updateInstruments: Function = function(): void {
 				var instrumentLead: int    = song.getPatternInstrument(0, bar);
@@ -416,6 +420,9 @@ package beepbox.synth {
 				leadChorusB    = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[0][instrumentLead]] - Music.chorusValues[song.instrumentChorus[0][instrumentLead]]) / 12.0 );
 				harmonyChorusB = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[1][instrumentHarmony]] - Music.chorusValues[song.instrumentChorus[1][instrumentHarmony]]) / 12.0 );
 				bassChorusB    = Math.pow( 2.0, (Music.chorusOffsets[song.instrumentChorus[2][instrumentBass]] - Music.chorusValues[song.instrumentChorus[2][instrumentBass]]) / 12.0 );
+				leadChorusSign = (song.instrumentChorus[0][instrumentLead] == 7) ? -1.0 : 1.0;
+				harmonyChorusSign = (song.instrumentChorus[1][instrumentHarmony] == 7) ? -1.0 : 1.0;
+				bassChorusSign = (song.instrumentChorus[2][instrumentBass] == 7) ? -1.0 : 1.0;
 				if (song.instrumentChorus[0][instrumentLead] == 0) leadPeriodB = leadPeriodA;
 				if (song.instrumentChorus[1][instrumentHarmony] == 0) harmonyPeriodB = harmonyPeriodA;
 				if (song.instrumentChorus[2][instrumentBass] == 0) bassPeriodB = bassPeriodA;
@@ -687,7 +694,6 @@ package beepbox.synth {
 				var prevEffectY: Number = Math.sin(effectPeriod - effectAngle);
 				
 				while (samples > 0) {
-					var sample: Number = 0.0;
 					var leadVibrato:    Number = 1.0 + leadVibratoScale    * effectY;
 					var harmonyVibrato: Number = 1.0 + harmonyVibratoScale * effectY;
 					var bassVibrato:    Number = 1.0 + bassVibratoScale    * effectY;
@@ -698,7 +704,7 @@ package beepbox.synth {
 					effectY = effectYMult * effectY - prevEffectY;
 					prevEffectY = temp;
 					
-					leadSample += ((leadWave[int(leadPeriodA * leadWaveLength)] + leadWave[int(leadPeriodB * leadWaveLength)]) * leadVolume * leadTremelo - leadSample) * leadFilter;
+					leadSample += ((leadWave[int(leadPeriodA * leadWaveLength)] + leadWave[int(leadPeriodB * leadWaveLength)] * leadChorusSign) * leadVolume * leadTremelo - leadSample) * leadFilter;
 					leadVolume += leadVolumeDelta;
 					leadPeriodA += leadPeriodDelta * leadVibrato * leadChorusA;
 					leadPeriodB += leadPeriodDelta * leadVibrato * leadChorusB;
@@ -706,9 +712,8 @@ package beepbox.synth {
 					leadPeriodA -= int(leadPeriodA);
 					leadPeriodB -= int(leadPeriodB);
 					leadFilter *= leadFilterScale;
-					sample += leadSample;
 					
-					harmonySample += ((harmonyWave[int(harmonyPeriodA * harmonyWaveLength)] + harmonyWave[int(harmonyPeriodB * harmonyWaveLength)]) * harmonyVolume * harmonyTremelo - harmonySample) * harmonyFilter;
+					harmonySample += ((harmonyWave[int(harmonyPeriodA * harmonyWaveLength)] + harmonyWave[int(harmonyPeriodB * harmonyWaveLength)] * harmonyChorusSign) * harmonyVolume * harmonyTremelo - harmonySample) * harmonyFilter;
 					harmonyVolume += harmonyVolumeDelta;
 					harmonyPeriodA += harmonyPeriodDelta * harmonyVibrato * harmonyChorusA;
 					harmonyPeriodB += harmonyPeriodDelta * harmonyVibrato * harmonyChorusB;
@@ -716,9 +721,8 @@ package beepbox.synth {
 					harmonyPeriodA -= int(harmonyPeriodA);
 					harmonyPeriodB -= int(harmonyPeriodB);
 					harmonyFilter *= harmonyFilterScale;
-					sample += harmonySample;
 					
-					bassSample += ((bassWave[int(bassPeriodA * bassWaveLength)] + bassWave[int(bassPeriodB * bassWaveLength)]) * bassVolume * bassTremelo - bassSample) * bassFilter;
+					bassSample += ((bassWave[int(bassPeriodA * bassWaveLength)] + bassWave[int(bassPeriodB * bassWaveLength)] * bassChorusSign) * bassVolume * bassTremelo - bassSample) * bassFilter;
 					bassVolume += bassVolumeDelta;
 					bassPeriodA += bassPeriodDelta * bassVibrato * bassChorusA;
 					bassPeriodB += bassPeriodDelta * bassVibrato * bassChorusB;
@@ -726,7 +730,6 @@ package beepbox.synth {
 					bassPeriodA -= int(bassPeriodA);
 					bassPeriodB -= int(bassPeriodB);
 					bassFilter *= bassFilterScale;
-					sample += bassSample;
 					
 					drumSample += (drumWave[int(drumPeriod * 32767.0)] * drumVolume - drumSample) * drumFilter;
 					drumVolume += drumVolumeDelta;
@@ -734,36 +737,31 @@ package beepbox.synth {
 					drumPeriodDelta *= drumPeriodDeltaScale;
 					drumPeriod -= int(drumPeriod);
 					
-					sample += drumSample;
+					var instrumentSample: Number = leadSample + harmonySample + bassSample;
 					
-					/*
-					var g: Number = 0.9;
-					var reverbSample: Number;
+					// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
+					// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
+					// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
+					// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
+					var delaySample0: Number = delayLine[delayPos] + instrumentSample;
+					var delaySample1: Number = delayLine[(delayPos +  3041) & 0x3FFF];
+					var delaySample2: Number = delayLine[(delayPos +  6426) & 0x3FFF];
+					var delaySample3: Number = delayLine[(delayPos + 10907) & 0x3FFF];
+					var delayTemp0: Number = -delaySample0 + delaySample1;
+					var delayTemp1: Number = -delaySample0 - delaySample1;
+					var delayTemp2: Number = -delaySample2 + delaySample3;
+					var delayTemp3: Number = -delaySample2 - delaySample3;
+					delayFeedback0 += ((delayTemp0 + delayTemp2) * reverb - delayFeedback0) * 0.5;
+					delayFeedback1 += ((delayTemp1 + delayTemp3) * reverb - delayFeedback1) * 0.5;
+					delayFeedback2 += ((delayTemp0 - delayTemp2) * reverb - delayFeedback2) * 0.5;
+					delayFeedback3 += ((delayTemp1 - delayTemp3) * reverb - delayFeedback3) * 0.5;
+					delayLine[(delayPos +  3041) & 0x3FFF] = delayFeedback0;
+					delayLine[(delayPos +  6426) & 0x3FFF] = delayFeedback1;
+					delayLine[(delayPos + 10907) & 0x3FFF] = delayFeedback2;
+					delayLine[delayPos] = delayFeedback3;
+					delayPos = (delayPos + 1) & 0x3FFF;
 					
-					reverbSample = reverbDelay1[reverbDelayIndex1];
-					sample += reverbSample * g;
-					reverbDelay1[reverbDelayIndex1] = sample;
-					//reverbDelayIndex1 = (reverbDelayIndex1 + 1) & 0x3ff;
-					reverbDelayIndex1 = (reverbDelayIndex1 + 1) % 1021;
-					sample *= -g;
-					sample += reverbSample;
-					
-					reverbSample = reverbDelay2[reverbDelayIndex2];
-					sample += reverbSample * g;
-					reverbDelay2[reverbDelayIndex2] = sample;
-					//reverbDelayIndex2 = (reverbDelayIndex2 + 1) & 0x3ff;
-					reverbDelayIndex2 = (reverbDelayIndex2 + 1) % 317;
-					sample *= -g;
-					sample += reverbSample;
-					
-					reverbSample = reverbDelay3[reverbDelayIndex3];
-					sample += reverbSample * g;
-					reverbDelay3[reverbDelayIndex3] = sample;
-					//reverbDelayIndex3 = (reverbDelayIndex3 + 1) & 0x3ff;
-					reverbDelayIndex3 = (reverbDelayIndex3 + 1) % 89;
-					sample *= -g;
-					sample += reverbSample;
-					*/
+					var sample: Number = delaySample0 + delaySample1 + delaySample2 + delaySample3 + drumSample;
 					
 					var abs: Number = sample < 0.0 ? -sample : sample;
 					limit -= limitDecay;
