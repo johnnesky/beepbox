@@ -102,6 +102,29 @@ package beepbox.synth {
 			return _playhead;
 		}
 		
+		public function set playhead(value: Number): void {
+			if (song != null) {
+				_playhead = Math.max(0, Math.min(song.bars, value));
+				var remainder: Number = _playhead;
+				bar = Math.floor(remainder);
+				remainder = song.beats * (remainder - bar);
+				beat = Math.floor(remainder);
+				remainder = song.parts * (remainder - beat);
+				part = Math.floor(remainder);
+				remainder = 4 * (remainder - part);
+				arpeggio = Math.floor(remainder);
+				var samplesPerArpeggio: Number = getSamplesPerArpeggio();
+				remainder = samplesPerArpeggio * (remainder - arpeggio);
+				arpeggioSamples = Math.floor(samplesPerArpeggio - remainder);
+				if (bar < song.loopStart) {
+					enableIntro = true;
+				}
+				if (bar > song.loopStart + song.loopLength) {
+					enableOutro = true;
+				}
+			}
+		}
+		
 		public function get totalSamples(): int {
 			if (song == null) return 0;
 			var samplesPerBar: int = getSamplesPerArpeggio() * 4 * song.parts * song.beats;
@@ -217,11 +240,15 @@ package beepbox.synth {
 		public function nextBar(): void {
 			var oldBar: int = bar;
 			bar++;
-			if (bar >= song.bars) {
-				bar = song.loopStart;
-			}
-			if (bar >= song.loopStart + song.loopLength || bar >= song.bars) {
-				bar = song.loopStart;
+			
+			if (enableOutro) {
+				if (bar >= song.bars) {
+					bar = 0;
+				}
+			} else {
+				if (bar >= song.loopStart + song.loopLength || bar >= song.bars) {
+					bar = song.loopStart;
+				}
 			}
 			_playhead += bar - oldBar;
 		}
@@ -229,14 +256,11 @@ package beepbox.synth {
 		public function prevBar(): void {
 			var oldBar: int = bar;
 			bar--;
-			if (bar < 0) {
+			if (bar < 0 || bar > song.bars) {
 				bar = song.bars - 1;
 			}
 			if (bar < song.loopStart) {
 				enableIntro = true;
-			}
-			if (bar >= song.loopStart + song.loopLength || bar >= song.bars) {
-				bar = song.loopStart + song.loopLength - 1;
 			}
 			_playhead += bar - oldBar;
 		}
@@ -345,8 +369,13 @@ package beepbox.synth {
 				}
 			}
 			if (bar >= song.bars) {
-				bar = song.loopStart;
-				enableOutro = false;
+				if (enableOutro) {
+					bar = 0;
+					enableIntro = true;
+					pause();
+				} else {
+					bar = song.loopStart;
+				}
 			}
 			if (bar >= song.loopStart) {
 				enableIntro = false;
@@ -431,6 +460,14 @@ package beepbox.synth {
 			updateInstruments();
 			
 			while (totalSamples > 0) {
+				if (paused) {
+					while (totalSamples-- > 0) {
+						data.writeFloat(0.0);
+						data.writeFloat(0.0);
+					}
+					break;
+				}
+				
 				var samples: int;
 				if (arpeggioSamples <= totalSamples) {
 					samples = arpeggioSamples;
@@ -799,13 +836,14 @@ package beepbox.synth {
 								}
 								if (bar >= song.loopStart + song.loopLength) {
 									if (loopCount > 0) loopCount--;
-									if (loopCount != 0) {
+									if (loopCount > 0 || !enableOutro) {
 										bar = song.loopStart;
 									}
 								}
 								if (bar >= song.bars) {
-									bar = song.loopStart;
-									enableOutro = false;
+									bar = 0;
+									enableIntro = true;
+									pause();
 								}
 								updateInstruments();
 							}

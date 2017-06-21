@@ -90,7 +90,7 @@ SOFTWARE.
 		}
 		
 		private function onUpdated(): void {
-			var hash: String = doc.song.toString();
+			var hash: String = "#" + doc.song.toString();
 			if (prevHash == null) {
 				prevHash = hash;
 			} else if (prevHash != hash) {

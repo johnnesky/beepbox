@@ -16,9 +16,10 @@ div {
 	padding: 0;
 }
 body {
+	background: #000;
 	font-family: sans-serif;
-	font-size: 16px;
-	color: #ffffff;
+	font-size: medium;
+	color: #fff;
 }
 h1 {
 	font-size: 30px;
@@ -28,12 +29,13 @@ h1 {
 	margin: 0px auto;
 }
 a {
-	color: #8866ff;
+	color: #86f;
 }
 	</style>
 </head>
 
-<body bgcolor="#000000"> <div class="centerDiv" style="width: 700px">
+<body>
+<div class="centerDiv" style="width: 700px">
 	
 	<div id="beepboxEditorContainer" style="width: 700px; height: 645px;"></div>
 	
@@ -132,16 +134,15 @@ Instead of loading js beepbox editor interface directly, test for browser suppor
 <script type="text/javascript" src="beepbox_editor.min.js"></script>
 -->
 <script type="text/javascript">
-//<![CDATA[
 
-var hasAudioContext = false;//(window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
+var hasAudioContext = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
 
 if (hasAudioContext) {
 	// Go ahead and load js beepbox editor interface:
-	var fileref = document.createElement("script")
-	fileref.setAttribute("type", "text/javascript")
-	fileref.setAttribute("src", "beepbox_editor.min.js")
-	document.getElementsByTagName("head")[0].appendChild(fileref)
+	var fileref = document.createElement("script");
+	fileref.setAttribute("type", "text/javascript");
+	fileref.setAttribute("src", "beepbox_editor.min.js");
+	document.head.appendChild(fileref);
 	
 	if ( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
 		document.getElementById("introduction").innerHTML = "BeepBox is an online tool for sketching and sharing chiptune melodies. Make sure that your volume is turned up, then press the play button in the top right corner!";
@@ -190,7 +191,6 @@ if (hasAudioContext) {
 	hashInterval = setInterval('checkHash()', 100);
 }
 
-//]]>
 </script>
 
 </body></html>

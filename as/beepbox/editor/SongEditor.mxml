@@ -303,7 +303,7 @@ SOFTWARE.
 		
 		private function copyToClipboard(): void {
 			Clipboard.generalClipboard.clear();
-			Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, "http://www.beepbox.co/" + doc.song.toString());
+			Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, "http://www.beepbox.co/#" + doc.song.toString());
 		}
 		
 		private function onSetScale(): void {
