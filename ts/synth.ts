@@ -350,7 +350,7 @@ module beepbox {
 		public toString(): string {
 			let channel: number;
 			let bits: BitField;
-			let result: string = "#";
+			let result: string = "";
 			const base64: string[] = Song._newBase64;
 			
 			result += base64[Song._latestVersion];
@@ -539,11 +539,11 @@ module beepbox {
 		
 		public fromString(compressed: string): void {
 			compressed = compressed.trim();
+			if (compressed.charAt(0) == "#") compressed = compressed.substring(1);
 			if (compressed == null || compressed.length == 0) {
 				this.initToDefault();
 				return;
 			}
-			if (compressed.charAt(0) == "#") compressed = compressed.substring(1);
 			if (compressed.charAt(0) == "{") {
 				this.fromJsonObject(JSON.parse(compressed));
 				return;
@@ -1290,6 +1290,29 @@ module beepbox {
 			return this._playhead;
 		}
 		
+		public set playhead(value: number) {
+			if (this.song != null) {
+				this._playhead = Math.max(0, Math.min(this.song.bars, value));
+				var remainder: number = this._playhead;
+				this._bar = Math.floor(remainder);
+				remainder = this.song.beats * (remainder - this._bar);
+				this._beat = Math.floor(remainder);
+				remainder = this.song.parts * (remainder - this._beat);
+				this._part = Math.floor(remainder);
+				remainder = 4 * (remainder - this._part);
+				this._arpeggio = Math.floor(remainder);
+				var samplesPerArpeggio: number = this._getSamplesPerArpeggio();
+				remainder = samplesPerArpeggio * (remainder - this._arpeggio);
+				this._arpeggioSamples = Math.floor(samplesPerArpeggio - remainder);
+				if (this._bar < this.song.loopStart) {
+					this.enableIntro = true;
+				}
+				if (this._bar > this.song.loopStart + this.song.loopLength) {
+					this.enableOutro = true;
+				}
+			}
+		}
+		
 		public get totalSamples(): number {
 			if (this.song == null) return 0;
 			const samplesPerBar: number = this._getSamplesPerArpeggio() * 4 * this.song.parts * this.song.beats;
@@ -1409,12 +1432,15 @@ module beepbox {
 		public nextBar(): void {
 			const oldBar: number = this._bar;
 			this._bar++;
-			if (this._bar >= this.song.bars) {
-				this._bar = this.song.loopStart;
-			}
-			if (this._bar >= this.song.loopStart + this.song.loopLength || this._bar >= this.song.bars) {
-				this._bar = this.song.loopStart;
-			}
+			if (this.enableOutro) {
+				if (this._bar >= this.song.bars) {
+					this._bar = this.enableIntro ? 0 : this.song.loopStart;
+				}
+			} else {
+				if (this._bar >= this.song.loopStart + this.song.loopLength || this._bar >= this.song.bars) {
+					this._bar = this.song.loopStart;
+				}
+ 			}
 			this._playhead += this._bar - oldBar;
 		}
 		
@@ -1422,12 +1448,15 @@ module beepbox {
 			const oldBar: number = this._bar;
 			this._bar--;
 			if (this._bar < 0) {
+				this._bar = this.song.loopStart + this.song.loopLength - 1;
+			}
+			if (this._bar >= this.song.bars) {
 				this._bar = this.song.bars - 1;
 			}
 			if (this._bar < this.song.loopStart) {
 				this.enableIntro = true;
 			}
-			if (this._bar >= this.song.loopStart + this.song.loopLength || this._bar >= this.song.bars) {
+			if (!this.enableOutro && this._bar >= this.song.loopStart + this.song.loopLength) {
 				this._bar = this.song.loopStart + this.song.loopLength - 1;
 			}
 			this._playhead += this._bar - oldBar;
@@ -1543,9 +1572,14 @@ module beepbox {
 				}
 			}
 			if (this._bar >= this.song.bars) {
-				this._bar = this.song.loopStart;
-				this.enableOutro = false;
-			}
+				if (this.enableOutro) {
+					this._bar = 0;
+					this.enableIntro = true;
+					this.pause();
+				} else {
+					this._bar = this.song.loopStart;
+				}
+ 			}
 			if (this._bar >= this.song.loopStart) {
 				this.enableIntro = false;
 			}
@@ -1628,7 +1662,15 @@ module beepbox {
 			
 			updateInstruments();
 			
-			while (totalSamples > 0) {
+ 			while (totalSamples > 0) {
+				if (this._paused) {
+					while (totalSamples-- > 0) {
+						data[bufferIndex] = 0.0;
+						bufferIndex++;
+					}
+					break;
+				}
+				
 				let samples: number;
 				if (this._arpeggioSamples <= totalSamples) {
 					samples = this._arpeggioSamples;
@@ -2031,13 +2073,14 @@ module beepbox {
 								}
 								if (this._bar >= this.song.loopStart + this.song.loopLength) {
 									if (this.loopCount > 0) this.loopCount--;
-									if (this.loopCount != 0) {
+									if (this.loopCount > 0 || !this.enableOutro) {
 										this._bar = this.song.loopStart;
 									}
 								}
 								if (this._bar >= this.song.bars) {
-									this._bar = this.song.loopStart;
-									this.enableOutro = false;
+									this._bar = 0;
+									this.enableIntro = true;
+									this.pause();
 								}
 								updateInstruments();
 							}

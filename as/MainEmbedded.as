@@ -338,7 +338,7 @@ package {
 				synth.pause();
 			}
 			if (synth.song != null) {
-				ExternalInterface.call("open", "http://beepbox.co/" + synth.song.toString(), "_blank");
+				ExternalInterface.call("open", "http://beepbox.co/#" + synth.song.toString(), "_blank");
 			}
 		}
 		

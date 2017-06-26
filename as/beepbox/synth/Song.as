@@ -95,7 +95,7 @@ package beepbox.synth {
 			var channel: int;
 			var i: int;
 			var bits: BitField;
-			var result: String = "#";
+			var result: String = "";
 			var base64: Array = newBase64;
 			
 			result += base64[latestVersion];
@@ -284,11 +284,11 @@ package beepbox.synth {
 		
 		public function fromString(compressed: String): void {
 			compressed = StringUtil.trim(compressed);
+			if (compressed.charAt(0) == "#") compressed = compressed.substring(1);
 			if (compressed == null || compressed.length == 0) {
 				initToDefault();
 				return;
 			}
-			if (compressed.charAt(0) == "#") compressed = compressed.substring(1);
 			if (compressed.charAt(0) == "{") {
 				fromJsonObject(JSON.parse(compressed));
 				return;

@@ -240,10 +240,9 @@ package beepbox.synth {
 		public function nextBar(): void {
 			var oldBar: int = bar;
 			bar++;
-			
 			if (enableOutro) {
 				if (bar >= song.bars) {
-					bar = 0;
+					bar = enableIntro ? 0 : song.loopStart;
 				}
 			} else {
 				if (bar >= song.loopStart + song.loopLength || bar >= song.bars) {
@@ -256,11 +255,17 @@ package beepbox.synth {
 		public function prevBar(): void {
 			var oldBar: int = bar;
 			bar--;
-			if (bar < 0 || bar > song.bars) {
+			if (bar < 0) {
+				bar = song.loopStart + song.loopLength - 1;
+			}
+			if (bar >= song.bars) {
 				bar = song.bars - 1;
 			}
 			if (bar < song.loopStart) {
 				enableIntro = true;
+			}
+			if (!enableOutro && bar >= song.loopStart + song.loopLength) {
+				bar = song.loopStart + song.loopLength - 1;
 			}
 			_playhead += bar - oldBar;
 		}
