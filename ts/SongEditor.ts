@@ -441,11 +441,6 @@ module beepbox {
 			this._setPrompt(new ExportPrompt(this._doc, this));
 		}
 		
-		private _copyToClipboard = (): void => {
-			//Clipboard.generalClipboard.clear();
-			//Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, "http://www.beepbox.co/" + this._doc.song.toString());
-		}
-		
 		private _onSetScale = (): void => {
 			this._doc.history.record(new ChangeScale(this._doc, this._scaleDropDown.selectedIndex));
 		}
@@ -853,7 +848,7 @@ function checkHash(): void {
 }
 
 function onUpdated (): void {
-	const hash: string = doc.song.toString();
+	const hash: string = "#" + doc.song.toString();
 	if (location.hash != hash) {
 		location.hash = hash;
 		prevHash = hash;

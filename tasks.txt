@@ -208,17 +208,19 @@
 - show playhead on loop editor?
 
 EMBEDDED PLAYER:
-- show title if provided. show "by authorname" if provided. Or maybe just have one title field. make sure it is sanitized for security. :)
+- put title in data format if provided. show "artist - title" in placeholder text. make sure it is sanitized for security. :)
 - maybe instead of squashing notes really tiny, consider scrolling them instead.
 - If you hold control or shift and click play, put "*" in storage instead, and allow anything to continue playing until it is replaced with a unique id again or manually paused. 
-- maybe allow disabling the "Edit in BeepBox" link. cc license choices, link to cc website for more info.
+- It probably doesn't make sense to integrate licenses like creative commons into the data format: it would imply more authority than is actually possible. It is up to users to say how they want their songs to be used. However, there should be an option to disable the "Edit in BeepBox" link, which would turn on basic encryption.
 - maybe add a download/export button? set default file title based on embedded title. (restricting character set appropriately)
 - support both flash and js embedded players?
 - should the author be able to set the default loop behavior?
+- the embed player itself should have a share button, for social media. which should link to a full page player instead of the editor?
+- These icons at the bottom of the embed player should have tooltips. 
 - maybe also make a full page song player, to link to from tweets when you don't want others to edit.
 - add "Share" or "HTML Embed" button under export? or "File" menu. Include "title" and "author" fields.
 - sharing menu uses localSharedObject to remember your settings. same as editor volume?
-- should I make cards for twitter/facebook etc? Wait I need https for that I think...
+- should I make cards for twitter/facebook/slack/discord etc? Wait I need https for that I think...
 - make sure bots ignore embed.html
 
 PLAYLIST EDITOR:
