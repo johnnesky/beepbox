@@ -26,8 +26,8 @@ package beepbox.synth {
 	public class Song {
 		private static const oldestVersion: int = 2;
 		private static const latestVersion: int = 5;
-		private static const oldBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
-		private static const newBase64: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","-","_",];
+		private static const base64CharToInt: Object = {0:0,1:1,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17,i:18,j:19,k:20,l:21,m:22,n:23,o:24,p:25,q:26,r:27,s:28,t:29,u:30,v:31,w:32,x:33,y:34,z:35,A:36,B:37,C:38,D:39,E:40,F:41,G:42,H:43,I:44,J:45,K:46,L:47,M:48,N:49,O:50,P:51,Q:52,R:53,S:54,T:55,U:56,V:57,W:58,X:59,Y:60,Z:61,"-":62,".":62,_:63}; // 62 could be represented by either "-" or "." for historical reasons. New songs should use "-".
+		private static const base64IntToChar: Array = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","-","_"];
 		
 		public var scale: int;
 		public var key: int;
@@ -94,69 +94,69 @@ package beepbox.synth {
 		public function toString(): String {
 			var channel: int;
 			var i: int;
-			var bits: BitField;
+			var bits: BitFieldWriter;
 			var result: String = "";
-			var base64: Array = newBase64;
+			var base64IntToChar: Array = Song.base64IntToChar;
 			
-			result += base64[latestVersion];
-			result += "s" + base64[scale];
-			result += "k" + base64[key];
-			result += "l" + base64[loopStart >> 6] + base64[loopStart & 0x3f];
-			result += "e" + base64[(loopLength - 1) >> 6] + base64[(loopLength - 1) & 0x3f];
-			result += "t" + base64[tempo];
-			result += "m" + base64[reverb];
-			result += "a" + base64[beats - 1];
-			result += "g" + base64[(bars - 1) >> 6] + base64[(bars - 1) & 0x3f];
-			result += "j" + base64[patterns - 1];
-			result += "i" + base64[instruments - 1];
-			result += "r" + base64[Music.partCounts.indexOf(parts)];
+			result += base64IntToChar[latestVersion];
+			result += "s" + base64IntToChar[scale];
+			result += "k" + base64IntToChar[key];
+			result += "l" + base64IntToChar[loopStart >> 6] + base64IntToChar[loopStart & 0x3f];
+			result += "e" + base64IntToChar[(loopLength - 1) >> 6] + base64IntToChar[(loopLength - 1) & 0x3f];
+			result += "t" + base64IntToChar[tempo];
+			result += "m" + base64IntToChar[reverb];
+			result += "a" + base64IntToChar[beats - 1];
+			result += "g" + base64IntToChar[(bars - 1) >> 6] + base64IntToChar[(bars - 1) & 0x3f];
+			result += "j" + base64IntToChar[patterns - 1];
+			result += "i" + base64IntToChar[instruments - 1];
+			result += "r" + base64IntToChar[Music.partCounts.indexOf(parts)];
 			
 			result += "w";
 			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
-				result += base64[instrumentWaves[channel][i]];
+				result += base64IntToChar[instrumentWaves[channel][i]];
 			}
 			
 			result += "f";
 			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
-				result += base64[instrumentFilters[channel][i]];
+				result += base64IntToChar[instrumentFilters[channel][i]];
 			}
 			
 			result += "d";
 			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
-				result += base64[instrumentAttacks[channel][i]];
+				result += base64IntToChar[instrumentAttacks[channel][i]];
 			}
 			
 			result += "c";
 			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
-				result += base64[instrumentEffects[channel][i]];
+				result += base64IntToChar[instrumentEffects[channel][i]];
 			}
 			
 			result += "h";
 			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
-				result += base64[instrumentChorus[channel][i]];
+				result += base64IntToChar[instrumentChorus[channel][i]];
 			}
 			
 			result += "v";
 			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < instruments; i++) {
-				result += base64[instrumentVolumes[channel][i]];
+				result += base64IntToChar[instrumentVolumes[channel][i]];
 			}
 			
 			result += "o";
 			for (channel = 0; channel < Music.numChannels; channel++) {
-				result += base64[channelOctaves[channel]];
+				result += base64IntToChar[channelOctaves[channel]];
 			}
 			
 			result += "b";
-			bits = new BitField(base64);
+			bits = new BitFieldWriter();
 			var neededBits: int = 0;
 			while ((1 << neededBits) < patterns + 1) neededBits++;
 			for (channel = 0; channel < Music.numChannels; channel++) for (i = 0; i < bars; i++) {
 				bits.write(neededBits, channelBars[channel][i]);
 			}
-			result += bits.toString();
+			result += bits.encodeBase64(base64IntToChar);
 			
 			result += "p";
-			bits = new BitField(base64);
+			bits = new BitFieldWriter();
 			var neededInstrumentBits: int = 0;
 			while ((1 << neededInstrumentBits) < instruments) neededInstrumentBits++;
 			for (channel = 0; channel < Music.numChannels; channel++) {
@@ -180,7 +180,7 @@ package beepbox.synth {
 								bits.writePartDuration(t.start - curPart);
 							}
 							
-							var shapeBits: BitField = new BitField(base64);
+							var shapeBits: BitFieldWriter = new BitFieldWriter();
 							
 							// 0: 1 note, 10: 2 notes, 110: 3 notes, 111: 4 notes
 							for (i = 1; i < t.notes.length; i++) shapeBits.write(1,1);
@@ -209,7 +209,7 @@ package beepbox.synth {
 								shapeBits.write(2, pin.volume);
 							}
 							
-							var shapeString: String = shapeBits.toString();
+							var shapeString: String = shapeBits.encodeBase64(base64IntToChar);
 							var shapeIndex: int = recentShapes.indexOf(shapeString);
 							if (shapeIndex == -1) {
 								bits.write(2, 1); // new shape
@@ -268,14 +268,14 @@ package beepbox.synth {
 					}
 				}
 			}
-			var bitString: String = bits.toString();
+			var bitString: String = bits.encodeBase64(base64IntToChar);
 			var stringLength: int = bitString.length;
 			var digits: String = "";
 			while (stringLength > 0) {
-				digits = base64[stringLength & 0x3f] + digits;
+				digits = base64IntToChar[stringLength & 0x3f] + digits;
 				stringLength = stringLength >> 6;
 			}
-			result += base64[digits.length];
+			result += base64IntToChar[digits.length];
 			result += digits;
 			result += bitString;
 			
@@ -295,159 +295,157 @@ package beepbox.synth {
 			}
 			initToDefault();
 			var charIndex: int = 0;
-			var version: int = newBase64.indexOf(compressed.charAt(charIndex++));
+			var version: int = Song.base64CharToInt[compressed.charAt(charIndex++)];
 			if (version == -1 || version > latestVersion || version < oldestVersion) return;
 			var beforeThree: Boolean = version < 3;
 			var beforeFour:  Boolean = version < 4;
 			var beforeFive:  Boolean = version < 5;
-			var base64: Array = beforeThree ? oldBase64 : newBase64;
+			var base64CharToInt: Object = Song.base64CharToInt; // beforeThree ? oldBase64 : newBase64;
 			if (beforeThree) instrumentAttacks = [[0],[0],[0],[0]];
 			if (beforeThree) instrumentWaves   = [[1],[1],[1],[0]];
 			while (charIndex < compressed.length) {
 				var command: String = compressed.charAt(charIndex++);
-				var bits: BitField;
+				var bits: BitFieldReader;
 				var channel: int;
 				var i: int;
 				var j: int;
 				if (command == "s") {
-					scale = base64.indexOf(compressed.charAt(charIndex++));
+					scale = base64CharToInt[compressed.charAt(charIndex++)];
 					if (beforeThree && scale == 10) scale = 11;
 				} else if (command == "k") {
-					key = base64.indexOf(compressed.charAt(charIndex++));
+					key = base64CharToInt[compressed.charAt(charIndex++)];
 				} else if (command == "l") {
 					if (beforeFive) {
-						loopStart = base64.indexOf(compressed.charAt(charIndex++));
+						loopStart = base64CharToInt[compressed.charAt(charIndex++)];
 					} else {
-						loopStart = (base64.indexOf(compressed.charAt(charIndex++)) << 6) + base64.indexOf(compressed.charAt(charIndex++));
+						loopStart = (base64CharToInt[compressed.charAt(charIndex++)] << 6) + base64CharToInt[compressed.charAt(charIndex++)];
 					}
 				} else if (command == "e") {
 					if (beforeFive) {
-						loopLength = base64.indexOf(compressed.charAt(charIndex++));
+						loopLength = base64CharToInt[compressed.charAt(charIndex++)];
 					} else {
-						loopLength = (base64.indexOf(compressed.charAt(charIndex++)) << 6) + base64.indexOf(compressed.charAt(charIndex++)) + 1;
+						loopLength = (base64CharToInt[compressed.charAt(charIndex++)] << 6) + base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					}
 				} else if (command == "t") {
 					if (beforeFour) {
-						tempo = [1, 4, 7, 10][base64.indexOf(compressed.charAt(charIndex++))];
+						tempo = [1, 4, 7, 10][base64CharToInt[compressed.charAt(charIndex++)]];
 					} else {
-						tempo = base64.indexOf(compressed.charAt(charIndex++));
+						tempo = base64CharToInt[compressed.charAt(charIndex++)];
 					}
 					tempo = clip(0, Music.tempoNames.length, tempo);
 				} else if (command == "m") {
-					reverb = base64.indexOf(compressed.charAt(charIndex++));
+					reverb = base64CharToInt[compressed.charAt(charIndex++)];
 					reverb = clip(0, Music.reverbRange, reverb);
 				} else if (command == "a") {
 					if (beforeThree) {
-						beats = [6, 7, 8, 9, 10][base64.indexOf(compressed.charAt(charIndex++))];
+						beats = [6, 7, 8, 9, 10][base64CharToInt[compressed.charAt(charIndex++)]];
 					} else {
-						beats = base64.indexOf(compressed.charAt(charIndex++)) + 1;
+						beats = base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					}
 					beats = Math.max(Music.beatsMin, Math.min(Music.beatsMax, beats));
 				} else if (command == "g") {
-					bars = (base64.indexOf(compressed.charAt(charIndex++)) << 6) + base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					bars = (base64CharToInt[compressed.charAt(charIndex++)] << 6) + base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					bars = Math.max(Music.barsMin, Math.min(Music.barsMax, bars));
 				} else if (command == "j") {
-					patterns = base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					patterns = base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					patterns = Math.max(Music.patternsMin, Math.min(Music.patternsMax, patterns));
 				} else if (command == "i") {
-					instruments = base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					instruments = base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					instruments = Math.max(Music.instrumentsMin, Math.min(Music.instrumentsMax, instruments));
 				} else if (command == "r") {
-					parts = Music.partCounts[base64.indexOf(compressed.charAt(charIndex++))];
+					parts = Music.partCounts[base64CharToInt[compressed.charAt(charIndex++)]];
 				} else if (command == "w") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						instrumentWaves[channel][0] = clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						instrumentWaves[channel][0] = clip(0, Music.waveNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (i = 0; i < instruments; i++) {
-								instrumentWaves[channel][i] = clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								instrumentWaves[channel][i] = clip(0, Music.waveNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "f") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						instrumentFilters[channel][0] = [0, 2, 3, 5][clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)))];
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						instrumentFilters[channel][0] = [0, 2, 3, 5][clip(0, Music.filterNames.length, base64CharToInt[compressed.charAt(charIndex++)])];
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (i = 0; i < instruments; i++) {
-								instrumentFilters[channel][i] = clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								instrumentFilters[channel][i] = clip(0, Music.filterNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "d") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						instrumentAttacks[channel][0] = clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						instrumentAttacks[channel][0] = clip(0, Music.attackNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (i = 0; i < instruments; i++) {
-								instrumentAttacks[channel][i] = clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								instrumentAttacks[channel][i] = clip(0, Music.attackNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "c") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						instrumentEffects[channel][0] = clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						instrumentEffects[channel][0] = clip(0, Music.effectNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 						if (instrumentEffects[channel][0] == 1) instrumentEffects[channel][0] = 3;
 						else if (instrumentEffects[channel][0] == 3) instrumentEffects[channel][0] = 5;
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (i = 0; i < instruments; i++) {
-								instrumentEffects[channel][i] = clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								instrumentEffects[channel][i] = clip(0, Music.effectNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "h") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						instrumentChorus[channel][0] = clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						instrumentChorus[channel][0] = clip(0, Music.chorusNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (i = 0; i < instruments; i++) {
-								instrumentChorus[channel][i] = clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								instrumentChorus[channel][i] = clip(0, Music.chorusNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "v") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						instrumentVolumes[channel][0] = clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						instrumentVolumes[channel][0] = clip(0, Music.volumeNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (i = 0; i < instruments; i++) {
-								instrumentVolumes[channel][i] = clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								instrumentVolumes[channel][i] = clip(0, Music.volumeNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "o") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						channelOctaves[channel] = clip(0, 5, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						channelOctaves[channel] = clip(0, 5, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
-							channelOctaves[channel] = clip(0, 5, base64.indexOf(compressed.charAt(charIndex++)));
+							channelOctaves[channel] = clip(0, 5, base64CharToInt[compressed.charAt(charIndex++)]);
 						}
 					}
 				} else if (command == "b") {
 					var subStringLength: int;
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						var barCount: int = base64.indexOf(compressed.charAt(charIndex++));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						var barCount: int = base64CharToInt[compressed.charAt(charIndex++)];
 						subStringLength = Math.ceil(barCount * 0.5);
-						bits = new BitField(base64);
-						bits.load(compressed.substr(charIndex, subStringLength));
+						bits = new BitFieldReader(base64CharToInt, compressed.substr(charIndex, subStringLength));
 						for (i = 0; i < barCount; i++) {
 							channelBars[channel][i] = bits.read(3) + 1;
 						}
 					} else if (beforeFive) {
 						var neededBits: int = 0;
 						while ((1 << neededBits) < patterns) neededBits++;
-						bits = new BitField(base64);
 						subStringLength = Math.ceil(Music.numChannels * bars * neededBits / 6.0);
-						bits.load(compressed.substr(charIndex, subStringLength));
+						bits = new BitFieldReader(base64CharToInt, compressed.substr(charIndex, subStringLength));
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							channelBars[channel].length = bars;
 							for (i = 0; i < bars; i++) {
@@ -457,9 +455,8 @@ package beepbox.synth {
 					} else {
 						var neededBits2: int = 0;
 						while ((1 << neededBits2) < patterns + 1) neededBits2++;
-						bits = new BitField(base64);
 						subStringLength = Math.ceil(Music.numChannels * bars * neededBits2 / 6.0);
-						bits.load(compressed.substr(charIndex, subStringLength));
+						bits = new BitFieldReader(base64CharToInt, compressed.substr(charIndex, subStringLength));
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							channelBars[channel].length = bars;
 							for (i = 0; i < bars; i++) {
@@ -471,24 +468,23 @@ package beepbox.synth {
 				} else if (command == "p") {
 					var bitStringLength: int = 0;
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						var patternCount: int = base64.indexOf(compressed.charAt(charIndex++));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						var patternCount: int = base64CharToInt[compressed.charAt(charIndex++)];
 						
-						bitStringLength = base64.indexOf(compressed.charAt(charIndex++));
+						bitStringLength = base64CharToInt[compressed.charAt(charIndex++)];
 						bitStringLength = bitStringLength << 6;
-						bitStringLength += base64.indexOf(compressed.charAt(charIndex++));
+						bitStringLength += base64CharToInt[compressed.charAt(charIndex++)];
 					} else {
 						channel = 0;
-						var bitStringLengthLength: int = base64.indexOf(compressed.charAt(charIndex++));
+						var bitStringLengthLength: int = base64CharToInt[compressed.charAt(charIndex++)];
 						while (bitStringLengthLength > 0) {
 							bitStringLength = bitStringLength << 6;
-							bitStringLength += base64.indexOf(compressed.charAt(charIndex++));
+							bitStringLength += base64CharToInt[compressed.charAt(charIndex++)];
 							bitStringLengthLength--;
 						}
 					}
 					
-					bits = new BitField(base64);
-					bits.load(compressed.substr(charIndex, bitStringLength));
+					bits = new BitFieldReader(base64CharToInt, compressed.substr(charIndex, bitStringLength));
 					charIndex += bitStringLength;
 					
 					var neededInstrumentBits: int = 0;
@@ -629,9 +625,10 @@ package beepbox.synth {
 		
 		public function toJsonObject(enableIntro: Boolean = true, loopCount: int = 1, enableOutro: Boolean = true): Object {
 			const channelArray: Array = [];
+			var i: int;
 			for (var channel: int = 0; channel < Music.numChannels; channel++) {
 				const instrumentArray: Array = [];
-				for (var i: int = 0; i < this.instruments; i++) {
+				for (i = 0; i < this.instruments; i++) {
 					if (channel == 3) {
 						instrumentArray.push({
 							volume: (5 - this.instrumentVolumes[channel][i]) * 20,
@@ -676,13 +673,13 @@ package beepbox.synth {
 				}
 				
 				const sequenceArray: Array = [];
-				if (enableIntro) for (var i: int = 0; i < this.loopStart; i++) {
+				if (enableIntro) for (i = 0; i < this.loopStart; i++) {
 					sequenceArray.push(this.channelBars[channel][i]);
 				}
-				for (var l: int = 0; l < loopCount; l++) for (var i: int = this.loopStart; i < this.loopStart + this.loopLength; i++) {
+				for (var l: int = 0; l < loopCount; l++) for (i = this.loopStart; i < this.loopStart + this.loopLength; i++) {
 					sequenceArray.push(this.channelBars[channel][i]);
 				}
-				if (enableOutro) for (var i: int = this.loopStart + this.loopLength; i < this.bars; i++) {
+				if (enableOutro) for (i = this.loopStart + this.loopLength; i < this.bars; i++) {
 					sequenceArray.push(this.channelBars[channel][i]);
 				}
 				
@@ -712,6 +709,11 @@ package beepbox.synth {
 		}
 		
 		public function fromJsonObject(jsonObject: Object): void {
+			var i: int;
+			var k: int;
+			var channel: int;
+			var channelObject: *;
+			
 			initToDefault();
 			if (!jsonObject) return;
 			const version: int = int(jsonObject.version);
@@ -762,9 +764,9 @@ package beepbox.synth {
 			var maxInstruments: int = 1;
 			var maxPatterns: int = 1;
 			var maxBars: int = 1;
-			for (var channel: int = 0; channel < Music.numChannels; channel++) {
+			for (channel = 0; channel < Music.numChannels; channel++) {
 				if (jsonObject.channels && jsonObject.channels[channel]) {
-					var channelObject: * = jsonObject.channels[channel];
+					channelObject = jsonObject.channels[channel];
 					if (channelObject.instruments) maxInstruments = Math.max(maxInstruments, int(channelObject.instruments.length));
 					if (channelObject.patterns) maxPatterns = Math.max(maxPatterns, int(channelObject.patterns.length));
 					if (channelObject.sequence) maxBars = Math.max(maxBars, int(channelObject.sequence.length));
@@ -782,8 +784,8 @@ package beepbox.synth {
 				this.loopLength = clip(1, this.bars - this.loopStart + 1, int(jsonObject.loopBars));
 			}
 			
-			for (var channel: int = 0; channel < Music.numChannels; channel++) {
-				var channelObject: * = undefined;
+			for (channel = 0; channel < Music.numChannels; channel++) {
+				channelObject = undefined;
 				if (jsonObject.channels) channelObject = jsonObject.channels[channel];
 				if (channelObject == undefined) channelObject = {};
 				
@@ -800,7 +802,7 @@ package beepbox.synth {
 				this.channelPatterns[channel].length = this.patterns;
 				this.channelBars[channel].length = this.bars;
 				
-				for (var i: int = 0; i < this.instruments; i++) {
+				for (i = 0; i < this.instruments; i++) {
 					var instrumentObject: * = undefined;
 					if (channelObject.instruments) instrumentObject = channelObject.instruments[i];
 					if (instrumentObject == undefined) instrumentObject = {};
@@ -829,7 +831,7 @@ package beepbox.synth {
 					}
 				}
 				
-				for (var i: int = 0; i < this.patterns; i++) {
+				for (i = 0; i < this.patterns; i++) {
 					const pattern: BarPattern = new BarPattern();
 					this.channelPatterns[channel][i] = pattern;
 					
@@ -856,7 +858,7 @@ package beepbox.synth {
 							tone.notes = [];
 							tone.pins = [];
 							
-							for (var k: int = 0; k < noteObject.pitches.length; k++) {
+							for (k = 0; k < noteObject.pitches.length; k++) {
 								const pitch: int = int(noteObject.pitches[k]);
 								if (tone.notes.indexOf(pitch) != -1) continue;
 								tone.notes.push(pitch);
@@ -866,7 +868,7 @@ package beepbox.synth {
 							
 							var toneClock: int = tickClock;
 							var startInterval: int = 0;
-							for (var k: int = 0; k < noteObject.points.length; k++) {
+							for (k = 0; k < noteObject.points.length; k++) {
 								const pointObject: * = noteObject.points[k];
 								if (pointObject == undefined || pointObject.tick == undefined) continue;
 								const interval: int = (pointObject.pitchBend == undefined) ? 0 : int(pointObject.pitchBend);
@@ -892,7 +894,7 @@ package beepbox.synth {
 							const maxPitch: int = channel == 3 ? Music.drumCount - 1 : Music.maxPitch;
 							var lowestPitch: int = maxPitch;
 							var highestPitch: int = 0;
-							for (var k: int = 0; k < tone.notes.length; k++) {
+							for (k = 0; k < tone.notes.length; k++) {
 								tone.notes[k] += startInterval;
 								if (tone.notes[k] < 0 || tone.notes[k] > maxPitch) {
 									tone.notes.splice(k, 1);
@@ -903,7 +905,7 @@ package beepbox.synth {
 							}
 							if (tone.notes.length < 1) continue;
 							
-							for (var k: int = 0; k < tone.pins.length; k++) {
+							for (k = 0; k < tone.pins.length; k++) {
 								const pin: TonePin = tone.pins[k];
 								if (pin.interval + lowestPitch < 0) pin.interval = -lowestPitch;
 								if (pin.interval + highestPitch > maxPitch) pin.interval = maxPitch - highestPitch;
@@ -925,7 +927,7 @@ package beepbox.synth {
 					}
 				}
 				
-				for (var i: int = 0; i < this.bars; i++) {
+				for (i = 0; i < this.bars; i++) {
 					this.channelBars[channel][i] = channelObject.sequence ? Math.min(this.patterns, uint(channelObject.sequence[i])) : 0;
 				}
 			}
@@ -954,5 +956,130 @@ package beepbox.synth {
 		public function getBeatsPerMinute(): int {
 			return Math.round(120.0 * Math.pow(2.0, (-4.0 + this.tempo) / 9.0));
 		}
+	}
+}
+	
+class BitFieldReader {
+	private var bits: Array = [];
+	private var readIndex: int = 0;
+	
+	public function BitFieldReader(base64CharToInt: Object, source: String) {
+		for each (var char: String in source.split("")) {
+			var value: int = base64CharToInt[char];
+			bits.push((value & 0x20) != 0);
+			bits.push((value & 0x10) != 0);
+			bits.push((value & 0x08) != 0);
+			bits.push((value & 0x04) != 0);
+			bits.push((value & 0x02) != 0);
+			bits.push((value & 0x01) != 0);
+		}
+	}
+	
+	public function read(bitCount: int): int {
+		var result: int = 0;
+		while (bitCount > 0) {
+			result = result << 1;
+			result += bits[readIndex++] ? 1 : 0;
+			bitCount--;
+		}
+		return result;
+	}
+	
+	public function readLongTail(minValue: int, minBits: int): int {
+		var result: int = minValue;
+		var numBits: int = minBits;
+		while (bits[readIndex++]) {
+			result += 1 << numBits;
+			numBits++;
+		}
+		while (numBits > 0) {
+			numBits--;
+			if (bits[readIndex++]) {
+				result += 1 << numBits;
+			}
+		}
+		return result;
+	}
+	
+	public function readPartDuration(): int {
+		return readLongTail(1, 2);
+	}
+	
+	public function readPinCount(): int {
+		return readLongTail(1, 0);
+	}
+	
+	public function readNoteInterval(): int {
+		if (read(1)) {
+			return -readLongTail(1, 3);
+		} else {
+			return readLongTail(1, 3);
+		}
+	}
+}
+
+class BitFieldWriter {
+	private var bits: Array = [];
+	
+	public function write(bitCount: int, value: int): void {
+		bitCount--;
+		while (bitCount >= 0) {
+			bits.push(((value >> bitCount) & 1) == 1);
+			bitCount--;
+		}
+	}
+	
+	public function writeLongTail(minValue: int, minBits: int, value: int): void {
+		if (value < minValue) throw new Error();
+		value -= minValue;
+		var numBits: int = minBits;
+		while (value >= (1 << numBits)) {
+			bits.push(true);
+			value -= 1 << numBits;
+			numBits++;
+		}
+		bits.push(false);
+		while (numBits > 0) {
+			numBits--;
+			bits.push((value & (1 << numBits)) != 0);
+		}
+	}
+	
+	public function writePartDuration(value: int): void {
+		writeLongTail(1, 2, value);
+	}
+	
+	public function writePinCount(value: int): void {
+		writeLongTail(1, 0, value);
+	}
+	
+	public function writeNoteInterval(value: int): void {
+		if (value < 0) {
+			write(1, 1); // sign
+			writeLongTail(1, 3, -value);
+		} else {
+			write(1, 0); // sign
+			writeLongTail(1, 3, value);
+		}
+	}
+	
+	public function concat(other: BitFieldWriter): void {
+		bits = bits.concat(other.bits);
+	}
+	
+	public function encodeBase64(base64: Array): String {
+		var result: String = "";
+		for (var i: int = 0; i < bits.length; i += 6) {
+			var value: int = 0;
+			if (bits[i+0]) value += 0x20;
+			if (bits[i+1]) value += 0x10;
+			if (bits[i+2]) value += 0x08;
+			if (bits[i+3]) value += 0x04;
+			if (bits[i+4]) value += 0x02;
+			if (bits[i+5]) value += 0x01;
+			result += base64[value];
+			
+		}
+		return result;
 	}
 }

@@ -249,6 +249,7 @@ AUTHENTICATION:
 
 MAYBE:
 - allow dragging track editor playhead?
+- custom cover art, color schemes in playlists and embed player.
 - rapid document/fragment changes due to undo cause undefined state?
 - on linux chrome, select menus use same background color as select element, it's a bit too bright when highlighted.
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 
