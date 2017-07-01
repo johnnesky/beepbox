@@ -171,6 +171,9 @@ SOFTWARE.
 		}
 		
 		private function onExportToMidi(): void {
+			var bar: int;
+			var loopIndex: int;
+			
 			var data: ByteArray = new ByteArray();
 			data.endian = Endian.BIG_ENDIAN;
 			
@@ -227,17 +230,17 @@ SOFTWARE.
 			
 			const unrolledBars: Array = [];
 			if (enableIntro.selected) {
-				for (var bar: int = 0; bar < song.loopStart; bar++) {
+				for (bar = 0; bar < song.loopStart; bar++) {
 					unrolledBars.push(bar);
 				}
 			}
-			for (var loopIndex: int = 0; loopIndex < loopDropDown.selectedIndex + 1; loopIndex++) {
-				for (var bar: int = song.loopStart; bar < song.loopStart + song.loopLength; bar++) {
+			for (loopIndex = 0; loopIndex < loopDropDown.selectedIndex + 1; loopIndex++) {
+				for (bar = song.loopStart; bar < song.loopStart + song.loopLength; bar++) {
 					unrolledBars.push(bar);
 				}
 			}
 			if (enableOutro.selected) {
-				for (var bar: int = song.loopStart + song.loopLength; bar < song.bars; bar++) {
+				for (bar = song.loopStart + song.loopLength; bar < song.bars; bar++) {
 					unrolledBars.push(bar);
 				}
 			}
@@ -315,7 +318,7 @@ SOFTWARE.
 					writeUint16(0xFF06); // marker meta event. 
 					writeAscii("Loop Start");
 					
-					for (var loopIndex: int = 0; loopIndex < loopDropDown.selectedIndex + 1; loopIndex++) {
+					for (loopIndex = 0; loopIndex < loopDropDown.selectedIndex + 1; loopIndex++) {
 						barStartTime += ticksPerBar * song.loopLength;
 						writeEventTime(barStartTime);
 						writeUint16(0xFF06); // marker meta event. 
@@ -351,7 +354,7 @@ SOFTWARE.
 					const channelRoot: int = isDrums ? 33 : Music.keyTransposes[song.key];
 					const intervalScale: int = isDrums ? Music.drumInterval : 1;
 					
-					for each (var bar: int in unrolledBars) {
+					for each (bar in unrolledBars) {
 						const pattern: BarPattern = song.getPattern(channel, bar);
 						
 						if (pattern != null) {
@@ -368,8 +371,9 @@ SOFTWARE.
 								
 								writeEventTime(barStartTime);
 								writeUint16(0xFF04); // instrument event. 
+								var description: String;
 								if (isDrums) {
-									var description: String = "noise: " + Music.drumNames[song.instrumentWaves[channel][nextInstrument]];
+									description = "noise: " + Music.drumNames[song.instrumentWaves[channel][nextInstrument]];
 									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
 									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
 									writeAscii(description);
@@ -379,7 +383,7 @@ SOFTWARE.
 									writeUint8(0xC0 | midiChannel); // program change event for given channel
 									writeFlagAnd7Bits(0, 0x7E); // seashore, applause
 								} else {
-									var description: String = "wave: " + Music.waveNames[song.instrumentWaves[channel][nextInstrument]];
+									description = "wave: " + Music.waveNames[song.instrumentWaves[channel][nextInstrument]];
 									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
 									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
 									description += ", filter: " + Music.filterNames[song.instrumentFilters[channel][nextInstrument]];

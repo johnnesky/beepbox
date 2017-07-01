@@ -29,42 +29,23 @@ interface Window {
 }
 
 module beepbox {
-	export class BitField {
-		private _base64: string[];
+	interface Dictionary<T> {
+		[K: string]: T;
+	}
+	
+	class BitFieldReader {
 		private _bits: boolean[] = [];
 		private _readIndex: number = 0;
 		
-		constructor(base64: string[]) {
-			this._base64 = base64;
-		}
-		
-		public load(source: string): void {
-			for (const char of source.split("")) {
-				const value: number = this._base64.indexOf(char);
+		constructor(base64CharToInt: Readonly<Dictionary<number>>, source: string) {
+			for (let i: number = 0; i < source.length; i++) {
+				const value: number = base64CharToInt[source.charAt(i)];
 				this._bits.push((value & 0x20) != 0);
 				this._bits.push((value & 0x10) != 0);
 				this._bits.push((value & 0x08) != 0);
 				this._bits.push((value & 0x04) != 0);
 				this._bits.push((value & 0x02) != 0);
 				this._bits.push((value & 0x01) != 0);
-			}
-		}
-		
-		public addPadding(): void {
-			while ((this._bits.length % 6) != 0) {
-				this._bits.push(false);
-			}
-		}
-		
-		public skipPadding(): void {
-			this._readIndex += 5 - ((this._readIndex + 5) % 6);
-		}
-		
-		public write(bitCount: number, value: number): void {
-			bitCount--;
-			while (bitCount >= 0) {
-				this._bits.push(((value >> bitCount) & 1) == 1);
-				bitCount--;
 			}
 		}
 		
@@ -76,22 +57,6 @@ module beepbox {
 				bitCount--;
 			}
 			return result;
-		}
-		
-		public writeLongTail(minValue: number, minBits: number, value: number): void {
-			if (value < minValue) throw new Error("value out of bounds");
-			value -= minValue;
-			let numBits: number = minBits;
-			while (value >= (1 << numBits)) {
-				this._bits.push(true);
-				value -= 1 << numBits;
-				numBits++;
-			}
-			this._bits.push(false);
-			while (numBits > 0) {
-				numBits--;
-				this._bits.push((value & (1 << numBits)) != 0);
-			}
 		}
 		
 		public readLongTail(minValue: number, minBits: number): number {
@@ -110,20 +75,56 @@ module beepbox {
 			return result;
 		}
 		
-		public writePartDuration(value: number): void {
-			this.writeLongTail(1, 2, value);
-		}
-		
 		public readPartDuration(): number {
 			return this.readLongTail(1, 2);
 		}
 		
-		public writePinCount(value: number): void {
-			this.writeLongTail(1, 0, value);
-		}
-		
 		public readPinCount(): number {
 			return this.readLongTail(1, 0);
+		}
+		
+		public readNoteInterval(): number {
+			if (this.read(1)) {
+				return -this.readLongTail(1, 3);
+			} else {
+				return this.readLongTail(1, 3);
+			}
+		}
+	}
+	
+	class BitFieldWriter {
+		private _bits: boolean[] = [];
+		
+		public write(bitCount: number, value: number): void {
+			bitCount--;
+			while (bitCount >= 0) {
+				this._bits.push(((value >> bitCount) & 1) == 1);
+				bitCount--;
+			}
+		}
+		
+		public writeLongTail(minValue: number, minBits: number, value: number): void {
+			if (value < minValue) throw new Error("value out of bounds");
+			value -= minValue;
+			let numBits: number = minBits;
+			while (value >= (1 << numBits)) {
+				this._bits.push(true);
+				value -= 1 << numBits;
+				numBits++;
+			}
+			this._bits.push(false);
+			while (numBits > 0) {
+				numBits--;
+				this._bits.push((value & (1 << numBits)) != 0);
+			}
+		}
+		
+		public writePartDuration(value: number): void {
+			this.writeLongTail(1, 2, value);
+		}
+		
+		public writePinCount(value: number): void {
+			this.writeLongTail(1, 0, value);
 		}
 		
 		public writeNoteInterval(value: number): void {
@@ -136,20 +137,11 @@ module beepbox {
 			}
 		}
 		
-		public readNoteInterval(): number {
-			if (this.read(1)) {
-				return -this.readLongTail(1, 3);
-			} else {
-				return this.readLongTail(1, 3);
-			}
-		}
-		
-		public concat(other: BitField): void {
+		public concat(other: BitFieldWriter): void {
 			this._bits = this._bits.concat(other._bits);
 		}
 		
-		public toString(): string {
-			//const paddedBits: boolean[] = this._bits.concat([false, false, false, false, false, false]);
+		public encodeBase64(base64IntToChar: ReadonlyArray<string>): string {
 			let result: string = "";
 			for (let i: number = 0; i < this._bits.length; i += 6) {
 				let value: number = 0;
@@ -159,14 +151,9 @@ module beepbox {
 				if (this._bits[i+3]) value += 0x04;
 				if (this._bits[i+4]) value += 0x02;
 				if (this._bits[i+5]) value += 0x01;
-				result += this._base64[value];
-				
+				result += base64IntToChar[value];
 			}
 			return result;
-		}
-		
-		public traceBits(): void {
-			console.log(this._bits);
 		}
 	}
 
@@ -280,10 +267,10 @@ module beepbox {
 	}
 
 	export class Song {
-		private static _oldestVersion: number = 2;
-		private static _latestVersion: number = 5;
-		private static _oldBase64: string[] = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",".","_",];
-		private static _newBase64: string[] = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","-","_",];
+		private static readonly _oldestVersion: number = 2;
+		private static readonly _latestVersion: number = 5;
+		private static readonly _base64CharToInt: Readonly<Dictionary<number>> = {0:0,1:1,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,a:10,b:11,c:12,d:13,e:14,f:15,g:16,h:17,i:18,j:19,k:20,l:21,m:22,n:23,o:24,p:25,q:26,r:27,s:28,t:29,u:30,v:31,w:32,x:33,y:34,z:35,A:36,B:37,C:38,D:39,E:40,F:41,G:42,H:43,I:44,J:45,K:46,L:47,M:48,N:49,O:50,P:51,Q:52,R:53,S:54,T:55,U:56,V:57,W:58,X:59,Y:60,Z:61,"-":62,".":62,_:63}; // 62 could be represented by either "-" or "." for historical reasons. New songs should use "-".
+		private static readonly _base64IntToChar: ReadonlyArray<string> = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","-","_"];
 		
 		public scale: number;
 		public key: number;
@@ -349,69 +336,69 @@ module beepbox {
 		
 		public toString(): string {
 			let channel: number;
-			let bits: BitField;
+			let bits: BitFieldWriter;
 			let result: string = "";
-			const base64: string[] = Song._newBase64;
+			const base64IntToChar: ReadonlyArray<string> = Song._base64IntToChar;
 			
-			result += base64[Song._latestVersion];
-			result += "s" + base64[this.scale];
-			result += "k" + base64[this.key];
-			result += "l" + base64[this.loopStart >> 6] + base64[this.loopStart & 0x3f];
-			result += "e" + base64[(this.loopLength - 1) >> 6] + base64[(this.loopLength - 1) & 0x3f];
-			result += "t" + base64[this.tempo];
-			result += "m" + base64[this.reverb];
-			result += "a" + base64[this.beats - 1];
-			result += "g" + base64[(this.bars - 1) >> 6] + base64[(this.bars - 1) & 0x3f];
-			result += "j" + base64[this.patterns - 1];
-			result += "i" + base64[this.instruments - 1];
-			result += "r" + base64[Music.partCounts.indexOf(this.parts)];
+			result += base64IntToChar[Song._latestVersion];
+			result += "s" + base64IntToChar[this.scale];
+			result += "k" + base64IntToChar[this.key];
+			result += "l" + base64IntToChar[this.loopStart >> 6] + base64IntToChar[this.loopStart & 0x3f];
+			result += "e" + base64IntToChar[(this.loopLength - 1) >> 6] + base64IntToChar[(this.loopLength - 1) & 0x3f];
+			result += "t" + base64IntToChar[this.tempo];
+			result += "m" + base64IntToChar[this.reverb];
+			result += "a" + base64IntToChar[this.beats - 1];
+			result += "g" + base64IntToChar[(this.bars - 1) >> 6] + base64IntToChar[(this.bars - 1) & 0x3f];
+			result += "j" + base64IntToChar[this.patterns - 1];
+			result += "i" + base64IntToChar[this.instruments - 1];
+			result += "r" + base64IntToChar[Music.partCounts.indexOf(this.parts)];
 			
 			result += "w";
 			for (channel = 0; channel < Music.numChannels; channel++) for (let i: number = 0; i < this.instruments; i++) {
-				result += base64[this.instrumentWaves[channel][i]];
+				result += base64IntToChar[this.instrumentWaves[channel][i]];
 			}
 			
 			result += "f";
 			for (channel = 0; channel < Music.numChannels; channel++) for (let i: number = 0; i < this.instruments; i++) {
-				result += base64[this.instrumentFilters[channel][i]];
+				result += base64IntToChar[this.instrumentFilters[channel][i]];
 			}
 			
 			result += "d";
 			for (channel = 0; channel < Music.numChannels; channel++) for (let i: number = 0; i < this.instruments; i++) {
-				result += base64[this.instrumentAttacks[channel][i]];
+				result += base64IntToChar[this.instrumentAttacks[channel][i]];
 			}
 			
 			result += "c";
 			for (channel = 0; channel < Music.numChannels; channel++) for (let i: number = 0; i < this.instruments; i++) {
-				result += base64[this.instrumentEffects[channel][i]];
+				result += base64IntToChar[this.instrumentEffects[channel][i]];
 			}
 			
 			result += "h";
 			for (channel = 0; channel < Music.numChannels; channel++) for (let i: number = 0; i < this.instruments; i++) {
-				result += base64[this.instrumentChorus[channel][i]];
+				result += base64IntToChar[this.instrumentChorus[channel][i]];
 			}
 			
 			result += "v";
 			for (channel = 0; channel < Music.numChannels; channel++) for (let i: number = 0; i < this.instruments; i++) {
-				result += base64[this.instrumentVolumes[channel][i]];
+				result += base64IntToChar[this.instrumentVolumes[channel][i]];
 			}
 			
 			result += "o";
 			for (channel = 0; channel < Music.numChannels; channel++) {
-				result += base64[this.channelOctaves[channel]];
+				result += base64IntToChar[this.channelOctaves[channel]];
 			}
 			
 			result += "b";
-			bits = new BitField(base64);
+			bits = new BitFieldWriter();
 			let neededBits: number = 0;
 			while ((1 << neededBits) < this.patterns + 1) neededBits++;
 			for (channel = 0; channel < Music.numChannels; channel++) for (let i: number = 0; i < this.bars; i++) {
 				bits.write(neededBits, this.channelBars[channel][i]);
 			}
-			result += bits.toString();
+			result += bits.encodeBase64(base64IntToChar);
 			
 			result += "p";
-			bits = new BitField(base64);
+			bits = new BitFieldWriter();
 			let neededInstrumentBits: number = 0;
 			while ((1 << neededInstrumentBits) < this.instruments) neededInstrumentBits++;
 			for (channel = 0; channel < Music.numChannels; channel++) {
@@ -435,7 +422,7 @@ module beepbox {
 								bits.writePartDuration(t.start - curPart);
 							}
 							
-							const shapeBits: BitField = new BitField(base64);
+							const shapeBits: BitFieldWriter = new BitFieldWriter();
 							
 							// 0: 1 note, 10: 2 notes, 110: 3 notes, 111: 4 notes
 							for (let i: number = 1; i < t.notes.length; i++) shapeBits.write(1,1);
@@ -464,7 +451,7 @@ module beepbox {
 								shapeBits.write(2, pin.volume);
 							}
 							
-							const shapeString: string = shapeBits.toString();
+							const shapeString: string = shapeBits.encodeBase64(base64IntToChar);
 							const shapeIndex: number = recentShapes.indexOf(shapeString);
 							if (shapeIndex == -1) {
 								bits.write(2, 1); // new shape
@@ -523,14 +510,14 @@ module beepbox {
 					}
 				}
 			}
-			const bitString: string = bits.toString();
+			const bitString: string = bits.encodeBase64(base64IntToChar);
 			let stringLength: number = bitString.length;
 			let digits: string = "";
 			while (stringLength > 0) {
-				digits = base64[stringLength & 0x3f] + digits;
+				digits = base64IntToChar[stringLength & 0x3f] + digits;
 				stringLength = stringLength >> 6;
 			}
-			result += base64[digits.length];
+			result += base64IntToChar[digits.length];
 			result += digits;
 			result += bitString;
 			
@@ -550,157 +537,154 @@ module beepbox {
 			}
 			this.initToDefault();
 			let charIndex: number = 0;
-			const version: number = Song._newBase64.indexOf(compressed.charAt(charIndex++));
+			const version: number = Song._base64CharToInt[compressed.charAt(charIndex++)];
 			if (version == -1 || version > Song._latestVersion || version < Song._oldestVersion) return;
 			const beforeThree: boolean = version < 3;
 			const beforeFour:  boolean = version < 4;
 			const beforeFive:  boolean = version < 5;
-			const base64: string[] = beforeThree ? Song._oldBase64 : Song._newBase64;
+			const base64CharToInt: Readonly<Dictionary<number>> = Song._base64CharToInt; // beforeThree ? Song._oldBase64 : Song._newBase64;
 			if (beforeThree) this.instrumentAttacks = [[0],[0],[0],[0]];
 			if (beforeThree) this.instrumentWaves   = [[1],[1],[1],[0]];
 			while (charIndex < compressed.length) {
 				const command: string = compressed.charAt(charIndex++);
-				let bits: BitField;
 				let channel: number;
 				if (command == "s") {
-					this.scale = base64.indexOf(compressed.charAt(charIndex++));
+					this.scale = base64CharToInt[compressed.charAt(charIndex++)];
 					if (beforeThree && this.scale == 10) this.scale = 11;
 				} else if (command == "k") {
-					this.key = base64.indexOf(compressed.charAt(charIndex++));
+					this.key = base64CharToInt[compressed.charAt(charIndex++)];
 				} else if (command == "l") {
 					if (beforeFive) {
-						this.loopStart = base64.indexOf(compressed.charAt(charIndex++));
+						this.loopStart = base64CharToInt[compressed.charAt(charIndex++)];
 					} else {
-						this.loopStart = (base64.indexOf(compressed.charAt(charIndex++)) << 6) + base64.indexOf(compressed.charAt(charIndex++));
+						this.loopStart = (base64CharToInt[compressed.charAt(charIndex++)] << 6) + base64CharToInt[compressed.charAt(charIndex++)];
 					}
 				} else if (command == "e") {
 					if (beforeFive) {
-						this.loopLength = base64.indexOf(compressed.charAt(charIndex++));
+						this.loopLength = base64CharToInt[compressed.charAt(charIndex++)];
 					} else {
-						this.loopLength = (base64.indexOf(compressed.charAt(charIndex++)) << 6) + base64.indexOf(compressed.charAt(charIndex++)) + 1;
+						this.loopLength = (base64CharToInt[compressed.charAt(charIndex++)] << 6) + base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					}
 				} else if (command == "t") {
 					if (beforeFour) {
-						this.tempo = [1, 4, 7, 10][base64.indexOf(compressed.charAt(charIndex++))];
+						this.tempo = [1, 4, 7, 10][base64CharToInt[compressed.charAt(charIndex++)]];
 					} else {
-						this.tempo = base64.indexOf(compressed.charAt(charIndex++));
+						this.tempo = base64CharToInt[compressed.charAt(charIndex++)];
 					}
 					this.tempo = this._clip(0, Music.tempoNames.length, this.tempo);
 				} else if (command == "m") {
-					this.reverb = base64.indexOf(compressed.charAt(charIndex++));
+					this.reverb = base64CharToInt[compressed.charAt(charIndex++)];
 					this.reverb = this._clip(0, Music.reverbRange, this.reverb);
 				} else if (command == "a") {
 					if (beforeThree) {
-						this.beats = [6, 7, 8, 9, 10][base64.indexOf(compressed.charAt(charIndex++))];
+						this.beats = [6, 7, 8, 9, 10][base64CharToInt[compressed.charAt(charIndex++)]];
 					} else {
-						this.beats = base64.indexOf(compressed.charAt(charIndex++)) + 1;
+						this.beats = base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					}
 					this.beats = Math.max(Music.beatsMin, Math.min(Music.beatsMax, this.beats));
 				} else if (command == "g") {
-					this.bars = (base64.indexOf(compressed.charAt(charIndex++)) << 6) + base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					this.bars = (base64CharToInt[compressed.charAt(charIndex++)] << 6) + base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					this.bars = Math.max(Music.barsMin, Math.min(Music.barsMax, this.bars));
 				} else if (command == "j") {
-					this.patterns = base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					this.patterns = base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					this.patterns = Math.max(Music.patternsMin, Math.min(Music.patternsMax, this.patterns));
 				} else if (command == "i") {
-					this.instruments = base64.indexOf(compressed.charAt(charIndex++)) + 1;
+					this.instruments = base64CharToInt[compressed.charAt(charIndex++)] + 1;
 					this.instruments = Math.max(Music.instrumentsMin, Math.min(Music.instrumentsMax, this.instruments));
 				} else if (command == "r") {
-					this.parts = Music.partCounts[base64.indexOf(compressed.charAt(charIndex++))];
+					this.parts = Music.partCounts[base64CharToInt[compressed.charAt(charIndex++)]];
 				} else if (command == "w") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						this.instrumentWaves[channel][0] = this._clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						this.instrumentWaves[channel][0] = this._clip(0, Music.waveNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (let i: number = 0; i < this.instruments; i++) {
-								this.instrumentWaves[channel][i] = this._clip(0, Music.waveNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								this.instrumentWaves[channel][i] = this._clip(0, Music.waveNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "f") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						this.instrumentFilters[channel][0] = [0, 2, 3, 5][this._clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)))];
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						this.instrumentFilters[channel][0] = [0, 2, 3, 5][this._clip(0, Music.filterNames.length, base64CharToInt[compressed.charAt(charIndex++)])];
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (let i: number = 0; i < this.instruments; i++) {
-								this.instrumentFilters[channel][i] = this._clip(0, Music.filterNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								this.instrumentFilters[channel][i] = this._clip(0, Music.filterNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "d") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						this.instrumentAttacks[channel][0] = this._clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						this.instrumentAttacks[channel][0] = this._clip(0, Music.attackNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (let i: number = 0; i < this.instruments; i++) {
-								this.instrumentAttacks[channel][i] = this._clip(0, Music.attackNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								this.instrumentAttacks[channel][i] = this._clip(0, Music.attackNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "c") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						this.instrumentEffects[channel][0] = this._clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						this.instrumentEffects[channel][0] = this._clip(0, Music.effectNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 						if (this.instrumentEffects[channel][0] == 1) this.instrumentEffects[channel][0] = 3;
 						else if (this.instrumentEffects[channel][0] == 3) this.instrumentEffects[channel][0] = 5;
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (let i: number = 0; i < this.instruments; i++) {
-								this.instrumentEffects[channel][i] = this._clip(0, Music.effectNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								this.instrumentEffects[channel][i] = this._clip(0, Music.effectNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "h") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						this.instrumentChorus[channel][0] = this._clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						this.instrumentChorus[channel][0] = this._clip(0, Music.chorusNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (let i: number = 0; i < this.instruments; i++) {
-								this.instrumentChorus[channel][i] = this._clip(0, Music.chorusNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								this.instrumentChorus[channel][i] = this._clip(0, Music.chorusNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "v") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						this.instrumentVolumes[channel][0] = this._clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						this.instrumentVolumes[channel][0] = this._clip(0, Music.volumeNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (let i: number = 0; i < this.instruments; i++) {
-								this.instrumentVolumes[channel][i] = this._clip(0, Music.volumeNames.length, base64.indexOf(compressed.charAt(charIndex++)));
+								this.instrumentVolumes[channel][i] = this._clip(0, Music.volumeNames.length, base64CharToInt[compressed.charAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == "o") {
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						this.channelOctaves[channel] = this._clip(0, 5, base64.indexOf(compressed.charAt(charIndex++)));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						this.channelOctaves[channel] = this._clip(0, 5, base64CharToInt[compressed.charAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
-							this.channelOctaves[channel] = this._clip(0, 5, base64.indexOf(compressed.charAt(charIndex++)));
+							this.channelOctaves[channel] = this._clip(0, 5, base64CharToInt[compressed.charAt(charIndex++)]);
 						}
 					}
 				} else if (command == "b") {
 					let subStringLength: number;
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
-						const barCount: number = base64.indexOf(compressed.charAt(charIndex++));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
+						const barCount: number = base64CharToInt[compressed.charAt(charIndex++)];
 						subStringLength = Math.ceil(barCount * 0.5);
-						bits = new BitField(base64);
-						bits.load(compressed.substr(charIndex, subStringLength));
+						const bits: BitFieldReader = new BitFieldReader(base64CharToInt, compressed.substr(charIndex, subStringLength));
 						for (let i: number = 0; i < barCount; i++) {
 							this.channelBars[channel][i] = bits.read(3) + 1;
 						}
 					} else if (beforeFive) {
 						let neededBits: number = 0;
 						while ((1 << neededBits) < this.patterns) neededBits++;
-						bits = new BitField(base64);
 						subStringLength = Math.ceil(Music.numChannels * this.bars * neededBits / 6);
-						bits.load(compressed.substr(charIndex, subStringLength));
+						const bits: BitFieldReader = new BitFieldReader(base64CharToInt, compressed.substr(charIndex, subStringLength));
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							this.channelBars[channel].length = this.bars;
 							for (let i: number = 0; i < this.bars; i++) {
@@ -710,9 +694,8 @@ module beepbox {
 					} else {
 						let neededBits2: number = 0;
 						while ((1 << neededBits2) < this.patterns + 1) neededBits2++;
-						bits = new BitField(base64);
 						subStringLength = Math.ceil(Music.numChannels * this.bars * neededBits2 / 6);
-						bits.load(compressed.substr(charIndex, subStringLength));
+						const bits: BitFieldReader = new BitFieldReader(base64CharToInt, compressed.substr(charIndex, subStringLength));
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							this.channelBars[channel].length = this.bars;
 							for (let i: number = 0; i < this.bars; i++) {
@@ -724,26 +707,25 @@ module beepbox {
 				} else if (command == "p") {
 					let bitStringLength: number = 0;
 					if (beforeThree) {
-						channel = base64.indexOf(compressed.charAt(charIndex++));
+						channel = base64CharToInt[compressed.charAt(charIndex++)];
 						
 						// The old format used the next character to represent the number of patterns in the channel, which is usually eight, the default. 
-						charIndex++; //let patternCount: number = base64.indexOf(compressed.charAt(charIndex++));
+						charIndex++; //let patternCount: number = base64CharToInt[compressed.charAt(charIndex++)];
 						
-						bitStringLength = base64.indexOf(compressed.charAt(charIndex++));
+						bitStringLength = base64CharToInt[compressed.charAt(charIndex++)];
 						bitStringLength = bitStringLength << 6;
-						bitStringLength += base64.indexOf(compressed.charAt(charIndex++));
+						bitStringLength += base64CharToInt[compressed.charAt(charIndex++)];
 					} else {
 						channel = 0;
-						let bitStringLengthLength: number = base64.indexOf(compressed.charAt(charIndex++));
+						let bitStringLengthLength: number = base64CharToInt[compressed.charAt(charIndex++)];
 						while (bitStringLengthLength > 0) {
 							bitStringLength = bitStringLength << 6;
-							bitStringLength += base64.indexOf(compressed.charAt(charIndex++));
+							bitStringLength += base64CharToInt[compressed.charAt(charIndex++)];
 							bitStringLengthLength--;
 						}
 					}
 					
-					bits = new BitField(base64);
-					bits.load(compressed.substr(charIndex, bitStringLength));
+					const bits: BitFieldReader = new BitFieldReader(base64CharToInt, compressed.substr(charIndex, bitStringLength));
 					charIndex += bitStringLength;
 					
 					let neededInstrumentBits: number = 0;
@@ -985,8 +967,8 @@ module beepbox {
 					const key: string = jsonObject.key;
 					const letter: string = key.charAt(0).toUpperCase();
 					const symbol: string = key.charAt(1).toLowerCase();
-					const letterMap: Record<string, number> = {"C": 11, "D": 9, "E": 7, "F": 6, "G": 4, "A": 2, "B": 0};
-					const accidentalMap: Record<string, number> = {"#": -1, "♯": -1, "b": 1, "♭": 1};
+					const letterMap: Readonly<Dictionary<number>> = {"C": 11, "D": 9, "E": 7, "F": 6, "G": 4, "A": 2, "B": 0};
+					const accidentalMap: Readonly<Dictionary<number>> = {"#": -1, "♯": -1, "b": 1, "♭": 1};
 					let index: number | undefined = letterMap[letter];
 					const offset: number | undefined = accidentalMap[symbol];
 					if (index != undefined) {
