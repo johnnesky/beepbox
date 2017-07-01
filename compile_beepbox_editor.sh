@@ -16,7 +16,7 @@ uglifyjs \
 	--compress \
 	--mangle \
 	--mangle-props \
-	--mangle-regex="/^_/" \
+	--mangle-regex="/^_.+/" \
 	--screw-ie8 \
 	beepbox-synth/beepbox_editor.js \
 	-o beepbox-synth/beepbox_editor.min.js
