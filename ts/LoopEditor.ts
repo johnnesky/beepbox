@@ -24,8 +24,8 @@ SOFTWARE.
 /// <reference path="editor.ts" />
 
 interface Cursor {
-	startBar?: number;
-	mode?: number;
+	startBar: number;
+	mode: number;
 }
 
 interface Endpoints {
@@ -54,8 +54,8 @@ module beepbox {
 		private readonly _preview: HTMLCanvasElement = html.canvas({width: "512", height: "20"});
 		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 20px; position: relative;"}, [this._svg]);
 		
-		private _change: ChangeLoop;
-		private _cursor: Cursor = {};
+		private _change: ChangeLoop | null = null;
+		private _cursor: Cursor = {startBar: -1, mode: -1};
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
 		private _mouseDown: boolean = false;

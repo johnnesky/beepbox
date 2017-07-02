@@ -31,7 +31,7 @@ module beepbox {
 	
 	function makeEmptyReplacementElement(node: Node): Node {
 		const clone: Node = node.cloneNode(false);
-		node.parentNode.replaceChild(clone, node);
+		node.parentNode!.replaceChild(clone, node);
 		return clone;
 	}
 	
@@ -84,9 +84,9 @@ module beepbox {
 		private _mouseYPrev: number = 0;
 		//private _precise: boolean = false;
 		//private _precisionX: number = 0;
-		private _dragChange: Change = null;
+		private _dragChange: Change | null = null;
 		private _cursor: PatternCursor = new PatternCursor();
-		private _pattern: BarPattern;
+		private _pattern: BarPattern | null = null;
 		private _playheadX: number = 0.0;
 		private _octaveOffset: number = 0;
 		private _renderedWidth: number = -1;
@@ -157,8 +157,8 @@ module beepbox {
 				this._cursor.end   = this._cursor.curTone.end;
 				this._cursor.pins  = this._cursor.curTone.pins;
 				
-				let interval: number;
-				let error: number;
+				let interval: number = 0;
+				let error: number = 0;
 				let prevPin: TonePin;
 				let nextPin: TonePin = this._cursor.curTone.pins[0];
 				for (let j: number = 1; j < this._cursor.curTone.pins.length; j++) {
@@ -517,8 +517,8 @@ module beepbox {
 						
 						let prevPin: TonePin;
 						let nextPin: TonePin = this._cursor.curTone.pins[0];
-						let bendVolume: number;
-						let bendInterval: number;
+						let bendVolume: number = 0;
+						let bendInterval: number = 0;
 						for (let i: number = 1; i < this._cursor.curTone.pins.length; i++) {
 							prevPin = nextPin;
 							nextPin = this._cursor.curTone.pins[i];

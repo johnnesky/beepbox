@@ -179,7 +179,7 @@ module beepbox {
 	
 	export class ChangeHistory extends Model {
 		private _changes: Change[];
-		private _recentChange: Change;
+		private _recentChange: Change | null;
 		private _index: number;
 		
 		constructor() {
@@ -224,7 +224,7 @@ module beepbox {
 			this.changed();
 		}
 		
-		public getRecentChange(): Change {
+		public getRecentChange(): Change | null {
 			return this._recentChange;
 		}
 	}
@@ -281,12 +281,12 @@ module beepbox {
 			this.synth.volume = this._calcVolume();
 		}
 		
-		public getCurrentPattern(): BarPattern {
+		public getCurrentPattern(): BarPattern | null {
 			return this.song.getPattern(this.channel, this.bar);
 		}
 		
 		public getCurrentInstrument(): number {
-			const pattern: BarPattern = this.getCurrentPattern();
+			const pattern: BarPattern | null = this.getCurrentPattern();
 			return pattern == null ? 0 : pattern.instrument;
 		}
 		
@@ -295,7 +295,7 @@ module beepbox {
 		}
 		
 		private _getCookie(cname: string): string {
-			const item: string = localStorage.getItem(cname);
+			const item: string | null = localStorage.getItem(cname);
 			if (item != null) {
 				return item;
 			}
@@ -324,9 +324,9 @@ module beepbox {
 	
 	export class ChangeSequence extends Change {
 		private _changes: Change[];
-		constructor(changes: Change[] = null) {
+		constructor(changes?: Change[]) {
 			super(false);
-			if (changes == null) {
+			if (changes == undefined) {
 				this._changes = [];
 			} else {
 				this._changes = changes.concat();
@@ -973,28 +973,25 @@ module beepbox {
 		private _document: SongDocument;
 		public oldTones: Tone[];
 		public newTones: Tone[];
-		constructor(document: SongDocument, tones: Tone[]) {
+		constructor(document: SongDocument, tones: Tone[], private _pattern: BarPattern) {
 			super(false);
 			this._document = document;
 			
-			const pattern: BarPattern = document.getCurrentPattern();
-			this.oldTones = pattern.tones;
-			pattern.tones = tones;
-			pattern.tones = pattern.cloneTones();
-			this.newTones = pattern.tones;
+			this.oldTones = this._pattern.tones;
+			this._pattern.tones = tones;
+			this._pattern.tones = this._pattern.cloneTones();
+			this.newTones = this._pattern.tones;
 			document.changed();
 			this._didSomething();
 		}
 		
 		protected _doForwards(): void {
-			const pattern: BarPattern = this._document.getCurrentPattern();
-			pattern.tones = this.newTones;
+			this._pattern.tones = this.newTones;
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			const pattern: BarPattern = this._document.getCurrentPattern();
-			pattern.tones = this.oldTones;
+			this._pattern.tones = this.oldTones;
 			this._document.changed();
 		}
 	}
@@ -1003,10 +1000,10 @@ module beepbox {
 		private _document: SongDocument;
 		private _oldInstrument: number;
 		private _newInstrument: number;
-		constructor(document: SongDocument, instrument: number) {
+		constructor(document: SongDocument, instrument: number, private _pattern: BarPattern) {
 			super(false);
 			this._document = document;
-			this._oldInstrument = document.getCurrentPattern().instrument;
+			this._oldInstrument = this._pattern.instrument;
 			this._newInstrument = instrument;
 			
 			if (this._oldInstrument != this._newInstrument) {
@@ -1016,12 +1013,12 @@ module beepbox {
 		}
 		
 		protected _doForwards(): void {
-			this._document.getCurrentPattern().instrument = this._newInstrument;
+			this._pattern.instrument = this._newInstrument;
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			this._document.getCurrentPattern().instrument = this._oldInstrument;
+			this._pattern.instrument = this._oldInstrument;
 			this._document.changed();
 		}
 	}
@@ -1196,11 +1193,12 @@ module beepbox {
 		constructor(document: SongDocument, bar: BarPattern, oldParts: number, newParts: number) {
 			super();
 			let changeRhythm: (oldTime:number)=>number;
-			if (oldParts == 4 && newParts == 3) changeRhythm = (oldTime: number)=>{
-				return Math.ceil(oldTime * 3.0 / 4.0);
-			}
-			if (oldParts == 3 && newParts == 4) changeRhythm = (oldTime: number)=>{
-				return Math.floor(oldTime * 4.0 / 3.0);
+			if (oldParts == 4 && newParts == 3) {
+				changeRhythm = (oldTime: number)=> Math.ceil(oldTime * 3.0 / 4.0);
+			} else if (oldParts == 3 && newParts == 4) {
+				changeRhythm = (oldTime: number)=> Math.floor(oldTime * 4.0 / 3.0);
+			} else {
+				throw new Error("ChangeRhythm couldn't handle rhythm change from " + oldParts + " to " + newParts + ".");
 			}
 			let i: number = 0;
 			while (i < bar.tones.length) {
@@ -1411,12 +1409,12 @@ module beepbox {
 	}
 	
 	export class ChangeToneTruncate extends ChangeSequence {
-		constructor(document: SongDocument, bar: BarPattern, start: number, end: number, skipTone: Tone = null) {
+		constructor(document: SongDocument, bar: BarPattern, start: number, end: number, skipTone?: Tone) {
 			super();
 			let i: number = 0;
 			while (i < bar.tones.length) {
 				const tone: Tone = bar.tones[i];
-				if (tone == skipTone && skipTone != null) {
+				if (tone == skipTone && skipTone != undefined) {
 					i++;
 				} else if (tone.end <= start) {
 					i++;
@@ -1670,9 +1668,9 @@ module beepbox {
 	
 	export class PatternCursor {
 		public valid:        boolean = false;
-		public prevTone:     Tone = null;
-		public curTone:      Tone = null;
-		public nextTone:     Tone = null;
+		public prevTone:     Tone | null = null;
+		public curTone:      Tone | null = null;
+		public nextTone:     Tone | null = null;
 		public note:         number = 0;
 		public noteIndex:    number = -1;
 		public curIndex:     number = 0;
@@ -1681,6 +1679,6 @@ module beepbox {
 		public part:         number = 0;
 		public tonePart:     number = 0;
 		public nearPinIndex: number = 0;
-		public pins:         TonePin[] = null;
+		public pins:         TonePin[] = [];
 	}
 }

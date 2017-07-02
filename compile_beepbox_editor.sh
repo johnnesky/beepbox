@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Compile ts/SongEditor.ts into beepbox_editor.js
-#	--strictNullChecks \
 tsc \
 	--target ES5 \
+	--strictNullChecks \
 	--noImplicitAny \
 	--noImplicitReturns \
 	--noFallthroughCasesInSwitch \

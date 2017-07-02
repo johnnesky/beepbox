@@ -218,7 +218,6 @@ module beepbox {
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
 			this.mainLayer.addEventListener("keydown", this._onKeyPressed);
-			this.mainLayer.addEventListener("keyup", this._onKeyReleased);
 		}
 		
 		private _setPrompt(prompt: {container: HTMLElement}): void {
@@ -369,10 +368,6 @@ module beepbox {
 					this._doc.synth.nextBar();
 					event.preventDefault();
 					break;
-				case 71: // g
-					this._doc.synth.stutterPressed = true;
-					event.preventDefault();
-					break;
 				case 189: // -
 				case 173: // Firefox -
 					this._transpose(false);
@@ -382,14 +377,6 @@ module beepbox {
 				case 61: // Firefox +
 					this._transpose(true);
 					event.preventDefault();
-					break;
-			}
-		}
-		
-		private _onKeyReleased = (event: KeyboardEvent): void => {
-			switch (event.keyCode) {
-				case 71: // g
-					this._doc.synth.stutterPressed = false;
 					break;
 			}
 		}
@@ -418,12 +405,10 @@ module beepbox {
 		}
 		
 		private _paste(): void {
-			if (!this._canPaste()) return;
-			this._doc.history.record(new ChangePaste(this._doc, this._copyTones));
-		}
-		
-		private _canPaste(): boolean {
-			return this._doc.getCurrentPattern() != null && this._copyTones != null && this._copyBeats == this._doc.song.beats && this._copyParts == this._doc.song.parts && this._copyDrums == (this._doc.channel == 3);
+			const pattern: BarPattern | null = this._doc.getCurrentPattern();
+			if (pattern != null && this._copyTones != null && this._copyBeats == this._doc.song.beats && this._copyParts == this._doc.song.parts && this._copyDrums == (this._doc.channel == 3)) {
+				this._doc.history.record(new ChangePaste(this._doc, this._copyTones, pattern));
+			}
 		}
 		
 		private _cleanSlate(): void {
@@ -490,8 +475,9 @@ module beepbox {
 		}
 		
 		private _onSetInstrument = (): void => {
-			if (this._doc.getCurrentPattern() == null) return;
-			this._doc.history.record(new ChangePatternInstrument(this._doc, this._instrumentDropDown.selectedIndex));
+			const pattern : BarPattern | null = this._doc.getCurrentPattern();
+			if (pattern == null) return;
+			this._doc.history.record(new ChangePatternInstrument(this._doc, this._instrumentDropDown.selectedIndex, pattern));
 		}
 		
 		private _editMenuHandler = (event:Event): void => {
@@ -857,7 +843,7 @@ function onUpdated (): void {
 
 const editor = new SongEditor(doc);
 
-const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer");
+const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer")!;
 beepboxEditorContainer.appendChild(editor.mainLayer);
 editor.mainLayer.focus();
 
