@@ -27,6 +27,10 @@ handlers:
   static_files: beepbox_synth.js
   upload: beepbox_synth\.js
 
+- url: /beepbox_synth\.min\.js
+  static_files: beepbox_synth.min.js
+  upload: beepbox_synth\.min\.js
+
 - url: /favicon\.ico
   static_files: favicon.ico
   upload: favicon\.ico
