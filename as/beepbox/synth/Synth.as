@@ -350,6 +350,8 @@ package beepbox.synth {
 			var samplesPerArpeggio: int = getSamplesPerArpeggio();
 			
 			var reverb: Number = Math.pow(song.reverb / Music.reverbRange, 0.667) * 0.375;
+			
+			var ended: Boolean = false;
 
 			// Check the bounds of the playhead:
 			if (arpeggioSamples == 0 || arpeggioSamples > samplesPerArpeggio) {
@@ -377,6 +379,7 @@ package beepbox.synth {
 				if (enableOutro) {
 					bar = 0;
 					enableIntro = true;
+					ended = true;
 					pause();
 				} else {
 					bar = song.loopStart;
@@ -465,7 +468,7 @@ package beepbox.synth {
 			updateInstruments();
 			
 			while (totalSamples > 0) {
-				if (paused) {
+				if (ended) {
 					while (totalSamples-- > 0) {
 						data.writeFloat(0.0);
 						data.writeFloat(0.0);
@@ -848,6 +851,7 @@ package beepbox.synth {
 								if (bar >= song.bars) {
 									bar = 0;
 									enableIntro = true;
+									ended = true;
 									pause();
 								}
 								updateInstruments();

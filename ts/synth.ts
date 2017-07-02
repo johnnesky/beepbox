@@ -1448,27 +1448,8 @@ module beepbox {
 			const outputBuffer = audioProcessingEvent.outputBuffer;
 			const outputData: Float32Array = outputBuffer.getChannelData(0);
 			this.synthesize(outputData, outputBuffer.length);
-			/*
-			if (this.paused) {
-				return;
-			} else {
-				this.synthesize(event.data, 4096);
-			}
-			this.stillGoing = true;
-			*/
 		}
-		/*
-		private _checkSound(event: TimerEvent): void {
-			if (!this.stillGoing) {
-				if (soundChannel != null) {
-					soundChannel.stop();
-				}
-				soundChannel = sound.play();
-			} else {
-				this.stillGoing = false;
-			}
-		}
-		*/
+		
 		public synthesize(data: Float32Array, totalSamples: number): void {
 			if (this.song == null) {
 				for (let i: number = 0; i < totalSamples; i++) {
@@ -1530,6 +1511,7 @@ module beepbox {
 			const volume: number = this.volume;
 			const delayLine: Float32Array = this._delayLine;
 			const reverb: number = Math.pow(this.song.reverb / Music.reverbRange, 0.667) * 0.425;
+			let ended: boolean = false;
 			
 			// Check the bounds of the playhead:
 			if (this._arpeggioSamples == 0 || this._arpeggioSamples > samplesPerArpeggio) {
@@ -1557,6 +1539,7 @@ module beepbox {
 				if (this.enableOutro) {
 					this._bar = 0;
 					this.enableIntro = true;
+					ended = true;
 					this.pause();
 				} else {
 					this._bar = this.song.loopStart;
@@ -1645,7 +1628,8 @@ module beepbox {
 			updateInstruments();
 			
  			while (totalSamples > 0) {
-				if (this._paused) {
+				if (ended) {
+					console.log("ended");
 					while (totalSamples-- > 0) {
 						data[bufferIndex] = 0.0;
 						bufferIndex++;
@@ -2062,6 +2046,7 @@ module beepbox {
 								if (this._bar >= this.song.bars) {
 									this._bar = 0;
 									this.enableIntro = true;
+									ended = true;
 									this.pause();
 								}
 								updateInstruments();
