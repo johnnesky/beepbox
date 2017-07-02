@@ -50,7 +50,7 @@ module beepbox {
 		}
 		
 		private _onFileSelected = (): void => {
-			const file: File = this._fileInput.files[0];
+			const file: File = this._fileInput.files![0];
 			if (!file) return;
 			
 			const reader: FileReader = new FileReader();

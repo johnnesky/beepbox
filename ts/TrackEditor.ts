@@ -98,7 +98,7 @@ module beepbox {
 		private readonly _grid: Box[][] = [[], [], [], []];
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
-		private _pattern: BarPattern;
+		private _pattern: BarPattern | null = null;
 		private _mouseOver: boolean = false;
 		private _digits: string = "";
 		private _editorHeight: number = 128;
@@ -334,7 +334,7 @@ module beepbox {
 			
 			for (let j: number = 0; j < Music.numChannels; j++) {
 				for (let i: number = 0; i < 16; i++) {
-					const pattern: BarPattern = this._doc.song.getPattern(j, i + this._doc.barScrollPos);
+					const pattern: BarPattern | null = this._doc.song.getPattern(j, i + this._doc.barScrollPos);
 					const selected: boolean = (i + this._doc.barScrollPos == this._doc.bar && j == this._doc.channel);
 					const dim: boolean = (pattern == null || pattern.tones.length == 0);
 					

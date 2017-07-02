@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Compile ts/synth.ts into beepbox_synth.js
-#	--strictNullChecks \
 tsc \
 	--target ES5 \
+	--strictNullChecks \
 	--noImplicitAny \
 	--noImplicitReturns \
 	--noFallthroughCasesInSwitch \

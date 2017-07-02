@@ -54,8 +54,8 @@ module beepbox {
 			this._canvas,
 			this._preview,
 		]);
-		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d");
-		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d");
+		private readonly _graphics: CanvasRenderingContext2D = this._canvas.getContext("2d")!;
+		private readonly _previewGraphics: CanvasRenderingContext2D = this._preview.getContext("2d")!;
 		private readonly _editorWidth: number = 32;
 		private readonly _editorHeight: number = 481;
 		
@@ -206,11 +206,11 @@ module beepbox {
 					key = Music.pianoScaleFlags[noteNameIndex] ? WhiteKeyDisabled : BlackKeyDisabled;
 				    this._graphics.drawImage(key, 0, this._noteHeight * (this._noteCount - j - 1));
 				} else {
-					let text: string = Music.noteNames[noteNameIndex];
+					let text: string | null = Music.noteNames[noteNameIndex];
 					
 					if (text == null) {
 						const shiftDir: number = Music.blackKeyNameParents[j%12];
-						text = Music.noteNames[(noteNameIndex + 12 + shiftDir) % 12];
+						text = Music.noteNames[(noteNameIndex + 12 + shiftDir) % 12]!;
 						if (shiftDir == 1) {
 							text += "♭";
 						} else if (shiftDir == -1) {
