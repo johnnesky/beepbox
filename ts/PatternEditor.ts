@@ -58,11 +58,11 @@ module beepbox {
 		private readonly _defaultDrumHeight: number = 40;
 		private readonly _backgroundPitchRows: SVGRectElement[] = [];
 		private readonly _backgroundDrumRow: SVGRectElement = <SVGRectElement> svgElement("rect");
-		private readonly _defaultPinChannels: TonePin[][] = [
-			[new TonePin(0, 0, 3), new TonePin(0, 2, 3)],
-			[new TonePin(0, 0, 3), new TonePin(0, 2, 3)],
-			[new TonePin(0, 0, 3), new TonePin(0, 2, 3)],
-			[new TonePin(0, 0, 3), new TonePin(0, 2, 0)],
+		private readonly _defaultPinChannels: NotePin[][] = [
+			[new NotePin(0, 0, 3), new NotePin(0, 2, 3)],
+			[new NotePin(0, 0, 3), new NotePin(0, 2, 3)],
+			[new NotePin(0, 0, 3), new NotePin(0, 2, 3)],
+			[new NotePin(0, 0, 3), new NotePin(0, 2, 0)],
 		];
 		
 		private _editorWidth: number;
@@ -76,8 +76,8 @@ module beepbox {
 		private _mouseOver: boolean = false;
 		private _mouseDragging: boolean = false;
 		private _mouseHorizontal: boolean = false;
-		private _copiedPinChannels: TonePin[][] = this._defaultPinChannels.concat();
-		private _copiedPins: TonePin[];
+		private _copiedPinChannels: NotePin[][] = this._defaultPinChannels.concat();
+		private _copiedPins: NotePin[];
 		private _mouseXStart: number = 0;
 		private _mouseYStart: number = 0;
 		private _mouseXPrev: number = 0;
@@ -138,34 +138,34 @@ module beepbox {
 			
 			this._cursor.part = Math.floor(Math.max(0, Math.min(this._doc.song.beats * this._doc.song.parts - 1, this._mouseX / this._partWidth)));
 			
-			for (const tone of this._pattern.tones) {
-				if (tone.end <= this._cursor.part) {
-					this._cursor.prevTone = tone;
+			for (const note of this._pattern.notes) {
+				if (note.end <= this._cursor.part) {
+					this._cursor.prevNote = note;
 					this._cursor.curIndex++;
-				} else if (tone.start <= this._cursor.part && tone.end > this._cursor.part) {
-					this._cursor.curTone = tone;
-				} else if (tone.start > this._cursor.part) {
-					this._cursor.nextTone = tone;
+				} else if (note.start <= this._cursor.part && note.end > this._cursor.part) {
+					this._cursor.curNote = note;
+				} else if (note.start > this._cursor.part) {
+					this._cursor.nextNote = note;
 					break;
 				}
 			}
 			
 			let mousePitch: number = this._findMousePitch(this._mouseY);
 			
-			if (this._cursor.curTone != null) {
-				this._cursor.start = this._cursor.curTone.start;
-				this._cursor.end   = this._cursor.curTone.end;
-				this._cursor.pins  = this._cursor.curTone.pins;
+			if (this._cursor.curNote != null) {
+				this._cursor.start = this._cursor.curNote.start;
+				this._cursor.end   = this._cursor.curNote.end;
+				this._cursor.pins  = this._cursor.curNote.pins;
 				
 				let interval: number = 0;
 				let error: number = 0;
-				let prevPin: TonePin;
-				let nextPin: TonePin = this._cursor.curTone.pins[0];
-				for (let j: number = 1; j < this._cursor.curTone.pins.length; j++) {
+				let prevPin: NotePin;
+				let nextPin: NotePin = this._cursor.curNote.pins[0];
+				for (let j: number = 1; j < this._cursor.curNote.pins.length; j++) {
 					prevPin = nextPin;
-					nextPin = this._cursor.curTone.pins[j];
-					const leftSide:    number = this._partWidth * (this._cursor.curTone.start + prevPin.time);
-					const rightSide:   number = this._partWidth * (this._cursor.curTone.start + nextPin.time);
+					nextPin = this._cursor.curNote.pins[j];
+					const leftSide:    number = this._partWidth * (this._cursor.curNote.start + prevPin.time);
+					const rightSide:   number = this._partWidth * (this._cursor.curNote.start + nextPin.time);
 					if (this._mouseX > rightSide) continue;
 					if (this._mouseX < leftSide) throw new Error();
 					const intervalRatio: number = (this._mouseX - leftSide) / (rightSide - leftSide);
@@ -179,13 +179,13 @@ module beepbox {
 				let minInterval: number = Number.MAX_VALUE;
 				let maxInterval: number = -Number.MAX_VALUE;
 				let bestDistance: number = Number.MAX_VALUE;
-				for (const pin of this._cursor.curTone.pins) {
+				for (const pin of this._cursor.curNote.pins) {
 					if (minInterval > pin.interval) minInterval = pin.interval;
 					if (maxInterval < pin.interval) maxInterval = pin.interval;
-					const pinDistance: number = Math.abs(this._cursor.curTone.start + pin.time - this._mouseX / this._partWidth);
+					const pinDistance: number = Math.abs(this._cursor.curNote.start + pin.time - this._mouseX / this._partWidth);
 					if (bestDistance > pinDistance) {
 						bestDistance = pinDistance;
-						this._cursor.nearPinIndex = this._cursor.curTone.pins.indexOf(pin);
+						this._cursor.nearPinIndex = this._cursor.curNote.pins.indexOf(pin);
 					}
 				}
 				
@@ -193,15 +193,15 @@ module beepbox {
 				this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch) - maxInterval);
 				
 				let nearest: number = error;
-				for (let i: number = 0; i < this._cursor.curTone.pitches.length; i++) {
-					const distance: number = Math.abs(this._cursor.curTone.pitches[i] - mousePitch + 0.5);
+				for (let i: number = 0; i < this._cursor.curNote.pitches.length; i++) {
+					const distance: number = Math.abs(this._cursor.curNote.pitches[i] - mousePitch + 0.5);
 					if (distance > nearest) continue;
 					nearest = distance;
-					this._cursor.pitch = this._cursor.curTone.pitches[i];
+					this._cursor.pitch = this._cursor.curNote.pitches[i];
 				}
 				
-				for (let i: number = 0; i < this._cursor.curTone.pitches.length; i++) {
-					if (this._cursor.curTone.pitches[i] == this._cursor.pitch) {
+				for (let i: number = 0; i < this._cursor.curNote.pitches.length; i++) {
+					if (this._cursor.curNote.pitches[i] == this._cursor.pitch) {
 						this._cursor.pitchIndex = i;
 						break;
 					}
@@ -234,11 +234,11 @@ module beepbox {
 				this._cursor.end = this._cursor.start + defaultLength;
 				let forceStart: number = 0;
 				let forceEnd: number = this._doc.song.beats * this._doc.song.parts;
-				if (this._cursor.prevTone != null) {
-					forceStart = this._cursor.prevTone.end;
+				if (this._cursor.prevNote != null) {
+					forceStart = this._cursor.prevNote.end;
 				}
-				if (this._cursor.nextTone != null) {
-					forceEnd   = this._cursor.nextTone.start;
+				if (this._cursor.nextNote != null) {
+					forceEnd   = this._cursor.nextNote.start;
 				}
 				if (this._cursor.start < forceStart) {
 					this._cursor.start = forceStart;
@@ -260,10 +260,10 @@ module beepbox {
 					this._cursor.pins = [];
 					for (const oldPin of this._copiedPins) {
 						if (oldPin.time <= this._cursor.end - this._cursor.start) {
-							this._cursor.pins.push(new TonePin(0, oldPin.time, oldPin.volume));
+							this._cursor.pins.push(new NotePin(0, oldPin.time, oldPin.volume));
 							if (oldPin.time == this._cursor.end - this._cursor.start) break;
 						} else {
-							this._cursor.pins.push(new TonePin(0, this._cursor.end - this._cursor.start, oldPin.volume));
+							this._cursor.pins.push(new NotePin(0, this._cursor.end - this._cursor.start, oldPin.volume));
 							break;
 						}
 					}
@@ -313,10 +313,10 @@ module beepbox {
 			}
 		}
 		
-		private _copyPins(tone: Tone): void {
+		private _copyPins(note: Note): void {
 			this._copiedPins = [];
-			for (const oldPin of tone.pins) {
-				this._copiedPins.push(new TonePin(0, oldPin.time, oldPin.volume));
+			for (const oldPin of note.pins) {
+				this._copiedPins.push(new NotePin(0, oldPin.time, oldPin.volume));
 			}
 			for (let i: number = 1; i < this._copiedPins.length - 1; ) {
 				if (this._copiedPins[i-1].volume == this._copiedPins[i].volume && 
@@ -429,7 +429,7 @@ module beepbox {
 					const currentPart: number = Math.floor(this._mouseX / this._partWidth);
 					const sequence: ChangeSequence = new ChangeSequence();
 					
-					if (this._cursor.curTone == null) {
+					if (this._cursor.curNote == null) {
 						let backwards: boolean;
 						let directLength: number;
 						if (currentPart < this._cursor.start) {
@@ -470,7 +470,7 @@ module beepbox {
 						
 						/*
 						if (defaultLength < directLength) {
-							// See if I can find a better match by snapping to an existing tone...
+							// See if I can find a better match by snapping to an existing note...
 							// E.G. in another channel
 						}
 						*/
@@ -485,55 +485,55 @@ module beepbox {
 						if (start < 0) start = 0;
 						if (end > this._doc.song.beats * this._doc.song.parts) end = this._doc.song.beats * this._doc.song.parts;
 						
-						sequence.append(new ChangeToneTruncate(this._doc, this._pattern, start, end));
+						sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, start, end));
 						let i: number;
-						for (i = 0; i < this._pattern.tones.length; i++) {
-							if (this._pattern.tones[i].start >= end) break;
+						for (i = 0; i < this._pattern.notes.length; i++) {
+							if (this._pattern.notes[i].start >= end) break;
 						}
-						const theTone: Tone = new Tone(this._cursor.pitch, start, end, 3, this._doc.channel == 3);
-						sequence.append(new ChangeToneAdded(this._doc, this._pattern, theTone, i));
-						this._copyPins(theTone);
+						const theNote: Note = new Note(this._cursor.pitch, start, end, 3, this._doc.channel == 3);
+						sequence.append(new ChangeNoteAdded(this._doc, this._pattern, theNote, i));
+						this._copyPins(theNote);
 					} else if (this._mouseHorizontal) {
 						const shift: number = Math.round((this._mouseX - this._mouseXStart) / this._partWidth);
 						
-						const shiftedPin: TonePin = this._cursor.curTone.pins[this._cursor.nearPinIndex];
-						let shiftedTime: number = this._cursor.curTone.start + shiftedPin.time + shift;
+						const shiftedPin: NotePin = this._cursor.curNote.pins[this._cursor.nearPinIndex];
+						let shiftedTime: number = this._cursor.curNote.start + shiftedPin.time + shift;
 						if (shiftedTime < 0) shiftedTime = 0;
 						if (shiftedTime > this._doc.song.beats * this._doc.song.parts) shiftedTime = this._doc.song.beats * this._doc.song.parts;
 						
-						if (shiftedTime <= this._cursor.curTone.start && this._cursor.nearPinIndex == this._cursor.curTone.pins.length - 1 ||
-						    shiftedTime >= this._cursor.curTone.end   && this._cursor.nearPinIndex == 0)
+						if (shiftedTime <= this._cursor.curNote.start && this._cursor.nearPinIndex == this._cursor.curNote.pins.length - 1 ||
+						    shiftedTime >= this._cursor.curNote.end   && this._cursor.nearPinIndex == 0)
 						{
-							sequence.append(new ChangeToneAdded(this._doc, this._pattern, this._cursor.curTone, this._cursor.curIndex, true));
+							sequence.append(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
 						} else {
-							start = Math.min(this._cursor.curTone.start, shiftedTime);
-							end   = Math.max(this._cursor.curTone.end,   shiftedTime);
-							sequence.append(new ChangeToneTruncate(this._doc, this._pattern, start, end, this._cursor.curTone));
-							sequence.append(new ChangePinTime(this._doc, this._cursor.curTone, this._cursor.nearPinIndex, shiftedTime));
-							this._copyPins(this._cursor.curTone);
+							start = Math.min(this._cursor.curNote.start, shiftedTime);
+							end   = Math.max(this._cursor.curNote.end,   shiftedTime);
+							sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, start, end, this._cursor.curNote));
+							sequence.append(new ChangePinTime(this._doc, this._cursor.curNote, this._cursor.nearPinIndex, shiftedTime));
+							this._copyPins(this._cursor.curNote);
 						}
 					} else if (this._cursor.pitchIndex == -1) {
-						const bendPart: number = Math.round(Math.max(this._cursor.curTone.start, Math.min(this._cursor.curTone.end, this._mouseX / this._partWidth))) - this._cursor.curTone.start;
+						const bendPart: number = Math.round(Math.max(this._cursor.curNote.start, Math.min(this._cursor.curNote.end, this._mouseX / this._partWidth))) - this._cursor.curNote.start;
 						
-						let prevPin: TonePin;
-						let nextPin: TonePin = this._cursor.curTone.pins[0];
+						let prevPin: NotePin;
+						let nextPin: NotePin = this._cursor.curNote.pins[0];
 						let bendVolume: number = 0;
 						let bendInterval: number = 0;
-						for (let i: number = 1; i < this._cursor.curTone.pins.length; i++) {
+						for (let i: number = 1; i < this._cursor.curNote.pins.length; i++) {
 							prevPin = nextPin;
-							nextPin = this._cursor.curTone.pins[i];
+							nextPin = this._cursor.curNote.pins[i];
 							if (bendPart > nextPin.time) continue;
 							if (bendPart < prevPin.time) throw new Error();
 							const volumeRatio: number = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
 							bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((this._mouseYStart - this._mouseY) / 25.0));
 							if (bendVolume < 0) bendVolume = 0;
 							if (bendVolume > 3) bendVolume = 3;
-							bendInterval = this._snapToPitch(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + this._cursor.curTone.pitches[0], 0, Music.maxPitch) - this._cursor.curTone.pitches[0];
+							bendInterval = this._snapToPitch(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + this._cursor.curNote.pitches[0], 0, Music.maxPitch) - this._cursor.curNote.pitches[0];
 							break;
 						}
 						
-						sequence.append(new ChangeVolumeBend(this._doc, this._pattern, this._cursor.curTone, bendPart, bendVolume, bendInterval));
-						this._copyPins(this._cursor.curTone);
+						sequence.append(new ChangeVolumeBend(this._doc, this._pattern, this._cursor.curNote, bendPart, bendVolume, bendInterval));
+						this._copyPins(this._cursor.curNote);
 					} else {
 						let bendStart: number;
 						let bendEnd: number;
@@ -546,24 +546,24 @@ module beepbox {
 						}
 						if (bendEnd < 0) bendEnd = 0;
 						if (bendEnd > this._doc.song.beats * this._doc.song.parts) bendEnd = this._doc.song.beats * this._doc.song.parts;
-						if (bendEnd > this._cursor.curTone.end) {
-							sequence.append(new ChangeToneTruncate(this._doc, this._pattern, this._cursor.curTone.start, bendEnd, this._cursor.curTone));
+						if (bendEnd > this._cursor.curNote.end) {
+							sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, this._cursor.curNote.start, bendEnd, this._cursor.curNote));
 						}
-						if (bendEnd < this._cursor.curTone.start) {
-							sequence.append(new ChangeToneTruncate(this._doc, this._pattern, bendEnd, this._cursor.curTone.end, this._cursor.curTone));
+						if (bendEnd < this._cursor.curNote.start) {
+							sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, bendEnd, this._cursor.curNote.end, this._cursor.curNote));
 						}
 						
 						let minPitch: number = Number.MAX_VALUE;
 						let maxPitch: number = -Number.MAX_VALUE;
-						for (const pitch of this._cursor.curTone.pitches) {
+						for (const pitch of this._cursor.curNote.pitches) {
 							if (minPitch > pitch) minPitch = pitch;
 							if (maxPitch < pitch) maxPitch = pitch;
 						}
-						minPitch -= this._cursor.curTone.pitches[0];
-						maxPitch -= this._cursor.curTone.pitches[0];
+						minPitch -= this._cursor.curNote.pitches[0];
+						maxPitch -= this._cursor.curNote.pitches[0];
 						const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, Music.maxPitch - maxPitch);
-						sequence.append(new ChangePitchBend(this._doc, this._cursor.curTone, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
-						this._copyPins(this._cursor.curTone);
+						sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
+						this._copyPins(this._cursor.curNote);
 					}
 					this._dragChange = sequence;
 				}
@@ -584,27 +584,27 @@ module beepbox {
 					this._dragChange = null;
 				}
 			} else if (this._mouseDown) {
-				if (this._cursor.curTone == null) {
-					const tone: Tone = new Tone(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.channel == 3);
-					tone.pins = [];
+				if (this._cursor.curNote == null) {
+					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.channel == 3);
+					note.pins = [];
 					for (const oldPin of this._cursor.pins) {
-						tone.pins.push(new TonePin(0, oldPin.time, oldPin.volume));
+						note.pins.push(new NotePin(0, oldPin.time, oldPin.volume));
 					}
-					this._doc.history.record(new ChangeToneAdded(this._doc, this._pattern, tone, this._cursor.curIndex));
+					this._doc.history.record(new ChangeNoteAdded(this._doc, this._pattern, note, this._cursor.curIndex));
 				} else {
 					if (this._cursor.pitchIndex == -1) {
 						const sequence: ChangeSequence = new ChangeSequence();
-						if (this._cursor.curTone.pitches.length == 4) {
-							sequence.append(new ChangePitchAdded(this._doc, this._pattern, this._cursor.curTone, this._cursor.curTone.pitches[0], 0, true));
+						if (this._cursor.curNote.pitches.length == 4) {
+							sequence.append(new ChangePitchAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curNote.pitches[0], 0, true));
 						}
-						sequence.append(new ChangePitchAdded(this._doc, this._pattern, this._cursor.curTone, this._cursor.pitch, this._cursor.curTone.pitches.length));
+						sequence.append(new ChangePitchAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));
 						this._doc.history.record(sequence);
-						this._copyPins(this._cursor.curTone);
+						this._copyPins(this._cursor.curNote);
 					} else {
-						if (this._cursor.curTone.pitches.length == 1) {
-							this._doc.history.record(new ChangeToneAdded(this._doc, this._pattern, this._cursor.curTone, this._cursor.curIndex, true));
+						if (this._cursor.curNote.pitches.length == 1) {
+							this._doc.history.record(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
 						} else {
-							this._doc.history.record(new ChangePitchAdded(this._doc, this._pattern, this._cursor.curTone, this._cursor.pitch, this._cursor.curTone.pitches.indexOf(this._cursor.pitch), true));
+							this._doc.history.record(new ChangePitchAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
 						}
 					}
 				}
@@ -693,39 +693,39 @@ module beepbox {
 					if (channel == this._doc.channel) continue;
 					const pattern2: BarPattern | null = this._doc.song.getPattern(channel, this._doc.bar);
 					if (pattern2 == null) continue;
-					for (const tone of pattern2.tones) {
-						for (const pitch of tone.pitches) {
+					for (const note of pattern2.notes) {
+						for (const pitch of note.pitches) {
 							const notePath: SVGPathElement = <SVGPathElement> svgElement("path");
 							notePath.setAttribute("fill", SongEditor.noteColorsDim[channel]);
 							notePath.setAttribute("pointer-events", "none");
-							this._drawNote(notePath, pitch, tone.start, tone.pins, this._pitchHeight / 2 - 4, false, this._doc.song.channelOctaves[channel] * 12);
+							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 - 4, false, this._doc.song.channelOctaves[channel] * 12);
 							this._svgNoteContainer.appendChild(notePath);
 						}
 					}
 				}
 			}
 			
-			for (const tone of this._pattern.tones) {
-				for (const pitch of tone.pitches) {
+			for (const note of this._pattern.notes) {
+				for (const pitch of note.pitches) {
 					let notePath: SVGPathElement = <SVGPathElement> svgElement("path");
 					notePath.setAttribute("fill", SongEditor.noteColorsDim[this._doc.channel]);
 					notePath.setAttribute("pointer-events", "none");
-					this._drawNote(notePath, pitch, tone.start, tone.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
+					this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
 					this._svgNoteContainer.appendChild(notePath);
 					notePath = <SVGPathElement> svgElement("path");
 					notePath.setAttribute("fill", SongEditor.noteColorsBright[this._doc.channel]);
 					notePath.setAttribute("pointer-events", "none");
-					this._drawNote(notePath, pitch, tone.start, tone.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+					this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 					this._svgNoteContainer.appendChild(notePath);
 				}
 			}
 		}
 		
-		private _drawNote(svgElement: SVGPathElement, pitch: number, start: number, pins: TonePin[], radius: number, showVolume: boolean, offset: number): void {
-			let nextPin: TonePin = pins[0];
+		private _drawNote(svgElement: SVGPathElement, pitch: number, start: number, pins: NotePin[], radius: number, showVolume: boolean, offset: number): void {
+			let nextPin: NotePin = pins[0];
 			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + 1) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
 			for (let i: number = 1; i < pins.length; i++) {
-				let prevPin: TonePin = nextPin;
+				let prevPin: NotePin = nextPin;
 				nextPin = pins[i];
 				let prevSide: number = this._partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
 				let nextSide: number = this._partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
@@ -739,7 +739,7 @@ module beepbox {
 				pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
 			}
 			for (let i: number = pins.length - 2; i >= 0; i--) {
-				let prevPin: TonePin = nextPin;
+				let prevPin: NotePin = nextPin;
 				nextPin = pins[i];
 				let prevSide: number = this._partWidth * (start + prevPin.time) - (i == pins.length - 2 ? 1 : 0);
 				let nextSide: number = this._partWidth * (start + nextPin.time) + (i == 0 ? 1 : 0);

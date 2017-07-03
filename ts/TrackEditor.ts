@@ -336,7 +336,7 @@ module beepbox {
 				for (let i: number = 0; i < 16; i++) {
 					const pattern: BarPattern | null = this._doc.song.getPattern(j, i + this._doc.barScrollPos);
 					const selected: boolean = (i + this._doc.barScrollPos == this._doc.bar && j == this._doc.channel);
-					const dim: boolean = (pattern == null || pattern.tones.length == 0);
+					const dim: boolean = (pattern == null || pattern.notes.length == 0);
 					
 					const box: Box = this._grid[j][i];
 					if (i < this._doc.song.bars) {

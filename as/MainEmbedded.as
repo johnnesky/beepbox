@@ -387,12 +387,12 @@ package {
 					if (pattern == null) continue;
 					var offsetX: Number = bar * barWidth;
 					
-					for (var i: int = 0; i < pattern.tones.length; i++) {
-						var tone: Tone = pattern.tones[i];
+					for (var i: int = 0; i < pattern.notes.length; i++) {
+						var note: Note = pattern.notes[i];
 						
-						for each (var pitch: int in tone.pitches) {
+						for each (var pitch: int in note.pitches) {
 							timeline.graphics.beginFill(noteColors[channel]);
-							drawNote(pitch, tone.start, tone.pins, (pitchHeight + 1) / 2, offsetX, offsetY, partWidth, pitchHeight);
+							drawNote(pitch, note.start, note.pins, (pitchHeight + 1) / 2, offsetX, offsetY, partWidth, pitchHeight);
 							timeline.graphics.endFill();
 						}
 					}
@@ -402,8 +402,8 @@ package {
 		
 		private function drawNote(pitch: int, start: int, pins: Array, radius: int, offsetX: Number, offsetY: Number, partWidth: Number, pitchHeight: Number): void {
 			var i: int;
-			var prevPin: TonePin;
-			var nextPin: TonePin;
+			var prevPin: NotePin;
+			var nextPin: NotePin;
 			var prevSide:   Number;
 			var nextSide:   Number;
 			var prevHeight: Number;

@@ -23,29 +23,39 @@ SOFTWARE.
 package beepbox.editor {
 	import beepbox.synth.*;
 	
-	public class ChangeToneAdded extends Change {
-		private var document: Document;
-		private var bar: BarPattern;
-		private var tone: Tone;
-		private var index: int;
-		public function ChangeToneAdded(document: Document, bar: BarPattern, tone: Tone, index: int, deletion: Boolean = false) {
-			super(deletion);
-			this.document = document;
-			this.bar = bar;
-			this.tone = tone;
-			this.index = index;
-			didSomething();
-			redo();
-		}
-		
-		protected override function doForwards(): void {
-			bar.tones.splice(index, 0, tone);
-			document.changed();
-		}
-		
-		protected override function doBackwards(): void {
-			bar.tones.splice(index, 1);
-			document.changed();
+	public class ChangeNoteLength extends ChangePins {
+		public function ChangeNoteLength(document: Document, note: Note, truncStart: int, truncEnd: int) {
+			var changePins: Function = function(): void {
+				truncStart -= oldStart;
+				truncEnd   -= oldStart;
+				var setStart: Boolean = false;
+				var prevVolume: int = oldPins[0].volume;
+				var prevInterval: int = oldPins[0].interval;
+				var i: int;
+				for (i = 0; i < oldPins.length; i++) {
+					var oldPin: NotePin = oldPins[i];
+					if (oldPin.time < truncStart) {
+						prevVolume = oldPin.volume;
+						prevInterval = oldPin.interval;
+					} else if (oldPin.time <= truncEnd) {
+						if (oldPin.time > truncStart && !setStart) {
+							newPins.push(new NotePin(prevInterval, truncStart, prevVolume));
+						}
+						newPins.push(new NotePin(oldPin.interval, oldPin.time, oldPin.volume));
+						setStart = true;
+						if (oldPin.time == truncEnd) {
+							return;
+						}
+					} else {
+						break;
+					} 
+					
+				}
+				
+				newPins.push(new NotePin(oldPins[i].interval, truncEnd, oldPins[i].volume));
+			}
+			
+			super(document, note, changePins);
 		}
 	}
 }

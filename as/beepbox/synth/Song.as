@@ -170,11 +170,11 @@ package beepbox.synth {
 				for each (var p: BarPattern in channelPatterns[channel]) {
 					bits.write(neededInstrumentBits, p.instrument);
 					
-					if (p.tones.length > 0) {
+					if (p.notes.length > 0) {
 						bits.write(1, 1);
 						
 						var curPart: int = 0;
-						for each (var t: Tone in p.tones) {
+						for each (var t: Note in p.notes) {
 							if (t.start > curPart) {
 								bits.write(2, 0); // rest
 								bits.writePartDuration(t.start - curPart);
@@ -195,7 +195,7 @@ package beepbox.synth {
 							var currentPitch: int = startPitch;
 							var pitchBends: Array = [];
 							for (i = 1; i < t.pins.length; i++) {
-								var pin: TonePin = t.pins[i];
+								var pin: NotePin = t.pins[i];
 								var nextPitch: int = startPitch + pin.interval;
 								if (currentPitch != nextPitch) {
 									shapeBits.write(1, 1);
@@ -493,8 +493,8 @@ package beepbox.synth {
 						channelPatterns[channel] = [];
 						
 						var octaveOffset: int = channel == 3 ? 0 : channelOctaves[channel] * 12;
-						var tone: Tone = null;
-						var pin: TonePin = null;
+						var note: Note = null;
+						var pin: NotePin = null;
 						var lastPitch: int = (channel == 3 ? 4 : 12) + octaveOffset;
 						var recentPitches: Array = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
 						var recentShapes: Array = [];
@@ -509,19 +509,19 @@ package beepbox.synth {
 							if (!beforeThree && bits.read(1) == 0) continue;
 							
 							var curPart: int = 0;
-							var newTones: Array = [];
+							var newNotes: Array = [];
 							while (curPart < beats * parts) {
 								
 								var useOldShape: Boolean = bits.read(1) == 1;
-								var newTone: Boolean = false;
+								var newNote: Boolean = false;
 								var shapeIndex: int = 0;
 								if (useOldShape) {
 									shapeIndex = bits.readLongTail(0, 0);
 								} else {
-									newTone = bits.read(1) == 1;
+									newNote = bits.read(1) == 1;
 								}
 								
-								if (!useOldShape && !newTone) {
+								if (!useOldShape && !newNote) {
 									var restLength: int = bits.readPartDuration();
 									curPart += restLength;
 								} else {
@@ -556,9 +556,9 @@ package beepbox.synth {
 									recentShapes.unshift(shape);
 									if (recentShapes.length > 10) recentShapes.pop();
 									
-									tone = new Tone(0,curPart,curPart + shape.length, shape.initialVolume);
-									tone.pitches = [];
-									tone.pins.length = 1;
+									note = new Note(0,curPart,curPart + shape.length, shape.initialVolume);
+									note.pitches = [];
+									note.pins.length = 1;
 									var pitchBends: Array = [];
 									for (j = 0; j < shape.pitchCount + shape.bendCount; j++) {
 										var useOldPitch: Boolean = bits.read(1) == 1;
@@ -586,30 +586,30 @@ package beepbox.synth {
 										if (recentPitches.length > 8) recentPitches.pop();
 										
 										if (j < shape.pitchCount) {
-											tone.pitches.push(pitch);
+											note.pitches.push(pitch);
 										} else {
 											pitchBends.push(pitch);
 										}
 										
 										if (j == shape.pitchCount - 1) {
-											lastPitch = tone.pitches[0];
+											lastPitch = note.pitches[0];
 										} else {
 											lastPitch = pitch;
 										}
 									}
 									
-									pitchBends.unshift(tone.pitches[0]);
+									pitchBends.unshift(note.pitches[0]);
 									
 									for each (pinObj in shape.pins) {
 										if (pinObj.pitchBend) pitchBends.shift();
-										pin = new TonePin(pitchBends[0] - tone.pitches[0], pinObj.time, pinObj.volume);
-										tone.pins.push(pin);
+										pin = new NotePin(pitchBends[0] - note.pitches[0], pinObj.time, pinObj.volume);
+										note.pins.push(pin);
 									}
-									curPart = tone.end;
-									newTones.push(tone);
+									curPart = note.end;
+									newNotes.push(note);
 								}
 							}
-							newPattern.tones = newTones;
+							newPattern.notes = newNotes;
 						} // for (i = 0; i < patterns; i++) {
 						
 						if (beforeThree) {
@@ -650,18 +650,18 @@ package beepbox.synth {
 				const patternArray: Array = [];
 				for each (var pattern: BarPattern in this.channelPatterns[channel]) {
 					const pitchArray: Array = [];
-					for each (var tone: Tone in pattern.tones) {
+					for each (var note: Note in pattern.notes) {
 						const pointArray: Array = [];
-						for each (var pin: TonePin in tone.pins) {
+						for each (var pin: NotePin in note.pins) {
 							pointArray.push({
-								tick: pin.time + tone.start,
+								tick: pin.time + note.start,
 								pitchBend: pin.interval,
 								volume: Math.round(pin.volume * 100.0 / 3.0)
 							});
 						}
 						
 						pitchArray.push({
-							pitches: tone.pitches,
+							pitches: note.pitches,
 							points: pointArray
 						});
 					}
@@ -842,31 +842,31 @@ package beepbox.synth {
 					pattern.instrument = clip(0, this.instruments, int(patternObject.instrument) - 1);
 					
 					if (patternObject.pitches && patternObject.pitches.length > 0) {
-						const maxToneCount: int = Math.min(this.beats * this.parts, uint(patternObject.pitches.length));
+						const maxNoteCount: int = Math.min(this.beats * this.parts, uint(patternObject.pitches.length));
 						
 						///@TODO: Consider supporting pitches specified in any timing order, sorting them and truncating as necessary. 
 						var tickClock: int = 0;
 						for (var j: int = 0; j < patternObject.pitches.length; j++) {
-							if (j >= maxToneCount) break;
+							if (j >= maxNoteCount) break;
 							
 							const pitchObject: * = patternObject.pitches[j];
 							if (!pitchObject || !pitchObject.pitches || !(pitchObject.pitches.length >= 1) || !pitchObject.points || !(pitchObject.points.length >= 2)) {
 								continue;
 							}
 							
-							const tone: Tone = new Tone(0, 0, 0, 0);
-							tone.pitches = [];
-							tone.pins = [];
+							const note: Note = new Note(0, 0, 0, 0);
+							note.pitches = [];
+							note.pins = [];
 							
 							for (k = 0; k < pitchObject.pitches.length; k++) {
 								const pitch: int = int(pitchObject.pitches[k]);
-								if (tone.pitches.indexOf(pitch) != -1) continue;
-								tone.pitches.push(pitch);
-								if (tone.pitches.length >= 4) break;
+								if (note.pitches.indexOf(pitch) != -1) continue;
+								note.pitches.push(pitch);
+								if (note.pitches.length >= 4) break;
 							}
-							if (tone.pitches.length < 1) continue;
+							if (note.pitches.length < 1) continue;
 							
-							var toneClock: int = tickClock;
+							var noteClock: int = tickClock;
 							var startInterval: int = 0;
 							for (k = 0; k < pitchObject.points.length; k++) {
 								const pointObject: * = pitchObject.points[k];
@@ -876,53 +876,53 @@ package beepbox.synth {
 								const volume: int = (pointObject.volume == undefined) ? 3 : Math.max(0, Math.min(3, Math.round(int(pointObject.volume) * 3.0 / 100.0)));
 								
 								if (time > this.beats * this.parts) continue;
-								if (tone.pins.length == 0) {
-									if (time < toneClock) continue;
-									tone.start = time;
+								if (note.pins.length == 0) {
+									if (time < noteClock) continue;
+									note.start = time;
 									startInterval = interval;
 								} else {
-									if (time <= toneClock) continue;
+									if (time <= noteClock) continue;
 								}
-								toneClock = time;
+								noteClock = time;
 								
-								tone.pins.push(new TonePin(interval - startInterval, time - tone.start, volume));
+								note.pins.push(new NotePin(interval - startInterval, time - note.start, volume));
 							}
-							if (tone.pins.length < 2) continue;
+							if (note.pins.length < 2) continue;
 							
-							tone.end = tone.pins[tone.pins.length - 1].time + tone.start;
+							note.end = note.pins[note.pins.length - 1].time + note.start;
 							
 							const maxPitch: int = channel == 3 ? Music.drumCount - 1 : Music.maxPitch;
 							var lowestPitch: int = maxPitch;
 							var highestPitch: int = 0;
-							for (k = 0; k < tone.pitches.length; k++) {
-								tone.pitches[k] += startInterval;
-								if (tone.pitches[k] < 0 || tone.pitches[k] > maxPitch) {
-									tone.pitches.splice(k, 1);
+							for (k = 0; k < note.pitches.length; k++) {
+								note.pitches[k] += startInterval;
+								if (note.pitches[k] < 0 || note.pitches[k] > maxPitch) {
+									note.pitches.splice(k, 1);
 									k--;
 								}
-								if (tone.pitches[k] < lowestPitch) lowestPitch = tone.pitches[k];
-								if (tone.pitches[k] > highestPitch) highestPitch = tone.pitches[k];
+								if (note.pitches[k] < lowestPitch) lowestPitch = note.pitches[k];
+								if (note.pitches[k] > highestPitch) highestPitch = note.pitches[k];
 							}
-							if (tone.pitches.length < 1) continue;
+							if (note.pitches.length < 1) continue;
 							
-							for (k = 0; k < tone.pins.length; k++) {
-								const pin: TonePin = tone.pins[k];
+							for (k = 0; k < note.pins.length; k++) {
+								const pin: NotePin = note.pins[k];
 								if (pin.interval + lowestPitch < 0) pin.interval = -lowestPitch;
 								if (pin.interval + highestPitch > maxPitch) pin.interval = maxPitch - highestPitch;
 								if (k >= 2) {
-									if (pin.interval == tone.pins[k-1].interval && 
-									    pin.interval == tone.pins[k-2].interval && 
-									    pin.volume == tone.pins[k-1].volume && 
-									    pin.volume == tone.pins[k-2].volume)
+									if (pin.interval == note.pins[k-1].interval && 
+									    pin.interval == note.pins[k-2].interval && 
+									    pin.volume == note.pins[k-1].volume && 
+									    pin.volume == note.pins[k-2].volume)
 									{
-										tone.pins.splice(k-1, 1);
+										note.pins.splice(k-1, 1);
 										k--;
 									}    
 								}
 							}
 							
-							pattern.tones.push(tone);
-							tickClock = tone.end;
+							pattern.notes.push(note);
+							tickClock = note.end;
 						}
 					}
 				}

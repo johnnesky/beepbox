@@ -20,18 +20,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package beepbox.editor {
-	import beepbox.synth.*;
-	
-	public class ChangeRhythmTone extends ChangePins {
-		public function ChangeRhythmTone(document: Document, tone: Tone, changeRhythm: Function) {
-			var changePins: Function = function(): void {
-				for each (var oldPin: TonePin in oldPins) {
-					newPins.push(new TonePin(oldPin.interval, changeRhythm(oldPin.time + oldStart) - oldStart, oldPin.volume));
-				}
-			}
-			
-			super(document, tone, changePins);
+package beepbox.synth {
+	public class Note {
+		public var pitches: Array;
+		public var pins: Array;
+		public var start: int;
+		public var end: int;
+		
+		public function Note(pitch: int, start: int, end: int, volume: int, fadeout: Boolean = false) {
+			pitches = [pitch];
+			pins = [new NotePin(0, 0, volume), new NotePin(0, end - start, fadeout ? 0 : volume)];
+			this.start = start;
+			this.end = end;
 		}
 	}
 }

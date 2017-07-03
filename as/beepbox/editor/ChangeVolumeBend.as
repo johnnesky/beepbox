@@ -26,29 +26,29 @@ package beepbox.editor {
 	public class ChangeVolumeBend extends Change {
 		private var document: Document;
 		private var bar: BarPattern;
-		private var tone: Tone;
+		private var note: Note;
 		private var oldPins: Array;
 		private var newPins: Array;
-		public function ChangeVolumeBend(document: Document, bar: BarPattern, tone: Tone, bendPart: int, bendVolume: int, bendInterval: int) {
+		public function ChangeVolumeBend(document: Document, bar: BarPattern, note: Note, bendPart: int, bendVolume: int, bendInterval: int) {
 			super(false);
 			this.document = document;
 			this.bar = bar;
-			this.tone = tone;
-			oldPins = tone.pins;
+			this.note = note;
+			oldPins = note.pins;
 			newPins = [];
 			
 			var inserted: Boolean = false;
 			var i: int;
 			
-			for each (var pin: TonePin in tone.pins) {
+			for each (var pin: NotePin in note.pins) {
 				if (pin.time < bendPart) {
 					newPins.push(pin);
 				} else if (pin.time == bendPart) {
-					newPins.push(new TonePin(bendInterval, bendPart, bendVolume));
+					newPins.push(new NotePin(bendInterval, bendPart, bendVolume));
 					inserted = true;
 				} else {
 					if (!inserted) {
-						newPins.push(new TonePin(bendInterval, bendPart, bendVolume));
+						newPins.push(new NotePin(bendInterval, bendPart, bendVolume));
 						inserted = true;
 					}
 					newPins.push(pin);
@@ -72,12 +72,12 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			tone.pins = newPins;
+			note.pins = newPins;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			tone.pins = oldPins;
+			note.pins = oldPins;
 			document.changed();
 		}
 	}

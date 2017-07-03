@@ -26,14 +26,14 @@ package beepbox.editor {
 	public class ChangePitchAdded extends Change {
 		private var document: Document;
 		private var pattern: BarPattern;
-		private var tone: Tone;
+		private var note: Note;
 		private var pitch: int;
 		private var index: int;
-		public function ChangePitchAdded(document: Document, pattern: BarPattern, tone: Tone, pitch: int, index: int, deletion: Boolean = false) {
+		public function ChangePitchAdded(document: Document, pattern: BarPattern, note: Note, pitch: int, index: int, deletion: Boolean = false) {
 			super(deletion);
 			this.document = document;
 			this.pattern = pattern;
-			this.tone = tone;
+			this.note = note;
 			this.pitch = pitch;
 			this.index = index;
 			didSomething();
@@ -41,12 +41,12 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			tone.pitches.splice(index, 0, pitch);
+			note.pitches.splice(index, 0, pitch);
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			tone.pitches.splice(index, 1);
+			note.pitches.splice(index, 1);
 			document.changed();
 		}
 	}

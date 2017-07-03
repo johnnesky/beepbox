@@ -25,30 +25,30 @@ package beepbox.editor {
 	
 	public class ChangePaste extends Change {
 		private var document: Document;
-		public var oldTones: Array;
-		public var newTones: Array;
-		public function ChangePaste(document: Document, tones: Array) {
+		public var oldNotes: Array;
+		public var newNotes: Array;
+		public function ChangePaste(document: Document, notes: Array) {
 			super(false);
 			this.document = document;
 			
 			var pattern: BarPattern = document.getCurrentPattern();
-			oldTones = pattern.tones;
-			pattern.tones = tones;
-			pattern.tones = pattern.cloneTones();
-			newTones = pattern.tones;
+			oldNotes = pattern.notes;
+			pattern.notes = notes;
+			pattern.notes = pattern.cloneNotes();
+			newNotes = pattern.notes;
 			document.changed();
 			didSomething();
 		}
 		
 		protected override function doForwards(): void {
 			var pattern: BarPattern = document.getCurrentPattern();
-			pattern.tones = newTones;
+			pattern.notes = newNotes;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
 			var pattern: BarPattern = document.getCurrentPattern();
-			pattern.tones = oldTones;
+			pattern.notes = oldNotes;
 			document.changed();
 		}
 	}

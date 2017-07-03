@@ -366,19 +366,19 @@ module beepbox {
 		protected _newStart: number;
 		protected _oldEnd: number;
 		protected _newEnd: number;
-		protected _oldPins: TonePin[];
-		protected _newPins: TonePin[];
+		protected _oldPins: NotePin[];
+		protected _newPins: NotePin[];
 		protected _oldPitches: number[];
 		protected _newPitches: number[];
-		constructor(protected _document: SongDocument, protected _tone: Tone) {
+		constructor(protected _document: SongDocument, protected _note: Note) {
 			super(false);
-			this._oldStart = this._tone.start;
-			this._oldEnd   = this._tone.end;
-			this._newStart = this._tone.start;
-			this._newEnd   = this._tone.end;
-			this._oldPins = this._tone.pins;
+			this._oldStart = this._note.start;
+			this._oldEnd   = this._note.end;
+			this._newStart = this._note.start;
+			this._newEnd   = this._note.end;
+			this._oldPins = this._note.pins;
 			this._newPins = [];
-			this._oldPitches = this._tone.pitches;
+			this._oldPitches = this._note.pitches;
 			this._newPitches = [];
 		}
 		
@@ -420,18 +420,18 @@ module beepbox {
 		}
 		
 		protected _doForwards(): void {
-			this._tone.pins = this._newPins;
-			this._tone.pitches = this._newPitches;
-			this._tone.start = this._newStart;
-			this._tone.end = this._newEnd;
+			this._note.pins = this._newPins;
+			this._note.pitches = this._newPitches;
+			this._note.start = this._newStart;
+			this._note.end = this._newEnd;
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			this._tone.pins = this._oldPins;
-			this._tone.pitches = this._oldPitches;
-			this._tone.start = this._oldStart;
-			this._tone.end = this._oldEnd;
+			this._note.pins = this._oldPins;
+			this._note.pitches = this._oldPitches;
+			this._note.start = this._oldStart;
+			this._note.end = this._oldEnd;
 			this._document.changed();
 		}
 	}
@@ -574,7 +574,7 @@ module beepbox {
 					this._sequence = new ChangeSequence();
 					for (let i: number = 0; i < Music.numChannels; i++) {
 						for (let j: number = 0; j < document.song.channelPatterns[i].length; j++) {
-							this._sequence.append(new ChangeToneTruncate(document, document.song.channelPatterns[i][j], this._newBeats * document.song.parts, this._oldBeats * document.song.parts));
+							this._sequence.append(new ChangeNoteTruncate(document, document.song.channelPatterns[i][j], this._newBeats * document.song.parts, this._oldBeats * document.song.parts));
 						}
 					}
 				}
@@ -882,14 +882,14 @@ module beepbox {
 	export class ChangePitchAdded extends Change {
 		private _document: SongDocument;
 		private _pattern: BarPattern;
-		private _tone: Tone;
+		private _note: Note;
 		private _pitch: number;
 		private _index: number;
-		constructor(document: SongDocument, pattern: BarPattern, tone: Tone, pitch: number, index: number, deletion: boolean = false) {
+		constructor(document: SongDocument, pattern: BarPattern, note: Note, pitch: number, index: number, deletion: boolean = false) {
 			super(deletion);
 			this._document = document;
 			this._pattern = pattern;
-			this._tone = tone;
+			this._note = note;
 			this._pitch = pitch;
 			this._index = index;
 			this._didSomething();
@@ -897,12 +897,12 @@ module beepbox {
 		}
 		
 		protected _doForwards(): void {
-			this._tone.pitches.splice(this._index, 0, this._pitch);
+			this._note.pitches.splice(this._index, 0, this._pitch);
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			this._tone.pitches.splice(this._index, 1);
+			this._note.pitches.splice(this._index, 1);
 			this._document.changed();
 		}
 	}
@@ -971,27 +971,27 @@ module beepbox {
 	
 	export class ChangePaste extends Change {
 		private _document: SongDocument;
-		public oldTones: Tone[];
-		public newTones: Tone[];
-		constructor(document: SongDocument, tones: Tone[], private _pattern: BarPattern) {
+		public oldNotes: Note[];
+		public newNotes: Note[];
+		constructor(document: SongDocument, notes: Note[], private _pattern: BarPattern) {
 			super(false);
 			this._document = document;
 			
-			this.oldTones = this._pattern.tones;
-			this._pattern.tones = tones;
-			this._pattern.tones = this._pattern.cloneTones();
-			this.newTones = this._pattern.tones;
+			this.oldNotes = this._pattern.notes;
+			this._pattern.notes = notes;
+			this._pattern.notes = this._pattern.cloneNotes();
+			this.newNotes = this._pattern.notes;
 			document.changed();
 			this._didSomething();
 		}
 		
 		protected _doForwards(): void {
-			this._pattern.tones = this.newTones;
+			this._pattern.notes = this.newNotes;
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			this._pattern.tones = this.oldTones;
+			this._pattern.notes = this.oldNotes;
 			this._document.changed();
 		}
 	}
@@ -1086,8 +1086,8 @@ module beepbox {
 	}
 	
 	export class ChangePinTime extends ChangePins {
-		constructor(document: SongDocument, tone: Tone, pinIndex: number, shiftedTime: number) {
-			super(document, tone);
+		constructor(document: SongDocument, note: Note, pinIndex: number, shiftedTime: number) {
+			super(document, note);
 			
 			shiftedTime -= this._oldStart;
 			const originalTime: number = this._oldPins[pinIndex].time;
@@ -1095,20 +1095,20 @@ module beepbox {
 			const skipEnd: number = Math.max(originalTime, shiftedTime);
 			let setPin: boolean = false;
 			for (let i: number = 0; i < this._oldPins.length; i++) {
-				const oldPin: TonePin = tone.pins[i];
+				const oldPin: NotePin = note.pins[i];
 				const time: number = oldPin.time;
 				if (time < skipStart) {
-					this._newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
+					this._newPins.push(new NotePin(oldPin.interval, time, oldPin.volume));
 				} else if (time > skipEnd) {
 					if (!setPin) {
-						this._newPins.push(new TonePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
+						this._newPins.push(new NotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
 						setPin = true;
 					}
-					this._newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
+					this._newPins.push(new NotePin(oldPin.interval, time, oldPin.volume));
 				}
 			}
 			if (!setPin) {
-				this._newPins.push(new TonePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
+				this._newPins.push(new NotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
 			}
 			
 			this._finishSetup();
@@ -1116,12 +1116,12 @@ module beepbox {
 	}
 	
 	export class ChangePitchBend extends ChangePins {
-		constructor(document: SongDocument, tone: Tone, bendStart: number, bendEnd: number, bendTo: number, pitchIndex: number) {
-			super(document, tone);
+		constructor(document: SongDocument, note: Note, bendStart: number, bendEnd: number, bendTo: number, pitchIndex: number) {
+			super(document, note);
 			
 			bendStart -= this._oldStart;
 			bendEnd   -= this._oldStart;
-			bendTo    -= tone.pitches[pitchIndex];
+			bendTo    -= note.pitches[pitchIndex];
 			
 			let setStart: boolean = false;
 			let setEnd: boolean   = false;
@@ -1131,20 +1131,20 @@ module beepbox {
 			let i: number;
 			let direction: number;
 			let stop: number;
-			let push: (item: TonePin)=>void;
+			let push: (item: NotePin)=>void;
 			if (bendEnd > bendStart) {
 				i = 0;
 				direction = 1;
-				stop = tone.pins.length;
-				push = (item: TonePin)=>{ this._newPins.push(item); };
+				stop = note.pins.length;
+				push = (item: NotePin)=>{ this._newPins.push(item); };
 			} else {
-				i = tone.pins.length - 1;
+				i = note.pins.length - 1;
 				direction = -1;
 				stop = -1;
-				push = (item: TonePin)=>{ this._newPins.unshift(item); };
+				push = (item: NotePin)=>{ this._newPins.unshift(item); };
 			}
 			for (; i != stop; i += direction) {
-				const oldPin: TonePin = tone.pins[i];
+				const oldPin: NotePin = note.pins[i];
 				const time: number = oldPin.time;
 				for (;;) {
 					if (!setStart) {
@@ -1153,10 +1153,10 @@ module beepbox {
 							prevVolume = oldPin.volume;
 						}
 						if (time * direction < bendStart * direction) {
-							push(new TonePin(oldPin.interval, time, oldPin.volume));
+							push(new NotePin(oldPin.interval, time, oldPin.volume));
 							break;
 						} else {
-							push(new TonePin(prevInterval, bendStart, prevVolume));
+							push(new NotePin(prevInterval, bendStart, prevVolume));
 							setStart = true;
 						}
 					} else if (!setEnd) {
@@ -1167,7 +1167,7 @@ module beepbox {
 						if (time * direction < bendEnd * direction) {
 							break;
 						} else {
-							push(new TonePin(bendTo, bendEnd, prevVolume));
+							push(new NotePin(bendTo, bendEnd, prevVolume));
 							setEnd = true;
 						}
 					} else {
@@ -1175,14 +1175,14 @@ module beepbox {
 							break;
 						} else {
 							if (oldPin.interval != prevInterval) persist = false;
-							push(new TonePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
+							push(new NotePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
 							break;
 						}
 					}
 				}
 			}
 			if (!setEnd) {
-				push(new TonePin(bendTo, bendEnd, prevVolume));
+				push(new NotePin(bendTo, bendEnd, prevVolume));
 			}
 			
 			this._finishSetup();
@@ -1201,24 +1201,24 @@ module beepbox {
 				throw new Error("ChangeRhythm couldn't handle rhythm change from " + oldParts + " to " + newParts + ".");
 			}
 			let i: number = 0;
-			while (i < bar.tones.length) {
-				const tone: Tone = bar.tones[i];
-				if (changeRhythm(tone.start) >= changeRhythm(tone.end)) {
-					this.append(new ChangeToneAdded(document, bar, tone, i, true));
+			while (i < bar.notes.length) {
+				const note: Note = bar.notes[i];
+				if (changeRhythm(note.start) >= changeRhythm(note.end)) {
+					this.append(new ChangeNoteAdded(document, bar, note, i, true));
 				} else {
-					this.append(new ChangeRhythmTone(document, tone, changeRhythm));
+					this.append(new ChangeRhythmNote(document, note, changeRhythm));
 					i++;
 				}
 			}
 		}
 	}
 	
-	export class ChangeRhythmTone extends ChangePins {
-		constructor(document: SongDocument, tone: Tone, changeRhythm: (oldTime:number)=>number) {
-			super(document, tone);
+	export class ChangeRhythmNote extends ChangePins {
+		constructor(document: SongDocument, note: Note, changeRhythm: (oldTime:number)=>number) {
+			super(document, note);
 			
 			for (const oldPin of this._oldPins) {
-				this._newPins.push(new TonePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.volume));
+				this._newPins.push(new NotePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.volume));
 			}
 			
 			this._finishSetup();
@@ -1344,35 +1344,35 @@ module beepbox {
 		}
 	}
 	
-	export class ChangeToneAdded extends Change {
+	export class ChangeNoteAdded extends Change {
 		private _document: SongDocument;
 		private _bar: BarPattern;
-		private _tone: Tone;
+		private _note: Note;
 		private _index: number;
-		constructor(document: SongDocument, bar: BarPattern, tone: Tone, index: number, deletion: boolean = false) {
+		constructor(document: SongDocument, bar: BarPattern, note: Note, index: number, deletion: boolean = false) {
 			super(deletion);
 			this._document = document;
 			this._bar = bar;
-			this._tone = tone;
+			this._note = note;
 			this._index = index;
 			this._didSomething();
 			this.redo();
 		}
 		
 		protected _doForwards(): void {
-			this._bar.tones.splice(this._index, 0, this._tone);
+			this._bar.notes.splice(this._index, 0, this._note);
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			this._bar.tones.splice(this._index, 1);
+			this._bar.notes.splice(this._index, 1);
 			this._document.changed();
 		}
 	}
 	
-	export class ChangeToneLength extends ChangePins {
-		constructor(document: SongDocument, tone: Tone, truncStart: number, truncEnd: number) {
-			super(document, tone);
+	export class ChangeNoteLength extends ChangePins {
+		constructor(document: SongDocument, note: Note, truncStart: number, truncEnd: number) {
+			super(document, note);
 			
 			truncStart -= this._oldStart;
 			truncEnd   -= this._oldStart;
@@ -1382,15 +1382,15 @@ module beepbox {
 			let pushLastPin: boolean = true;
 			let i: number;
 			for (i = 0; i < this._oldPins.length; i++) {
-				const oldPin: TonePin = this._oldPins[i];
+				const oldPin: NotePin = this._oldPins[i];
 				if (oldPin.time < truncStart) {
 					prevVolume = oldPin.volume;
 					prevInterval = oldPin.interval;
 				} else if (oldPin.time <= truncEnd) {
 					if (oldPin.time > truncStart && !setStart) {
-						this._newPins.push(new TonePin(prevInterval, truncStart, prevVolume));
+						this._newPins.push(new NotePin(prevInterval, truncStart, prevVolume));
 					}
-					this._newPins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
+					this._newPins.push(new NotePin(oldPin.interval, oldPin.time, oldPin.volume));
 					setStart = true;
 					if (oldPin.time == truncEnd) {
 						pushLastPin = false;
@@ -1402,55 +1402,55 @@ module beepbox {
 				
 			}
 			
-			if (pushLastPin) this._newPins.push(new TonePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
+			if (pushLastPin) this._newPins.push(new NotePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
 			
 			this._finishSetup();
 		}
 	}
 	
-	export class ChangeToneTruncate extends ChangeSequence {
-		constructor(document: SongDocument, bar: BarPattern, start: number, end: number, skipTone?: Tone) {
+	export class ChangeNoteTruncate extends ChangeSequence {
+		constructor(document: SongDocument, bar: BarPattern, start: number, end: number, skipNote?: Note) {
 			super();
 			let i: number = 0;
-			while (i < bar.tones.length) {
-				const tone: Tone = bar.tones[i];
-				if (tone == skipTone && skipTone != undefined) {
+			while (i < bar.notes.length) {
+				const note: Note = bar.notes[i];
+				if (note == skipNote && skipNote != undefined) {
 					i++;
-				} else if (tone.end <= start) {
+				} else if (note.end <= start) {
 					i++;
-				} else if (tone.start >= end) {
+				} else if (note.start >= end) {
 					break;
-				} else if (tone.start < start) {
-					this.append(new ChangeToneLength(document, tone, tone.start, start));
+				} else if (note.start < start) {
+					this.append(new ChangeNoteLength(document, note, note.start, start));
 					i++;
-				} else if (tone.end > end) {
-					this.append(new ChangeToneLength(document, tone, end, tone.end));
+				} else if (note.end > end) {
+					this.append(new ChangeNoteLength(document, note, end, note.end));
 					i++;
 				} else {
-					this.append(new ChangeToneAdded(document, bar, tone, i, true));
+					this.append(new ChangeNoteAdded(document, bar, note, i, true));
 				}
 			}
 		}
 	}
 	
-	export class ChangeTransposeTone extends Change {
+	export class ChangeTransposeNote extends Change {
 		protected _document: SongDocument;
-		protected _tone: Tone;
+		protected _note: Note;
 		protected _oldStart: number;
 		protected _newStart: number;
 		protected _oldEnd: number;
 		protected _newEnd: number;
-		protected _oldPins: TonePin[];
-		protected _newPins: TonePin[];
+		protected _oldPins: NotePin[];
+		protected _newPins: NotePin[];
 		protected _oldPitches: number[];
 		protected _newPitches: number[];
-		constructor(doc: SongDocument, tone: Tone, upward: boolean) {
+		constructor(doc: SongDocument, note: Note, upward: boolean) {
 			super(false);
 			this._document = doc;
-			this._tone = tone;
-			this._oldPins = tone.pins;
+			this._note = note;
+			this._oldPins = note.pins;
 			this._newPins = [];
-			this._oldPitches = tone.pitches;
+			this._oldPitches = note.pitches;
 			this._newPitches = [];
 			
 			const maxPitch: number = (doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch);
@@ -1513,7 +1513,7 @@ module beepbox {
 					}
 				}
 				interval -= this._newPitches[0];
-				this._newPins.push(new TonePin(interval, oldPin.time, oldPin.volume));
+				this._newPins.push(new NotePin(interval, oldPin.time, oldPin.volume));
 			}
 			
 			if (this._newPins[0].interval != 0) throw new Error("wrong pin start interval");
@@ -1535,14 +1535,14 @@ module beepbox {
 		}
 		
 		protected _doForwards(): void {
-			this._tone.pins = this._newPins;
-			this._tone.pitches = this._newPitches;
+			this._note.pins = this._newPins;
+			this._note.pitches = this._newPitches;
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			this._tone.pins = this._oldPins;
-			this._tone.pitches = this._oldPitches;
+			this._note.pins = this._oldPins;
+			this._note.pitches = this._oldPitches;
 			this._document.changed();
 		}
 	}
@@ -1550,8 +1550,8 @@ module beepbox {
 	export class ChangeTranspose extends ChangeSequence {
 		constructor(document: SongDocument, bar: BarPattern, upward: boolean) {
 			super();
-			for (let i: number = 0; i < bar.tones.length; i++) {
-				this.append(new ChangeTransposeTone(document, bar.tones[i], upward));
+			for (let i: number = 0; i < bar.notes.length; i++) {
+				this.append(new ChangeTransposeNote(document, bar.notes[i], upward));
 			}
 		}
 	}
@@ -1585,28 +1585,28 @@ module beepbox {
 	export class ChangeVolumeBend extends Change {
 		private _document: SongDocument;
 		private _bar: BarPattern;
-		private _tone: Tone;
-		private _oldPins: TonePin[];
-		private _newPins: TonePin[];
-		constructor(document: SongDocument, bar: BarPattern, tone: Tone, bendPart: number, bendVolume: number, bendInterval: number) {
+		private _note: Note;
+		private _oldPins: NotePin[];
+		private _newPins: NotePin[];
+		constructor(document: SongDocument, bar: BarPattern, note: Note, bendPart: number, bendVolume: number, bendInterval: number) {
 			super(false);
 			this._document = document;
 			this._bar = bar;
-			this._tone = tone;
-			this._oldPins = tone.pins;
+			this._note = note;
+			this._oldPins = note.pins;
 			this._newPins = [];
 			
 			let inserted: boolean = false;
 			
-			for (const pin of tone.pins) {
+			for (const pin of note.pins) {
 				if (pin.time < bendPart) {
 					this._newPins.push(pin);
 				} else if (pin.time == bendPart) {
-					this._newPins.push(new TonePin(bendInterval, bendPart, bendVolume));
+					this._newPins.push(new NotePin(bendInterval, bendPart, bendVolume));
 					inserted = true;
 				} else {
 					if (!inserted) {
-						this._newPins.push(new TonePin(bendInterval, bendPart, bendVolume));
+						this._newPins.push(new NotePin(bendInterval, bendPart, bendVolume));
 						inserted = true;
 					}
 					this._newPins.push(pin);
@@ -1630,12 +1630,12 @@ module beepbox {
 		}
 		
 		protected _doForwards(): void {
-			this._tone.pins = this._newPins;
+			this._note.pins = this._newPins;
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			this._tone.pins = this._oldPins;
+			this._note.pins = this._oldPins;
 			this._document.changed();
 		}
 	}
@@ -1668,17 +1668,17 @@ module beepbox {
 	
 	export class PatternCursor {
 		public valid:        boolean = false;
-		public prevTone:     Tone | null = null;
-		public curTone:      Tone | null = null;
-		public nextTone:     Tone | null = null;
+		public prevNote:     Note | null = null;
+		public curNote:      Note | null = null;
+		public nextNote:     Note | null = null;
 		public pitch:        number = 0;
 		public pitchIndex:   number = -1;
 		public curIndex:     number = 0;
 		public start:        number = 0;
 		public end:          number = 0;
 		public part:         number = 0;
-		public tonePart:     number = 0;
+		public notePart:     number = 0;
 		public nearPinIndex: number = 0;
-		public pins:         TonePin[] = [];
+		public pins:         NotePin[] = [];
 	}
 }

@@ -33,12 +33,12 @@ package beepbox.editor {
 				return Math.floor(oldTime * 4.0 / 3.0);
 			}
 			var i: int = 0;
-			while (i < bar.tones.length) {
-				var tone: Tone = bar.tones[i];
-				if (changeRhythm(tone.start) >= changeRhythm(tone.end)) {
-					append(new ChangeToneAdded(document, bar, tone, i, true));
+			while (i < bar.notes.length) {
+				var note: Note = bar.notes[i];
+				if (changeRhythm(note.start) >= changeRhythm(note.end)) {
+					append(new ChangeNoteAdded(document, bar, note, i, true));
 				} else {
-					append(new ChangeRhythmTone(document, tone, changeRhythm));
+					append(new ChangeRhythmNote(document, note, changeRhythm));
 					i++;
 				}
 			}

@@ -38,7 +38,7 @@ package beepbox.editor {
 					sequence = new ChangeSequence();
 					for (var i: int = 0; i < Music.numChannels; i++) {
 						for (var j: int = 0; j < document.song.channelPatterns[i].length; j++) {
-							sequence.append(new ChangeToneTruncate(document, document.song.channelPatterns[i][j], newBeats * document.song.parts, oldBeats * document.song.parts));
+							sequence.append(new ChangeNoteTruncate(document, document.song.channelPatterns[i][j], newBeats * document.song.parts, oldBeats * document.song.parts));
 						}
 					}
 				}

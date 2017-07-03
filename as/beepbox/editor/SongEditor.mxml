@@ -90,7 +90,7 @@ SOFTWARE.
 		private var patternEditor: PatternEditor;
 		private var editMenu: Menu;
 		private var optionsMenu: Menu;
-		private var copyTones: Array;
+		private var copyNotes: Array;
 		private var copyBeats: int = 0;
 		private var copyParts: int = 0;
 		private var copyDrums: Boolean = false;
@@ -267,7 +267,7 @@ SOFTWARE.
 		private function copy(): void {
 			var pattern: BarPattern = doc.getCurrentPattern();
 			if (pattern == null) return;
-			copyTones = pattern.cloneTones();
+			copyNotes = pattern.cloneNotes();
 			copyBeats = doc.song.beats;
 			copyParts = doc.song.parts;
 			copyDrums = doc.channel == 3;
@@ -275,11 +275,11 @@ SOFTWARE.
 		
 		private function paste(): void {
 			if (!canPaste()) return;
-			doc.history.record(new ChangePaste(doc, copyTones));
+			doc.history.record(new ChangePaste(doc, copyNotes));
 		}
 		
 		private function canPaste(): Boolean {
-			return doc.getCurrentPattern() != null && copyTones != null && copyBeats == doc.song.beats && copyParts == doc.song.parts && copyDrums == (doc.channel == 3);
+			return doc.getCurrentPattern() != null && copyNotes != null && copyBeats == doc.song.beats && copyParts == doc.song.parts && copyDrums == (doc.channel == 3);
 		}
 		
 		private function cleanSlate(): void {

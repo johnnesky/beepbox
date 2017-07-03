@@ -569,19 +569,19 @@ module beepbox {
 							if (!isChorus) chorusOffset *= -1;
 							chorusOffset += Music.chorusOffsets[song.instrumentChorus[channel][nextInstrument]];
 							
-							for (let toneIndex: number = 0; toneIndex < pattern.tones.length; toneIndex++) {
-								const tone: Tone = pattern.tones[toneIndex];
+							for (let noteIndex: number = 0; noteIndex < pattern.notes.length; noteIndex++) {
+								const note: Note = pattern.notes[noteIndex];
 								
-								const toneStartTime: number = barStartTime + tone.start * ticksPerPart;
-								let pinTime: number = toneStartTime;
-								let pinVolume: number = tone.pins[0].volume;
-								let pinInterval: number = tone.pins[0].interval;
-								let pitch: number = channelRoot + tone.pitches[0] * intervalScale;
+								const noteStartTime: number = barStartTime + note.start * ticksPerPart;
+								let pinTime: number = noteStartTime;
+								let pinVolume: number = note.pins[0].volume;
+								let pinInterval: number = note.pins[0].interval;
+								let pitch: number = channelRoot + note.pitches[0] * intervalScale;
 								
-								for (let pinIndex: number = 1; pinIndex < tone.pins.length; pinIndex++) {
-									const nextPinTime: number = toneStartTime + tone.pins[pinIndex].time * ticksPerPart;
-									const nextPinVolume: number = tone.pins[pinIndex].volume;
-									const nextPinInterval: number = tone.pins[pinIndex].interval;
+								for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
+									const nextPinTime: number = noteStartTime + note.pins[pinIndex].time * ticksPerPart;
+									const nextPinVolume: number = note.pins[pinIndex].volume;
+									const nextPinInterval: number = note.pins[pinIndex].interval;
 									
 									const length: number = nextPinTime - pinTime;
 									for (let tick: number = 0; tick < length; tick++) {
@@ -591,21 +591,21 @@ module beepbox {
 										
 										const arpeggio: number = Math.floor(tick / ticksPerArpeggio) % 4;
 										let nextPitch: number;
-										if (tone.pitches.length == 2) {
-											nextPitch = tone.pitches[arpeggio >> 1];
-										} else if (tone.pitches.length == 3) {
-											nextPitch = tone.pitches[arpeggio == 3 ? 1 : arpeggio];
-										} else if (tone.pitches.length == 4) {
-											nextPitch = tone.pitches[arpeggio];
+										if (note.pitches.length == 2) {
+											nextPitch = note.pitches[arpeggio >> 1];
+										} else if (note.pitches.length == 3) {
+											nextPitch = note.pitches[arpeggio == 3 ? 1 : arpeggio];
+										} else if (note.pitches.length == 4) {
+											nextPitch = note.pitches[arpeggio];
 										} else {
-											nextPitch = tone.pitches[0];
+											nextPitch = note.pitches[0];
 										}
 										const fractionalPitch: number = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
 										nextPitch = Math.round(fractionalPitch);
 										let pitchOffset: number = fractionalPitch - nextPitch;
 										
 										const effectCurve: number = Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / effectDuration);
-										if (effectChoice != 2 || tickTime - toneStartTime >= 3 * ticksPerPart) {
+										if (effectChoice != 2 || tickTime - noteStartTime >= 3 * ticksPerPart) {
 											pitchOffset += effectVibrato * effectCurve;
 										}
 										const pitchBend: number = Math.max(0, Math.min(0x3fff, Math.round(0x2000 + 0x1000 * pitchOffset)));
@@ -631,7 +631,7 @@ module beepbox {
 											prevExpression = expression;
 										}
 										
-										if (tickTime == toneStartTime) {
+										if (tickTime == noteStartTime) {
 											writeEventTime(tickTime);
 											writeUint8(0x90 | midiChannel); // note on event for given channel
 											writeFlagAnd7Bits(0, nextPitch); // pitch
@@ -656,7 +656,7 @@ module beepbox {
 									pinInterval = nextPinInterval;
 								}
 								
-								writeEventTime(barStartTime + tone.end * ticksPerPart);
+								writeEventTime(barStartTime + note.end * ticksPerPart);
 								writeUint8(0x80 | midiChannel); // note off event for given channel
 								writeFlagAnd7Bits(0, pitch); // pitch
 								writeFlagAnd7Bits(0, 0x40); // pressure
