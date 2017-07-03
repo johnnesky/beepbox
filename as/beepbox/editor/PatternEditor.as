@@ -35,8 +35,8 @@ package beepbox.editor {
 		public var editorWidth: Number;
 		public const editorHeight: Number = 481;
 		public var partWidth: Number;
-		public var noteHeight: Number;
-		public var noteCount: int;
+		public var pitchHeight: Number;
+		public var pitchCount: int;
 		
 		[Bindable]
 		public var doc: Document;
@@ -153,24 +153,24 @@ package beepbox.editor {
 				}
 				
 				mousePitch -= interval;
-				cursor.note = snapToNote(mousePitch, -minInterval, (doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch) - maxInterval);
+				cursor.pitch = snapToPitch(mousePitch, -minInterval, (doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch) - maxInterval);
 				
 				var nearest: Number = error;
-				for (i = 0; i < cursor.curTone.notes.length; i++) {
-					var distance: Number = Math.abs(cursor.curTone.notes[i] - mousePitch + 0.5);
+				for (i = 0; i < cursor.curTone.pitches.length; i++) {
+					var distance: Number = Math.abs(cursor.curTone.pitches[i] - mousePitch + 0.5);
 					if (distance > nearest) continue;
 					nearest = distance;
-					cursor.note = cursor.curTone.notes[i];
+					cursor.pitch = cursor.curTone.pitches[i];
 				}
 				
-				for (i = 0; i < cursor.curTone.notes.length; i++) {
-					if (cursor.curTone.notes[i] == cursor.note) {
-						cursor.noteIndex = i;
+				for (i = 0; i < cursor.curTone.pitches.length; i++) {
+					if (cursor.curTone.pitches[i] == cursor.pitch) {
+						cursor.pitchIndex = i;
 						break;
 					}
 				}
 			} else {
-				cursor.note = snapToNote(mousePitch, 0, Music.maxPitch);
+				cursor.pitch = snapToPitch(mousePitch, 0, Music.maxPitch);
 				var defaultLength: int = copiedPins[copiedPins.length-1].time;
 				var quadBeats: int = cursor.part / doc.song.parts;
 				var modLength: int = defaultLength % doc.song.parts;
@@ -237,42 +237,42 @@ package beepbox.editor {
 		}
 		
 		private function findMousePitch(pixelY: Number): Number {
-			return Math.max(0, Math.min(noteCount-1, noteCount - (pixelY / noteHeight))) + octaveOffset;
+			return Math.max(0, Math.min(pitchCount-1, pitchCount - (pixelY / pitchHeight))) + octaveOffset;
 		}
 		
-		private function snapToNote(guess: Number, min: int, max: int): int {
+		private function snapToPitch(guess: Number, min: int, max: int): int {
 			if (guess < min) guess = min;
 			if (guess > max) guess = max;
 			var scale: Array = Music.scaleFlags[doc.song.scale];
 			if (scale[int(guess) % 12] || doc.channel == 3) {
 				return int(guess);
 			} else {
-				var topNote: int = int(guess) + 1;
-				var bottomNote: int = int(guess) - 1;
-				while (scale[topNote % 12] == false) {
-					topNote++;
+				var topPitch: int = int(guess) + 1;
+				var bottomPitch: int = int(guess) - 1;
+				while (scale[topPitch % 12] == false) {
+					topPitch++;
 				}
-				while (scale[(bottomNote) % 12] == false) {
-					bottomNote--;
+				while (scale[(bottomPitch) % 12] == false) {
+					bottomPitch--;
 				}
-				if (topNote > max) {
-					if (bottomNote < min) {
+				if (topPitch > max) {
+					if (bottomPitch < min) {
 						return min;
 					} else {
-						return bottomNote;
+						return bottomPitch;
 					}
-				} else if (bottomNote < min) {
-					return topNote;
+				} else if (bottomPitch < min) {
+					return topPitch;
 				}
-				var topRange: Number = topNote;
-				var bottomRange: Number = bottomNote + 1;
-				if (topNote % 12 == 0 || topNote % 12 == 7) {
+				var topRange: Number = topPitch;
+				var bottomRange: Number = bottomPitch + 1;
+				if (topPitch % 12 == 0 || topPitch % 12 == 7) {
 					topRange -= 0.5;
 				}
-				if (bottomNote % 12 == 0 || bottomNote % 12 == 7) {
+				if (bottomPitch % 12 == 0 || bottomPitch % 12 == 7) {
 					bottomRange += 0.5;
 				}
-				return guess - bottomRange > topRange - guess ? topNote : bottomNote;
+				return guess - bottomRange > topRange - guess ? topPitch : bottomPitch;
 			}
 		}
 		
@@ -420,7 +420,7 @@ package beepbox.editor {
 							}
 							i++;
 						}
-						var theTone: Tone = new Tone(cursor.note, start, end, 3, doc.channel == 3);
+						var theTone: Tone = new Tone(cursor.pitch, start, end, 3, doc.channel == 3);
 						sequence.append(new ChangeToneAdded(doc, pattern, theTone, i));
 						copyPins(theTone);
 					} else if (mouseHorizontal) {
@@ -442,7 +442,7 @@ package beepbox.editor {
 							sequence.append(new ChangePinTime(doc, cursor.curTone, cursor.nearPinIndex, shiftedTime));
 							copyPins(cursor.curTone);
 						}
-					} else if (cursor.noteIndex == -1) {
+					} else if (cursor.pitchIndex == -1) {
 						var bendPart: int = Math.round(Math.max(cursor.curTone.start, Math.min(cursor.curTone.end, mouseX / partWidth))) - cursor.curTone.start;
 						
 						var prevPin: TonePin;
@@ -458,7 +458,7 @@ package beepbox.editor {
 							bendVolume = prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((mouseYStart - mouseY) / 25.0);
 							if (bendVolume < 0) bendVolume = 0;
 							if (bendVolume > 3) bendVolume = 3;
-							bendInterval = snapToNote(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + cursor.curTone.notes[0], 0, Music.maxPitch) - cursor.curTone.notes[0];
+							bendInterval = snapToPitch(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + cursor.curTone.pitches[0], 0, Music.maxPitch) - cursor.curTone.pitches[0];
 							break;
 						}
 						
@@ -483,16 +483,16 @@ package beepbox.editor {
 							sequence.append(new ChangeToneTruncate(doc, pattern, bendEnd, cursor.curTone.end, cursor.curTone));
 						}
 						
-						var minNote: int = int.MAX_VALUE;
-						var maxNote: int = int.MIN_VALUE;
-						for each (var note: int in cursor.curTone.notes) {
-							if (minNote > note) minNote = note;
-							if (maxNote < note) maxNote = note;
+						var minPitch: int = int.MAX_VALUE;
+						var maxPitch: int = int.MIN_VALUE;
+						for each (var pitch: int in cursor.curTone.pitches) {
+							if (minPitch > pitch) minPitch = pitch;
+							if (maxPitch < pitch) maxPitch = pitch;
 						}
-						minNote -= cursor.curTone.notes[0];
-						maxNote -= cursor.curTone.notes[0];
-						var bendTo: int = snapToNote(findMousePitch(mouseY), -minNote, Music.maxPitch - maxNote);
-						sequence.append(new ChangePitchBend(doc, cursor.curTone, bendStart, bendEnd, bendTo, cursor.noteIndex));
+						minPitch -= cursor.curTone.pitches[0];
+						maxPitch -= cursor.curTone.pitches[0];
+						var bendTo: int = snapToPitch(findMousePitch(mouseY), -minPitch, Music.maxPitch - maxPitch);
+						sequence.append(new ChangePitchBend(doc, cursor.curTone, bendStart, bendEnd, bendTo, cursor.pitchIndex));
 						copyPins(cursor.curTone);
 					}
 					dragChange = sequence;
@@ -515,26 +515,26 @@ package beepbox.editor {
 				}
 			} else if (mouseDown) {
 				if (cursor.curTone == null) {
-					var tone: Tone = new Tone(cursor.note, cursor.start, cursor.end, 3, doc.channel == 3);
+					var tone: Tone = new Tone(cursor.pitch, cursor.start, cursor.end, 3, doc.channel == 3);
 					tone.pins = [];
 					for each (var oldPin: TonePin in cursor.pins) {
 						tone.pins.push(new TonePin(0, oldPin.time, oldPin.volume));
 					}
 					doc.history.record(new ChangeToneAdded(doc, pattern, tone, cursor.curIndex));
 				} else {
-					if (cursor.noteIndex == -1) {
+					if (cursor.pitchIndex == -1) {
 						var sequence: ChangeSequence = new ChangeSequence();
-						if (cursor.curTone.notes.length == 4) {
-							sequence.append(new ChangeNoteAdded(doc, pattern, cursor.curTone, cursor.curTone.notes[0], 0, true));
+						if (cursor.curTone.pitches.length == 4) {
+							sequence.append(new ChangePitchAdded(doc, pattern, cursor.curTone, cursor.curTone.pitches[0], 0, true));
 						}
-						sequence.append(new ChangeNoteAdded(doc, pattern, cursor.curTone, cursor.note, cursor.curTone.notes.length));
+						sequence.append(new ChangePitchAdded(doc, pattern, cursor.curTone, cursor.pitch, cursor.curTone.pitches.length));
 						doc.history.record(sequence);
 						copyPins(cursor.curTone);
 					} else {
-						if (cursor.curTone.notes.length == 1) {
+						if (cursor.curTone.pitches.length == 1) {
 							doc.history.record(new ChangeToneAdded(doc, pattern, cursor.curTone, cursor.curIndex, true));
 						} else {
-							doc.history.record(new ChangeNoteAdded(doc, pattern, cursor.curTone, cursor.note, cursor.curTone.notes.indexOf(cursor.note), true));
+							doc.history.record(new ChangePitchAdded(doc, pattern, cursor.curTone, cursor.pitch, cursor.curTone.pitches.indexOf(cursor.pitch), true));
 						}
 					}
 				}
@@ -551,7 +551,7 @@ package beepbox.editor {
 			if (!mouseOver || mouseDown || !cursor.valid || pattern == null) return;
 			
 			preview.graphics.lineStyle(2, 0xffffff);
-			drawNote(preview.graphics, cursor.note, cursor.start, cursor.pins, noteHeight / 2 + 1, true, octaveOffset);
+			drawNote(preview.graphics, cursor.pitch, cursor.start, cursor.pins, pitchHeight / 2 + 1, true, octaveOffset);
 			preview.graphics.lineStyle();
 		}
 		
@@ -559,8 +559,8 @@ package beepbox.editor {
 			editorWidth = doc.showLetters ? (doc.showScrollBar ? 460 : 480) : (doc.showScrollBar ? 492 : 512);
 			pattern = doc.getCurrentPattern();
 			partWidth = editorWidth / (doc.song.beats * doc.song.parts);
-			noteHeight = doc.channel == 3 ? 40 : 13;
-			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
+			pitchHeight = doc.channel == 3 ? 40 : 13;
+			pitchCount = doc.channel == 3 ? Music.drumCount : Music.pitchCount;
 			octaveOffset = doc.song.channelOctaves[doc.channel] * 12;
 			scrollRect = new Rectangle(0, 0, editorWidth, editorHeight);
 			copiedPins = copiedPinChannels[doc.channel];
@@ -571,14 +571,14 @@ package beepbox.editor {
 		private function render(): void {
 			graphics.clear();
 			graphics.beginFill(0);
-			graphics.drawRect(0, 0, partWidth * doc.song.beats * doc.song.parts, noteHeight * noteCount);
+			graphics.drawRect(0, 0, partWidth * doc.song.beats * doc.song.parts, pitchHeight * pitchCount);
 			graphics.endFill();
 			
 			updatePreview();
 			
 			if (pattern == null) return;
 			
-			for (var j: int = 0; j < noteCount; j++) {
+			for (var j: int = 0; j < pitchCount; j++) {
 				if (doc.channel != 3 && Music.scaleFlags[doc.song.scale][j%12] == false) {
 					continue;
 				}
@@ -589,40 +589,40 @@ package beepbox.editor {
 				}
 				graphics.beginFill(color);
 				for (var k: int = 0; k < doc.song.beats; k++) {
-					graphics.drawRect(partWidth * k * doc.song.parts + 1, noteHeight * (noteCount - j - 1) + 1, partWidth * doc.song.parts - 2, noteHeight - 2);
+					graphics.drawRect(partWidth * k * doc.song.parts + 1, pitchHeight * (pitchCount - j - 1) + 1, partWidth * doc.song.parts - 2, pitchHeight - 2);
 				}
 				graphics.endFill();
 			}
 			
 			var tone: Tone;
-			var note: int;
+			var pitch: int;
 			if (doc.channel != 3 && doc.showChannels) {
 				for (var channel: int = 2; channel >= 0; channel--) {
 					if (channel == doc.channel) continue;
 					var pattern2: BarPattern = doc.song.getPattern(channel, doc.bar);
 					if (pattern2 == null) continue;
 					for each (tone in pattern2.tones) {
-						for each (note in tone.notes) {
+						for each (pitch in tone.pitches) {
 							graphics.beginFill(SongEditor.noteColorsDim[channel]);
-							drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
+							drawNote(graphics, pitch, tone.start, tone.pins, pitchHeight / 2 - 4, false, doc.song.channelOctaves[channel] * 12);
 							graphics.endFill();
 						}
 					}
 				}
 			}
 			for each (tone in pattern.tones) {
-				for each (note in tone.notes) {
+				for each (pitch in tone.pitches) {
 					graphics.beginFill(SongEditor.noteColorsDim[doc.channel]);
-					drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, false, octaveOffset);
+					drawNote(graphics, pitch, tone.start, tone.pins, pitchHeight / 2 + 1, false, octaveOffset);
 					graphics.endFill();
 					graphics.beginFill(SongEditor.noteColorsBright[doc.channel]);
-					drawNote(graphics, note, tone.start, tone.pins, noteHeight / 2 + 1, true, octaveOffset);
+					drawNote(graphics, pitch, tone.start, tone.pins, pitchHeight / 2 + 1, true, octaveOffset);
 					graphics.endFill();
 				}
 			}
 		}
 		
-		private function drawNote(graphics: Graphics, note: int, start: int, pins: Array, radius: int, showVolume: Boolean, offset: Number): void {
+		private function drawNote(graphics: Graphics, pitch: int, start: int, pins: Array, radius: int, showVolume: Boolean, offset: Number): void {
 			var i: int;
 			var prevPin: TonePin;
 			var nextPin: TonePin;
@@ -633,14 +633,14 @@ package beepbox.editor {
 			var prevVolume: Number;
 			var nextVolume: Number;
 			nextPin = pins[0];
-			graphics.moveTo(partWidth * (start + nextPin.time) + 1, noteToPixelHeight(note - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0));
+			graphics.moveTo(partWidth * (start + nextPin.time) + 1, pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0));
 			for (i = 1; i < pins.length; i++) {
 				prevPin = nextPin;
 				nextPin = pins[i];
 				prevSide   = partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
 				nextSide   = partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
-				prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
-				nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
+				prevHeight = pitchToPixelHeight(pitch + prevPin.interval - offset);
+				nextHeight = pitchToPixelHeight(pitch + nextPin.interval - offset);
 				prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
 				nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
 				graphics.lineTo(prevSide, prevHeight - radius * prevVolume);
@@ -653,8 +653,8 @@ package beepbox.editor {
 				nextPin = pins[i];
 				prevSide   = partWidth * (start + prevPin.time) - (i == pins.length - 2 ? 1 : 0);
 				nextSide   = partWidth * (start + nextPin.time) + (i == 0 ? 1 : 0);
-				prevHeight = noteToPixelHeight(note + prevPin.interval - offset);
-				nextHeight = noteToPixelHeight(note + nextPin.interval - offset);
+				prevHeight = pitchToPixelHeight(pitch + prevPin.interval - offset);
+				nextHeight = pitchToPixelHeight(pitch + nextPin.interval - offset);
 				prevVolume = showVolume ? prevPin.volume / 3.0 : 1.0;
 				nextVolume = showVolume ? nextPin.volume / 3.0 : 1.0;
 				graphics.lineTo(prevSide, prevHeight + radius * prevVolume);
@@ -664,8 +664,8 @@ package beepbox.editor {
 			}
 		}
 		
-		private function noteToPixelHeight(note: int): Number {
-			return noteHeight * (noteCount - (note) - 0.5);
+		private function pitchToPixelHeight(pitch: int): Number {
+			return pitchHeight * (pitchCount - (pitch) - 0.5);
 		}
 	}
 }

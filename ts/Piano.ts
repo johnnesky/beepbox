@@ -59,13 +59,13 @@ module beepbox {
 		private readonly _editorWidth: number = 32;
 		private readonly _editorHeight: number = 481;
 		
-		private _noteHeight: number;
-		private _noteCount: number;
+		private _pitchHeight: number;
+		private _pitchCount: number;
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
-		private _cursorNote: number;
+		private _cursorPitch: number;
 		private _renderedScale: number = -1;
 		private _renderedDrums: boolean = false;
 		private _renderedKey: number = -1;
@@ -81,30 +81,30 @@ module beepbox {
 			this.container.addEventListener("mouseout", this._onMouseOut);
 		}
 		
-		private _updateCursorNote(): void {
+		private _updateCursorPitch(): void {
 			const scale: ReadonlyArray<boolean> = Music.scaleFlags[this._doc.song.scale];
 			
-			const mouseNote: number = Math.max(0, Math.min(this._noteCount-1, this._noteCount - (this._mouseY / this._noteHeight)));
-			if (scale[Math.floor(mouseNote) % 12] || this._doc.channel == 3) {
-				this._cursorNote = Math.floor(mouseNote);
+			const mousePitch: number = Math.max(0, Math.min(this._pitchCount-1, this._pitchCount - (this._mouseY / this._pitchHeight)));
+			if (scale[Math.floor(mousePitch) % 12] || this._doc.channel == 3) {
+				this._cursorPitch = Math.floor(mousePitch);
 			} else {
-				let topNote: number = Math.floor(mouseNote) + 1;
-				let bottomNote: number = Math.floor(mouseNote) - 1;
-				while (!scale[topNote % 12]) {
-					topNote++;
+				let topPitch: number = Math.floor(mousePitch) + 1;
+				let bottomPitch: number = Math.floor(mousePitch) - 1;
+				while (!scale[topPitch % 12]) {
+					topPitch++;
 				}
-				while (!scale[(bottomNote) % 12]) {
-					bottomNote--;
+				while (!scale[(bottomPitch) % 12]) {
+					bottomPitch--;
 				}
-				let topRange: number = topNote;
-				let bottomRange: number = bottomNote + 1;
-				if (topNote % 12 == 0 || topNote % 12 == 7) {
+				let topRange: number = topPitch;
+				let bottomRange: number = bottomPitch + 1;
+				if (topPitch % 12 == 0 || topPitch % 12 == 7) {
 					topRange -= 0.5;
 				}
-				if (bottomNote % 12 == 0 || bottomNote % 12 == 7) {
+				if (bottomPitch % 12 == 0 || bottomPitch % 12 == 7) {
 					bottomRange += 0.5;
 				}
-				this._cursorNote = mouseNote - bottomRange > topRange - mouseNote ? topNote : bottomNote;
+				this._cursorPitch = mousePitch - bottomRange > topRange - mousePitch ? topPitch : bottomPitch;
 			}
 		}
 		
@@ -134,8 +134,8 @@ module beepbox {
 			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-			this._updateCursorNote();
-			this._doc.synth.pianoNote = this._cursorNote + this._doc.song.channelOctaves[this._doc.channel] * 12;
+			this._updateCursorPitch();
+			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
 			this._updatePreview();
 		}
 		
@@ -150,17 +150,17 @@ module beepbox {
 			if (!this._mouseOver || this._mouseDown) return;
 			this._previewGraphics.clearRect(0, 0, 32, 40);
 			this._preview.style.left = "0px";
-			this._preview.style.top = this._noteHeight * (this._noteCount - this._cursorNote - 1) + "px";
+			this._preview.style.top = this._pitchHeight * (this._pitchCount - this._cursorPitch - 1) + "px";
 			this._previewGraphics.lineWidth = 2;
 			this._previewGraphics.strokeStyle = "#ffffff";
-			this._previewGraphics.strokeRect(1, 1, this._editorWidth - 2, this._noteHeight - 2);
+			this._previewGraphics.strokeRect(1, 1, this._editorWidth - 2, this._pitchHeight - 2);
 		}
 		
 		private _documentChanged = (): void => {
-			this._noteHeight = this._doc.channel == 3 ? 40 : 13;
-			this._noteCount = this._doc.channel == 3 ? Music.drumCount : Music.noteCount;
-			this._updateCursorNote();
-			this._doc.synth.pianoNote = this._cursorNote + this._doc.song.channelOctaves[this._doc.channel] * 12;
+			this._pitchHeight = this._doc.channel == 3 ? 40 : 13;
+			this._pitchCount = this._doc.channel == 3 ? Music.drumCount : Music.pitchCount;
+			this._updateCursorPitch();
+			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
 			this._doc.synth.pianoChannel = this._doc.channel;
 			this._render();
 		}
@@ -181,19 +181,19 @@ module beepbox {
 			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
 			
 			let key: HTMLImageElement;
-			for (let j: number = 0; j < this._noteCount; j++) {
-				const noteNameIndex: number = (j + Music.keyTransposes[this._doc.song.key]) % 12;
+			for (let j: number = 0; j < this._pitchCount; j++) {
+				const pitchNameIndex: number = (j + Music.keyTransposes[this._doc.song.key]) % 12;
 				if (this._doc.channel == 3) {
 					key = Drum;
-					const scale: number = 1.0 - ( j / this._noteCount ) * 0.35;
+					const scale: number = 1.0 - ( j / this._pitchCount ) * 0.35;
 					const offset: number = (1.0 - scale) * 0.5;
 					const x: number = key.width * offset;
-					const y: number = key.height * offset + this._noteHeight * (this._noteCount - j - 1);
+					const y: number = key.height * offset + this._pitchHeight * (this._pitchCount - j - 1);
 					const w: number = key.width * scale;
 					const h: number = key.height * scale;
 				    this._graphics.drawImage(key, x, y, w, h);
 				    
-					const brightness: number = 1.0 + ((j - this._noteCount / 2.0) / this._noteCount) * 0.5;
+					const brightness: number = 1.0 + ((j - this._pitchCount / 2.0) / this._pitchCount) * 0.5;
 					const imageData: ImageData = this._graphics.getImageData(x, y, w, h);
 					const data: Uint8ClampedArray = imageData.data;
 					for(let i = 0; i < data.length; i += 4) {
@@ -203,14 +203,14 @@ module beepbox {
 					}
 					this._graphics.putImageData(imageData, x, y);
 				} else if (!Music.scaleFlags[this._doc.song.scale][j%12]) {
-					key = Music.pianoScaleFlags[noteNameIndex] ? WhiteKeyDisabled : BlackKeyDisabled;
-				    this._graphics.drawImage(key, 0, this._noteHeight * (this._noteCount - j - 1));
+					key = Music.pianoScaleFlags[pitchNameIndex] ? WhiteKeyDisabled : BlackKeyDisabled;
+				    this._graphics.drawImage(key, 0, this._pitchHeight * (this._pitchCount - j - 1));
 				} else {
-					let text: string | null = Music.noteNames[noteNameIndex];
+					let text: string | null = Music.pitchNames[pitchNameIndex];
 					
 					if (text == null) {
 						const shiftDir: number = Music.blackKeyNameParents[j%12];
-						text = Music.noteNames[(noteNameIndex + 12 + shiftDir) % 12]!;
+						text = Music.pitchNames[(pitchNameIndex + 12 + shiftDir) % 12]!;
 						if (shiftDir == 1) {
 							text += "♭";
 						} else if (shiftDir == -1) {
@@ -218,12 +218,12 @@ module beepbox {
 						}
 					}
 					
-					const textColor: string = Music.pianoScaleFlags[noteNameIndex] ? "#000000" : "#ffffff";
-					key = Music.pianoScaleFlags[noteNameIndex] ? WhiteKey : BlackKey;
-				    this._graphics.drawImage(key, 0, this._noteHeight * (this._noteCount - j - 1));
+					const textColor: string = Music.pianoScaleFlags[pitchNameIndex] ? "#000000" : "#ffffff";
+					key = Music.pianoScaleFlags[pitchNameIndex] ? WhiteKey : BlackKey;
+				    this._graphics.drawImage(key, 0, this._pitchHeight * (this._pitchCount - j - 1));
 					this._graphics.font = "bold 11px sans-serif";
 				    this._graphics.fillStyle = textColor;
-				    this._graphics.fillText(text, 15, this._noteHeight * (this._noteCount - j) - 3);
+				    this._graphics.fillText(text, 15, this._pitchHeight * (this._pitchCount - j) - 3);
 				}
 			}
 			this._updatePreview();

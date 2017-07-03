@@ -368,8 +368,8 @@ module beepbox {
 		protected _newEnd: number;
 		protected _oldPins: TonePin[];
 		protected _newPins: TonePin[];
-		protected _oldNotes: number[];
-		protected _newNotes: number[];
+		protected _oldPitches: number[];
+		protected _newPitches: number[];
 		constructor(protected _document: SongDocument, protected _tone: Tone) {
 			super(false);
 			this._oldStart = this._tone.start;
@@ -378,8 +378,8 @@ module beepbox {
 			this._newEnd   = this._tone.end;
 			this._oldPins = this._tone.pins;
 			this._newPins = [];
-			this._oldNotes = this._tone.notes;
-			this._newNotes = [];
+			this._oldPitches = this._tone.pitches;
+			this._newPitches = [];
 		}
 		
 		protected _finishSetup(): void {
@@ -405,8 +405,8 @@ module beepbox {
 			
 			const firstInterval: number = this._newPins[0].interval;
 			const firstTime: number = this._newPins[0].time;
-			for (let i: number = 0; i < this._oldNotes.length; i++) {
-				this._newNotes[i] = this._oldNotes[i] + firstInterval;
+			for (let i: number = 0; i < this._oldPitches.length; i++) {
+				this._newPitches[i] = this._oldPitches[i] + firstInterval;
 			}
 			for (let i: number = 0; i < this._newPins.length; i++) {
 				this._newPins[i].interval -= firstInterval;
@@ -421,7 +421,7 @@ module beepbox {
 		
 		protected _doForwards(): void {
 			this._tone.pins = this._newPins;
-			this._tone.notes = this._newNotes;
+			this._tone.pitches = this._newPitches;
 			this._tone.start = this._newStart;
 			this._tone.end = this._newEnd;
 			this._document.changed();
@@ -429,7 +429,7 @@ module beepbox {
 		
 		protected _doBackwards(): void {
 			this._tone.pins = this._oldPins;
-			this._tone.notes = this._oldNotes;
+			this._tone.pitches = this._oldPitches;
 			this._tone.start = this._oldStart;
 			this._tone.end = this._oldEnd;
 			this._document.changed();
@@ -879,30 +879,30 @@ module beepbox {
 		}
 	}
 	
-	export class ChangeNoteAdded extends Change {
+	export class ChangePitchAdded extends Change {
 		private _document: SongDocument;
 		private _pattern: BarPattern;
 		private _tone: Tone;
-		private _note: number;
+		private _pitch: number;
 		private _index: number;
-		constructor(document: SongDocument, pattern: BarPattern, tone: Tone, note: number, index: number, deletion: boolean = false) {
+		constructor(document: SongDocument, pattern: BarPattern, tone: Tone, pitch: number, index: number, deletion: boolean = false) {
 			super(deletion);
 			this._document = document;
 			this._pattern = pattern;
 			this._tone = tone;
-			this._note = note;
+			this._pitch = pitch;
 			this._index = index;
 			this._didSomething();
 			this.redo();
 		}
 		
 		protected _doForwards(): void {
-			this._tone.notes.splice(this._index, 0, this._note);
+			this._tone.pitches.splice(this._index, 0, this._pitch);
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
-			this._tone.notes.splice(this._index, 1);
+			this._tone.pitches.splice(this._index, 1);
 			this._document.changed();
 		}
 	}
@@ -1116,12 +1116,12 @@ module beepbox {
 	}
 	
 	export class ChangePitchBend extends ChangePins {
-		constructor(document: SongDocument, tone: Tone, bendStart: number, bendEnd: number, bendTo: number, noteIndex: number) {
+		constructor(document: SongDocument, tone: Tone, bendStart: number, bendEnd: number, bendTo: number, pitchIndex: number) {
 			super(document, tone);
 			
 			bendStart -= this._oldStart;
 			bendEnd   -= this._oldStart;
-			bendTo    -= tone.notes[noteIndex];
+			bendTo    -= tone.pitches[pitchIndex];
 			
 			let setStart: boolean = false;
 			let setEnd: boolean   = false;
@@ -1442,58 +1442,58 @@ module beepbox {
 		protected _newEnd: number;
 		protected _oldPins: TonePin[];
 		protected _newPins: TonePin[];
-		protected _oldNotes: number[];
-		protected _newNotes: number[];
+		protected _oldPitches: number[];
+		protected _newPitches: number[];
 		constructor(doc: SongDocument, tone: Tone, upward: boolean) {
 			super(false);
 			this._document = doc;
 			this._tone = tone;
 			this._oldPins = tone.pins;
 			this._newPins = [];
-			this._oldNotes = tone.notes;
-			this._newNotes = [];
+			this._oldPitches = tone.pitches;
+			this._newPitches = [];
 			
 			const maxPitch: number = (doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch);
 			
-			for (let i: number = 0; i < this._oldNotes.length; i++) {
-				let note: number = this._oldNotes[i];
+			for (let i: number = 0; i < this._oldPitches.length; i++) {
+				let pitch: number = this._oldPitches[i];
 				if (upward) {
-					for (let j: number = note + 1; j <= maxPitch; j++) {
+					for (let j: number = pitch + 1; j <= maxPitch; j++) {
 						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12]) {
-							note = j;
+							pitch = j;
 							break;
 						}
 					}
 				} else {
-					for (let j: number = note - 1; j >= 0; j--) {
+					for (let j: number = pitch - 1; j >= 0; j--) {
 						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12]) {
-							note = j;
+							pitch = j;
 							break;
 						}
 					}
 				}
 				
 				let foundMatch: boolean = false;
-				for (let j: number = 0; j < this._newNotes.length; j++) {
-					if (this._newNotes[j] == note) {
+				for (let j: number = 0; j < this._newPitches.length; j++) {
+					if (this._newPitches[j] == pitch) {
 						foundMatch = true;
 						break;
 					}
 				}
-				if (!foundMatch) this._newNotes.push(note);
+				if (!foundMatch) this._newPitches.push(pitch);
 			}
 			
 			let min: number = 0;
 			let max: number = maxPitch;
 			
-			for (let i: number = 1; i < this._newNotes.length; i++) {
-				const diff: number = this._newNotes[0] - this._newNotes[i];
+			for (let i: number = 1; i < this._newPitches.length; i++) {
+				const diff: number = this._newPitches[0] - this._newPitches[i];
 				if (min < diff) min = diff;
 				if (max > diff + maxPitch) max = diff + maxPitch;
 			}
 			
 			for (const oldPin of this._oldPins) {
-				let interval: number = oldPin.interval + this._oldNotes[0];
+				let interval: number = oldPin.interval + this._oldPitches[0];
 				
 				if (interval < min) interval = min;
 				if (interval > max) interval = max;
@@ -1512,7 +1512,7 @@ module beepbox {
 						}
 					}
 				}
-				interval -= this._newNotes[0];
+				interval -= this._newPitches[0];
 				this._newPins.push(new TonePin(interval, oldPin.time, oldPin.volume));
 			}
 			
@@ -1536,13 +1536,13 @@ module beepbox {
 		
 		protected _doForwards(): void {
 			this._tone.pins = this._newPins;
-			this._tone.notes = this._newNotes;
+			this._tone.pitches = this._newPitches;
 			this._document.changed();
 		}
 		
 		protected _doBackwards(): void {
 			this._tone.pins = this._oldPins;
-			this._tone.notes = this._oldNotes;
+			this._tone.pitches = this._oldPitches;
 			this._document.changed();
 		}
 	}
@@ -1671,8 +1671,8 @@ module beepbox {
 		public prevTone:     Tone | null = null;
 		public curTone:      Tone | null = null;
 		public nextTone:     Tone | null = null;
-		public note:         number = 0;
-		public noteIndex:    number = -1;
+		public pitch:        number = 0;
+		public pitchIndex:   number = -1;
 		public curIndex:     number = 0;
 		public start:        number = 0;
 		public end:          number = 0;

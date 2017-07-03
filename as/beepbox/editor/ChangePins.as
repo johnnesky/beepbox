@@ -32,8 +32,8 @@ package beepbox.editor {
 		protected var newEnd: int;
 		protected var oldPins: Array;
 		protected var newPins: Array;
-		protected var oldNotes: Array;
-		protected var newNotes: Array;
+		protected var oldPitches: Array;
+		protected var newPitches: Array;
 		public function ChangePins(document: Document, tone: Tone, changePins: Function) {
 			super(false);
 			this.document = document;
@@ -44,8 +44,8 @@ package beepbox.editor {
 			newEnd   = tone.end;
 			oldPins = tone.pins;
 			newPins = [];
-			oldNotes = tone.notes;
-			newNotes = [];
+			oldPitches = tone.pitches;
+			newPitches = [];
 			
 			changePins();
 			
@@ -72,8 +72,8 @@ package beepbox.editor {
 			
 			var firstInterval: int = newPins[0].interval;
 			var firstTime: int = newPins[0].time;
-			for (i = 0; i < oldNotes.length; i++) {
-				newNotes[i] = oldNotes[i] + firstInterval;
+			for (i = 0; i < oldPitches.length; i++) {
+				newPitches[i] = oldPitches[i] + firstInterval;
 			}
 			for (i = 0; i < newPins.length; i++) {
 				newPins[i].interval -= firstInterval;
@@ -88,7 +88,7 @@ package beepbox.editor {
 		
 		protected override function doForwards(): void {
 			tone.pins = newPins;
-			tone.notes = newNotes;
+			tone.pitches = newPitches;
 			tone.start = newStart;
 			tone.end = newEnd;
 			document.changed();
@@ -96,7 +96,7 @@ package beepbox.editor {
 		
 		protected override function doBackwards(): void {
 			tone.pins = oldPins;
-			tone.notes = oldNotes;
+			tone.pitches = oldPitches;
 			tone.start = oldStart;
 			tone.end = oldEnd;
 			document.changed();

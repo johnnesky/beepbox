@@ -23,30 +23,30 @@ SOFTWARE.
 package beepbox.editor {
 	import beepbox.synth.*;
 	
-	public class ChangeNoteAdded extends Change {
+	public class ChangePitchAdded extends Change {
 		private var document: Document;
 		private var pattern: BarPattern;
 		private var tone: Tone;
-		private var note: int;
+		private var pitch: int;
 		private var index: int;
-		public function ChangeNoteAdded(document: Document, pattern: BarPattern, tone: Tone, note: int, index: int, deletion: Boolean = false) {
+		public function ChangePitchAdded(document: Document, pattern: BarPattern, tone: Tone, pitch: int, index: int, deletion: Boolean = false) {
 			super(deletion);
 			this.document = document;
 			this.pattern = pattern;
 			this.tone = tone;
-			this.note = note;
+			this.pitch = pitch;
 			this.index = index;
 			didSomething();
 			redo();
 		}
 		
 		protected override function doForwards(): void {
-			tone.notes.splice(index, 0, note);
+			tone.pitches.splice(index, 0, pitch);
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			tone.notes.splice(index, 1);
+			tone.pitches.splice(index, 1);
 			document.changed();
 		}
 	}

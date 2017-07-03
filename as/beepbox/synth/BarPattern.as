@@ -35,7 +35,7 @@ package beepbox.synth {
 			var result: Array = [];
 			for each (var oldTone: Tone in tones) {
 				var newTone: Tone = new Tone(-1, oldTone.start, oldTone.end, 3);
-				newTone.notes = oldTone.notes.concat();
+				newTone.pitches = oldTone.pitches.concat();
 				newTone.pins = [];
 				for each (var oldPin: TonePin in oldTone.pins) {
 					newTone.pins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));

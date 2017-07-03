@@ -42,8 +42,8 @@ SOFTWARE.
 		
 		import beepbox.synth.*;
 		
-		public var noteHeight: Number;
-		public var noteCount: int;
+		public var pitchHeight: Number;
+		public var pitchCount: int;
 		
 		[Bindable]
 		public var doc: Document;
@@ -64,12 +64,12 @@ SOFTWARE.
 		private var mouseOver: Boolean = false;
 		private var labels: Array;
 		private var keys: Array;
-		private var cursorNote: int;
+		private var cursorPitch: int;
 		
 		public function init():void {
 			keys = [];
 			labels = [];
-			for (var i: int = 0; i < Music.noteCount; i++) {
+			for (var i: int = 0; i < Music.pitchCount; i++) {
 				var format: TextFormat = new TextFormat();
 				format.align = TextFormatAlign.CENTER;
 				format.bold = true;
@@ -79,7 +79,7 @@ SOFTWARE.
 				text.width = 20;
 				text.x = 13;
 				text.height = 20;
-				text.y = 13 * (Music.noteCount - i - 1);
+				text.y = 13 * (Music.pitchCount - i - 1);
 				text.wordWrap = true;
 				text.type = TextFieldType.DYNAMIC;
 				text.selectable = false;
@@ -102,30 +102,30 @@ SOFTWARE.
 			addEventListener(MouseEvent.ROLL_OUT, onMouseOut);
 		}
 		
-		private function updateCursorNote(): void {
+		private function updateCursorPitch(): void {
 			var scale: Array = Music.scaleFlags[doc.song.scale];
 			
-			var mouseNote: Number = Math.max(0, Math.min(noteCount-1, noteCount - (mouseY / noteHeight)));
-			if (scale[int(mouseNote) % 12] || doc.channel == 3) {
-				cursorNote = int(mouseNote);
+			var mousePitch: Number = Math.max(0, Math.min(pitchCount-1, pitchCount - (mouseY / pitchHeight)));
+			if (scale[int(mousePitch) % 12] || doc.channel == 3) {
+				cursorPitch = int(mousePitch);
 			} else {
-				var topNote: int = int(mouseNote) + 1;
-				var bottomNote: int = int(mouseNote) - 1;
-				while (scale[topNote % 12] == false) {
-					topNote++;
+				var topPitch: int = int(mousePitch) + 1;
+				var bottomPitch: int = int(mousePitch) - 1;
+				while (scale[topPitch % 12] == false) {
+					topPitch++;
 				}
-				while (scale[(bottomNote) % 12] == false) {
-					bottomNote--;
+				while (scale[(bottomPitch) % 12] == false) {
+					bottomPitch--;
 				}
-				var topRange: Number = topNote;
-				var bottomRange: Number = bottomNote + 1;
-				if (topNote % 12 == 0 || topNote % 12 == 7) {
+				var topRange: Number = topPitch;
+				var bottomRange: Number = bottomPitch + 1;
+				if (topPitch % 12 == 0 || topPitch % 12 == 7) {
 					topRange -= 0.5;
 				}
-				if (bottomNote % 12 == 0 || bottomNote % 12 == 7) {
+				if (bottomPitch % 12 == 0 || bottomPitch % 12 == 7) {
 					bottomRange += 0.5;
 				}
-				cursorNote = mouseNote - bottomRange > topRange - mouseNote ? topNote : bottomNote;
+				cursorPitch = mousePitch - bottomRange > topRange - mousePitch ? topPitch : bottomPitch;
 			}
 		}
 		
@@ -144,8 +144,8 @@ SOFTWARE.
 		}
 		
 		private function onMouseMoved(event: Event): void {
-			updateCursorNote();
-			doc.synth.pianoNote = cursorNote + doc.song.channelOctaves[doc.channel] * 12;
+			updateCursorPitch();
+			doc.synth.pianoPitch = cursorPitch + doc.song.channelOctaves[doc.channel] * 12;
 			updatePreview();
 		}
 		
@@ -161,15 +161,15 @@ SOFTWARE.
 			preview.graphics.clear();
 			if (!mouseOver || mouseDown) return;
 			preview.graphics.lineStyle(2, 0xffffff);
-			preview.graphics.drawRect(1, noteHeight * (noteCount - cursorNote - 1) + 1, width - 2, noteHeight - 2);
+			preview.graphics.drawRect(1, pitchHeight * (pitchCount - cursorPitch - 1) + 1, width - 2, pitchHeight - 2);
 			preview.graphics.lineStyle();
 		}
 		
 		private function documentChanged(): void {
-			noteHeight = doc.channel == 3 ? 43 : 13;
-			noteCount = doc.channel == 3 ? Music.drumCount : Music.noteCount;
-			updateCursorNote();
-			doc.synth.pianoNote = cursorNote + doc.song.channelOctaves[doc.channel] * 12;
+			pitchHeight = doc.channel == 3 ? 43 : 13;
+			pitchCount = doc.channel == 3 ? Music.drumCount : Music.pitchCount;
+			updateCursorPitch();
+			doc.synth.pianoPitch = cursorPitch + doc.song.channelOctaves[doc.channel] * 12;
 			doc.synth.pianoChannel = doc.channel;
 			render();
 		}
@@ -191,29 +191,29 @@ SOFTWARE.
 			if (!doc.showLetters) return;
 			
 			if (doc.channel == 3) {
-				for (var i: int = 0; i < Music.noteCount; i++) {
+				for (var i: int = 0; i < Music.pitchCount; i++) {
 					labels[i].text = "";
 				}
 			}
-			for (var j: int = 0; j < noteCount; j++) {
-				var noteNameIndex: int = (j + Music.keyTransposes[doc.song.key]) % 12;
+			for (var j: int = 0; j < pitchCount; j++) {
+				var pitchNameIndex: int = (j + Music.keyTransposes[doc.song.key]) % 12;
 				if (doc.channel == 3) {
 					key = new Drum();
-					key.scaleX = key.scaleY = 1.0 - ( j / noteCount ) * 0.35;
+					key.scaleX = key.scaleY = 1.0 - ( j / pitchCount ) * 0.35;
 					key.x = 16.0 - key.width / 2.0;
 					key.y = 21.5 - key.height / 2.0;
 					key.smoothing = true;
-					var brightness: Number = 1.0 + ((j - noteCount / 2.0) / noteCount) * 0.5;
+					var brightness: Number = 1.0 + ((j - pitchCount / 2.0) / pitchCount) * 0.5;
 		            key.transform.colorTransform = new ColorTransform(brightness, brightness, brightness);
 				} else if (Music.scaleFlags[doc.song.scale][j%12] == false) {
 					labels[j].text = "";
-					key = Music.pianoScaleFlags[noteNameIndex] ? new WhiteKeyDisabled() : new BlackKeyDisabled();
+					key = Music.pianoScaleFlags[pitchNameIndex] ? new WhiteKeyDisabled() : new BlackKeyDisabled();
 				} else {
-					labels[j].text = Music.noteNames[noteNameIndex];
-					labels[j].textColor = Music.pianoScaleFlags[noteNameIndex] ? 0x000000 : 0xffffff;
-					key = Music.pianoScaleFlags[noteNameIndex] ? new WhiteKey() : new BlackKey();
+					labels[j].text = Music.pitchNames[pitchNameIndex];
+					labels[j].textColor = Music.pianoScaleFlags[pitchNameIndex] ? 0x000000 : 0xffffff;
+					key = Music.pianoScaleFlags[pitchNameIndex] ? new WhiteKey() : new BlackKey();
 				}
-				key.y += noteHeight * (noteCount - j - 1);
+				key.y += pitchHeight * (pitchCount - j - 1);
 				container.addChildAt(key, 0);
 				keys.push(key);
 			}

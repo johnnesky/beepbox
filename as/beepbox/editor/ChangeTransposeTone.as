@@ -32,59 +32,59 @@ package beepbox.editor {
 		protected var newEnd: int;
 		protected var oldPins: Array;
 		protected var newPins: Array;
-		protected var oldNotes: Array;
-		protected var newNotes: Array;
+		protected var oldPitches: Array;
+		protected var newPitches: Array;
 		public function ChangeTransposeTone(doc: Document, tone: Tone, upward: Boolean) {
 			super(false);
 			this.doc = doc;
 			this.tone = tone;
 			oldPins = tone.pins;
 			newPins = [];
-			oldNotes = tone.notes;
-			newNotes = [];
+			oldPitches = tone.pitches;
+			newPitches = [];
 			
 			var i: int;
 			var j: int;
 			
-			for (i = 0; i < oldNotes.length; i++) {
-				var note: int = oldNotes[i];
+			for (i = 0; i < oldPitches.length; i++) {
+				var pitch: int = oldPitches[i];
 				if (upward) {
-					for (j = note + 1; j <= Music.maxPitch; j++) {
+					for (j = pitch + 1; j <= Music.maxPitch; j++) {
 						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12] == true) {
-							note = j;
+							pitch = j;
 							break;
 						}
 					}
 				} else {
-					for (j = note - 1; j >= 0; j--) {
+					for (j = pitch - 1; j >= 0; j--) {
 						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12] == true) {
-							note = j;
+							pitch = j;
 							break;
 						}
 					}
 				}
 				
 				var foundMatch: Boolean = false;
-				for (j = 0; j < newNotes.length; j++) {
-					if (newNotes[j] == note) {
+				for (j = 0; j < newPitches.length; j++) {
+					if (newPitches[j] == pitch) {
 						foundMatch = true;
 						break;
 					}
 				}
-				if (!foundMatch) newNotes.push(note);
+				if (!foundMatch) newPitches.push(pitch);
 			}
 			
 			var min: int = 0;
 			var max: int = Music.maxPitch;
 			
-			for (i = 1; i < newNotes.length; i++) {
-				var diff: int = newNotes[0] - newNotes[i];
+			for (i = 1; i < newPitches.length; i++) {
+				var diff: int = newPitches[0] - newPitches[i];
 				if (min < diff) min = diff;
 				if (max > diff + Music.maxPitch) max = diff + Music.maxPitch;
 			}
 			
 			for each (var oldPin: TonePin in oldPins) {
-				var interval: int = oldPin.interval + oldNotes[0];
+				var interval: int = oldPin.interval + oldPitches[0];
 				
 				if (interval < min) interval = min;
 				if (interval > max) interval = max;
@@ -103,7 +103,7 @@ package beepbox.editor {
 						}
 					}
 				}
-				interval -= newNotes[0];
+				interval -= newPitches[0];
 				newPins.push(new TonePin(interval, oldPin.time, oldPin.volume));
 			}
 			
@@ -127,13 +127,13 @@ package beepbox.editor {
 		
 		protected override function doForwards(): void {
 			tone.pins = newPins;
-			tone.notes = newNotes;
+			tone.pitches = newPitches;
 			doc.changed();
 		}
 		
 		protected override function doBackwards(): void {
 			tone.pins = oldPins;
-			tone.notes = oldNotes;
+			tone.pitches = oldPitches;
 			doc.changed();
 		}
 	}

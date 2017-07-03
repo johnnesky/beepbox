@@ -83,7 +83,7 @@ module beepbox {
 			return this.readLongTail(1, 0);
 		}
 		
-		public readNoteInterval(): number {
+		public readPitchInterval(): number {
 			if (this.read(1)) {
 				return -this.readLongTail(1, 3);
 			} else {
@@ -127,7 +127,7 @@ module beepbox {
 			this.writeLongTail(1, 0, value);
 		}
 		
-		public writeNoteInterval(value: number): void {
+		public writePitchInterval(value: number): void {
 			if (value < 0) {
 				this.write(1, 1); // sign
 				this.writeLongTail(1, 3, -value);
@@ -176,7 +176,7 @@ module beepbox {
 		public static readonly pianoScaleFlags: ReadonlyArray<boolean> = [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true];
 		// C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
 		public static readonly blackKeyNameParents: ReadonlyArray<number> = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
-		public static readonly noteNames: ReadonlyArray<string | null> = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
+		public static readonly pitchNames: ReadonlyArray<string | null> = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
 		public static readonly keyNames: ReadonlyArray<string> = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
 		public static readonly keyTransposes: ReadonlyArray<number> = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
 		public static readonly tempoNames: ReadonlyArray<string> = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
@@ -213,7 +213,7 @@ module beepbox {
 		public static readonly drumInterval: number = 6;
 		public static readonly numChannels: number = 4;
 		public static readonly drumCount: number = 12;
-		public static readonly noteCount: number = 37;
+		public static readonly pitchCount: number = 37;
 		public static readonly maxPitch: number = 84;
 	}
 
@@ -230,13 +230,13 @@ module beepbox {
 	}
 
 	export class Tone {
-		public notes: number[];
+		public pitches: number[];
 		public pins: TonePin[];
 		public start: number;
 		public end: number;
 		
-		constructor(note: number, start: number, end: number, volume: number, fadeout: boolean = false) {
-			this.notes = [note];
+		constructor(pitch: number, start: number, end: number, volume: number, fadeout: boolean = false) {
+			this.pitches = [pitch];
 			this.pins = [new TonePin(0, 0, volume), new TonePin(0, end - start, fadeout ? 0 : volume)];
 			this.start = start;
 			this.end = end;
@@ -255,7 +255,7 @@ module beepbox {
 			const result: Tone[] = [];
 			for (const oldTone of this.tones) {
 				const newTone: Tone = new Tone(-1, oldTone.start, oldTone.end, 3);
-				newTone.notes = oldTone.notes.concat();
+				newTone.pitches = oldTone.pitches.concat();
 				newTone.pins = [];
 				for (const oldPin of oldTone.pins) {
 					newTone.pins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
@@ -403,11 +403,11 @@ module beepbox {
 			while ((1 << neededInstrumentBits) < this.instruments) neededInstrumentBits++;
 			for (channel = 0; channel < Music.numChannels; channel++) {
 				const octaveOffset: number = channel == 3 ? 0 : this.channelOctaves[channel] * 12;
-				let lastNote: number = (channel == 3 ? 4 : 12) + octaveOffset;
-				const recentNotes: number[] = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+				let lastPitch: number = (channel == 3 ? 4 : 12) + octaveOffset;
+				const recentPitches: number[] = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
 				const recentShapes: string[] = [];
-				for (let i: number = 0; i < recentNotes.length; i++) {
-					recentNotes[i] += octaveOffset;
+				for (let i: number = 0; i < recentPitches.length; i++) {
+					recentPitches[i] += octaveOffset;
 				}
 				for (const p of this.channelPatterns[channel]) {
 					bits.write(neededInstrumentBits, p.instrument);
@@ -424,25 +424,25 @@ module beepbox {
 							
 							const shapeBits: BitFieldWriter = new BitFieldWriter();
 							
-							// 0: 1 note, 10: 2 notes, 110: 3 notes, 111: 4 notes
-							for (let i: number = 1; i < t.notes.length; i++) shapeBits.write(1,1);
-							if (t.notes.length < 4) shapeBits.write(1,0);
+							// 0: 1 pitch, 10: 2 pitches, 110: 3 pitches, 111: 4 pitches
+							for (let i: number = 1; i < t.pitches.length; i++) shapeBits.write(1,1);
+							if (t.pitches.length < 4) shapeBits.write(1,0);
 							
 							shapeBits.writePinCount(t.pins.length - 1);
 							
 							shapeBits.write(2, t.pins[0].volume); // volume
 							
 							let shapePart: number = 0;
-							let startNote: number = t.notes[0];
-							let currentNote: number = startNote;
+							let startPitch: number = t.pitches[0];
+							let currentPitch: number = startPitch;
 							const pitchBends: number[] = [];
 							for (let i: number = 1; i < t.pins.length; i++) {
 								const pin: TonePin = t.pins[i];
-								const nextNote: number = startNote + pin.interval;
-								if (currentNote != nextNote) {
+								const nextPitch: number = startPitch + pin.interval;
+								if (currentPitch != nextPitch) {
 									shapeBits.write(1, 1);
-									pitchBends.push(nextNote);
-									currentNote = nextNote;
+									pitchBends.push(nextPitch);
+									currentPitch = nextPitch;
 								} else {
 									shapeBits.write(1, 0);
 								}
@@ -464,38 +464,38 @@ module beepbox {
 							recentShapes.unshift(shapeString);
 							if (recentShapes.length > 10) recentShapes.pop();
 							
-							const allNotes: number[] = t.notes.concat(pitchBends);
-							for (let i: number = 0; i < allNotes.length; i++) {
-								const note: number = allNotes[i];
-								const noteIndex: number = recentNotes.indexOf(note);
-								if (noteIndex == -1) {
+							const allPitches: number[] = t.pitches.concat(pitchBends);
+							for (let i: number = 0; i < allPitches.length; i++) {
+								const pitch: number = allPitches[i];
+								const pitchIndex: number = recentPitches.indexOf(pitch);
+								if (pitchIndex == -1) {
 									let interval: number = 0;
-									let noteIter: number = lastNote;
-									if (noteIter < note) {
-										while (noteIter != note) {
-											noteIter++;
-											if (recentNotes.indexOf(noteIter) == -1) interval++;
+									let pitchIter: number = lastPitch;
+									if (pitchIter < pitch) {
+										while (pitchIter != pitch) {
+											pitchIter++;
+											if (recentPitches.indexOf(pitchIter) == -1) interval++;
 										}
 									} else {
-										while (noteIter != note) {
-											noteIter--;
-											if (recentNotes.indexOf(noteIter) == -1) interval--;
+										while (pitchIter != pitch) {
+											pitchIter--;
+											if (recentPitches.indexOf(pitchIter) == -1) interval--;
 										}
 									}
 									bits.write(1, 0);
-									bits.writeNoteInterval(interval);
+									bits.writePitchInterval(interval);
 								} else {
 									bits.write(1, 1);
-									bits.write(3, noteIndex);
-									recentNotes.splice(noteIndex, 1);
+									bits.write(3, pitchIndex);
+									recentPitches.splice(pitchIndex, 1);
 								}
-								recentNotes.unshift(note);
-								if (recentNotes.length > 8) recentNotes.pop();
+								recentPitches.unshift(pitch);
+								if (recentPitches.length > 8) recentPitches.pop();
 								
-								if (i == t.notes.length - 1) {
-									lastNote = t.notes[0];
+								if (i == t.pitches.length - 1) {
+									lastPitch = t.pitches[0];
 								} else {
-									lastNote = note;
+									lastPitch = pitch;
 								}
 							}
 							curPart = t.end;
@@ -736,11 +736,11 @@ module beepbox {
 						const octaveOffset: number = channel == 3 ? 0 : this.channelOctaves[channel] * 12;
 						let tone: Tone | null = null;
 						let pin: TonePin | null = null;
-						let lastNote: number = (channel == 3 ? 4 : 12) + octaveOffset;
-						const recentNotes: number[] = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+						let lastPitch: number = (channel == 3 ? 4 : 12) + octaveOffset;
+						const recentPitches: number[] = channel == 3 ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
 						const recentShapes: any[] = [];
-						for (let i: number = 0; i < recentNotes.length; i++) {
-							recentNotes[i] += octaveOffset;
+						for (let i: number = 0; i < recentPitches.length; i++) {
+							recentPitches[i] += octaveOffset;
 						}
 						for (let i: number = 0; i < this.patterns; i++) {
 							const newPattern: BarPattern | null = new BarPattern();
@@ -768,15 +768,15 @@ module beepbox {
 								} else {
 									let shape: any;
 									let pinObj: any;
-									let note: number;
+									let pitch: number;
 									if (useOldShape) {
 										shape = recentShapes[shapeIndex];
 										recentShapes.splice(shapeIndex, 1);
 									} else {
 										shape = {};
 										
-										shape.noteCount = 1;
-										while (shape.noteCount < 4 && bits.read(1) == 1) shape.noteCount++;
+										shape.pitchCount = 1;
+										while (shape.pitchCount < 4 && bits.read(1) == 1) shape.pitchCount++;
 										
 										shape.pinCount = bits.readPinCount();
 										shape.initialVolume = bits.read(2);
@@ -798,52 +798,52 @@ module beepbox {
 									if (recentShapes.length > 10) recentShapes.pop();
 									
 									tone = new Tone(0,curPart,curPart + shape.length, shape.initialVolume);
-									tone.notes = [];
+									tone.pitches = [];
 									tone.pins.length = 1;
 									const pitchBends: number[] = [];
-									for (let j: number = 0; j < shape.noteCount + shape.bendCount; j++) {
-										const useOldNote: boolean = bits.read(1) == 1;
-										if (!useOldNote) {
-											const interval: number = bits.readNoteInterval();
-											note = lastNote;
+									for (let j: number = 0; j < shape.pitchCount + shape.bendCount; j++) {
+										const useOldPitch: boolean = bits.read(1) == 1;
+										if (!useOldPitch) {
+											const interval: number = bits.readPitchInterval();
+											pitch = lastPitch;
 											let intervalIter: number = interval;
 											while (intervalIter > 0) {
-												note++;
-												while (recentNotes.indexOf(note) != -1) note++;
+												pitch++;
+												while (recentPitches.indexOf(pitch) != -1) pitch++;
 												intervalIter--;
 											}
 											while (intervalIter < 0) {
-												note--;
-												while (recentNotes.indexOf(note) != -1) note--;
+												pitch--;
+												while (recentPitches.indexOf(pitch) != -1) pitch--;
 												intervalIter++;
 											}
 										} else {
-											const noteIndex: number = bits.read(3);
-											note = recentNotes[noteIndex];
-											recentNotes.splice(noteIndex, 1);
+											const pitchIndex: number = bits.read(3);
+											pitch = recentPitches[pitchIndex];
+											recentPitches.splice(pitchIndex, 1);
 										}
 										
-										recentNotes.unshift(note);
-										if (recentNotes.length > 8) recentNotes.pop();
+										recentPitches.unshift(pitch);
+										if (recentPitches.length > 8) recentPitches.pop();
 										
-										if (j < shape.noteCount) {
-											tone.notes.push(note);
+										if (j < shape.pitchCount) {
+											tone.pitches.push(pitch);
 										} else {
-											pitchBends.push(note);
+											pitchBends.push(pitch);
 										}
 										
-										if (j == shape.noteCount - 1) {
-											lastNote = tone.notes[0];
+										if (j == shape.pitchCount - 1) {
+											lastPitch = tone.pitches[0];
 										} else {
-											lastNote = note;
+											lastPitch = pitch;
 										}
 									}
 									
-									pitchBends.unshift(tone.notes[0]);
+									pitchBends.unshift(tone.pitches[0]);
 									
 									for (const pinObj of shape.pins) {
 										if (pinObj.pitchBend) pitchBends.shift();
-										pin = new TonePin(pitchBends[0] - tone.notes[0], pinObj.time, pinObj.volume);
+										pin = new TonePin(pitchBends[0] - tone.pitches[0], pinObj.time, pinObj.volume);
 										tone.pins.push(pin);
 									}
 									curPart = tone.end;
@@ -889,7 +889,7 @@ module beepbox {
 				
 				const patternArray: Object[] = [];
 				for (const pattern of this.channelPatterns[channel]) {
-					const noteArray: Object[] = [];
+					const pitchArray: Object[] = [];
 					for (const tone of pattern.tones) {
 						const pointArray: Object[] = [];
 						for (const pin of tone.pins) {
@@ -900,15 +900,15 @@ module beepbox {
 							});
 						}
 						
-						noteArray.push({
-							pitches: tone.notes,
+						pitchArray.push({
+							pitches: tone.pitches,
 							points: pointArray,
 						});
 					}
 					
 					patternArray.push({
 						instrument: pattern.instrument + 1,
-						notes: noteArray, 
+						pitches: pitchArray, 
 					});
 				}
 				
@@ -1078,35 +1078,35 @@ module beepbox {
 					
 					pattern.instrument = this._clip(0, this.instruments, (patternObject.instrument | 0) - 1);
 					
-					if (patternObject.notes && patternObject.notes.length > 0) {
-						const maxToneCount: number = Math.min(this.beats * this.parts, patternObject.notes.length >>> 0);
+					if (patternObject.pitches && patternObject.pitches.length > 0) {
+						const maxToneCount: number = Math.min(this.beats * this.parts, patternObject.pitches.length >>> 0);
 						
-						///@TODO: Consider supporting notes specified in any timing order, sorting them and truncating as necessary. 
+						///@TODO: Consider supporting pitches specified in any timing order, sorting them and truncating as necessary. 
 						let tickClock: number = 0;
-						for (let j: number = 0; j < patternObject.notes.length; j++) {
+						for (let j: number = 0; j < patternObject.pitches.length; j++) {
 							if (j >= maxToneCount) break;
 							
-							const noteObject = patternObject.notes[j];
-							if (!noteObject || !noteObject.pitches || !(noteObject.pitches.length >= 1) || !noteObject.points || !(noteObject.points.length >= 2)) {
+							const pitchObject = patternObject.pitches[j];
+							if (!pitchObject || !pitchObject.pitches || !(pitchObject.pitches.length >= 1) || !pitchObject.points || !(pitchObject.points.length >= 2)) {
 								continue;
 							}
 							
 							const tone: Tone = new Tone(0, 0, 0, 0);
-							tone.notes = [];
+							tone.pitches = [];
 							tone.pins = [];
 							
-							for (let k: number = 0; k < noteObject.pitches.length; k++) {
-								const pitch: number = noteObject.pitches[k] | 0;
-								if (tone.notes.indexOf(pitch) != -1) continue;
-								tone.notes.push(pitch);
-								if (tone.notes.length >= 4) break;
+							for (let k: number = 0; k < pitchObject.pitches.length; k++) {
+								const pitch: number = pitchObject.pitches[k] | 0;
+								if (tone.pitches.indexOf(pitch) != -1) continue;
+								tone.pitches.push(pitch);
+								if (tone.pitches.length >= 4) break;
 							}
-							if (tone.notes.length < 1) continue;
+							if (tone.pitches.length < 1) continue;
 							
 							let toneClock: number = tickClock;
 							let startInterval: number = 0;
-							for (let k: number = 0; k < noteObject.points.length; k++) {
-								const pointObject: any = noteObject.points[k];
+							for (let k: number = 0; k < pitchObject.points.length; k++) {
+								const pointObject: any = pitchObject.points[k];
 								if (pointObject == undefined || pointObject.tick == undefined) continue;
 								const interval: number = (pointObject.pitchBend == undefined) ? 0 : (pointObject.pitchBend | 0);
 								const time: number = pointObject.tick | 0;
@@ -1131,16 +1131,16 @@ module beepbox {
 							const maxPitch: number = channel == 3 ? Music.drumCount - 1 : Music.maxPitch;
 							let lowestPitch: number = maxPitch;
 							let highestPitch: number = 0;
-							for (let k: number = 0; k < tone.notes.length; k++) {
-								tone.notes[k] += startInterval;
-								if (tone.notes[k] < 0 || tone.notes[k] > maxPitch) {
-									tone.notes.splice(k, 1);
+							for (let k: number = 0; k < tone.pitches.length; k++) {
+								tone.pitches[k] += startInterval;
+								if (tone.pitches[k] < 0 || tone.pitches[k] > maxPitch) {
+									tone.pitches.splice(k, 1);
 									k--;
 								}
-								if (tone.notes[k] < lowestPitch) lowestPitch = tone.notes[k];
-								if (tone.notes[k] > highestPitch) highestPitch = tone.notes[k];
+								if (tone.pitches[k] < lowestPitch) lowestPitch = tone.pitches[k];
+								if (tone.pitches[k] > highestPitch) highestPitch = tone.pitches[k];
 							}
-							if (tone.notes.length < 1) continue;
+							if (tone.pitches.length < 1) continue;
 							
 							for (let k: number = 0; k < tone.pins.length; k++) {
 								const pin: TonePin = tone.pins[k];
@@ -1218,7 +1218,7 @@ module beepbox {
 		
 		public song: Song | null = null;
 		public pianoPressed: boolean = false;
-		public pianoNote: number = 0;
+		public pianoPitch: number = 0;
 		public pianoChannel: number = 0;
 		public enableIntro: boolean = true;
 		public enableOutro: boolean = false;
@@ -1271,7 +1271,7 @@ module beepbox {
 		public set playhead(value: number) {
 			if (this.song != null) {
 				this._playhead = Math.max(0, Math.min(this.song.bars, value));
-				var remainder: number = this._playhead;
+				let remainder: number = this._playhead;
 				this._bar = Math.floor(remainder);
 				remainder = this.song.beats * (remainder - this._bar);
 				this._beat = Math.floor(remainder);
@@ -1279,7 +1279,7 @@ module beepbox {
 				this._part = Math.floor(remainder);
 				remainder = 4 * (remainder - this._part);
 				this._arpeggio = Math.floor(remainder);
-				var samplesPerArpeggio: number = this._getSamplesPerArpeggio();
+				const samplesPerArpeggio: number = this._getSamplesPerArpeggio();
 				remainder = samplesPerArpeggio * (remainder - this._arpeggio);
 				this._arpeggioSamples = Math.floor(samplesPerArpeggio - remainder);
 				if (this._bar < this.song.loopStart) {
@@ -1599,9 +1599,9 @@ module beepbox {
 						
 						const attack: number = pattern == null ? 0 : song.instrumentAttacks[channel][pattern.instrument];
 						
-						var tone: Tone | null = null;
-						var prevTone: Tone | null = null;
-						var nextTone: Tone | null = null;
+						let tone: Tone | null = null;
+						let prevTone: Tone | null = null;
+						let nextTone: Tone | null = null;
 						if (pattern != null) {
 							for (let i: number = 0; i < pattern.tones.length; i++) {
 								if (pattern.tones[i].end <= time) {
@@ -1628,7 +1628,7 @@ module beepbox {
 						let vibratoScale: number;
 						let resetPeriod: boolean = false;
 						if (this.pianoPressed && channel == this.pianoChannel) {
-							const pianoFreq: number = this._frequencyFromPitch(channelRoot + this.pianoNote * intervalScale);
+							const pianoFreq: number = this._frequencyFromPitch(channelRoot + this.pianoPitch * intervalScale);
 							const instrument = pattern ? pattern.instrument : 0; 
 							let pianoPitchDamping: number;
 							if (channel == 3) {
@@ -1643,7 +1643,7 @@ module beepbox {
 							}
 							periodDelta = pianoFreq * sampleTime;
 							periodDeltaScale = 1.0;
-							toneVolume = Math.pow(2.0, -this.pianoNote * intervalScale / pianoPitchDamping);
+							toneVolume = Math.pow(2.0, -this.pianoPitch * intervalScale / pianoPitchDamping);
 							volumeDelta = 0.0;
 							filter = 1.0;
 							filterScale = 1.0;
@@ -1659,18 +1659,18 @@ module beepbox {
 							resetPeriod = true;
 						} else {
 							let pitch: number;
-							if (tone.notes.length == 2) {
-								pitch = tone.notes[this._arpeggio >> 1];
-							} else if (tone.notes.length == 3) {
-								pitch = tone.notes[this._arpeggio == 3 ? 1 : this._arpeggio];
-							} else if (tone.notes.length == 4) {
-								pitch = tone.notes[this._arpeggio];
+							if (tone.pitches.length == 2) {
+								pitch = tone.pitches[this._arpeggio >> 1];
+							} else if (tone.pitches.length == 3) {
+								pitch = tone.pitches[this._arpeggio == 3 ? 1 : this._arpeggio];
+							} else if (tone.pitches.length == 4) {
+								pitch = tone.pitches[this._arpeggio];
 							} else {
-								pitch = tone.notes[0];
+								pitch = tone.pitches[0];
 							}
 							
 							let endPinIndex: number;
-							for (endPinIndex = 1; endPinIndex < tone.pins.length - 1; endPinIndex) {
+							for (endPinIndex = 1; endPinIndex < tone.pins.length - 1; endPinIndex++) {
 								if (tone.pins[endPinIndex].time + tone.start > time) break;
 							}
 							const startPin: TonePin = tone.pins[endPinIndex-1];
@@ -1698,14 +1698,14 @@ module beepbox {
 								} else if (attack == 2) {
 									arpeggioVolumeStart = 0.0;
 								} else if (attack == 3) {
-									if (prevTone == null || prevTone.notes.length > 1 || tone.notes.length > 1) {
+									if (prevTone == null || prevTone.pitches.length > 1 || tone.pitches.length > 1) {
 										arpeggioVolumeStart = 0.0;
 									} else if (prevTone.pins[prevTone.pins.length-1].volume == 0 || tone.pins[0].volume == 0) {
 										arpeggioVolumeStart = 0.0;
-									//} else if (prevTone.notes[0] + prevTone.pins[prevTone.pins.length-1].interval == pitch) {
+									//} else if (prevTone.pitches[0] + prevTone.pins[prevTone.pins.length-1].interval == pitch) {
 									//	arpeggioVolumeStart = 0.0;
 									} else {
-										arpeggioIntervalStart = (prevTone.notes[0] + prevTone.pins[prevTone.pins.length-1].interval - pitch) * 0.5;
+										arpeggioIntervalStart = (prevTone.pitches[0] + prevTone.pins[prevTone.pins.length-1].interval - pitch) * 0.5;
 										arpeggioFilterTimeStart = prevTone.pins[prevTone.pins.length-1].time * 0.5;
 										inhibitRestart = true;
 									}
@@ -1715,14 +1715,14 @@ module beepbox {
 								if (attack == 1 || attack == 2) {
 									arpeggioVolumeEnd = 0.0;
 								} else if (attack == 3) {
-									if (nextTone == null || nextTone.notes.length > 1 || tone.notes.length > 1) {
+									if (nextTone == null || nextTone.pitches.length > 1 || tone.pitches.length > 1) {
 										arpeggioVolumeEnd = 0.0;
 									} else if (tone.pins[tone.pins.length-1].volume == 0 || nextTone.pins[0].volume == 0) {
 										arpeggioVolumeStart = 0.0;
-									//} else if (nextTone.notes[0] == pitch + tone.pins[tone.pins.length-1].interval) {
+									//} else if (nextTone.pitches[0] == pitch + tone.pins[tone.pins.length-1].interval) {
 										//arpeggioVolumeEnd = 0.0;
 									} else {
-										arpeggioIntervalEnd = (nextTone.notes[0] + tone.pins[tone.pins.length-1].interval - pitch) * 0.5;
+										arpeggioIntervalEnd = (nextTone.pitches[0] + tone.pins[tone.pins.length-1].interval - pitch) * 0.5;
 										arpeggioFilterTimeEnd *= 0.5;
 									}
 								}
@@ -1835,12 +1835,12 @@ module beepbox {
 					let limit: number = +this._limit;
 					
 					while (samples) {
-						const leadVibrato: number = 1.0 + leadVibratoScale    * effectY;
+						const leadVibrato: number = 1.0 + leadVibratoScale * effectY;
 						const harmVibrato: number = 1.0 + harmVibratoScale * effectY;
-						const bassVibrato: number = 1.0 + bassVibratoScale    * effectY;
-						const leadTremelo: number = 1.0 + leadTremeloScale    * (effectY - 1.0);
+						const bassVibrato: number = 1.0 + bassVibratoScale * effectY;
+						const leadTremelo: number = 1.0 + leadTremeloScale * (effectY - 1.0);
 						const harmTremelo: number = 1.0 + harmTremeloScale * (effectY - 1.0);
-						const bassTremelo: number = 1.0 + bassTremeloScale    * (effectY - 1.0);
+						const bassTremelo: number = 1.0 + bassTremeloScale * (effectY - 1.0);
 						const temp: number = effectY;
 						effectY = effectYMult * effectY - prevEffectY;
 						prevEffectY = temp;

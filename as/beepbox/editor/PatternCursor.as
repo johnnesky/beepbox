@@ -28,8 +28,8 @@ package beepbox.editor {
 		public var prevTone:     Tone = null;
 		public var curTone:      Tone = null;
 		public var nextTone:     Tone = null;
-		public var note:         int  = 0;
-		public var noteIndex:    int  = -1;
+		public var pitch:        int  = 0;
+		public var pitchIndex:   int  = -1;
 		public var curIndex:     int  = 0;
 		public var start:        int  = 0;
 		public var end:          int  = 0;
