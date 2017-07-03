@@ -53,7 +53,7 @@ package beepbox.synth {
 		public static const instrumentsMax: int = 10;
 		public static const partNames: Array = ["triples", "standard"];
 		public static const partCounts: Array = [3, 4];
-		public static const noteNames: Array = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+		public static const pitchNames: Array = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 		public static const waveNames: Array = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
 		public static const waveVolumes: Array = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
 		public static const drumNames: Array = ["retro", "white"];
@@ -76,7 +76,7 @@ package beepbox.synth {
 		public static const drumInterval: int = 6;
 		public static const numChannels: int = 4;
 		public static const drumCount: int = 12;
-		public static const noteCount: int = 37;
+		public static const pitchCount: int = 37;
 		public static const maxPitch: int = 84;
 	}
 }

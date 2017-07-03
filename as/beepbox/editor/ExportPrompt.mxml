@@ -448,7 +448,7 @@ SOFTWARE.
 								var pinTime: int = toneStartTime;
 								var pinVolume: int = tone.pins[0].volume;
 								var pinInterval: int = tone.pins[0].interval;
-								var pitch: int = channelRoot + tone.notes[0] * intervalScale;
+								var pitch: int = channelRoot + tone.pitches[0] * intervalScale;
 								
 								for (var pinIndex: int = 1; pinIndex < tone.pins.length; pinIndex++) {
 									const nextPinTime: int = toneStartTime + tone.pins[pinIndex].time * ticksPerPart;
@@ -466,14 +466,14 @@ SOFTWARE.
 										
 										const arpeggio: int = Math.floor(Number(tick) / ticksPerArpeggio) % 4;
 										var nextPitch: int;
-										if (tone.notes.length == 2) {
-											nextPitch = tone.notes[arpeggio >> 1];
-										} else if (tone.notes.length == 3) {
-											nextPitch = tone.notes[arpeggio == 3 ? 1 : arpeggio];
-										} else if (tone.notes.length == 4) {
-											nextPitch = tone.notes[arpeggio];
+										if (tone.pitches.length == 2) {
+											nextPitch = tone.pitches[arpeggio >> 1];
+										} else if (tone.pitches.length == 3) {
+											nextPitch = tone.pitches[arpeggio == 3 ? 1 : arpeggio];
+										} else if (tone.pitches.length == 4) {
+											nextPitch = tone.pitches[arpeggio];
 										} else {
-											nextPitch = tone.notes[0];
+											nextPitch = tone.pitches[0];
 										}
 										const fractionalPitch: Number = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
 										nextPitch = Math.round(fractionalPitch);

@@ -360,8 +360,8 @@ package {
 			
 			var barWidth: Number = timelineWidth / synth.song.bars;
 			var partWidth: Number = barWidth / (synth.song.beats * synth.song.parts);
-			var pitchedNoteHeight: Number = (timelineHeight-1) / Music.noteCount;
-			var drumNoteHeight: Number =  (timelineHeight-1) / Music.drumCount;
+			var wavePitchHeight: Number = (timelineHeight-1) / Music.pitchCount;
+			var drumPitchHeight: Number =  (timelineHeight-1) / Music.drumCount;
 			
 			timeline.graphics.beginFill(0x000000);
 			timeline.graphics.drawRect(0, 0, timelineWidth, timelineHeight);
@@ -374,13 +374,13 @@ package {
 			timeline.graphics.endFill();
 			timeline.graphics.beginFill(0x664933);
 			for (var octave: int = 0; octave < 4; octave++) {
-				timeline.graphics.drawRect(0, octave * 12 * pitchedNoteHeight, timelineWidth, pitchedNoteHeight + 1);
+				timeline.graphics.drawRect(0, octave * 12 * wavePitchHeight, timelineWidth, wavePitchHeight + 1);
 			}
 			timeline.graphics.endFill();
 			
 			for (var channel: int = 3; channel >= 0; channel--) {
-				var noteHeight: Number = (channel == 3 ? drumNoteHeight : pitchedNoteHeight);
-				var offsetY: Number = synth.song.channelOctaves[channel] * noteHeight * 12 + timelineHeight - noteHeight * 0.5 - 0.5;
+				var pitchHeight: Number = (channel == 3 ? drumPitchHeight : wavePitchHeight);
+				var offsetY: Number = synth.song.channelOctaves[channel] * pitchHeight * 12 + timelineHeight - pitchHeight * 0.5 - 0.5;
 				
 				for (var bar: int = 0; bar < synth.song.bars; bar++) {
 					var pattern: BarPattern = synth.song.getPattern(channel, bar);
@@ -390,9 +390,9 @@ package {
 					for (var i: int = 0; i < pattern.tones.length; i++) {
 						var tone: Tone = pattern.tones[i];
 						
-						for each (var note: int in tone.notes) {
+						for each (var pitch: int in tone.pitches) {
 							timeline.graphics.beginFill(noteColors[channel]);
-							drawNote(note, tone.start, tone.pins, noteHeight / 2 + 1, offsetX, offsetY, partWidth, noteHeight);
+							drawNote(pitch, tone.start, tone.pins, (pitchHeight + 1) / 2, offsetX, offsetY, partWidth, pitchHeight);
 							timeline.graphics.endFill();
 						}
 					}
@@ -400,7 +400,7 @@ package {
 			}
 		}
 		
-		private function drawNote(note: int, start: int, pins: Array, radius: int, offsetX: Number, offsetY: Number, partWidth: Number, noteHeight: Number): void {
+		private function drawNote(pitch: int, start: int, pins: Array, radius: int, offsetX: Number, offsetY: Number, partWidth: Number, pitchHeight: Number): void {
 			var i: int;
 			var prevPin: TonePin;
 			var nextPin: TonePin;
@@ -411,14 +411,14 @@ package {
 			var prevVolume: Number;
 			var nextVolume: Number;
 			nextPin = pins[0];
-			timeline.graphics.moveTo(offsetX + partWidth * (start + nextPin.time), offsetY - note * noteHeight + radius * (nextPin.volume / 3.0));
+			timeline.graphics.moveTo(offsetX + partWidth * (start + nextPin.time), offsetY - pitch * pitchHeight + radius * (nextPin.volume / 3.0));
 			for (i = 1; i < pins.length; i++) {
 				prevPin = nextPin;
 				nextPin = pins[i];
 				prevSide   = offsetX + partWidth * (start + prevPin.time);
 				nextSide   = offsetX + partWidth * (start + nextPin.time);
-				prevHeight = offsetY - noteHeight * (note + prevPin.interval);
-				nextHeight = offsetY - noteHeight * (note + nextPin.interval);
+				prevHeight = offsetY - pitchHeight * (pitch + prevPin.interval);
+				nextHeight = offsetY - pitchHeight * (pitch + nextPin.interval);
 				prevVolume = prevPin.volume / 3.0;
 				nextVolume = nextPin.volume / 3.0;
 				timeline.graphics.lineTo(prevSide, prevHeight - radius * prevVolume);
@@ -431,8 +431,8 @@ package {
 				nextPin = pins[i];
 				prevSide   = offsetX + partWidth * (start + prevPin.time);
 				nextSide   = offsetX + partWidth * (start + nextPin.time);
-				prevHeight = offsetY - noteHeight * (note + prevPin.interval);
-				nextHeight = offsetY - noteHeight * (note + nextPin.interval);
+				prevHeight = offsetY - pitchHeight * (pitch + prevPin.interval);
+				nextHeight = offsetY - pitchHeight * (pitch + nextPin.interval);
 				prevVolume = prevPin.volume / 3.0;
 				nextVolume = nextPin.volume / 3.0;
 				timeline.graphics.lineTo(prevSide, prevHeight + radius * prevVolume);
@@ -442,8 +442,8 @@ package {
 			}
 		}
 		
-		private function noteToPixelHeight(note: int, noteHeight: Number): Number {
-			return noteHeight * (note - 0.5);
+		private function pitchToPixelHeight(pitch: int, wavePitchHeight: Number): Number {
+			return wavePitchHeight * (pitch - 0.5);
 		}
 		
 		private function render(): void {

@@ -576,7 +576,7 @@ module beepbox {
 								let pinTime: number = toneStartTime;
 								let pinVolume: number = tone.pins[0].volume;
 								let pinInterval: number = tone.pins[0].interval;
-								let pitch: number = channelRoot + tone.notes[0] * intervalScale;
+								let pitch: number = channelRoot + tone.pitches[0] * intervalScale;
 								
 								for (let pinIndex: number = 1; pinIndex < tone.pins.length; pinIndex++) {
 									const nextPinTime: number = toneStartTime + tone.pins[pinIndex].time * ticksPerPart;
@@ -591,14 +591,14 @@ module beepbox {
 										
 										const arpeggio: number = Math.floor(tick / ticksPerArpeggio) % 4;
 										let nextPitch: number;
-										if (tone.notes.length == 2) {
-											nextPitch = tone.notes[arpeggio >> 1];
-										} else if (tone.notes.length == 3) {
-											nextPitch = tone.notes[arpeggio == 3 ? 1 : arpeggio];
-										} else if (tone.notes.length == 4) {
-											nextPitch = tone.notes[arpeggio];
+										if (tone.pitches.length == 2) {
+											nextPitch = tone.pitches[arpeggio >> 1];
+										} else if (tone.pitches.length == 3) {
+											nextPitch = tone.pitches[arpeggio == 3 ? 1 : arpeggio];
+										} else if (tone.pitches.length == 4) {
+											nextPitch = tone.pitches[arpeggio];
 										} else {
-											nextPitch = tone.notes[0];
+											nextPitch = tone.pitches[0];
 										}
 										const fractionalPitch: number = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
 										nextPitch = Math.round(fractionalPitch);

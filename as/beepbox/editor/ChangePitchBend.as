@@ -24,11 +24,11 @@ package beepbox.editor {
 	import beepbox.synth.*;
 	
 	public class ChangePitchBend extends ChangePins {
-		public function ChangePitchBend(document: Document, tone: Tone, bendStart: int, bendEnd: int, bendTo: int, noteIndex: int) {
+		public function ChangePitchBend(document: Document, tone: Tone, bendStart: int, bendEnd: int, bendTo: int, pitchIndex: int) {
 			var changePins: Function = function(): void {
 				bendStart -= oldStart;
 				bendEnd   -= oldStart;
-				bendTo    -= tone.notes[noteIndex];
+				bendTo    -= tone.pitches[pitchIndex];
 				
 				var setStart: Boolean = false;
 				var setEnd: Boolean   = false;

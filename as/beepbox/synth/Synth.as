@@ -54,7 +54,7 @@ package beepbox.synth {
 		public var song: Song = null;
 		public var stutterPressed: Boolean = false;
 		public var pianoPressed: Boolean = false;
-		public var pianoNote: int = 0;
+		public var pianoPitch: int = 0;
 		public var pianoChannel: int = 0;
 		public var enableIntro: Boolean = true;
 		public var enableOutro: Boolean = false;
@@ -546,7 +546,7 @@ package beepbox.synth {
 					var vibratoScale: Number;
 					var resetPeriod: Boolean = false;
 					if (pianoPressed && channel == pianoChannel) {
-						var pianoFreq: Number = frequencyFromPitch(channelRoot + pianoNote * intervalScale);
+						var pianoFreq: Number = frequencyFromPitch(channelRoot + pianoPitch * intervalScale);
 						var pianoPitchDamping: Number;
 						if (channel == 3) {
 							if (song.instrumentWaves[3][pattern.instrument] > 0) {
@@ -560,7 +560,7 @@ package beepbox.synth {
 						}
 						periodDelta = pianoFreq * sampleTime;
 						periodDeltaScale = 1.0;
-						toneVolume = Math.pow(2.0, -pianoNote * intervalScale / pianoPitchDamping);
+						toneVolume = Math.pow(2.0, -pianoPitch * intervalScale / pianoPitchDamping);
 						volumeDelta = 0.0;
 						filter = 1.0;
 						filterScale = 1.0;
@@ -576,14 +576,14 @@ package beepbox.synth {
 						resetPeriod = true;
 					} else {
 						var pitch: int;
-						if (tone.notes.length == 2) {
-							pitch = tone.notes[arpeggio >> 1];
-						} else if (tone.notes.length == 3) {
-							pitch = tone.notes[arpeggio == 3 ? 1 : arpeggio];
-						} else if (tone.notes.length == 4) {
-							pitch = tone.notes[arpeggio];
+						if (tone.pitches.length == 2) {
+							pitch = tone.pitches[arpeggio >> 1];
+						} else if (tone.pitches.length == 3) {
+							pitch = tone.pitches[arpeggio == 3 ? 1 : arpeggio];
+						} else if (tone.pitches.length == 4) {
+							pitch = tone.pitches[arpeggio];
 						} else {
-							pitch = tone.notes[0];
+							pitch = tone.pitches[0];
 						}
 						
 						var startPin: TonePin = null;
@@ -619,14 +619,14 @@ package beepbox.synth {
 							} else if (attack == 2) {
 								arpeggioVolumeStart = 0.0;
 							} else if (attack == 3) {
-								if (prevTone == null || prevTone.notes.length > 1 || tone.notes.length > 1) {
+								if (prevTone == null || prevTone.pitches.length > 1 || tone.pitches.length > 1) {
 									arpeggioVolumeStart = 0.0;
 								} else if (prevTone.pins[prevTone.pins.length-1].volume == 0 || tone.pins[0].volume == 0) {
 									arpeggioVolumeStart = 0.0;
-								//} else if (prevTone.notes[0] + prevTone.pins[prevTone.pins.length-1].interval == pitch) {
+								//} else if (prevTone.pitches[0] + prevTone.pins[prevTone.pins.length-1].interval == pitch) {
 								//	arpeggioVolumeStart = 0.0;
 								} else {
-									arpeggioIntervalStart = (prevTone.notes[0] + prevTone.pins[prevTone.pins.length-1].interval - pitch) * 0.5;
+									arpeggioIntervalStart = (prevTone.pitches[0] + prevTone.pins[prevTone.pins.length-1].interval - pitch) * 0.5;
 									arpeggioFilterTimeStart = prevTone.pins[prevTone.pins.length-1].time * 0.5;
 									inhibitRestart = true;
 								}
@@ -636,14 +636,14 @@ package beepbox.synth {
 							if (attack == 1 || attack == 2) {
 								arpeggioVolumeEnd = 0.0;
 							} else if (attack == 3) {
-								if (nextTone == null || nextTone.notes.length > 1 || tone.notes.length > 1) {
+								if (nextTone == null || nextTone.pitches.length > 1 || tone.pitches.length > 1) {
 									arpeggioVolumeEnd = 0.0;
 								} else if (tone.pins[tone.pins.length-1].volume == 0 || nextTone.pins[0].volume == 0) {
 									arpeggioVolumeStart = 0.0;
-								//} else if (nextTone.notes[0] == pitch + tone.pins[tone.pins.length-1].interval) {
+								//} else if (nextTone.pitches[0] == pitch + tone.pins[tone.pins.length-1].interval) {
 									//arpeggioVolumeEnd = 0.0;
 								} else {
-									arpeggioIntervalEnd = (nextTone.notes[0] + tone.pins[tone.pins.length-1].interval - pitch) * 0.5;
+									arpeggioIntervalEnd = (nextTone.pitches[0] + tone.pins[tone.pins.length-1].interval - pitch) * 0.5;
 									arpeggioFilterTimeEnd *= 0.5;
 								}
 							}
