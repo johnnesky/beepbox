@@ -23,9 +23,9 @@ SOFTWARE.
 package beepbox.editor {
 	import beepbox.synth.*;
 	
-	public class ChangeTransposeTone extends Change {
+	public class ChangeTransposeNote extends Change {
 		protected var doc: Document;
-		protected var tone: Tone;
+		protected var note: Note;
 		protected var oldStart: int;
 		protected var newStart: int;
 		protected var oldEnd: int;
@@ -34,13 +34,13 @@ package beepbox.editor {
 		protected var newPins: Array;
 		protected var oldPitches: Array;
 		protected var newPitches: Array;
-		public function ChangeTransposeTone(doc: Document, tone: Tone, upward: Boolean) {
+		public function ChangeTransposeNote(doc: Document, note: Note, upward: Boolean) {
 			super(false);
 			this.doc = doc;
-			this.tone = tone;
-			oldPins = tone.pins;
+			this.note = note;
+			oldPins = note.pins;
 			newPins = [];
-			oldPitches = tone.pitches;
+			oldPitches = note.pitches;
 			newPitches = [];
 			
 			var i: int;
@@ -83,7 +83,7 @@ package beepbox.editor {
 				if (max > diff + Music.maxPitch) max = diff + Music.maxPitch;
 			}
 			
-			for each (var oldPin: TonePin in oldPins) {
+			for each (var oldPin: NotePin in oldPins) {
 				var interval: int = oldPin.interval + oldPitches[0];
 				
 				if (interval < min) interval = min;
@@ -104,7 +104,7 @@ package beepbox.editor {
 					}
 				}
 				interval -= newPitches[0];
-				newPins.push(new TonePin(interval, oldPin.time, oldPin.volume));
+				newPins.push(new NotePin(interval, oldPin.time, oldPin.volume));
 			}
 			
 			if (newPins[0].interval != 0) throw new Error("wrong pin start interval");
@@ -126,14 +126,14 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			tone.pins = newPins;
-			tone.pitches = newPitches;
+			note.pins = newPins;
+			note.pitches = newPitches;
 			doc.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			tone.pins = oldPins;
-			tone.pitches = oldPitches;
+			note.pins = oldPins;
+			note.pitches = oldPitches;
 			doc.changed();
 		}
 	}

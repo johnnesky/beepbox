@@ -187,7 +187,7 @@ module beepbox {
 			this._promptContainer,
 		]);
 		
-		private _copyTones: Tone[];
+		private _copyNotes: Note[];
 		private _copyBeats: number = 0;
 		private _copyParts: number = 0;
 		private _copyDrums: boolean = false;
@@ -398,7 +398,7 @@ module beepbox {
 		private _copy(): void {
 			const pattern: BarPattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
-			this._copyTones = pattern.cloneTones();
+			this._copyNotes = pattern.cloneNotes();
 			this._copyBeats = this._doc.song.beats;
 			this._copyParts = this._doc.song.parts;
 			this._copyDrums = this._doc.channel == 3;
@@ -406,8 +406,8 @@ module beepbox {
 		
 		private _paste(): void {
 			const pattern: BarPattern | null = this._doc.getCurrentPattern();
-			if (pattern != null && this._copyTones != null && this._copyBeats == this._doc.song.beats && this._copyParts == this._doc.song.parts && this._copyDrums == (this._doc.channel == 3)) {
-				this._doc.history.record(new ChangePaste(this._doc, this._copyTones, pattern));
+			if (pattern != null && this._copyNotes != null && this._copyBeats == this._doc.song.beats && this._copyParts == this._doc.song.parts && this._copyDrums == (this._doc.channel == 3)) {
+				this._doc.history.record(new ChangePaste(this._doc, this._copyNotes, pattern));
 			}
 		}
 		

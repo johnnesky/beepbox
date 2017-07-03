@@ -22,25 +22,25 @@ SOFTWARE.
 
 package beepbox.synth {
 	public class BarPattern {
-		public var tones: Array;
+		public var notes: Array;
 		public var instrument: int;
 		public function BarPattern() {
-			tones = [];
+			notes = [];
 			instrument = 0;
-			//tones = [new Tone(12, 0, 8)];
-			//tones[0].pins = [new TonePin(0, 0), new TonePin(0, 3), new TonePin(2, 4), new TonePin(2, 8)];
+			//notes = [new Note(12, 0, 8)];
+			//notes[0].pins = [new NotePin(0, 0), new NotePin(0, 3), new NotePin(2, 4), new NotePin(2, 8)];
 		}
 		
-		public function cloneTones(): Array {
+		public function cloneNotes(): Array {
 			var result: Array = [];
-			for each (var oldTone: Tone in tones) {
-				var newTone: Tone = new Tone(-1, oldTone.start, oldTone.end, 3);
-				newTone.pitches = oldTone.pitches.concat();
-				newTone.pins = [];
-				for each (var oldPin: TonePin in oldTone.pins) {
-					newTone.pins.push(new TonePin(oldPin.interval, oldPin.time, oldPin.volume));
+			for each (var oldNote: Note in notes) {
+				var newNote: Note = new Note(-1, oldNote.start, oldNote.end, 3);
+				newNote.pitches = oldNote.pitches.concat();
+				newNote.pins = [];
+				for each (var oldPin: NotePin in oldNote.pins) {
+					newNote.pins.push(new NotePin(oldPin.interval, oldPin.time, oldPin.volume));
 				}
-				result.push(newTone);
+				result.push(newNote);
 			}
 			return result;
 		}

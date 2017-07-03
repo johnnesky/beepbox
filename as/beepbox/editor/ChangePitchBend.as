@@ -24,11 +24,11 @@ package beepbox.editor {
 	import beepbox.synth.*;
 	
 	public class ChangePitchBend extends ChangePins {
-		public function ChangePitchBend(document: Document, tone: Tone, bendStart: int, bendEnd: int, bendTo: int, pitchIndex: int) {
+		public function ChangePitchBend(document: Document, note: Note, bendStart: int, bendEnd: int, bendTo: int, pitchIndex: int) {
 			var changePins: Function = function(): void {
 				bendStart -= oldStart;
 				bendEnd   -= oldStart;
-				bendTo    -= tone.pitches[pitchIndex];
+				bendTo    -= note.pitches[pitchIndex];
 				
 				var setStart: Boolean = false;
 				var setEnd: Boolean   = false;
@@ -42,16 +42,16 @@ package beepbox.editor {
 				if (bendEnd > bendStart) {
 					i = 0;
 					direction = 1;
-					stop = tone.pins.length;
+					stop = note.pins.length;
 					push = newPins.push;
 				} else {
-					i = tone.pins.length - 1;
+					i = note.pins.length - 1;
 					direction = -1;
 					stop = -1;
 					push = newPins.unshift;
 				}
 				for (; i != stop; i += direction) {
-					var oldPin: TonePin = tone.pins[i];
+					var oldPin: NotePin = note.pins[i];
 					var time: int = oldPin.time;
 					for (;;) {
 						if (!setStart) {
@@ -60,10 +60,10 @@ package beepbox.editor {
 								prevVolume = oldPin.volume;
 							}
 							if (time * direction < bendStart * direction) {
-								push(new TonePin(oldPin.interval, time, oldPin.volume));
+								push(new NotePin(oldPin.interval, time, oldPin.volume));
 								break;
 							} else {
-								push(new TonePin(prevInterval, bendStart, prevVolume));
+								push(new NotePin(prevInterval, bendStart, prevVolume));
 								setStart = true;
 							}
 						} else if (!setEnd) {
@@ -74,7 +74,7 @@ package beepbox.editor {
 							if (time * direction < bendEnd * direction) {
 								break;
 							} else {
-								push(new TonePin(bendTo, bendEnd, prevVolume));
+								push(new NotePin(bendTo, bendEnd, prevVolume));
 								setEnd = true;
 							}
 						} else {
@@ -82,18 +82,18 @@ package beepbox.editor {
 								break;
 							} else {
 								if (oldPin.interval != prevInterval) persist = false;
-								push(new TonePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
+								push(new NotePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
 								break;
 							}
 						}
 					}
 				}
 				if (!setEnd) {
-					push(new TonePin(bendTo, bendEnd, prevVolume));
+					push(new NotePin(bendTo, bendEnd, prevVolume));
 				}
 			}
 			
-			super(document, tone, changePins);
+			super(document, note, changePins);
 		}
 	}
 }

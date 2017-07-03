@@ -25,16 +25,16 @@ package beepbox.editor {
 	
 	public class PatternCursor {
 		public var valid:        Boolean = false;
-		public var prevTone:     Tone = null;
-		public var curTone:      Tone = null;
-		public var nextTone:     Tone = null;
+		public var prevNote:     Note = null;
+		public var curNote:      Note = null;
+		public var nextNote:     Note = null;
 		public var pitch:        int  = 0;
 		public var pitchIndex:   int  = -1;
 		public var curIndex:     int  = 0;
 		public var start:        int  = 0;
 		public var end:          int  = 0;
 		public var part:         int  = 0;
-		public var tonePart:     int  = 0;
+		public var notePart:     int  = 0;
 		public var nearPinIndex: int = 0;
 		public var pins:         Array = null;
 	}

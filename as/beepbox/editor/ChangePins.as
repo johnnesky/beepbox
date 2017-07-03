@@ -25,7 +25,7 @@ package beepbox.editor {
 	
 	public class ChangePins extends Change {
 		protected var document: Document;
-		protected var tone: Tone;
+		protected var note: Note;
 		protected var oldStart: int;
 		protected var newStart: int;
 		protected var oldEnd: int;
@@ -34,17 +34,17 @@ package beepbox.editor {
 		protected var newPins: Array;
 		protected var oldPitches: Array;
 		protected var newPitches: Array;
-		public function ChangePins(document: Document, tone: Tone, changePins: Function) {
+		public function ChangePins(document: Document, note: Note, changePins: Function) {
 			super(false);
 			this.document = document;
-			this.tone = tone;
-			oldStart = tone.start;
-			oldEnd   = tone.end;
-			newStart = tone.start;
-			newEnd   = tone.end;
-			oldPins = tone.pins;
+			this.note = note;
+			oldStart = note.start;
+			oldEnd   = note.end;
+			newStart = note.start;
+			newEnd   = note.end;
+			oldPins = note.pins;
 			newPins = [];
-			oldPitches = tone.pitches;
+			oldPitches = note.pitches;
 			newPitches = [];
 			
 			changePins();
@@ -87,18 +87,18 @@ package beepbox.editor {
 		}
 		
 		protected override function doForwards(): void {
-			tone.pins = newPins;
-			tone.pitches = newPitches;
-			tone.start = newStart;
-			tone.end = newEnd;
+			note.pins = newPins;
+			note.pitches = newPitches;
+			note.start = newStart;
+			note.end = newEnd;
 			document.changed();
 		}
 		
 		protected override function doBackwards(): void {
-			tone.pins = oldPins;
-			tone.pitches = oldPitches;
-			tone.start = oldStart;
-			tone.end = oldEnd;
+			note.pins = oldPins;
+			note.pitches = oldPitches;
+			note.start = oldStart;
+			note.end = oldEnd;
 			document.changed();
 		}
 	}

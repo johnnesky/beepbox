@@ -517,29 +517,29 @@ package beepbox.synth {
 					
 					var attack: int = pattern == null ? 0 : song.instrumentAttacks[channel][pattern.instrument];
 					
-					var tone: Tone = null;
-					var prevTone: Tone = null;
-					var nextTone: Tone = null;
+					var note: Note = null;
+					var prevNote: Note = null;
+					var nextNote: Note = null;
 					if (pattern != null) {
-						for (i = 0; i < pattern.tones.length; i++) {
-							if (pattern.tones[i].end <= time) {
-								prevTone = pattern.tones[i];
-							} else if (pattern.tones[i].start <= time && pattern.tones[i].end > time) {
-								tone = pattern.tones[i];
-							} else if (pattern.tones[i].start > time) {
-								nextTone = pattern.tones[i];
+						for (i = 0; i < pattern.notes.length; i++) {
+							if (pattern.notes[i].end <= time) {
+								prevNote = pattern.notes[i];
+							} else if (pattern.notes[i].start <= time && pattern.notes[i].end > time) {
+								note = pattern.notes[i];
+							} else if (pattern.notes[i].start > time) {
+								nextNote = pattern.notes[i];
 								break;
 							}
 						}
 					}
-					if (tone != null && prevTone != null && prevTone.end != tone.start) prevTone = null;
-					if (tone != null && nextTone != null && nextTone.start != tone.end) nextTone = null;
+					if (note != null && prevNote != null && prevNote.end != note.start) prevNote = null;
+					if (note != null && nextNote != null && nextNote.start != note.end) nextNote = null;
 					
 					var channelRoot: int = channel == 3 ? 69 : Music.keyTransposes[song.key];
 					var intervalScale: int = channel == 3 ? Music.drumInterval : 1;
 					var periodDelta: Number;
 					var periodDeltaScale: Number;
-					var toneVolume: Number;
+					var noteVolume: Number;
 					var volumeDelta: Number;
 					var filter: Number;
 					var filterScale: Number;
@@ -560,15 +560,15 @@ package beepbox.synth {
 						}
 						periodDelta = pianoFreq * sampleTime;
 						periodDeltaScale = 1.0;
-						toneVolume = Math.pow(2.0, -pianoPitch * intervalScale / pianoPitchDamping);
+						noteVolume = Math.pow(2.0, -pianoPitch * intervalScale / pianoPitchDamping);
 						volumeDelta = 0.0;
 						filter = 1.0;
 						filterScale = 1.0;
 						vibratoScale = Math.pow(2.0, Music.effectVibratos[song.instrumentEffects[channel][pattern.instrument]] / 12.0 ) - 1.0;
-					} else if (tone == null) {
+					} else if (note == null) {
 						periodDelta = 0.0;
 						periodDeltaScale = 0.0;
-						toneVolume = 0.0;
+						noteVolume = 0.0;
 						volumeDelta = 0.0;
 						filter = 1.0;
 						filterScale = 1.0;
@@ -576,20 +576,20 @@ package beepbox.synth {
 						resetPeriod = true;
 					} else {
 						var pitch: int;
-						if (tone.pitches.length == 2) {
-							pitch = tone.pitches[arpeggio >> 1];
-						} else if (tone.pitches.length == 3) {
-							pitch = tone.pitches[arpeggio == 3 ? 1 : arpeggio];
-						} else if (tone.pitches.length == 4) {
-							pitch = tone.pitches[arpeggio];
+						if (note.pitches.length == 2) {
+							pitch = note.pitches[arpeggio >> 1];
+						} else if (note.pitches.length == 3) {
+							pitch = note.pitches[arpeggio == 3 ? 1 : arpeggio];
+						} else if (note.pitches.length == 4) {
+							pitch = note.pitches[arpeggio];
 						} else {
-							pitch = tone.pitches[0];
+							pitch = note.pitches[0];
 						}
 						
-						var startPin: TonePin = null;
-						var endPin: TonePin = null;
-						for each (var pin: TonePin in tone.pins) {
-							if (pin.time + tone.start <= time) {
+						var startPin: NotePin = null;
+						var endPin: NotePin = null;
+						for each (var pin: NotePin in note.pins) {
+							if (pin.time + note.start <= time) {
 								startPin = pin;
 							} else {
 								endPin = pin;
@@ -597,10 +597,10 @@ package beepbox.synth {
 							}
 						}
 						
-						var toneStart: int = tone.start * 4;
-						var toneEnd:   int = tone.end   * 4;
-						var pinStart: int  = (tone.start + startPin.time) * 4;
-						var pinEnd:   int  = (tone.start + endPin.time  ) * 4;
+						var noteStart: int = note.start * 4;
+						var noteEnd:   int = note.end   * 4;
+						var pinStart: int  = (note.start + startPin.time) * 4;
+						var pinEnd:   int  = (note.start + endPin.time  ) * 4;
 						var arpeggioStart: int = time * 4 + arpeggio;
 						var arpeggioEnd:   int = time * 4 + arpeggio + 1;
 						var arpeggioRatioStart: Number = (arpeggioStart - pinStart) / (pinEnd - pinStart);
@@ -613,37 +613,37 @@ package beepbox.synth {
 						var arpeggioFilterTimeEnd:   Number = startPin.time * (1.0 - arpeggioRatioEnd)   + endPin.time * arpeggioRatioEnd;
 						
 						var inhibitRestart: Boolean = false;
-						if (arpeggioStart == toneStart) {
+						if (arpeggioStart == noteStart) {
 							if (attack == 0) {
 								inhibitRestart = true;
 							} else if (attack == 2) {
 								arpeggioVolumeStart = 0.0;
 							} else if (attack == 3) {
-								if (prevTone == null || prevTone.pitches.length > 1 || tone.pitches.length > 1) {
+								if (prevNote == null || prevNote.pitches.length > 1 || note.pitches.length > 1) {
 									arpeggioVolumeStart = 0.0;
-								} else if (prevTone.pins[prevTone.pins.length-1].volume == 0 || tone.pins[0].volume == 0) {
+								} else if (prevNote.pins[prevNote.pins.length-1].volume == 0 || note.pins[0].volume == 0) {
 									arpeggioVolumeStart = 0.0;
-								//} else if (prevTone.pitches[0] + prevTone.pins[prevTone.pins.length-1].interval == pitch) {
+								//} else if (prevNote.pitches[0] + prevNote.pins[prevNote.pins.length-1].interval == pitch) {
 								//	arpeggioVolumeStart = 0.0;
 								} else {
-									arpeggioIntervalStart = (prevTone.pitches[0] + prevTone.pins[prevTone.pins.length-1].interval - pitch) * 0.5;
-									arpeggioFilterTimeStart = prevTone.pins[prevTone.pins.length-1].time * 0.5;
+									arpeggioIntervalStart = (prevNote.pitches[0] + prevNote.pins[prevNote.pins.length-1].interval - pitch) * 0.5;
+									arpeggioFilterTimeStart = prevNote.pins[prevNote.pins.length-1].time * 0.5;
 									inhibitRestart = true;
 								}
 							}
 						}
-						if (arpeggioEnd == toneEnd) {
+						if (arpeggioEnd == noteEnd) {
 							if (attack == 1 || attack == 2) {
 								arpeggioVolumeEnd = 0.0;
 							} else if (attack == 3) {
-								if (nextTone == null || nextTone.pitches.length > 1 || tone.pitches.length > 1) {
+								if (nextNote == null || nextNote.pitches.length > 1 || note.pitches.length > 1) {
 									arpeggioVolumeEnd = 0.0;
-								} else if (tone.pins[tone.pins.length-1].volume == 0 || nextTone.pins[0].volume == 0) {
+								} else if (note.pins[note.pins.length-1].volume == 0 || nextNote.pins[0].volume == 0) {
 									arpeggioVolumeStart = 0.0;
-								//} else if (nextTone.pitches[0] == pitch + tone.pins[tone.pins.length-1].interval) {
+								//} else if (nextNote.pitches[0] == pitch + note.pins[note.pins.length-1].interval) {
 									//arpeggioVolumeEnd = 0.0;
 								} else {
-									arpeggioIntervalEnd = (nextTone.pitches[0] + tone.pins[tone.pins.length-1].interval - pitch) * 0.5;
+									arpeggioIntervalEnd = (nextNote.pitches[0] + note.pins[note.pins.length-1].interval - pitch) * 0.5;
 									arpeggioFilterTimeEnd *= 0.5;
 								}
 							}
@@ -676,22 +676,22 @@ package beepbox.synth {
 						var freqScale: Number = endFreq / startFreq;
 						periodDelta = startFreq * sampleTime;
 						periodDeltaScale = Math.pow(freqScale, 1.0 / samples);
-						toneVolume = startVol;
+						noteVolume = startVol;
 						volumeDelta = (endVol - startVol) / samples;
-						var timeSinceStart: Number = (arpeggioStart + startRatio - toneStart) * samplesPerArpeggio / samplesPerSecond;
+						var timeSinceStart: Number = (arpeggioStart + startRatio - noteStart) * samplesPerArpeggio / samplesPerSecond;
 						if (timeSinceStart == 0.0 && !inhibitRestart) resetPeriod = true;
 						
 						var filterScaleRate: Number = Music.filterDecays[song.instrumentFilters[channel][pattern.instrument]];
 						filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / samplesPerSecond);
 						var endFilter: Number = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / samplesPerSecond);
 						filterScale = Math.pow(endFilter / filter, 1.0 / samples);
-						vibratoScale = (song.instrumentEffects[channel][pattern.instrument] == 2 && time - tone.start < 3) ? 0.0 : Math.pow( 2.0, Music.effectVibratos[song.instrumentEffects[channel][pattern.instrument]] / 12.0 ) - 1.0;
+						vibratoScale = (song.instrumentEffects[channel][pattern.instrument] == 2 && time - note.start < 3) ? 0.0 : Math.pow( 2.0, Music.effectVibratos[song.instrumentEffects[channel][pattern.instrument]] / 12.0 ) - 1.0;
 					}
 					
 					if (channel == 0) {
 						leadPeriodDelta = periodDelta;
 						leadPeriodDeltaScale = periodDeltaScale;
-						leadVolume = toneVolume * maxLeadVolume;
+						leadVolume = noteVolume * maxLeadVolume;
 						leadVolumeDelta = volumeDelta * maxLeadVolume;
 						leadFilter = filter * leadFilterBase;
 						leadFilterScale = filterScale;
@@ -704,7 +704,7 @@ package beepbox.synth {
 					} else if (channel == 1) {
 						harmonyPeriodDelta = periodDelta;
 						harmonyPeriodDeltaScale = periodDeltaScale;
-						harmonyVolume = toneVolume * maxHarmonyVolume;
+						harmonyVolume = noteVolume * maxHarmonyVolume;
 						harmonyVolumeDelta = volumeDelta * maxHarmonyVolume;
 						harmonyFilter = filter * harmonyFilterBase;
 						harmonyFilterScale = filterScale;
@@ -717,7 +717,7 @@ package beepbox.synth {
 					} else if (channel == 2) {
 						bassPeriodDelta = periodDelta;
 						bassPeriodDeltaScale = periodDeltaScale;
-						bassVolume = toneVolume * maxBassVolume;
+						bassVolume = noteVolume * maxBassVolume;
 						bassVolumeDelta = volumeDelta * maxBassVolume;
 						bassFilter = filter * bassFilterBase;
 						bassFilterScale = filterScale;
@@ -730,7 +730,7 @@ package beepbox.synth {
 					} else if (channel == 3) {
 						drumPeriodDelta = periodDelta / 32767.0;
 						drumPeriodDeltaScale = periodDeltaScale;
-						drumVolume = toneVolume * maxDrumVolume;
+						drumVolume = noteVolume * maxDrumVolume;
 						drumVolumeDelta = volumeDelta * maxDrumVolume;
 					}
 				}
@@ -869,8 +869,8 @@ package beepbox.synth {
 			return 440.0 * Math.pow(2.0, (pitch - 69.0) / 12.0);
 		}
 		
-		private function volumeConversion(toneVolume: Number): Number {
-			return Math.pow(toneVolume / 3.0, 1.5);
+		private function volumeConversion(noteVolume: Number): Number {
+			return Math.pow(noteVolume / 3.0, 1.5);
 		}
 		
 		private function getSamplesPerArpeggio(): int {

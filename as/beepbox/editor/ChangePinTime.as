@@ -24,7 +24,7 @@ package beepbox.editor {
 	import beepbox.synth.*;
 	
 	public class ChangePinTime extends ChangePins {
-		public function ChangePinTime(document: Document, tone: Tone, pinIndex: int, shiftedTime: int) {
+		public function ChangePinTime(document: Document, note: Note, pinIndex: int, shiftedTime: int) {
 			var changePins: Function = function(): void {
 				shiftedTime -= oldStart;
 				var originalTime: int = oldPins[pinIndex].time;
@@ -32,24 +32,24 @@ package beepbox.editor {
 				var skipEnd: int = Math.max(originalTime, shiftedTime);
 				var setPin: Boolean = false;
 				for (var i: int = 0; i < oldPins.length; i++) {
-					var oldPin: TonePin = tone.pins[i];
+					var oldPin: NotePin = note.pins[i];
 					var time: int = oldPin.time;
 					if (time < skipStart) {
-						newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
+						newPins.push(new NotePin(oldPin.interval, time, oldPin.volume));
 					} else if (time > skipEnd) {
 						if (!setPin) {
-							newPins.push(new TonePin(oldPins[pinIndex].interval, shiftedTime, oldPins[pinIndex].volume));
+							newPins.push(new NotePin(oldPins[pinIndex].interval, shiftedTime, oldPins[pinIndex].volume));
 							setPin = true;
 						}
-						newPins.push(new TonePin(oldPin.interval, time, oldPin.volume));
+						newPins.push(new NotePin(oldPin.interval, time, oldPin.volume));
 					}
 				}
 				if (!setPin) {
-					newPins.push(new TonePin(oldPins[pinIndex].interval, shiftedTime, oldPins[pinIndex].volume));
+					newPins.push(new NotePin(oldPins[pinIndex].interval, shiftedTime, oldPins[pinIndex].volume));
 				}
 			}
 			
-			super(document, tone, changePins);
+			super(document, note, changePins);
 		}
 	}
 }

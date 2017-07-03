@@ -25,8 +25,8 @@ package beepbox.editor {
 	
 	public class ChangeTranspose extends ChangeSequence {
 		public function ChangeTranspose(document: Document, bar: BarPattern, upward: Boolean) {
-			for (var i: int = 0; i < bar.tones.length; i++) {
-				append(new ChangeTransposeTone(document, bar.tones[i], upward));
+			for (var i: int = 0; i < bar.notes.length; i++) {
+				append(new ChangeTransposeNote(document, bar.notes[i], upward));
 			}
 		}
 	}

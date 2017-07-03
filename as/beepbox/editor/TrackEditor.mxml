@@ -288,7 +288,7 @@ SOFTWARE.
 					}
 					
 					var text: TextField = labels[j][i];
-					text.textColor = selected ? 0x000000 : (pattern == null || pattern.tones.length == 0 ? channelDim : channelColor);
+					text.textColor = selected ? 0x000000 : (pattern == null || pattern.notes.length == 0 ? channelDim : channelColor);
 					text.text = String(doc.song.channelBars[j][i + doc.barScrollPos]);
 					text.height = channelHeight;
 					text.y = channelHeight * j + (channelHeight - 24) / 2;

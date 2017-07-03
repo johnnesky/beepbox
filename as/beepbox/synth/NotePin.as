@@ -20,30 +20,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package beepbox.editor {
-	import beepbox.synth.*;
-	
-	public class ChangeToneTruncate extends ChangeSequence {
-		public function ChangeToneTruncate(document: Document, bar: BarPattern, start: int, end: int, skipTone: Tone = null) {
-			var i: int = 0;
-			while (i < bar.tones.length) {
-				var tone: Tone = bar.tones[i];
-				if (tone == skipTone && skipTone != null) {
-					i++;
-				} else if (tone.end <= start) {
-					i++;
-				} else if (tone.start >= end) {
-					break;
-				} else if (tone.start < start) {
-					append(new ChangeToneLength(document, tone, tone.start, start));
-					i++;
-				} else if (tone.end > end) {
-					append(new ChangeToneLength(document, tone, end, tone.end));
-					i++;
-				} else {
-					append(new ChangeToneAdded(document, bar, tone, i, true));
-				}
-			}
+package beepbox.synth {
+	public class NotePin {
+		public var interval: int;
+		public var time: int;
+		public var volume: int;
+		
+		public function NotePin(interval: int, time: int, volume: int) {
+			this.interval = interval;
+			this.time = time;
+			this.volume = volume;
 		}
 	}
 }

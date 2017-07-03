@@ -20,16 +20,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package beepbox.synth {
-	public class TonePin {
-		public var interval: int;
-		public var time: int;
-		public var volume: int;
+package beepbox.editor {
+	import beepbox.synth.*;
+	
+	public class ChangeNoteAdded extends Change {
+		private var document: Document;
+		private var bar: BarPattern;
+		private var note: Note;
+		private var index: int;
+		public function ChangeNoteAdded(document: Document, bar: BarPattern, note: Note, index: int, deletion: Boolean = false) {
+			super(deletion);
+			this.document = document;
+			this.bar = bar;
+			this.note = note;
+			this.index = index;
+			didSomething();
+			redo();
+		}
 		
-		public function TonePin(interval: int, time: int, volume: int) {
-			this.interval = interval;
-			this.time = time;
-			this.volume = volume;
+		protected override function doForwards(): void {
+			bar.notes.splice(index, 0, note);
+			document.changed();
+		}
+		
+		protected override function doBackwards(): void {
+			bar.notes.splice(index, 1);
+			document.changed();
 		}
 	}
 }

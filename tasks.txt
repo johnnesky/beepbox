@@ -173,8 +173,8 @@
 √ allow dragging embedded playhead.
 √ make sure there's only one beep box player playing simultaneously. make a random guid on startup. When clicked play, set it to a variable in sessionStorage or localStorage. periodically check to make sure that it's still set to that, otherwise pause. 
 √ loop control
+√ rename note to pitch, tone to note. 
 
-- rename note to pitch, tone to note. 
 - octave scroll dragging should just be one History change, and it would be nice if dragging sliders didn't generate a bunch of undo history events.
 - Make an embeddable song player. (See below.) 
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
