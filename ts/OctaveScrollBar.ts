@@ -49,6 +49,7 @@ module beepbox {
 		private _currentOctave: number;
 		private _barBottom: number;
 		private _renderedBarBottom: number = -1;
+		private _change: ChangeOctave | null = null;
 		
 		constructor(private _doc: SongDocument) {
 			this._doc.watch(this._documentChanged);
@@ -145,21 +146,30 @@ module beepbox {
 		private _onCursorMoved(): void {
 			if (this._doc.channel == 3) return;
 			if (this._dragging) {
+				const startOctave: number = this._doc.song.channelOctaves[this._doc.channel];
+				let octave: number = startOctave;
+				
 				while (this._mouseY - this._dragStart < -this._octaveHeight * 0.5) {
-					if (this._currentOctave < 4) {
-						this._doc.history.record(new ChangeOctave(this._doc, this._currentOctave + 1));
+					if (octave < 4) {
+						octave++;
 						this._dragStart -= this._octaveHeight;
 					} else {
 						break;
 					}
 				}
 				while (this._mouseY - this._dragStart > this._octaveHeight * 0.5) {
-					if (this._currentOctave > 0) {
-						this._doc.history.record(new ChangeOctave(this._doc, this._currentOctave - 1));
+					if (octave > 0) {
+						octave--;
 						this._dragStart += this._octaveHeight;
 					} else {
 						break;
 					}
+				}
+				
+				if (octave != startOctave) {
+					this._doc.history.undoIfLastChangeWas(this._change);
+					this._change = new ChangeOctave(this._doc, octave);
+					this._doc.history.record(this._change);
 				}
 			}
 			
@@ -169,9 +179,17 @@ module beepbox {
 		private _onCursorReleased = (event: Event): void => {
 			if (this._doc.channel != 3 && !this._dragging && this._mouseDown) {
 				if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
-					if (this._currentOctave < 4) this._doc.history.record(new ChangeOctave(this._doc, this._currentOctave + 1));
+					if (this._currentOctave < 4) {
+						this._doc.history.undoIfLastChangeWas(this._change);
+						this._change = new ChangeOctave(this._doc, this._currentOctave + 1);
+						this._doc.history.record(this._change);
+					}
 				} else {
-					if (this._currentOctave > 0) this._doc.history.record(new ChangeOctave(this._doc, this._currentOctave - 1));
+					if (this._currentOctave > 0) {
+						this._doc.history.undoIfLastChangeWas(this._change);
+						this._change = new ChangeOctave(this._doc, this._currentOctave - 1);
+						this._doc.history.record(this._change);
+					}
 				}
 			}
 			this._mouseDown = false;

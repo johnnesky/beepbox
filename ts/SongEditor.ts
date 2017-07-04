@@ -192,6 +192,10 @@ module beepbox {
 		private _copyParts: number = 0;
 		private _copyDrums: boolean = false;
 		private _wasPlaying: boolean;
+		private _changeTranspose: ChangeSequence | null = null;
+		private _changeTempo: ChangeTempo | null = null;
+		private _changeReverb: ChangeReverb | null = null;
+		private _changeAttack: ChangeAttack | null = null;
 		
 		constructor(private _doc: SongDocument) {
 			this._doc.watch(this._onUpdated);
@@ -419,7 +423,16 @@ module beepbox {
 		private _transpose(upward: boolean): void {
 			const pattern: BarPattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
-			this._doc.history.record(new ChangeTranspose(this._doc, pattern, upward));
+			
+			const change: ChangeTranspose = new ChangeTranspose(this._doc, pattern, upward);
+			
+			if (this._changeTranspose != null && this._doc.history.lastChangeWas(this._changeTranspose)) {
+				this._changeTranspose.append(change);
+			} else {
+				this._changeTranspose = new ChangeSequence();
+				this._changeTranspose.append(change);
+				this._doc.history.record(this._changeTranspose);
+			}
 		}
 		
 		private _openExportPrompt = (): void => {
@@ -435,11 +448,15 @@ module beepbox {
 		}
 		
 		private _onSetTempo = (): void => {
-			this._doc.history.record(new ChangeTempo(this._doc, parseInt(this._tempoSlider.value)));
+			this._doc.history.undoIfLastChangeWas(this._changeTempo);
+			this._changeTempo = new ChangeTempo(this._doc, parseInt(this._tempoSlider.value));
+			this._doc.history.record(this._changeTempo);
 		}
 		
 		private _onSetReverb = (): void => {
-			this._doc.history.record(new ChangeReverb(this._doc, parseInt(this._reverbSlider.value)));
+			this._doc.history.undoIfLastChangeWas(this._changeReverb);
+			this._changeReverb = new ChangeReverb(this._doc, parseInt(this._reverbSlider.value));
+			this._doc.history.record(this._changeReverb);
 		}
 		
 		private _onSetParts = (): void => {
@@ -459,7 +476,9 @@ module beepbox {
 		}
 		
 		private _onSetAttack = (): void => {
-			this._doc.history.record(new ChangeAttack(this._doc, this._attackDropDown.selectedIndex));
+			this._doc.history.undoIfLastChangeWas(this._changeAttack);
+			this._changeAttack = new ChangeAttack(this._doc, this._attackDropDown.selectedIndex);
+			this._doc.history.record(this._changeAttack);
 		}
 		
 		private _onSetEffect = (): void => {

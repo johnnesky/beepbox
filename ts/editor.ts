@@ -224,8 +224,16 @@ module beepbox {
 			this.changed();
 		}
 		
-		public getRecentChange(): Change | null {
-			return this._recentChange;
+		public lastChangeWas(change: Change | null): boolean {
+			return change != null && change == this._recentChange;
+		}
+		
+		public undoIfLastChangeWas(change: Change | null): boolean {
+			if (this.lastChangeWas(change)) {
+				this.undo();
+				return true;
+			}
+			return false;
 		}
 	}
 	
@@ -338,15 +346,6 @@ module beepbox {
 			this._changes[this._changes.length] = change;
 			this._didSomething();
 		}
-		
-		/*
-		// WARNING: prepend is almost always a bad idea. Know what you're doing.
-		protected _prepend(change: Change): void {
-			if (change.didNothing) return;
-			this._changes.splice(0,0,change);
-			this._didSomething();
-		}
-		*/
 		
 		protected _doForwards(): void {
 			for (let i: number = 0; i < this._changes.length; i++) {
