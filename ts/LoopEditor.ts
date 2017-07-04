@@ -161,7 +161,7 @@ module beepbox {
 		
 		private _onCursorMoved(): void {
 			if (this._mouseDown) {
-				if (this._change != null) this._change.undo();
+				this._doc.history.undoIfLastChangeWas(this._change);
 				this._change = null;
 				
 				const bar: number = this._mouseX / this._barWidth + this._doc.barScrollPos;
@@ -198,6 +198,7 @@ module beepbox {
 					const endPoints: Endpoints = this._findEndPoints(bar);
 					this._change = new ChangeLoop(this._doc, endPoints.start, endPoints.length);
 				}
+				if (this._change != null) this._doc.history.record(this._change);
 			} else {
 				this._updateCursorStatus();
 				this._updatePreview();
@@ -205,14 +206,7 @@ module beepbox {
 		}
 		
 		private _onCursorReleased = (event: Event): void => {
-			if (this._mouseDown) {
-				if (this._change != null) {
-					//if (this._doc.history.getRecentChange() is ChangeLoop) this._doc.history.undo();
-					this._doc.history.record(this._change);
-					this._change = null;
-				}
-			}
-			
+			this._change = null;
 			this._mouseDown = false;
 			this._updateCursorStatus();
 			this._render();

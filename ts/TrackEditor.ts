@@ -105,6 +105,8 @@ module beepbox {
 		private _channelHeight: number = 32;
 		private _renderedSquashed: boolean = false;
 		private _renderedPlayhead: number = -1;
+		private _changeChannelBar: ChangeChannelBar | null = null;
+		private _changeBarPattern: ChangeBarPattern | null = null;
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._pattern = this._doc.getCurrentPattern();
@@ -144,15 +146,17 @@ module beepbox {
 		
 		private _setChannelBar(channel: number, bar: number): void {
 			const oldBarScrollPos: number = this._doc.barScrollPos;
-			if (this._doc.history.getRecentChange() instanceof ChangeChannelBar) this._doc.history.undo();
+			this._doc.history.undoIfLastChangeWas(this._changeChannelBar);
 			this._doc.barScrollPos = oldBarScrollPos;
-			this._doc.history.record(new ChangeChannelBar(this._doc, channel, bar));
+			this._changeChannelBar = new ChangeChannelBar(this._doc, channel, bar);
+			this._doc.history.record(this._changeChannelBar);
 			this._digits = "";
 		}
 		
 		private _setBarPattern(pattern: number): void {
-			if (this._doc.history.getRecentChange() instanceof ChangeBarPattern) this._doc.history.undo();
-			this._doc.history.record(new ChangeBarPattern(this._doc, pattern));
+			this._doc.history.undoIfLastChangeWas(this._changeBarPattern);
+			this._changeBarPattern = new ChangeBarPattern(this._doc, pattern);
+			this._doc.history.record(this._changeBarPattern);
 		}
 		
 		public onKeyPressed(event: KeyboardEvent): void {
