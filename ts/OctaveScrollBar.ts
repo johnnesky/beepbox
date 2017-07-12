@@ -21,7 +21,8 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
+/// <reference path="SongDocument.ts" />
+/// <reference path="html.ts" />
 
 module beepbox {
 	export class OctaveScrollBar {
@@ -46,13 +47,12 @@ module beepbox {
 		private _mouseOver: boolean = false;
 		private _dragging: boolean = false;
 		private _dragStart: number;
-		private _currentOctave: number;
 		private _barBottom: number;
 		private _renderedBarBottom: number = -1;
 		private _change: ChangeOctave | null = null;
 		
 		constructor(private _doc: SongDocument) {
-			this._doc.watch(this._documentChanged);
+			this._doc.notifier.watch(this._documentChanged);
 			this._documentChanged();
 			
 			this._svg.appendChild(this._handle);
@@ -146,9 +146,11 @@ module beepbox {
 		private _onCursorMoved(): void {
 			if (this._doc.channel == 3) return;
 			if (this._dragging) {
-				const startOctave: number = this._doc.song.channelOctaves[this._doc.channel];
-				let octave: number = startOctave;
+				const currentOctave: number = this._doc.song.channelOctaves[this._doc.channel];
+				const continuousChange: boolean = this._doc.history.lastChangeWas(this._change);
+				const oldValue: number = continuousChange ? this._change!.oldValue : currentOctave;
 				
+				let octave: number = currentOctave;
 				while (this._mouseY - this._dragStart < -this._octaveHeight * 0.5) {
 					if (octave < 4) {
 						octave++;
@@ -166,10 +168,9 @@ module beepbox {
 					}
 				}
 				
-				if (octave != startOctave) {
-					this._doc.history.undoIfLastChangeWas(this._change);
-					this._change = new ChangeOctave(this._doc, octave);
-					this._doc.history.record(this._change);
+				if (octave != currentOctave) {
+					this._change = new ChangeOctave(this._doc, oldValue, octave);
+					this._doc.history.record(this._change, continuousChange);
 				}
 			}
 			
@@ -178,17 +179,19 @@ module beepbox {
 		
 		private _onCursorReleased = (event: Event): void => {
 			if (this._doc.channel != 3 && !this._dragging && this._mouseDown) {
+				const continuousChange: boolean = this._doc.history.lastChangeWas(this._change);
+				const oldValue: number = continuousChange ? this._change!.oldValue : this._doc.song.channelOctaves[this._doc.channel];
+				const currentOctave: number = this._doc.song.channelOctaves[this._doc.channel];
+				
 				if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
-					if (this._currentOctave < 4) {
-						this._doc.history.undoIfLastChangeWas(this._change);
-						this._change = new ChangeOctave(this._doc, this._currentOctave + 1);
-						this._doc.history.record(this._change);
+					if (currentOctave < 4) {
+						this._change = new ChangeOctave(this._doc, oldValue, currentOctave + 1);
+						this._doc.history.record(this._change, continuousChange);
 					}
 				} else {
-					if (this._currentOctave > 0) {
-						this._doc.history.undoIfLastChangeWas(this._change);
-						this._change = new ChangeOctave(this._doc, this._currentOctave - 1);
-						this._doc.history.record(this._change);
+					if (currentOctave > 0) {
+						this._change = new ChangeOctave(this._doc, oldValue, currentOctave - 1);
+						this._doc.history.record(this._change, continuousChange);
 					}
 				}
 			}
@@ -219,8 +222,7 @@ module beepbox {
 		}
 		
 		private _documentChanged = (): void => {
-			this._currentOctave = this._doc.song.channelOctaves[this._doc.channel];
-			this._barBottom = this._editorHeight - (this._octaveHeight * this._currentOctave);
+			this._barBottom = this._editorHeight - (this._octaveHeight * this._doc.song.channelOctaves[this._doc.channel]);
 			this._render();
 		}
 		

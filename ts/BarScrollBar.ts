@@ -21,7 +21,8 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
+/// <reference path="SongDocument.ts" />
+/// <reference path="html.ts" />
 
 module beepbox {
 	export class BarScrollBar {
@@ -55,7 +56,7 @@ module beepbox {
 		private _renderedBarPos: number = -1;
 		
 		constructor(private _doc: SongDocument) {
-			this._doc.watch(this._documentChanged);
+			this._doc.notifier.watch(this._documentChanged);
 			this._documentChanged();
 			
 			const center: number = this._editorHeight * 0.5;
@@ -137,7 +138,7 @@ module beepbox {
 					if (this._doc.barScrollPos > 0) {
 						this._doc.barScrollPos--;
 						this._dragStart -= this._barWidth;
-						this._doc.changed();
+						this._doc.notifier.changed();
 					} else {
 						break;
 					}
@@ -146,7 +147,7 @@ module beepbox {
 					if (this._doc.barScrollPos < this._doc.song.bars - 16) {
 						this._doc.barScrollPos++;
 						this._dragStart += this._barWidth;
-						this._doc.changed();
+						this._doc.notifier.changed();
 					} else {
 						break;
 					}
@@ -159,10 +160,10 @@ module beepbox {
 			if (!this._dragging && this._mouseDown) {
 				if (this._mouseX < (this._doc.barScrollPos + 8) * this._barWidth) {
 					if (this._doc.barScrollPos > 0) this._doc.barScrollPos--;
-					this._doc.changed();
+					this._doc.notifier.changed();
 				} else {
 					if (this._doc.barScrollPos < this._doc.song.bars - 16) this._doc.barScrollPos++;
-					this._doc.changed();
+					this._doc.notifier.changed();
 				}
 			}
 			this._mouseDown = false;

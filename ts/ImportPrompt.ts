@@ -21,7 +21,8 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
+/// <reference path="SongDocument.ts" />
+/// <reference path="html.ts" />
 /// <reference path="SongEditor.ts" />
 
 module beepbox {
@@ -55,7 +56,7 @@ module beepbox {
 			
 			const reader: FileReader = new FileReader();
 			reader.addEventListener("load", (event: Event): void => {
-				this._doc.history.record(new ChangeSong(this._doc, new Song(reader.result)));
+				this._doc.history.record(new ChangeSong(this._doc, reader.result));
 				this._onClose();
 			});
 			reader.readAsText(file);
