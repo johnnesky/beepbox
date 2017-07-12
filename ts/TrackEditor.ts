@@ -21,7 +21,8 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
+/// <reference path="SongDocument.ts" />
+/// <reference path="html.ts" />
 /// <reference path="SongEditor.ts" />
 
 module beepbox {
@@ -31,7 +32,7 @@ module beepbox {
 		private readonly _rect = <SVGRectElement> svgElement("rect", {width: 30, height: 30, x: 1, y: 1});
 		public readonly container = <SVGSVGElement> svgElement("svg", undefined, [this._rect, this._label]);
 		private _renderedIndex: number = 1;
-		private _renderedDim: boolean = false;
+		private _renderedDim: boolean = true;
 		private _renderedSelected: boolean = false;
 		constructor(channel: number, x: number, y: number) {
 			this.container.setAttribute("x", "" + (x * 32));
@@ -105,7 +106,6 @@ module beepbox {
 		private _channelHeight: number = 32;
 		private _renderedSquashed: boolean = false;
 		private _renderedPlayhead: number = -1;
-		private _changeChannelBar: ChangeChannelBar | null = null;
 		private _changeBarPattern: ChangeBarPattern | null = null;
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
@@ -125,7 +125,7 @@ module beepbox {
 			this._svg.appendChild(this._playhead);
 			
 			this._render();
-			this._doc.watch(this._documentChanged);
+			this._doc.notifier.watch(this._documentChanged);
 			
 			window.requestAnimationFrame(this._onEnterFrame);
 			this.container.addEventListener("mousedown", this._onMousePressed);
@@ -145,18 +145,19 @@ module beepbox {
 		}
 		
 		private _setChannelBar(channel: number, bar: number): void {
-			const oldBarScrollPos: number = this._doc.barScrollPos;
-			this._doc.history.undoIfLastChangeWas(this._changeChannelBar);
-			this._doc.barScrollPos = oldBarScrollPos;
-			this._changeChannelBar = new ChangeChannelBar(this._doc, channel, bar);
-			this._doc.history.record(this._changeChannelBar);
+			new ChangeChannelBar(this._doc, channel, bar);
 			this._digits = "";
+			this._doc.history.forgetLastChange();
 		}
 		
 		private _setBarPattern(pattern: number): void {
-			this._doc.history.undoIfLastChangeWas(this._changeBarPattern);
-			this._changeBarPattern = new ChangeBarPattern(this._doc, pattern);
-			this._doc.history.record(this._changeBarPattern);
+			const currentValue: number = this._doc.song.channelBars[this._doc.channel][this._doc.bar];
+			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeBarPattern);
+			const oldValue: number = continuousChange ? this._changeBarPattern!.oldValue : currentValue;
+			if (pattern != currentValue) {
+				this._changeBarPattern = new ChangeBarPattern(this._doc, oldValue, pattern);
+				this._doc.history.record(this._changeBarPattern, continuousChange);
+			}
 		}
 		
 		public onKeyPressed(event: KeyboardEvent): void {

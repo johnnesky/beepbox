@@ -21,7 +21,8 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
+/// <reference path="SongDocument.ts" />
+/// <reference path="html.ts" />
 /// <reference path="SongEditor.ts" />
 
 interface ArrayBufferConstructor {
@@ -30,6 +31,10 @@ interface ArrayBufferConstructor {
 
 module beepbox {
 	const {button, div, input, text} = html;
+	
+	function lerp(low: number, high: number, t: number): number {
+		return low + t * (high - low);
+	}
 	
 	const save = function(blob: Blob, name: string): void {
 		if (navigator.msSaveOrOpenBlob) {

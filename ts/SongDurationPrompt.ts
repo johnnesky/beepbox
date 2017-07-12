@@ -21,7 +21,9 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
+/// <reference path="html.ts" />
+/// <reference path="SongDocument.ts" />
+/// <reference path="changes.ts" />
 /// <reference path="SongEditor.ts" />
 
 module beepbox {
@@ -129,12 +131,12 @@ module beepbox {
 		}
 		
 		private _saveChanges = (): void => {
-			const sequence: ChangeSequence = new ChangeSequence();
-			sequence.append(new ChangeBeats(this._doc, SongDurationPrompt._validate(this._beatsStepper)));
-			sequence.append(new ChangeBars(this._doc, SongDurationPrompt._validate(this._barsStepper)));
-			sequence.append(new ChangePatterns(this._doc, SongDurationPrompt._validate(this._patternsStepper)));
-			sequence.append(new ChangeInstruments(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));
-			this._doc.history.record(sequence);
+			const group: ChangeGroup = new ChangeGroup();
+			group.append(new ChangeBeats(this._doc, SongDurationPrompt._validate(this._beatsStepper)));
+			group.append(new ChangeBars(this._doc, SongDurationPrompt._validate(this._barsStepper)));
+			group.append(new ChangePatterns(this._doc, SongDurationPrompt._validate(this._patternsStepper)));
+			group.append(new ChangeInstruments(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));
+			this._doc.history.record(group);
 			this._onClose();
 		}
 	}

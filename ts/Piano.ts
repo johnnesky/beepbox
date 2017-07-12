@@ -21,7 +21,8 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
+/// <reference path="SongDocument.ts" />
+/// <reference path="html.ts" />
 
 module beepbox {
 	let loadedCount: number = 0;
@@ -71,7 +72,7 @@ module beepbox {
 		private _renderedKey: number = -1;
 		
 		constructor(private _doc: SongDocument) {
-			this._doc.watch(this._documentChanged);
+			this._doc.notifier.watch(this._documentChanged);
 			this._documentChanged();
 			
 			this.container.addEventListener("mousedown", this._onMousePressed);

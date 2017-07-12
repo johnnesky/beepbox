@@ -176,28 +176,28 @@
 √ rename note to pitch, tone to note. 
 √ octave scroll dragging should just be one History change, and it would be nice if dragging sliders didn't generate a bunch of undo history events. Ooh, let's do it for transpose too.
 
+- merge undo history with browser history.
+- rename "_on" to "_when". rename song.toString to song.toHashCode. rename attack to envelope.
+- octave scroll bar shouldn't show white highlight when mouseover and current channel is drums.
+- It would be nice if "escape" closed modal dialogs/prompts. 
 - Make an embeddable song player. (See below.) 
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
 - highlight note edge extensions on touch
 - the method for cycling patterns on a bar is inadequate on touchscreen... use select menu?
 - manifests to allow installing web app as mobile app
 - do audio worker threads work yet? "AudioWorkerNode" vs "AudioWorkletNode"???
-- fix it so that the browser back button isn't useless. save state before and after pasting new song. 
-- the mobile back button is "effectively" undo... but actually extends the undo history, rather than backtracks. Can I make it perform the correct undo? (wait, what if you undo past the start and go back to a different page altogether, do you lose your undo history?)
 - can I improve the interaction for volume envelope dragging and pitch dragging? illustrate volume envelope dragging to make it less confusing. 
-- It would be nice if "escape" closed modal dialogs/prompts. 
 - multitouch?
 - new preferences: follow playhead, play at load?
-- custom number of channels? (how would this impact midi channel exporting?)
 - pitch bends mixed with arpeggios don’t properly check min/max bounds
 - export mp3 and ogg?
 - translation/localization
 - tooltips
+- custom number of channels? (how would this impact midi channel exporting?)
 - a way to pre-generate a javascript sound buffer.
 - Get in touch with ludum dare about linking to beepbox: http://www.ludumdare.com/compo/tools/
 - get in touch with http://youcanmakevideogames.com/resources/music
 - illustrate arpeggio texture on tones with multiple notes, striped fill
-- under the file menu make a "share" button that displays a link that can be copied easily on mobile. 
 - remember recent songs in cookies or local shared object.
 - Allow mobile to start playing on first interaction?
 - Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
@@ -215,6 +215,7 @@ EMBEDDED PLAYER:
 - maybe add a download/export button? set default file title based on embedded title. (restricting character set appropriately)
 - support both flash and js embedded players?
 - should the author be able to set the default loop behavior?
+- under the file menu make a "share" button that displays a link that can be copied easily on mobile. 
 - the embed player itself should have a share button, for social media. which should link to a full page player instead of the editor?
 - These icons at the bottom of the embed player should have tooltips. 
 - maybe also make a full page song player, to link to from tweets when you don't want others to edit.
@@ -248,6 +249,8 @@ AUTHENTICATION:
 - main website should break out of iframe for security: http://usablelayout.com/articles/automatically-break-out-iframe
 
 MAYBE:
+- new drum noise spectrums.
+- @Gasparatus asked for a BPM display.
 - allow dragging track editor playhead?
 - custom cover art, color schemes in playlists and embed player.
 - rapid document/fragment changes due to undo cause undefined state?
@@ -269,7 +272,6 @@ MAYBE:
 - new song setting: distortion, nonlinear mixing of channels...
 - If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
 - compacting and concatenating songs!
-- check to see if the drum frequency range could be usefully extended
 - visual feedback when a note is played
 - when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - options for timing offset

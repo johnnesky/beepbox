@@ -21,7 +21,8 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
+/// <reference path="SongDocument.ts" />
+/// <reference path="html.ts" />
 /// <reference path="SongEditor.ts" />
 
 module beepbox {
@@ -33,6 +34,22 @@ module beepbox {
 		const clone: Node = node.cloneNode(false);
 		node.parentNode!.replaceChild(clone, node);
 		return clone;
+	}
+	
+	class PatternCursor {
+		public valid:        boolean = false;
+		public prevNote:     Note | null = null;
+		public curNote:      Note | null = null;
+		public nextNote:     Note | null = null;
+		public pitch:        number = 0;
+		public pitchIndex:   number = -1;
+		public curIndex:     number = 0;
+		public start:        number = 0;
+		public end:          number = 0;
+		public part:         number = 0;
+		public notePart:     number = 0;
+		public nearPinIndex: number = 0;
+		public pins:         NotePin[] = [];
 	}
 	
 	export class PatternEditor {
@@ -84,7 +101,7 @@ module beepbox {
 		private _mouseYPrev: number = 0;
 		//private _precise: boolean = false;
 		//private _precisionX: number = 0;
-		private _dragChange: Change | null = null;
+		private _dragChange: UndoableChange | null = null;
 		private _cursor: PatternCursor = new PatternCursor();
 		private _pattern: BarPattern | null = null;
 		private _playheadX: number = 0.0;
@@ -112,7 +129,7 @@ module beepbox {
 			this._backgroundDrumRow.setAttribute("fill", "#444444");
 			this._svgDrumBackground.appendChild(this._backgroundDrumRow);
 			
-			this._doc.watch(this._documentChanged);
+			this._doc.notifier.watch(this._documentChanged);
 			this._documentChanged();
 			this._updateCursorStatus();
 			this._updatePreview();
@@ -366,28 +383,28 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-			this._mouseDown = true;
-			this._mouseXStart = this._mouseX;
-			this._mouseYStart = this._mouseY;
-			this._mouseXPrev = this._mouseX;
-			this._mouseYPrev = this._mouseY;
-			this._updateCursorStatus();
-			this._updatePreview();
+			this._onCursorPressed();
 		}
 		
 		private _onTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
 			if (this._pattern == null) return;
-			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			this._onCursorPressed();
+		}
+		
+		private _onCursorPressed(): void {
+			this._mouseDown = true;
 			this._mouseXStart = this._mouseX;
 			this._mouseYStart = this._mouseY;
 			this._mouseXPrev = this._mouseX;
 			this._mouseYPrev = this._mouseY;
 			this._updateCursorStatus();
 			this._updatePreview();
+			this._dragChange = new ChangeSequence();
+			this._doc.history.setProspectiveChange(this._dragChange);
 		}
 		
 		private _onMouseMoved = (event: MouseEvent): void => {
@@ -410,7 +427,14 @@ module beepbox {
 			let start: number;
 			let end: number;
 			if (this._pattern == null) return;
-			if (this._mouseDown && this._cursor.valid) {
+			
+			// HACK: Undoable pattern changes rely on persistent instance
+			// references. Loading song from hash via undo/redo breaks that,
+			// so changes are no longer undoable and the cursor status may be
+			// invalid. Abort further drag changes until the mouse is released.
+			const continuousChange: boolean = this._doc.history.lastChangeWas(this._dragChange);
+			
+			if (this._mouseDown && this._cursor.valid && continuousChange) {
 				if (!this._mouseDragging) {
 					const dx: number = this._mouseX - this._mouseXStart;
 					const dy: number = this._mouseY - this._mouseYStart;
@@ -423,11 +447,12 @@ module beepbox {
 				if (this._mouseDragging) {
 					if (this._dragChange != null) {
 						this._dragChange.undo();
-						this._dragChange = null;
 					}
 					
 					const currentPart: number = Math.floor(this._mouseX / this._partWidth);
 					const sequence: ChangeSequence = new ChangeSequence();
+					this._dragChange = sequence;
+					this._doc.history.setProspectiveChange(this._dragChange);
 					
 					if (this._cursor.curNote == null) {
 						let backwards: boolean;
@@ -565,7 +590,6 @@ module beepbox {
 						sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
 						this._copyPins(this._cursor.curNote);
 					}
-					this._dragChange = sequence;
 				}
 				this._mouseXPrev = this._mouseX;
 				this._mouseYPrev = this._mouseY;
@@ -578,12 +602,13 @@ module beepbox {
 		private _onCursorReleased = (event: Event): void => {
 			if (!this._cursor.valid) return;
 			if (this._pattern == null) return;
-			if (this._mouseDragging) {
+			const continuousChange: boolean = this._doc.history.lastChangeWas(this._dragChange);
+			if (this._mouseDragging && continuousChange) {
 				if (this._dragChange != null) {
 					this._doc.history.record(this._dragChange);
 					this._dragChange = null;
 				}
-			} else if (this._mouseDown) {
+			} else if (this._mouseDown && continuousChange) {
 				if (this._cursor.curNote == null) {
 					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.channel == 3);
 					note.pins = [];

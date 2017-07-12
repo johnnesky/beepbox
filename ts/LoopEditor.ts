@@ -21,7 +21,8 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="editor.ts" />
+/// <reference path="SongDocument.ts" />
+/// <reference path="html.ts" />
 
 interface Cursor {
 	startBar: number;
@@ -66,7 +67,7 @@ module beepbox {
 		constructor(private _doc: SongDocument) {
 			this._updateCursorStatus();
 			this._render();
-			this._doc.watch(this._documentChanged);
+			this._doc.notifier.watch(this._documentChanged);
 			
 			this.container.addEventListener("mousedown", this._onMousePressed);
 			document.addEventListener("mousemove", this._onMouseMoved);
@@ -161,16 +162,20 @@ module beepbox {
 		
 		private _onCursorMoved(): void {
 			if (this._mouseDown) {
-				this._doc.history.undoIfLastChangeWas(this._change);
-				this._change = null;
+				let oldStart: number = this._doc.song.loopStart;
+				let oldEnd: number = this._doc.song.loopStart + this._doc.song.loopLength;
+				if (this._change != null && this._doc.history.lastChangeWas(this._change)) {
+					oldStart = this._change.oldStart;
+					oldEnd = oldStart + this._change.oldLength;
+				}
 				
 				const bar: number = this._mouseX / this._barWidth + this._doc.barScrollPos;
 				let start: number;
 				let end: number;
 				let temp: number;
 				if (this._cursor.mode == this._startMode) {
-					start = this._doc.song.loopStart + Math.round(bar - this._cursor.startBar);
-					end = this._doc.song.loopStart + this._doc.song.loopLength;
+					start = oldStart + Math.round(bar - this._cursor.startBar);
+					end = oldEnd;
 					if (start == end) {
 						start = end - 1;
 					} else if (start > end) {
@@ -180,10 +185,10 @@ module beepbox {
 					}
 					if (start < 0) start = 0;
 					if (end >= this._doc.song.bars) end = this._doc.song.bars;
-					this._change = new ChangeLoop(this._doc, start, end - start);
+					this._change = new ChangeLoop(this._doc, oldStart, oldEnd - oldStart, start, end - start);
 				} else if (this._cursor.mode == this._endMode) {
-					start = this._doc.song.loopStart;
-					end = this._doc.song.loopStart + this._doc.song.loopLength + Math.round(bar - this._cursor.startBar);
+					start = oldStart;
+					end = oldEnd + Math.round(bar - this._cursor.startBar);
 					if (end == start) {
 						end = start + 1;
 					} else if (end < start) {
@@ -193,12 +198,12 @@ module beepbox {
 					}
 					if (start < 0) start = 0;
 					if (end >= this._doc.song.bars) end = this._doc.song.bars;
-					this._change = new ChangeLoop(this._doc, start, end - start);
+					this._change = new ChangeLoop(this._doc, oldStart, oldEnd - oldStart, start, end - start);
 				} else if (this._cursor.mode == this._bothMode) {
 					const endPoints: Endpoints = this._findEndPoints(bar);
-					this._change = new ChangeLoop(this._doc, endPoints.start, endPoints.length);
+					this._change = new ChangeLoop(this._doc, oldStart, oldEnd - oldStart, endPoints.start, endPoints.length);
 				}
-				if (this._change != null) this._doc.history.record(this._change);
+				this._doc.history.setProspectiveChange(this._change);
 			} else {
 				this._updateCursorStatus();
 				this._updatePreview();
@@ -206,6 +211,7 @@ module beepbox {
 		}
 		
 		private _onCursorReleased = (event: Event): void => {
+			if (this._change != null) this._doc.history.record(this._change);
 			this._change = null;
 			this._mouseDown = false;
 			this._updateCursorStatus();
