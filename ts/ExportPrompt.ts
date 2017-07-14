@@ -422,7 +422,7 @@ module beepbox {
 					
 					writeEventTime(0);
 					writeUint16(0xFF01); // text meta event. 
-					writeAscii("http://www.beepbox.co/#" + song.toString());
+					writeAscii("http://www.beepbox.co/#" + song.toBase64String());
 					
 					writeEventTime(0);
 					writeUint24(0xFF5103); // tempo meta event. data is 3 bytes.
