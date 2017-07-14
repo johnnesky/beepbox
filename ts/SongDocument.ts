@@ -70,7 +70,7 @@ module beepbox {
 			if (state == null) {
 				// When the page is first loaded, indicate that undo is NOT possible.
 				state = {canUndo: false, sequenceNumber: 0, bar: 0, channel: 0};
-				window.history.replaceState(state, "", "#" + this.song.toString());
+				window.history.replaceState(state, "", "#" + this.song.toBase64String());
 			}
 			window.addEventListener("hashchange", this._whenHashChanged);
 			
@@ -98,7 +98,7 @@ module beepbox {
 				// The user changed the hash directly.
 				this._sequenceNumber++;
 				state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel};
-				window.history.replaceState(state, "", "#" + this.song.toString());
+				window.history.replaceState(state, "", "#" + this.song.toBase64String());
 			} else {
 				if (state.sequenceNumber == this._sequenceNumber - 1) {
 					// undo:
@@ -124,7 +124,7 @@ module beepbox {
 		
 		private _updateHistoryState = (): void => {
 			this._waitingToUpdateState = false;
-			const hash: string = "#" + this.song.toString();
+			const hash: string = "#" + this.song.toBase64String();
 			let state: HistoryState;
 			if (this._shouldPushState) {
 				this._sequenceNumber++;

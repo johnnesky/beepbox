@@ -593,7 +593,7 @@ module beepbox {
 	export class ChangeSong extends Change {
 		constructor(document: SongDocument, newHash: string) {
 			super();
-			document.song.fromString(newHash);
+			document.song.fromBase64String(newHash);
 			document.bar = Math.max(0, Math.min(document.song.bars - 1, document.bar));
 			document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
 			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));

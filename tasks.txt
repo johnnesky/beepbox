@@ -175,10 +175,12 @@
 √ loop control
 √ rename note to pitch, tone to note. 
 √ octave scroll dragging should just be one History change, and it would be nice if dragging sliders didn't generate a bunch of undo history events. Ooh, let's do it for transpose too.
+√ merge undo history with browser history.
+√ optimize song.toString using charCodes. rename song.toString to song.toBase64String.
 
-- merge undo history with browser history.
-- rename "_on" to "_when". rename song.toString to song.toHashCode. rename attack to envelope.
+- rename "_on" to "_when". rename attack to envelope.
 - octave scroll bar shouldn't show white highlight when mouseover and current channel is drums.
+- If there's a drum note at the second-to-top slot, I can't add on to the top slot. Also, the whole snap-to-nearby-note-pitch thing makes less sense for drums anyway. 
 - It would be nice if "escape" closed modal dialogs/prompts. 
 - Make an embeddable song player. (See below.) 
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
