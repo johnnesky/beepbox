@@ -40,24 +40,24 @@ module beepbox {
 		]);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
-			this._fileInput.addEventListener("change", this._onFileSelected);
-			this._cancelButton.addEventListener("click", this._onClose);
+			this._fileInput.addEventListener("change", this._whenFileSelected);
+			this._cancelButton.addEventListener("click", this._close);
 		}
 		
-		private _onClose = (): void => { 
+		private _close = (): void => { 
 			this._songEditor.closePrompt(this);
-			this._fileInput.removeEventListener("change", this._onFileSelected);
-			this._cancelButton.removeEventListener("click", this._onClose);
+			this._fileInput.removeEventListener("change", this._whenFileSelected);
+			this._cancelButton.removeEventListener("click", this._close);
 		}
 		
-		private _onFileSelected = (): void => {
+		private _whenFileSelected = (): void => {
 			const file: File = this._fileInput.files![0];
 			if (!file) return;
 			
 			const reader: FileReader = new FileReader();
 			reader.addEventListener("load", (event: Event): void => {
 				this._doc.history.record(new ChangeSong(this._doc, reader.result));
-				this._onClose();
+				this._close();
 			});
 			reader.readAsText(file);
 		}

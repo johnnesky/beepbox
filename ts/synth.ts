@@ -231,7 +231,7 @@ module beepbox {
 	}
 
 	export class Music {
-		public static readonly scaleNames: ReadonlyArray<string> = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "romani :)", "romani :(", "enigma", "expert"];
+		public static readonly scaleNames: ReadonlyArray<string> = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "dbl harmonic :)", "dbl harmonic :(", "enigma", "expert"];
 		public static readonly scaleFlags: ReadonlyArray<ReadonlyArray<boolean>> = [
 			[ true, false,  true, false,  true, false, false,  true, false,  true, false, false],
 			[ true, false, false,  true, false,  true, false,  true, false, false,  true, false],
@@ -241,7 +241,7 @@ module beepbox {
 			[ true, false, false,  true, false,  true,  true,  true, false, false,  true, false],
 			[ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true],
 			[ true, false,  true,  true, false,  true, false,  true,  true, false,  true, false],
-			[ true,  true, false, false,  true,  true, false,  true,  true, false,  true, false],
+			[ true,  true, false, false,  true,  true, false,  true,  true, false, false,  true],
 			[ true, false,  true,  true, false, false,  true,  true,  true, false, false,  true],
 			[ true, false,  true, false,  true, false,  true, false,  true, false,  true, false],
 			[ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true],
@@ -272,7 +272,7 @@ module beepbox {
 		public static readonly filterBases: ReadonlyArray<number> = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
 		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
 		public static readonly filterVolumes: ReadonlyArray<number> = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
-		public static readonly attackNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide"];
+		public static readonly envelopeNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide"];
 		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
 		public static readonly effectVibratos: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
 		public static readonly effectTremelos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
@@ -361,7 +361,7 @@ module beepbox {
 		public channelOctaves: number[];
 		public instrumentWaves: number[][];
 		public instrumentFilters: number[][];
-		public instrumentAttacks: number[][];
+		public instrumentEnvelopes: number[][];
 		public instrumentEffects: number[][];
 		public instrumentChorus: number[][];
 		public instrumentVolumes: number[][];
@@ -391,7 +391,7 @@ module beepbox {
 			this.instrumentVolumes = [[0],[0],[0],[0]];
 			this.instrumentWaves   = [[1],[1],[1],[1]];
 			this.instrumentFilters = [[0],[0],[0],[0]];
-			this.instrumentAttacks = [[1],[1],[1],[1]];
+			this.instrumentEnvelopes = [[1],[1],[1],[1]];
 			this.instrumentEffects = [[0],[0],[0],[0]];
 			this.instrumentChorus  = [[0],[0],[0],[0]];
 			this.scale = 0;
@@ -438,7 +438,7 @@ module beepbox {
 			
 			buffer.push(CharCode.d);
 			for (let channel: number = 0; channel < Music.numChannels; channel++) for (let i: number = 0; i < this.instruments; i++) {
-				buffer.push(base64IntToCharCode[this.instrumentAttacks[channel][i]]);
+				buffer.push(base64IntToCharCode[this.instrumentEnvelopes[channel][i]]);
 			}
 			
 			buffer.push(CharCode.c);
@@ -619,7 +619,7 @@ module beepbox {
 			const beforeFour:  boolean = version < 4;
 			const beforeFive:  boolean = version < 5;
 			const base64CharCodeToInt: ReadonlyArray<number> = Song._base64CharCodeToInt;
-			if (beforeThree) this.instrumentAttacks = [[0],[0],[0],[0]];
+			if (beforeThree) this.instrumentEnvelopes = [[0],[0],[0],[0]];
 			if (beforeThree) this.instrumentWaves   = [[1],[1],[1],[0]];
 			while (charIndex < compressed.length) {
 				const command: number = compressed.charCodeAt(charIndex++);
@@ -694,11 +694,11 @@ module beepbox {
 				} else if (command == CharCode.d) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentAttacks[channel][0] = this._clip(0, Music.attackNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.instrumentEnvelopes[channel][0] = this._clip(0, Music.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < Music.numChannels; channel++) {
 							for (let i: number = 0; i < this.instruments; i++) {
-								this.instrumentAttacks[channel][i] = this._clip(0, Music.attackNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.instrumentEnvelopes[channel][i] = this._clip(0, Music.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
@@ -949,13 +949,13 @@ module beepbox {
 						instrumentArray.push({
 							volume: (5 - this.instrumentVolumes[channel][i]) * 20,
 							wave: Music.drumNames[this.instrumentWaves[channel][i]],
-							envelope: Music.attackNames[this.instrumentAttacks[channel][i]],
+							envelope: Music.envelopeNames[this.instrumentEnvelopes[channel][i]],
 						});
 					} else {
 						instrumentArray.push({
 							volume: (5 - this.instrumentVolumes[channel][i]) * 20,
 							wave: Music.waveNames[this.instrumentWaves[channel][i]],
-							envelope: Music.attackNames[this.instrumentAttacks[channel][i]],
+							envelope: Music.envelopeNames[this.instrumentEnvelopes[channel][i]],
 							filter: Music.filterNames[this.instrumentFilters[channel][i]],
 							chorus: Music.chorusNames[this.instrumentChorus[channel][i]],
 							effect: Music.effectNames[this.instrumentEffects[channel][i]],
@@ -1108,7 +1108,7 @@ module beepbox {
 				
 				this.instrumentVolumes[channel].length = this.instruments;
 				this.instrumentWaves[channel].length = this.instruments;
-				this.instrumentAttacks[channel].length = this.instruments;
+				this.instrumentEnvelopes[channel].length = this.instruments;
 				this.instrumentFilters[channel].length = this.instruments;
 				this.instrumentChorus[channel].length = this.instruments;
 				this.instrumentEffects[channel].length = this.instruments;
@@ -1124,8 +1124,8 @@ module beepbox {
 					} else {
 						this.instrumentVolumes[channel][i] = 0;
 					}
-					this.instrumentAttacks[channel][i] = Music.attackNames.indexOf(instrumentObject.envelope);
-					if (this.instrumentAttacks[channel][i] == -1) this.instrumentAttacks[channel][i] = 1;
+					this.instrumentEnvelopes[channel][i] = Music.envelopeNames.indexOf(instrumentObject.envelope);
+					if (this.instrumentEnvelopes[channel][i] == -1) this.instrumentEnvelopes[channel][i] = 1;
 					if (channel == 3) {
 						this.instrumentWaves[channel][i] = Music.drumNames.indexOf(instrumentObject.wave);
 						if (this.instrumentWaves[channel][i] == -1) this.instrumentWaves[channel][i] = 0;
@@ -1435,7 +1435,7 @@ module beepbox {
 			const contextClass = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
 			this._audioCtx = this._audioCtx || new contextClass();
 			this._scriptNode = this._audioCtx.createScriptProcessor ? this._audioCtx.createScriptProcessor(2048, 0, 1) : this._audioCtx.createJavaScriptNode(2048, 0, 1); // 2048, 0 input channels, 1 output
-			this._scriptNode.onaudioprocess = this._onSampleData.bind(this);
+			this._scriptNode.onaudioprocess = this._audioProcessCallback;
 			this._scriptNode.channelCountMode = 'explicit';
 			this._scriptNode.channelInterpretation = 'speakers';
 			this._scriptNode.connect(this._audioCtx.destination);
@@ -1518,7 +1518,7 @@ module beepbox {
 			this._playhead += this._bar - oldBar;
 		}
 		
-		private _onSampleData(audioProcessingEvent: any): void {
+		private _audioProcessCallback = (audioProcessingEvent: any): void => {
 			const outputBuffer = audioProcessingEvent.outputBuffer;
 			const outputData: Float32Array = outputBuffer.getChannelData(0);
 			this.synthesize(outputData, outputBuffer.length);
@@ -1673,7 +1673,7 @@ module beepbox {
 					for (let channel: number = 0; channel < 4; channel++) {
 						const pattern: BarPattern | null = song.getPattern(channel, this._bar);
 						
-						const attack: number = pattern == null ? 0 : song.instrumentAttacks[channel][pattern.instrument];
+						const envelope: number = pattern == null ? 0 : song.instrumentEnvelopes[channel][pattern.instrument];
 						
 						let note: Note | null = null;
 						let prevNote: Note | null = null;
@@ -1769,11 +1769,11 @@ module beepbox {
 							
 							let inhibitRestart: boolean = false;
 							if (arpeggioStart == noteStart) {
-								if (attack == 0) {
+								if (envelope == 0) {
 									inhibitRestart = true;
-								} else if (attack == 2) {
+								} else if (envelope == 2) {
 									arpeggioVolumeStart = 0.0;
-								} else if (attack == 3) {
+								} else if (envelope == 3) {
 									if (prevNote == null || prevNote.pitches.length > 1 || note.pitches.length > 1) {
 										arpeggioVolumeStart = 0.0;
 									} else if (prevNote.pins[prevNote.pins.length-1].volume == 0 || note.pins[0].volume == 0) {
@@ -1788,9 +1788,9 @@ module beepbox {
 								}
 							}
 							if (arpeggioEnd == noteEnd) {
-								if (attack == 1 || attack == 2) {
+								if (envelope == 1 || envelope == 2) {
 									arpeggioVolumeEnd = 0.0;
-								} else if (attack == 3) {
+								} else if (envelope == 3) {
 									if (nextNote == null || nextNote.pitches.length > 1 || note.pitches.length > 1) {
 										arpeggioVolumeEnd = 0.0;
 									} else if (note.pins[note.pins.length-1].volume == 0 || nextNote.pins[0].volume == 0) {

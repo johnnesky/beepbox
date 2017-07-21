@@ -113,7 +113,7 @@ module beepbox {
 		private readonly _channelVolumeSlider: HTMLInputElement = input({style: "width: 9em; margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"});
 		private readonly _waveNames: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.waveNames);
 		private readonly _drumNames: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.drumNames);
-		private readonly _attackDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.attackNames);
+		private readonly _envelopeDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.envelopeNames);
 		private readonly _filterDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.filterNames);
 		private readonly _filterDropDownGroup: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Filter: ")]), div({className: "selectContainer"}, [this._filterDropDown])]);
 		private readonly _chorusDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.chorusNames);
@@ -131,7 +131,7 @@ module beepbox {
 			]),
 			div({className: "selectRow"}, [
 				span({}, [text("Envelope: ")]),
-				div({className: "selectContainer"}, [this._attackDropDown]),
+				div({className: "selectContainer"}, [this._envelopeDropDown]),
 			]),
 			this._filterDropDownGroup,
 			this._chorusDropDownGroup,
@@ -200,30 +200,30 @@ module beepbox {
 		private _changeVolume: ChangeVolume | null = null;
 		
 		constructor(private _doc: SongDocument) {
-			this._doc.notifier.watch(this._onUpdated);
-			this._onUpdated();
+			this._doc.notifier.watch(this._whenUpdated);
+			this._whenUpdated();
 			
 			this._editButton.addEventListener("change", this._editMenuHandler);
 			this._optionsButton.addEventListener("change", this._optionsMenuHandler);
-			this._scaleDropDown.addEventListener("change", this._onSetScale);
-			this._keyDropDown.addEventListener("change", this._onSetKey);
-			this._tempoSlider.addEventListener("input", this._onSetTempo);
-			this._reverbSlider.addEventListener("input", this._onSetReverb);
-			this._partDropDown.addEventListener("change", this._onSetParts);
-			this._instrumentDropDown.addEventListener("change", this._onSetInstrument);
-			this._channelVolumeSlider.addEventListener("input", this._onSetVolume);
-			this._waveNames.addEventListener("change", this._onSetWave);
-			this._drumNames.addEventListener("change", this._onSetDrum);
-			this._attackDropDown.addEventListener("change", this._onSetAttack);
-			this._filterDropDown.addEventListener("change", this._onSetFilter);
-			this._chorusDropDown.addEventListener("change", this._onSetChorus);
-			this._effectDropDown.addEventListener("change", this._onSetEffect);
+			this._scaleDropDown.addEventListener("change", this._whenSetScale);
+			this._keyDropDown.addEventListener("change", this._whenSetKey);
+			this._tempoSlider.addEventListener("input", this._whenSetTempo);
+			this._reverbSlider.addEventListener("input", this._whenSetReverb);
+			this._partDropDown.addEventListener("change", this._whenSetParts);
+			this._instrumentDropDown.addEventListener("change", this._whenSetInstrument);
+			this._channelVolumeSlider.addEventListener("input", this._whenSetVolume);
+			this._waveNames.addEventListener("change", this._whenSetWave);
+			this._drumNames.addEventListener("change", this._whenSetDrum);
+			this._envelopeDropDown.addEventListener("change", this._whenSetEnvelope);
+			this._filterDropDown.addEventListener("change", this._whenSetFilter);
+			this._chorusDropDown.addEventListener("change", this._whenSetChorus);
+			this._effectDropDown.addEventListener("change", this._whenSetEffect);
 			this._playButton.addEventListener("click", this._togglePlay);
 			this._exportButton.addEventListener("click", this._openExportPrompt);
 			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
-			this.mainLayer.addEventListener("keydown", this._onKeyPressed);
+			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
 		}
 		
 		private _setPrompt(prompt: {container: HTMLElement}): void {
@@ -247,7 +247,7 @@ module beepbox {
 			this.mainLayer.focus();
 		}
 		
-		private _onUpdated = (): void => {
+		private _whenUpdated = (): void => {
 			const optionCommands: ReadonlyArray<string> = [
 				(this._doc.showLetters ? "✓ " : "") + "Show Piano",
 				(this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes",
@@ -297,7 +297,7 @@ module beepbox {
 			setSelectedIndex(this._waveNames, this._doc.song.instrumentWaves[this._doc.channel][instrument]);
 			setSelectedIndex(this._drumNames, this._doc.song.instrumentWaves[this._doc.channel][instrument]);
 			setSelectedIndex(this._filterDropDown, this._doc.song.instrumentFilters[this._doc.channel][instrument]);
-			setSelectedIndex(this._attackDropDown, this._doc.song.instrumentAttacks[this._doc.channel][instrument]);
+			setSelectedIndex(this._envelopeDropDown, this._doc.song.instrumentEnvelopes[this._doc.channel][instrument]);
 			setSelectedIndex(this._effectDropDown, this._doc.song.instrumentEffects[this._doc.channel][instrument]);
 			setSelectedIndex(this._chorusDropDown, this._doc.song.instrumentChorus[this._doc.channel][instrument]);
 			this._channelVolumeSlider.value = -this._doc.song.instrumentVolumes[this._doc.channel][instrument]+"";
@@ -332,7 +332,7 @@ module beepbox {
 			}
 		}
 		
-		private _onKeyPressed = (event: KeyboardEvent): void => {
+		private _whenKeyPressed = (event: KeyboardEvent): void => {
 			if (this.promptVisible) return;
 			
 			this._trackEditor.onKeyPressed(event);
@@ -433,64 +433,64 @@ module beepbox {
 			this._setPrompt(new ExportPrompt(this._doc, this));
 		}
 		
-		private _onSetScale = (): void => {
+		private _whenSetScale = (): void => {
 			this._doc.history.record(new ChangeScale(this._doc, this._scaleDropDown.selectedIndex));
 		}
 		
-		private _onSetKey = (): void => {
+		private _whenSetKey = (): void => {
 			this._doc.history.record(new ChangeKey(this._doc, this._keyDropDown.selectedIndex));
 		}
 		
-		private _onSetTempo = (): void => {
+		private _whenSetTempo = (): void => {
 			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeTempo);
 			const oldValue: number = continuousChange ? this._changeTempo!.oldValue : this._doc.song.tempo;
 			this._changeTempo = new ChangeTempo(this._doc, oldValue, parseInt(this._tempoSlider.value));
 			this._doc.history.record(this._changeTempo, continuousChange);
 		}
 		
-		private _onSetReverb = (): void => {
+		private _whenSetReverb = (): void => {
 			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeReverb);
 			const oldValue: number = continuousChange ? this._changeReverb!.oldValue : this._doc.song.reverb;
 			this._changeReverb = new ChangeReverb(this._doc, oldValue, parseInt(this._reverbSlider.value));
 			this._doc.history.record(this._changeReverb, continuousChange);
 		}
 		
-		private _onSetParts = (): void => {
+		private _whenSetParts = (): void => {
 			this._doc.history.record(new ChangeParts(this._doc, Music.partCounts[this._partDropDown.selectedIndex]));
 		}
 		
-		private _onSetWave = (): void => {
+		private _whenSetWave = (): void => {
 			this._doc.history.record(new ChangeWave(this._doc, this._waveNames.selectedIndex));
 		}
 		
-		private _onSetDrum = (): void => {
+		private _whenSetDrum = (): void => {
 			this._doc.history.record(new ChangeWave(this._doc, this._drumNames.selectedIndex));
 		}
 		
-		private _onSetFilter = (): void => {
+		private _whenSetFilter = (): void => {
 			this._doc.history.record(new ChangeFilter(this._doc, this._filterDropDown.selectedIndex));
 		}
 		
-		private _onSetAttack = (): void => {
-			this._doc.history.record(new ChangeAttack(this._doc, this._attackDropDown.selectedIndex));
+		private _whenSetEnvelope = (): void => {
+			this._doc.history.record(new ChangeEnvelope(this._doc, this._envelopeDropDown.selectedIndex));
 		}
 		
-		private _onSetEffect = (): void => {
+		private _whenSetEffect = (): void => {
 			this._doc.history.record(new ChangeEffect(this._doc, this._effectDropDown.selectedIndex));
 		}
 		
-		private _onSetChorus = (): void => {
+		private _whenSetChorus = (): void => {
 			this._doc.history.record(new ChangeChorus(this._doc, this._chorusDropDown.selectedIndex));
 		}
 		
-		private _onSetVolume = (): void => {
+		private _whenSetVolume = (): void => {
 			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeVolume);
 			const oldValue: number = continuousChange ? this._changeVolume!.oldValue : this._doc.song.instrumentVolumes[this._doc.channel][this._doc.getCurrentInstrument()];
 			this._changeVolume = new ChangeVolume(this._doc, oldValue, -parseInt(this._channelVolumeSlider.value));
 			this._doc.history.record(this._changeVolume, continuousChange);
 		}
 		
-		private _onSetInstrument = (): void => {
+		private _whenSetInstrument = (): void => {
 			const pattern : BarPattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
 			this._doc.history.record(new ChangePatternInstrument(this._doc, this._instrumentDropDown.selectedIndex, pattern));

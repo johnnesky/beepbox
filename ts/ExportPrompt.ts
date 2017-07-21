@@ -171,20 +171,20 @@ module beepbox {
 			
 			this._fileName.addEventListener("input", ExportPrompt._validateFileName);
 			this._loopDropDown.addEventListener("blur", ExportPrompt._validateNumber);
-			this._exportWavButton.addEventListener("click", this._onExportToWav);
-			this._exportMidiButton.addEventListener("click", this._onExportToMidi);
-			this._exportJsonButton.addEventListener("click", this._onExportToJson);
-			this._cancelButton.addEventListener("click", this._onClose);
+			this._exportWavButton.addEventListener("click", this._whenExportToWav);
+			this._exportMidiButton.addEventListener("click", this._whenExportToMidi);
+			this._exportJsonButton.addEventListener("click", this._whenExportToJson);
+			this._cancelButton.addEventListener("click", this._close);
 		}
 		
-		private _onClose = (): void => { 
+		private _close = (): void => { 
 			this._songEditor.closePrompt(this);
 			this._fileName.removeEventListener("input", ExportPrompt._validateFileName);
 			this._loopDropDown.removeEventListener("blur", ExportPrompt._validateNumber);
-			this._exportWavButton.removeEventListener("click", this._onExportToWav);
-			this._exportMidiButton.removeEventListener("click", this._onExportToMidi);
-			this._exportJsonButton.removeEventListener("click", this._onExportToJson);
-			this._cancelButton.removeEventListener("click", this._onClose);
+			this._exportWavButton.removeEventListener("click", this._whenExportToWav);
+			this._exportMidiButton.removeEventListener("click", this._whenExportToMidi);
+			this._exportJsonButton.removeEventListener("click", this._whenExportToJson);
+			this._cancelButton.removeEventListener("click", this._close);
 		}
 		
 		private static _validateFileName(event: Event): void {
@@ -203,7 +203,7 @@ module beepbox {
 			input.value = Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value)))) + "";
 		}
 		
-		private _onExportToWav = (): void => {
+		private _whenExportToWav = (): void => {
 			
 			const synth: Synth = new Synth(this._doc.song)
 			synth.enableIntro = this._enableIntro.checked;
@@ -283,10 +283,10 @@ module beepbox {
 			const blob = new Blob([arrayBuffer], {type: "audio/wav"});
 			save(blob, this._fileName.value.trim() + ".wav");
 			
-			this._onClose();
+			this._close();
 		}
 		
-		private _onExportToMidi = (): void => {
+		private _whenExportToMidi = (): void => {
 			let writeIndex: number = 0;
 			let fileSize: number = 0;
 			let arrayBuffer: ArrayBuffer = new ArrayBuffer(1024);
@@ -508,7 +508,7 @@ module beepbox {
 								if (isDrums) {
 									let description: string = "noise: " + Music.drumNames[song.instrumentWaves[channel][nextInstrument]];
 									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
-									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
+									description += ", envelope: " + Music.envelopeNames[song.instrumentEnvelopes[channel][nextInstrument]];
 									writeAscii(description);
 									
 									// Program (instrument) change event:
@@ -518,7 +518,7 @@ module beepbox {
 								} else {
 									let description: string = "wave: " + Music.waveNames[song.instrumentWaves[channel][nextInstrument]];
 									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
-									description += ", envelope: " + Music.attackNames[song.instrumentAttacks[channel][nextInstrument]];
+									description += ", envelope: " + Music.envelopeNames[song.instrumentEnvelopes[channel][nextInstrument]];
 									description += ", filter: " + Music.filterNames[song.instrumentFilters[channel][nextInstrument]];
 									description += ", chorus: " + Music.chorusNames[song.instrumentChorus[channel][nextInstrument]];
 									description += ", effect: " + Music.effectNames[song.instrumentEffects[channel][nextInstrument]];
@@ -685,15 +685,15 @@ module beepbox {
 			const blob = new Blob([arrayBuffer], {type: "audio/midi"});
 			save(blob, this._fileName.value.trim() + ".midi");
 			
-			this._onClose();
+			this._close();
 		}
 		
-		private _onExportToJson = (): void => {
+		private _whenExportToJson = (): void => {
 			const jsonObject: Object = this._doc.song.toJsonObject(this._enableIntro.checked, Number(this._loopDropDown.value), this._enableOutro.checked);
 			const jsonString: string = JSON.stringify(jsonObject, null, '\t');
 			const blob = new Blob([jsonString], {type: "application/json"});
 			save(blob, this._fileName.value.trim() + ".json");
-			this._onClose();
+			this._close();
 		}
 	}
 }

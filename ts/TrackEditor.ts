@@ -127,21 +127,21 @@ module beepbox {
 			this._render();
 			this._doc.notifier.watch(this._documentChanged);
 			
-			window.requestAnimationFrame(this._onEnterFrame);
-			this.container.addEventListener("mousedown", this._onMousePressed);
-			document.addEventListener("mousemove", this._onMouseMoved);
-			document.addEventListener("mouseup", this._onMouseReleased);
-			this.container.addEventListener("mouseover", this._onMouseOver);
-			this.container.addEventListener("mouseout", this._onMouseOut);
+			window.requestAnimationFrame(this._animatePlayhead);
+			this.container.addEventListener("mousedown", this._whenMousePressed);
+			document.addEventListener("mousemove", this._whenMouseMoved);
+			document.addEventListener("mouseup", this._whenMouseReleased);
+			this.container.addEventListener("mouseover", this._whenMouseOver);
+			this.container.addEventListener("mouseout", this._whenMouseOut);
 		}
 		
-		private _onEnterFrame = (timestamp: number): void => {
+		private _animatePlayhead = (timestamp: number): void => {
 			const playhead = (this._barWidth * (this._doc.synth.playhead - this._doc.barScrollPos) - 2);
 			if (this._renderedPlayhead != playhead) {
 				this._renderedPlayhead = playhead;
 				this._playhead.setAttribute("x", "" + playhead);
 			}
-			window.requestAnimationFrame(this._onEnterFrame);
+			window.requestAnimationFrame(this._animatePlayhead);
 		}
 		
 		private _setChannelBar(channel: number, bar: number): void {
@@ -242,17 +242,17 @@ module beepbox {
 			this._digits = "";
 		}
 		
-		private _onMouseOver = (event: MouseEvent): void => {
+		private _whenMouseOver = (event: MouseEvent): void => {
 			if (this._mouseOver) return;
 			this._mouseOver = true;
 		}
 		
-		private _onMouseOut = (event: MouseEvent): void => {
+		private _whenMouseOut = (event: MouseEvent): void => {
 			if (!this._mouseOver) return;
 			this._mouseOver = false;
 		}
 		
-		private _onMousePressed = (event: MouseEvent): void => {
+		private _whenMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
@@ -268,14 +268,14 @@ module beepbox {
 			}
 		}
 		
-		private _onMouseMoved = (event: MouseEvent): void => {
+		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updatePreview();
 		}
 		
-		private _onMouseReleased = (event: MouseEvent): void => {
+		private _whenMouseReleased = (event: MouseEvent): void => {
 		}
 		
 		private _updatePreview(): void {

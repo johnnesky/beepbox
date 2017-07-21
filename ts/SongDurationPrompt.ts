@@ -87,7 +87,7 @@ module beepbox {
 			this._instrumentsStepper.max = Music.instrumentsMax + "";
 			
 			this._okayButton.addEventListener("click", this._saveChanges);
-			this._cancelButton.addEventListener("click", this._onClose);
+			this._cancelButton.addEventListener("click", this._close);
 			this._beatsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._barsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._patternsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
@@ -98,10 +98,10 @@ module beepbox {
 			this._instrumentsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
 		}
 		
-		private _onClose = (): void => { 
+		private _close = (): void => { 
 			this._songEditor.closePrompt(this);
 			this._okayButton.removeEventListener("click", this._saveChanges);
-			this._cancelButton.removeEventListener("click", this._onClose);
+			this._cancelButton.removeEventListener("click", this._close);
 			this._beatsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._barsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._patternsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
@@ -137,7 +137,7 @@ module beepbox {
 			group.append(new ChangePatterns(this._doc, SongDurationPrompt._validate(this._patternsStepper)));
 			group.append(new ChangeInstruments(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));
 			this._doc.history.record(group);
-			this._onClose();
+			this._close();
 		}
 	}
 }

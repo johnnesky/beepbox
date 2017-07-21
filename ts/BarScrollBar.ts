@@ -66,31 +66,31 @@ module beepbox {
 			this._leftHighlight.setAttribute("d", `M ${tip} ${center} L ${base} ${center + arrowHeight} L ${base} ${center - arrowHeight} z`);
 			this._rightHighlight.setAttribute("d", `M ${this._editorWidth - tip} ${center} L ${this._editorWidth - base} ${center + arrowHeight} L ${this._editorWidth - base} ${center - arrowHeight} z`);
 			
-			this.container.addEventListener("mousedown", this._onMousePressed);
-			document.addEventListener("mousemove", this._onMouseMoved);
-			document.addEventListener("mouseup", this._onCursorReleased);
-			this.container.addEventListener("mouseover", this._onMouseOver);
-			this.container.addEventListener("mouseout", this._onMouseOut);
+			this.container.addEventListener("mousedown", this._whenMousePressed);
+			document.addEventListener("mousemove", this._whenMouseMoved);
+			document.addEventListener("mouseup", this._whenCursorReleased);
+			this.container.addEventListener("mouseover", this._whenMouseOver);
+			this.container.addEventListener("mouseout", this._whenMouseOut);
 			
-			this.container.addEventListener("touchstart", this._onTouchPressed);
-			document.addEventListener("touchmove", this._onTouchMoved);
-			document.addEventListener("touchend", this._onCursorReleased);
-			document.addEventListener("touchcancel", this._onCursorReleased);
+			this.container.addEventListener("touchstart", this._whenTouchPressed);
+			document.addEventListener("touchmove", this._whenTouchMoved);
+			document.addEventListener("touchend", this._whenCursorReleased);
+			document.addEventListener("touchcancel", this._whenCursorReleased);
 		}
 		
-		private _onMouseOver = (event: MouseEvent): void => {
+		private _whenMouseOver = (event: MouseEvent): void => {
 			if (this._mouseOver) return;
 			this._mouseOver = true;
 			this._updatePreview();
 		}
 		
-		private _onMouseOut = (event: MouseEvent): void => {
+		private _whenMouseOut = (event: MouseEvent): void => {
 			if (!this._mouseOver) return;
 			this._mouseOver = false;
 			this._updatePreview();
 		}
 		
-		private _onMousePressed = (event: MouseEvent): void => {
+		private _whenMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
@@ -103,7 +103,7 @@ module beepbox {
 			}
 		}
 		
-		private _onTouchPressed = (event: TouchEvent): void => {
+		private _whenTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
@@ -116,23 +116,23 @@ module beepbox {
 			}
 		}
 		
-		private _onMouseMoved = (event: MouseEvent): void => {
+		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-		    this._onCursorMoved();
+		    this._whenCursorMoved();
 		}
 		
-		private _onTouchMoved = (event: TouchEvent): void => {
+		private _whenTouchMoved = (event: TouchEvent): void => {
 			if (!this._mouseDown) return;
 			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
-		    this._onCursorMoved();
+		    this._whenCursorMoved();
 		}
 		
-		private _onCursorMoved(): void {
+		private _whenCursorMoved(): void {
 			if (this._dragging) {
 				while (this._mouseX - this._dragStart < -this._barWidth * 0.5) {
 					if (this._doc.barScrollPos > 0) {
@@ -156,7 +156,7 @@ module beepbox {
 			if (this._mouseOver) this._updatePreview();
 		}
 		
-		private _onCursorReleased = (event: Event): void => {
+		private _whenCursorReleased = (event: Event): void => {
 			if (!this._dragging && this._mouseDown) {
 				if (this._mouseX < (this._doc.barScrollPos + 8) * this._barWidth) {
 					if (this._doc.barScrollPos > 0) this._doc.barScrollPos--;

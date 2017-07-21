@@ -100,13 +100,13 @@ module beepbox {
 		}
 	}
 	
-	export class ChangeAttack extends Change {
+	export class ChangeEnvelope extends Change {
 		constructor(document: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = document.song.instrumentAttacks[document.channel][document.getCurrentInstrument()];
+			const oldValue: number = document.song.instrumentEnvelopes[document.channel][document.getCurrentInstrument()];
 			if (oldValue != newValue) {
 				this._didSomething();
-				document.song.instrumentAttacks[document.channel][document.getCurrentInstrument()] = newValue;
+				document.song.instrumentEnvelopes[document.channel][document.getCurrentInstrument()] = newValue;
 				document.notifier.changed();
 			}
 		}
@@ -237,18 +237,18 @@ module beepbox {
 				// todo: adjust size of instrument arrays, make sure no references to invalid instruments
 				const oldInstrumentWaves: number[][]   = document.song.instrumentWaves;
 				const oldInstrumentFilters: number[][] = document.song.instrumentFilters;
-				const oldInstrumentAttacks: number[][] = document.song.instrumentAttacks;
+				const oldInstrumentEnvelopes: number[][] = document.song.instrumentEnvelopes;
 				const oldInstrumentEffects: number[][] = document.song.instrumentEffects;
 				const oldInstrumentChorus: number[][]  = document.song.instrumentChorus;
 				const oldInstrumentVolumes: number[][] = document.song.instrumentVolumes;
 				const newInstrumentWaves: number[][]   = [];
 				const newInstrumentFilters: number[][] = [];
-				const newInstrumentAttacks: number[][] = [];
+				const newInstrumentEnvelopes: number[][] = [];
 				const newInstrumentEffects: number[][] = [];
 				const newInstrumentChorus: number[][]  = [];
 				const newInstrumentVolumes: number[][] = [];
-				const oldArrays: number[][][] = [oldInstrumentWaves, oldInstrumentFilters, oldInstrumentAttacks, oldInstrumentEffects, oldInstrumentChorus, oldInstrumentVolumes];
-				const newArrays: number[][][] = [newInstrumentWaves, newInstrumentFilters, newInstrumentAttacks, newInstrumentEffects, newInstrumentChorus, newInstrumentVolumes];
+				const oldArrays: number[][][] = [oldInstrumentWaves, oldInstrumentFilters, oldInstrumentEnvelopes, oldInstrumentEffects, oldInstrumentChorus, oldInstrumentVolumes];
+				const newArrays: number[][][] = [newInstrumentWaves, newInstrumentFilters, newInstrumentEnvelopes, newInstrumentEffects, newInstrumentChorus, newInstrumentVolumes];
 				for (let k: number = 0; k < newArrays.length; k++) {
 					const oldArray: number[][] = oldArrays[k];
 					const newArray: number[][] = newArrays[k];
@@ -260,7 +260,7 @@ module beepbox {
 							} else {
 								if (k == 0) { // square wave or white noise
 									channel.push(1);
-								} else if (k == 2) { // sudden attack
+								} else if (k == 2) { // sudden envelope
 									channel.push(1);
 								} else {
 									channel.push(0);
@@ -285,7 +285,7 @@ module beepbox {
 				document.song.instruments = newInstruments;
 				document.song.instrumentWaves   = newInstrumentWaves;
 				document.song.instrumentFilters = newInstrumentFilters;
-				document.song.instrumentAttacks = newInstrumentAttacks;
+				document.song.instrumentEnvelopes = newInstrumentEnvelopes;
 				document.song.instrumentEffects = newInstrumentEffects;
 				document.song.instrumentChorus  = newInstrumentChorus;
 				document.song.instrumentVolumes = newInstrumentVolumes;
