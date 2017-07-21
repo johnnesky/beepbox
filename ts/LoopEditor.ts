@@ -69,16 +69,16 @@ module beepbox {
 			this._render();
 			this._doc.notifier.watch(this._documentChanged);
 			
-			this.container.addEventListener("mousedown", this._onMousePressed);
-			document.addEventListener("mousemove", this._onMouseMoved);
-			document.addEventListener("mouseup", this._onCursorReleased);
-			this.container.addEventListener("mouseover", this._onMouseOver);
-			this.container.addEventListener("mouseout", this._onMouseOut);
+			this.container.addEventListener("mousedown", this._whenMousePressed);
+			document.addEventListener("mousemove", this._whenMouseMoved);
+			document.addEventListener("mouseup", this._whenCursorReleased);
+			this.container.addEventListener("mouseover", this._whenMouseOver);
+			this.container.addEventListener("mouseout", this._whenMouseOut);
 			
-			this.container.addEventListener("touchstart", this._onTouchPressed);
-			document.addEventListener("touchmove", this._onTouchMoved);
-			document.addEventListener("touchend", this._onCursorReleased);
-			document.addEventListener("touchcancel", this._onCursorReleased);
+			this.container.addEventListener("touchstart", this._whenTouchPressed);
+			document.addEventListener("touchmove", this._whenTouchMoved);
+			document.addEventListener("touchend", this._whenCursorReleased);
+			document.addEventListener("touchcancel", this._whenCursorReleased);
 		}
 		
 		private _updateCursorStatus(): void {
@@ -110,19 +110,19 @@ module beepbox {
 			return {start: start, length: end - start};
 		}
 		
-		private _onMouseOver = (event: MouseEvent): void => {
+		private _whenMouseOver = (event: MouseEvent): void => {
 			if (this._mouseOver) return;
 			this._mouseOver = true;
 			this._updatePreview();
 		}
 		
-		private _onMouseOut = (event: MouseEvent): void => {
+		private _whenMouseOut = (event: MouseEvent): void => {
 			if (!this._mouseOver) return;
 			this._mouseOver = false;
 			this._updatePreview();
 		}
 		
-		private _onMousePressed = (event: MouseEvent): void => {
+		private _whenMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
@@ -130,10 +130,10 @@ module beepbox {
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updateCursorStatus();
 			this._updatePreview();
-			this._onMouseMoved(event);
+			this._whenMouseMoved(event);
 		}
 		
-		private _onTouchPressed = (event: TouchEvent): void => {
+		private _whenTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
@@ -141,26 +141,26 @@ module beepbox {
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
 			this._updateCursorStatus();
 			this._updatePreview();
-			this._onTouchMoved(event);
+			this._whenTouchMoved(event);
 		}
 		
-		private _onMouseMoved = (event: MouseEvent): void => {
+		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-		    this._onCursorMoved();
+		    this._whenCursorMoved();
 		}
 		
-		private _onTouchMoved = (event: TouchEvent): void => {
+		private _whenTouchMoved = (event: TouchEvent): void => {
 			if (!this._mouseDown) return;
 			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
-		    this._onCursorMoved();
+		    this._whenCursorMoved();
 		}
 		
-		private _onCursorMoved(): void {
+		private _whenCursorMoved(): void {
 			if (this._mouseDown) {
 				let oldStart: number = this._doc.song.loopStart;
 				let oldEnd: number = this._doc.song.loopStart + this._doc.song.loopLength;
@@ -210,7 +210,7 @@ module beepbox {
 			}
 		}
 		
-		private _onCursorReleased = (event: Event): void => {
+		private _whenCursorReleased = (event: Event): void => {
 			if (this._change != null) this._doc.history.record(this._change);
 			this._change = null;
 			this._mouseDown = false;

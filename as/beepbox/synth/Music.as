@@ -22,7 +22,7 @@ SOFTWARE.
 
 package beepbox.synth {
 	public class Music {
-		public static const scaleNames: Array = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "romani :)", "romani :(", "enigma", "expert"];
+		public static const scaleNames: Array = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "dbl harmonic :)", "dbl harmonic :(", "enigma", "expert"];
 		public static const scaleFlags: Array = [
 			[ true, false,  true, false,  true, false, false,  true, false,  true, false, false],
 			[ true, false, false,  true, false,  true, false,  true, false, false,  true, false],
@@ -32,7 +32,7 @@ package beepbox.synth {
 			[ true, false, false,  true, false,  true,  true,  true, false, false,  true, false],
 			[ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true],
 			[ true, false,  true,  true, false,  true, false,  true,  true, false,  true, false],
-			[ true,  true, false, false,  true,  true, false,  true,  true, false,  true, false],
+			[ true,  true, false, false,  true,  true, false,  true,  true, false, false,  true],
 			[ true, false,  true,  true, false, false,  true,  true,  true, false, false,  true],
 			[ true, false,  true, false,  true, false,  true, false,  true, false,  true, false],
 			[ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true],

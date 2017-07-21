@@ -133,17 +133,17 @@ module beepbox {
 			this._documentChanged();
 			this._updateCursorStatus();
 			this._updatePreview();
-			window.requestAnimationFrame(this._onEnterFrame);
-			this._svg.addEventListener("mousedown", this._onMousePressed);
-			document.addEventListener("mousemove", this._onMouseMoved);
-			document.addEventListener("mouseup", this._onCursorReleased);
-			this._svg.addEventListener("mouseover", this._onMouseOver);
-			this._svg.addEventListener("mouseout", this._onMouseOut);
+			window.requestAnimationFrame(this._animatePlayhead);
+			this._svg.addEventListener("mousedown", this._whenMousePressed);
+			document.addEventListener("mousemove", this._whenMouseMoved);
+			document.addEventListener("mouseup", this._whenCursorReleased);
+			this._svg.addEventListener("mouseover", this._whenMouseOver);
+			this._svg.addEventListener("mouseout", this._whenMouseOut);
 			
-			this._svg.addEventListener("touchstart", this._onTouchPressed);
-			document.addEventListener("touchmove", this._onTouchMoved);
-			document.addEventListener("touchend", this._onCursorReleased);
-			document.addEventListener("touchcancel", this._onCursorReleased);
+			this._svg.addEventListener("touchstart", this._whenTouchPressed);
+			document.addEventListener("touchmove", this._whenTouchMoved);
+			document.addEventListener("touchend", this._whenCursorReleased);
+			document.addEventListener("touchcancel", this._whenCursorReleased);
 		}
 		
 		private _updateCursorStatus(): void {
@@ -209,12 +209,14 @@ module beepbox {
 				mousePitch -= interval;
 				this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch) - maxInterval);
 				
-				let nearest: number = error;
-				for (let i: number = 0; i < this._cursor.curNote.pitches.length; i++) {
-					const distance: number = Math.abs(this._cursor.curNote.pitches[i] - mousePitch + 0.5);
-					if (distance > nearest) continue;
-					nearest = distance;
-					this._cursor.pitch = this._cursor.curNote.pitches[i];
+				if (this._doc.channel != 3) {
+					let nearest: number = error;
+					for (let i: number = 0; i < this._cursor.curNote.pitches.length; i++) {
+						const distance: number = Math.abs(this._cursor.curNote.pitches[i] - mousePitch + 0.5);
+						if (distance > nearest) continue;
+						nearest = distance;
+						this._cursor.pitch = this._cursor.curNote.pitches[i];
+					}
 				}
 				
 				for (let i: number = 0; i < this._cursor.curNote.pitches.length; i++) {
@@ -351,7 +353,7 @@ module beepbox {
 			this._copiedPinChannels = this._defaultPinChannels.concat();
 		}
 		
-		private _onEnterFrame = (timestamp: number): void => {
+		private _animatePlayhead = (timestamp: number): void => {
 			if (!this._doc.synth.playing || this._pattern == null || this._doc.song.getPattern(this._doc.channel, Math.floor(this._doc.synth.playhead)) != this._pattern) {
 				this._svgPlayhead.setAttribute("visibility", "hidden");
 			} else {
@@ -364,38 +366,38 @@ module beepbox {
 				}
 				this._svgPlayhead.setAttribute("x", "" + prettyNumber(this._playheadX * this._editorWidth - 2));
 			}
-			window.requestAnimationFrame(this._onEnterFrame);
+			window.requestAnimationFrame(this._animatePlayhead);
 		}
 		
-		private _onMouseOver = (event: MouseEvent): void => {
+		private _whenMouseOver = (event: MouseEvent): void => {
 			if (this._mouseOver) return;
 			this._mouseOver = true;
 		}
 		
-		private _onMouseOut = (event: MouseEvent): void => {
+		private _whenMouseOut = (event: MouseEvent): void => {
 			if (!this._mouseOver) return;
 			this._mouseOver = false;
 		}
 		
-		private _onMousePressed = (event: MouseEvent): void => {
+		private _whenMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
 			if (this._pattern == null) return;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-			this._onCursorPressed();
+			this._whenCursorPressed();
 		}
 		
-		private _onTouchPressed = (event: TouchEvent): void => {
+		private _whenTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
 			if (this._pattern == null) return;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
-			this._onCursorPressed();
+			this._whenCursorPressed();
 		}
 		
-		private _onCursorPressed(): void {
+		private _whenCursorPressed(): void {
 			this._mouseDown = true;
 			this._mouseXStart = this._mouseX;
 			this._mouseYStart = this._mouseY;
@@ -407,23 +409,23 @@ module beepbox {
 			this._doc.history.setProspectiveChange(this._dragChange);
 		}
 		
-		private _onMouseMoved = (event: MouseEvent): void => {
+		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-		    this._onCursorMoved();
+		    this._whenCursorMoved();
 		}
 		
-		private _onTouchMoved = (event: TouchEvent): void => {
+		private _whenTouchMoved = (event: TouchEvent): void => {
 			if (!this._mouseDown) return;
 			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
-		    this._onCursorMoved();
+		    this._whenCursorMoved();
 		}
 		
-		private _onCursorMoved(): void {
+		private _whenCursorMoved(): void {
 			let start: number;
 			let end: number;
 			if (this._pattern == null) return;
@@ -599,7 +601,7 @@ module beepbox {
 			}
 		}
 		
-		private _onCursorReleased = (event: Event): void => {
+		private _whenCursorReleased = (event: Event): void => {
 			if (!this._cursor.valid) return;
 			if (this._pattern == null) return;
 			const continuousChange: boolean = this._doc.history.lastChangeWas(this._dragChange);
