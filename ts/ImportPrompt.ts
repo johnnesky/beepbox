@@ -22,13 +22,14 @@ SOFTWARE.
 
 /// <reference path="synth.ts" />
 /// <reference path="SongDocument.ts" />
+/// <reference path="Prompt.ts" />
 /// <reference path="html.ts" />
-/// <reference path="SongEditor.ts" />
+/// <reference path="changes.ts" />
 
 module beepbox {
 	const {button, div, input, text} = html;
 
-	export class ImportPrompt {
+	export class ImportPrompt implements Prompt {
 		private readonly _fileInput: HTMLInputElement = input({type: "file", accept: ".json,application/json"});
 		private readonly _cancelButton: HTMLButtonElement = button({}, [text("Cancel")]);
 		
@@ -45,7 +46,10 @@ module beepbox {
 		}
 		
 		private _close = (): void => { 
-			this._songEditor.closePrompt(this);
+			this._doc.undo();
+		}
+		
+		public cleanUp = (): void => { 
 			this._fileInput.removeEventListener("change", this._whenFileSelected);
 			this._cancelButton.removeEventListener("click", this._close);
 		}
@@ -56,8 +60,8 @@ module beepbox {
 			
 			const reader: FileReader = new FileReader();
 			reader.addEventListener("load", (event: Event): void => {
-				this._doc.history.record(new ChangeSong(this._doc, reader.result));
-				this._close();
+				this._doc.prompt = null;
+				this._doc.history.record(new ChangeSong(this._doc, reader.result), true);
 			});
 			reader.readAsText(file);
 		}

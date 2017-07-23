@@ -29,6 +29,7 @@ module beepbox {
 		sequenceNumber: number;
 		bar: number;
 		channel: number;
+		prompt: string | null;
 	}
 	
 	export class SongDocument {
@@ -46,6 +47,7 @@ module beepbox {
 		public showScrollBar: boolean;
 		public volume: number = 75;
 		public barScrollPos: number = 0;
+		public prompt: string | null = null;
 		
 		private _recentChange: Change | null = null;
 		private _sequenceNumber: number = 0;
@@ -69,10 +71,11 @@ module beepbox {
 			let state: HistoryState | null = window.history.state;
 			if (state == null) {
 				// When the page is first loaded, indicate that undo is NOT possible.
-				state = {canUndo: false, sequenceNumber: 0, bar: 0, channel: 0};
+				state = {canUndo: false, sequenceNumber: 0, bar: 0, channel: 0, prompt: this.prompt};
 				window.history.replaceState(state, "", "#" + this.song.toBase64String());
 			}
-			window.addEventListener("hashchange", this._whenHashChanged);
+			window.addEventListener("hashchange", this._whenHistoryStateChanged);
+			window.addEventListener("popstate", this._whenHistoryStateChanged);
 			
 			this.bar = state.bar;
 			this.channel = state.channel;
@@ -89,12 +92,17 @@ module beepbox {
 			}
 		}
 		
-		private _whenHashChanged = (): void => {
+		private _whenHistoryStateChanged = (): void => {
 			let state: HistoryState | null = window.history.state;
+			
+			// We're listening for both hashchanged and popstate, which often fire together.
+			// Abort if we've already handled the current state. 
+			if (state && state.sequenceNumber == this._sequenceNumber) return;
+			
 			if (state == null) {
 				// The user changed the hash directly.
 				this._sequenceNumber++;
-				state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel};
+				state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
 				new ChangeSong(this, location.hash);
 				window.history.replaceState(state, "", "#" + this.song.toBase64String());
 			} else {
@@ -102,12 +110,13 @@ module beepbox {
 					// undo:
 					this.bar = this._barFromCurrentState;
 					this.channel = this._channelFromCurrentState;
-				} else {
+				} else if (state.sequenceNumber != this._sequenceNumber) {
 					// redo, or jump multiple steps in history:
 					this.bar = state.bar;
 					this.channel = state.channel;
 				}
 				this._sequenceNumber = state.sequenceNumber;
+				this.prompt = state.prompt;
 				new ChangeSong(this, location.hash);
 			}
 			
@@ -130,10 +139,10 @@ module beepbox {
 			let state: HistoryState;
 			if (this._shouldPushState) {
 				this._sequenceNumber++;
-				state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel};
+				state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
 				window.history.pushState(state, "", hash);
 			} else {
-				state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel};
+				state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
 				window.history.replaceState(state, "", hash);
 			}
 			this._barFromCurrentState = state.bar;
@@ -155,6 +164,14 @@ module beepbox {
 					this._waitingToUpdateState = true;
 				}
 			}
+		}
+		
+		public openPrompt(prompt: string): void {
+			this.prompt = prompt;
+			const hash: string = "#" + this.song.toBase64String();
+			this._sequenceNumber++;
+			const state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
+			window.history.pushState(state, "", hash);
 		}
 		
 		public undo(): void {

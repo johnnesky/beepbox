@@ -22,8 +22,8 @@ SOFTWARE.
 
 /// <reference path="synth.ts" />
 /// <reference path="SongDocument.ts" />
+/// <reference path="Prompt.ts" />
 /// <reference path="html.ts" />
-/// <reference path="SongEditor.ts" />
 
 interface ArrayBufferConstructor {
 	transfer: any;
@@ -36,7 +36,7 @@ module beepbox {
 		return low + t * (high - low);
 	}
 	
-	const save = function(blob: Blob, name: string): void {
+	function save(blob: Blob, name: string): void {
 		if (navigator.msSaveOrOpenBlob) {
 			navigator.msSaveOrOpenBlob(blob, name);
 			return;
@@ -117,7 +117,7 @@ module beepbox {
 		};
 	}
 
-	export class ExportPrompt {
+	export class ExportPrompt implements Prompt {
 		private readonly _fileName: HTMLInputElement = input({type: "text", style: "width: 10em;", value: "BeepBox-Song", maxlength: 250});
 		private readonly _enableIntro: HTMLInputElement = input({type: "checkbox"});
 		private readonly _loopDropDown: HTMLInputElement = input({style:"width: 2em;", type: "number", min: "1", max: "4", step: "1"});
@@ -178,7 +178,10 @@ module beepbox {
 		}
 		
 		private _close = (): void => { 
-			this._songEditor.closePrompt(this);
+			this._doc.undo();
+		}
+		
+		public cleanUp = (): void => { 
 			this._fileName.removeEventListener("input", ExportPrompt._validateFileName);
 			this._loopDropDown.removeEventListener("blur", ExportPrompt._validateNumber);
 			this._exportWavButton.removeEventListener("click", this._whenExportToWav);

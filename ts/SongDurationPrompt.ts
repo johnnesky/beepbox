@@ -23,13 +23,13 @@ SOFTWARE.
 /// <reference path="synth.ts" />
 /// <reference path="html.ts" />
 /// <reference path="SongDocument.ts" />
+/// <reference path="Prompt.ts" />
 /// <reference path="changes.ts" />
-/// <reference path="SongEditor.ts" />
 
 module beepbox {
 	const {button, div, span, input, br, text} = html;
 	
-	export class SongDurationPrompt {
+	export class SongDurationPrompt implements Prompt {
 		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "128", step: "1"});
 		private readonly _barsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "128", step: "1"});
 		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "32", step: "1"});
@@ -99,7 +99,10 @@ module beepbox {
 		}
 		
 		private _close = (): void => { 
-			this._songEditor.closePrompt(this);
+			this._doc.undo();
+		}
+		
+		public cleanUp = (): void => { 
 			this._okayButton.removeEventListener("click", this._saveChanges);
 			this._cancelButton.removeEventListener("click", this._close);
 			this._beatsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
@@ -136,8 +139,8 @@ module beepbox {
 			group.append(new ChangeBars(this._doc, SongDurationPrompt._validate(this._barsStepper)));
 			group.append(new ChangePatterns(this._doc, SongDurationPrompt._validate(this._patternsStepper)));
 			group.append(new ChangeInstruments(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));
-			this._doc.history.record(group);
-			this._close();
+			this._doc.prompt = null;
+			this._doc.history.record(group, true);
 		}
 	}
 }
