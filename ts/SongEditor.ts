@@ -24,6 +24,7 @@ SOFTWARE.
 /// <reference path="SongDocument.ts" />
 /// <reference path="html.ts" />
 /// <reference path="style.ts" />
+/// <reference path="Prompt.ts" />
 /// <reference path="PatternEditor.ts" />
 /// <reference path="TrackEditor.ts" />
 /// <reference path="LoopEditor.ts" />
@@ -54,7 +55,7 @@ module beepbox {
 		public static readonly noteColorsDim: ReadonlyArray<string>       = ["#00bdc7", "#c7c700", "#ff771c", "#aaaaaa"];
 		public static readonly noteColorsBright: ReadonlyArray<string>    = ["#92f9ff", "#ffff92", "#ffcdab", "#eeeeee"];
 		
-		public promptVisible: boolean = false;
+		public prompt: Prompt | null = null;
 		
 		private readonly _width: number = 700;
 		private readonly _height: number = 645;
@@ -226,22 +227,43 @@ module beepbox {
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
 		}
 		
-		private _setPrompt(prompt: {container: HTMLElement}): void {
-			if (this.promptVisible) return;
-			this._wasPlaying = this._doc.synth.playing;
-			if (this._wasPlaying) this._togglePlay();
-			this._promptContainer.style.display = null;
-			this._promptContainer.appendChild(prompt.container);
-			this.promptVisible = true;
+		private _openPrompt(promptName: string): void {
+			this._doc.openPrompt(promptName);
+			this._setPrompt(promptName);
 		}
 		
-		public closePrompt(prompt: {container: HTMLElement}) {
-			this.promptVisible = false;
-			if (this._wasPlaying) this._togglePlay();
-			this._promptContainer.style.display = "none";
-			this._promptContainer.removeChild(prompt.container);
-			this.mainLayer.focus();
-		};
+		private _setPrompt(promptName: string | null): void {
+			if (this.prompt) {
+				if (this._wasPlaying) this._play();
+				this._wasPlaying = false;
+				this._promptContainer.style.display = "none";
+				this._promptContainer.removeChild(this.prompt.container);
+				this.prompt.cleanUp();
+				this.prompt = null;
+				this.mainLayer.focus();
+			}
+			
+			if (promptName) {
+				switch (promptName) {
+					case "export":
+						this.prompt = new ExportPrompt(this._doc, this)
+						break;
+					case "import":
+						this.prompt = new ImportPrompt(this._doc, this)
+						break;
+					case "duration":
+						this.prompt = new SongDurationPrompt(this._doc, this)
+						break;
+				}
+				
+				if (this.prompt) {
+					this._wasPlaying = this._doc.synth.playing;
+					this._pause();
+					this._promptContainer.style.display = null;
+					this._promptContainer.appendChild(this.prompt.container);
+				}
+			}
+		}
 		
 		private _refocusStage = (event: Event): void => {
 			this.mainLayer.focus();
@@ -318,6 +340,8 @@ module beepbox {
 			this._trackEditor.container.style.height = String(trackHeight) + "px";
 			
 			this._volumeSlider.value = String(this._doc.volume);
+			
+			this._setPrompt(this._doc.prompt);
 		}
 		
 		public updatePlayButton(): void {
@@ -333,7 +357,13 @@ module beepbox {
 		}
 		
 		private _whenKeyPressed = (event: KeyboardEvent): void => {
-			if (this.promptVisible) return;
+			if (this.prompt) {
+				if (event.keyCode == 27) { // ESC key
+					// close prompt.
+					window.history.back();
+				}
+				return;
+			}
 			
 			this._trackEditor.onKeyPressed(event);
 			//if (event.ctrlKey)
@@ -387,11 +417,20 @@ module beepbox {
 		
 		private _togglePlay = (): void => {
 			if (this._doc.synth.playing) {
-				this._doc.synth.pause();
-				this._doc.synth.snapToBar();
+				this._pause();
 			} else {
-				this._doc.synth.play();
+				this._play();
 			}
+		}
+		
+		private _play(): void {
+			this._doc.synth.play();
+			this.updatePlayButton();
+		}
+		
+		private _pause(): void {
+			this._doc.synth.pause();
+			this._doc.synth.snapToBar();
 			this.updatePlayButton();
 		}
 		
@@ -430,7 +469,7 @@ module beepbox {
 		}
 		
 		private _openExportPrompt = (): void => {
-			this._setPrompt(new ExportPrompt(this._doc, this));
+			this._openPrompt("export");
 		}
 		
 		private _whenSetScale = (): void => {
@@ -517,13 +556,13 @@ module beepbox {
 					this._transpose(false);
 					break;
 				case "import":
-					this._setPrompt(new ImportPrompt(this._doc, this));
+					this._openPrompt("import");
 					break;
 				case "clean":
 					this._cleanSlate();
 					break;
 				case "duration":
-					this._setPrompt(new SongDurationPrompt(this._doc, this));
+					this._openPrompt("duration");
 					break;
 			}
 			this._editButton.selectedIndex = 0;
