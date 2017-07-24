@@ -360,47 +360,35 @@ module beepbox {
 		}
 	}
 	
-	export class ChangeParts extends UndoableChange {
-		private _document: SongDocument;
-		private _oldParts: number;
-		private _newParts: number;
-		private _sequence: ChangeSequence;
-		constructor(document: SongDocument, parts: number) {
-			super(false);
-			this._document = document;
-			this._oldParts = document.song.parts;
-			this._newParts = parts;
-			if (this._oldParts != this._newParts) {
-				this._sequence = new ChangeSequence();
+	export class ChangeParts extends ChangeGroup {
+		constructor(document: SongDocument, newValue: number) {
+			super();
+			if (document.song.parts != newValue) {
 				for (let i: number = 0; i < Music.numChannels; i++) {
 					for (let j: number = 0; j < document.song.channelPatterns[i].length; j++) {
-						this._sequence.append(new ChangeRhythm(document, document.song.channelPatterns[i][j], this._oldParts, this._newParts));
+						this.append(new ChangeRhythm(document, document.song.channelPatterns[i][j], document.song.parts, newValue));
 					}
 				}
-				document.song.parts = this._newParts;
+				document.song.parts = newValue;
 				document.notifier.changed();
 				this._didSomething();
 			}
 		}
-		
-		protected _doForwards(): void {
-			if (this._sequence != null) this._sequence.redo();
-			this._document.song.parts = this._newParts;
-			this._document.notifier.changed();
-		}
-		
-		protected _doBackwards(): void {
-			this._document.song.parts = this._oldParts;
-			if (this._sequence != null) this._sequence.undo();
-			this._document.notifier.changed();
-		}
 	}
 	
-	export class ChangePaste extends Change {
-		constructor(document: SongDocument, notes: Note[], pattern: BarPattern) {
+	export class ChangePaste extends ChangeGroup {
+		constructor(document: SongDocument, pattern: BarPattern, notes: Note[], newBeats: number, newParts: number) {
 			super();
 			pattern.notes = notes;
-			pattern.notes = pattern.cloneNotes();
+			
+			if (document.song.parts != newParts) {
+				this.append(new ChangeRhythm(document, pattern, newParts, document.song.parts));
+			}
+			
+			if (document.song.beats != newBeats) {
+				this.append(new ChangeNoteTruncate(document, pattern, document.song.beats * document.song.parts, newBeats * document.song.parts));
+			}
+			
 			document.notifier.changed();
 			this._didSomething();
 		}
@@ -452,17 +440,17 @@ module beepbox {
 				const oldPin: NotePin = note.pins[i];
 				const time: number = oldPin.time;
 				if (time < skipStart) {
-					this._newPins.push(new NotePin(oldPin.interval, time, oldPin.volume));
+					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.volume));
 				} else if (time > skipEnd) {
 					if (!setPin) {
-						this._newPins.push(new NotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
+						this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
 						setPin = true;
 					}
-					this._newPins.push(new NotePin(oldPin.interval, time, oldPin.volume));
+					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.volume));
 				}
 			}
 			if (!setPin) {
-				this._newPins.push(new NotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
+				this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
 			}
 			
 			this._finishSetup();
@@ -507,10 +495,10 @@ module beepbox {
 							prevVolume = oldPin.volume;
 						}
 						if (time * direction < bendStart * direction) {
-							push(new NotePin(oldPin.interval, time, oldPin.volume));
+							push(makeNotePin(oldPin.interval, time, oldPin.volume));
 							break;
 						} else {
-							push(new NotePin(prevInterval, bendStart, prevVolume));
+							push(makeNotePin(prevInterval, bendStart, prevVolume));
 							setStart = true;
 						}
 					} else if (!setEnd) {
@@ -521,7 +509,7 @@ module beepbox {
 						if (time * direction < bendEnd * direction) {
 							break;
 						} else {
-							push(new NotePin(bendTo, bendEnd, prevVolume));
+							push(makeNotePin(bendTo, bendEnd, prevVolume));
 							setEnd = true;
 						}
 					} else {
@@ -529,14 +517,14 @@ module beepbox {
 							break;
 						} else {
 							if (oldPin.interval != prevInterval) persist = false;
-							push(new NotePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
+							push(makeNotePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
 							break;
 						}
 					}
 				}
 			}
 			if (!setEnd) {
-				push(new NotePin(bendTo, bendEnd, prevVolume));
+				push(makeNotePin(bendTo, bendEnd, prevVolume));
 			}
 			
 			this._finishSetup();
@@ -572,7 +560,7 @@ module beepbox {
 			super(document, note);
 			
 			for (const oldPin of this._oldPins) {
-				this._newPins.push(new NotePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.volume));
+				this._newPins.push(makeNotePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.volume));
 			}
 			
 			this._finishSetup();
@@ -664,9 +652,9 @@ module beepbox {
 					prevInterval = oldPin.interval;
 				} else if (oldPin.time <= truncEnd) {
 					if (oldPin.time > truncStart && !setStart) {
-						this._newPins.push(new NotePin(prevInterval, truncStart, prevVolume));
+						this._newPins.push(makeNotePin(prevInterval, truncStart, prevVolume));
 					}
-					this._newPins.push(new NotePin(oldPin.interval, oldPin.time, oldPin.volume));
+					this._newPins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.volume));
 					setStart = true;
 					if (oldPin.time == truncEnd) {
 						pushLastPin = false;
@@ -678,7 +666,7 @@ module beepbox {
 				
 			}
 			
-			if (pushLastPin) this._newPins.push(new NotePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
+			if (pushLastPin) this._newPins.push(makeNotePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
 			
 			this._finishSetup();
 		}
@@ -789,7 +777,7 @@ module beepbox {
 					}
 				}
 				interval -= this._newPitches[0];
-				this._newPins.push(new NotePin(interval, oldPin.time, oldPin.volume));
+				this._newPins.push(makeNotePin(interval, oldPin.time, oldPin.volume));
 			}
 			
 			if (this._newPins[0].interval != 0) throw new Error("wrong pin start interval");
@@ -861,11 +849,11 @@ module beepbox {
 				if (pin.time < bendPart) {
 					this._newPins.push(pin);
 				} else if (pin.time == bendPart) {
-					this._newPins.push(new NotePin(bendInterval, bendPart, bendVolume));
+					this._newPins.push(makeNotePin(bendInterval, bendPart, bendVolume));
 					inserted = true;
 				} else {
 					if (!inserted) {
-						this._newPins.push(new NotePin(bendInterval, bendPart, bendVolume));
+						this._newPins.push(makeNotePin(bendInterval, bendPart, bendVolume));
 						inserted = true;
 					}
 					this._newPins.push(pin);

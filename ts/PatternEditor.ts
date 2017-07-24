@@ -76,10 +76,10 @@ module beepbox {
 		private readonly _backgroundPitchRows: SVGRectElement[] = [];
 		private readonly _backgroundDrumRow: SVGRectElement = <SVGRectElement> svgElement("rect");
 		private readonly _defaultPinChannels: NotePin[][] = [
-			[new NotePin(0, 0, 3), new NotePin(0, 2, 3)],
-			[new NotePin(0, 0, 3), new NotePin(0, 2, 3)],
-			[new NotePin(0, 0, 3), new NotePin(0, 2, 3)],
-			[new NotePin(0, 0, 3), new NotePin(0, 2, 0)],
+			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 3)],
+			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 3)],
+			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 3)],
+			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 0)],
 		];
 		
 		private _editorWidth: number;
@@ -279,10 +279,10 @@ module beepbox {
 					this._cursor.pins = [];
 					for (const oldPin of this._copiedPins) {
 						if (oldPin.time <= this._cursor.end - this._cursor.start) {
-							this._cursor.pins.push(new NotePin(0, oldPin.time, oldPin.volume));
+							this._cursor.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
 							if (oldPin.time == this._cursor.end - this._cursor.start) break;
 						} else {
-							this._cursor.pins.push(new NotePin(0, this._cursor.end - this._cursor.start, oldPin.volume));
+							this._cursor.pins.push(makeNotePin(0, this._cursor.end - this._cursor.start, oldPin.volume));
 							break;
 						}
 					}
@@ -335,7 +335,7 @@ module beepbox {
 		private _copyPins(note: Note): void {
 			this._copiedPins = [];
 			for (const oldPin of note.pins) {
-				this._copiedPins.push(new NotePin(0, oldPin.time, oldPin.volume));
+				this._copiedPins.push(makeNotePin(0, oldPin.time, oldPin.volume));
 			}
 			for (let i: number = 1; i < this._copiedPins.length - 1; ) {
 				if (this._copiedPins[i-1].volume == this._copiedPins[i].volume && 
@@ -517,7 +517,7 @@ module beepbox {
 						for (i = 0; i < this._pattern.notes.length; i++) {
 							if (this._pattern.notes[i].start >= end) break;
 						}
-						const theNote: Note = new Note(this._cursor.pitch, start, end, 3, this._doc.channel == 3);
+						const theNote: Note = makeNote(this._cursor.pitch, start, end, 3, this._doc.channel == 3);
 						sequence.append(new ChangeNoteAdded(this._doc, this._pattern, theNote, i));
 						this._copyPins(theNote);
 					} else if (this._mouseHorizontal) {
@@ -612,10 +612,10 @@ module beepbox {
 				}
 			} else if (this._mouseDown && continuousChange) {
 				if (this._cursor.curNote == null) {
-					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.channel == 3);
+					const note: Note = makeNote(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.channel == 3);
 					note.pins = [];
 					for (const oldPin of this._cursor.pins) {
-						note.pins.push(new NotePin(0, oldPin.time, oldPin.volume));
+						note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
 					}
 					this._doc.history.record(new ChangeNoteAdded(this._doc, this._pattern, note, this._cursor.curIndex));
 				} else {

@@ -49,6 +49,13 @@ module beepbox {
 		if (menu.selectedIndex != index) menu.selectedIndex = index;
 	}
 	
+	interface PatternCopy {
+		notes: Note[];
+		beats: number;
+		parts: number;
+		drums: boolean;
+	}
+	
 	export class SongEditor {
 		public static readonly channelColorsDim: ReadonlyArray<string>    = ["#0099a1", "#a1a100", "#c75000", "#6f6f6f"];
 		public static readonly channelColorsBright: ReadonlyArray<string> = ["#25f3ff", "#ffff25", "#ff9752", "#aaaaaa"];
@@ -190,10 +197,6 @@ module beepbox {
 			this._promptContainer,
 		]);
 		
-		private _copyNotes: Note[];
-		private _copyBeats: number = 0;
-		private _copyParts: number = 0;
-		private _copyDrums: boolean = false;
 		private _wasPlaying: boolean;
 		private _changeTranspose: ChangeTranspose | null = null;
 		private _changeTempo: ChangeTempo | null = null;
@@ -441,16 +444,25 @@ module beepbox {
 		private _copy(): void {
 			const pattern: BarPattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
-			this._copyNotes = pattern.cloneNotes();
-			this._copyBeats = this._doc.song.beats;
-			this._copyParts = this._doc.song.parts;
-			this._copyDrums = this._doc.channel == 3;
+			
+			const patternCopy: PatternCopy = {
+				notes: pattern.notes,
+				beats: this._doc.song.beats,
+				parts: this._doc.song.parts,
+				drums: this._doc.channel == 3,
+			};
+			
+			window.localStorage.setItem("patternCopy", JSON.stringify(patternCopy));
 		}
 		
 		private _paste(): void {
 			const pattern: BarPattern | null = this._doc.getCurrentPattern();
-			if (pattern != null && this._copyNotes != null && this._copyBeats == this._doc.song.beats && this._copyParts == this._doc.song.parts && this._copyDrums == (this._doc.channel == 3)) {
-				this._doc.history.record(new ChangePaste(this._doc, this._copyNotes, pattern));
+			if (pattern == null) return;
+			
+			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
+			
+			if (patternCopy != null && patternCopy.drums == (this._doc.channel == 3)) {
+				this._doc.history.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beats, patternCopy.parts));
 			}
 		}
 		
