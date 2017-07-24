@@ -229,7 +229,7 @@ module beepbox {
 			return Math.ceil(this._bits.length / 6);
 		}
 	}
-
+	
 	export class Music {
 		public static readonly scaleNames: ReadonlyArray<string> = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "dbl harmonic :)", "dbl harmonic :(", "enigma", "expert"];
 		public static readonly scaleFlags: ReadonlyArray<ReadonlyArray<boolean>> = [
@@ -289,33 +289,33 @@ module beepbox {
 		public static readonly pitchCount: number = 37;
 		public static readonly maxPitch: number = 84;
 	}
-
-	export class NotePin {
-		public interval: number;
-		public time: number;
-		public volume: number;
-		
-		constructor(interval: number, time: number, volume: number) {
-			this.interval = interval;
-			this.time = time;
-			this.volume = volume;
-		}
+	
+	export interface NotePin {
+		interval: number;
+		time: number;
+		volume: number;
 	}
-
-	export class Note {
-		public pitches: number[];
-		public pins: NotePin[];
-		public start: number;
-		public end: number;
-		
-		constructor(pitch: number, start: number, end: number, volume: number, fadeout: boolean = false) {
-			this.pitches = [pitch];
-			this.pins = [new NotePin(0, 0, volume), new NotePin(0, end - start, fadeout ? 0 : volume)];
-			this.start = start;
-			this.end = end;
-		}
+	
+	export function makeNotePin(interval: number, time: number, volume: number): NotePin {
+		return {interval: interval, time: time, volume: volume};
 	}
-
+	
+	export interface Note {
+		pitches: number[];
+		pins: NotePin[];
+		start: number;
+		end: number;
+	}
+	
+	export function makeNote(pitch: number, start: number, end: number, volume: number, fadeout: boolean = false) {
+		return {
+			pitches: [pitch],
+			pins: [makeNotePin(0, 0, volume), makeNotePin(0, end - start, fadeout ? 0 : volume)],
+			start: start,
+			end: end,
+		};
+	}
+	
 	export class BarPattern {
 		public notes: Note[];
 		public instrument: number;
@@ -327,11 +327,11 @@ module beepbox {
 		public cloneNotes(): Note[] {
 			const result: Note[] = [];
 			for (const oldNote of this.notes) {
-				const newNote: Note = new Note(-1, oldNote.start, oldNote.end, 3);
+				const newNote: Note = makeNote(-1, oldNote.start, oldNote.end, 3);
 				newNote.pitches = oldNote.pitches.concat();
 				newNote.pins = [];
 				for (const oldPin of oldNote.pins) {
-					newNote.pins.push(new NotePin(oldPin.interval, oldPin.time, oldPin.volume));
+					newNote.pins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.volume));
 				}
 				result.push(newNote);
 			}
@@ -873,7 +873,7 @@ module beepbox {
 									recentShapes.unshift(shape);
 									if (recentShapes.length > 10) recentShapes.pop();
 									
-									note = new Note(0,curPart,curPart + shape.length, shape.initialVolume);
+									note = makeNote(0,curPart,curPart + shape.length, shape.initialVolume);
 									note.pitches = [];
 									note.pins.length = 1;
 									const pitchBends: number[] = [];
@@ -919,7 +919,7 @@ module beepbox {
 									
 									for (const pinObj of shape.pins) {
 										if (pinObj.pitchBend) pitchBends.shift();
-										pin = new NotePin(pitchBends[0] - note.pitches[0], pinObj.time, pinObj.volume);
+										pin = makeNotePin(pitchBends[0] - note.pitches[0], pinObj.time, pinObj.volume);
 										note.pins.push(pin);
 									}
 									curPart = note.end;
@@ -1167,7 +1167,7 @@ module beepbox {
 								continue;
 							}
 							
-							const note: Note = new Note(0, 0, 0, 0);
+							const note: Note = makeNote(0, 0, 0, 0);
 							note.pitches = [];
 							note.pins = [];
 							
@@ -1198,7 +1198,7 @@ module beepbox {
 								}
 								noteClock = time;
 								
-								note.pins.push(new NotePin(interval - startInterval, time - note.start, volume));
+								note.pins.push(makeNotePin(interval - startInterval, time - note.start, volume));
 							}
 							if (note.pins.length < 2) continue;
 							
@@ -1271,7 +1271,7 @@ module beepbox {
 			return Math.round(120.0 * Math.pow(2.0, (-4.0 + this.tempo) / 9.0));
 		}
 	}
-
+	
 	export class Synth {
 		public samplesPerSecond: number = 44100;
 		private _effectDuration: number = 0.14;
