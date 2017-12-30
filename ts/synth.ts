@@ -78,7 +78,7 @@ module beepbox {
 		X =  88,
 		Y =  89,
 		Z =  90,
-		UNDERSCORE =  95,
+		UNDERSCORE = 95,
 		a =  97,
 		b =  98,
 		c =  99,
@@ -268,15 +268,17 @@ module beepbox {
 		public static readonly waveVolumes: ReadonlyArray<number> = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
 		public static readonly drumNames: ReadonlyArray<string> = ["retro", "white"];
 		public static readonly drumVolumes: ReadonlyArray<number> = [0.25, 1.0];
+		public static readonly drumPitchRoots: ReadonlyArray<number> = [69, 69];
+		public static readonly drumPitchFilterMult: ReadonlyArray<number> = [100.0, 8.0];
 		public static readonly filterNames: ReadonlyArray<string> = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
 		public static readonly filterBases: ReadonlyArray<number> = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
 		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
 		public static readonly filterVolumes: ReadonlyArray<number> = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
 		public static readonly envelopeNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide"];
-		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremelo light", "tremelo heavy"];
+		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremolo light", "tremolo heavy"];
 		public static readonly effectVibratos: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
-		public static readonly effectTremelos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-		public static readonly chorusNames: ReadonlyArray<string> = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed"];
+		public static readonly effectTremolos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
+		public static readonly chorusNames: ReadonlyArray<string> = ["unison", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed"];
 		public static readonly chorusValues: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02];
 		public static readonly chorusOffsets: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0];
 		public static readonly chorusVolumes: ReadonlyArray<number> = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0];
@@ -1273,24 +1275,88 @@ module beepbox {
 	}
 	
 	export class Synth {
+		private static readonly _waves: ReadonlyArray<Float64Array> = Synth._generateWaves();
+		private static readonly _drumWaves: Array<Float32Array | null> = [null, null];
+		
+		private static _generateWaves(): ReadonlyArray<Float64Array> {
+			const waves: Float64Array[] = [
+				new Float64Array([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0]),
+				new Float64Array([1.0, -1.0]),
+				new Float64Array([1.0, -1.0, -1.0, -1.0]),
+				new Float64Array([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]),
+				new Float64Array([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0]),
+				new Float64Array([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2]),
+				new Float64Array([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0]),
+				new Float64Array([1.0, -1.0, 1.0, -1.0, 1.0, 0.0]),
+				new Float64Array([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]),
+			];
+			// Ensure waves are centered.
+			for (const wave of waves) {
+				let sum: number = 0.0;
+				for (let i: number = 0; i < wave.length; i++) sum += wave[i];
+				const average: number = sum / wave.length;
+				for (let i: number = 0; i < wave.length; i++) wave[i] -= average;
+			}
+			return waves;
+		}
+		
+		private static _ensureDrumWavesExist(song: Song | null): void {
+			// Don't bother to generate the drum waves unless the song actually
+			// uses them, since they may require a lot of computation.
+			if (song != null) {
+				for (let i: number = 0; i < song.instruments; i++) {
+					const index: number = song.instrumentWaves[3][i];
+					if (Synth._drumWaves[index] == null) {
+						const wave: Float32Array = new Float32Array(32768);
+						Synth._drumWaves[index] = wave;
+						
+						if (index == 0) {
+							// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
+							let drumBuffer: number = 1;
+							for (let i: number = 0; i < 32768; i++) {
+								wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+								let newBuffer: number = drumBuffer >> 1;
+								if (((drumBuffer + newBuffer) & 1) == 1) {
+									newBuffer += 1 << 14;
+								}
+								drumBuffer = newBuffer;
+							}
+						} else if (index == 1) {
+							// White noise is just random values for each sample.
+							for (let i: number = 0; i < 32768; i++) {
+								wave[i] = Math.random() * 2.0 - 1.0;
+							}
+						/*
+						} else if (index == 2) {
+							// Experimental drum:
+							for (let i: number = 1 << 10; i < (1 << 11); i++) {
+								const amplitude: number = 2.0;
+								const radians: number = Math.random() * Math.PI * 2.0;
+								wave[i] = Math.cos(radians) * amplitude;
+								wave[32768 - i] = Math.sin(radians) * amplitude;
+							}
+							for (let i: number = 1 << 11; i < (1 << 14); i++) {
+								const amplitude: number = 0.25;
+								const radians: number = Math.random() * Math.PI * 2.0;
+								wave[i] = Math.cos(radians) * amplitude;
+								wave[32768 - i] = Math.sin(radians) * amplitude;
+							}
+							FFT.inverseRealFourierTransform(wave);
+							FFT.scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
+						*/
+						} else {
+							throw new Error("Unrecognized drum index: " + index);
+						}
+					}
+				}
+			}
+		}
+		
 		public samplesPerSecond: number = 44100;
 		private _effectDuration: number = 0.14;
 		private _effectAngle: number = Math.PI * 2.0 / (this._effectDuration * this.samplesPerSecond);
 		private _effectYMult: number = 2.0 * Math.cos(this._effectAngle);
 		private _limitDecay: number = 1.0 / (2.0 * this.samplesPerSecond);
-		
-		private _waves: Float64Array[] = [
-			new Float64Array([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0]),
-			new Float64Array([1.0, -1.0]),
-			new Float64Array([1.0, -1.0, -1.0, -1.0]),
-			new Float64Array([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]),
-			new Float64Array([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0]),
-			new Float64Array([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2, ]),
-			new Float64Array([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0]),
-			new Float64Array([1.0, -1.0, 1.0, -1.0, 1.0, 0.0]),
-			new Float64Array([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2, ]),
-		];
-		private _drumWaves: Float32Array[] = [ new Float32Array(32767), new Float32Array(32767) ];
 		
 		public song: Song | null = null;
 		public pianoPressed: boolean = false;
@@ -1324,14 +1390,12 @@ module beepbox {
 		private _effectPeriod: number = 0.0;
 		private _limit: number = 0.0;
 		
-		
 		private _delayLine: Float32Array = new Float32Array(16384);
 		private _delayPos: number = 0;
 		private _delayFeedback0: number = 0.0;
 		private _delayFeedback1: number = 0.0;
 		private _delayFeedback2: number = 0.0;
 		private _delayFeedback3: number = 0.0;
-		
 		
 		private _audioCtx: any;
 		private _scriptNode: any;
@@ -1388,37 +1452,7 @@ module beepbox {
 		}
 		
 		constructor(song: any = null) {
-			for (const wave of this._waves) {
-				//wave.fixed = true;
-				let sum: number = 0.0;
-				for (let i: number = 0; i < wave.length; i++) sum += wave[i];
-				const average: number = sum / wave.length;
-				for (let i: number = 0; i < wave.length; i++) wave[i] -= average;
-			}
-			
-			for (let index: number = 0; index < this._drumWaves.length; index++) {
-				const wave: Float32Array = this._drumWaves[index];
-				if (index == 0) {
-					let drumBuffer: number = 1;
-					for (let i: number = 0; i < 32767; i++) {
-						wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
-						let newBuffer: number = drumBuffer >> 1;
-						if (((drumBuffer + newBuffer) & 1) == 1) {
-							newBuffer += 1 << 14;
-						}
-						drumBuffer = newBuffer;
-					}
-				} else if (index == 1) {
-					for (let i: number = 0; i < 32767; i++) {
-						wave[i] = Math.random() * 2.0 - 1.0;
-					}
-				}
-				//wave.fixed = true;
-			}
-			
-			if (song != null) {
-				this.setSong(song);
-			}
+			if (song != null) this.setSong(song);
 		}
 		
 		public setSong(song: any): void {
@@ -1432,6 +1466,9 @@ module beepbox {
 		public play(): void {
 			if (!this._paused) return;
 			this._paused = false;
+			
+			Synth._ensureDrumWavesExist(this.song);
+			
 			const contextClass = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
 			this._audioCtx = this._audioCtx || new contextClass();
 			this._scriptNode = this._audioCtx.createScriptProcessor ? this._audioCtx.createScriptProcessor(2048, 0, 1) : this._audioCtx.createJavaScriptNode(2048, 0, 1); // 2048, 0 input channels, 1 output
@@ -1533,6 +1570,7 @@ module beepbox {
 			}
 			
 			const song: Song = this.song;
+			Synth._ensureDrumWavesExist(song);
 			
 			let bufferIndex: number = 0;
 			
@@ -1601,23 +1639,25 @@ module beepbox {
 				const maxBassVolume: number = Music.channelVolumes[2] * (song.instrumentVolumes[2][instrumentBass] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[2][instrumentBass]])) * Music.waveVolumes[song.instrumentWaves[2][instrumentBass]] * Music.filterVolumes[song.instrumentFilters[2][instrumentBass]] * Music.chorusVolumes[song.instrumentChorus[0][instrumentBass]] * 0.5;
 				const maxDrumVolume: number = Music.channelVolumes[3] * (song.instrumentVolumes[3][instrumentDrum] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[3][instrumentDrum]])) * Music.drumVolumes[song.instrumentWaves[3][instrumentDrum]];
 				
-				const leadWave: Float64Array = this._waves[song.instrumentWaves[0][instrumentLead]];
-				const harmWave: Float64Array = this._waves[song.instrumentWaves[1][instrumentHarm]];
-				const bassWave: Float64Array = this._waves[song.instrumentWaves[2][instrumentBass]];
-				const drumWave: Float32Array = this._drumWaves[song.instrumentWaves[3][instrumentDrum]];
+				const leadWave: Float64Array = Synth._waves[song.instrumentWaves[0][instrumentLead]];
+				const harmWave: Float64Array = Synth._waves[song.instrumentWaves[1][instrumentHarm]];
+				const bassWave: Float64Array = Synth._waves[song.instrumentWaves[2][instrumentBass]];
+				const drumWave: Float32Array = Synth._drumWaves[song.instrumentWaves[3][instrumentDrum]]!;
 				
 				const leadWaveLength: number = leadWave.length;
 				const harmWaveLength: number = harmWave.length;
 				const bassWaveLength: number = bassWave.length;
+				
+				const drumPitchRoot: number = Music.drumPitchRoots[song.instrumentWaves[3][instrumentDrum]];
 				
 				const leadFilterBase: number = Math.pow(2, -Music.filterBases[song.instrumentFilters[0][instrumentLead]]);
 				const harmFilterBase: number = Math.pow(2, -Music.filterBases[song.instrumentFilters[1][instrumentHarm]]);
 				const bassFilterBase: number = Math.pow(2, -Music.filterBases[song.instrumentFilters[2][instrumentBass]]);
 				let drumFilter: number = 1.0;
 				
-				const leadTremeloScale: number = Music.effectTremelos[song.instrumentEffects[0][instrumentLead]];
-				const harmTremeloScale: number = Music.effectTremelos[song.instrumentEffects[1][instrumentHarm]];
-				const bassTremeloScale: number = Music.effectTremelos[song.instrumentEffects[2][instrumentBass]];
+				const leadTremoloScale: number = Music.effectTremolos[song.instrumentEffects[0][instrumentLead]];
+				const harmTremoloScale: number = Music.effectTremolos[song.instrumentEffects[1][instrumentHarm]];
+				const bassTremoloScale: number = Music.effectTremolos[song.instrumentEffects[2][instrumentBass]];
 				
 				const leadChorusA: number = Math.pow(2.0, (Music.chorusOffsets[song.instrumentChorus[0][instrumentLead]] + Music.chorusValues[song.instrumentChorus[0][instrumentLead]]) / 12.0);
 				const harmChorusA: number = Math.pow(2.0, (Music.chorusOffsets[song.instrumentChorus[1][instrumentHarm]] + Music.chorusValues[song.instrumentChorus[1][instrumentHarm]]) / 12.0);
@@ -1693,7 +1733,7 @@ module beepbox {
 						if (note != null && prevNote != null && prevNote.end != note.start) prevNote = null;
 						if (note != null && nextNote != null && nextNote.start != note.end) nextNote = null;
 						
-						const channelRoot: number = channel == 3 ? 69 : Music.keyTransposes[song.key];
+						const channelRoot: number = channel == 3 ? drumPitchRoot : Music.keyTransposes[song.key];
 						const intervalScale: number = channel == 3 ? Music.drumInterval : 1;
 						let periodDelta: number;
 						let periodDeltaScale: number;
@@ -1709,7 +1749,7 @@ module beepbox {
 							let pianoPitchDamping: number;
 							if (channel == 3) {
 								if (song.instrumentWaves[3][instrument] > 0) {
-									drumFilter = Math.min(1.0, pianoFreq * sampleTime * 8.0);
+									drumFilter = Math.min(1.0, pianoFreq * sampleTime * Music.drumPitchFilterMult[song.instrumentWaves[3][pattern!.instrument]]);
 									pianoPitchDamping = 24.0;
 								} else {
 									pianoPitchDamping = 60.0;
@@ -1815,7 +1855,7 @@ module beepbox {
 							let pitchDamping: number;
 							if (channel == 3) {
 								if (song.instrumentWaves[3][pattern!.instrument] > 0) {
-									drumFilter = Math.min(1.0, startFreq * sampleTime * 8.0);
+									drumFilter = Math.min(1.0, startFreq * sampleTime * Music.drumPitchFilterMult[song.instrumentWaves[3][pattern!.instrument]]);
 									pitchDamping = 24.0;
 								} else {
 									pitchDamping = 60.0;
@@ -1882,7 +1922,7 @@ module beepbox {
 								this._bassPeriodB = 0.0;
 							}
 						} else if (channel == 3) {
-							drumPeriodDelta = periodDelta / 32767.0;
+							drumPeriodDelta = periodDelta / 32768.0;
 							drumPeriodDeltaScale = periodDeltaScale;
 							drumVolume = noteVolume * maxDrumVolume;
 							drumVolumeDelta = volumeDelta * maxDrumVolume;
@@ -1914,17 +1954,17 @@ module beepbox {
 						const leadVibrato: number = 1.0 + leadVibratoScale * effectY;
 						const harmVibrato: number = 1.0 + harmVibratoScale * effectY;
 						const bassVibrato: number = 1.0 + bassVibratoScale * effectY;
-						const leadTremelo: number = 1.0 + leadTremeloScale * (effectY - 1.0);
-						const harmTremelo: number = 1.0 + harmTremeloScale * (effectY - 1.0);
-						const bassTremelo: number = 1.0 + bassTremeloScale * (effectY - 1.0);
+						const leadTremolo: number = 1.0 + leadTremoloScale * (effectY - 1.0);
+						const harmTremolo: number = 1.0 + harmTremoloScale * (effectY - 1.0);
+						const bassTremolo: number = 1.0 + bassTremoloScale * (effectY - 1.0);
 						const temp: number = effectY;
 						effectY = effectYMult * effectY - prevEffectY;
 						prevEffectY = temp;
 						
-						leadSample += ((leadWave[0|(leadPeriodA * leadWaveLength)] + leadWave[0|(leadPeriodB * leadWaveLength)] * leadChorusSign) * leadVolume * leadTremelo - leadSample) * leadFilter;
-						harmSample += ((harmWave[0|(harmPeriodA * harmWaveLength)] + harmWave[0|(harmPeriodB * harmWaveLength)] * harmChorusSign) * harmVolume * harmTremelo - harmSample) * harmFilter;
-						bassSample += ((bassWave[0|(bassPeriodA * bassWaveLength)] + bassWave[0|(bassPeriodB * bassWaveLength)] * bassChorusSign) * bassVolume * bassTremelo - bassSample) * bassFilter;
-						drumSample += (drumWave[0|(drumPeriod * 32767.0)] * drumVolume - drumSample) * drumFilter;
+						leadSample += ((leadWave[0|(leadPeriodA * leadWaveLength)] + leadWave[0|(leadPeriodB * leadWaveLength)] * leadChorusSign) * leadVolume * leadTremolo - leadSample) * leadFilter;
+						harmSample += ((harmWave[0|(harmPeriodA * harmWaveLength)] + harmWave[0|(harmPeriodB * harmWaveLength)] * harmChorusSign) * harmVolume * harmTremolo - harmSample) * harmFilter;
+						bassSample += ((bassWave[0|(bassPeriodA * bassWaveLength)] + bassWave[0|(bassPeriodB * bassWaveLength)] * bassChorusSign) * bassVolume * bassTremolo - bassSample) * bassFilter;
+						drumSample += (drumWave[0|(drumPeriod * 32768.0)] * drumVolume - drumSample) * drumFilter;
 						leadVolume += leadVolumeDelta;
 						harmVolume += harmVolumeDelta;
 						bassVolume += bassVolumeDelta;
@@ -1957,10 +1997,13 @@ module beepbox {
 						// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
 						// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
 						// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
-						const delaySample0: number = delayLine[delayPos] + instrumentSample;
-						const delaySample1: number = delayLine[(delayPos +  3041) & 0x3FFF];
-						const delaySample2: number = delayLine[(delayPos +  6426) & 0x3FFF];
-						const delaySample3: number = delayLine[(delayPos + 10907) & 0x3FFF];
+						const delayPos1: number = (delayPos +  3041) & 0x3FFF;
+						const delayPos2: number = (delayPos +  6426) & 0x3FFF;
+						const delayPos3: number = (delayPos + 10907) & 0x3FFF;
+						const delaySample0: number = delayLine[delayPos ] + instrumentSample;
+						const delaySample1: number = delayLine[delayPos1];
+						const delaySample2: number = delayLine[delayPos2];
+						const delaySample3: number = delayLine[delayPos3];
 						const delayTemp0: number = -delaySample0 + delaySample1;
 						const delayTemp1: number = -delaySample0 - delaySample1;
 						const delayTemp2: number = -delaySample2 + delaySample3;
@@ -1969,10 +2012,10 @@ module beepbox {
 						delayFeedback1 += ((delayTemp1 + delayTemp3) * reverb - delayFeedback1) * 0.5;
 						delayFeedback2 += ((delayTemp0 - delayTemp2) * reverb - delayFeedback2) * 0.5;
 						delayFeedback3 += ((delayTemp1 - delayTemp3) * reverb - delayFeedback3) * 0.5;
-						delayLine[(delayPos +  3041) & 0x3FFF] = delayFeedback0;
-						delayLine[(delayPos +  6426) & 0x3FFF] = delayFeedback1;
-						delayLine[(delayPos + 10907) & 0x3FFF] = delayFeedback2;
-						delayLine[delayPos] = delayFeedback3;
+						delayLine[delayPos1] = delayFeedback0;
+						delayLine[delayPos2] = delayFeedback1;
+						delayLine[delayPos3] = delayFeedback2;
+						delayLine[delayPos ] = delayFeedback3;
 						delayPos = (delayPos + 1) & 0x3FFF;
 						
 						let sample: number = delaySample0 + delaySample1 + delaySample2 + delaySample3 + drumSample;

@@ -23,6 +23,7 @@ SOFTWARE.
 /// <reference path="synth.ts" />
 /// <reference path="SongDocument.ts" />
 /// <reference path="html.ts" />
+/// <reference path="changes.ts" />
 
 module beepbox {
 	export class OctaveScrollBar {

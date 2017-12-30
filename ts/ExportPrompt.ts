@@ -487,7 +487,7 @@ module beepbox {
 					let prevInstrument: number = -1;
 					let prevPitchBend: number = -1;
 					let prevExpression: number = -1;
-					//let prevTremelo: number = -1;
+					//let prevTremolo: number = -1;
 					const channelRoot: number = isDrums ? 33 : Music.keyTransposes[song.key];
 					const intervalScale: number = isDrums ? Music.drumInterval : 1;
 					
@@ -570,7 +570,7 @@ module beepbox {
 							
 							const effectChoice: number = song.instrumentEffects[channel][nextInstrument];
 							const effectVibrato: number = Music.effectVibratos[effectChoice];
-							const effectTremelo: number = Music.effectTremelos[effectChoice];
+							const effectTremolo: number = Music.effectTremolos[effectChoice];
 							const effectDuration: number = 0.14;
 							
 							let chorusOffset: number = Music.chorusValues[song.instrumentChorus[channel][nextInstrument]];
@@ -620,8 +620,8 @@ module beepbox {
 										
 										//const volume: number = Math.pow(linearVolume / 3.0, 1.5);
 										const volume: number = linearVolume / 3;
-										const tremelo: number = 1.0 + effectTremelo * (effectCurve - 1.0);
-										let expression: number = Math.round(0x7f * volume * tremelo);
+										const tremolo: number = 1.0 + effectTremolo * (effectCurve - 1.0);
+										let expression: number = Math.round(0x7f * volume * tremolo);
 										
 										if (pitchBend != prevPitchBend) {
 											writeEventTime(tickTime);

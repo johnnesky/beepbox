@@ -184,13 +184,18 @@
 √ Let "back" and "escape" closed modal dialogs/prompts. 
 √ copy and paste across tabs? (local storage?)
 
-
 - new drum noise spectrums?
-- Make an embeddable song player. (See below.) 
+- drum noise waves should be static, and generated on demand. (when play() is called, and at start of synth callback, check all drum instruments.) ensureDrumWavesExist()
+- "custom" chorus setting. lock first chorus voice to first pitch, the second voice arpeggios remaining pitches.
+- maybe add that guitar wave?
+- in synth callback, some variables called arpeggio should probably be called partIndex or something.
+- in song, rename "instruments" to "instrumentCount", and other similar properties.
+
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
 - highlight note edge extensions on touch
 - the method for cycling patterns on a bar is inadequate on touchscreen... use select menu?
 - manifests to allow installing web app as mobile app
+- Make an embeddable song player and album player. (See below.) 
 - can I improve the interaction for volume envelope dragging and pitch dragging? illustrate volume envelope dragging to make it less confusing. 
 - multitouch?
 - new preferences: follow playhead, play at load?
