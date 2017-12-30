@@ -183,16 +183,18 @@
 √ octave scroll bar shouldn't show white highlight when mouseover if current channel is drums.
 √ Let "back" and "escape" closed modal dialogs/prompts. 
 √ copy and paste across tabs? (local storage?)
+√ drum noise waves should be static, and generated on demand. (when play() is called, and at start of synth callback, check all drum instruments.) ensureDrumWavesExist()
+√ "custom/harmonize" chorus setting. lock first chorus voice to first pitch, the second voice arpeggios remaining pitches.
 
-- new drum noise spectrums?
-- drum noise waves should be static, and generated on demand. (when play() is called, and at start of synth callback, check all drum instruments.) ensureDrumWavesExist()
-- "custom" chorus setting. lock first chorus voice to first pitch, the second voice arpeggios remaining pitches.
-- maybe add that guitar wave?
+- custom number of channels? note all those places where we check whether the channel is 3 to see if it is supposed to be drums. (how would this impact midi channel exporting? well, the midi drum channel 10 is unusable, which leaves 15 channels, but beepbox only needs one channel for drums, which leaves 14 channels, which can be shared between 7 melody channels which are each split into 2 midi chorus channels.)
+- make it easier to mod by editing the Music structure. where possible, remove hardcoded assumptions about Music array lengths and values, like partCounts/arpeggios, envelope, and harmonize mode. maybe move wave and drum shapes to Music.
+- maybe add that "guitar" wave?
 - in synth callback, some variables called arpeggio should probably be called partIndex or something.
 - in song, rename "instruments" to "instrumentCount", and other similar properties.
 
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
 - highlight note edge extensions on touch
+- allow dragging track editor playhead?
 - the method for cycling patterns on a bar is inadequate on touchscreen... use select menu?
 - manifests to allow installing web app as mobile app
 - Make an embeddable song player and album player. (See below.) 
@@ -258,14 +260,13 @@ AUTHENTICATION:
 - main website should break out of iframe for security: http://usablelayout.com/articles/automatically-break-out-iframe
 
 MAYBE:
+- new drum noise spectrums?
 - @Gasparatus asked for a BPM display.
 - do audio worker threads work yet? "AudioWorkerNode" vs "AudioWorkletNode"???
-- custom number of channels? (how would this impact midi channel exporting? well, the midi drum channel 10 is unusable, which leaves 15 channels, but beepbox only needs one channel for drums, which leaves 14 channels, which can be shared between 7 melody channels which are each split into 2 midi chorus channels.)
-- allow dragging track editor playhead?
 - custom cover art, color schemes in playlists and embed player.
 - on linux chrome, select menus use same background color as select element, it's a bit too bright when highlighted.
 - per-pattern drop down menu for instrument selection, prepopulated with common ones. 
-- fade in/out checkboxes
+- export fade in/out checkboxes
 - derive song length from number of bars with non-zero patterns
 - more “effect” keys like stutter, scratch, scrub, drag playhead, speedmult, whatever.
 - detect vibrate switch
