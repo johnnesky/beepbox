@@ -22,6 +22,7 @@ SOFTWARE.
 
 /// <reference path="synth.ts" />
 /// <reference path="SongDocument.ts" />
+/// <reference path="SongEditor.ts" />
 /// <reference path="Prompt.ts" />
 /// <reference path="html.ts" />
 /// <reference path="changes.ts" />
