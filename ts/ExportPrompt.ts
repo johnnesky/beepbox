@@ -573,7 +573,7 @@ module beepbox {
 							const effectTremolo: number = Music.effectTremolos[effectChoice];
 							const effectDuration: number = 0.14;
 							
-							let chorusOffset: number = Music.chorusValues[song.instrumentChorus[channel][nextInstrument]];
+							let chorusOffset: number = Music.chorusIntervals[song.instrumentChorus[channel][nextInstrument]];
 							if (!isChorus) chorusOffset *= -1;
 							chorusOffset += Music.chorusOffsets[song.instrumentChorus[channel][nextInstrument]];
 							
