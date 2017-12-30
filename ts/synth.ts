@@ -291,6 +291,76 @@ module beepbox {
 		public static readonly drumCount: number = 12;
 		public static readonly pitchCount: number = 37;
 		public static readonly maxPitch: number = 84;
+		public static readonly waves: ReadonlyArray<Float64Array> = [
+			Music._centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0]),
+			Music._centerWave([1.0, -1.0]),
+			Music._centerWave([1.0, -1.0, -1.0, -1.0]),
+			Music._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]),
+			Music._centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0]),
+			Music._centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2]),
+			Music._centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0]),
+			Music._centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0]),
+			Music._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]),
+		];
+		
+		private static _centerWave(wave: Array<number>): Float64Array {
+			let sum: number = 0.0;
+			for (let i: number = 0; i < wave.length; i++) sum += wave[i];
+			const average: number = sum / wave.length;
+			for (let i: number = 0; i < wave.length; i++) wave[i] -= average;
+			return new Float64Array(wave);
+		}
+		
+		// Drum waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
+		private static readonly _drumWaves: Array<Float32Array | null> = [null, null];
+		
+		public static getDrumWave(index: number): Float32Array {
+			let wave: Float32Array | null = Music._drumWaves[index];
+			if (wave == null) {
+				wave = new Float32Array(32768);
+				Music._drumWaves[index] = wave;
+				
+				if (index == 0) {
+					// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
+					let drumBuffer: number = 1;
+					for (let i: number = 0; i < 32768; i++) {
+						wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+						let newBuffer: number = drumBuffer >> 1;
+						if (((drumBuffer + newBuffer) & 1) == 1) {
+							newBuffer += 1 << 14;
+						}
+						drumBuffer = newBuffer;
+					}
+				} else if (index == 1) {
+					// White noise is just random values for each sample.
+					for (let i: number = 0; i < 32768; i++) {
+						wave[i] = Math.random() * 2.0 - 1.0;
+					}
+				/*
+				} else if (index == 2) {
+					// Experimental drum:
+					for (let i: number = 1 << 10; i < (1 << 11); i++) {
+						const amplitude: number = 2.0;
+						const radians: number = Math.random() * Math.PI * 2.0;
+						wave[i] = Math.cos(radians) * amplitude;
+						wave[32768 - i] = Math.sin(radians) * amplitude;
+					}
+					for (let i: number = 1 << 11; i < (1 << 14); i++) {
+						const amplitude: number = 0.25;
+						const radians: number = Math.random() * Math.PI * 2.0;
+						wave[i] = Math.cos(radians) * amplitude;
+						wave[32768 - i] = Math.sin(radians) * amplitude;
+					}
+					FFT.inverseRealFourierTransform(wave);
+					FFT.scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
+				*/
+				} else {
+					throw new Error("Unrecognized drum index: " + index);
+				}
+			}
+			
+			return wave;
+		}
 	}
 	
 	export interface NotePin {
@@ -1276,79 +1346,13 @@ module beepbox {
 	}
 	
 	export class Synth {
-		private static readonly _waves: ReadonlyArray<Float64Array> = Synth._generateWaves();
-		private static readonly _drumWaves: Array<Float32Array | null> = [null, null];
-		
-		private static _generateWaves(): ReadonlyArray<Float64Array> {
-			const waves: Float64Array[] = [
-				new Float64Array([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0]),
-				new Float64Array([1.0, -1.0]),
-				new Float64Array([1.0, -1.0, -1.0, -1.0]),
-				new Float64Array([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]),
-				new Float64Array([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0]),
-				new Float64Array([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2]),
-				new Float64Array([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0]),
-				new Float64Array([1.0, -1.0, 1.0, -1.0, 1.0, 0.0]),
-				new Float64Array([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]),
-			];
-			// Ensure waves are centered.
-			for (const wave of waves) {
-				let sum: number = 0.0;
-				for (let i: number = 0; i < wave.length; i++) sum += wave[i];
-				const average: number = sum / wave.length;
-				for (let i: number = 0; i < wave.length; i++) wave[i] -= average;
-			}
-			return waves;
-		}
 		
 		private static _ensureDrumWavesExist(song: Song | null): void {
 			// Don't bother to generate the drum waves unless the song actually
 			// uses them, since they may require a lot of computation.
 			if (song != null) {
 				for (let i: number = 0; i < song.instruments; i++) {
-					const index: number = song.instrumentWaves[3][i];
-					if (Synth._drumWaves[index] == null) {
-						const wave: Float32Array = new Float32Array(32768);
-						Synth._drumWaves[index] = wave;
-						
-						if (index == 0) {
-							// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
-							let drumBuffer: number = 1;
-							for (let i: number = 0; i < 32768; i++) {
-								wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
-								let newBuffer: number = drumBuffer >> 1;
-								if (((drumBuffer + newBuffer) & 1) == 1) {
-									newBuffer += 1 << 14;
-								}
-								drumBuffer = newBuffer;
-							}
-						} else if (index == 1) {
-							// White noise is just random values for each sample.
-							for (let i: number = 0; i < 32768; i++) {
-								wave[i] = Math.random() * 2.0 - 1.0;
-							}
-						/*
-						} else if (index == 2) {
-							// Experimental drum:
-							for (let i: number = 1 << 10; i < (1 << 11); i++) {
-								const amplitude: number = 2.0;
-								const radians: number = Math.random() * Math.PI * 2.0;
-								wave[i] = Math.cos(radians) * amplitude;
-								wave[32768 - i] = Math.sin(radians) * amplitude;
-							}
-							for (let i: number = 1 << 11; i < (1 << 14); i++) {
-								const amplitude: number = 0.25;
-								const radians: number = Math.random() * Math.PI * 2.0;
-								wave[i] = Math.cos(radians) * amplitude;
-								wave[32768 - i] = Math.sin(radians) * amplitude;
-							}
-							FFT.inverseRealFourierTransform(wave);
-							FFT.scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
-						*/
-						} else {
-							throw new Error("Unrecognized drum index: " + index);
-						}
-					}
+					Music.getDrumWave(song.instrumentWaves[3][i]);
 				}
 			}
 		}
@@ -1570,7 +1574,6 @@ module beepbox {
 			}
 			
 			const song: Song = this.song;
-			Synth._ensureDrumWavesExist(song);
 			
 			let bufferIndex: number = 0;
 			
@@ -1639,10 +1642,10 @@ module beepbox {
 				const maxChannel2Volume: number = Music.channelVolumes[2] * (song.instrumentVolumes[2][instrumentChannel2] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[2][instrumentChannel2]])) * Music.waveVolumes[song.instrumentWaves[2][instrumentChannel2]] * Music.filterVolumes[song.instrumentFilters[2][instrumentChannel2]] * Music.chorusVolumes[song.instrumentChorus[0][instrumentChannel2]] * 0.5;
 				const maxDrumVolume: number = Music.channelVolumes[3] * (song.instrumentVolumes[3][instrumentDrum] == 5 ? 0.0 : Math.pow(2, -Music.volumeValues[song.instrumentVolumes[3][instrumentDrum]])) * Music.drumVolumes[song.instrumentWaves[3][instrumentDrum]];
 				
-				const channel0Wave: Float64Array = Synth._waves[song.instrumentWaves[0][instrumentChannel0]];
-				const channel1Wave: Float64Array = Synth._waves[song.instrumentWaves[1][instrumentChannel1]];
-				const channel2Wave: Float64Array = Synth._waves[song.instrumentWaves[2][instrumentChannel2]];
-				const drumWave: Float32Array = Synth._drumWaves[song.instrumentWaves[3][instrumentDrum]]!;
+				const channel0Wave: Float64Array = Music.waves[song.instrumentWaves[0][instrumentChannel0]];
+				const channel1Wave: Float64Array = Music.waves[song.instrumentWaves[1][instrumentChannel1]];
+				const channel2Wave: Float64Array = Music.waves[song.instrumentWaves[2][instrumentChannel2]];
+				const drumWave: Float32Array = Music.getDrumWave(song.instrumentWaves[3][instrumentDrum]);
 				
 				const channel0WaveLength: number = channel0Wave.length;
 				const channel1WaveLength: number = channel1Wave.length;
