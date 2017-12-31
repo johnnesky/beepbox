@@ -144,7 +144,7 @@ module beepbox {
 					}
 				}
 				while (this._mouseX - this._dragStart > this._barWidth * 0.5) {
-					if (this._doc.barScrollPos < this._doc.song.bars - 16) {
+					if (this._doc.barScrollPos < this._doc.song.barCount - 16) {
 						this._doc.barScrollPos++;
 						this._dragStart += this._barWidth;
 						this._doc.notifier.changed();
@@ -162,7 +162,7 @@ module beepbox {
 					if (this._doc.barScrollPos > 0) this._doc.barScrollPos--;
 					this._doc.notifier.changed();
 				} else {
-					if (this._doc.barScrollPos < this._doc.song.bars - 16) this._doc.barScrollPos++;
+					if (this._doc.barScrollPos < this._doc.song.barCount - 16) this._doc.barScrollPos++;
 					this._doc.notifier.changed();
 				}
 			}
@@ -193,18 +193,18 @@ module beepbox {
 		}
 		
 		private _documentChanged = (): void => {
-			this._barWidth = (this._editorWidth-1) / Math.max(16, this._doc.song.bars);
+			this._barWidth = (this._editorWidth-1) / Math.max(16, this._doc.song.barCount);
 			this._render();
 		}
 		
 		private _render(): void {
-			const resized: boolean = this._renderedNotchCount != this._doc.song.bars;
+			const resized: boolean = this._renderedNotchCount != this._doc.song.barCount;
 			if (resized) {
-				this._renderedNotchCount = this._doc.song.bars;
+				this._renderedNotchCount = this._doc.song.barCount;
 				
 				while (this._notches.firstChild) this._notches.removeChild(this._notches.firstChild);
 				
-				for (let i: number = 0; i <= this._doc.song.bars; i++) {
+				for (let i: number = 0; i <= this._doc.song.barCount; i++) {
 					const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
 					this._notches.appendChild(svgElement("rect", {fill: "#444444", x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2}));
 				}

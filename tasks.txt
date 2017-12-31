@@ -186,12 +186,12 @@
 √ drum noise waves should be static, and generated on demand. (when play() is called, and at start of synth callback, check all drum instruments.) ensureDrumWavesExist()
 √ "custom/harmonize" chorus setting. lock first chorus voice to first pitch, the second voice arpeggios remaining pitches.
 √ move waves into Music structure.
+√ the "period" variables are the wrong name for what they mean. In Song, rename "instruments" to "instrumentCount", and other similar properties.
+√ add sixths and eighths rhythms.
 
 - custom number of channels, up to 6? check all those places where we check whether the channel is 3 to see if it is supposed to be drums. (how would this impact midi channel exporting? well, the midi drum channel 10 is unusable, which leaves 15 channels, but beepbox only needs one channel for drums, which leaves 14 channels, which can be shared between 7 melody channels which are each split into 2 midi chorus channels.)
-- make it easier to mod by editing the Music structure. where possible, remove hardcoded assumptions about Music array lengths and values, like partCounts/arpeggios, envelope, and harmonize mode.
+- when parsing base64 pattern instrument indices, the drum wave is clamped based on number of melodic waves.
 - maybe add that "guitar" wave?
-- add sixths and eighths rhythms... the names are bad though, because a "beat" is already a "quarter note".
-- in synth callback, some variables called arpeggio should probably be called partIndex or something. And frankly, the "period" variables are the wrong name for what they mean. In Song, rename "instruments" to "instrumentCount", and other similar properties.
 
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
 - highlight note edge extensions on touch

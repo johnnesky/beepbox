@@ -70,21 +70,21 @@ module beepbox {
 		]);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
-			this._beatsStepper.value = this._doc.song.beats + "";
-			this._beatsStepper.min = Music.beatsMin + "";
-			this._beatsStepper.max = Music.beatsMax + "";
+			this._beatsStepper.value = this._doc.song.beatsPerBar + "";
+			this._beatsStepper.min = Music.beatsPerBarMin + "";
+			this._beatsStepper.max = Music.beatsPerBarMax + "";
 			
-			this._barsStepper.value = this._doc.song.bars + "";
-			this._barsStepper.min = Music.barsMin + "";
-			this._barsStepper.max = Music.barsMax + "";
+			this._barsStepper.value = this._doc.song.barCount + "";
+			this._barsStepper.min = Music.barCountMin + "";
+			this._barsStepper.max = Music.barCountMax + "";
 			
-			this._patternsStepper.value = this._doc.song.patterns + "";
-			this._patternsStepper.min = Music.patternsMin + "";
-			this._patternsStepper.max = Music.patternsMax + "";
+			this._patternsStepper.value = this._doc.song.patternsPerChannel + "";
+			this._patternsStepper.min = Music.patternsPerChannelMin + "";
+			this._patternsStepper.max = Music.patternsPerChannelMax + "";
 			
-			this._instrumentsStepper.value = this._doc.song.instruments + "";
-			this._instrumentsStepper.min = Music.instrumentsMin + "";
-			this._instrumentsStepper.max = Music.instrumentsMax + "";
+			this._instrumentsStepper.value = this._doc.song.instrumentsPerChannel + "";
+			this._instrumentsStepper.min = Music.instrumentsPerChannelMin + "";
+			this._instrumentsStepper.max = Music.instrumentsPerChannelMax + "";
 			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);
@@ -135,10 +135,10 @@ module beepbox {
 		
 		private _saveChanges = (): void => {
 			const group: ChangeGroup = new ChangeGroup();
-			group.append(new ChangeBeats(this._doc, SongDurationPrompt._validate(this._beatsStepper)));
-			group.append(new ChangeBars(this._doc, SongDurationPrompt._validate(this._barsStepper)));
-			group.append(new ChangePatterns(this._doc, SongDurationPrompt._validate(this._patternsStepper)));
-			group.append(new ChangeInstruments(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));
+			group.append(new ChangeBeatsPerBar(this._doc, SongDurationPrompt._validate(this._beatsStepper)));
+			group.append(new ChangeBarCount(this._doc, SongDurationPrompt._validate(this._barsStepper)));
+			group.append(new ChangePatternsPerChannel(this._doc, SongDurationPrompt._validate(this._patternsStepper)));
+			group.append(new ChangeInstrumentsPerChannel(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));
 			this._doc.prompt = null;
 			this._doc.history.record(group, true);
 		}

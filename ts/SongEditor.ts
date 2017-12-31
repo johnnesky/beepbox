@@ -51,8 +51,8 @@ module beepbox {
 	
 	interface PatternCopy {
 		notes: Note[];
-		beats: number;
-		parts: number;
+		beatsPerBar: number;
+		partsPerBeat: number;
 		drums: boolean;
 	}
 	
@@ -213,7 +213,7 @@ module beepbox {
 			this._keyDropDown.addEventListener("change", this._whenSetKey);
 			this._tempoSlider.addEventListener("input", this._whenSetTempo);
 			this._reverbSlider.addEventListener("input", this._whenSetReverb);
-			this._partDropDown.addEventListener("change", this._whenSetParts);
+			this._partDropDown.addEventListener("change", this._whenSetPartsPerBeat);
 			this._instrumentDropDown.addEventListener("change", this._whenSetInstrument);
 			this._channelVolumeSlider.addEventListener("input", this._whenSetVolume);
 			this._waveNames.addEventListener("change", this._whenSetWave);
@@ -288,7 +288,7 @@ module beepbox {
 			setSelectedIndex(this._keyDropDown, this._doc.song.key);
 			this._tempoSlider.value = "" + this._doc.song.tempo;
 			this._reverbSlider.value = "" + this._doc.song.reverb;
-			setSelectedIndex(this._partDropDown, Music.partCounts.indexOf(this._doc.song.parts));
+			setSelectedIndex(this._partDropDown, Music.partCounts.indexOf(this._doc.song.partsPerBeat));
 			if (this._doc.channel == 3) {
 				this._filterDropDownGroup.style.visibility = "hidden";
 				this._chorusDropDownGroup.style.visibility = "hidden";
@@ -305,12 +305,12 @@ module beepbox {
 			
 			const pattern: BarPattern | null = this._doc.getCurrentPattern();
 			
-			this._patternSettingsLabel.style.visibility    = (this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
-			this._instrumentDropDownGroup.style.visibility = (this._doc.song.instruments > 1 && pattern != null) ? "visible" : "hidden";
-			if (this._instrumentDropDown.children.length != this._doc.song.instruments) {
+			this._patternSettingsLabel.style.visibility    = (this._doc.song.instrumentsPerChannel > 1 && pattern != null) ? "visible" : "hidden";
+			this._instrumentDropDownGroup.style.visibility = (this._doc.song.instrumentsPerChannel > 1 && pattern != null) ? "visible" : "hidden";
+			if (this._instrumentDropDown.children.length != this._doc.song.instrumentsPerChannel) {
 				while (this._instrumentDropDown.firstChild) this._instrumentDropDown.removeChild(this._instrumentDropDown.firstChild);
 				const instrumentList: number[] = [];
-				for (let i: number = 0; i < this._doc.song.instruments; i++) {
+				for (let i: number = 0; i < this._doc.song.instrumentsPerChannel; i++) {
 					instrumentList.push(i + 1);
 				}
 				buildOptions(this._instrumentDropDown, instrumentList);
@@ -331,7 +331,7 @@ module beepbox {
 			//currentState = this._doc.showLetters ? (this._doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (this._doc.showScrollBar ? "showScrollBar" : "hideAll");
 			this._piano.container.style.display = this._doc.showLetters ? "block" : "none";
 			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "block" : "none";
-			this._barScrollBar.container.style.display = this._doc.song.bars > 16 ? "block" : "none";
+			this._barScrollBar.container.style.display = this._doc.song.barCount > 16 ? "block" : "none";
 			
 			let patternWidth: number = 512;
 			if (this._doc.showLetters) patternWidth -= 32;
@@ -339,7 +339,7 @@ module beepbox {
 			this._patternEditor.container.style.width = String(patternWidth) + "px";
 			
 			let trackHeight: number = 128;
-			if (this._doc.song.bars > 16) trackHeight -= 20;
+			if (this._doc.song.barCount > 16) trackHeight -= 20;
 			this._trackEditor.container.style.height = String(trackHeight) + "px";
 			
 			this._volumeSlider.value = String(this._doc.volume);
@@ -447,8 +447,8 @@ module beepbox {
 			
 			const patternCopy: PatternCopy = {
 				notes: pattern.notes,
-				beats: this._doc.song.beats,
-				parts: this._doc.song.parts,
+				beatsPerBar: this._doc.song.beatsPerBar,
+				partsPerBeat: this._doc.song.partsPerBeat,
 				drums: this._doc.channel == 3,
 			};
 			
@@ -462,7 +462,7 @@ module beepbox {
 			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
 			
 			if (patternCopy != null && patternCopy.drums == (this._doc.channel == 3)) {
-				this._doc.history.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beats, patternCopy.parts));
+				this._doc.history.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beatsPerBar, patternCopy.partsPerBeat));
 			}
 		}
 		
@@ -506,8 +506,8 @@ module beepbox {
 			this._doc.history.record(this._changeReverb, continuousChange);
 		}
 		
-		private _whenSetParts = (): void => {
-			this._doc.history.record(new ChangeParts(this._doc, Music.partCounts[this._partDropDown.selectedIndex]));
+		private _whenSetPartsPerBeat = (): void => {
+			this._doc.history.record(new ChangePartsPerBeat(this._doc, Music.partCounts[this._partDropDown.selectedIndex]));
 		}
 		
 		private _whenSetWave = (): void => {

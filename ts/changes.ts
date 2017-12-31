@@ -122,15 +122,15 @@ module beepbox {
 		}
 	}
 	
-	export class ChangeBars extends Change {
+	export class ChangeBarCount extends Change {
 		constructor(document: SongDocument, newValue: number) {
 			super();
-			if (document.song.bars != newValue) {
+			if (document.song.barCount != newValue) {
 				const newChannelBars: number[][] = [];
 				for (let i: number = 0; i < Music.numChannels; i++) {
 					const channel: number[] = [];
 					for (let j: number = 0; j < newValue; j++) {
-						channel.push(j < document.song.bars ? document.song.channelBars[i][j] : 1);
+						channel.push(j < document.song.barCount ? document.song.channelBars[i][j] : 1);
 					}
 					newChannelBars.push(channel);
 				}
@@ -139,7 +139,7 @@ module beepbox {
 				let newBarScrollPos: number = document.barScrollPos;
 				let newLoopStart: number = document.song.loopStart;
 				let newLoopLength: number = document.song.loopLength;
-				if (document.song.bars > newValue) {
+				if (document.song.barCount > newValue) {
 					newBar = Math.min(newBar, newValue - 1);
 					newBarScrollPos = Math.max(0, Math.min(newValue - 16, newBarScrollPos));
 					newLoopLength = Math.min(newValue, newLoopLength);
@@ -149,7 +149,7 @@ module beepbox {
 				document.barScrollPos = newBarScrollPos;
 				document.song.loopStart = newLoopStart;
 				document.song.loopLength = newLoopLength;
-				document.song.bars = newValue;
+				document.song.barCount = newValue;
 				document.song.channelBars = newChannelBars;
 				document.notifier.changed();
 				
@@ -158,19 +158,19 @@ module beepbox {
 		}
 	}
 	
-	export class ChangeBeats extends Change {
+	export class ChangeBeatsPerBar extends Change {
 		constructor(document: SongDocument, newValue: number) {
 			super();
-			if (document.song.beats != newValue) {
-				if (document.song.beats > newValue) {
+			if (document.song.beatsPerBar != newValue) {
+				if (document.song.beatsPerBar > newValue) {
 					const sequence: ChangeSequence = new ChangeSequence();
 					for (let i: number = 0; i < Music.numChannels; i++) {
 						for (let j: number = 0; j < document.song.channelPatterns[i].length; j++) {
-							sequence.append(new ChangeNoteTruncate(document, document.song.channelPatterns[i][j], newValue * document.song.parts, document.song.beats * document.song.parts));
+							sequence.append(new ChangeNoteTruncate(document, document.song.channelPatterns[i][j], newValue * document.song.partsPerBeat, document.song.beatsPerBar * document.song.partsPerBeat));
 						}
 					}
 				}
-				document.song.beats = newValue;
+				document.song.beatsPerBar = newValue;
 				document.notifier.changed();
 				this._didSomething();
 			}
@@ -228,12 +228,12 @@ module beepbox {
 		}
 	}
 	
-	export class ChangeInstruments extends Change {
-		constructor(document: SongDocument, instruments: number) {
+	export class ChangeInstrumentsPerChannel extends Change {
+		constructor(document: SongDocument, instrumentsPerChannel: number) {
 			super();
-			const oldInstruments: number = document.song.instruments;
-			const newInstruments: number = instruments;
-			if (document.song.instruments != newInstruments) {
+			const oldInstrumentsPerChannel: number = document.song.instrumentsPerChannel;
+			const newInstrumentsPerChannel: number = instrumentsPerChannel;
+			if (document.song.instrumentsPerChannel != newInstrumentsPerChannel) {
 				// todo: adjust size of instrument arrays, make sure no references to invalid instruments
 				const oldInstrumentWaves: number[][]   = document.song.instrumentWaves;
 				const oldInstrumentFilters: number[][] = document.song.instrumentFilters;
@@ -254,8 +254,8 @@ module beepbox {
 					const newArray: number[][] = newArrays[k];
 					for (let i: number = 0; i < Music.numChannels; i++) {
 						const channel: number[] = [];
-						for (let j: number = 0; j < newInstruments; j++) {
-							if (j < oldInstruments) {
+						for (let j: number = 0; j < newInstrumentsPerChannel; j++) {
+							if (j < oldInstrumentsPerChannel) {
 								channel.push(oldArray[i][j]);
 							} else {
 								if (k == 0) { // square wave or white noise
@@ -275,14 +275,14 @@ module beepbox {
 				for (let i: number = 0; i < Music.numChannels; i++) {
 					const oldIndices: number[] = [];
 					const newIndices: number[] = [];
-					for (let j: number = 0; j < document.song.patterns; j++) {
+					for (let j: number = 0; j < document.song.patternsPerChannel; j++) {
 						const oldIndex: number = document.song.channelPatterns[i][j].instrument;
 						oldIndices.push(oldIndex);
-						newIndices.push(oldIndex < newInstruments ? oldIndex : 0);
+						newIndices.push(oldIndex < newInstrumentsPerChannel ? oldIndex : 0);
 					}
 					newInstrumentIndices.push(newIndices);
 				}
-				document.song.instruments = newInstruments;
+				document.song.instrumentsPerChannel = newInstrumentsPerChannel;
 				document.song.instrumentWaves   = newInstrumentWaves;
 				document.song.instrumentFilters = newInstrumentFilters;
 				document.song.instrumentEnvelopes = newInstrumentEnvelopes;
@@ -290,7 +290,7 @@ module beepbox {
 				document.song.instrumentChorus  = newInstrumentChorus;
 				document.song.instrumentVolumes = newInstrumentVolumes;
 				for (let i: number = 0; i < Music.numChannels; i++) {
-					for (let j: number = 0; j < document.song.patterns; j++) {
+					for (let j: number = 0; j < document.song.patternsPerChannel; j++) {
 						document.song.channelPatterns[i][j].instrument = newInstrumentIndices[i][j];
 					}
 				}
@@ -360,16 +360,16 @@ module beepbox {
 		}
 	}
 	
-	export class ChangeParts extends ChangeGroup {
+	export class ChangePartsPerBeat extends ChangeGroup {
 		constructor(document: SongDocument, newValue: number) {
 			super();
-			if (document.song.parts != newValue) {
+			if (document.song.partsPerBeat != newValue) {
 				for (let i: number = 0; i < Music.numChannels; i++) {
 					for (let j: number = 0; j < document.song.channelPatterns[i].length; j++) {
-						this.append(new ChangeRhythm(document, document.song.channelPatterns[i][j], document.song.parts, newValue));
+						this.append(new ChangeRhythm(document, document.song.channelPatterns[i][j], document.song.partsPerBeat, newValue));
 					}
 				}
-				document.song.parts = newValue;
+				document.song.partsPerBeat = newValue;
 				document.notifier.changed();
 				this._didSomething();
 			}
@@ -377,16 +377,16 @@ module beepbox {
 	}
 	
 	export class ChangePaste extends ChangeGroup {
-		constructor(document: SongDocument, pattern: BarPattern, notes: Note[], newBeats: number, newParts: number) {
+		constructor(document: SongDocument, pattern: BarPattern, notes: Note[], newBeatsPerBar: number, newPartsPerBeat: number) {
 			super();
 			pattern.notes = notes;
 			
-			if (document.song.parts != newParts) {
-				this.append(new ChangeRhythm(document, pattern, newParts, document.song.parts));
+			if (document.song.partsPerBeat != newPartsPerBeat) {
+				this.append(new ChangeRhythm(document, pattern, newPartsPerBeat, document.song.partsPerBeat));
 			}
 			
-			if (document.song.beats != newBeats) {
-				this.append(new ChangeNoteTruncate(document, pattern, document.song.beats * document.song.parts, newBeats * document.song.parts));
+			if (document.song.beatsPerBar != newBeatsPerBar) {
+				this.append(new ChangeNoteTruncate(document, pattern, document.song.beatsPerBar * document.song.partsPerBeat, newBeatsPerBar * document.song.partsPerBeat));
 			}
 			
 			document.notifier.changed();
@@ -405,10 +405,10 @@ module beepbox {
 		}
 	}
 	
-	export class ChangePatterns extends Change {
+	export class ChangePatternsPerChannel extends Change {
 		constructor(document: SongDocument, newValue: number) {
 			super();
-			if (document.song.patterns != newValue) {
+			if (document.song.patternsPerChannel != newValue) {
 				for (let i: number = 0; i < Music.numChannels; i++) {
 					const channelBars: number[] = document.song.channelBars[i];
 					const channelPatterns: BarPattern[] = document.song.channelPatterns[i];
@@ -420,7 +420,7 @@ module beepbox {
 					}
 					channelPatterns.length = newValue;
 				}
-				document.song.patterns = newValue;
+				document.song.patternsPerChannel = newValue;
 				document.notifier.changed();
 				this._didSomething();
 			}
@@ -532,15 +532,16 @@ module beepbox {
 	}
 	
 	export class ChangeRhythm extends ChangeSequence {
-		constructor(document: SongDocument, bar: BarPattern, oldParts: number, newParts: number) {
+		constructor(document: SongDocument, bar: BarPattern, oldPartsPerBeat: number, newPartsPerBeat: number) {
 			super();
 			let changeRhythm: (oldTime:number)=>number;
-			if (oldParts == 4 && newParts == 3) {
-				changeRhythm = (oldTime: number)=> Math.ceil(oldTime * 3.0 / 4.0);
-			} else if (oldParts == 3 && newParts == 4) {
-				changeRhythm = (oldTime: number)=> Math.floor(oldTime * 4.0 / 3.0);
+			
+			if (oldPartsPerBeat > newPartsPerBeat) {
+				changeRhythm = (oldTime: number)=> Math.ceil(oldTime * newPartsPerBeat / oldPartsPerBeat);
+			} else if (oldPartsPerBeat < newPartsPerBeat) {
+				changeRhythm = (oldTime: number)=> Math.floor(oldTime * newPartsPerBeat / oldPartsPerBeat);
 			} else {
-				throw new Error("ChangeRhythm couldn't handle rhythm change from " + oldParts + " to " + newParts + ".");
+				throw new Error("ChangeRhythm couldn't handle rhythm change from " + oldPartsPerBeat + " to " + newPartsPerBeat + ".");
 			}
 			let i: number = 0;
 			while (i < bar.notes.length) {
@@ -582,8 +583,8 @@ module beepbox {
 		constructor(document: SongDocument, newHash: string) {
 			super();
 			document.song.fromBase64String(newHash);
-			document.bar = Math.max(0, Math.min(document.song.bars - 1, document.bar));
-			document.barScrollPos = Math.max(0, Math.min(document.song.bars - 16, document.barScrollPos));
+			document.bar = Math.max(0, Math.min(document.song.barCount - 1, document.bar));
+			document.barScrollPos = Math.max(0, Math.min(document.song.barCount - 16, document.barScrollPos));
 			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
 			document.notifier.changed();
 			this._didSomething();

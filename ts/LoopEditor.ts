@@ -104,9 +104,9 @@ module beepbox {
 				end -= start;
 				start = 0;
 			}
-			if (end > this._doc.song.bars) {
-				start -= end - this._doc.song.bars;
-				end = this._doc.song.bars;
+			if (end > this._doc.song.barCount) {
+				start -= end - this._doc.song.barCount;
+				end = this._doc.song.barCount;
 			}
 			return {start: start, length: end - start};
 		}
@@ -185,7 +185,7 @@ module beepbox {
 						end = temp;
 					}
 					if (start < 0) start = 0;
-					if (end >= this._doc.song.bars) end = this._doc.song.bars;
+					if (end >= this._doc.song.barCount) end = this._doc.song.barCount;
 					this._change = new ChangeLoop(this._doc, oldStart, oldEnd - oldStart, start, end - start);
 				} else if (this._cursor.mode == this._endMode) {
 					start = oldStart;
@@ -198,7 +198,7 @@ module beepbox {
 						end = temp;
 					}
 					if (start < 0) start = 0;
-					if (end >= this._doc.song.bars) end = this._doc.song.bars;
+					if (end >= this._doc.song.barCount) end = this._doc.song.barCount;
 					this._change = new ChangeLoop(this._doc, oldStart, oldEnd - oldStart, start, end - start);
 				} else if (this._cursor.mode == this._bothMode) {
 					const endPoints: Endpoints = this._findEndPoints(bar);

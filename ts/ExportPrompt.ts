@@ -161,7 +161,7 @@ module beepbox {
 				this._enableIntro.checked = true;
 				this._enableIntro.disabled = false;
 			}
-			if (this._doc.song.loopStart + this._doc.song.loopLength == this._doc.song.bars) {
+			if (this._doc.song.loopStart + this._doc.song.loopLength == this._doc.song.barCount) {
 				this._enableOutro.checked = false;
 				this._enableOutro.disabled = true;
 			} else {
@@ -359,14 +359,14 @@ module beepbox {
 			
 			const song: Song = this._doc.song;
 			const ticksPerBeat: number = 96;
-			const ticksPerPart: number = ticksPerBeat / song.parts;
+			const ticksPerPart: number = ticksPerBeat / song.partsPerBeat;
 			const ticksPerArpeggio: number = ticksPerPart / 4;
 			const secondsPerMinute: number = 60;
 			const microsecondsPerMinute: number = secondsPerMinute * 1000000;
 			const beatsPerMinute: number = song.getBeatsPerMinute();
 			const microsecondsPerBeat: number = Math.round(microsecondsPerMinute / beatsPerMinute);
 			const secondsPerTick: number = secondsPerMinute / (ticksPerBeat * beatsPerMinute);
-			const ticksPerBar: number = ticksPerBeat * song.beats;
+			const ticksPerBar: number = ticksPerBeat * song.beatsPerBar;
 			
 			const unrolledBars: number[] = [];
 			if (this._enableIntro.checked) {
@@ -380,7 +380,7 @@ module beepbox {
 				}
 			}
 			if (this._enableOutro.checked) {
-				for (let bar: number = song.loopStart + song.loopLength; bar < song.bars; bar++) {
+				for (let bar: number = song.loopStart + song.loopLength; bar < song.barCount; bar++) {
 					unrolledBars.push(bar);
 				}
 			}
@@ -433,7 +433,7 @@ module beepbox {
 					
 					writeEventTime(0);
 					writeUint24(0xFF5804); // time signature meta event. data is 4 bytes.
-					writeUint8(song.beats); // numerator. @TODO: turn 8/4 into 4/4? 
+					writeUint8(song.beatsPerBar); // numerator. @TODO: turn 8/4 into 4/4? 
 					writeUint8(2); // denominator exponent in 2^E. 2^2 = 4, and we will always use "quarter" notes.
 					writeUint8(24); // MIDI Clocks per metronome tick (should match beats), standard is 24
 					writeUint8(8); // number of 1/32 notes per 24 MIDI Clocks, standard is 8, meaning 24 clocks per "quarter" note.
@@ -462,7 +462,7 @@ module beepbox {
 						writeAscii(loopIndex < Number(this._loopDropDown.value) - 1 ? "Loop Repeat" : "Loop End");
 					}
 					
-					if (this._enableOutro.checked) barStartTime += ticksPerBar * (song.bars - song.loopStart - song.loopLength);
+					if (this._enableOutro.checked) barStartTime += ticksPerBar * (song.barCount - song.loopStart - song.loopLength);
 					if (barStartTime != ticksPerBar * unrolledBars.length) throw new Error("Miscalculated number of bars.");
 					
 				} else {
