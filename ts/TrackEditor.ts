@@ -171,11 +171,11 @@ module beepbox {
 					event.preventDefault();
 					break;
 				case 37: // left
-					this._setChannelBar(this._doc.channel, (this._doc.bar + this._doc.song.bars - 1) % this._doc.song.bars);
+					this._setChannelBar(this._doc.channel, (this._doc.bar + this._doc.song.barCount - 1) % this._doc.song.barCount);
 					event.preventDefault();
 					break;
 				case 39: // right
-					this._setChannelBar(this._doc.channel, (this._doc.bar + 1) % this._doc.song.bars);
+					this._setChannelBar(this._doc.channel, (this._doc.bar + 1) % this._doc.song.barCount);
 					event.preventDefault();
 					break;
 				case 48: // 0
@@ -227,14 +227,14 @@ module beepbox {
 		private _nextDigit(digit: string): void {
 			this._digits += digit;
 			let parsed: number = parseInt(this._digits);
-			if (parsed <= this._doc.song.patterns) {
+			if (parsed <= this._doc.song.patternsPerChannel) {
 				this._setBarPattern(parsed);
 				return;
 			}
 				
 			this._digits = digit;
 			parsed = parseInt(this._digits);
-			if (parsed <= this._doc.song.patterns) {
+			if (parsed <= this._doc.song.patternsPerChannel) {
 				this._setBarPattern(parsed);
 				return;
 			}
@@ -257,8 +257,8 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, this._mouseY / this._channelHeight)));
-			const bar: number = Math.floor(Math.min(this._doc.song.bars-1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
+			const channel: number = Math.floor(Math.min(Music.numChannels - 1, Math.max(0, this._mouseY / this._channelHeight)));
+			const bar: number = Math.floor(Math.min(this._doc.song.barCount - 1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
 			if (this._doc.channel == channel && this._doc.bar == bar) {
 				const up: boolean = (this._mouseY % this._channelHeight) < this._channelHeight / 2;
 				const patternCount: number = this._doc.song.channelPatterns[channel].length;
@@ -279,8 +279,8 @@ module beepbox {
 		}
 		
 		private _updatePreview(): void {
-			const channel: number = Math.floor(Math.min(Music.numChannels-1, Math.max(0, this._mouseY / this._channelHeight)));
-			const bar: number = Math.floor(Math.min(this._doc.song.bars-1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
+			const channel: number = Math.floor(Math.min(Music.numChannels - 1, Math.max(0, this._mouseY / this._channelHeight)));
+			const bar: number = Math.floor(Math.min(this._doc.song.barCount - 1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
 			const selected: boolean = (bar == this._doc.bar && channel == this._doc.channel);
 			
 			if (this._mouseOver && !selected) {
@@ -316,9 +316,9 @@ module beepbox {
 		
 		private _documentChanged = (): void => {
 			this._pattern = this._doc.getCurrentPattern();
-			const editorHeight = this._doc.song.bars > 16 ? 108 : 128;
+			const editorHeight = this._doc.song.barCount > 16 ? 108 : 128;
 			if (this._editorHeight != editorHeight) {
-				this._editorHeight = this._doc.song.bars > 16 ? 108 : 128;
+				this._editorHeight = this._doc.song.barCount > 16 ? 108 : 128;
 				this._svg.setAttribute("height", ""+this._editorHeight);
 				this.container.style.height = ""+this._editorHeight;
 				this._channelHeight = this._editorHeight / Music.numChannels;
@@ -327,7 +327,7 @@ module beepbox {
 		}
 		
 		private _render(): void {
-			const squashed: boolean = (this._doc.song.bars > 16);
+			const squashed: boolean = (this._doc.song.barCount > 16);
 			if (this._renderedSquashed != squashed) {
 				this._renderedSquashed = squashed;
 				for (let y: number = 0; y < Music.numChannels; y++) {
@@ -344,7 +344,7 @@ module beepbox {
 					const dim: boolean = (pattern == null || pattern.notes.length == 0);
 					
 					const box: Box = this._grid[j][i];
-					if (i < this._doc.song.bars) {
+					if (i < this._doc.song.barCount) {
 						box.setIndex(this._doc.song.channelBars[j][i + this._doc.barScrollPos], dim, selected, j);
 						box.container.style.visibility = "visible";
 					} else {
