@@ -144,7 +144,7 @@ module beepbox {
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"}, [
 			this._editorBox,
 			div({className: "editor-right-side"}, [
-				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.1.4")]),
+				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.2")]),
 				div({style: "margin: 5px 0; display: flex; flex-direction: row; align-items: center;"}, [
 					this._playButton,
 					div({style: "width: 1px; height: 10px;"}),

@@ -73,6 +73,7 @@ module beepbox {
 		public static readonly drumVolumes: ReadonlyArray<number> = [0.25, 1.0];
 		public static readonly drumPitchRoots: ReadonlyArray<number> = [69, 69];
 		public static readonly drumPitchFilterMult: ReadonlyArray<number> = [100.0, 8.0];
+		public static readonly drumWaveIsSoft: ReadonlyArray<boolean> = [false, true];
 		public static readonly filterNames: ReadonlyArray<string> = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
 		public static readonly filterBases: ReadonlyArray<number> = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
 		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
@@ -819,7 +820,7 @@ module beepbox {
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentWaves[channel][i] = this._clip(0, Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.instrumentWaves[channel][i] = this._clip(0, i < this.pitchChannelCount ? Config.waveNames.length : Config.drumNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
@@ -1179,7 +1180,8 @@ module beepbox {
 			
 			this.scale = 11; // default to expert.
 			if (jsonObject.scale != undefined) {
-				const scale: number = Config.scaleNames.indexOf(jsonObject.scale);
+				const oldScaleNames: Dictionary<number> = {"romani :)": 8, "romani :(": 9};
+				const scale: number = oldScaleNames[jsonObject.scale] != undefined ? oldScaleNames[jsonObject.scale] : Config.scaleNames.indexOf(jsonObject.scale);
 				if (scale != -1) this.scale = scale;
 			}
 			
@@ -1297,11 +1299,12 @@ module beepbox {
 						} else {
 							this.instrumentVolumes[channel][i] = 0;
 						}
-						this.instrumentEnvelopes[channel][i] = Config.envelopeNames.indexOf(instrumentObject.envelope);
+						const oldEnvelopeNames: Dictionary<number> = {"binary": 0};
+						this.instrumentEnvelopes[channel][i] = oldEnvelopeNames[instrumentObject.envelope] != undefined ? oldEnvelopeNames[instrumentObject.envelope] : Config.envelopeNames.indexOf(instrumentObject.envelope);
 						if (this.instrumentEnvelopes[channel][i] == -1) this.instrumentEnvelopes[channel][i] = 1;
 						if (isDrum) {
 							this.instrumentWaves[channel][i] = Config.drumNames.indexOf(instrumentObject.wave);
-							if (this.instrumentWaves[channel][i] == -1) this.instrumentWaves[channel][i] = 0;
+							if (this.instrumentWaves[channel][i] == -1) this.instrumentWaves[channel][i] = 1;
 							this.instrumentFilters[channel][i] = 0;
 							this.instrumentChorus[channel][i] = 0;
 							this.instrumentEffects[channel][i] = 0;
@@ -1719,7 +1722,7 @@ module beepbox {
 				const instrument = pattern ? pattern.instrument : 0; 
 				let pianoPitchDamping: number;
 				if (isDrum) {
-					if (song.instrumentWaves[channel][instrument] > 0) {
+					if (Config.drumWaveIsSoft[song.instrumentWaves[channel][instrument]]) {
 						filter = Math.min(1.0, pianoFreq * sampleTime * Config.drumPitchFilterMult[song.instrumentWaves[channel][pattern!.instrument]]);
 						pianoPitchDamping = 24.0;
 					} else {
@@ -1825,7 +1828,7 @@ module beepbox {
 				const endFreq:   number = synth.frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
 				let pitchDamping: number;
 				if (isDrum) {
-					if (song.instrumentWaves[channel][pattern!.instrument] > 0) {
+					if (Config.drumWaveIsSoft[song.instrumentWaves[channel][pattern!.instrument]]) {
 						filter = Math.min(1.0, startFreq * sampleTime * Config.drumPitchFilterMult[song.instrumentWaves[channel][pattern!.instrument]]);
 						pitchDamping = 24.0;
 					} else {
