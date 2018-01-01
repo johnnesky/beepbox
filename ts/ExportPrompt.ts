@@ -602,16 +602,27 @@ module beepbox {
 										const linearVolume: number = lerp(pinVolume, nextPinVolume, tick / length);
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, tick / length);
 										
+										const chorusHarmonizes: boolean = Config.chorusHarmonizes[song.instrumentChorus[channel][nextInstrument]];
 										const arpeggio: number = Math.floor(tick / ticksPerArpeggio) % 4;
-										let nextPitch: number;
-										if (note.pitches.length == 2) {
-											nextPitch = note.pitches[arpeggio >> 1];
-										} else if (note.pitches.length == 3) {
-											nextPitch = note.pitches[arpeggio == 3 ? 1 : arpeggio];
-										} else if (note.pitches.length == 4) {
-											nextPitch = note.pitches[arpeggio];
+										let nextPitch: number = note.pitches[0];
+										if (chorusHarmonizes) {
+											if (isChorus) {
+												if (note.pitches.length == 2) {
+													nextPitch = note.pitches[1];
+												} else if (note.pitches.length == 3) {
+													nextPitch = note.pitches[(arpeggio >> 1) + 1];
+												} else if (note.pitches.length == 4) {
+													nextPitch = note.pitches[(arpeggio == 3 ? 1 : arpeggio) + 1];
+												}
+											}
 										} else {
-											nextPitch = note.pitches[0];
+											if (note.pitches.length == 2) {
+												nextPitch = note.pitches[arpeggio >> 1];
+											} else if (note.pitches.length == 3) {
+												nextPitch = note.pitches[arpeggio == 3 ? 1 : arpeggio];
+											} else if (note.pitches.length == 4) {
+												nextPitch = note.pitches[arpeggio];
+											}
 										}
 										const fractionalPitch: number = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
 										nextPitch = Math.round(fractionalPitch);

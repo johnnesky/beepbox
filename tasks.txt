@@ -197,12 +197,10 @@
 	√ track colors based on channel type
 	√ _defaultPinChannels was broken.
 √ move Music to top, rename to Config.
+√ drumFilter shouldn't have hardcoded dependence on drum wave index.
+√ adjust json import to be backwards compatible with old names: romani, binary
+√ when exporting to midi with custom harmony, use correct simultaneous notes.
 
-- drumFilter shouldn't have hardcoded dependence on drum wave index.
-- adjust json import to be backwards compatible with old names: romani, binary
-- when exporting to midi with custom harmony, use correct simultaneous notes.
-- does midi correctly export new rhythm values? I think so?
-- when parsing base64 pattern instrument indices, the drum wave index should be clamped based on number of available drum waves.
 - maybe add that "guitar" wave? maybe rearrange the waves by harshness, increment format version number.
 
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
