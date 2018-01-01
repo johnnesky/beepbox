@@ -127,7 +127,7 @@ module beepbox {
 			super();
 			if (document.song.barCount != newValue) {
 				const newChannelBars: number[][] = [];
-				for (let i: number = 0; i < Music.numChannels; i++) {
+				for (let i: number = 0; i < document.song.getChannelCount(); i++) {
 					const channel: number[] = [];
 					for (let j: number = 0; j < newValue; j++) {
 						channel.push(j < document.song.barCount ? document.song.channelBars[i][j] : 1);
@@ -158,13 +158,100 @@ module beepbox {
 		}
 	}
 	
+	export class ChangeChannelCount extends Change {
+		constructor(document: SongDocument, newPitchChannelCount: number, newDrumChannelCount: number) {
+			super();
+			if (document.song.pitchChannelCount != newPitchChannelCount || document.song.drumChannelCount != newDrumChannelCount) {
+				const channelPatterns: BarPattern[][] = [];
+				const channelBars: number[][] = [];
+				const channelOctaves: number[] = [];
+				const instrumentWaves: number[][] = [];
+				const instrumentFilters: number[][] = [];
+				const instrumentEnvelopes: number[][] = [];
+				const instrumentEffects: number[][] = [];
+				const instrumentChorus: number[][] = [];
+				const instrumentVolumes: number[][] = [];
+				
+				for (let i: number = 0; i < newPitchChannelCount; i++) {
+					const channel = i;
+					const oldChannel = i;
+					if (i < document.song.pitchChannelCount) {
+						channelPatterns[channel] = document.song.channelPatterns[oldChannel];
+						channelBars[channel] = document.song.channelBars[oldChannel];
+						channelOctaves[channel] = document.song.channelOctaves[oldChannel];
+						instrumentWaves[channel] = document.song.instrumentWaves[oldChannel];
+						instrumentFilters[channel] = document.song.instrumentFilters[oldChannel];
+						instrumentEnvelopes[channel] = document.song.instrumentEnvelopes[oldChannel];
+						instrumentEffects[channel] = document.song.instrumentEffects[oldChannel];
+						instrumentChorus[channel] = document.song.instrumentChorus[oldChannel];
+						instrumentVolumes[channel] = document.song.instrumentVolumes[oldChannel];
+					} else {
+						channelPatterns[channel] = [];
+						for (let j = 0; j < document.song.patternsPerChannel; j++) channelPatterns[channel][j] = new BarPattern();
+						channelBars[channel] = filledArray(document.song.barCount, 1);
+						channelOctaves[channel] = 2;
+						instrumentWaves[channel] = filledArray(document.song.instrumentsPerChannel, 1);
+						instrumentFilters[channel] = filledArray(document.song.instrumentsPerChannel, 0);
+						instrumentEnvelopes[channel] = filledArray(document.song.instrumentsPerChannel, 1);
+						instrumentEffects[channel] = filledArray(document.song.instrumentsPerChannel, 0);
+						instrumentChorus[channel] = filledArray(document.song.instrumentsPerChannel, 0);
+						instrumentVolumes[channel] = filledArray(document.song.instrumentsPerChannel, 0);
+					}
+				}
+
+				for (let i: number = 0; i < newDrumChannelCount; i++) {
+					const channel = i + newPitchChannelCount;
+					const oldChannel = i + document.song.pitchChannelCount;
+					if (i < document.song.drumChannelCount) {
+						channelPatterns[channel] = document.song.channelPatterns[oldChannel];
+						channelBars[channel] = document.song.channelBars[oldChannel];
+						channelOctaves[channel] = document.song.channelOctaves[oldChannel];
+						instrumentWaves[channel] = document.song.instrumentWaves[oldChannel];
+						instrumentFilters[channel] = document.song.instrumentFilters[oldChannel];
+						instrumentEnvelopes[channel] = document.song.instrumentEnvelopes[oldChannel];
+						instrumentEffects[channel] = document.song.instrumentEffects[oldChannel];
+						instrumentChorus[channel] = document.song.instrumentChorus[oldChannel];
+						instrumentVolumes[channel] = document.song.instrumentVolumes[oldChannel];
+					} else {
+						channelPatterns[channel] = [];
+						for (let j = 0; j < document.song.patternsPerChannel; j++) channelPatterns[channel][j] = new BarPattern();
+						channelBars[channel] = filledArray(document.song.barCount, 1);
+						channelOctaves[channel] = 0;
+						instrumentWaves[channel] = filledArray(document.song.instrumentsPerChannel, 1);
+						instrumentFilters[channel] = filledArray(document.song.instrumentsPerChannel, 0);
+						instrumentEnvelopes[channel] = filledArray(document.song.instrumentsPerChannel, 1);
+						instrumentEffects[channel] = filledArray(document.song.instrumentsPerChannel, 0);
+						instrumentChorus[channel] = filledArray(document.song.instrumentsPerChannel, 0);
+						instrumentVolumes[channel] = filledArray(document.song.instrumentsPerChannel, 0);
+					}
+				}
+				
+				document.song.pitchChannelCount = newPitchChannelCount;
+				document.song.drumChannelCount = newDrumChannelCount;
+				document.song.channelPatterns = channelPatterns;
+				document.song.channelBars = channelBars;
+				document.song.channelOctaves = channelOctaves;
+				document.song.instrumentWaves = instrumentWaves;
+				document.song.instrumentFilters = instrumentFilters;
+				document.song.instrumentEnvelopes = instrumentEnvelopes;
+				document.song.instrumentEffects = instrumentEffects;
+				document.song.instrumentChorus = instrumentChorus;
+				document.song.instrumentVolumes = instrumentVolumes;
+				document.channel = Math.min(document.channel, newPitchChannelCount + newDrumChannelCount - 1);
+				document.notifier.changed();
+				
+				this._didSomething();
+			}
+		}
+	}
+	
 	export class ChangeBeatsPerBar extends Change {
 		constructor(document: SongDocument, newValue: number) {
 			super();
 			if (document.song.beatsPerBar != newValue) {
 				if (document.song.beatsPerBar > newValue) {
 					const sequence: ChangeSequence = new ChangeSequence();
-					for (let i: number = 0; i < Music.numChannels; i++) {
+					for (let i: number = 0; i < document.song.getChannelCount(); i++) {
 						for (let j: number = 0; j < document.song.channelPatterns[i].length; j++) {
 							sequence.append(new ChangeNoteTruncate(document, document.song.channelPatterns[i][j], newValue * document.song.partsPerBeat, document.song.beatsPerBar * document.song.partsPerBeat));
 						}
@@ -252,7 +339,7 @@ module beepbox {
 				for (let k: number = 0; k < newArrays.length; k++) {
 					const oldArray: number[][] = oldArrays[k];
 					const newArray: number[][] = newArrays[k];
-					for (let i: number = 0; i < Music.numChannels; i++) {
+					for (let i: number = 0; i < document.song.getChannelCount(); i++) {
 						const channel: number[] = [];
 						for (let j: number = 0; j < newInstrumentsPerChannel; j++) {
 							if (j < oldInstrumentsPerChannel) {
@@ -272,7 +359,7 @@ module beepbox {
 				}
 				
 				const newInstrumentIndices: number[][] = [];
-				for (let i: number = 0; i < Music.numChannels; i++) {
+				for (let i: number = 0; i < document.song.getChannelCount(); i++) {
 					const oldIndices: number[] = [];
 					const newIndices: number[] = [];
 					for (let j: number = 0; j < document.song.patternsPerChannel; j++) {
@@ -289,7 +376,7 @@ module beepbox {
 				document.song.instrumentEffects = newInstrumentEffects;
 				document.song.instrumentChorus  = newInstrumentChorus;
 				document.song.instrumentVolumes = newInstrumentVolumes;
-				for (let i: number = 0; i < Music.numChannels; i++) {
+				for (let i: number = 0; i < document.song.getChannelCount(); i++) {
 					for (let j: number = 0; j < document.song.patternsPerChannel; j++) {
 						document.song.channelPatterns[i][j].instrument = newInstrumentIndices[i][j];
 					}
@@ -364,7 +451,7 @@ module beepbox {
 		constructor(document: SongDocument, newValue: number) {
 			super();
 			if (document.song.partsPerBeat != newValue) {
-				for (let i: number = 0; i < Music.numChannels; i++) {
+				for (let i: number = 0; i < document.song.getChannelCount(); i++) {
 					for (let j: number = 0; j < document.song.channelPatterns[i].length; j++) {
 						this.append(new ChangeRhythm(document, document.song.channelPatterns[i][j], document.song.partsPerBeat, newValue));
 					}
@@ -409,7 +496,7 @@ module beepbox {
 		constructor(document: SongDocument, newValue: number) {
 			super();
 			if (document.song.patternsPerChannel != newValue) {
-				for (let i: number = 0; i < Music.numChannels; i++) {
+				for (let i: number = 0; i < document.song.getChannelCount(); i++) {
 					const channelBars: number[] = document.song.channelBars[i];
 					const channelPatterns: BarPattern[] = document.song.channelPatterns[i];
 					for (let j: number = 0; j < channelBars.length; j++) {
@@ -583,6 +670,7 @@ module beepbox {
 		constructor(document: SongDocument, newHash: string) {
 			super();
 			document.song.fromBase64String(newHash);
+			document.channel = Math.min(document.channel, document.song.getChannelCount() - 1);
 			document.bar = Math.max(0, Math.min(document.song.barCount - 1, document.bar));
 			document.barScrollPos = Math.max(0, Math.min(document.song.barCount - 16, document.barScrollPos));
 			document.barScrollPos = Math.min(document.bar, Math.max(document.bar - 15, document.barScrollPos));
@@ -718,20 +806,20 @@ module beepbox {
 			this._oldPitches = note.pitches;
 			this._newPitches = [];
 			
-			const maxPitch: number = (doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch);
+			const maxPitch: number = (doc.song.getChannelIsDrum(doc.channel) ? Music.drumCount - 1 : Music.maxPitch);
 			
 			for (let i: number = 0; i < this._oldPitches.length; i++) {
 				let pitch: number = this._oldPitches[i];
 				if (upward) {
 					for (let j: number = pitch + 1; j <= maxPitch; j++) {
-						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Music.scaleFlags[doc.song.scale][j%12]) {
 							pitch = j;
 							break;
 						}
 					}
 				} else {
 					for (let j: number = pitch - 1; j >= 0; j--) {
-						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][j%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Music.scaleFlags[doc.song.scale][j%12]) {
 							pitch = j;
 							break;
 						}
@@ -764,14 +852,14 @@ module beepbox {
 				if (interval > max) interval = max;
 				if (upward) {
 					for (let i: number = interval + 1; i <= max; i++) {
-						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][i%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Music.scaleFlags[doc.song.scale][i%12]) {
 							interval = i;
 							break;
 						}
 					}
 				} else {
 					for (let i: number = interval - 1; i >= min; i--) {
-						if (doc.channel == 3 || Music.scaleFlags[doc.song.scale][i%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Music.scaleFlags[doc.song.scale][i%12]) {
 							interval = i;
 							break;
 						}

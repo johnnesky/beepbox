@@ -104,7 +104,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-			if (this._doc.channel == 3) return;
+			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
 			this._updatePreview();
 			
 			if (this._mouseY >= this._barBottom - this._barHeight && this._mouseY <= this._barBottom) {
@@ -119,7 +119,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
-			if (this._doc.channel == 3) return;
+			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
 			this._updatePreview();
 			
 			if (this._mouseY >= this._barBottom - this._barHeight && this._mouseY <= this._barBottom) {
@@ -145,7 +145,7 @@ module beepbox {
 		}
 		
 		private _whenCursorMoved(): void {
-			if (this._doc.channel == 3) return;
+			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
 			if (this._dragging) {
 				const currentOctave: number = this._doc.song.channelOctaves[this._doc.channel];
 				const continuousChange: boolean = this._doc.history.lastChangeWas(this._change);
@@ -228,7 +228,7 @@ module beepbox {
 		}
 		
 		private _render(): void {
-			this._svg.style.visibility = (this._doc.channel == 3) ? "hidden" : "visible";
+			this._svg.style.visibility = (this._doc.song.getChannelIsDrum(this._doc.channel)) ? "hidden" : "visible";
 			if (this._renderedBarBottom != this._barBottom) {
 				this._renderedBarBottom = this._barBottom;
 				this._handle.setAttribute("y", "" + (this._barBottom - this._barHeight));
