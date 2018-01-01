@@ -223,7 +223,7 @@ module beepbox {
 				}
 				
 				mousePitch -= interval;
-				this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.song.getChannelIsDrum(this._doc.channel) ? Music.drumCount - 1 : Music.maxPitch) - maxInterval);
+				this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount - 1 : Config.maxPitch) - maxInterval);
 				
 				if (this._doc.channel != 3) {
 					let nearest: number = error;
@@ -242,7 +242,7 @@ module beepbox {
 					}
 				}
 			} else {
-				this._cursor.pitch = this._snapToPitch(mousePitch, 0, Music.maxPitch);
+				this._cursor.pitch = this._snapToPitch(mousePitch, 0, Config.maxPitch);
 				const defaultLength: number = this._copiedPins[this._copiedPins.length-1].time;
 				const fullBeats: number = Math.floor(this._cursor.part / this._doc.song.partsPerBeat);
 				const maxDivision: number = this._getMaxDivision();
@@ -313,7 +313,7 @@ module beepbox {
 		private _snapToPitch(guess: number, min: number, max: number): number {
 			if (guess < min) guess = min;
 			if (guess > max) guess = max;
-			const scale: ReadonlyArray<boolean> = Music.scaleFlags[this._doc.song.scale];
+			const scale: ReadonlyArray<boolean> = Config.scaleFlags[this._doc.song.scale];
 			if (scale[Math.floor(guess) % 12] || this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				return Math.floor(guess);
 			} else {
@@ -576,7 +576,7 @@ module beepbox {
 							bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((this._mouseYStart - this._mouseY) / 25.0));
 							if (bendVolume < 0) bendVolume = 0;
 							if (bendVolume > 3) bendVolume = 3;
-							bendInterval = this._snapToPitch(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + this._cursor.curNote.pitches[0], 0, Music.maxPitch) - this._cursor.curNote.pitches[0];
+							bendInterval = this._snapToPitch(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + this._cursor.curNote.pitches[0], 0, Config.maxPitch) - this._cursor.curNote.pitches[0];
 							break;
 						}
 						
@@ -609,7 +609,7 @@ module beepbox {
 						}
 						minPitch -= this._cursor.curNote.pitches[0];
 						maxPitch -= this._cursor.curNote.pitches[0];
-						const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, Music.maxPitch - maxPitch);
+						const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, Config.maxPitch - maxPitch);
 						sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
 						this._copyPins(this._cursor.curNote);
 					}
@@ -678,7 +678,7 @@ module beepbox {
 			this._pattern = this._doc.getCurrentPattern();
 			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * this._doc.song.partsPerBeat);
 			this._pitchHeight = this._doc.song.getChannelIsDrum(this._doc.channel) ? this._defaultDrumHeight : this._defaultPitchHeight;
-			this._pitchCount = this._doc.song.getChannelIsDrum(this._doc.channel) ? Music.drumCount : Music.pitchCount;
+			this._pitchCount = this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount : Config.pitchCount;
 			this._octaveOffset = this._doc.song.channelOctaves[this._doc.channel] * 12;
 			
 			if (this._renderedPartsPerBeat != this._doc.song.partsPerBeat || 
@@ -728,15 +728,15 @@ module beepbox {
 			}
 			
 			for (let j: number = 0; j < 12; j++) {
-				this._backgroundPitchRows[j].style.visibility = Music.scaleFlags[this._doc.song.scale][j] ? "visible" : "hidden";
+				this._backgroundPitchRows[j].style.visibility = Config.scaleFlags[this._doc.song.scale][j] ? "visible" : "hidden";
 			}
 			
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				if (!this._renderedDrums) {
 					this._renderedDrums = true;
 					this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
-					this._svgBackground.setAttribute("height", "" + (this._defaultDrumHeight * Music.drumCount));
-					this._svg.setAttribute("height", "" + (this._defaultDrumHeight * Music.drumCount));
+					this._svgBackground.setAttribute("height", "" + (this._defaultDrumHeight * Config.drumCount));
+					this._svg.setAttribute("height", "" + (this._defaultDrumHeight * Config.drumCount));
 				}
 			} else {
 				if (this._renderedDrums) {

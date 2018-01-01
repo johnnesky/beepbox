@@ -493,8 +493,8 @@ module beepbox {
 					let prevPitchBend: number = -1;
 					let prevExpression: number = -1;
 					//let prevTremolo: number = -1;
-					const channelRoot: number = isDrums ? 33 : Music.keyTransposes[song.key];
-					const intervalScale: number = isDrums ? Music.drumInterval : 1;
+					const channelRoot: number = isDrums ? 33 : Config.keyTransposes[song.key];
+					const intervalScale: number = isDrums ? Config.drumInterval : 1;
 					
 					for (const bar of unrolledBars) {
 						const pattern: BarPattern | null = song.getPattern(channel, bar);
@@ -514,9 +514,9 @@ module beepbox {
 								writeEventTime(barStartTime);
 								writeUint16(0xFF04); // instrument event. 
 								if (isDrums) {
-									let description: string = "noise: " + Music.drumNames[song.instrumentWaves[channel][nextInstrument]];
-									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
-									description += ", envelope: " + Music.envelopeNames[song.instrumentEnvelopes[channel][nextInstrument]];
+									let description: string = "noise: " + Config.drumNames[song.instrumentWaves[channel][nextInstrument]];
+									description += ", volume: " + Config.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
+									description += ", envelope: " + Config.envelopeNames[song.instrumentEnvelopes[channel][nextInstrument]];
 									writeAscii(description);
 									
 									// Program (instrument) change event:
@@ -524,12 +524,12 @@ module beepbox {
 									writeUint8(0xC0 | midiChannel); // program change event for given channel
 									writeFlagAnd7Bits(0, 0x7E); // seashore, applause
 								} else {
-									let description: string = "wave: " + Music.waveNames[song.instrumentWaves[channel][nextInstrument]];
-									description += ", volume: " + Music.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
-									description += ", envelope: " + Music.envelopeNames[song.instrumentEnvelopes[channel][nextInstrument]];
-									description += ", filter: " + Music.filterNames[song.instrumentFilters[channel][nextInstrument]];
-									description += ", chorus: " + Music.chorusNames[song.instrumentChorus[channel][nextInstrument]];
-									description += ", effect: " + Music.effectNames[song.instrumentEffects[channel][nextInstrument]];
+									let description: string = "wave: " + Config.waveNames[song.instrumentWaves[channel][nextInstrument]];
+									description += ", volume: " + Config.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
+									description += ", envelope: " + Config.envelopeNames[song.instrumentEnvelopes[channel][nextInstrument]];
+									description += ", filter: " + Config.filterNames[song.instrumentFilters[channel][nextInstrument]];
+									description += ", chorus: " + Config.chorusNames[song.instrumentChorus[channel][nextInstrument]];
+									description += ", effect: " + Config.effectNames[song.instrumentEffects[channel][nextInstrument]];
 									writeAscii(description);
 									
 									const sustainInstruments: number[] = [
@@ -574,13 +574,13 @@ module beepbox {
 							}
 							
 							const effectChoice: number = song.instrumentEffects[channel][nextInstrument];
-							const effectVibrato: number = Music.effectVibratos[effectChoice];
-							const effectTremolo: number = Music.effectTremolos[effectChoice];
+							const effectVibrato: number = Config.effectVibratos[effectChoice];
+							const effectTremolo: number = Config.effectTremolos[effectChoice];
 							const effectDuration: number = 0.14;
 							
-							let chorusOffset: number = Music.chorusIntervals[song.instrumentChorus[channel][nextInstrument]];
+							let chorusOffset: number = Config.chorusIntervals[song.instrumentChorus[channel][nextInstrument]];
 							if (!isChorus) chorusOffset *= -1;
-							chorusOffset += Music.chorusOffsets[song.instrumentChorus[channel][nextInstrument]];
+							chorusOffset += Config.chorusOffsets[song.instrumentChorus[channel][nextInstrument]];
 							
 							for (let noteIndex: number = 0; noteIndex < pattern.notes.length; noteIndex++) {
 								const note: Note = pattern.notes[noteIndex];

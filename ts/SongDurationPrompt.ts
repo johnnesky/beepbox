@@ -81,28 +81,28 @@ module beepbox {
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._beatsStepper.value = this._doc.song.beatsPerBar + "";
-			this._beatsStepper.min = Music.beatsPerBarMin + "";
-			this._beatsStepper.max = Music.beatsPerBarMax + "";
+			this._beatsStepper.min = Config.beatsPerBarMin + "";
+			this._beatsStepper.max = Config.beatsPerBarMax + "";
 			
 			this._barsStepper.value = this._doc.song.barCount + "";
-			this._barsStepper.min = Music.barCountMin + "";
-			this._barsStepper.max = Music.barCountMax + "";
+			this._barsStepper.min = Config.barCountMin + "";
+			this._barsStepper.max = Config.barCountMax + "";
 			
 			this._patternsStepper.value = this._doc.song.patternsPerChannel + "";
-			this._patternsStepper.min = Music.patternsPerChannelMin + "";
-			this._patternsStepper.max = Music.patternsPerChannelMax + "";
+			this._patternsStepper.min = Config.patternsPerChannelMin + "";
+			this._patternsStepper.max = Config.patternsPerChannelMax + "";
 			
 			this._instrumentsStepper.value = this._doc.song.instrumentsPerChannel + "";
-			this._instrumentsStepper.min = Music.instrumentsPerChannelMin + "";
-			this._instrumentsStepper.max = Music.instrumentsPerChannelMax + "";
+			this._instrumentsStepper.min = Config.instrumentsPerChannelMin + "";
+			this._instrumentsStepper.max = Config.instrumentsPerChannelMax + "";
 			
 			this._pitchChannelStepper.value = this._doc.song.pitchChannelCount + "";
-			this._pitchChannelStepper.min = Music.pitchChannelCountMin + "";
-			this._pitchChannelStepper.max = Music.pitchChannelCountMax + "";
+			this._pitchChannelStepper.min = Config.pitchChannelCountMin + "";
+			this._pitchChannelStepper.max = Config.pitchChannelCountMax + "";
 			
 			this._drumChannelStepper.value = this._doc.song.drumChannelCount + "";
-			this._drumChannelStepper.min = Music.drumChannelCountMin + "";
-			this._drumChannelStepper.max = Music.drumChannelCountMax + "";
+			this._drumChannelStepper.min = Config.drumChannelCountMin + "";
+			this._drumChannelStepper.max = Config.drumChannelCountMax + "";
 			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);

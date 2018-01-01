@@ -104,24 +104,24 @@ module beepbox {
 			option("showScrollBar", "Octave Scroll Bar", false, false),
 		]);
 		private readonly _exportButton: HTMLButtonElement = button({style: "margin: 5px 0;", type: "button"}, [text("Export")]);
-		private readonly _scaleDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.scaleNames);
-		private readonly _keyDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.keyNames);
+		private readonly _scaleDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Config.scaleNames);
+		private readonly _keyDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Config.keyNames);
 		private readonly _tempoSlider: HTMLInputElement = input({style: "width: 9em; margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1"});
 		private readonly _reverbSlider: HTMLInputElement = input({style: "width: 9em; margin: 0px;", type: "range", min: "0", max: "3", value: "0", step: "1"});
-		private readonly _partDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.partNames);
+		private readonly _partDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Config.partNames);
 		private readonly _patternSettingsLabel: HTMLDivElement = div({style: "visibility: hidden; margin: 3px 0; text-align: center;"}, [text("Pattern Settings")]);
 		private readonly _instrumentDropDown: HTMLSelectElement = select({style: "width:9em;"});
 		private readonly _instrumentDropDownGroup: HTMLDivElement = div({className: "selectRow", style: "visibility: hidden;"}, [span({}, [text("Instrument: ")]), div({className: "selectContainer"}, [this._instrumentDropDown])]);
 		private readonly _instrumentSettingsLabel: HTMLDivElement = div({style: "margin: 3px 0; text-align: center;"}, [text("Instrument Settings")]);
 		private readonly _channelVolumeSlider: HTMLInputElement = input({style: "width: 9em; margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"});
-		private readonly _waveNames: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.waveNames);
-		private readonly _drumNames: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.drumNames);
-		private readonly _envelopeDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.envelopeNames);
-		private readonly _filterDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.filterNames);
+		private readonly _waveNames: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Config.waveNames);
+		private readonly _drumNames: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Config.drumNames);
+		private readonly _envelopeDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Config.envelopeNames);
+		private readonly _filterDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Config.filterNames);
 		private readonly _filterDropDownGroup: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Filter: ")]), div({className: "selectContainer"}, [this._filterDropDown])]);
-		private readonly _chorusDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.chorusNames);
+		private readonly _chorusDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Config.chorusNames);
 		private readonly _chorusDropDownGroup: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chorus: ")]), div({className: "selectContainer"}, [this._chorusDropDown])]);
-		private readonly _effectDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Music.effectNames);
+		private readonly _effectDropDown: HTMLSelectElement = buildOptions(select({style: "width:9em;"}), Config.effectNames);
 		private readonly _effectDropDownGroup: HTMLElement = div({className: "selectRow"}, [span({}, [text("Effect: ")]), div({className: "selectContainer"}, [this._effectDropDown])]);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({}, [
 			div({className: "selectRow"}, [
@@ -283,7 +283,7 @@ module beepbox {
 			setSelectedIndex(this._keyDropDown, this._doc.song.key);
 			this._tempoSlider.value = "" + this._doc.song.tempo;
 			this._reverbSlider.value = "" + this._doc.song.reverb;
-			setSelectedIndex(this._partDropDown, Music.partCounts.indexOf(this._doc.song.partsPerBeat));
+			setSelectedIndex(this._partDropDown, Config.partCounts.indexOf(this._doc.song.partsPerBeat));
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				this._filterDropDownGroup.style.visibility = "hidden";
 				this._chorusDropDownGroup.style.visibility = "hidden";
@@ -498,7 +498,7 @@ module beepbox {
 		}
 		
 		private _whenSetPartsPerBeat = (): void => {
-			this._doc.history.record(new ChangePartsPerBeat(this._doc, Music.partCounts[this._partDropDown.selectedIndex]));
+			this._doc.history.record(new ChangePartsPerBeat(this._doc, Config.partCounts[this._partDropDown.selectedIndex]));
 		}
 		
 		private _whenSetWave = (): void => {
