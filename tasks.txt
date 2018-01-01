@@ -188,10 +188,22 @@
 √ move waves into Music structure.
 √ the "period" variables are the wrong name for what they mean. In Song, rename "instruments" to "instrumentCount", and other similar properties.
 √ add sixths and eighths rhythms.
+√ custom number of channels, up to 6 melodic and 2 drums. 
+	√ change song size prompt
+	√ import base64, export base64, import json, export json, export midi
+	√ check all those places where we check whether the channel is 3 to see if it is supposed to be drums.
+	√ in pattern editor, show all drum channels if appropriate preference is on.
+	√ track editor scaling
+	√ track colors based on channel type
+	√ _defaultPinChannels was broken.
 
-- custom number of channels, up to 6? check all those places where we check whether the channel is 3 to see if it is supposed to be drums. (how would this impact midi channel exporting? well, the midi drum channel 10 is unusable, which leaves 15 channels, but beepbox only needs one channel for drums, which leaves 14 channels, which can be shared between 7 melody channels which are each split into 2 midi chorus channels.)
-- when parsing base64 pattern instrument indices, the drum wave is clamped based on number of melodic waves.
-- maybe add that "guitar" wave?
+- move Music to top, rename to Config.
+- drumFilter shouldn't have hardcoded dependence on drum wave index.
+- adjust json import to be backwards compatible with old names: romani, binary
+- when exporting to midi with custom harmony, use correct simultaneous notes.
+- does midi correctly export new rhythm values? I think so?
+- when parsing base64 pattern instrument indices, the drum wave index should be clamped based on number of available drum waves.
+- maybe add that "guitar" wave? maybe rearrange the waves by harshness, increment format version number.
 
 - responsive design layout. figure out how to layout portrait mode. can I use floats to pull the pattern editor out of the stack?
 - highlight note edge extensions on touch

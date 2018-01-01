@@ -34,11 +34,12 @@ module beepbox {
 		private _renderedIndex: number = 1;
 		private _renderedDim: boolean = true;
 		private _renderedSelected: boolean = false;
-		constructor(channel: number, x: number, y: number) {
+		private _renderedColor: string = "";
+		constructor(channel: number, x: number, y: number, color: string) {
 			this.container.setAttribute("x", "" + (x * 32));
 			this.container.setAttribute("y", "" + (y * 32));
 			this._rect.setAttribute("fill", "#444444");
-			this._label.setAttribute("fill", SongEditor.channelColorsDim[y]);
+			this._label.setAttribute("fill", color);
 		}
 		
 		public setSquashed(squashed: boolean, y: number): void {
@@ -53,7 +54,7 @@ module beepbox {
 			}
 		}
 		
-		public setIndex(index: number, dim: boolean, selected: boolean, y: number): void {
+		public setIndex(index: number, dim: boolean, selected: boolean, y: number, color: string): void {
 			if (this._renderedIndex != index) {
 				if (!this._renderedSelected && ((index == 0) != (this._renderedIndex == 0))) {
 					this._rect.setAttribute("fill", (index == 0) ? "#000000" : "#444444");
@@ -63,25 +64,27 @@ module beepbox {
 				this._text.data = ""+index;
 			}
 			
-			if (this._renderedDim != dim) {
+			if (this._renderedDim != dim || this._renderedColor != color) {
 				this._renderedDim = dim;
 				if (selected) {
 					this._label.setAttribute("fill", "#000000");
 				} else {
-					this._label.setAttribute("fill", dim ? SongEditor.channelColorsDim[y] : SongEditor.channelColorsBright[y]);
+					this._label.setAttribute("fill", color);
 				}
 			}
 			
-			if (this._renderedSelected != selected) {
+			if (this._renderedSelected != selected || this._renderedColor != color) {
 				this._renderedSelected = selected;
 				if (selected) {
-					this._rect.setAttribute("fill", SongEditor.channelColorsBright[y]);
+					this._rect.setAttribute("fill", color);
 					this._label.setAttribute("fill", "#000000");
 				} else {
 					this._rect.setAttribute("fill", (this._renderedIndex == 0) ? "#000000" : "#444444");
-					this._label.setAttribute("fill", dim ? SongEditor.channelColorsDim[y] : SongEditor.channelColorsBright[y]);
+					this._label.setAttribute("fill", color);
 				}
 			}
+			
+			this._renderedColor = color;
 		}
 	}
 	
@@ -91,12 +94,13 @@ module beepbox {
 		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; position: absolute;", width: this._editorWidth, height: 128});
 		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 128px; position: relative; overflow:hidden;"}, [this._svg]);
 		
+		private readonly _boxContainer = <SVGGElement> svgElement("g");
 		private readonly _playhead = <SVGRectElement> svgElement("rect", {fill: "white", x: 0, y: 0, width: 4, height: 128});
 		private readonly _boxHighlight = <SVGRectElement> svgElement("rect", {fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
 		private readonly _upHighlight = <SVGPathElement> svgElement("path", {fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
 		private readonly _downHighlight = <SVGPathElement> svgElement("path", {fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
 		
-		private readonly _grid: Box[][] = [[], [], [], []];
+		private readonly _grid: Box[][] = [];
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
 		private _pattern: BarPattern | null = null;
@@ -104,21 +108,13 @@ module beepbox {
 		private _digits: string = "";
 		private _editorHeight: number = 128;
 		private _channelHeight: number = 32;
-		private _renderedSquashed: boolean = false;
+		private _renderedChannelCount: number = 0;
 		private _renderedPlayhead: number = -1;
+		private _renderedSquashed: boolean = false;
 		private _changeBarPattern: ChangeBarPattern | null = null;
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
-			this._pattern = this._doc.getCurrentPattern();
-			
-			for (let y: number = 0; y < Music.numChannels; y++) {
-				for (let x: number = 0; x < 16; x++) {
-					const box: Box = new Box(y, x, y);
-					this._svg.appendChild(box.container);
-					this._grid[y][x] = box;
-				}
-			}
-			
+			this._svg.appendChild(this._boxContainer);
 			this._svg.appendChild(this._boxHighlight);
 			this._svg.appendChild(this._upHighlight);
 			this._svg.appendChild(this._downHighlight);
@@ -163,11 +159,11 @@ module beepbox {
 		public onKeyPressed(event: KeyboardEvent): void {
 			switch (event.keyCode) {
 				case 38: // up
-					this._setChannelBar((this._doc.channel + 3) % Music.numChannels, this._doc.bar);
+					this._setChannelBar((this._doc.channel - 1 + this._doc.song.getChannelCount()) % this._doc.song.getChannelCount(), this._doc.bar);
 					event.preventDefault();
 					break;
 				case 40: // down
-					this._setChannelBar((this._doc.channel + 1) % Music.numChannels, this._doc.bar);
+					this._setChannelBar((this._doc.channel + 1) % this._doc.song.getChannelCount(), this._doc.bar);
 					event.preventDefault();
 					break;
 				case 37: // left
@@ -257,7 +253,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-			const channel: number = Math.floor(Math.min(Music.numChannels - 1, Math.max(0, this._mouseY / this._channelHeight)));
+			const channel: number = Math.floor(Math.min(this._doc.song.getChannelCount() - 1, Math.max(0, this._mouseY / this._channelHeight)));
 			const bar: number = Math.floor(Math.min(this._doc.song.barCount - 1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
 			if (this._doc.channel == channel && this._doc.bar == bar) {
 				const up: boolean = (this._mouseY % this._channelHeight) < this._channelHeight / 2;
@@ -279,7 +275,7 @@ module beepbox {
 		}
 		
 		private _updatePreview(): void {
-			const channel: number = Math.floor(Math.min(Music.numChannels - 1, Math.max(0, this._mouseY / this._channelHeight)));
+			const channel: number = Math.floor(Math.min(this._doc.song.getChannelCount() - 1, Math.max(0, this._mouseY / this._channelHeight)));
 			const bar: number = Math.floor(Math.min(this._doc.song.barCount - 1, Math.max(0, this._mouseX / this._barWidth + this._doc.barScrollPos)));
 			const selected: boolean = (bar == this._doc.bar && channel == this._doc.channel);
 			
@@ -315,29 +311,53 @@ module beepbox {
 		}
 		
 		private _documentChanged = (): void => {
-			this._pattern = this._doc.getCurrentPattern();
-			const editorHeight = this._doc.song.barCount > 16 ? 108 : 128;
-			if (this._editorHeight != editorHeight) {
-				this._editorHeight = this._doc.song.barCount > 16 ? 108 : 128;
-				this._svg.setAttribute("height", ""+this._editorHeight);
-				this.container.style.height = ""+this._editorHeight;
-				this._channelHeight = this._editorHeight / Music.numChannels;
-			}
 			this._render();
 		}
 		
 		private _render(): void {
-			const squashed: boolean = (this._doc.song.barCount > 16);
+			this._pattern = this._doc.getCurrentPattern();
+			
+			const squashed: boolean = this._doc.song.getChannelCount() > 4 || (this._doc.song.barCount > 16 && this._doc.song.getChannelCount() > 3);
+			this._channelHeight = squashed ? 27 : 32;
+			
+			if (this._renderedChannelCount != this._doc.song.getChannelCount()) {
+				for (let y: number = this._renderedChannelCount; y < this._doc.song.getChannelCount(); y++) {
+					this._grid[y] = [];
+					for (let x: number = 0; x < 16; x++) {
+						const box: Box = new Box(y, x, y, this._doc.song.getChannelColorDim(y));
+						box.setSquashed(squashed, y);
+						this._boxContainer.appendChild(box.container);
+						this._grid[y][x] = box;
+					}
+				}
+				
+				for (let y: number = this._doc.song.getChannelCount(); y < this._renderedChannelCount; y++) {
+					for (let x: number = 0; x < 16; x++) {
+						this._boxContainer.removeChild(this._grid[y][x].container);
+					}
+				}
+				
+				this._grid.length = this._doc.song.getChannelCount();
+			}
+			
 			if (this._renderedSquashed != squashed) {
-				this._renderedSquashed = squashed;
-				for (let y: number = 0; y < Music.numChannels; y++) {
+				for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
 					for (let x: number = 0; x < 16; x++) {
 						this._grid[y][x].setSquashed(squashed, y);
 					}
 				}
 			}
 			
-			for (let j: number = 0; j < Music.numChannels; j++) {
+			if (this._renderedSquashed != squashed || this._renderedChannelCount != this._doc.song.getChannelCount()) {
+				this._renderedSquashed = squashed;
+				this._renderedChannelCount = this._doc.song.getChannelCount();
+				this._editorHeight = this._doc.song.getChannelCount() * this._channelHeight;
+				this._svg.setAttribute("height", "" + this._editorHeight);
+				this._playhead.setAttribute("height", "" + this._editorHeight);
+				this.container.style.height = this._editorHeight + "px";
+			}
+			
+			for (let j: number = 0; j < this._doc.song.getChannelCount(); j++) {
 				for (let i: number = 0; i < 16; i++) {
 					const pattern: BarPattern | null = this._doc.song.getPattern(j, i + this._doc.barScrollPos);
 					const selected: boolean = (i + this._doc.barScrollPos == this._doc.bar && j == this._doc.channel);
@@ -345,7 +365,7 @@ module beepbox {
 					
 					const box: Box = this._grid[j][i];
 					if (i < this._doc.song.barCount) {
-						box.setIndex(this._doc.song.channelBars[j][i + this._doc.barScrollPos], dim, selected, j);
+						box.setIndex(this._doc.song.channelBars[j][i + this._doc.barScrollPos], dim, selected, j, dim && !selected ? this._doc.song.getChannelColorDim(j) : this._doc.song.getChannelColorBright(j));
 						box.container.style.visibility = "visible";
 					} else {
 						box.container.style.visibility = "hidden";

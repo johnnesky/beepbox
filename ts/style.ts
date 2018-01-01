@@ -33,7 +33,6 @@ styleSheet.appendChild(document.createTextNode(`
 	margin: -3px;
 	border: 3px solid transparent;
 	width: 700px;
-	height: 645px;
 	display: flex;
 	flex-direction: row;
 	-webkit-touch-callout: none;

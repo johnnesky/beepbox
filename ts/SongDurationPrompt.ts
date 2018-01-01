@@ -30,10 +30,12 @@ module beepbox {
 	const {button, div, span, input, br, text} = html;
 	
 	export class SongDurationPrompt implements Prompt {
-		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "128", step: "1"});
-		private readonly _barsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "128", step: "1"});
-		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "32", step: "1"});
-		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", min: "1", max: "10", step: "1"});
+		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
+		private readonly _barsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
+		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
+		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
+		private readonly _pitchChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
+		private readonly _drumChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _okayButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Okay")]);
 		private readonly _cancelButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Cancel")]);
 		
@@ -63,6 +65,14 @@ module beepbox {
 				text("Instruments per channel:"),
 				this._instrumentsStepper,
 			]),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
+				text("Number of pitch channels:"),
+				this._pitchChannelStepper,
+			]),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
+				text("Number of drum channels:"),
+				this._drumChannelStepper,
+			]),
 			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
 				this._okayButton,
 				this._cancelButton,
@@ -86,16 +96,28 @@ module beepbox {
 			this._instrumentsStepper.min = Music.instrumentsPerChannelMin + "";
 			this._instrumentsStepper.max = Music.instrumentsPerChannelMax + "";
 			
+			this._pitchChannelStepper.value = this._doc.song.pitchChannelCount + "";
+			this._pitchChannelStepper.min = Music.pitchChannelCountMin + "";
+			this._pitchChannelStepper.max = Music.pitchChannelCountMax + "";
+			
+			this._drumChannelStepper.value = this._doc.song.drumChannelCount + "";
+			this._drumChannelStepper.min = Music.drumChannelCountMin + "";
+			this._drumChannelStepper.max = Music.drumChannelCountMax + "";
+			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);
 			this._beatsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._barsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._patternsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._instrumentsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+			this._pitchChannelStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
+			this._drumChannelStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._beatsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
 			this._barsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
 			this._patternsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
 			this._instrumentsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
+			this._pitchChannelStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
+			this._drumChannelStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
 		}
 		
 		private _close = (): void => { 
@@ -109,10 +131,14 @@ module beepbox {
 			this._barsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._patternsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._instrumentsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+			this._pitchChannelStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
+			this._drumChannelStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._beatsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
 			this._barsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
 			this._patternsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
 			this._instrumentsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+			this._pitchChannelStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+			this._drumChannelStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
 		}
 		
 		private static _validateKey(event: KeyboardEvent): boolean {
@@ -139,6 +165,7 @@ module beepbox {
 			group.append(new ChangeBarCount(this._doc, SongDurationPrompt._validate(this._barsStepper)));
 			group.append(new ChangePatternsPerChannel(this._doc, SongDurationPrompt._validate(this._patternsStepper)));
 			group.append(new ChangeInstrumentsPerChannel(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));
+			group.append(new ChangeChannelCount(this._doc, SongDurationPrompt._validate(this._pitchChannelStepper), SongDurationPrompt._validate(this._drumChannelStepper)));
 			this._doc.prompt = null;
 			this._doc.history.record(group, true);
 		}

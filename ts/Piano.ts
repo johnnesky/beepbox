@@ -86,7 +86,7 @@ module beepbox {
 			const scale: ReadonlyArray<boolean> = Music.scaleFlags[this._doc.song.scale];
 			
 			const mousePitch: number = Math.max(0, Math.min(this._pitchCount-1, this._pitchCount - (this._mouseY / this._pitchHeight)));
-			if (scale[Math.floor(mousePitch) % 12] || this._doc.channel == 3) {
+			if (scale[Math.floor(mousePitch) % 12] || this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				this._cursorPitch = Math.floor(mousePitch);
 			} else {
 				let topPitch: number = Math.floor(mousePitch) + 1;
@@ -158,8 +158,9 @@ module beepbox {
 		}
 		
 		private _documentChanged = (): void => {
-			this._pitchHeight = this._doc.channel == 3 ? 40 : 13;
-			this._pitchCount = this._doc.channel == 3 ? Music.drumCount : Music.pitchCount;
+			const isDrum: boolean = this._doc.song.getChannelIsDrum(this._doc.channel);
+			this._pitchHeight = isDrum ? 40 : 13;
+			this._pitchCount = isDrum ? Music.drumCount : Music.pitchCount;
 			this._updateCursorPitch();
 			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
 			this._doc.synth.pianoChannel = this._doc.channel;
@@ -174,17 +175,18 @@ module beepbox {
 			
 			if (!this._doc.showLetters) return;
 			
-			if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key && this._renderedDrums == (this._doc.channel == 3)) return;
+			const isDrum = this._doc.song.getChannelIsDrum(this._doc.channel);
+			if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key && this._renderedDrums == isDrum) return;
 			this._renderedScale = this._doc.song.scale;
 			this._renderedKey = this._doc.song.key;
-			this._renderedDrums = (this._doc.channel == 3);
+			this._renderedDrums = isDrum;
 			
 			this._graphics.clearRect(0, 0, this._editorWidth, this._editorHeight);
 			
 			let key: HTMLImageElement;
 			for (let j: number = 0; j < this._pitchCount; j++) {
 				const pitchNameIndex: number = (j + Music.keyTransposes[this._doc.song.key]) % 12;
-				if (this._doc.channel == 3) {
+				if (isDrum) {
 					key = Drum;
 					const scale: number = 1.0 - ( j / this._pitchCount ) * 0.35;
 					const offset: number = (1.0 - scale) * 0.5;

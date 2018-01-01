@@ -93,7 +93,7 @@ module beepbox {
 		private _mouseOver: boolean = false;
 		private _mouseDragging: boolean = false;
 		private _mouseHorizontal: boolean = false;
-		private _copiedPinChannels: NotePin[][] = this._defaultPinChannels.concat();
+		private _copiedPinChannels: NotePin[][] = [];
 		private _copiedPins: NotePin[];
 		private _mouseXStart: number = 0;
 		private _mouseYStart: number = 0;
@@ -110,6 +110,9 @@ module beepbox {
 		private _renderedBeatWidth: number = -1;
 		private _renderedFifths: boolean = false;
 		private _renderedDrums: boolean = false;
+		private _renderedPartsPerBeat: number = -1;
+		private _renderedPitchChannelCount: number = -1;
+		private _renderedDrumChannelCount: number = -1;
 		
 		constructor(private _doc: SongDocument) {
 			for (let i: number = 0; i < 12; i++) {
@@ -144,6 +147,19 @@ module beepbox {
 			document.addEventListener("touchmove", this._whenTouchMoved);
 			document.addEventListener("touchend", this._whenCursorReleased);
 			document.addEventListener("touchcancel", this._whenCursorReleased);
+			
+			this.resetCopiedPins();
+		}
+		
+		private _getMaxDivision(): number {
+			if (this._doc.song.partsPerBeat % 3 == 0) {
+				// Beat is divisible by 3.
+				return this._doc.song.partsPerBeat / 3;
+			} else if (this._doc.song.partsPerBeat % 2 == 0) {
+				// Beat is divisible by 2.
+				return this._doc.song.partsPerBeat / 2;
+			}
+			return this._doc.song.partsPerBeat;
 		}
 		
 		private _updateCursorStatus(): void {
@@ -207,7 +223,7 @@ module beepbox {
 				}
 				
 				mousePitch -= interval;
-				this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.channel == 3 ? Music.drumCount - 1 : Music.maxPitch) - maxInterval);
+				this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.song.getChannelIsDrum(this._doc.channel) ? Music.drumCount - 1 : Music.maxPitch) - maxInterval);
 				
 				if (this._doc.channel != 3) {
 					let nearest: number = error;
@@ -229,14 +245,7 @@ module beepbox {
 				this._cursor.pitch = this._snapToPitch(mousePitch, 0, Music.maxPitch);
 				const defaultLength: number = this._copiedPins[this._copiedPins.length-1].time;
 				const fullBeats: number = Math.floor(this._cursor.part / this._doc.song.partsPerBeat);
-				let maxDivision: number = this._doc.song.partsPerBeat;
-				if (this._doc.song.partsPerBeat % 3 == 0) {
-					// Beat is divisible by 3.
-					maxDivision = this._doc.song.partsPerBeat / 3;
-				} else if (this._doc.song.partsPerBeat % 2 == 0) {
-					// Beat is divisible by 2.
-					maxDivision = this._doc.song.partsPerBeat / 2;
-				}
+				const maxDivision: number = this._getMaxDivision();
 				const modMouse: number = this._cursor.part % this._doc.song.partsPerBeat;
 				if (defaultLength == 1) {
 					this._cursor.start = this._cursor.part;
@@ -305,7 +314,7 @@ module beepbox {
 			if (guess < min) guess = min;
 			if (guess > max) guess = max;
 			const scale: ReadonlyArray<boolean> = Music.scaleFlags[this._doc.song.scale];
-			if (scale[Math.floor(guess) % 12] || this._doc.channel == 3) {
+			if (scale[Math.floor(guess) % 12] || this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				return Math.floor(guess);
 			} else {
 				let topPitch: number = Math.floor(guess) + 1;
@@ -355,7 +364,14 @@ module beepbox {
 		}
 		
 		public resetCopiedPins = (): void => {
-			this._copiedPinChannels = this._defaultPinChannels.concat();
+			const maxDivision: number = this._getMaxDivision();
+			this._copiedPinChannels.length = this._doc.song.getChannelCount();
+			for (let i: number = 0; i < this._doc.song.pitchChannelCount; i++) {
+				this._copiedPinChannels[i] = [makeNotePin(0, 0, 3), makeNotePin(0, maxDivision, 3)];
+			}
+			for (let i: number = this._doc.song.pitchChannelCount; i < this._doc.song.getChannelCount(); i++) {
+				this._copiedPinChannels[i] = [makeNotePin(0, 0, 3), makeNotePin(0, maxDivision, 0)];
+			}
 		}
 		
 		private _animatePlayhead = (timestamp: number): void => {
@@ -522,7 +538,7 @@ module beepbox {
 						for (i = 0; i < this._pattern.notes.length; i++) {
 							if (this._pattern.notes[i].start >= end) break;
 						}
-						const theNote: Note = makeNote(this._cursor.pitch, start, end, 3, this._doc.channel == 3);
+						const theNote: Note = makeNote(this._cursor.pitch, start, end, 3, this._doc.song.getChannelIsDrum(this._doc.channel));
 						sequence.append(new ChangeNoteAdded(this._doc, this._pattern, theNote, i));
 						this._copyPins(theNote);
 					} else if (this._mouseHorizontal) {
@@ -617,7 +633,7 @@ module beepbox {
 				}
 			} else if (this._mouseDown && continuousChange) {
 				if (this._cursor.curNote == null) {
-					const note: Note = makeNote(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.channel == 3);
+					const note: Note = makeNote(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.song.getChannelIsDrum(this._doc.channel));
 					note.pins = [];
 					for (const oldPin of this._cursor.pins) {
 						note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
@@ -661,9 +677,20 @@ module beepbox {
 			this._editorWidth = this._doc.showLetters ? (this._doc.showScrollBar ? 460 : 480) : (this._doc.showScrollBar ? 492 : 512);
 			this._pattern = this._doc.getCurrentPattern();
 			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * this._doc.song.partsPerBeat);
-			this._pitchHeight = this._doc.channel == 3 ? this._defaultDrumHeight : this._defaultPitchHeight;
-			this._pitchCount = this._doc.channel == 3 ? Music.drumCount : Music.pitchCount;
+			this._pitchHeight = this._doc.song.getChannelIsDrum(this._doc.channel) ? this._defaultDrumHeight : this._defaultPitchHeight;
+			this._pitchCount = this._doc.song.getChannelIsDrum(this._doc.channel) ? Music.drumCount : Music.pitchCount;
 			this._octaveOffset = this._doc.song.channelOctaves[this._doc.channel] * 12;
+			
+			if (this._renderedPartsPerBeat != this._doc.song.partsPerBeat || 
+				this._renderedPitchChannelCount != this._doc.song.pitchChannelCount || 
+				this._renderedDrumChannelCount != this._doc.song.drumChannelCount)
+			{
+				this._renderedPartsPerBeat = this._doc.song.partsPerBeat;
+				this._renderedPitchChannelCount = this._doc.song.pitchChannelCount;
+				this._renderedDrumChannelCount = this._doc.song.drumChannelCount;
+				this.resetCopiedPins();
+			}
+			
 			this._copiedPins = this._copiedPinChannels[this._doc.channel];
 			
 			if (this._renderedWidth != this._editorWidth) {
@@ -704,7 +731,7 @@ module beepbox {
 				this._backgroundPitchRows[j].style.visibility = Music.scaleFlags[this._doc.song.scale][j] ? "visible" : "hidden";
 			}
 			
-			if (this._doc.channel == 3) {
+			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				if (!this._renderedDrums) {
 					this._renderedDrums = true;
 					this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
@@ -720,17 +747,19 @@ module beepbox {
 				}
 			}
 			
-			if (this._doc.channel != 3 && this._doc.showChannels) {
-				for (let channel: number = 2; channel >= 0; channel--) {
+			if (this._doc.showChannels) {
+				for (let channel: number = this._doc.song.getChannelCount() - 1; channel >= 0; channel--) {
 					if (channel == this._doc.channel) continue;
+					if (this._doc.song.getChannelIsDrum(channel) != this._doc.song.getChannelIsDrum(this._doc.channel)) continue;
+					
 					const pattern2: BarPattern | null = this._doc.song.getPattern(channel, this._doc.bar);
 					if (pattern2 == null) continue;
 					for (const note of pattern2.notes) {
 						for (const pitch of note.pitches) {
 							const notePath: SVGPathElement = <SVGPathElement> svgElement("path");
-							notePath.setAttribute("fill", SongEditor.noteColorsDim[channel]);
+							notePath.setAttribute("fill", this._doc.song.getNoteColorDim(channel));
 							notePath.setAttribute("pointer-events", "none");
-							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 - 4, false, this._doc.song.channelOctaves[channel] * 12);
+							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channelOctaves[channel] * 12);
 							this._svgNoteContainer.appendChild(notePath);
 						}
 					}
@@ -740,12 +769,12 @@ module beepbox {
 			for (const note of this._pattern.notes) {
 				for (const pitch of note.pitches) {
 					let notePath: SVGPathElement = <SVGPathElement> svgElement("path");
-					notePath.setAttribute("fill", SongEditor.noteColorsDim[this._doc.channel]);
+					notePath.setAttribute("fill", this._doc.song.getNoteColorDim(this._doc.channel));
 					notePath.setAttribute("pointer-events", "none");
 					this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
 					this._svgNoteContainer.appendChild(notePath);
 					notePath = <SVGPathElement> svgElement("path");
-					notePath.setAttribute("fill", SongEditor.noteColorsBright[this._doc.channel]);
+					notePath.setAttribute("fill", this._doc.song.getNoteColorBright(this._doc.channel));
 					notePath.setAttribute("pointer-events", "none");
 					this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 					this._svgNoteContainer.appendChild(notePath);

@@ -385,16 +385,19 @@ module beepbox {
 				}
 			}
 			
-			const tracks = [
-				{isMeta:  true, channel: -1, midiChannel: -1, isChorus: false, isDrums: false},
-				{isMeta: false, channel:  0, midiChannel:  0, isChorus: false, isDrums: false},
-				{isMeta: false, channel:  0, midiChannel:  1, isChorus:  true, isDrums: false},
-				{isMeta: false, channel:  1, midiChannel:  2, isChorus: false, isDrums: false},
-				{isMeta: false, channel:  1, midiChannel:  3, isChorus:  true, isDrums: false},
-				{isMeta: false, channel:  2, midiChannel:  4, isChorus: false, isDrums: false},
-				{isMeta: false, channel:  2, midiChannel:  5, isChorus:  true, isDrums: false},
-				{isMeta: false, channel:  3, midiChannel:  6, isChorus: false, isDrums:  true},
-			];
+			const tracks = [{isMeta:  true, channel: -1, midiChannel: -1, isChorus: false, isDrums: false}];
+			let midiChannelCounter = 0;
+			for (let channel: number = 0; channel < this._doc.song.getChannelCount(); channel++) {
+				if (this._doc.song.getChannelIsDrum(channel)) {
+					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isChorus: false, isDrums: true});
+					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
+				} else {
+					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isChorus: false, isDrums: false});
+					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
+					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isChorus:  true, isDrums: false});
+					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
+				}
+			}
 			
 			writeUint32(0x4D546864); // "MThd": Header chunk type
 			writeUint32(6); // length of headers is 6 bytes
@@ -466,9 +469,11 @@ module beepbox {
 					if (barStartTime != ticksPerBar * unrolledBars.length) throw new Error("Miscalculated number of bars.");
 					
 				} else {
-					// For tracks 0, 1, 2, and 3, set up the instruments and write the notes:
+					// For remaining tracks, set up the instruments and write the notes:
 					
-					let channelName: string = ["blue channel", "yellow channel", "orange channel", "gray channel"][channel];
+					const pitchChannelNames = ["cyan channel", "yellow channel", "orange channel", "green channel", "purple channel", "blue channel"];
+					const drumChannelNames = ["gray channel", "brown channel"];
+					let channelName: string = song.getChannelIsDrum(channel) ? drumChannelNames[channel - song.pitchChannelCount] : pitchChannelNames[channel];
 					if (isChorus) channelName += " chorus";
 					writeEventTime(0);
 					writeUint16(0xFF03); // track name meta event.

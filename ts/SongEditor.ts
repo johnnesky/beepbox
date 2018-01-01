@@ -57,11 +57,6 @@ module beepbox {
 	}
 	
 	export class SongEditor {
-		public static readonly channelColorsDim: ReadonlyArray<string>    = ["#0099a1", "#a1a100", "#c75000", "#6f6f6f"];
-		public static readonly channelColorsBright: ReadonlyArray<string> = ["#25f3ff", "#ffff25", "#ff9752", "#aaaaaa"];
-		public static readonly noteColorsDim: ReadonlyArray<string>       = ["#00bdc7", "#c7c700", "#ff771c", "#aaaaaa"];
-		public static readonly noteColorsBright: ReadonlyArray<string>    = ["#92f9ff", "#ffff92", "#ffcdab", "#eeeeee"];
-		
 		public prompt: Prompt | null = null;
 		
 		private readonly _width: number = 700;
@@ -72,14 +67,14 @@ module beepbox {
 		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc);
 		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
 		private readonly _piano: Piano = new Piano(this._doc);
-		private readonly _editorBox: HTMLElement = div({style: "width: 512px; height: 645px;"}, [
+		private readonly _editorBox: HTMLElement = div({style: "width: 512px;"}, [
 			div({style: "width: 512px; height: 481px; display: flex; flex-direction: row;"}, [
 				this._piano.container,
 				this._patternEditor.container,
 				this._octaveScrollBar.container,
 			]),
 			div({style: "width: 512px; height: 6px;"}),
-			div({style: "width: 512px; height: 158px;"}, [
+			div({style: "width: 512px;"}, [
 				this._trackEditor.container,
 				div({style: "width: 512px; height: 5px;"}),
 				this._loopEditor.container,
@@ -289,7 +284,7 @@ module beepbox {
 			this._tempoSlider.value = "" + this._doc.song.tempo;
 			this._reverbSlider.value = "" + this._doc.song.reverb;
 			setSelectedIndex(this._partDropDown, Music.partCounts.indexOf(this._doc.song.partsPerBeat));
-			if (this._doc.channel == 3) {
+			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				this._filterDropDownGroup.style.visibility = "hidden";
 				this._chorusDropDownGroup.style.visibility = "hidden";
 				this._effectDropDownGroup.style.visibility = "hidden";
@@ -316,7 +311,7 @@ module beepbox {
 				buildOptions(this._instrumentDropDown, instrumentList);
 			}
 			
-			this._instrumentSettingsGroup.style.color = SongEditor.noteColorsBright[this._doc.channel];
+			this._instrumentSettingsGroup.style.color = this._doc.song.getNoteColorBright(this._doc.channel);
 			
 			const instrument: number = this._doc.getCurrentInstrument();
 			setSelectedIndex(this._waveNames, this._doc.song.instrumentWaves[this._doc.channel][instrument]);
@@ -337,10 +332,6 @@ module beepbox {
 			if (this._doc.showLetters) patternWidth -= 32;
 			if (this._doc.showScrollBar) patternWidth -= 20;
 			this._patternEditor.container.style.width = String(patternWidth) + "px";
-			
-			let trackHeight: number = 128;
-			if (this._doc.song.barCount > 16) trackHeight -= 20;
-			this._trackEditor.container.style.height = String(trackHeight) + "px";
 			
 			this._volumeSlider.value = String(this._doc.volume);
 			
@@ -449,7 +440,7 @@ module beepbox {
 				notes: pattern.notes,
 				beatsPerBar: this._doc.song.beatsPerBar,
 				partsPerBeat: this._doc.song.partsPerBeat,
-				drums: this._doc.channel == 3,
+				drums: this._doc.song.getChannelIsDrum(this._doc.channel),
 			};
 			
 			window.localStorage.setItem("patternCopy", JSON.stringify(patternCopy));
@@ -461,7 +452,7 @@ module beepbox {
 			
 			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
 			
-			if (patternCopy != null && patternCopy.drums == (this._doc.channel == 3)) {
+			if (patternCopy != null && patternCopy.drums == this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				this._doc.history.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beatsPerBar, patternCopy.partsPerBeat));
 			}
 		}
