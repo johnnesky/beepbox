@@ -33,6 +33,151 @@ module beepbox {
 		[K: string]: T;
 	}
 	
+	export class Config {
+		public static readonly scaleNames: ReadonlyArray<string> = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "dbl harmonic :)", "dbl harmonic :(", "enigma", "expert"];
+		public static readonly scaleFlags: ReadonlyArray<ReadonlyArray<boolean>> = [
+			[ true, false,  true, false,  true, false, false,  true, false,  true, false, false],
+			[ true, false, false,  true, false,  true, false,  true, false, false,  true, false],
+			[ true, false, false, false,  true,  true, false,  true, false, false, false,  true],
+			[ true,  true, false,  true, false, false, false,  true,  true, false, false, false],
+			[ true, false,  true,  true,  true, false, false,  true, false,  true, false, false],
+			[ true, false, false,  true, false,  true,  true,  true, false, false,  true, false],
+			[ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true],
+			[ true, false,  true,  true, false,  true, false,  true,  true, false,  true, false],
+			[ true,  true, false, false,  true,  true, false,  true,  true, false, false,  true],
+			[ true, false,  true,  true, false, false,  true,  true,  true, false, false,  true],
+			[ true, false,  true, false,  true, false,  true, false,  true, false,  true, false],
+			[ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true],
+		];
+		public static readonly pianoScaleFlags: ReadonlyArray<boolean> = [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true];
+		public static readonly blackKeyNameParents: ReadonlyArray<number> = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
+		public static readonly pitchNames: ReadonlyArray<string | null> = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
+		public static readonly keyNames: ReadonlyArray<string> = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
+		// C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
+		public static readonly keyTransposes: ReadonlyArray<number> = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
+		public static readonly tempoNames: ReadonlyArray<string> = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
+		public static readonly reverbRange: number = 4;
+		public static readonly beatsPerBarMin: number = 3;
+		public static readonly beatsPerBarMax: number = 15;
+		public static readonly barCountMin: number = 1;
+		public static readonly barCountMax: number = 128;
+		public static readonly patternsPerChannelMin: number = 1;
+		public static readonly patternsPerChannelMax: number = 64;
+		public static readonly instrumentsPerChannelMin: number = 1;
+		public static readonly instrumentsPerChannelMax: number = 10;
+		public static readonly partNames: ReadonlyArray<string> = ["÷3 (triples)", "÷4 (standard)", "÷6", "÷8"];
+		public static readonly partCounts: ReadonlyArray<number> = [3, 4, 6, 8];
+		public static readonly waveNames: ReadonlyArray<string> = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
+		public static readonly waveVolumes: ReadonlyArray<number> = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
+		public static readonly drumNames: ReadonlyArray<string> = ["retro", "white"];
+		public static readonly drumVolumes: ReadonlyArray<number> = [0.25, 1.0];
+		public static readonly drumPitchRoots: ReadonlyArray<number> = [69, 69];
+		public static readonly drumPitchFilterMult: ReadonlyArray<number> = [100.0, 8.0];
+		public static readonly filterNames: ReadonlyArray<string> = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
+		public static readonly filterBases: ReadonlyArray<number> = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
+		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
+		public static readonly filterVolumes: ReadonlyArray<number> = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
+		public static readonly envelopeNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide"];
+		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremolo light", "tremolo heavy"];
+		public static readonly effectVibratos: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
+		public static readonly effectTremolos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
+		public static readonly effectVibratoDelays: ReadonlyArray<number> = [0, 0, 3, 0, 0, 0];
+		public static readonly chorusNames: ReadonlyArray<string> = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed", "custom harmony"];
+		public static readonly chorusIntervals: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02, 0.05];
+		public static readonly chorusOffsets: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0, 0.0];
+		public static readonly chorusVolumes: ReadonlyArray<number> = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0, 1.0];
+		public static readonly chorusHarmonizes: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, true];
+		public static readonly volumeNames: ReadonlyArray<string> = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
+		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
+		public static readonly channelVolumes: ReadonlyArray<number> = [0.27, 0.27, 0.27, 0.19];
+		public static readonly pitchChannelColorsDim: ReadonlyArray<string>    = ["#0099a1", "#a1a100", "#c75000", "#00a100", "#d020d0", "#7777b0"];
+		public static readonly pitchChannelColorsBright: ReadonlyArray<string> = ["#25f3ff", "#ffff25", "#ff9752", "#50ff50", "#ff90ff", "#a0a0ff"];
+		public static readonly pitchNoteColorsDim: ReadonlyArray<string>       = ["#00bdc7", "#c7c700", "#ff771c", "#00c700", "#e040e0", "#8888d0"];
+		public static readonly pitchNoteColorsBright: ReadonlyArray<string>    = ["#92f9ff", "#ffff92", "#ffcdab", "#a0ffa0", "#ffc0ff", "#d0d0ff"];
+		public static readonly drumChannelColorsDim: ReadonlyArray<string>    = ["#6f6f6f", "#996633"];
+		public static readonly drumChannelColorsBright: ReadonlyArray<string> = ["#aaaaaa", "#ddaa77"];
+		public static readonly drumNoteColorsDim: ReadonlyArray<string>       = ["#aaaaaa", "#cc9966"];
+		public static readonly drumNoteColorsBright: ReadonlyArray<string>    = ["#eeeeee", "#f0d0bb"];
+		public static readonly drumInterval: number = 6;
+		public static readonly drumCount: number = 12;
+		public static readonly pitchCount: number = 37;
+		public static readonly maxPitch: number = 84;
+		public static readonly pitchChannelCountMin: number = 1;
+		public static readonly pitchChannelCountMax: number = 6;
+		public static readonly drumChannelCountMin: number = 0;
+		public static readonly drumChannelCountMax: number = 2;
+		public static readonly waves: ReadonlyArray<Float64Array> = [
+			Config._centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0]),
+			Config._centerWave([1.0, -1.0]),
+			Config._centerWave([1.0, -1.0, -1.0, -1.0]),
+			Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]),
+			Config._centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0]),
+			Config._centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2]),
+			Config._centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0]),
+			Config._centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0]),
+			Config._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]),
+		];
+		
+		private static _centerWave(wave: Array<number>): Float64Array {
+			let sum: number = 0.0;
+			for (let i: number = 0; i < wave.length; i++) sum += wave[i];
+			const average: number = sum / wave.length;
+			for (let i: number = 0; i < wave.length; i++) wave[i] -= average;
+			return new Float64Array(wave);
+		}
+		
+		// Drum waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
+		private static readonly _drumWaves: Array<Float32Array | null> = [null, null];
+		
+		public static getDrumWave(index: number): Float32Array {
+			let wave: Float32Array | null = Config._drumWaves[index];
+			if (wave == null) {
+				wave = new Float32Array(32768);
+				Config._drumWaves[index] = wave;
+				
+				if (index == 0) {
+					// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
+					let drumBuffer: number = 1;
+					for (let i: number = 0; i < 32768; i++) {
+						wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+						let newBuffer: number = drumBuffer >> 1;
+						if (((drumBuffer + newBuffer) & 1) == 1) {
+							newBuffer += 1 << 14;
+						}
+						drumBuffer = newBuffer;
+					}
+				} else if (index == 1) {
+					// White noise is just random values for each sample.
+					for (let i: number = 0; i < 32768; i++) {
+						wave[i] = Math.random() * 2.0 - 1.0;
+					}
+				/*
+				} else if (index == 2) {
+					// Experimental drum:
+					for (let i: number = 1 << 10; i < (1 << 11); i++) {
+						const amplitude: number = 2.0;
+						const radians: number = Math.random() * Math.PI * 2.0;
+						wave[i] = Math.cos(radians) * amplitude;
+						wave[32768 - i] = Math.sin(radians) * amplitude;
+					}
+					for (let i: number = 1 << 11; i < (1 << 14); i++) {
+						const amplitude: number = 0.25;
+						const radians: number = Math.random() * Math.PI * 2.0;
+						wave[i] = Math.cos(radians) * amplitude;
+						wave[32768 - i] = Math.sin(radians) * amplitude;
+					}
+					FFT.inverseRealFourierTransform(wave);
+					FFT.scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
+				*/
+				} else {
+					throw new Error("Unrecognized drum index: " + index);
+				}
+			}
+			
+			return wave;
+		}
+	}
+	
 	const enum CharCode {
 		SPACE = 32,
 		HASH = 35,
@@ -230,151 +375,6 @@ module beepbox {
 		}
 	}
 	
-	export class Music {
-		public static readonly scaleNames: ReadonlyArray<string> = ["easy :)", "easy :(", "island :)", "island :(", "blues :)", "blues :(", "normal :)", "normal :(", "dbl harmonic :)", "dbl harmonic :(", "enigma", "expert"];
-		public static readonly scaleFlags: ReadonlyArray<ReadonlyArray<boolean>> = [
-			[ true, false,  true, false,  true, false, false,  true, false,  true, false, false],
-			[ true, false, false,  true, false,  true, false,  true, false, false,  true, false],
-			[ true, false, false, false,  true,  true, false,  true, false, false, false,  true],
-			[ true,  true, false,  true, false, false, false,  true,  true, false, false, false],
-			[ true, false,  true,  true,  true, false, false,  true, false,  true, false, false],
-			[ true, false, false,  true, false,  true,  true,  true, false, false,  true, false],
-			[ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true],
-			[ true, false,  true,  true, false,  true, false,  true,  true, false,  true, false],
-			[ true,  true, false, false,  true,  true, false,  true,  true, false, false,  true],
-			[ true, false,  true,  true, false, false,  true,  true,  true, false, false,  true],
-			[ true, false,  true, false,  true, false,  true, false,  true, false,  true, false],
-			[ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true],
-		];
-		public static readonly pianoScaleFlags: ReadonlyArray<boolean> = [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true];
-		public static readonly blackKeyNameParents: ReadonlyArray<number> = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
-		public static readonly pitchNames: ReadonlyArray<string | null> = ["C", null, "D", null, "E", "F", null, "G", null, "A", null, "B"];
-		public static readonly keyNames: ReadonlyArray<string> = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
-		// C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
-		public static readonly keyTransposes: ReadonlyArray<number> = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
-		public static readonly tempoNames: ReadonlyArray<string> = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
-		public static readonly reverbRange: number = 4;
-		public static readonly beatsPerBarMin: number = 3;
-		public static readonly beatsPerBarMax: number = 15;
-		public static readonly barCountMin: number = 1;
-		public static readonly barCountMax: number = 128;
-		public static readonly patternsPerChannelMin: number = 1;
-		public static readonly patternsPerChannelMax: number = 64;
-		public static readonly instrumentsPerChannelMin: number = 1;
-		public static readonly instrumentsPerChannelMax: number = 10;
-		public static readonly partNames: ReadonlyArray<string> = ["÷3 (triples)", "÷4 (standard)", "÷6", "÷8"];
-		public static readonly partCounts: ReadonlyArray<number> = [3, 4, 6, 8];
-		public static readonly waveNames: ReadonlyArray<string> = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
-		public static readonly waveVolumes: ReadonlyArray<number> = [1.0, 0.5, 0.5, 0.5, 0.65, 0.5, 0.4, 0.4, 0.94];
-		public static readonly drumNames: ReadonlyArray<string> = ["retro", "white"];
-		public static readonly drumVolumes: ReadonlyArray<number> = [0.25, 1.0];
-		public static readonly drumPitchRoots: ReadonlyArray<number> = [69, 69];
-		public static readonly drumPitchFilterMult: ReadonlyArray<number> = [100.0, 8.0];
-		public static readonly filterNames: ReadonlyArray<string> = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
-		public static readonly filterBases: ReadonlyArray<number> = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
-		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
-		public static readonly filterVolumes: ReadonlyArray<number> = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
-		public static readonly envelopeNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide"];
-		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremolo light", "tremolo heavy"];
-		public static readonly effectVibratos: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
-		public static readonly effectTremolos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-		public static readonly effectVibratoDelays: ReadonlyArray<number> = [0, 0, 3, 0, 0, 0];
-		public static readonly chorusNames: ReadonlyArray<string> = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed", "custom harmony"];
-		public static readonly chorusIntervals: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02, 0.05];
-		public static readonly chorusOffsets: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0, 0.0];
-		public static readonly chorusVolumes: ReadonlyArray<number> = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0, 1.0];
-		public static readonly chorusHarmonizes: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, true];
-		public static readonly volumeNames: ReadonlyArray<string> = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
-		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
-		public static readonly channelVolumes: ReadonlyArray<number> = [0.27, 0.27, 0.27, 0.19];
-		public static readonly pitchChannelColorsDim: ReadonlyArray<string>    = ["#0099a1", "#a1a100", "#c75000", "#00a100", "#d020d0", "#7777b0"];
-		public static readonly pitchChannelColorsBright: ReadonlyArray<string> = ["#25f3ff", "#ffff25", "#ff9752", "#50ff50", "#ff90ff", "#a0a0ff"];
-		public static readonly pitchNoteColorsDim: ReadonlyArray<string>       = ["#00bdc7", "#c7c700", "#ff771c", "#00c700", "#e040e0", "#8888d0"];
-		public static readonly pitchNoteColorsBright: ReadonlyArray<string>    = ["#92f9ff", "#ffff92", "#ffcdab", "#a0ffa0", "#ffc0ff", "#d0d0ff"];
-		public static readonly drumChannelColorsDim: ReadonlyArray<string>    = ["#6f6f6f", "#996633"];
-		public static readonly drumChannelColorsBright: ReadonlyArray<string> = ["#aaaaaa", "#ddaa77"];
-		public static readonly drumNoteColorsDim: ReadonlyArray<string>       = ["#aaaaaa", "#cc9966"];
-		public static readonly drumNoteColorsBright: ReadonlyArray<string>    = ["#eeeeee", "#f0d0bb"];
-		public static readonly drumInterval: number = 6;
-		public static readonly drumCount: number = 12;
-		public static readonly pitchCount: number = 37;
-		public static readonly maxPitch: number = 84;
-		public static readonly pitchChannelCountMin: number = 1;
-		public static readonly pitchChannelCountMax: number = 6;
-		public static readonly drumChannelCountMin: number = 0;
-		public static readonly drumChannelCountMax: number = 2;
-		public static readonly waves: ReadonlyArray<Float64Array> = [
-			Music._centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0]),
-			Music._centerWave([1.0, -1.0]),
-			Music._centerWave([1.0, -1.0, -1.0, -1.0]),
-			Music._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]),
-			Music._centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0]),
-			Music._centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2]),
-			Music._centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0]),
-			Music._centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0]),
-			Music._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]),
-		];
-		
-		private static _centerWave(wave: Array<number>): Float64Array {
-			let sum: number = 0.0;
-			for (let i: number = 0; i < wave.length; i++) sum += wave[i];
-			const average: number = sum / wave.length;
-			for (let i: number = 0; i < wave.length; i++) wave[i] -= average;
-			return new Float64Array(wave);
-		}
-		
-		// Drum waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
-		private static readonly _drumWaves: Array<Float32Array | null> = [null, null];
-		
-		public static getDrumWave(index: number): Float32Array {
-			let wave: Float32Array | null = Music._drumWaves[index];
-			if (wave == null) {
-				wave = new Float32Array(32768);
-				Music._drumWaves[index] = wave;
-				
-				if (index == 0) {
-					// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
-					let drumBuffer: number = 1;
-					for (let i: number = 0; i < 32768; i++) {
-						wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
-						let newBuffer: number = drumBuffer >> 1;
-						if (((drumBuffer + newBuffer) & 1) == 1) {
-							newBuffer += 1 << 14;
-						}
-						drumBuffer = newBuffer;
-					}
-				} else if (index == 1) {
-					// White noise is just random values for each sample.
-					for (let i: number = 0; i < 32768; i++) {
-						wave[i] = Math.random() * 2.0 - 1.0;
-					}
-				/*
-				} else if (index == 2) {
-					// Experimental drum:
-					for (let i: number = 1 << 10; i < (1 << 11); i++) {
-						const amplitude: number = 2.0;
-						const radians: number = Math.random() * Math.PI * 2.0;
-						wave[i] = Math.cos(radians) * amplitude;
-						wave[32768 - i] = Math.sin(radians) * amplitude;
-					}
-					for (let i: number = 1 << 11; i < (1 << 14); i++) {
-						const amplitude: number = 0.25;
-						const radians: number = Math.random() * Math.PI * 2.0;
-						wave[i] = Math.cos(radians) * amplitude;
-						wave[32768 - i] = Math.sin(radians) * amplitude;
-					}
-					FFT.inverseRealFourierTransform(wave);
-					FFT.scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
-				*/
-				} else {
-					throw new Error("Unrecognized drum index: " + index);
-				}
-			}
-			
-			return wave;
-		}
-	}
-	
 	export interface NotePin {
 		interval: number;
 		time: number;
@@ -476,16 +476,16 @@ module beepbox {
 		}
 		
 		public getChannelColorDim(channel: number): string {
-			return channel < this.pitchChannelCount ? Music.pitchChannelColorsDim[channel] : Music.drumChannelColorsDim[channel - this.pitchChannelCount];
+			return channel < this.pitchChannelCount ? Config.pitchChannelColorsDim[channel] : Config.drumChannelColorsDim[channel - this.pitchChannelCount];
 		}
 		public getChannelColorBright(channel: number): string {
-			return channel < this.pitchChannelCount ? Music.pitchChannelColorsBright[channel] : Music.drumChannelColorsBright[channel - this.pitchChannelCount];
+			return channel < this.pitchChannelCount ? Config.pitchChannelColorsBright[channel] : Config.drumChannelColorsBright[channel - this.pitchChannelCount];
 		}
 		public getNoteColorDim(channel: number): string {
-			return channel < this.pitchChannelCount ? Music.pitchNoteColorsDim[channel] : Music.drumNoteColorsDim[channel - this.pitchChannelCount];
+			return channel < this.pitchChannelCount ? Config.pitchNoteColorsDim[channel] : Config.drumNoteColorsDim[channel - this.pitchChannelCount];
 		}
 		public getNoteColorBright(channel: number): string {
-			return channel < this.pitchChannelCount ? Music.pitchNoteColorsBright[channel] : Music.drumNoteColorsBright[channel - this.pitchChannelCount];
+			return channel < this.pitchChannelCount ? Config.pitchNoteColorsBright[channel] : Config.drumNoteColorsBright[channel - this.pitchChannelCount];
 		}
 		
 		public initToDefault(): void {
@@ -509,7 +509,7 @@ module beepbox {
 			this.instrumentEffects = [[0],[0],[0],[0]];
 			this.instrumentChorus  = [[0],[0],[0],[0]];
 			this.scale = 0;
-			this.key = Music.keyNames.length - 1;
+			this.key = Config.keyNames.length - 1;
 			this.loopStart = 0;
 			this.loopLength = 4;
 			this.tempo = 7;
@@ -541,7 +541,7 @@ module beepbox {
 			buffer.push(CharCode.g, base64IntToCharCode[(this.barCount - 1) >> 6], base64IntToCharCode[(this.barCount - 1) & 0x3f]);
 			buffer.push(CharCode.j, base64IntToCharCode[this.patternsPerChannel - 1]);
 			buffer.push(CharCode.i, base64IntToCharCode[this.instrumentsPerChannel - 1]);
-			buffer.push(CharCode.r, base64IntToCharCode[Music.partCounts.indexOf(this.partsPerBeat)]);
+			buffer.push(CharCode.r, base64IntToCharCode[Config.partCounts.indexOf(this.partsPerBeat)]);
 			
 			buffer.push(CharCode.w);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
@@ -745,8 +745,8 @@ module beepbox {
 				if (command == CharCode.n) {
 					this.pitchChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.drumChannelCount  = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					this.pitchChannelCount = this._clip(Music.pitchChannelCountMin, Music.pitchChannelCountMax + 1, this.pitchChannelCount);
-					this.drumChannelCount = this._clip(Music.drumChannelCountMin, Music.drumChannelCountMax + 1, this.drumChannelCount);
+					this.pitchChannelCount = this._clip(Config.pitchChannelCountMin, Config.pitchChannelCountMax + 1, this.pitchChannelCount);
+					this.drumChannelCount = this._clip(Config.drumChannelCountMin, Config.drumChannelCountMax + 1, this.drumChannelCount);
 					const channelCount: number = this.pitchChannelCount + this.drumChannelCount;
 					for (let channel: number = 0; channel < channelCount; channel++) {
 						this.channelPatterns[channel] = [];
@@ -790,93 +790,93 @@ module beepbox {
 					} else {
 						this.tempo = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					}
-					this.tempo = this._clip(0, Music.tempoNames.length, this.tempo);
+					this.tempo = this._clip(0, Config.tempoNames.length, this.tempo);
 				} else if (command == CharCode.m) {
 					this.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					this.reverb = this._clip(0, Music.reverbRange, this.reverb);
+					this.reverb = this._clip(0, Config.reverbRange, this.reverb);
 				} else if (command == CharCode.a) {
 					if (beforeThree) {
 						this.beatsPerBar = [6, 7, 8, 9, 10][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
 					} else {
 						this.beatsPerBar = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					}
-					this.beatsPerBar = Math.max(Music.beatsPerBarMin, Math.min(Music.beatsPerBarMax, this.beatsPerBar));
+					this.beatsPerBar = Math.max(Config.beatsPerBarMin, Math.min(Config.beatsPerBarMax, this.beatsPerBar));
 				} else if (command == CharCode.g) {
 					this.barCount = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
-					this.barCount = Math.max(Music.barCountMin, Math.min(Music.barCountMax, this.barCount));
+					this.barCount = Math.max(Config.barCountMin, Math.min(Config.barCountMax, this.barCount));
 				} else if (command == CharCode.j) {
 					this.patternsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
-					this.patternsPerChannel = Math.max(Music.patternsPerChannelMin, Math.min(Music.patternsPerChannelMax, this.patternsPerChannel));
+					this.patternsPerChannel = Math.max(Config.patternsPerChannelMin, Math.min(Config.patternsPerChannelMax, this.patternsPerChannel));
 				} else if (command == CharCode.i) {
 					this.instrumentsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
-					this.instrumentsPerChannel = Math.max(Music.instrumentsPerChannelMin, Math.min(Music.instrumentsPerChannelMax, this.instrumentsPerChannel));
+					this.instrumentsPerChannel = Math.max(Config.instrumentsPerChannelMin, Math.min(Config.instrumentsPerChannelMax, this.instrumentsPerChannel));
 				} else if (command == CharCode.r) {
-					this.partsPerBeat = Music.partCounts[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
+					this.partsPerBeat = Config.partCounts[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
 				} else if (command == CharCode.w) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentWaves[channel][0] = this._clip(0, Music.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.instrumentWaves[channel][0] = this._clip(0, Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentWaves[channel][i] = this._clip(0, Music.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.instrumentWaves[channel][i] = this._clip(0, Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.f) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentFilters[channel][0] = [0, 2, 3, 5][this._clip(0, Music.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+						this.instrumentFilters[channel][0] = [0, 2, 3, 5][this._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentFilters[channel][i] = this._clip(0, Music.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.instrumentFilters[channel][i] = this._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.d) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentEnvelopes[channel][0] = this._clip(0, Music.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.instrumentEnvelopes[channel][0] = this._clip(0, Config.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentEnvelopes[channel][i] = this._clip(0, Music.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.instrumentEnvelopes[channel][i] = this._clip(0, Config.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.c) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentEffects[channel][0] = this._clip(0, Music.effectNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.instrumentEffects[channel][0] = this._clip(0, Config.effectNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						if (this.instrumentEffects[channel][0] == 1) this.instrumentEffects[channel][0] = 3;
 						else if (this.instrumentEffects[channel][0] == 3) this.instrumentEffects[channel][0] = 5;
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentEffects[channel][i] = this._clip(0, Music.effectNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.instrumentEffects[channel][i] = this._clip(0, Config.effectNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.h) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentChorus[channel][0] = this._clip(0, Music.chorusNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.instrumentChorus[channel][0] = this._clip(0, Config.chorusNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentChorus[channel][i] = this._clip(0, Music.chorusNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.instrumentChorus[channel][i] = this._clip(0, Config.chorusNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.v) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentVolumes[channel][0] = this._clip(0, Music.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.instrumentVolumes[channel][0] = this._clip(0, Config.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentVolumes[channel][i] = this._clip(0, Music.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.instrumentVolumes[channel][i] = this._clip(0, Config.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
@@ -1094,17 +1094,17 @@ module beepbox {
 					if (isDrum) {
 						instrumentArray.push({
 							volume: (5 - this.instrumentVolumes[channel][i]) * 20,
-							wave: Music.drumNames[this.instrumentWaves[channel][i]],
-							envelope: Music.envelopeNames[this.instrumentEnvelopes[channel][i]],
+							wave: Config.drumNames[this.instrumentWaves[channel][i]],
+							envelope: Config.envelopeNames[this.instrumentEnvelopes[channel][i]],
 						});
 					} else {
 						instrumentArray.push({
 							volume: (5 - this.instrumentVolumes[channel][i]) * 20,
-							wave: Music.waveNames[this.instrumentWaves[channel][i]],
-							envelope: Music.envelopeNames[this.instrumentEnvelopes[channel][i]],
-							filter: Music.filterNames[this.instrumentFilters[channel][i]],
-							chorus: Music.chorusNames[this.instrumentChorus[channel][i]],
-							effect: Music.effectNames[this.instrumentEffects[channel][i]],
+							wave: Config.waveNames[this.instrumentWaves[channel][i]],
+							envelope: Config.envelopeNames[this.instrumentEnvelopes[channel][i]],
+							filter: Config.filterNames[this.instrumentFilters[channel][i]],
+							chorus: Config.chorusNames[this.instrumentChorus[channel][i]],
+							effect: Config.effectNames[this.instrumentEffects[channel][i]],
 						});
 					}
 				}
@@ -1156,8 +1156,8 @@ module beepbox {
 			
 			return {
 				version: Song._latestVersion,
-				scale: Music.scaleNames[this.scale],
-				key: Music.keyNames[this.key],
+				scale: Config.scaleNames[this.scale],
+				key: Config.keyNames[this.key],
 				introBars: this.loopStart,
 				loopBars: this.loopLength,
 				beatsPerBar: this.beatsPerBar,
@@ -1179,13 +1179,13 @@ module beepbox {
 			
 			this.scale = 11; // default to expert.
 			if (jsonObject.scale != undefined) {
-				const scale: number = Music.scaleNames.indexOf(jsonObject.scale);
+				const scale: number = Config.scaleNames.indexOf(jsonObject.scale);
 				if (scale != -1) this.scale = scale;
 			}
 			
 			if (jsonObject.key != undefined) {
 				if (typeof(jsonObject.key) == "number") {
-					this.key = Music.keyNames.length - 1 - (((jsonObject.key + 1200) >>> 0) % Music.keyNames.length);
+					this.key = Config.keyNames.length - 1 - (((jsonObject.key + 1200) >>> 0) % Config.keyNames.length);
 				} else if (typeof(jsonObject.key) == "string") {
 					const key: string = jsonObject.key;
 					const letter: string = key.charAt(0).toUpperCase();
@@ -1206,15 +1206,15 @@ module beepbox {
 			if (jsonObject.beatsPerMinute != undefined) {
 				const bpm: number = jsonObject.beatsPerMinute | 0;
 				this.tempo = Math.round(4.0 + 9.0 * Math.log(bpm / 120) / Math.LN2);
-				this.tempo = this._clip(0, Music.tempoNames.length, this.tempo);
+				this.tempo = this._clip(0, Config.tempoNames.length, this.tempo);
 			}
 			
 			if (jsonObject.reverb != undefined) {
-				this.reverb = this._clip(0, Music.reverbRange, jsonObject.reverb | 0);
+				this.reverb = this._clip(0, Config.reverbRange, jsonObject.reverb | 0);
 			}
 			
 			if (jsonObject.beatsPerBar != undefined) {
-				this.beatsPerBar = Math.max(Music.beatsPerBarMin, Math.min(Music.beatsPerBarMax, jsonObject.beatsPerBar | 0));
+				this.beatsPerBar = Math.max(Config.beatsPerBarMin, Math.min(Config.beatsPerBarMax, jsonObject.beatsPerBar | 0));
 			}
 			
 			if (jsonObject.ticksPerBeat != undefined) {
@@ -1293,26 +1293,26 @@ module beepbox {
 						if (channelObject.instruments) instrumentObject = channelObject.instruments[i];
 						if (instrumentObject == undefined) instrumentObject = {};
 						if (instrumentObject.volume != undefined) {
-							this.instrumentVolumes[channel][i] = this._clip(0, Music.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
+							this.instrumentVolumes[channel][i] = this._clip(0, Config.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
 						} else {
 							this.instrumentVolumes[channel][i] = 0;
 						}
-						this.instrumentEnvelopes[channel][i] = Music.envelopeNames.indexOf(instrumentObject.envelope);
+						this.instrumentEnvelopes[channel][i] = Config.envelopeNames.indexOf(instrumentObject.envelope);
 						if (this.instrumentEnvelopes[channel][i] == -1) this.instrumentEnvelopes[channel][i] = 1;
 						if (isDrum) {
-							this.instrumentWaves[channel][i] = Music.drumNames.indexOf(instrumentObject.wave);
+							this.instrumentWaves[channel][i] = Config.drumNames.indexOf(instrumentObject.wave);
 							if (this.instrumentWaves[channel][i] == -1) this.instrumentWaves[channel][i] = 0;
 							this.instrumentFilters[channel][i] = 0;
 							this.instrumentChorus[channel][i] = 0;
 							this.instrumentEffects[channel][i] = 0;
 						} else {
-							this.instrumentWaves[channel][i] = Music.waveNames.indexOf(instrumentObject.wave);
+							this.instrumentWaves[channel][i] = Config.waveNames.indexOf(instrumentObject.wave);
 							if (this.instrumentWaves[channel][i] == -1) this.instrumentWaves[channel][i] = 1;
-							this.instrumentFilters[channel][i] = Music.filterNames.indexOf(instrumentObject.filter);
+							this.instrumentFilters[channel][i] = Config.filterNames.indexOf(instrumentObject.filter);
 							if (this.instrumentFilters[channel][i] == -1) this.instrumentFilters[channel][i] = 0;
-							this.instrumentChorus[channel][i] = Music.chorusNames.indexOf(instrumentObject.chorus);
+							this.instrumentChorus[channel][i] = Config.chorusNames.indexOf(instrumentObject.chorus);
 							if (this.instrumentChorus[channel][i] == -1) this.instrumentChorus[channel][i] = 0;
-							this.instrumentEffects[channel][i] = Music.effectNames.indexOf(instrumentObject.effect);
+							this.instrumentEffects[channel][i] = Config.effectNames.indexOf(instrumentObject.effect);
 							if (this.instrumentEffects[channel][i] == -1) this.instrumentEffects[channel][i] = 0;
 						}
 					}
@@ -1377,7 +1377,7 @@ module beepbox {
 							
 								note.end = note.pins[note.pins.length - 1].time + note.start;
 							
-								const maxPitch: number = isDrum ? Music.drumCount - 1 : Music.maxPitch;
+								const maxPitch: number = isDrum ? Config.drumCount - 1 : Config.maxPitch;
 								let lowestPitch: number = maxPitch;
 								let highestPitch: number = 0;
 								for (let k: number = 0; k < note.pitches.length; k++) {
@@ -1457,7 +1457,7 @@ module beepbox {
 			if (song != null) {
 				for (let i: number = 0; i < song.instrumentsPerChannel; i++) {
 					for (let j: number = song.pitchChannelCount; j < song.pitchChannelCount + song.drumChannelCount; j++) {
-						Music.getDrumWave(song.instrumentWaves[j][i]);
+						Config.getDrumWave(song.instrumentWaves[j][i]);
 					}
 				}
 				Synth.getGeneratedSynthesizer(song.pitchChannelCount, song.drumChannelCount);
@@ -1683,8 +1683,8 @@ module beepbox {
 			
 			const envelope: number = pattern == null ? 0 : song.instrumentEnvelopes[channel][pattern.instrument];
 			
-			const channelRoot: number = isDrum ? Music.drumPitchRoots[song.instrumentWaves[channel][pattern == null ? 0 : pattern.instrument]] : Music.keyTransposes[song.key];
-			const intervalScale: number = isDrum ? Music.drumInterval : 1;
+			const channelRoot: number = isDrum ? Config.drumPitchRoots[song.instrumentWaves[channel][pattern == null ? 0 : pattern.instrument]] : Config.keyTransposes[song.key];
+			const intervalScale: number = isDrum ? Config.drumInterval : 1;
 			
 			let note: Note | null = null;
 			let prevNote: Note | null = null;
@@ -1720,7 +1720,7 @@ module beepbox {
 				let pianoPitchDamping: number;
 				if (isDrum) {
 					if (song.instrumentWaves[channel][instrument] > 0) {
-						filter = Math.min(1.0, pianoFreq * sampleTime * Music.drumPitchFilterMult[song.instrumentWaves[channel][pattern!.instrument]]);
+						filter = Math.min(1.0, pianoFreq * sampleTime * Config.drumPitchFilterMult[song.instrumentWaves[channel][pattern!.instrument]]);
 						pianoPitchDamping = 24.0;
 					} else {
 						pianoPitchDamping = 60.0;
@@ -1730,7 +1730,7 @@ module beepbox {
 				}
 				periodDelta = pianoFreq * sampleTime;
 				noteVolume = Math.pow(2.0, -synth.pianoPitch * intervalScale / pianoPitchDamping);
-				vibratoScale = Math.pow(2.0, Music.effectVibratos[song.instrumentEffects[channel][instrument]] / 12.0) - 1.0;
+				vibratoScale = Math.pow(2.0, Config.effectVibratos[song.instrumentEffects[channel][instrument]] / 12.0) - 1.0;
 			} else if (note == null) {
 				periodDelta = 0.0;
 				periodDeltaScale = 0.0;
@@ -1738,7 +1738,7 @@ module beepbox {
 				vibratoScale = 0.0;
 				resetPlayheads = true;
 			} else {
-				const chorusHarmonizes: boolean = Music.chorusHarmonizes[song.instrumentChorus[channel][pattern!.instrument]];
+				const chorusHarmonizes: boolean = Config.chorusHarmonizes[song.instrumentChorus[channel][pattern!.instrument]];
 				let pitch: number = note.pitches[0];
 				if (chorusHarmonizes) {
 					let harmonyOffset: number = 0.0;
@@ -1826,7 +1826,7 @@ module beepbox {
 				let pitchDamping: number;
 				if (isDrum) {
 					if (song.instrumentWaves[channel][pattern!.instrument] > 0) {
-						filter = Math.min(1.0, startFreq * sampleTime * Music.drumPitchFilterMult[song.instrumentWaves[channel][pattern!.instrument]]);
+						filter = Math.min(1.0, startFreq * sampleTime * Config.drumPitchFilterMult[song.instrumentWaves[channel][pattern!.instrument]]);
 						pitchDamping = 24.0;
 					} else {
 						pitchDamping = 60.0;
@@ -1847,14 +1847,14 @@ module beepbox {
 				if (timeSinceStart == 0.0 && !inhibitRestart) resetPlayheads = true;
 				
 				if (!isDrum) {
-					const filterScaleRate: number = Music.filterDecays[song.instrumentFilters[channel][pattern!.instrument]];
+					const filterScaleRate: number = Config.filterDecays[song.instrumentFilters[channel][pattern!.instrument]];
 					filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / synth.samplesPerSecond);
 					const endFilter: number = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / synth.samplesPerSecond);
 					filterScale = Math.pow(endFilter / filter, 1.0 / samples);
 				}
 				
-				const vibratoDelay = Music.effectVibratoDelays[song.instrumentEffects[channel][pattern!.instrument]];
-				vibratoScale = (time - note.start < vibratoDelay) ? 0.0 : Math.pow(2.0, Music.effectVibratos[song.instrumentEffects[channel][pattern!.instrument]] / 12.0) - 1.0;
+				const vibratoDelay = Config.effectVibratoDelays[song.instrumentEffects[channel][pattern!.instrument]];
+				vibratoScale = (time - note.start < vibratoDelay) ? 0.0 : Math.pow(2.0, Config.effectVibratos[song.instrumentEffects[channel][pattern!.instrument]] / 12.0) - 1.0;
 			}
 			
 			return {
@@ -1917,7 +1917,7 @@ module beepbox {
 			var limitDecay = synth.limitDecay;
 			var volume = synth.volume;
 			var delayLine = synth.delayLine;
-			var reverb = Math.pow(song.reverb / beepbox.Music.reverbRange, 0.667) * 0.425;
+			var reverb = Math.pow(song.reverb / beepbox.Config.reverbRange, 0.667) * 0.425;
 			var ended = false;
 			
 			// Check the bounds of the playhead:
@@ -1967,13 +1967,13 @@ module beepbox {
 				
 				// Initialize instruments based on current pattern.
 				var instrumentChannel# = song.getPatternInstrument(#, synth.bar); // ALL
-				var maxChannel#Volume = beepbox.Music.channelVolumes[#] * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Music.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Music.waveVolumes[song.instrumentWaves[#][instrumentChannel#]] * beepbox.Music.filterVolumes[song.instrumentFilters[#][instrumentChannel#]] * beepbox.Music.chorusVolumes[song.instrumentChorus[#][instrumentChannel#]] * 0.5; // PITCH
-				var maxChannel#Volume = beepbox.Music.channelVolumes[#] * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Music.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Music.drumVolumes[song.instrumentWaves[#][instrumentChannel#]]; // DRUM
-				var channel#Wave = beepbox.Music.waves[song.instrumentWaves[#][instrumentChannel#]]; // PITCH
-				var channel#Wave = beepbox.Music.getDrumWave(song.instrumentWaves[#][instrumentChannel#]); // DRUM
+				var maxChannel#Volume = beepbox.Config.channelVolumes[#] * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Config.waveVolumes[song.instrumentWaves[#][instrumentChannel#]] * beepbox.Config.filterVolumes[song.instrumentFilters[#][instrumentChannel#]] * beepbox.Config.chorusVolumes[song.instrumentChorus[#][instrumentChannel#]] * 0.5; // PITCH
+				var maxChannel#Volume = beepbox.Config.channelVolumes[#] * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Config.drumVolumes[song.instrumentWaves[#][instrumentChannel#]]; // DRUM
+				var channel#Wave = beepbox.Config.waves[song.instrumentWaves[#][instrumentChannel#]]; // PITCH
+				var channel#Wave = beepbox.Config.getDrumWave(song.instrumentWaves[#][instrumentChannel#]); // DRUM
 				var channel#WaveLength = channel#Wave.length; // PITCH
-				var channel#FilterBase = Math.pow(2, -beepbox.Music.filterBases[song.instrumentFilters[#][instrumentChannel#]]); // PITCH
-				var channel#TremoloScale = beepbox.Music.effectTremolos[song.instrumentEffects[#][instrumentChannel#]]; // PITCH
+				var channel#FilterBase = Math.pow(2, -beepbox.Config.filterBases[song.instrumentFilters[#][instrumentChannel#]]); // PITCH
+				var channel#TremoloScale = beepbox.Config.effectTremolos[song.instrumentEffects[#][instrumentChannel#]]; // PITCH
 				
 				// Reuse initialized instruments until getting to the end of the sample period or the end of the current bar.
 				while (totalSamples > 0) {
@@ -1988,8 +1988,8 @@ module beepbox {
 					
 					var time = synth.part + synth.beat * song.partsPerBeat;
 				
-					var channel#ChorusA = Math.pow(2.0, (beepbox.Music.chorusOffsets[song.instrumentChorus[#][instrumentChannel#]] + beepbox.Music.chorusIntervals[song.instrumentChorus[#][instrumentChannel#]]) / 12.0); // PITCH
-					var channel#ChorusB = Math.pow(2.0, (beepbox.Music.chorusOffsets[song.instrumentChorus[#][instrumentChannel#]] - beepbox.Music.chorusIntervals[song.instrumentChorus[#][instrumentChannel#]]) / 12.0); // PITCH
+					var channel#ChorusA = Math.pow(2.0, (beepbox.Config.chorusOffsets[song.instrumentChorus[#][instrumentChannel#]] + beepbox.Config.chorusIntervals[song.instrumentChorus[#][instrumentChannel#]]) / 12.0); // PITCH
+					var channel#ChorusB = Math.pow(2.0, (beepbox.Config.chorusOffsets[song.instrumentChorus[#][instrumentChannel#]] - beepbox.Config.chorusIntervals[song.instrumentChorus[#][instrumentChannel#]]) / 12.0); // PITCH
 					var channel#ChorusSign = (song.instrumentChorus[#][instrumentChannel#] == 7) ? -1.0 : 1.0; // PITCH
 					if (song.instrumentChorus[#][instrumentChannel#] == 0) synth.channelPlayheadB[#] = synth.channelPlayheadA[#]; // PITCH
 					

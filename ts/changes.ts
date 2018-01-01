@@ -806,20 +806,20 @@ module beepbox {
 			this._oldPitches = note.pitches;
 			this._newPitches = [];
 			
-			const maxPitch: number = (doc.song.getChannelIsDrum(doc.channel) ? Music.drumCount - 1 : Music.maxPitch);
+			const maxPitch: number = (doc.song.getChannelIsDrum(doc.channel) ? Config.drumCount - 1 : Config.maxPitch);
 			
 			for (let i: number = 0; i < this._oldPitches.length; i++) {
 				let pitch: number = this._oldPitches[i];
 				if (upward) {
 					for (let j: number = pitch + 1; j <= maxPitch; j++) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Music.scaleFlags[doc.song.scale][j%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Config.scaleFlags[doc.song.scale][j%12]) {
 							pitch = j;
 							break;
 						}
 					}
 				} else {
 					for (let j: number = pitch - 1; j >= 0; j--) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Music.scaleFlags[doc.song.scale][j%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Config.scaleFlags[doc.song.scale][j%12]) {
 							pitch = j;
 							break;
 						}
@@ -852,14 +852,14 @@ module beepbox {
 				if (interval > max) interval = max;
 				if (upward) {
 					for (let i: number = interval + 1; i <= max; i++) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Music.scaleFlags[doc.song.scale][i%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Config.scaleFlags[doc.song.scale][i%12]) {
 							interval = i;
 							break;
 						}
 					}
 				} else {
 					for (let i: number = interval - 1; i >= min; i--) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Music.scaleFlags[doc.song.scale][i%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Config.scaleFlags[doc.song.scale][i%12]) {
 							interval = i;
 							break;
 						}

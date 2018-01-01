@@ -196,8 +196,8 @@
 	√ track editor scaling
 	√ track colors based on channel type
 	√ _defaultPinChannels was broken.
+√ move Music to top, rename to Config.
 
-- move Music to top, rename to Config.
 - drumFilter shouldn't have hardcoded dependence on drum wave index.
 - adjust json import to be backwards compatible with old names: romani, binary
 - when exporting to midi with custom harmony, use correct simultaneous notes.
