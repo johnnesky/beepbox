@@ -93,7 +93,6 @@ module beepbox {
 		public static readonly chorusHarmonizes: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, true];
 		public static readonly volumeNames: ReadonlyArray<string> = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
 		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
-		public static readonly channelVolumes: ReadonlyArray<number> = [0.27, 0.27, 0.27, 0.19];
 		public static readonly pitchChannelColorsDim: ReadonlyArray<string>    = ["#0099a1", "#a1a100", "#c75000", "#00a100", "#d020d0", "#7777b0"];
 		public static readonly pitchChannelColorsBright: ReadonlyArray<string> = ["#25f3ff", "#ffff25", "#ff9752", "#50ff50", "#ff90ff", "#a0a0ff"];
 		public static readonly pitchNoteColorsDim: ReadonlyArray<string>       = ["#00bdc7", "#c7c700", "#ff771c", "#00c700", "#e040e0", "#8888d0"];
@@ -1715,6 +1714,20 @@ module beepbox {
 				return;
 			}
 			
+			const channelCount: number = this.song.getChannelCount();
+			if (this.channelPlayheadA.length != channelCount) {
+				for (let i: number = 0; i < channelCount; i++) this.channelPlayheadA[i] = 0.0;
+				this.channelPlayheadA.length = channelCount;
+			}
+			if (this.channelPlayheadB.length != channelCount) {
+				for (let i: number = 0; i < channelCount; i++) this.channelPlayheadB[i] = 0.0;
+				this.channelPlayheadB.length = channelCount;
+			}
+			if (this.channelSample.length != channelCount) {
+				for (let i: number = 0; i < channelCount; i++) this.channelSample[i] = 0.0;
+				this.channelSample.length = channelCount;
+			}
+			
 			var generatedSynthesizer = Synth.getGeneratedSynthesizer(this.song.pitchChannelCount, this.song.drumChannelCount);
 			generatedSynthesizer(this, this.song, data, totalSamples);
 		}
@@ -2008,8 +2021,8 @@ module beepbox {
 				
 				// Initialize instruments based on current pattern.
 				var instrumentChannel# = song.getPatternInstrument(#, synth.bar); // ALL
-				var maxChannel#Volume = beepbox.Config.channelVolumes[#] * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Config.waveVolumes[song.instrumentWaves[#][instrumentChannel#]] * beepbox.Config.filterVolumes[song.instrumentFilters[#][instrumentChannel#]] * beepbox.Config.chorusVolumes[song.instrumentChorus[#][instrumentChannel#]] * 0.5; // PITCH
-				var maxChannel#Volume = beepbox.Config.channelVolumes[#] * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Config.drumVolumes[song.instrumentWaves[#][instrumentChannel#]]; // DRUM
+				var maxChannel#Volume = 0.27 * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Config.waveVolumes[song.instrumentWaves[#][instrumentChannel#]] * beepbox.Config.filterVolumes[song.instrumentFilters[#][instrumentChannel#]] * beepbox.Config.chorusVolumes[song.instrumentChorus[#][instrumentChannel#]] * 0.5; // PITCH
+				var maxChannel#Volume = 0.19 * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Config.drumVolumes[song.instrumentWaves[#][instrumentChannel#]]; // DRUM
 				var channel#Wave = beepbox.Config.waves[song.instrumentWaves[#][instrumentChannel#]]; // PITCH
 				var channel#Wave = beepbox.Config.getDrumWave(song.instrumentWaves[#][instrumentChannel#]); // DRUM
 				var channel#WaveLength = channel#Wave.length; // PITCH
@@ -2099,7 +2112,7 @@ module beepbox {
 						var delayPos1 = (delayPos +  3041) & 0x3FFF;
 						var delayPos2 = (delayPos +  6426) & 0x3FFF;
 						var delayPos3 = (delayPos + 10907) & 0x3FFF;
-						var delaySample0 = delayLine[delayPos ]
+						var delaySample0 = delayLine[delayPos]
 							+ channel#Sample // PITCH
 						;
 						var delaySample1 = delayLine[delayPos1];
