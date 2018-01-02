@@ -67,7 +67,7 @@ module beepbox {
 		public static readonly patternsPerChannelMax: number = 64;
 		public static readonly instrumentsPerChannelMin: number = 1;
 		public static readonly instrumentsPerChannelMax: number = 10;
-		public static readonly partNames: ReadonlyArray<string> = ["÷3 (triples)", "÷4 (standard)", "÷6", "÷8"];
+		public static readonly partNames: ReadonlyArray<string> = ["÷3 (triplets)", "÷4 (standard)", "÷6", "÷8"];
 		public static readonly partCounts: ReadonlyArray<number> = [3, 4, 6, 8];
 		public static readonly waveNames: ReadonlyArray<string> = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
 		public static readonly waveVolumes: ReadonlyArray<number> = [1.0,         0.5,       0.5,          0.5,          0.65,          0.5,          0.4,         0.4,      0.94];
