@@ -179,7 +179,7 @@ module beepbox {
 		}
 		
 		private _whenCursorReleased = (event: Event): void => {
-			if (this._doc.channel != 3 && !this._dragging && this._mouseDown) {
+			if (!this._doc.song.getChannelIsDrum(this._doc.channel) && !this._dragging && this._mouseDown) {
 				const continuousChange: boolean = this._doc.history.lastChangeWas(this._change);
 				const oldValue: number = continuousChange ? this._change!.oldValue : this._doc.song.channelOctaves[this._doc.channel];
 				const currentOctave: number = this._doc.song.channelOctaves[this._doc.channel];
