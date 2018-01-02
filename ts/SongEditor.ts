@@ -83,7 +83,7 @@ module beepbox {
 			]),
 		]);
 		private readonly _playButton: HTMLButtonElement = button({style: "width: 34px; margin: 0px", type: "button"});
-		private readonly _volumeSlider: HTMLInputElement = input({style: "width: 9em; flex-shrink: 0; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1"});
+		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 9em; flex-shrink: 0; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1"});
 		private readonly _editButton: HTMLSelectElement = select({style: "width:100%;"}, [
 			option("", "Edit Menu", true, true),
 			option("undo", "Undo (Z)", false, false),

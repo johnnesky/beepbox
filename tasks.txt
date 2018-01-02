@@ -270,7 +270,6 @@ AUTHENTICATION:
 - main website should break out of iframe for security: http://usablelayout.com/articles/automatically-break-out-iframe
 
 MAYBE:
-- new drum noise spectrums?
 - @Gasparatus asked for a BPM display.
 - do audio worker threads work yet? "AudioWorkerNode" vs "AudioWorkletNode"???
 - custom cover art, color schemes in playlists and embed player.
