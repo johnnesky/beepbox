@@ -342,11 +342,11 @@ module beepbox {
 			if (this._doc.synth.playing) {
 				this._playButton.classList.remove("playButton");
 				this._playButton.classList.add("pauseButton");
-				//if (this._playButton.innerText != "Pause") this._playButton.innerText = "Pause";
+				this._playButton.title = "Pause";
 			} else {
 				this._playButton.classList.remove("pauseButton");
 				this._playButton.classList.add("playButton");
-				//if (this._playButton.innerText != "Play") this._playButton.innerText = "Play";
+				this._playButton.title = "Play";
 			}
 		}
 		
@@ -614,6 +614,7 @@ module beepbox {
 		} else {
 			autoplay();
 		}
+		editor.updatePlayButton();
 	}
 	
 }
