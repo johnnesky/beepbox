@@ -614,7 +614,7 @@ module beepbox {
 		} else {
 			autoplay();
 		}
-		editor.updatePlayButton();
 	}
 	
+	editor.updatePlayButton();
 }
