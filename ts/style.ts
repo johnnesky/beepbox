@@ -29,12 +29,7 @@ styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode(`
 
 .beepboxEditor {
-	/* For some reason the default focus outline effect causes the entire editor to get repainted when any part of it changes. Border doesn't do that. */
-	margin: -3px;
-	border: 3px solid transparent;
-	width: 700px;
 	display: flex;
-	flex-direction: row;
 	-webkit-touch-callout: none;
 	-webkit-user-select: none;
 	-khtml-user-select: none;
@@ -45,10 +40,7 @@ styleSheet.appendChild(document.createTextNode(`
 	touch-action: manipulation;
 	cursor: default;
 	font-size: small;
-}
-.beepboxEditor:focus {
-	outline: none;
-	border-color: #555;
+	overflow: hidden;
 }
 
 .beepboxEditor div {
@@ -88,7 +80,7 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor .selectContainer {
 	position: relative;
 }
-.beepboxEditor .selectContainer::before {
+.beepboxEditor .selectContainer:not(.menu)::before {
 	content: "";
 	position: absolute;
 	right: 0.5em;
@@ -98,11 +90,24 @@ styleSheet.appendChild(document.createTextNode(`
 	border-right: 0.3em solid transparent;
 	pointer-events: none;
 }
-.beepboxEditor .selectContainer::after {
+.beepboxEditor .selectContainer:not(.menu)::after {
 	content: "";
 	position: absolute;
 	right: 0.5em;
 	bottom: 0.4em;
+	border-top: 0.4em solid currentColor;
+	border-left: 0.3em solid transparent;
+	border-right: 0.3em solid transparent;
+	pointer-events: none;
+}
+.beepboxEditor .selectContainer.menu::after {
+	content: "";
+	position: absolute;
+	right: 0.5em;
+	margin: auto;
+	top: 0;
+	bottom: 0;
+	height: 0;
 	border-top: 0.4em solid currentColor;
 	border-left: 0.3em solid transparent;
 	border-right: 0.3em solid transparent;
@@ -124,10 +129,18 @@ styleSheet.appendChild(document.createTextNode(`
 	-moz-appearance: none;
 	appearance: none;
 }
+.beepboxEditor .menu select {
+	padding-right: 1.5em;
+}
 .beepboxEditor select:focus {
 	background: #777777;
 	outline: none;
 }
+.beepboxEditor .menu select {
+	text-align: center;
+	text-align-last: center;
+}
+
 /* This makes it look better in firefox on my computer... What about others?
 @-moz-document url-prefix() {
 	.beepboxEditor select { padding: 0 2px; }
@@ -148,12 +161,14 @@ styleSheet.appendChild(document.createTextNode(`
 	background: #777;
 	outline: none;
 }
+.beepboxEditor button.playButton, .beepboxEditor button.pauseButton {
+	padding-left: 2em;
+}
 .beepboxEditor button.playButton::before {
 	content: "";
 	position: absolute;
-	left: 50%;
+	left: 0.7em;
 	top: 50%;
-	margin-left: -0.45em;
 	margin-top: -0.65em;
 	border-left: 1em solid currentColor;
 	border-top: 0.65em solid transparent;
@@ -163,9 +178,8 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor button.pauseButton::before {
 	content: "";
 	position: absolute;
-	left: 50%;
+	left: 0.7em;
 	top: 50%;
-	margin-left: -0.5em;
 	margin-top: -0.65em;
 	width: 0.3em;
 	height: 1.3em;
@@ -175,12 +189,61 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor button.pauseButton::after {
 	content: "";
 	position: absolute;
-	left: 50%;
+	left: 1.4em;
 	top: 50%;
-	margin-left: 0.2em;
 	margin-top: -0.65em;
 	width: 0.3em;
 	height: 1.3em;
+	background: currentColor;
+	pointer-events: none;
+}
+
+.beepboxEditor button.prevBarButton::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	margin-left: -0.5em;
+	margin-top: -0.5em;
+	width: 0.2em;
+	height: 1em;
+	background: currentColor;
+	pointer-events: none;
+}
+.beepboxEditor button.prevBarButton::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	margin-left: -0.3em;
+	margin-top: -0.5em;
+	border-right: 0.8em solid currentColor;
+	border-top: 0.5em solid transparent;
+	border-bottom: 0.5em solid transparent;
+	pointer-events: none;
+}
+
+.beepboxEditor button.nextBarButton::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	margin-left: -0.5em;
+	margin-top: -0.5em;
+	border-left: 0.8em solid currentColor;
+	border-top: 0.5em solid transparent;
+	border-bottom: 0.5em solid transparent;
+	pointer-events: none;
+}
+.beepboxEditor button.nextBarButton::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	margin-left: 0.3em;
+	margin-top: -0.5em;
+	width: 0.2em;
+	height: 1em;
 	background: currentColor;
 	pointer-events: none;
 }
@@ -189,6 +252,10 @@ styleSheet.appendChild(document.createTextNode(`
 	overflow: hidden;
 	position: absolute;
 	display: block;
+}
+
+.beepboxEditor .trackContainer {
+	overflow-x: hidden;
 }
 
 .beepboxEditor .selectRow {
@@ -204,15 +271,39 @@ styleSheet.appendChild(document.createTextNode(`
 	color: #999;
 }
 
-.beepboxEditor .editor-right-side {
-	margin-left: 6px;
-	width: 182px;
-	height: 645px;
+.beepboxEditor .editor-widgets {
 	display: flex;
 	flex-direction: column;
 }
 
-.beepboxEditor .editor-right-side > * {
+.beepboxEditor .editor-controls {
+	display: flex;
+	flex-direction: column;
+}
+
+.beepboxEditor .editor-menus {
+	display: flex;
+	flex-direction: column;
+}
+
+.beepboxEditor .editor-settings {
+	display: flex;
+	flex-direction: column;
+	flex-grow: 1;
+	justify-content: space-between;
+}
+
+.beepboxEditor .editor-song-settings {
+	display: flex;
+	flex-direction: column;
+}
+
+.beepboxEditor .editor-instrument-settings {
+	display: flex;
+	flex-direction: column;
+}
+
+.beepboxEditor .editor-right-side-top > *, .beepboxEditor .editor-right-side-bottom > * {
 	flex-shrink: 0;
 }
 
@@ -236,6 +327,7 @@ styleSheet.appendChild(document.createTextNode(`
 	margin: 0;
 	cursor: pointer;
 	background-color: black;
+	touch-action: pan-y;
 }
 .beepboxEditor input[type=range]:focus {
 	outline: none;
@@ -291,6 +383,124 @@ styleSheet.appendChild(document.createTextNode(`
 	border-radius: 0.25em;
 	background: currentColor;
 	cursor: pointer;
+}
+
+/* wide screen */
+@media (min-width: 701px) {
+	.beepboxEditor {
+		flex-direction: row;
+	}
+	.beepboxEditor:focus-within {
+		outline: 3px solid #555;
+	}
+	.beepboxEditor .trackContainer {
+		width: 512px;
+	}
+	.beepboxEditor .trackSelectBox {
+		display: none;
+	}
+	.beepboxEditor .playback-controls {
+		display: flex;
+		flex-direction: column;
+	}
+	.beepboxEditor .playback-bar-controls {
+		display: flex;
+		flex-direction: row;
+		margin: 5px 0;
+	}
+	.beepboxEditor .playback-volume-controls {
+		display: flex;
+		flex-direction: row;
+		margin: 5px 0;
+		align-items: center;
+	}
+	.beepboxEditor .pauseButton, .beepboxEditor .playButton {
+		flex-grow: 1;
+	}
+	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
+		flex-grow: 1;
+		margin-left: 10px;
+	}
+	.beepboxEditor .editor-widgets {
+		margin-left: 6px;
+		width: 182px;
+		height: 645px;
+		flex-direction: column;
+	}
+	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings select {
+		width: 9em;
+	}
+	.beepboxEditor .editor-menus > * {
+		flex-grow: 1;
+		margin: 5px 0;
+	}
+}
+
+/* narrow screen */
+@media (max-width: 700px) {
+	.beepboxEditor {
+		flex-direction: column;
+	}
+	.beepboxEditor:focus-within {
+		outline: none;
+	}
+	.beepboxEditor .editorBox {
+		max-height: 75vh;
+	}
+	.beepboxEditor .editor-menus {
+		flex-direction: row;
+	}
+	.beepboxEditor .editor-menus > * {
+		flex-grow: 1;
+		margin: 5px;
+	}
+	.beepboxEditor .trackContainer {
+		overflow-x: auto;
+	}
+	.beepboxEditor .barScrollBar {
+		display: none;
+	}
+	.beepboxEditor .playback-controls {
+		display: flex;
+		flex-direction: row;
+		margin: 5px 0;
+	}
+	.beepboxEditor .playback-bar-controls {
+		display: flex;
+		flex-direction: row;
+		flex-grow: 1;
+	}
+	.beepboxEditor .playback-volume-controls {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		flex-grow: 1;
+		margin: 0 5px;
+	}
+	.beepboxEditor .editor-settings {
+		flex-direction: row;
+	}
+	.beepboxEditor .pauseButton, .beepboxEditor .playButton,
+	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
+		flex-grow: 1;
+		margin: 0 5px;
+	}
+	.beepboxEditor .editor-song-settings, .beepboxEditor .editor-instrument-settings {
+		flex-grow: 1;
+		margin: 0 5px;
+	}
+	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings .selectContainer {
+		width: 60%;
+	}
+	.beepboxEditor .editor-settings select {
+		width: 100%;
+	}
+	.fullWidthSpacer {
+		display: none;
+	}
+	p {
+		margin: 1em 0.5em;
+	}
 }
 
 `));

@@ -43,7 +43,7 @@ module beepbox {
 			this._rightHighlight,
 		]);
 		
-		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 20px; overflow: hidden; position: relative;"}, [this._svg]);
+		public readonly container: HTMLElement = html.div({className: "barScrollBar", style: "width: 512px; height: 20px; overflow: hidden; position: relative;"}, [this._svg]);
 		
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
@@ -55,10 +55,7 @@ module beepbox {
 		private _renderedNotchCount: number = -1;
 		private _renderedBarPos: number = -1;
 		
-		constructor(private _doc: SongDocument) {
-			this._doc.notifier.watch(this._documentChanged);
-			this._documentChanged();
-			
+		constructor(private _doc: SongDocument, private _trackContainer: HTMLDivElement) {
 			const center: number = this._editorHeight * 0.5;
 			const base: number = 20;
 			const tip: number = 9;
@@ -73,9 +70,17 @@ module beepbox {
 			this.container.addEventListener("mouseout", this._whenMouseOut);
 			
 			this.container.addEventListener("touchstart", this._whenTouchPressed);
-			document.addEventListener("touchmove", this._whenTouchMoved);
-			document.addEventListener("touchend", this._whenCursorReleased);
-			document.addEventListener("touchcancel", this._whenCursorReleased);
+			this.container.addEventListener("touchmove", this._whenTouchMoved);
+			this.container.addEventListener("touchend", this._whenCursorReleased);
+			this.container.addEventListener("touchcancel", this._whenCursorReleased);
+			
+			// Sorry, bypassing typescript type safety on this function because I want to use the new "passive" option.
+			//this._trackContainer.addEventListener("scroll", this._onScroll, {capture: false, passive: true});
+			(<Function>this._trackContainer.addEventListener)("scroll", this._onScroll, {capture: false, passive: true});
+		}
+		
+		private _onScroll = (event: Event): void => {
+			this._doc.barScrollPos = (this._trackContainer.scrollLeft / 32);
 		}
 		
 		private _whenMouseOver = (event: MouseEvent): void => {
@@ -97,7 +102,7 @@ module beepbox {
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updatePreview();
-			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + 16) * this._barWidth) {
+			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._barWidth) {
 				this._dragging = true;
 				this._dragStart = this._mouseX;
 			}
@@ -110,7 +115,7 @@ module beepbox {
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
 			this._updatePreview();
-			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + 16) * this._barWidth) {
+			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._barWidth) {
 				this._dragging = true;
 				this._dragStart = this._mouseX;
 			}
@@ -144,7 +149,7 @@ module beepbox {
 					}
 				}
 				while (this._mouseX - this._dragStart > this._barWidth * 0.5) {
-					if (this._doc.barScrollPos < this._doc.song.barCount - 16) {
+					if (this._doc.barScrollPos < this._doc.song.barCount - this._doc.trackVisibleBars) {
 						this._doc.barScrollPos++;
 						this._dragStart += this._barWidth;
 						this._doc.notifier.changed();
@@ -162,7 +167,7 @@ module beepbox {
 					if (this._doc.barScrollPos > 0) this._doc.barScrollPos--;
 					this._doc.notifier.changed();
 				} else {
-					if (this._doc.barScrollPos < this._doc.song.barCount - 16) this._doc.barScrollPos++;
+					if (this._doc.barScrollPos < this._doc.song.barCount - this._doc.trackVisibleBars) this._doc.barScrollPos++;
 					this._doc.notifier.changed();
 				}
 			}
@@ -180,7 +185,7 @@ module beepbox {
 			if (showHighlight) {
 				if (this._mouseX < this._doc.barScrollPos * this._barWidth) {
 					showleftHighlight = true;
-				} else if (this._mouseX > (this._doc.barScrollPos + 16) * this._barWidth) {
+				} else if (this._mouseX > (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._barWidth) {
 					showRightHighlight = true;
 				} else {
 					showHandleHighlight = true;
@@ -192,12 +197,9 @@ module beepbox {
 			this._handleHighlight.style.visibility = showHandleHighlight ? "visible" : "hidden";
 		}
 		
-		private _documentChanged = (): void => {
-			this._barWidth = (this._editorWidth-1) / Math.max(16, this._doc.song.barCount);
-			this._render();
-		}
-		
-		private _render(): void {
+		public render(): void {
+			this._barWidth = (this._editorWidth-1) / Math.max(this._doc.trackVisibleBars, this._doc.song.barCount);
+			
 			const resized: boolean = this._renderedNotchCount != this._doc.song.barCount;
 			if (resized) {
 				this._renderedNotchCount = this._doc.song.barCount;
@@ -213,12 +215,14 @@ module beepbox {
 			if (resized || this._renderedBarPos != this._doc.barScrollPos) {
 				this._renderedBarPos = this._doc.barScrollPos;
 				this._handle.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
-				this._handle.setAttribute("width", "" + (this._barWidth * 16));
+				this._handle.setAttribute("width", "" + (this._barWidth * this._doc.trackVisibleBars));
 				this._handleHighlight.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
-				this._handleHighlight.setAttribute("width", "" + (this._barWidth * 16));
+				this._handleHighlight.setAttribute("width", "" + (this._barWidth * this._doc.trackVisibleBars));
 			}
 			
 			this._updatePreview();
+			
+			this._trackContainer.scrollLeft = this._doc.barScrollPos * 32;
 		}
 	}
 }

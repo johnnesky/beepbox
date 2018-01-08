@@ -46,6 +46,7 @@ module beepbox {
 		public showChannels: boolean;
 		public showScrollBar: boolean;
 		public volume: number = 75;
+		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
 		public prompt: string | null = null;
 		
@@ -81,7 +82,7 @@ module beepbox {
 			this.channel = state.channel;
 			this._barFromCurrentState = state.bar;
 			this._channelFromCurrentState = state.channel;
-			this.barScrollPos = Math.max(0, this.bar - 15);
+			this.barScrollPos = Math.max(0, this.bar - (this.trackVisibleBars - 6));
 			
 			// For all input events, catch them when they are about to finish bubbling,
 			// presumably after all handlers are done updating the model and update the
@@ -123,7 +124,7 @@ module beepbox {
 			this._barFromCurrentState = state.bar;
 			this._channelFromCurrentState = state.channel;
 			
-			//this.barScrollPos = Math.min(this.bar, Math.max(this.bar - 15, this.barScrollPos));
+			//this.barScrollPos = Math.min(this.bar, Math.max(this.bar - (this.trackVisibleBars - 1), this.barScrollPos));
 			
 			this.forgetLastChange();
 			this.notifier.notifyWatchers();
