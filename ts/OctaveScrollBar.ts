@@ -39,8 +39,8 @@ module beepbox {
 		private readonly _upHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		private readonly _downHighlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		
-		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: pan-x; position: absolute;", width: this._editorWidth, height: this._editorHeight});
-		public readonly container: HTMLDivElement = html.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 481px; overflow: hidden; position: relative;"}, [this._svg]);
+		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: pan-x; position: absolute;", width: this._editorWidth, height: "100%", viewBox: "0 0 20 481", preserveAspectRatio: "none"});
+		public readonly container: HTMLDivElement = html.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 100%; overflow: hidden; position: relative; flex-shrink: 0;"}, [this._svg]);
 		
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
@@ -81,9 +81,9 @@ module beepbox {
 			this.container.addEventListener("mouseout", this._whenMouseOut);
 			
 			this.container.addEventListener("touchstart", this._whenTouchPressed);
-			document.addEventListener("touchmove", this._whenTouchMoved);
-			document.addEventListener("touchend", this._whenCursorReleased);
-			document.addEventListener("touchcancel", this._whenCursorReleased);
+			this.container.addEventListener("touchmove", this._whenTouchMoved);
+			this.container.addEventListener("touchend", this._whenCursorReleased);
+			this.container.addEventListener("touchcancel", this._whenCursorReleased);
 		}
 		
 		private _whenMouseOver = (event: MouseEvent): void => {
@@ -103,7 +103,7 @@ module beepbox {
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
 			this._updatePreview();
 			
@@ -118,7 +118,7 @@ module beepbox {
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
-			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
 			this._updatePreview();
 			
@@ -131,7 +131,7 @@ module beepbox {
 		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    this._whenCursorMoved();
 		}
 		
@@ -140,7 +140,7 @@ module beepbox {
 			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
-			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    this._whenCursorMoved();
 		}
 		

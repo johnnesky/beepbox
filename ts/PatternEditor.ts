@@ -59,7 +59,7 @@ module beepbox {
 		private _svgNoteContainer: SVGSVGElement = <SVGSVGElement> svgElement("svg");
 		private readonly _svgPlayhead: SVGRectElement = <SVGRectElement> svgElement("rect", {id: "", x: "0", y: "0", width: "4", height: "481", fill: "white", "pointer-events": "none"});
 		private readonly _svgPreview: SVGPathElement = <SVGPathElement> svgElement("path", {fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none"});
-		private readonly _svg: SVGSVGElement = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: "512", height: "481"}, [
+		private readonly _svg: SVGSVGElement = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: "100%", height: "100%", viewBox: "0 0 512 481", preserveAspectRatio: "none"}, [
 			svgElement("defs", undefined, [
 				this._svgNoteBackground,
 				this._svgDrumBackground,
@@ -69,7 +69,7 @@ module beepbox {
 			this._svgPreview,
 			this._svgPlayhead,
 		]);
-		public readonly container: HTMLDivElement = html.div({style: "height: 481px; overflow:hidden; position: relative;"}, [this._svg]);
+		public readonly container: HTMLDivElement = html.div({style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1;"}, [this._svg]);
 		
 		private readonly _defaultPitchHeight: number = 13;
 		private readonly _defaultDrumHeight: number = 40;
@@ -93,12 +93,17 @@ module beepbox {
 		private _mouseOver: boolean = false;
 		private _mouseDragging: boolean = false;
 		private _mouseHorizontal: boolean = false;
+		private _usingTouch: boolean = false;
 		private _copiedPinChannels: NotePin[][] = [];
 		private _copiedPins: NotePin[];
 		private _mouseXStart: number = 0;
 		private _mouseYStart: number = 0;
 		private _mouseXPrev: number = 0;
 		private _mouseYPrev: number = 0;
+		private _dragTime: number = 0;
+		private _dragPitch: number = 0;
+		private _dragVolume: number = 0;
+		private _dragVisible: boolean = false;
 		//private _precise: boolean = false;
 		//private _precisionX: number = 0;
 		private _dragChange: UndoableChange | null = null;
@@ -144,9 +149,9 @@ module beepbox {
 			this._svg.addEventListener("mouseout", this._whenMouseOut);
 			
 			this._svg.addEventListener("touchstart", this._whenTouchPressed);
-			document.addEventListener("touchmove", this._whenTouchMoved);
-			document.addEventListener("touchend", this._whenCursorReleased);
-			document.addEventListener("touchcancel", this._whenCursorReleased);
+			this._svg.addEventListener("touchmove", this._whenTouchMoved);
+			this._svg.addEventListener("touchend", this._whenCursorReleased);
+			this._svg.addEventListener("touchcancel", this._whenCursorReleased);
 			
 			this.resetCopiedPins();
 		}
@@ -393,6 +398,7 @@ module beepbox {
 		private _whenMouseOver = (event: MouseEvent): void => {
 			if (this._mouseOver) return;
 			this._mouseOver = true;
+			this._usingTouch = false;
 		}
 		
 		private _whenMouseOut = (event: MouseEvent): void => {
@@ -404,8 +410,9 @@ module beepbox {
 			event.preventDefault();
 			if (this._pattern == null) return;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+    		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
+		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+			this._usingTouch = false;
 			this._whenCursorPressed();
 		}
 		
@@ -413,8 +420,9 @@ module beepbox {
 			event.preventDefault();
 			if (this._pattern == null) return;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-			this._mouseX = event.touches[0].clientX - boundingRect.left;
-			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
+			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+			this._usingTouch = true;
 			this._whenCursorPressed();
 		}
 		
@@ -432,8 +440,9 @@ module beepbox {
 		
 		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+    		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
+		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+			this._usingTouch = false;
 		    this._whenCursorMoved();
 		}
 		
@@ -441,8 +450,8 @@ module beepbox {
 			if (!this._mouseDown) return;
 			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-			this._mouseX = event.touches[0].clientX - boundingRect.left;
-			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
+			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    this._whenCursorMoved();
 		}
 		
@@ -541,6 +550,11 @@ module beepbox {
 						const theNote: Note = makeNote(this._cursor.pitch, start, end, 3, this._doc.song.getChannelIsDrum(this._doc.channel));
 						sequence.append(new ChangeNoteAdded(this._doc, this._pattern, theNote, i));
 						this._copyPins(theNote);
+						
+						this._dragTime = backwards ? start : end;
+						this._dragPitch = this._cursor.pitch;
+						this._dragVolume = theNote.pins[backwards ? 0 : 1].volume;
+						this._dragVisible = true;
 					} else if (this._mouseHorizontal) {
 						const shift: number = Math.round((this._mouseX - this._mouseXStart) / this._partWidth);
 						
@@ -553,9 +567,17 @@ module beepbox {
 						    shiftedTime >= this._cursor.curNote.end   && this._cursor.nearPinIndex == 0)
 						{
 							sequence.append(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
+							
+							this._dragVisible = false;
 						} else {
 							start = Math.min(this._cursor.curNote.start, shiftedTime);
 							end   = Math.max(this._cursor.curNote.end,   shiftedTime);
+							
+							this._dragTime = shiftedTime;
+							this._dragPitch = this._cursor.curNote.pitches[this._cursor.pitchIndex == -1 ? 0 : this._cursor.pitchIndex] + this._cursor.curNote.pins[this._cursor.nearPinIndex].interval;
+							this._dragVolume = this._cursor.curNote.pins[this._cursor.nearPinIndex].volume;
+							this._dragVisible = true;
+							
 							sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, start, end, this._cursor.curNote));
 							sequence.append(new ChangePinTime(this._doc, this._cursor.curNote, this._cursor.nearPinIndex, shiftedTime));
 							this._copyPins(this._cursor.curNote);
@@ -580,9 +602,16 @@ module beepbox {
 							break;
 						}
 						
+						this._dragTime = this._cursor.curNote.start + bendPart;
+						this._dragPitch = this._cursor.curNote.pitches[this._cursor.pitchIndex == -1 ? 0 : this._cursor.pitchIndex] + bendInterval;
+						this._dragVolume = bendVolume;
+						this._dragVisible = true;
+						
 						sequence.append(new ChangeVolumeBend(this._doc, this._pattern, this._cursor.curNote, bendPart, bendVolume, bendInterval));
 						this._copyPins(this._cursor.curNote);
 					} else {
+						this._dragVolume = this._cursor.curNote.pins[this._cursor.nearPinIndex].volume;
+						
 						let bendStart: number;
 						let bendEnd: number;
 						if (this._mouseX >= this._mouseXStart) {
@@ -612,6 +641,10 @@ module beepbox {
 						const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, Config.maxPitch - maxPitch);
 						sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
 						this._copyPins(this._cursor.curNote);
+						
+						this._dragTime = bendEnd;
+						this._dragPitch = bendTo;
+						this._dragVisible = true;
 					}
 				}
 				this._mouseXPrev = this._mouseX;
@@ -665,11 +698,43 @@ module beepbox {
 		}
 		
 		private _updatePreview(): void {
-			if (!this._mouseOver || this._mouseDown || !this._cursor.valid || this._pattern == null) {
-				this._svgPreview.setAttribute("visibility", "hidden");
+			if (this._usingTouch) {
+				if (!this._mouseDown || !this._cursor.valid  || !this._mouseDragging || !this._dragVisible || this._pattern == null) {
+					this._svgPreview.setAttribute("visibility", "hidden");
+				} else {
+					this._svgPreview.setAttribute("visibility", "visible");
+					
+					const x: number = this._partWidth * this._dragTime;
+					const y: number = this._pitchToPixelHeight(this._dragPitch - this._octaveOffset);
+					const radius: number = this._pitchHeight / 2;
+					const width: number = 80;
+					const height: number = 60;
+					//this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+					
+					let pathString: string = "";
+					
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0) - height) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0) + height) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
+					
+					this._svgPreview.setAttribute("d", pathString);
+				}
 			} else {
-				this._svgPreview.setAttribute("visibility", "visible");
-				this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+				if (!this._mouseOver || this._mouseDown || !this._cursor.valid || this._pattern == null) {
+					this._svgPreview.setAttribute("visibility", "hidden");
+				} else {
+					this._svgPreview.setAttribute("visibility", "visible");
+					this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+				}
 			}
 		}
 		
@@ -695,7 +760,8 @@ module beepbox {
 			
 			if (this._renderedWidth != this._editorWidth) {
 				this._renderedWidth = this._editorWidth;
-				this._svg.setAttribute("width", "" + this._editorWidth);
+				//this._svg.setAttribute("width", "" + this._editorWidth);
+				this._svg.setAttribute("viewBox", "0 0 " + this._editorWidth + " 481");
 				this._svgBackground.setAttribute("width", "" + this._editorWidth);
 			}
 			
@@ -736,14 +802,14 @@ module beepbox {
 					this._renderedDrums = true;
 					this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
 					this._svgBackground.setAttribute("height", "" + (this._defaultDrumHeight * Config.drumCount));
-					this._svg.setAttribute("height", "" + (this._defaultDrumHeight * Config.drumCount));
+					//this._svg.setAttribute("height", "" + (this._defaultDrumHeight * Config.drumCount));
 				}
 			} else {
 				if (this._renderedDrums) {
 					this._renderedDrums = false;
 					this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground)");
 					this._svgBackground.setAttribute("height", "" + this._editorHeight);
-					this._svg.setAttribute("height", "" + this._editorHeight);
+					//this._svg.setAttribute("height", "" + this._editorHeight);
 				}
 			}
 			

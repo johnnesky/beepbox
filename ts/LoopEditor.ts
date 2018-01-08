@@ -38,7 +38,6 @@ interface Endpoints {
 module beepbox {
 	export class LoopEditor {
 		private readonly _barWidth: number = 32;
-		private readonly _editorWidth: number = 512;
 		private readonly _editorHeight: number = 20;
 		private readonly _startMode:   number = 0;
 		private readonly _endMode:     number = 1;
@@ -47,23 +46,26 @@ module beepbox {
 		private readonly _loop = <SVGPathElement> svgElement("path", {fill: "none", stroke: "#7744ff", "stroke-width": 4});
 		private readonly _highlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
 		
-		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: pan-y; position: absolute;", width: this._editorWidth, height: this._editorHeight}, [
+		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: pan-y; position: absolute;", height: this._editorHeight}, [
 			this._loop,
 			this._highlight,
 		]);
 		
-		private readonly _canvas: HTMLCanvasElement = html.canvas({width: "512", height: "20"});
-		private readonly _preview: HTMLCanvasElement = html.canvas({width: "512", height: "20"});
-		public readonly container: HTMLElement = html.div({style: "width: 512px; height: 20px; position: relative;"}, [this._svg]);
+		public readonly container: HTMLElement = html.div({style: "height: 20px; position: relative; margin: 5px 0;"}, [this._svg]);
 		
 		private _change: ChangeLoop | null = null;
 		private _cursor: Cursor = {startBar: -1, mode: -1};
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
+		private _clientStartX: number = 0;
+		private _clientStartY: number = 0;
+		private _startedScrolling: boolean = false;
+		private _draggingHorizontally: boolean = false;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _renderedLoopStart: number = -1;
 		private _renderedLoopStop: number = -1;
+		private _renderedBarCount: number = 0;
 		
 		constructor(private _doc: SongDocument) {
 			this._updateCursorStatus();
@@ -77,13 +79,13 @@ module beepbox {
 			this.container.addEventListener("mouseout", this._whenMouseOut);
 			
 			this.container.addEventListener("touchstart", this._whenTouchPressed);
-			document.addEventListener("touchmove", this._whenTouchMoved);
-			document.addEventListener("touchend", this._whenCursorReleased);
-			document.addEventListener("touchcancel", this._whenCursorReleased);
+			this.container.addEventListener("touchmove", this._whenTouchMoved);
+			this.container.addEventListener("touchend", this._whenTouchReleased);
+			this.container.addEventListener("touchcancel", this._whenTouchReleased);
 		}
 		
 		private _updateCursorStatus(): void {
-			const bar: number = this._mouseX / this._barWidth + this._doc.barScrollPos;
+			const bar: number = this._mouseX / this._barWidth;
 			this._cursor.startBar = bar;
 			
 			if (bar > this._doc.song.loopStart - 0.25 && bar < this._doc.song.loopStart + this._doc.song.loopLength + 0.25) {
@@ -135,14 +137,18 @@ module beepbox {
 		}
 		
 		private _whenTouchPressed = (event: TouchEvent): void => {
-			event.preventDefault();
+			//event.preventDefault();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
 			this._updateCursorStatus();
 			this._updatePreview();
-			this._whenTouchMoved(event);
+			//this._whenTouchMoved(event);
+			this._clientStartX = event.touches[0].clientX;
+			this._clientStartY = event.touches[0].clientY;
+			this._draggingHorizontally = false;
+			this._startedScrolling = false;
 		}
 		
 		private _whenMouseMoved = (event: MouseEvent): void => {
@@ -154,11 +160,22 @@ module beepbox {
 		
 		private _whenTouchMoved = (event: TouchEvent): void => {
 			if (!this._mouseDown) return;
-			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = event.touches[0].clientY - boundingRect.top;
-		    this._whenCursorMoved();
+			
+			if (!this._draggingHorizontally && !this._startedScrolling) {
+				if (Math.abs(event.touches[0].clientY - this._clientStartY) > 10) {
+					this._startedScrolling = true;
+				} else if (Math.abs(event.touches[0].clientX - this._clientStartX) > 10) {
+					this._draggingHorizontally = true;
+				}
+			}
+			
+		    if (this._draggingHorizontally) {
+				this._whenCursorMoved();
+				event.preventDefault();
+		    }
 		}
 		
 		private _whenCursorMoved(): void {
@@ -170,7 +187,7 @@ module beepbox {
 					oldEnd = oldStart + this._change.oldLength;
 				}
 				
-				const bar: number = this._mouseX / this._barWidth + this._doc.barScrollPos;
+				const bar: number = this._mouseX / this._barWidth;
 				let start: number;
 				let end: number;
 				let temp: number;
@@ -211,6 +228,16 @@ module beepbox {
 			}
 		}
 		
+		private _whenTouchReleased = (event: TouchEvent): void => {
+			event.preventDefault();
+		    if (!this._startedScrolling) {
+				this._whenCursorMoved();
+				this._mouseOver = false;
+				this._whenCursorReleased(event);
+				this._updatePreview();
+		    }
+		}
+		
 		private _whenCursorReleased = (event: Event): void => {
 			if (this._change != null) this._doc.history.record(this._change);
 			this._change = null;
@@ -226,16 +253,16 @@ module beepbox {
 			if (showHighlight) {
 				const radius: number = this._editorHeight / 2;
 				
-				let highlightStart: number = (this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth;
-				let highlightStop: number = (this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth;
+				let highlightStart: number = (this._doc.song.loopStart) * this._barWidth;
+				let highlightStop: number = (this._doc.song.loopStart + this._doc.song.loopLength) * this._barWidth;
 				if (this._cursor.mode == this._startMode) {
-					highlightStop = (this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth + radius * 2;
+					highlightStop = (this._doc.song.loopStart) * this._barWidth + radius * 2;
 				} else if (this._cursor.mode == this._endMode) {
-					highlightStart = (this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth - radius * 2;
+					highlightStart = (this._doc.song.loopStart + this._doc.song.loopLength) * this._barWidth - radius * 2;
 				} else {
 					const endPoints: Endpoints = this._findEndPoints(this._cursor.startBar);
-					highlightStart = (endPoints.start - this._doc.barScrollPos) * this._barWidth;
-					highlightStop = (endPoints.start + endPoints.length - this._doc.barScrollPos) * this._barWidth;
+					highlightStart = (endPoints.start) * this._barWidth;
+					highlightStop = (endPoints.start + endPoints.length) * this._barWidth;
 				}
 				
 				this._highlight.setAttribute("d",
@@ -255,9 +282,16 @@ module beepbox {
 		
 		private _render(): void {
 			const radius: number = this._editorHeight / 2;
-			const loopStart: number = (this._doc.song.loopStart - this._doc.barScrollPos) * this._barWidth;
-			const loopStop: number = (this._doc.song.loopStart + this._doc.song.loopLength - this._doc.barScrollPos) * this._barWidth;
+			const loopStart: number = (this._doc.song.loopStart) * this._barWidth;
+			const loopStop: number = (this._doc.song.loopStart + this._doc.song.loopLength) * this._barWidth;
 			
+			if (this._renderedBarCount != this._doc.song.barCount) {
+				this._renderedBarCount = this._doc.song.barCount;
+				const editorWidth = 32 * this._doc.song.barCount;
+				this.container.style.width = editorWidth + "px";
+				this._svg.setAttribute("width", editorWidth + "");
+			}
+
 			if (this._renderedLoopStart != loopStart || this._renderedLoopStop != loopStop) {
 				this._renderedLoopStart = loopStart;
 				this._renderedLoopStop = loopStop;

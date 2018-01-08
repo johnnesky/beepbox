@@ -471,9 +471,7 @@ module beepbox {
 				} else {
 					// For remaining tracks, set up the instruments and write the notes:
 					
-					const pitchChannelNames = ["cyan channel", "yellow channel", "orange channel", "green channel", "purple channel", "blue channel"];
-					const drumChannelNames = ["gray channel", "brown channel"];
-					let channelName: string = song.getChannelIsDrum(channel) ? drumChannelNames[channel - song.pitchChannelCount] : pitchChannelNames[channel];
+					let channelName: string = song.getChannelIsDrum(channel) ? Config.midiDrumChannelNames[channel - song.pitchChannelCount] : Config.midiPitchChannelNames[channel];
 					if (isChorus) channelName += " chorus";
 					writeEventTime(0);
 					writeUint16(0xFF03); // track name meta event.
@@ -532,31 +530,7 @@ module beepbox {
 									description += ", effect: " + Config.effectNames[song.instrumentEffects[channel][nextInstrument]];
 									writeAscii(description);
 									
-									const sustainInstruments: number[] = [
-										0x47, // triangle -> clarinet
-										0x50, // square -> square wave
-										0x46, // pulse wide -> bassoon
-										0x44, // pulse narrow -> oboe
-										0x51, // sawtooth -> sawtooth wave
-										0x51, // double saw -> sawtooth wave
-										0x51, // double pulse -> sawtooth wave
-										0x51, // spiky -> sawtooth wave
-										0x4A, // plateau -> recorder
-									];
-									
-									const decayInstruments: number[] = [
-										0x2E, // triangle -> harp
-										0x2E, // square -> harp
-										0x06, // pulse wide -> harpsichord
-										0x18, // pulse narrow -> nylon guitar
-										0x19, // sawtooth -> steel guitar
-										0x19, // double saw -> steel guitar
-										0x6A, // double pulse -> shamisen
-										0x6A, // spiky -> shamisen
-										0x21, // plateau -> fingered bass
-									];
-									
-									const filterInstruments: number[] = song.instrumentFilters[channel][nextInstrument] < 3 ? sustainInstruments : decayInstruments;
+									const filterInstruments: number[] = Config.filterDecays[song.instrumentFilters[channel][nextInstrument]] == 0 ? Config.midiSustainInstruments : Config.midiDecayInstruments;
 									
 									// Program (instrument) change event:
 									writeEventTime(barStartTime);

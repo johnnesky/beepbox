@@ -101,6 +101,30 @@ module beepbox {
 		public static readonly drumChannelColorsBright: ReadonlyArray<string> = ["#aaaaaa", "#ddaa77"];
 		public static readonly drumNoteColorsDim: ReadonlyArray<string>       = ["#aaaaaa", "#cc9966"];
 		public static readonly drumNoteColorsBright: ReadonlyArray<string>    = ["#eeeeee", "#f0d0bb"];
+		public static readonly midiPitchChannelNames: ReadonlyArray<string> = ["cyan channel", "yellow channel", "orange channel", "green channel", "purple channel", "blue channel"];
+		public static readonly midiDrumChannelNames: ReadonlyArray<string> = ["gray channel", "brown channel"];
+		public static readonly midiSustainInstruments: number[] = [
+			0x47, // triangle -> clarinet
+			0x50, // square -> square wave
+			0x46, // pulse wide -> bassoon
+			0x44, // pulse narrow -> oboe
+			0x51, // sawtooth -> sawtooth wave
+			0x51, // double saw -> sawtooth wave
+			0x51, // double pulse -> sawtooth wave
+			0x51, // spiky -> sawtooth wave
+			0x4A, // plateau -> recorder
+		];
+		public static readonly midiDecayInstruments: number[] = [
+			0x2E, // triangle -> harp
+			0x2E, // square -> harp
+			0x06, // pulse wide -> harpsichord
+			0x18, // pulse narrow -> nylon guitar
+			0x19, // sawtooth -> steel guitar
+			0x19, // double saw -> steel guitar
+			0x6A, // double pulse -> shamisen
+			0x6A, // spiky -> shamisen
+			0x21, // plateau -> fingered bass
+		];
 		public static readonly drumInterval: number = 6;
 		public static readonly drumCount: number = 12;
 		public static readonly pitchCount: number = 37;
@@ -424,7 +448,7 @@ module beepbox {
 		};
 	}
 	
-	export function filledArray<T>(count: number, value: T): T[] {
+	export function filledArray <T> (count: number, value: T): T[] {
 		const array: T[] = [];
 		for (let i: number = 0; i < count; i++) array[i] = value;
 		return array;
@@ -841,8 +865,9 @@ module beepbox {
 						this.instrumentWaves[channel][0] = this._clip(0, Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
+							const isDrums = channel >= this.pitchChannelCount;
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentWaves[channel][i] = this._clip(0, i < this.pitchChannelCount ? Config.waveNames.length : Config.drumNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.instrumentWaves[channel][i] = this._clip(0, isDrums ? Config.drumNames.length : Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
@@ -1242,7 +1267,10 @@ module beepbox {
 			}
 			
 			if (jsonObject.ticksPerBeat != undefined) {
-				this.partsPerBeat = Math.max(3, Math.min(4, jsonObject.ticksPerBeat | 0));
+				this.partsPerBeat = jsonObject.ticksPerBeat | 0;
+				if (Config.partCounts.indexOf(this.partsPerBeat) == -1) {
+					this.partsPerBeat = Config.partCounts[Config.partCounts.length - 1];
+				}
 			}
 			
 			let maxInstruments: number = 1;
