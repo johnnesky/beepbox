@@ -57,10 +57,10 @@ module beepbox {
 		public static readonly keyNames: ReadonlyArray<string> = ["B", "A♯", "A", "G♯", "G", "F♯", "F", "E", "D♯", "D", "C♯", "C"];
 		// C1 has index 24 on the MIDI scale. C8 is 108, and C9 is 120. C10 is barely in the audible range.
 		public static readonly keyTransposes: ReadonlyArray<number> = [23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12];
-		public static readonly tempoNames: ReadonlyArray<string> = ["molasses", "slow", "leisurely", "moderate", "steady", "brisk", "hasty", "fast", "strenuous", "grueling", "hyper", "ludicrous"];
+		public static readonly tempoSteps: number = 15;
 		public static readonly reverbRange: number = 4;
 		public static readonly beatsPerBarMin: number = 3;
-		public static readonly beatsPerBarMax: number = 15;
+		public static readonly beatsPerBarMax: number = 16;
 		public static readonly barCountMin: number = 1;
 		public static readonly barCountMax: number = 128;
 		public static readonly patternsPerChannelMin: number = 1;
@@ -837,7 +837,7 @@ module beepbox {
 					} else {
 						this.tempo = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					}
-					this.tempo = this._clip(0, Config.tempoNames.length, this.tempo);
+					this.tempo = this._clip(0, Config.tempoSteps, this.tempo);
 				} else if (command == CharCode.m) {
 					this.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.reverb = this._clip(0, Config.reverbRange, this.reverb);
@@ -1255,7 +1255,7 @@ module beepbox {
 			if (jsonObject.beatsPerMinute != undefined) {
 				const bpm: number = jsonObject.beatsPerMinute | 0;
 				this.tempo = Math.round(4.0 + 9.0 * Math.log(bpm / 120) / Math.LN2);
-				this.tempo = this._clip(0, Config.tempoNames.length, this.tempo);
+				this.tempo = this._clip(0, Config.tempoSteps, this.tempo);
 			}
 			
 			if (jsonObject.reverb != undefined) {

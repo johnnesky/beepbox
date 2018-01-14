@@ -59,8 +59,6 @@ module beepbox {
 	export class SongEditor {
 		public prompt: Prompt | null = null;
 		
-		private readonly _width: number = 700;
-		private readonly _height: number = 645;
 		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
 		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
 		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
@@ -106,8 +104,8 @@ module beepbox {
 		private readonly _exportButton: HTMLButtonElement = button({type: "button"}, [text("Export")]);
 		private readonly _scaleDropDown: HTMLSelectElement = buildOptions(select({}), Config.scaleNames);
 		private readonly _keyDropDown: HTMLSelectElement = buildOptions(select({}), Config.keyNames);
-		private readonly _tempoSlider: HTMLInputElement = input({style: "margin: 0px;", type: "range", min: "0", max: "11", value: "7", step: "1"});
-		private readonly _reverbSlider: HTMLInputElement = input({style: "margin: 0px;", type: "range", min: "0", max: "3", value: "0", step: "1"});
+		private readonly _tempoSlider: HTMLInputElement = input({style: "margin: 0px;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"});
+		private readonly _reverbSlider: HTMLInputElement = input({style: "margin: 0px;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"});
 		private readonly _partDropDown: HTMLSelectElement = buildOptions(select({}), Config.partNames);
 		private readonly _instrumentDropDown: HTMLSelectElement = select({});
 		private readonly _instrumentDropDownGroup: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, [span({}, [text("Instrument: ")]), div({className: "selectContainer"}, [this._instrumentDropDown])]);

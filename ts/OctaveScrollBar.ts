@@ -104,6 +104,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
 			this._updatePreview();
 			
@@ -119,6 +120,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
 			this._updatePreview();
 			
@@ -132,6 +134,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 		    this._whenCursorMoved();
 		}
 		
@@ -141,6 +144,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 		    this._whenCursorMoved();
 		}
 		

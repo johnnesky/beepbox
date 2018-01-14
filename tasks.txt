@@ -207,9 +207,11 @@
 √ the method for cycling patterns on a bar is inadequate on touchscreen... use select menu? also update instructions in index.html for changing patterns.
 √ highlight note edge extensions on touch
 √ midi channel export names should be in Config.
+√ random infinite loops when opening new song?
+√ when pattern is 0, show other channels anyway over black pattern editor.
+√ faster tempos
 
 MISC:
-- the offline html needs to be kept in sync with index.html.
 - I don't like how when you click the wave menu then use arrow keys to select drums the editor loses focus.
 - pitch bends mixed with arpeggios don’t properly check min/max bounds
 - can I improve the interaction for volume envelope dragging and pitch dragging? illustrate volume envelope dragging to make it less confusing. 
