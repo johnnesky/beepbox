@@ -412,6 +412,8 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseX)) this._mouseX = 0;
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._usingTouch = false;
 			this._whenCursorPressed();
 		}
@@ -422,6 +424,8 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseX)) this._mouseX = 0;
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._usingTouch = true;
 			this._whenCursorPressed();
 		}
@@ -442,6 +446,8 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseX)) this._mouseX = 0;
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._usingTouch = false;
 		    this._whenCursorMoved();
 		}
@@ -452,6 +458,8 @@ module beepbox {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseX)) this._mouseX = 0;
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 		    this._whenCursorMoved();
 		}
 		
@@ -782,12 +790,6 @@ module beepbox {
 			
 			this._updatePreview();
 			
-			if (this._pattern == null) {
-				this._svg.style.visibility = "hidden";
-				return;
-			}
-			this._svg.style.visibility = "visible";
-			
 			if (this._renderedFifths != this._doc.showFifth) {
 				this._renderedFifths = this._doc.showFifth;
 				this._backgroundPitchRows[7].setAttribute("fill", this._doc.showFifth ? "#446688" : "#444444");
@@ -832,19 +834,25 @@ module beepbox {
 				}
 			}
 			
-			for (const note of this._pattern.notes) {
-				for (const pitch of note.pitches) {
-					let notePath: SVGPathElement = <SVGPathElement> svgElement("path");
-					notePath.setAttribute("fill", this._doc.song.getNoteColorDim(this._doc.channel));
-					notePath.setAttribute("pointer-events", "none");
-					this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
-					this._svgNoteContainer.appendChild(notePath);
-					notePath = <SVGPathElement> svgElement("path");
-					notePath.setAttribute("fill", this._doc.song.getNoteColorBright(this._doc.channel));
-					notePath.setAttribute("pointer-events", "none");
-					this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
-					this._svgNoteContainer.appendChild(notePath);
+			if (this._pattern != null) {
+				for (const note of this._pattern.notes) {
+					for (const pitch of note.pitches) {
+						let notePath: SVGPathElement = <SVGPathElement> svgElement("path");
+						notePath.setAttribute("fill", this._doc.song.getNoteColorDim(this._doc.channel));
+						notePath.setAttribute("pointer-events", "none");
+						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
+						this._svgNoteContainer.appendChild(notePath);
+						notePath = <SVGPathElement> svgElement("path");
+						notePath.setAttribute("fill", this._doc.song.getNoteColorBright(this._doc.channel));
+						notePath.setAttribute("pointer-events", "none");
+						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+						this._svgNoteContainer.appendChild(notePath);
+					}
 				}
+				
+				this._svgBackground.style.visibility = "visible";
+			} else {
+				this._svgBackground.style.visibility = "hidden";
 			}
 		}
 		

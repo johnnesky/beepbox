@@ -89,7 +89,6 @@ module beepbox {
 		
 		private _updateCursorPitch(): void {
 			const scale: ReadonlyArray<boolean> = Config.scaleFlags[this._doc.song.scale];
-			
 			const mousePitch: number = Math.max(0, Math.min(this._pitchCount-1, this._pitchCount - (this._mouseY / this._pitchHeight)));
 			if (scale[Math.floor(mousePitch) % 12] || this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				this._cursorPitch = Math.floor(mousePitch);
@@ -132,6 +131,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._doc.synth.pianoPressed = true;
 			this._updatePreview();
 		}
@@ -140,6 +140,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._updateCursorPitch();
 			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
 			this._updatePreview();
@@ -157,6 +158,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._updateCursorPitch();
 			this._doc.synth.pianoPressed = true;
 			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
@@ -167,6 +169,7 @@ module beepbox {
 			const boundingRect: ClientRect = this._canvas.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
+		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._updateCursorPitch();
 			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
 		}
