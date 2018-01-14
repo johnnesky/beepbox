@@ -340,7 +340,8 @@ module beepbox {
 		public render(): void {
 			this._pattern = this._doc.getCurrentPattern();
 			
-			const squashed: boolean = this._doc.song.getChannelCount() > 4 || (this._doc.song.barCount > this._doc.trackVisibleBars && this._doc.song.getChannelCount() > 3);
+			const wideScreen: boolean = window.innerWidth > 700;
+			const squashed: boolean = !wideScreen || this._doc.song.getChannelCount() > 4 || (this._doc.song.barCount > this._doc.trackVisibleBars && this._doc.song.getChannelCount() > 3);
 			this._channelHeight = squashed ? 27 : 32;
 			
 			if (this._renderedChannelCount != this._doc.song.getChannelCount()) {

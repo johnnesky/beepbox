@@ -141,59 +141,61 @@ module beepbox {
 		private readonly _promptContainer: HTMLDivElement = div({className: "promptContainer", style: "display: none;"});
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"}, [
 			this._editorBox,
-			div({className: "editor-widgets"}, [
+			div({className: "editor-widget-column"}, [
 				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.2.1")]),
-				div({className: "editor-controls"}, [
-					div({className: "playback-controls"}, [
-						div({className: "playback-bar-controls"}, [
-							this._playButton,
-							this._prevBarButton,
-							this._nextBarButton,
-						]),
-						div({className: "playback-volume-controls"}, [
-							// Volume speaker icon:
-							svgElement("svg", {style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26"}, [
-								svgElement("path", {d: "M 4 17 L 4 9 L 8 9 L 12 5 L 12 21 L 8 17 z", fill: "#777"}),
-								svgElement("path", {d: "M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z", fill: "#777"}),
-								svgElement("path", {d: "M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777"}),
+				div({className: "editor-widgets"}, [
+					div({className: "editor-controls"}, [
+						div({className: "playback-controls"}, [
+							div({className: "playback-bar-controls"}, [
+								this._playButton,
+								this._prevBarButton,
+								this._nextBarButton,
 							]),
-							this._volumeSlider,
+							div({className: "playback-volume-controls"}, [
+								// Volume speaker icon:
+								svgElement("svg", {style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26"}, [
+									svgElement("path", {d: "M 4 17 L 4 9 L 8 9 L 12 5 L 12 21 L 8 17 z", fill: "#777"}),
+									svgElement("path", {d: "M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z", fill: "#777"}),
+									svgElement("path", {d: "M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777"}),
+								]),
+								this._volumeSlider,
+							]),
+						]),
+						div({className: "editor-menus"}, [
+							div({className: "selectContainer menu"}, [this._editMenu]),
+							div({className: "selectContainer menu"}, [this._optionsMenu]),
+							this._exportButton,
 						]),
 					]),
-					div({className: "editor-menus"}, [
-						div({className: "selectContainer menu"}, [this._editMenu]),
-						div({className: "selectContainer menu"}, [this._optionsMenu]),
-						this._exportButton,
-					]),
-				]),
-				div({className: "fullWidthSpacer", style: "flex: 0 1 15px;"}),
-				div({className: "editor-settings"}, [
-					div({className: "editor-song-settings"}, [
-						div({style: "margin: 3px 0; text-align: center;"}, [text("Song Settings")]),
-						div({className: "selectRow"}, [
-							span({}, [text("Scale: ")]),
-							div({className: "selectContainer"}, [this._scaleDropDown]),
+					div({className: "fullWidthSpacer", style: "flex: 0 1 15px;"}),
+					div({className: "editor-settings"}, [
+						div({className: "editor-song-settings"}, [
+							div({style: "margin: 3px 0; text-align: center;"}, [text("Song Settings")]),
+							div({className: "selectRow"}, [
+								span({}, [text("Scale: ")]),
+								div({className: "selectContainer"}, [this._scaleDropDown]),
+							]),
+							div({className: "selectRow"}, [
+								span({}, [text("Key: ")]),
+								div({className: "selectContainer"}, [this._keyDropDown]),
+							]),
+							div({className: "selectRow"}, [
+								span({}, [text("Tempo: ")]),
+								this._tempoSlider,
+							]),
+							div({className: "selectRow"}, [
+								span({}, [text("Reverb: ")]),
+								this._reverbSlider,
+							]),
+							div({className: "selectRow"}, [
+								span({}, [text("Rhythm: ")]),
+								div({className: "selectContainer"}, [this._partDropDown]),
+							]),
 						]),
-						div({className: "selectRow"}, [
-							span({}, [text("Key: ")]),
-							div({className: "selectContainer"}, [this._keyDropDown]),
+						div({className: "editor-instrument-settings"}, [
+							this._instrumentSettingsLabel,
+							this._instrumentSettingsGroup,
 						]),
-						div({className: "selectRow"}, [
-							span({}, [text("Tempo: ")]),
-							this._tempoSlider,
-						]),
-						div({className: "selectRow"}, [
-							span({}, [text("Reverb: ")]),
-							this._reverbSlider,
-						]),
-						div({className: "selectRow"}, [
-							span({}, [text("Rhythm: ")]),
-							div({className: "selectContainer"}, [this._partDropDown]),
-						]),
-					]),
-					div({className: "editor-instrument-settings"}, [
-						this._instrumentSettingsLabel,
-						this._instrumentSettingsGroup,
 					]),
 				]),
 			]),

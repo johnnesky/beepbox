@@ -271,6 +271,11 @@ styleSheet.appendChild(document.createTextNode(`
 	color: #999;
 }
 
+.beepboxEditor .editor-widget-column {
+	display: flex;
+	flex-direction: column;
+}
+
 .beepboxEditor .editor-widgets {
 	display: flex;
 	flex-direction: column;
@@ -421,7 +426,7 @@ styleSheet.appendChild(document.createTextNode(`
 		flex-grow: 1;
 		margin-left: 10px;
 	}
-	.beepboxEditor .editor-widgets {
+	.beepboxEditor .editor-widget-column {
 		margin-left: 6px;
 		width: 182px;
 		height: 645px;
@@ -476,6 +481,9 @@ styleSheet.appendChild(document.createTextNode(`
 		align-items: center;
 		flex-grow: 1;
 		margin: 0 5px;
+	}
+	.beepboxEditor .editor-widget-column {
+		flex-direction: column-reverse;
 	}
 	.beepboxEditor .editor-settings {
 		flex-direction: row;
