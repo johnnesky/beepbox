@@ -42,6 +42,8 @@ handlers:
 - url: /
   static_files: index.html
   upload: index\.html
+  secure: always
+  redirect_http_response_code: 301
 
 - url: /synth_example\.html
   static_files: synth_example.html

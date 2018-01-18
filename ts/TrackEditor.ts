@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012 John Nesky
+Copyright (C) 2018 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -25,7 +25,7 @@ SOFTWARE.
 /// <reference path="html.ts" />
 /// <reference path="SongEditor.ts" />
 
-module beepbox {
+namespace beepbox {
 	class Box {
 		private readonly _text: Text = html.text("1");
 		private readonly _label = <SVGTextElement> svgElement("text", {x: 16, y: 23, "font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red"}, [this._text]);

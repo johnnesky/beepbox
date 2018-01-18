@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012 John Nesky
+Copyright (C) 2018 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -24,7 +24,7 @@ SOFTWARE.
 /// <reference path="Change.ts" />
 /// <reference path="SongDocument.ts" />
 
-module beepbox {
+namespace beepbox {
 	export class ChangePins extends UndoableChange {
 		protected _oldStart: number;
 		protected _newStart: number;
@@ -985,5 +985,11 @@ module beepbox {
 				this._didSomething();
 			}
 		}
+	}
+	
+	function filledArray<T>(count: number, value: T): T[] {
+		const array: T[] = [];
+		for (let i: number = 0; i < count; i++) array[i] = value;
+		return array;
 	}
 }

@@ -218,12 +218,10 @@ MISC:
 - Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
 - remember recent songs in cookies or local shared object.
 - export mp3 and ogg?
-- tooltips
 - a way to pre-generate a javascript sound buffer.
 - asynchronous export
 - Make an embeddable song player and album player. (See below.) 
 - document synth api
-- disable canvas pixel blurring in high dpi? why doesn't it work yet? (or just replace piano/drums with svg)
 - do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
 
 EMBEDDED PLAYER:
@@ -256,18 +254,8 @@ PLAYLIST EDITOR:
 - put songs in browser history before/after pasting new songs.
 - offsite album/playlist player, with scrolling notes. hashbang urls, bot indexable. 
 
-AUTHENTICATION:
-- show light "http://" or "http://www.beepbox.com/" in url fields while empty
-- round trip to server auth. How are the link, iframe html, and twitter button presented?
-- author, password, website
-- non-editable songs in list from pre-published playlists
-- key stretching, salt, at least partially on server
-- cc license enforcement
-- store author/password is localSO or cookie, if "remember me" is flagged
-- flag to reveal password, otherwise show dots
-- underline author name as URL in embed player
-- "inspire me" button for passwords, shows prompt with a random button that gives you three-ish words, and requests that you personalize your password by adding some more words and punctuation to complete the thought. 
-- main website should break out of iframe for security: http://usablelayout.com/articles/automatically-break-out-iframe
+NEW EDITORS:
+- Rename synth.ts to BeepBoxSynth.ts. Pull out some of it into CommonSynth.ts. Rename SongEditor to BeepBoxSongEditor. OR: start using directories... but Typescript is pretty mean about directories if I recall?
 
 MAYBE:
 - translation/localization
@@ -275,6 +263,7 @@ MAYBE:
 - get in touch with http://youcanmakevideogames.com/resources/music
 - new preferences: follow playhead, play at load (on desktop)?
 - multitouch?
+- replace piano/drums canvas with svg
 - piano should still play when song is paused
 - illustrate arpeggio texture on tones with multiple notes, striped fill
 - @Gasparatus asked for a BPM display.

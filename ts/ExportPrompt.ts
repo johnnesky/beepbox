@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012 John Nesky
+Copyright (C) 2018 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -29,7 +29,7 @@ interface ArrayBufferConstructor {
 	transfer: any;
 }
 
-module beepbox {
+namespace beepbox {
 	const {button, div, input, text} = html;
 	
 	function lerp(low: number, high: number, t: number): number {

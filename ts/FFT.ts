@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012 John Nesky
+Copyright (C) 2018 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-module FFT {
+namespace beepbox {
 	// interface shared by number[], Float32Array, and other typed arrays in JavaScript.
 	interface NumberArray {
 		length: number;
