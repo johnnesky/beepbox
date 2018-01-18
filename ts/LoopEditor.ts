@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012 John Nesky
+Copyright (C) 2018 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -25,17 +25,17 @@ SOFTWARE.
 /// <reference path="html.ts" />
 /// <reference path="changes.ts" />
 
-interface Cursor {
-	startBar: number;
-	mode: number;
-}
-
-interface Endpoints {
-	start: number;
-	length: number;
-}
-
-module beepbox {
+namespace beepbox {
+	interface Cursor {
+		startBar: number;
+		mode: number;
+	}
+	
+	interface Endpoints {
+		start: number;
+		length: number;
+	}
+	
 	export class LoopEditor {
 		private readonly _barWidth: number = 32;
 		private readonly _editorHeight: number = 20;

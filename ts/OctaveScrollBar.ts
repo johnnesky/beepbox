@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012 John Nesky
+Copyright (C) 2018 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -25,7 +25,7 @@ SOFTWARE.
 /// <reference path="html.ts" />
 /// <reference path="changes.ts" />
 
-module beepbox {
+namespace beepbox {
 	export class OctaveScrollBar {
 		private readonly _editorWidth: number = 20;
 		private readonly _editorHeight: number = 481;

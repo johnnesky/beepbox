@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012 John Nesky
+Copyright (C) 2018 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -30,7 +30,7 @@ interface Window {
 	msAudioContext: any;
 }
 
-module beepbox {
+namespace beepbox {
 	interface Dictionary<T> {
 		[K: string]: T;
 	}
@@ -214,8 +214,8 @@ module beepbox {
 						wave[i] = Math.cos(radians) * amplitude;
 						wave[32768 - i] = Math.sin(radians) * amplitude;
 					}
-					FFT.inverseRealFourierTransform(wave);
-					FFT.scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
+					inverseRealFourierTransform(wave);
+					scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
 				} else {
 					throw new Error("Unrecognized drum index: " + index);
 				}
@@ -448,12 +448,6 @@ module beepbox {
 		};
 	}
 	
-	export function filledArray <T> (count: number, value: T): T[] {
-		const array: T[] = [];
-		for (let i: number = 0; i < count; i++) array[i] = value;
-		return array;
-	}
-	
 	export class BarPattern {
 		public notes: Note[];
 		public instrument: number;
@@ -478,6 +472,7 @@ module beepbox {
 	}
 	
 	export class Song {
+		private static readonly _format: string = "BeepBox";
 		private static readonly _oldestVersion: number = 2;
 		private static readonly _latestVersion: number = 5;
 		private static readonly _base64CharCodeToInt: ReadonlyArray<number> = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,62,62,0,0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0,0,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,0,0,0,0,63,0,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,0,0,0,0,0]; // 62 could be represented by either "-" or "." for historical reasons. New songs should use "-".
@@ -1203,6 +1198,7 @@ module beepbox {
 			}
 			
 			return {
+				format: Song._format,
 				version: Song._latestVersion,
 				scale: Config.scaleNames[this.scale],
 				key: Config.keyNames[this.key],
@@ -1539,13 +1535,13 @@ module beepbox {
 		private arpeggio: number = 0;
 		private arpeggioSampleCountdown: number = 0;
 		private paused: boolean = true;
-		private channelPlayheadA: number[] = [0.0, 0.0, 0.0, 0.0];
-		private channelPlayheadB: number[] = [0.0, 0.0, 0.0, 0.0];
+		private channelPhaseA: number[] = [0.0, 0.0, 0.0, 0.0];
+		private channelPhaseB: number[] = [0.0, 0.0, 0.0, 0.0];
 		private channelSample: number[] = [0.0, 0.0, 0.0, 0.0];
-		private drumPlayhead: number = 0.0;
+		private drumPhase: number = 0.0;
 		private drumSample: number = 0.0;
 		private stillGoing: boolean = false;
-		private effectPlayhead: number = 0.0;
+		private effectPhase: number = 0.0;
 		private limit: number = 0.0;
 		
 		private delayLine: Float32Array = new Float32Array(16384);
@@ -1664,7 +1660,7 @@ module beepbox {
 			this.part = 0;
 			this.arpeggio = 0;
 			this.arpeggioSampleCountdown = 0;
-			this.effectPlayhead = 0.0;
+			this.effectPhase = 0.0;
 			
 			this.channelSample[0] = 0.0;
 			this.channelSample[1] = 0.0;
@@ -1728,13 +1724,13 @@ module beepbox {
 			}
 			
 			const channelCount: number = this.song.getChannelCount();
-			if (this.channelPlayheadA.length != channelCount) {
-				for (let i: number = 0; i < channelCount; i++) this.channelPlayheadA[i] = 0.0;
-				this.channelPlayheadA.length = channelCount;
+			if (this.channelPhaseA.length != channelCount) {
+				for (let i: number = 0; i < channelCount; i++) this.channelPhaseA[i] = 0.0;
+				this.channelPhaseA.length = channelCount;
 			}
-			if (this.channelPlayheadB.length != channelCount) {
-				for (let i: number = 0; i < channelCount; i++) this.channelPlayheadB[i] = 0.0;
-				this.channelPlayheadB.length = channelCount;
+			if (this.channelPhaseB.length != channelCount) {
+				for (let i: number = 0; i < channelCount; i++) this.channelPhaseB[i] = 0.0;
+				this.channelPhaseB.length = channelCount;
 			}
 			if (this.channelSample.length != channelCount) {
 				for (let i: number = 0; i < channelCount; i++) this.channelSample[i] = 0.0;
@@ -1771,15 +1767,15 @@ module beepbox {
 			if (note != null && prevNote != null && prevNote.end != note.start) prevNote = null;
 			if (note != null && nextNote != null && nextNote.start != note.end) nextNote = null;
 			
-			let periodDelta: number;
-			let periodDeltaScale: number = 1.0;
+			let phaseDelta: number;
+			let phaseDeltaScale: number = 1.0;
 			let noteVolume: number;
 			let volumeDelta: number = 0.0;
 			let filter: number = 1.0;
 			let filterScale: number = 1.0;
 			let vibratoScale: number;
 			let harmonyMult: number = 1.0;
-			let resetPlayheads: boolean = false;
+			let resetPhases: boolean = false;
 			
 			if (synth.pianoPressed && channel == synth.pianoChannel) {
 				const pianoFreq: number = synth.frequencyFromPitch(channelRoot + synth.pianoPitch * intervalScale);
@@ -1795,15 +1791,15 @@ module beepbox {
 				} else {
 					pianoPitchDamping = 48.0;
 				}
-				periodDelta = pianoFreq * sampleTime;
+				phaseDelta = pianoFreq * sampleTime;
 				noteVolume = Math.pow(2.0, -synth.pianoPitch * intervalScale / pianoPitchDamping);
 				vibratoScale = Math.pow(2.0, Config.effectVibratos[song.instrumentEffects[channel][instrument]] / 12.0) - 1.0;
 			} else if (note == null) {
-				periodDelta = 0.0;
-				periodDeltaScale = 0.0;
+				phaseDelta = 0.0;
+				phaseDeltaScale = 0.0;
 				noteVolume = 0.0;
 				vibratoScale = 0.0;
-				resetPlayheads = true;
+				resetPhases = true;
 			} else {
 				const chorusHarmonizes: boolean = Config.chorusHarmonizes[song.instrumentChorus[channel][pattern!.instrument]];
 				let pitch: number = note.pitches[0];
@@ -1906,12 +1902,12 @@ module beepbox {
 				startVol *= synth.volumeConversion(arpeggioVolumeStart * (1.0 - startRatio) + arpeggioVolumeEnd * startRatio);
 				endVol   *= synth.volumeConversion(arpeggioVolumeStart * (1.0 - endRatio)   + arpeggioVolumeEnd * endRatio);
 				const freqScale: number = endFreq / startFreq;
-				periodDelta = startFreq * sampleTime;
-				periodDeltaScale = Math.pow(freqScale, 1.0 / samples);
+				phaseDelta = startFreq * sampleTime;
+				phaseDeltaScale = Math.pow(freqScale, 1.0 / samples);
 				noteVolume = startVol;
 				volumeDelta = (endVol - startVol) / samples;
 				const timeSinceStart: number = (arpeggioStart + startRatio - noteStart) * samplesPerArpeggio / synth.samplesPerSecond;
-				if (timeSinceStart == 0.0 && !inhibitRestart) resetPlayheads = true;
+				if (timeSinceStart == 0.0 && !inhibitRestart) resetPhases = true;
 				
 				if (!isDrum) {
 					const filterScaleRate: number = Config.filterDecays[song.instrumentFilters[channel][pattern!.instrument]];
@@ -1925,15 +1921,15 @@ module beepbox {
 			}
 			
 			return {
-				periodDelta: periodDelta,
-				periodDeltaScale: periodDeltaScale,
+				phaseDelta: phaseDelta,
+				phaseDeltaScale: phaseDeltaScale,
 				noteVolume: noteVolume,
 				volumeDelta: volumeDelta,
 				filter: filter,
 				filterScale: filterScale,
 				vibratoScale: vibratoScale,
 				harmonyMult: harmonyMult,
-				resetPlayheads: resetPlayheads,
+				resetPhases: resetPhases,
 			};
 		}
 		
@@ -2058,10 +2054,10 @@ module beepbox {
 					var channel#ChorusA = Math.pow(2.0, (beepbox.Config.chorusOffsets[song.instrumentChorus[#][instrumentChannel#]] + beepbox.Config.chorusIntervals[song.instrumentChorus[#][instrumentChannel#]]) / 12.0); // PITCH
 					var channel#ChorusB = Math.pow(2.0, (beepbox.Config.chorusOffsets[song.instrumentChorus[#][instrumentChannel#]] - beepbox.Config.chorusIntervals[song.instrumentChorus[#][instrumentChannel#]]) / 12.0); // PITCH
 					var channel#ChorusSign = (song.instrumentChorus[#][instrumentChannel#] == 7) ? -1.0 : 1.0; // PITCH
-					if (song.instrumentChorus[#][instrumentChannel#] == 0) synth.channelPlayheadB[#] = synth.channelPlayheadA[#]; // PITCH
+					if (song.instrumentChorus[#][instrumentChannel#] == 0) synth.channelPhaseB[#] = synth.channelPhaseA[#]; // PITCH
 					
-					var channel#PlayheadDelta = 0; // ALL
-					var channel#PlayheadDeltaScale = 0; // ALL
+					var channel#PhaseDelta = 0; // ALL
+					var channel#PhaseDeltaScale = 0; // ALL
 					var channel#Volume = 0; // ALL
 					var channel#VolumeDelta = 0; // ALL
 					var channel#Filter = 0; // ALL
@@ -2071,9 +2067,9 @@ module beepbox {
 					var instrument# = beepbox.Synth.computeChannelInstrument(synth, song, #, time, sampleTime, samplesPerArpeggio, samples, false); // PITCH
 					var instrument# = beepbox.Synth.computeChannelInstrument(synth, song, #, time, sampleTime, samplesPerArpeggio, samples, true); // DRUM
 					
-					channel#PlayheadDelta = instrument#.periodDelta; // PITCH
-					channel#PlayheadDelta = instrument#.periodDelta / 32768.0; // DRUM
-					channel#PlayheadDeltaScale = instrument#.periodDeltaScale; // ALL
+					channel#PhaseDelta = instrument#.phaseDelta; // PITCH
+					channel#PhaseDelta = instrument#.phaseDelta / 32768.0; // DRUM
+					channel#PhaseDeltaScale = instrument#.phaseDeltaScale; // ALL
 					channel#Volume = instrument#.noteVolume * maxChannel#Volume; // ALL
 					channel#VolumeDelta = instrument#.volumeDelta * maxChannel#Volume; // ALL
 					channel#Filter = instrument#.filter * channel#FilterBase; // PITCH
@@ -2081,14 +2077,14 @@ module beepbox {
 					channel#FilterScale = instrument#.filterScale; // PITCH
 					channel#VibratoScale = instrument#.vibratoScale; // PITCH
 					channel#ChorusB *= instrument#.harmonyMult; // PITCH
-					if (instrument#.resetPlayheads) { synth.channelSample[#] = 0.0; synth.channelPlayheadA[#] = 0.0; synth.channelPlayheadB[#] = 0.0; } // PITCH
+					if (instrument#.resetPhases) { synth.channelSample[#] = 0.0; synth.channelPhaseA[#] = 0.0; synth.channelPhaseB[#] = 0.0; } // PITCH
 					
-					var effectY     = Math.sin(synth.effectPlayhead);
-					var prevEffectY = Math.sin(synth.effectPlayhead - synth.effectAngle);
+					var effectY     = Math.sin(synth.effectPhase);
+					var prevEffectY = Math.sin(synth.effectPhase - synth.effectAngle);
 					
-					var channel#PlayheadA = +synth.channelPlayheadA[#]; // PITCH
-					var channel#PlayheadB = +synth.channelPlayheadB[#]; // PITCH
-					var channel#Playhead  = +synth.channelPlayheadA[#]; // DRUM
+					var channel#PlayheadA = +synth.channelPhaseA[#]; // PITCH
+					var channel#PlayheadB = +synth.channelPhaseB[#]; // PITCH
+					var channel#Playhead  = +synth.channelPhaseA[#]; // DRUM
 					
 					var channel#Sample = +synth.channelSample[#]; // ALL
 					
@@ -2109,10 +2105,10 @@ module beepbox {
 						channel#Sample += ((channel#Wave[0|(channel#PlayheadA * channel#WaveLength)] + channel#Wave[0|(channel#PlayheadB * channel#WaveLength)] * channel#ChorusSign) * channel#Volume * channel#Tremolo - channel#Sample) * channel#Filter; // PITCH
 						channel#Sample += (channel#Wave[0|(channel#Playhead * 32768.0)] * channel#Volume - channel#Sample) * channel#Filter; // DRUM
 						channel#Volume += channel#VolumeDelta; // ALL
-						channel#PlayheadA += channel#PlayheadDelta * channel#Vibrato * channel#ChorusA; // PITCH
-						channel#PlayheadB += channel#PlayheadDelta * channel#Vibrato * channel#ChorusB; // PITCH
-						channel#Playhead += channel#PlayheadDelta; // DRUM
-						channel#PlayheadDelta *= channel#PlayheadDeltaScale; // ALL
+						channel#PlayheadA += channel#PhaseDelta * channel#Vibrato * channel#ChorusA; // PITCH
+						channel#PlayheadB += channel#PhaseDelta * channel#Vibrato * channel#ChorusB; // PITCH
+						channel#Playhead += channel#PhaseDelta; // DRUM
+						channel#PhaseDelta *= channel#PhaseDeltaScale; // ALL
 						channel#Filter *= channel#FilterScale; // PITCH
 						channel#PlayheadA -= 0|channel#PlayheadA; // PITCH
 						channel#PlayheadB -= 0|channel#PlayheadB; // PITCH
@@ -2159,9 +2155,9 @@ module beepbox {
 						samples--;
 					}
 					
-					synth.channelPlayheadA[#] = channel#PlayheadA; // PITCH
-					synth.channelPlayheadB[#] = channel#PlayheadB; // PITCH
-					synth.channelPlayheadA[#] = channel#Playhead; // DRUM
+					synth.channelPhaseA[#] = channel#PlayheadA; // PITCH
+					synth.channelPhaseB[#] = channel#PlayheadB; // PITCH
+					synth.channelPhaseA[#] = channel#Playhead; // DRUM
 					synth.channelSample[#] = channel#Sample; // ALL
 					
 					synth.delayPos = delayPos;
@@ -2172,9 +2168,9 @@ module beepbox {
 					synth.limit = limit;
 					
 					if (effectYMult * effectY - prevEffectY > prevEffectY) {
-						synth.effectPlayhead = Math.asin(effectY);
+						synth.effectPhase = Math.asin(effectY);
 					} else {
-						synth.effectPlayhead = Math.PI - Math.asin(effectY);
+						synth.effectPhase = Math.PI - Math.asin(effectY);
 					}
 					
 					if (synth.arpeggioSampleCountdown == 0) {
@@ -2188,7 +2184,7 @@ module beepbox {
 								synth.beat++;
 								if (synth.beat == song.beatsPerBar) {
 									synth.beat = 0;
-									synth.effectPlayhead = 0.0;
+									synth.effectPhase = 0.0;
 									synth.bar++;
 									if (synth.bar < song.loopStart) {
 										if (!synth.enableIntro) synth.bar = song.loopStart;

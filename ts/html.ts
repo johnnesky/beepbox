@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2012 John Nesky
+Copyright (C) 2018 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-module beepbox {
+namespace beepbox {
 	export namespace html {
 		export function element(type: string, attributes?: Record<string, string | number>, children?: Node[]): HTMLElement {
 			const elem: HTMLElement = document.createElement(type);
