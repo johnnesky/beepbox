@@ -101,7 +101,7 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor .selectContainer.menu::after {
 	content: "";
 	position: absolute;
-	right: 0.5em;
+	right: 0.7em;
 	margin: auto;
 	top: 0;
 	bottom: 0;
@@ -128,7 +128,7 @@ styleSheet.appendChild(document.createTextNode(`
 	appearance: none;
 }
 .beepboxEditor .menu select {
-	padding-right: 1.5em;
+	padding: 0 2em;
 }
 .beepboxEditor select:focus {
 	background: #777777;
@@ -390,6 +390,9 @@ styleSheet.appendChild(document.createTextNode(`
 
 /* wide screen */
 @media (min-width: 701px) {
+	#beepboxEditorContainer {
+		display: table;
+	}
 	.beepboxEditor {
 		flex-direction: row;
 	}
@@ -409,12 +412,12 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .playback-bar-controls {
 		display: flex;
 		flex-direction: row;
-		margin: 5px 0;
+		margin: .2em 0;
 	}
 	.beepboxEditor .playback-volume-controls {
 		display: flex;
 		flex-direction: row;
-		margin: 5px 0;
+		margin: .2em 0;
 		align-items: center;
 	}
 	.beepboxEditor .pauseButton, .beepboxEditor .playButton {
@@ -426,8 +429,7 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.beepboxEditor .editor-widget-column {
 		margin-left: 6px;
-		width: 182px;
-		height: 645px;
+		width: 14em;
 		flex-direction: column;
 	}
 	.beepboxEditor .editor-widgets {
@@ -438,7 +440,11 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.beepboxEditor .editor-menus > * {
 		flex-grow: 1;
-		margin: 5px 0;
+		margin: .2em 0;
+	}
+	.beepboxEditor .editor-menus > button {
+		padding: 0 2em;
+		white-space: nowrap;
 	}
 }
 
@@ -458,7 +464,11 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.beepboxEditor .editor-menus > * {
 		flex-grow: 1;
-		margin: 5px;
+		margin: .2em;
+	}
+	.beepboxEditor .editor-menus > button {
+		padding-left: 2em;
+		white-space: nowrap;
 	}
 	.beepboxEditor .trackContainer {
 		overflow-x: auto;
@@ -469,7 +479,7 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .playback-controls {
 		display: flex;
 		flex-direction: row;
-		margin: 5px 0;
+		margin: .2em 0;
 	}
 	.beepboxEditor .playback-bar-controls {
 		display: flex;
@@ -481,7 +491,7 @@ styleSheet.appendChild(document.createTextNode(`
 		flex-direction: row;
 		align-items: center;
 		flex-grow: 1;
-		margin: 0 5px;
+		margin: 0 .2em;
 	}
 	.beepboxEditor .editor-widget-column {
 		flex-direction: column-reverse;
@@ -492,11 +502,11 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .pauseButton, .beepboxEditor .playButton,
 	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
 		flex-grow: 1;
-		margin: 0 5px;
+		margin: 0 .2em;
 	}
 	.beepboxEditor .editor-song-settings, .beepboxEditor .editor-instrument-settings {
 		flex-grow: 1;
-		margin: 0 5px;
+		margin: 0 .2em;
 	}
 	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings .selectContainer {
 		width: 60%;
@@ -504,7 +514,7 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .editor-settings select {
 		width: 100%;
 	}
-	.fullWidthSpacer {
+	.fullWidthOnly {
 		display: none;
 	}
 	p {
