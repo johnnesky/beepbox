@@ -92,7 +92,6 @@ namespace beepbox {
 			option("transposeDown", "Shift Notes Down (-)", false, false),
 			option("duration", "Custom song size...", false, false),
 			option("import", "Import JSON...", false, false),
-			option("clean", "Clean Slate", false, false),
 		]);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width:100%;"}, [
 			option("", "Preferences", true, true),
@@ -101,7 +100,21 @@ namespace beepbox {
 			option("showChannels", "Show All Channels", false, false),
 			option("showScrollBar", "Octave Scroll Bar", false, false),
 		]);
-		private readonly _exportButton: HTMLButtonElement = button({type: "button"}, [text("Export")]);
+		private readonly _newSongButton: HTMLButtonElement = button({type: "button"}, [
+			text("New"),
+			span({className: "fullWidthOnly"}, [text(" Song")]),
+			// Page icon:
+			svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"}, [
+				svgElement("path", {d: "M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z", fill: "currentColor"}),
+			]),
+		]);
+		private readonly _exportButton: HTMLButtonElement = button({type: "button"}, [
+			text("Export"),
+			// Download icon:
+			svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"}, [
+				svgElement("path", {d: "M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z", fill: "currentColor"}),
+			]),
+		]);
 		private readonly _scaleDropDown: HTMLSelectElement = buildOptions(select({}), Config.scaleNames);
 		private readonly _keyDropDown: HTMLSelectElement = buildOptions(select({}), Config.keyNames);
 		private readonly _tempoSlider: HTMLInputElement = input({style: "margin: 0px;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"});
@@ -109,7 +122,7 @@ namespace beepbox {
 		private readonly _partDropDown: HTMLSelectElement = buildOptions(select({}), Config.partNames);
 		private readonly _instrumentDropDown: HTMLSelectElement = select({});
 		private readonly _instrumentDropDownGroup: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, [span({}, [text("Instrument: ")]), div({className: "selectContainer"}, [this._instrumentDropDown])]);
-		private readonly _instrumentSettingsLabel: HTMLDivElement = div({style: "margin: 3px 0; text-align: center;"}, [text("Instrument Settings")]);
+		private readonly _instrumentSettingsLabel: HTMLDivElement = div({style: "margin: 3px 0; text-align: center; color: #999;"}, [text("Instrument Settings")]);
 		private readonly _channelVolumeSlider: HTMLInputElement = input({style: "margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"});
 		private readonly _waveNames: HTMLSelectElement = buildOptions(select({}), Config.waveNames);
 		private readonly _drumNames: HTMLSelectElement = buildOptions(select({}), Config.drumNames);
@@ -162,15 +175,28 @@ namespace beepbox {
 							]),
 						]),
 						div({className: "editor-menus"}, [
-							div({className: "selectContainer menu"}, [this._editMenu]),
-							div({className: "selectContainer menu"}, [this._optionsMenu]),
+							this._newSongButton,
+							div({className: "selectContainer menu"}, [
+								this._editMenu,
+								// Edit icon:
+								svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"}, [
+									svgElement("path", {d: "M 0 0 L 1 -4 L 4 -1 z M 2 -5 L 10 -13 L 13 -10 L 5 -2 zM 11 -14 L 13 -16 L 14 -16 L 16 -14 L 16 -13 L 14 -11 z", fill: "currentColor"}),
+								]),
+							]),
+							div({className: "selectContainer menu"}, [
+								this._optionsMenu,
+								// Gear icon:
+								svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"}, [
+									svgElement("path", {d: "M 5.85 -1.34 L 7.85 -1.34 L 7.85 1.34 L 5.85 1.34 L 4.69 3.74 L 5.94 5.3 L 3.85 6.97 L 2.6 5.41 L 0 6 L -0.45 7.95 L -3.05 7.36 L -2.6 5.41 L -4.69 3.74 L -6.49 4.61 L -7.65 2.2 L -5.85 1.34 L -5.85 -1.34 L -7.65 -2.2 L -6.49 -4.61 L -4.69 -3.74 L -2.6 -5.41 L -3.05 -7.36 L -0.45 -7.95 L -0 -6 L 2.6 -5.41 L 3.85 -6.97 L 5.94 -5.3 L 4.69 -3.74 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z", fill: "currentColor"}),
+								]),
+							]),
 							this._exportButton,
 						]),
 					]),
-					div({className: "fullWidthSpacer", style: "flex: 0 1 15px;"}),
+					div({className: "fullWidthOnly", style: "flex: 0 1 10px;"}),
 					div({className: "editor-settings"}, [
 						div({className: "editor-song-settings"}, [
-							div({style: "margin: 3px 0; text-align: center;"}, [text("Song Settings")]),
+							div({style: "margin: 3px 0; text-align: center; color: #999;"}, [text("Song Settings")]),
 							div({className: "selectRow"}, [
 								span({}, [text("Scale: ")]),
 								div({className: "selectContainer"}, [this._scaleDropDown]),
@@ -229,6 +255,7 @@ namespace beepbox {
 			this._playButton.addEventListener("click", this._togglePlay);
 			this._prevBarButton.addEventListener("click", this._whenPrevBarPressed);
 			this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
+			this._newSongButton.addEventListener("click", this._whenNewSongPressed);
 			this._exportButton.addEventListener("click", this._openExportPrompt);
 			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
 			
@@ -483,11 +510,6 @@ namespace beepbox {
 			}
 		}
 		
-		private _cleanSlate(): void {
-			this._doc.history.record(new ChangeSong(this._doc, ""));
-			this._patternEditor.resetCopiedPins();
-		}
-		
 		private _transpose(upward: boolean): void {
 			const pattern: BarPattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
@@ -495,6 +517,11 @@ namespace beepbox {
 			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeTranspose);
 			this._changeTranspose = new ChangeTranspose(this._doc, pattern, upward);
 			this._doc.history.record(this._changeTranspose, continuousChange);
+		}
+		
+		private _whenNewSongPressed = (): void => {
+			this._doc.history.record(new ChangeSong(this._doc, ""));
+			this._patternEditor.resetCopiedPins();
 		}
 		
 		private _openExportPrompt = (): void => {
@@ -586,9 +613,6 @@ namespace beepbox {
 					break;
 				case "import":
 					this._openPrompt("import");
-					break;
-				case "clean":
-					this._cleanSlate();
 					break;
 				case "duration":
 					this._openPrompt("duration");

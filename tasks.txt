@@ -210,6 +210,11 @@
 √ random infinite loops when opening new song?
 √ when pattern is 0, show other channels anyway over black pattern editor.
 √ faster tempos
+√ layout was messed up if browser default font size is set to large.
+√ add a "clean slate"/"new song" button with a little dog-eared page icon.
+√ while I'm at it, the edit menu should have a pencil icon and the prefs should have a gear or wrench.
+
+- add auto-follow and auto-play preferences. (I guess autoplay is only in browser? but defaults to true?)
 
 MISC:
 - I don't like how when you click the wave menu then use arrow keys to select drums the editor loses focus.
