@@ -103,7 +103,7 @@ namespace beepbox {
 		private readonly _grid: Box[][] = [];
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
-		private _pattern: BarPattern | null = null;
+		private _pattern: Pattern | null = null;
 		private _mouseOver: boolean = false;
 		private _digits: string = "";
 		private _editorHeight: number = 128;
@@ -113,7 +113,7 @@ namespace beepbox {
 		private _renderedPatternCount: number = 0;
 		private _renderedPlayhead: number = -1;
 		private _renderedSquashed: boolean = false;
-		private _changeBarPattern: ChangeBarPattern | null = null;
+		private _changePattern: ChangePattern | null = null;
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._svg.appendChild(this._boxContainer);
@@ -133,7 +133,7 @@ namespace beepbox {
 		}
 		
 		private _whenSelectChanged = (): void => {
-			this._setBarPattern(this._select.selectedIndex);
+			this._setPattern(this._select.selectedIndex);
 		}
 		
 		private _animatePlayhead = (timestamp: number): void => {
@@ -151,13 +151,13 @@ namespace beepbox {
 			this._doc.history.forgetLastChange();
 		}
 		
-		private _setBarPattern(pattern: number): void {
+		private _setPattern(pattern: number): void {
 			const currentValue: number = this._doc.song.channelBars[this._doc.channel][this._doc.bar];
-			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeBarPattern);
-			const oldValue: number = continuousChange ? this._changeBarPattern!.oldValue : currentValue;
+			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changePattern);
+			const oldValue: number = continuousChange ? this._changePattern!.oldValue : currentValue;
 			if (pattern != currentValue) {
-				this._changeBarPattern = new ChangeBarPattern(this._doc, oldValue, pattern);
-				this._doc.history.record(this._changeBarPattern, continuousChange);
+				this._changePattern = new ChangePattern(this._doc, oldValue, pattern);
+				this._doc.history.record(this._changePattern, continuousChange);
 			}
 		}
 		
@@ -229,14 +229,14 @@ namespace beepbox {
 			this._digits += digit;
 			let parsed: number = parseInt(this._digits);
 			if (parsed <= this._doc.song.patternsPerChannel) {
-				this._setBarPattern(parsed);
+				this._setPattern(parsed);
 				return;
 			}
 				
 			this._digits = digit;
 			parsed = parseInt(this._digits);
 			if (parsed <= this._doc.song.patternsPerChannel) {
-				this._setBarPattern(parsed);
+				this._setPattern(parsed);
 				return;
 			}
 			
@@ -263,7 +263,7 @@ namespace beepbox {
 			if (this._doc.channel == channel && this._doc.bar == bar) {
 				const up: boolean = (this._mouseY % this._channelHeight) < this._channelHeight / 2;
 				const patternCount: number = this._doc.song.patternsPerChannel;
-				this._setBarPattern((this._doc.song.channelBars[channel][bar] + (up ? 1 : patternCount)) % (patternCount + 1));
+				this._setPattern((this._doc.song.channelBars[channel][bar] + (up ? 1 : patternCount)) % (patternCount + 1));
 			} else {
 				this._setChannelBar(channel, bar);
 			}
@@ -403,7 +403,7 @@ namespace beepbox {
 			
 			for (let j: number = 0; j < this._doc.song.getChannelCount(); j++) {
 				for (let i: number = 0; i < this._renderedBarCount; i++) {
-					const pattern: BarPattern | null = this._doc.song.getPattern(j, i);
+					const pattern: Pattern | null = this._doc.song.getPattern(j, i);
 					const selected: boolean = (i == this._doc.bar && j == this._doc.channel);
 					const dim: boolean = (pattern == null || pattern.notes.length == 0);
 					

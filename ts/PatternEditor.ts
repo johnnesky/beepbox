@@ -109,7 +109,7 @@ namespace beepbox {
 		//private _precisionX: number = 0;
 		private _dragChange: UndoableChange | null = null;
 		private _cursor: PatternCursor = new PatternCursor();
-		private _pattern: BarPattern | null = null;
+		private _pattern: Pattern | null = null;
 		private _playheadX: number = 0.0;
 		private _octaveOffset: number = 0;
 		private _renderedWidth: number = -1;
@@ -119,6 +119,7 @@ namespace beepbox {
 		private _renderedPartsPerBeat: number = -1;
 		private _renderedPitchChannelCount: number = -1;
 		private _renderedDrumChannelCount: number = -1;
+		private _followPlayheadBar: number = -1;
 		
 		constructor(private _doc: SongDocument) {
 			for (let i: number = 0; i < 12; i++) {
@@ -381,11 +382,12 @@ namespace beepbox {
 		}
 		
 		private _animatePlayhead = (timestamp: number): void => {
+			const playheadBar: number = Math.floor(this._doc.synth.playhead);
 			if (!this._doc.synth.playing || this._pattern == null || this._doc.song.getPattern(this._doc.channel, Math.floor(this._doc.synth.playhead)) != this._pattern) {
 				this._svgPlayhead.setAttribute("visibility", "hidden");
 			} else {
 				this._svgPlayhead.setAttribute("visibility", "visible");
-				const modPlayhead: number = this._doc.synth.playhead - Math.floor(this._doc.synth.playhead);
+				const modPlayhead: number = this._doc.synth.playhead - playheadBar;
 				if (Math.abs(modPlayhead - this._playheadX) > 0.1) {
 					this._playheadX = modPlayhead;
 				} else {
@@ -393,6 +395,12 @@ namespace beepbox {
 				}
 				this._svgPlayhead.setAttribute("x", "" + prettyNumber(this._playheadX * this._editorWidth - 2));
 			}
+			
+			if (this._doc.synth.playing && this._doc.autoFollow && this._followPlayheadBar != playheadBar) {
+				new ChangeChannelBar(this._doc, this._doc.channel, playheadBar);
+				this._doc.notifier.notifyWatchers();
+			}
+			this._followPlayheadBar = playheadBar;
 			window.requestAnimationFrame(this._animatePlayhead);
 		}
 		
@@ -616,7 +624,7 @@ namespace beepbox {
 						this._dragVolume = bendVolume;
 						this._dragVisible = true;
 						
-						sequence.append(new ChangeVolumeBend(this._doc, this._pattern, this._cursor.curNote, bendPart, bendVolume, bendInterval));
+						sequence.append(new ChangeVolumeBend(this._doc, this._cursor.curNote, bendPart, bendVolume, bendInterval));
 						this._copyPins(this._cursor.curNote);
 					} else {
 						this._dragVolume = this._cursor.curNote.pins[this._cursor.nearPinIndex].volume;
@@ -821,7 +829,7 @@ namespace beepbox {
 					if (channel == this._doc.channel) continue;
 					if (this._doc.song.getChannelIsDrum(channel) != this._doc.song.getChannelIsDrum(this._doc.channel)) continue;
 					
-					const pattern2: BarPattern | null = this._doc.song.getPattern(channel, this._doc.bar);
+					const pattern2: Pattern | null = this._doc.song.getPattern(channel, this._doc.bar);
 					if (pattern2 == null) continue;
 					for (const note of pattern2.notes) {
 						for (const pitch of note.pitches) {

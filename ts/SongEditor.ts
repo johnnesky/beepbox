@@ -38,6 +38,8 @@ SOFTWARE.
 namespace beepbox {
 	const {button, div, span, select, option, input, text} = html;
 	
+	const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
+	
 	function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
 		for (const item of items) {
 			menu.appendChild(option(item, item, false, false));
@@ -95,6 +97,8 @@ namespace beepbox {
 		]);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width:100%;"}, [
 			option("", "Preferences", true, true),
+			option("autoPlay", "Auto Play On Load", false, false),
+			option("autoFollow", "Auto Follow Track", false, false),
 			option("showLetters", "Show Piano", false, false),
 			option("showFifth", "Highlight 'Fifth' Notes", false, false),
 			option("showChannels", "Show All Channels", false, false),
@@ -155,7 +159,7 @@ namespace beepbox {
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"}, [
 			this._editorBox,
 			div({className: "editor-widget-column"}, [
-				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.2.1")]),
+				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.2.2")]),
 				div({className: "editor-widgets"}, [
 					div({className: "editor-controls"}, [
 						div({className: "playback-controls"}, [
@@ -261,6 +265,8 @@ namespace beepbox {
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
+			
+			if (isMobile) (<HTMLOptionElement> this._optionsMenu.children[1]).disabled = true;
 		}
 		
 		private _openPrompt(promptName: string): void {
@@ -312,6 +318,8 @@ namespace beepbox {
 			this._trackEditor.render();
 			
 			const optionCommands: ReadonlyArray<string> = [
+				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
+				(this._doc.autoFollow ? "✓ " : "") + "Auto Follow Track",
 				(this._doc.showLetters ? "✓ " : "") + "Show Piano",
 				(this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes",
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
@@ -325,6 +333,7 @@ namespace beepbox {
 			setSelectedIndex(this._scaleDropDown, this._doc.song.scale);
 			setSelectedIndex(this._keyDropDown, this._doc.song.key);
 			this._tempoSlider.value = "" + this._doc.song.tempo;
+			this._tempoSlider.title = this._doc.song.getBeatsPerMinute() + " beats per minute";
 			this._reverbSlider.value = "" + this._doc.song.reverb;
 			setSelectedIndex(this._partDropDown, Config.partCounts.indexOf(this._doc.song.partsPerBeat));
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
@@ -341,7 +350,7 @@ namespace beepbox {
 				this._drumNames.style.display = "none";
 			}
 			
-			const pattern: BarPattern | null = this._doc.getCurrentPattern();
+			const pattern: Pattern | null = this._doc.getCurrentPattern();
 			
 			this._instrumentDropDownGroup.style.display = (this._doc.song.instrumentsPerChannel > 1) ? "flex" : "none";
 			this._instrumentDropDownGroup.style.visibility = (pattern != null) ? "visible" : "hidden";
@@ -366,7 +375,6 @@ namespace beepbox {
 			this._channelVolumeSlider.value = -this._doc.song.instrumentVolumes[this._doc.channel][instrument]+"";
 			setSelectedIndex(this._instrumentDropDown, instrument);
 			
-			//currentState = this._doc.showLetters ? (this._doc.showScrollBar ? "showPianoAndScrollBar" : "showPiano") : (this._doc.showScrollBar ? "showScrollBar" : "hideAll");
 			this._piano.container.style.display = this._doc.showLetters ? "block" : "none";
 			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "block" : "none";
 			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
@@ -379,6 +387,10 @@ namespace beepbox {
 			this._volumeSlider.value = String(this._doc.volume);
 			
 			this._setPrompt(this._doc.prompt);
+			
+			if (this._doc.autoFollow && !this._doc.synth.playing) {
+				this._doc.synth.snapToBar(this._doc.bar);
+			}
 		}
 		
 		public updatePlayButton(): void {
@@ -435,10 +447,16 @@ namespace beepbox {
 					break;
 				case 219: // left brace
 					this._doc.synth.prevBar();
+					if (this._doc.autoFollow) {
+						new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
+					}
 					event.preventDefault();
 					break;
 				case 221: // right brace
 					this._doc.synth.nextBar();
+					if (this._doc.autoFollow) {
+						new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
+					}
 					event.preventDefault();
 					break;
 				case 189: // -
@@ -477,7 +495,11 @@ namespace beepbox {
 		
 		private _pause(): void {
 			this._doc.synth.pause();
-			this._doc.synth.snapToBar();
+			if (this._doc.autoFollow) {
+				this._doc.synth.snapToBar(this._doc.bar);
+			} else {
+				this._doc.synth.snapToBar();
+			}
 			this.updatePlayButton();
 		}
 		
@@ -486,7 +508,7 @@ namespace beepbox {
 		}
 		
 		private _copy(): void {
-			const pattern: BarPattern | null = this._doc.getCurrentPattern();
+			const pattern: Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
 			
 			const patternCopy: PatternCopy = {
@@ -500,7 +522,7 @@ namespace beepbox {
 		}
 		
 		private _paste(): void {
-			const pattern: BarPattern | null = this._doc.getCurrentPattern();
+			const pattern: Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
 			
 			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
@@ -511,7 +533,7 @@ namespace beepbox {
 		}
 		
 		private _transpose(upward: boolean): void {
-			const pattern: BarPattern | null = this._doc.getCurrentPattern();
+			const pattern: Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
 			
 			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeTranspose);
@@ -586,7 +608,7 @@ namespace beepbox {
 		}
 		
 		private _whenSetInstrument = (): void => {
-			const pattern : BarPattern | null = this._doc.getCurrentPattern();
+			const pattern : Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
 			this._doc.history.record(new ChangePatternInstrument(this._doc, this._instrumentDropDown.selectedIndex, pattern));
 		}
@@ -623,6 +645,12 @@ namespace beepbox {
 		
 		private _optionsMenuHandler = (event:Event): void => {
 			switch (this._optionsMenu.value) {
+				case "autoPlay":
+					this._doc.autoPlay = !this._doc.autoPlay;
+					break;
+				case "autoFollow":
+					this._doc.autoFollow = !this._doc.autoFollow;
+					break;
 				case "showLetters":
 					this._doc.showLetters = !this._doc.showLetters;
 					break;
@@ -651,7 +679,7 @@ namespace beepbox {
 	editor.mainLayer.focus();
 	
 	// don't autoplay on mobile devices, wait for input.
-	if (!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
+	if (!isMobile && doc.autoPlay) {
 		function autoplay(): void {
 			if (!document.hidden) {
 				doc.synth.play();

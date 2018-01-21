@@ -112,7 +112,7 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeBarPattern extends Change {
+	export class ChangePattern extends Change {
 		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
 			super();
 			if (newValue > doc.song.channelPatterns[doc.channel].length) throw new Error("invalid pattern");
@@ -162,7 +162,7 @@ namespace beepbox {
 		constructor(doc: SongDocument, newPitchChannelCount: number, newDrumChannelCount: number) {
 			super();
 			if (doc.song.pitchChannelCount != newPitchChannelCount || doc.song.drumChannelCount != newDrumChannelCount) {
-				const channelPatterns: BarPattern[][] = [];
+				const channelPatterns: Pattern[][] = [];
 				const channelBars: number[][] = [];
 				const channelOctaves: number[] = [];
 				const instrumentWaves: number[][] = [];
@@ -187,7 +187,7 @@ namespace beepbox {
 						instrumentVolumes[channel] = doc.song.instrumentVolumes[oldChannel];
 					} else {
 						channelPatterns[channel] = [];
-						for (let j = 0; j < doc.song.patternsPerChannel; j++) channelPatterns[channel][j] = new BarPattern();
+						for (let j = 0; j < doc.song.patternsPerChannel; j++) channelPatterns[channel][j] = new Pattern();
 						channelBars[channel] = filledArray(doc.song.barCount, 1);
 						channelOctaves[channel] = 2;
 						instrumentWaves[channel] = filledArray(doc.song.instrumentsPerChannel, 1);
@@ -214,7 +214,7 @@ namespace beepbox {
 						instrumentVolumes[channel] = doc.song.instrumentVolumes[oldChannel];
 					} else {
 						channelPatterns[channel] = [];
-						for (let j = 0; j < doc.song.patternsPerChannel; j++) channelPatterns[channel][j] = new BarPattern();
+						for (let j = 0; j < doc.song.patternsPerChannel; j++) channelPatterns[channel][j] = new Pattern();
 						channelBars[channel] = filledArray(doc.song.barCount, 1);
 						channelOctaves[channel] = 0;
 						instrumentWaves[channel] = filledArray(doc.song.instrumentsPerChannel, 1);
@@ -412,11 +412,11 @@ namespace beepbox {
 	
 	export class ChangePitchAdded extends UndoableChange {
 		private _doc: SongDocument;
-		private _pattern: BarPattern;
+		private _pattern: Pattern;
 		private _note: Note;
 		private _pitch: number;
 		private _index: number;
-		constructor(doc: SongDocument, pattern: BarPattern, note: Note, pitch: number, index: number, deletion: boolean = false) {
+		constructor(doc: SongDocument, pattern: Pattern, note: Note, pitch: number, index: number, deletion: boolean = false) {
 			super(deletion);
 			this._doc = doc;
 			this._pattern = pattern;
@@ -464,7 +464,7 @@ namespace beepbox {
 	}
 	
 	export class ChangePaste extends ChangeGroup {
-		constructor(doc: SongDocument, pattern: BarPattern, notes: Note[], newBeatsPerBar: number, newPartsPerBeat: number) {
+		constructor(doc: SongDocument, pattern: Pattern, notes: Note[], newBeatsPerBar: number, newPartsPerBeat: number) {
 			super();
 			pattern.notes = notes;
 			
@@ -482,7 +482,7 @@ namespace beepbox {
 	}
 	
 	export class ChangePatternInstrument extends Change {
-		constructor(doc: SongDocument, newValue: number, pattern: BarPattern) {
+		constructor(doc: SongDocument, newValue: number, pattern: Pattern) {
 			super();
 			if (pattern.instrument != newValue) {
 				pattern.instrument = newValue;
@@ -498,12 +498,12 @@ namespace beepbox {
 			if (doc.song.patternsPerChannel != newValue) {
 				for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
 					const channelBars: number[] = doc.song.channelBars[i];
-					const channelPatterns: BarPattern[] = doc.song.channelPatterns[i];
+					const channelPatterns: Pattern[] = doc.song.channelPatterns[i];
 					for (let j: number = 0; j < channelBars.length; j++) {
 						if (channelBars[j] > newValue) channelBars[j] = 0;
 					}
 					for (let j: number = channelPatterns.length; j < newValue; j++) {
-						channelPatterns[j] = new BarPattern();
+						channelPatterns[j] = new Pattern();
 					}
 					channelPatterns.length = newValue;
 				}
@@ -619,7 +619,7 @@ namespace beepbox {
 	}
 	
 	export class ChangeRhythm extends ChangeSequence {
-		constructor(doc: SongDocument, bar: BarPattern, oldPartsPerBeat: number, newPartsPerBeat: number) {
+		constructor(doc: SongDocument, bar: Pattern, oldPartsPerBeat: number, newPartsPerBeat: number) {
 			super();
 			let changeRhythm: (oldTime:number)=>number;
 			
@@ -699,13 +699,13 @@ namespace beepbox {
 	
 	export class ChangeNoteAdded extends UndoableChange {
 		private _doc: SongDocument;
-		private _bar: BarPattern;
+		private _pattern: Pattern;
 		private _note: Note;
 		private _index: number;
-		constructor(doc: SongDocument, bar: BarPattern, note: Note, index: number, deletion: boolean = false) {
+		constructor(doc: SongDocument, pattern: Pattern, note: Note, index: number, deletion: boolean = false) {
 			super(deletion);
 			this._doc = doc;
-			this._bar = bar;
+			this._pattern = pattern;
 			this._note = note;
 			this._index = index;
 			this._didSomething();
@@ -713,12 +713,12 @@ namespace beepbox {
 		}
 		
 		protected _doForwards(): void {
-			this._bar.notes.splice(this._index, 0, this._note);
+			this._pattern.notes.splice(this._index, 0, this._note);
 			this._doc.notifier.changed();
 		}
 		
 		protected _doBackwards(): void {
-			this._bar.notes.splice(this._index, 1);
+			this._pattern.notes.splice(this._index, 1);
 			this._doc.notifier.changed();
 		}
 	}
@@ -762,7 +762,7 @@ namespace beepbox {
 	}
 	
 	export class ChangeNoteTruncate extends ChangeSequence {
-		constructor(doc: SongDocument, bar: BarPattern, start: number, end: number, skipNote?: Note) {
+		constructor(doc: SongDocument, bar: Pattern, start: number, end: number, skipNote?: Note) {
 			super();
 			let i: number = 0;
 			while (i < bar.notes.length) {
@@ -901,7 +901,7 @@ namespace beepbox {
 	}
 	
 	export class ChangeTranspose extends ChangeSequence {
-		constructor(doc: SongDocument, bar: BarPattern, upward: boolean) {
+		constructor(doc: SongDocument, bar: Pattern, upward: boolean) {
 			super();
 			for (let i: number = 0; i < bar.notes.length; i++) {
 				this.append(new ChangeTransposeNote(doc, bar.notes[i], upward));
@@ -920,14 +920,12 @@ namespace beepbox {
 	
 	export class ChangeVolumeBend extends UndoableChange {
 		private _doc: SongDocument;
-		private _bar: BarPattern;
 		private _note: Note;
 		private _oldPins: NotePin[];
 		private _newPins: NotePin[];
-		constructor(doc: SongDocument, bar: BarPattern, note: Note, bendPart: number, bendVolume: number, bendInterval: number) {
+		constructor(doc: SongDocument, note: Note, bendPart: number, bendVolume: number, bendInterval: number) {
 			super(false);
 			this._doc = doc;
-			this._bar = bar;
 			this._note = note;
 			this._oldPins = note.pins;
 			this._newPins = [];
