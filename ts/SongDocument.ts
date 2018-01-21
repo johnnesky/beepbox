@@ -41,6 +41,8 @@ namespace beepbox {
 		public notifier: ChangeNotifier = new ChangeNotifier();
 		public channel: number = 0;
 		public bar: number = 0;
+		public autoPlay: boolean;
+		public autoFollow: boolean;
 		public showFifth: boolean;
 		public showLetters: boolean;
 		public showChannels: boolean;
@@ -61,6 +63,8 @@ namespace beepbox {
 			this.song = new Song(string);
 			this.synth = new Synth(this.song);
 			
+			this.autoPlay = localStorage.getItem("autoPlay") != "false";
+			this.autoFollow = localStorage.getItem("autoFollow") == "true";
 			this.showFifth = localStorage.getItem("showFifth") == "true";
 			this.showLetters = localStorage.getItem("showLetters") == "true";
 			this.showChannels = localStorage.getItem("showChannels") == "true";
@@ -197,6 +201,8 @@ namespace beepbox {
 		}
 		
 		public savePreferences(): void {
+			localStorage.setItem("autoPlay", this.autoPlay ? "true" : "false");
+			localStorage.setItem("autoFollow", this.autoFollow ? "true" : "false");
 			localStorage.setItem("showFifth", this.showFifth ? "true" : "false");
 			localStorage.setItem("showLetters", this.showLetters ? "true" : "false");
 			localStorage.setItem("showChannels", this.showChannels ? "true" : "false");
@@ -214,12 +220,12 @@ namespace beepbox {
 			return Math.min(1.0, Math.pow(this.volume / 50.0, 0.5)) * Math.pow(2.0, (this.volume - 75.0) / 25.0);
 		}
 		
-		public getCurrentPattern(): BarPattern | null {
+		public getCurrentPattern(): Pattern | null {
 			return this.song.getPattern(this.channel, this.bar);
 		}
 		
 		public getCurrentInstrument(): number {
-			const pattern: BarPattern | null = this.getCurrentPattern();
+			const pattern: Pattern | null = this.getCurrentPattern();
 			return pattern == null ? 0 : pattern.instrument;
 		}
 	}

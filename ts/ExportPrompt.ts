@@ -495,7 +495,7 @@ namespace beepbox {
 					const intervalScale: number = isDrums ? Config.drumInterval : 1;
 					
 					for (const bar of unrolledBars) {
-						const pattern: BarPattern | null = song.getPattern(channel, bar);
+						const pattern: Pattern | null = song.getPattern(channel, bar);
 						
 						if (pattern != null) {
 							

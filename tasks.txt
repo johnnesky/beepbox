@@ -213,20 +213,41 @@
 √ layout was messed up if browser default font size is set to large.
 √ add a "clean slate"/"new song" button with a little dog-eared page icon.
 √ while I'm at it, the edit menu should have a pencil icon and the prefs should have a gear or wrench.
+√ rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
+√ tempo slider could use tooltip for BPM
+√ add auto-follow and auto-play preferences. (I guess autoplay is only on computers? but defaults to true?)
 
-- add auto-follow and auto-play preferences. (I guess autoplay is only in browser? but defaults to true?)
+PHASE MODULATION:
+- interface to select type of instrument. wave/phase/drums? goes above instrument number.
+- allow channels to be in any order regardless of type... how do they get colored? or can only pitch channels swap types? wait maybe pitch and drums both have a phase modulation variant...
+- new change to swap channel type
+- modulation sliders, ratio selectors, envelop selectors. steady/decay123/attack123/rise123/in-out123?/custom?
+- forward compatible instrument url
+- backward compatible url parsing
+- dim modulator settings when modulation is zero.
+- provide some visual indication for which modulators affect what.
+
+MAJOR REMAINING FEATURES:
+- phase modulation
+- instrument options: reverb,chorus,fadeout,distortion (applied to all enabled channels at once?)
+- embedded player
+- playlist editor
+- remember recent songs
+- export mp3/ogg and audio buffer
+- audio worklet thread
+- translation
 
 MISC:
 - I don't like how when you click the wave menu then use arrow keys to select drums the editor loses focus.
 - pitch bends mixed with arpeggios don’t properly check min/max bounds
-- can I improve the interaction for volume envelope dragging and pitch dragging? illustrate volume envelope dragging to make it less confusing. 
+- Distortion applying to some channels? new song setting: distortion, nonlinear mixing of channels... can't handle a range of volumes?
+- Maybe add a fadeout option that decays carrier volume until the next note starts? Or is that redundant since you can do the same thing with envelope editing?
 - Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
 - remember recent songs in cookies or local shared object.
-- export mp3 and ogg?
+- asynchronous export. worker thread?
 - a way to pre-generate a javascript sound buffer.
-- asynchronous export
-- Make an embeddable song player and album player. (See below.) 
 - document synth api
+- export mp3 and ogg?
 - do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
 
 EMBEDDED PLAYER:
@@ -245,7 +266,7 @@ EMBEDDED PLAYER:
 - manifests to allow installing web app as mobile app. add note in instructions. add any new files to app.yaml
 - allow copying the url from the share menu, so the app version can hide the url bar.
 - sharing menu uses localSharedObject to remember your settings. same as editor volume?
-- should I make cards for twitter/facebook/slack/discord etc? Wait I need https for that I think...
+- should I make cards for twitter/facebook/slack/discord etc?
 - make sure bots ignore embed.html
 
 PLAYLIST EDITOR:
@@ -258,44 +279,30 @@ PLAYLIST EDITOR:
 - when starting at a bar where all tones are at the end of the bar, go ahead and skip the beginning of the bar, up to maybe one beat before the first tone.
 - put songs in browser history before/after pasting new songs.
 - offsite album/playlist player, with scrolling notes. hashbang urls, bot indexable. 
-
-NEW EDITORS:
-- Rename synth.ts to BeepBoxSynth.ts. Pull out some of it into CommonSynth.ts. Rename SongEditor to BeepBoxSongEditor. OR: start using directories... but Typescript is pretty mean about directories if I recall?
+- custom cover art, color schemes in playlists and embed player.
 
 MAYBE:
+- compacting and concatenating songs!
+- can I improve the interaction for volume envelope dragging and pitch dragging? illustrate volume envelope dragging to make it less confusing. 
+- If adding new note and mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
+- make some button to bookmark the song in your browser
+- snap to tone edges from other channels, to help making NES style harmonies. 
+- piano should still play when song is paused
 - translation/localization
 - Get in touch with ludum dare about linking to beepbox: http://www.ludumdare.com/compo/tools/
 - get in touch with http://youcanmakevideogames.com/resources/music
-- new preferences: follow playhead, play at load (on desktop)?
 - multitouch?
 - replace piano/drums canvas with svg
-- piano should still play when song is paused
 - illustrate arpeggio texture on tones with multiple notes, striped fill
-- @Gasparatus asked for a BPM display.
-- custom cover art, color schemes in playlists and embed player.
 - on linux chrome, select drop downs use same background color as select element, it's a bit too bright when focused.
-- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - export fade in/out checkboxes
-- derive song length from number of bars with non-zero patterns
-- more “effect” keys like stutter, scratch, scrub, drag playhead, speedmult, whatever.
-- detect vibrate switch
+- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - circle of fifths display
-- allow drums to be divided into shorter parts, crucial for songs like the mario overworld
-- 5 parts per beat?
-- double number of beat divisions
-- it would be awesome to have a couple of modes where when you drag the playhead, it overrides the tempo of the song to match the motion of your mouse. In one mode it distorts the pitch like a DJ table, in the other it plays the normal pitch like SoundSPEAR.
-- Distortion applying to blue and yellow channels
 - Dim the column occupied by a tone to communicate mono voice?
-- rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
-- snap to tone edges from other channels, to help making NES style harmonies. 
-- new song setting: distortion, nonlinear mixing of channels...
-- If mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
-- compacting and concatenating songs!
 - visual feedback when a note is played
 - when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - options for timing offset
 - phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
 - a facebook app to put songs in your profile
 - preload some common tone shapes into the recentShape list. increment format number.
-- make some button to bookmark the song in your browser
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 

@@ -448,7 +448,7 @@ namespace beepbox {
 		};
 	}
 	
-	export class BarPattern {
+	export class Pattern {
 		public notes: Note[];
 		public instrument: number;
 		constructor() {
@@ -491,7 +491,7 @@ namespace beepbox {
 		public loopLength: number;
 		public pitchChannelCount: number;
 		public drumChannelCount: number;
-		public channelPatterns: BarPattern[][];
+		public channelPatterns: Pattern[][];
 		public channelBars: number[][];
 		public channelOctaves: number[];
 		public instrumentWaves: number[][];
@@ -532,10 +532,10 @@ namespace beepbox {
 		
 		public initToDefault(): void {
 			this.channelPatterns = [
-				[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
-				[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
-				[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
-				[new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern(), new BarPattern()], 
+				[new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern()], 
+				[new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern()], 
+				[new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern()], 
+				[new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern()], 
 			];
 			this.channelBars = [
 				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -1007,7 +1007,7 @@ namespace beepbox {
 							recentPitches[i] += octaveOffset;
 						}
 						for (let i: number = 0; i < this.patternsPerChannel; i++) {
-							const newPattern: BarPattern | null = new BarPattern();
+							const newPattern: Pattern | null = new Pattern();
 							newPattern.instrument = bits.read(neededInstrumentBits);
 							this.channelPatterns[channel][i] = newPattern;
 							
@@ -1367,7 +1367,7 @@ namespace beepbox {
 					}
 				
 					for (let i: number = 0; i < this.patternsPerChannel; i++) {
-						const pattern: BarPattern = new BarPattern();
+						const pattern: Pattern = new Pattern();
 						this.channelPatterns[channel][i] = pattern;
 					
 						let patternObject: any = undefined;
@@ -1482,14 +1482,14 @@ namespace beepbox {
 			}
 		}
 		
-		public getPattern(channel: number, bar: number): BarPattern | null {
+		public getPattern(channel: number, bar: number): Pattern | null {
 			const patternIndex: number = this.channelBars[channel][bar];
 			if (patternIndex == 0) return null;
 			return this.channelPatterns[channel][patternIndex - 1];
 		}
 		
 		public getPatternInstrument(channel: number, bar: number): number {
-			const pattern: BarPattern | null = this.getPattern(channel, bar);
+			const pattern: Pattern | null = this.getPattern(channel, bar);
 			return pattern == null ? 0 : pattern.instrument;
 		}
 		
@@ -1654,7 +1654,8 @@ namespace beepbox {
 			this.snapToBar();
 		}
 		
-		public snapToBar(): void {
+		public snapToBar(bar?: number): void {
+			if (bar !== undefined) this.bar = bar;
 			this.playheadInternal = this.bar;
 			this.beat = 0;
 			this.part = 0;
@@ -1742,7 +1743,7 @@ namespace beepbox {
 		}
 		
 		private static computeChannelInstrument(synth: Synth, song: Song, channel: number, time: number, sampleTime: number, samplesPerArpeggio: number, samples: number, isDrum: boolean) {
-			const pattern: BarPattern | null = song.getPattern(channel, synth.bar);
+			const pattern: Pattern | null = song.getPattern(channel, synth.bar);
 			
 			const envelope: number = pattern == null ? 0 : song.instrumentEnvelopes[channel][pattern.instrument];
 			
