@@ -216,16 +216,22 @@
 √ rename barpattern to pattern, bareditor to patterneditor, attack to envelope...
 √ tempo slider could use tooltip for BPM
 √ add auto-follow and auto-play preferences. (I guess autoplay is only on computers? but defaults to true?)
+√ restructured song/channel/pattern/instrument js representation. 
 
-PHASE MODULATION:
-- interface to select type of instrument. wave/phase/drums? goes above instrument number.
-- allow channels to be in any order regardless of type... how do they get colored? or can only pitch channels swap types? wait maybe pitch and drums both have a phase modulation variant...
-- new change to swap channel type
-- modulation sliders, ratio selectors, envelop selectors. steady/decay123/attack123/rise123/in-out123?/custom?
-- forward compatible instrument url
-- backward compatible url parsing
-- dim modulator settings when modulation is zero.
-- provide some visual indication for which modulators affect what.
+- phase modulation:
+	- interface to select type of channel. wave/phase? goes above instrument number.
+	- allow channels to be in any order regardless of type... how do they get colored? or can only pitch channels swap types? wait maybe pitch and drums both have a phase modulation variant...
+	- new change to swap channel type
+	- modulation sliders, ratio selectors, envelop selectors. steady/decay123/attack123/rise123/in-out123?/custom?
+	- forward compatible instrument url
+	- backward compatible url parsing
+	- forward compatible instrument JSON
+	- backward compatible url JSON
+	- check old song parsing, new song parsing, url compatibility with old beepbox, two-way json compatiblity
+	- update midi instrument export too
+	- dim modulator settings when modulation is zero.
+	- provide some visual indication for which modulators affect what.
+	- maybe drums can have their own phase modulation mode, with different fractions? can modulator pitches bend at different rates? maybe the "envelopes" are basically the same except instead of controlling modulation they control pitch?
 
 MAJOR REMAINING FEATURES:
 - phase modulation
@@ -249,6 +255,7 @@ MISC:
 - document synth api
 - export mp3 and ogg?
 - do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
+- Don't throw away allocated patterns, instruments, and channels when downsizing songs? If you don't want to leave them in the song arrays, put them in pools?
 
 EMBEDDED PLAYER:
 - put title in data format if provided. show "artist - title" in placeholder text. make sure it is sanitized for security. :)

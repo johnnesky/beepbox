@@ -449,12 +449,8 @@ namespace beepbox {
 	}
 	
 	export class Pattern {
-		public notes: Note[];
-		public instrument: number;
-		constructor() {
-			this.notes = [];
-			this.instrument = 0;
-		}
+		public notes: Note[] = [];
+		public instrument: number = 0;
 		
 		public cloneNotes(): Note[] {
 			const result: Note[] = [];
@@ -469,6 +465,38 @@ namespace beepbox {
 			}
 			return result;
 		}
+		
+		public reset(): void {
+			this.notes.length = 0;
+			this.instrument = 0;
+		}
+	}
+	
+	export class Instrument {
+		public wave: number = 1;
+		public filter: number = 0;
+		public envelope: number = 1;
+		public effect: number = 0;
+		public chorus: number = 0;
+		public volume: number = 0;
+		
+		public reset(): void {
+			this.wave = 1;
+			this.filter = 0;
+			this.envelope = 1;
+			this.effect = 0;
+			this.chorus = 0;
+			this.volume = 0;
+		}
+	}
+	
+	export class Channel {
+		//public isDrum: boolean = false;
+		//public type: number = 0;
+		public octave: number = 0;
+		public readonly instruments: Instrument[] = [];
+		public readonly patterns: Pattern[] = [];
+		public readonly bars: number[] = [];
 	}
 	
 	export class Song {
@@ -491,15 +519,7 @@ namespace beepbox {
 		public loopLength: number;
 		public pitchChannelCount: number;
 		public drumChannelCount: number;
-		public channelPatterns: Pattern[][];
-		public channelBars: number[][];
-		public channelOctaves: number[];
-		public instrumentWaves: number[][];
-		public instrumentFilters: number[][];
-		public instrumentEnvelopes: number[][];
-		public instrumentEffects: number[][];
-		public instrumentChorus: number[][];
-		public instrumentVolumes: number[][];
+		public readonly channels: Channel[] = [];
 		
 		constructor(string?: string) {
 			if (string != undefined) {
@@ -531,25 +551,6 @@ namespace beepbox {
 		}
 		
 		public initToDefault(): void {
-			this.channelPatterns = [
-				[new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern()], 
-				[new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern()], 
-				[new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern()], 
-				[new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern(), new Pattern()], 
-			];
-			this.channelBars = [
-				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-				[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-			];
-			this.channelOctaves = [3,2,1,0];
-			this.instrumentVolumes = [[0],[0],[0],[0]];
-			this.instrumentWaves   = [[1],[1],[1],[1]];
-			this.instrumentFilters = [[0],[0],[0],[0]];
-			this.instrumentEnvelopes = [[1],[1],[1],[1]];
-			this.instrumentEffects = [[0],[0],[0],[0]];
-			this.instrumentChorus  = [[0],[0],[0],[0]];
 			this.scale = 0;
 			this.key = Config.keyNames.length - 1;
 			this.loopStart = 0;
@@ -563,6 +564,41 @@ namespace beepbox {
 			this.instrumentsPerChannel = 1;
 			this.pitchChannelCount = 3;
 			this.drumChannelCount = 1;
+			
+			// TODO: It's kinda wasteful to discard channels, patterns, and instruments just because they're
+			// not included in the default settings. Maybe leave them there once the've been created, but
+			// just don't use them until a song is loaded that needs them.
+			for (let channelIndex = 0; channelIndex < this.getChannelCount(); channelIndex++) {
+				if (this.channels.length <= channelIndex) {
+					this.channels[channelIndex] = new Channel(/*channelIndex >= this.pitchChannelCount*/);
+				}
+				const channel: Channel = this.channels[channelIndex];
+				channel.octave = 3 - channelIndex; // [3, 2, 1, 0]; Descending octaves with drums at zero in last channel.
+				
+				for (let pattern = 0; pattern < this.patternsPerChannel; pattern++) {
+					if (channel.patterns.length <= pattern) {
+						channel.patterns[pattern] = new Pattern();
+					} else {
+						channel.patterns[pattern].reset();
+					}
+				}
+				channel.patterns.length = this.patternsPerChannel;
+				
+				for (let instrument = 0; instrument < this.instrumentsPerChannel; instrument++) {
+					if (channel.instruments.length <= instrument) {
+						channel.instruments[instrument] = new Instrument();
+					} else {
+						channel.instruments[instrument].reset();
+					}
+				}
+				channel.instruments.length = this.instrumentsPerChannel;
+				
+				for (let bar = 0; bar < this.barCount; bar++) {
+					channel.bars[bar] = 1;
+				}
+				channel.bars.length = this.barCount;
+			}
+			this.channels.length = this.getChannelCount();
 		}
 		
 		public toBase64String(): string {
@@ -587,37 +623,37 @@ namespace beepbox {
 			
 			buffer.push(CharCode.w);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-				buffer.push(base64IntToCharCode[this.instrumentWaves[channel][i]]);
+				buffer.push(base64IntToCharCode[this.channels[channel].instruments[i].wave]);
 			}
 			
 			buffer.push(CharCode.f);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-				buffer.push(base64IntToCharCode[this.instrumentFilters[channel][i]]);
+				buffer.push(base64IntToCharCode[this.channels[channel].instruments[i].filter]);
 			}
 			
 			buffer.push(CharCode.d);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-				buffer.push(base64IntToCharCode[this.instrumentEnvelopes[channel][i]]);
+				buffer.push(base64IntToCharCode[this.channels[channel].instruments[i].envelope]);
 			}
 			
 			buffer.push(CharCode.c);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-				buffer.push(base64IntToCharCode[this.instrumentEffects[channel][i]]);
+				buffer.push(base64IntToCharCode[this.channels[channel].instruments[i].effect]);
 			}
 			
 			buffer.push(CharCode.h);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-				buffer.push(base64IntToCharCode[this.instrumentChorus[channel][i]]);
+				buffer.push(base64IntToCharCode[this.channels[channel].instruments[i].chorus]);
 			}
 			
 			buffer.push(CharCode.v);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-				buffer.push(base64IntToCharCode[this.instrumentVolumes[channel][i]]);
+				buffer.push(base64IntToCharCode[this.channels[channel].instruments[i].volume]);
 			}
 			
 			buffer.push(CharCode.o);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
-				buffer.push(base64IntToCharCode[this.channelOctaves[channel]]);
+				buffer.push(base64IntToCharCode[this.channels[channel].octave]);
 			}
 			
 			buffer.push(CharCode.b);
@@ -625,7 +661,7 @@ namespace beepbox {
 			let neededBits: number = 0;
 			while ((1 << neededBits) < this.patternsPerChannel + 1) neededBits++;
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) for (let i: number = 0; i < this.barCount; i++) {
-				bits.write(neededBits, this.channelBars[channel][i]);
+				bits.write(neededBits, this.channels[channel].bars[i]);
 			}
 			bits.encodeBase64(base64IntToCharCode, buffer);
 			
@@ -635,14 +671,14 @@ namespace beepbox {
 			while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 				const isDrum: boolean = this.getChannelIsDrum(channel);
-				const octaveOffset: number = isDrum ? 0 : this.channelOctaves[channel] * 12;
+				const octaveOffset: number = isDrum ? 0 : this.channels[channel].octave * 12;
 				let lastPitch: number = (isDrum ? 4 : 12) + octaveOffset;
 				const recentPitches: number[] = isDrum ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
 				const recentShapes: string[] = [];
 				for (let i: number = 0; i < recentPitches.length; i++) {
 					recentPitches[i] += octaveOffset;
 				}
-				for (const p of this.channelPatterns[channel]) {
+				for (const p of this.channels[channel].patterns) {
 					bits.write(neededInstrumentBits, p.instrument);
 					
 					if (p.notes.length > 0) {
@@ -779,36 +815,23 @@ namespace beepbox {
 			const beforeFour:  boolean = version < 4;
 			const beforeFive:  boolean = version < 5;
 			const base64CharCodeToInt: ReadonlyArray<number> = Song._base64CharCodeToInt;
-			if (beforeThree) this.instrumentEnvelopes = [[0],[0],[0],[0]];
-			if (beforeThree) this.instrumentWaves   = [[1],[1],[1],[0]];
+			if (beforeThree) {
+				// Originally, the only instrument envelope was "seamless" and the only drum wave was "retro".
+				for (const channel of this.channels) channel.instruments[0].envelope = 0;
+				this.channels[3].instruments[0].wave = 0;
+			}
 			while (charIndex < compressed.length) {
 				const command: number = compressed.charCodeAt(charIndex++);
 				let channel: number;
 				if (command == CharCode.n) {
 					this.pitchChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.drumChannelCount  = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					this.pitchChannelCount = this._clip(Config.pitchChannelCountMin, Config.pitchChannelCountMax + 1, this.pitchChannelCount);
-					this.drumChannelCount = this._clip(Config.drumChannelCountMin, Config.drumChannelCountMax + 1, this.drumChannelCount);
-					const channelCount: number = this.pitchChannelCount + this.drumChannelCount;
-					for (let channel: number = 0; channel < channelCount; channel++) {
-						this.channelPatterns[channel] = [];
-						this.channelBars[channel] = [];
-						this.instrumentWaves[channel] = [];
-						this.instrumentFilters[channel] = [];
-						this.instrumentEnvelopes[channel] = [];
-						this.instrumentEffects[channel] = [];
-						this.instrumentChorus[channel] = [];
-						this.instrumentVolumes[channel] = [];
+					this.pitchChannelCount = Song._clip(Config.pitchChannelCountMin, Config.pitchChannelCountMax + 1, this.pitchChannelCount);
+					this.drumChannelCount = Song._clip(Config.drumChannelCountMin, Config.drumChannelCountMax + 1, this.drumChannelCount);
+					for (let channelIndex = this.channels.length; channelIndex < this.getChannelCount(); channelIndex++) {
+						this.channels[channelIndex] = new Channel(/*channelIndex >= this.pitchChannelCount*/);
 					}
-					this.channelPatterns.length = channelCount;
-					this.channelBars.length = channelCount;
-					this.channelOctaves.length = channelCount;
-					this.instrumentWaves.length = channelCount;
-					this.instrumentFilters.length = channelCount;
-					this.instrumentEnvelopes.length = channelCount;
-					this.instrumentEffects.length = channelCount;
-					this.instrumentChorus.length = channelCount;
-					this.instrumentVolumes.length = channelCount;
+					this.channels.length = this.getChannelCount();
 				} else if (command == CharCode.s) {
 					this.scale = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					if (beforeThree && this.scale == 10) this.scale = 11;
@@ -832,10 +855,10 @@ namespace beepbox {
 					} else {
 						this.tempo = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					}
-					this.tempo = this._clip(0, Config.tempoSteps, this.tempo);
+					this.tempo = Song._clip(0, Config.tempoSteps, this.tempo);
 				} else if (command == CharCode.m) {
 					this.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					this.reverb = this._clip(0, Config.reverbRange, this.reverb);
+					this.reverb = Song._clip(0, Config.reverbRange, this.reverb);
 				} else if (command == CharCode.a) {
 					if (beforeThree) {
 						this.beatsPerBar = [6, 7, 8, 9, 10][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
@@ -846,90 +869,109 @@ namespace beepbox {
 				} else if (command == CharCode.g) {
 					this.barCount = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					this.barCount = Math.max(Config.barCountMin, Math.min(Config.barCountMax, this.barCount));
+					for (let channel = 0; channel < this.getChannelCount(); channel++) {
+						for (let bar = this.channels[channel].bars.length; bar < this.barCount; bar++) {
+							this.channels[channel].bars[bar] = 1;
+						}
+						this.channels[channel].bars.length = this.barCount;
+					}
 				} else if (command == CharCode.j) {
 					this.patternsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					this.patternsPerChannel = Math.max(Config.patternsPerChannelMin, Math.min(Config.patternsPerChannelMax, this.patternsPerChannel));
+					for (let channel = 0; channel < this.getChannelCount(); channel++) {
+						for (let pattern = this.channels[channel].patterns.length; pattern < this.patternsPerChannel; pattern++) {
+							this.channels[channel].patterns[pattern] = new Pattern();
+						}
+						this.channels[channel].patterns.length = this.patternsPerChannel;
+					}
 				} else if (command == CharCode.i) {
 					this.instrumentsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					this.instrumentsPerChannel = Math.max(Config.instrumentsPerChannelMin, Math.min(Config.instrumentsPerChannelMax, this.instrumentsPerChannel));
+					for (let channel = 0; channel < this.getChannelCount(); channel++) {
+						for (let instrument = this.channels[channel].instruments.length; instrument < this.instrumentsPerChannel; instrument++) {
+							this.channels[channel].instruments[instrument] = new Instrument();
+						}
+						this.channels[channel].instruments.length = this.instrumentsPerChannel;
+					}
 				} else if (command == CharCode.r) {
 					this.partsPerBeat = Config.partCounts[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
 				} else if (command == CharCode.w) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentWaves[channel][0] = this._clip(0, Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].instruments[0].wave = Song._clip(0, Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							const isDrums = channel >= this.pitchChannelCount;
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentWaves[channel][i] = this._clip(0, isDrums ? Config.drumNames.length : Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.channels[channel].instruments[i].wave = Song._clip(0, isDrums ? Config.drumNames.length : Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.f) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentFilters[channel][0] = [0, 2, 3, 5][this._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+						this.channels[channel].instruments[0].filter = [0, 2, 3, 5][Song._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentFilters[channel][i] = this._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.channels[channel].instruments[i].filter = Song._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.d) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentEnvelopes[channel][0] = this._clip(0, Config.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].instruments[0].envelope = Song._clip(0, Config.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentEnvelopes[channel][i] = this._clip(0, Config.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.channels[channel].instruments[i].envelope = Song._clip(0, Config.envelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.c) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentEffects[channel][0] = this._clip(0, Config.effectNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						if (this.instrumentEffects[channel][0] == 1) this.instrumentEffects[channel][0] = 3;
-						else if (this.instrumentEffects[channel][0] == 3) this.instrumentEffects[channel][0] = 5;
+						let effect: number = Song._clip(0, Config.effectNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						if (effect == 1) effect = 3;
+						else if (effect == 3) effect = 5;
+						this.channels[channel].instruments[0].effect = effect;
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentEffects[channel][i] = this._clip(0, Config.effectNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.channels[channel].instruments[i].effect = Song._clip(0, Config.effectNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.h) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentChorus[channel][0] = this._clip(0, Config.chorusNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].instruments[0].chorus = Song._clip(0, Config.chorusNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentChorus[channel][i] = this._clip(0, Config.chorusNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.channels[channel].instruments[i].chorus = Song._clip(0, Config.chorusNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.v) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.instrumentVolumes[channel][0] = this._clip(0, Config.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].instruments[0].volume = Song._clip(0, Config.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.instrumentVolumes[channel][i] = this._clip(0, Config.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.channels[channel].instruments[i].volume = Song._clip(0, Config.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					}
 				} else if (command == CharCode.o) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channelOctaves[channel] = this._clip(0, 5, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].octave = Song._clip(0, 5, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
-							this.channelOctaves[channel] = this._clip(0, 5, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							this.channels[channel].octave = Song._clip(0, 5, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						}
 					}
 				} else if (command == CharCode.b) {
@@ -940,7 +982,7 @@ namespace beepbox {
 						subStringLength = Math.ceil(barCount * 0.5);
 						const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + subStringLength);
 						for (let i: number = 0; i < barCount; i++) {
-							this.channelBars[channel][i] = bits.read(3) + 1;
+							this.channels[channel].bars[i] = bits.read(3) + 1;
 						}
 					} else if (beforeFive) {
 						let neededBits: number = 0;
@@ -948,20 +990,18 @@ namespace beepbox {
 						subStringLength = Math.ceil(this.getChannelCount() * this.barCount * neededBits / 6);
 						const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + subStringLength);
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
-							this.channelBars[channel].length = this.barCount;
 							for (let i: number = 0; i < this.barCount; i++) {
-								this.channelBars[channel][i] = bits.read(neededBits) + 1;
+								this.channels[channel].bars[i] = bits.read(neededBits) + 1;
 							}
 						}
 					} else {
-						let neededBits2: number = 0;
-						while ((1 << neededBits2) < this.patternsPerChannel + 1) neededBits2++;
-						subStringLength = Math.ceil(this.getChannelCount() * this.barCount * neededBits2 / 6);
+						let neededBits: number = 0;
+						while ((1 << neededBits) < this.patternsPerChannel + 1) neededBits++;
+						subStringLength = Math.ceil(this.getChannelCount() * this.barCount * neededBits / 6);
 						const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + subStringLength);
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
-							this.channelBars[channel].length = this.barCount;
 							for (let i: number = 0; i < this.barCount; i++) {
-								this.channelBars[channel][i] = bits.read(neededBits2);
+								this.channels[channel].bars[i] = bits.read(neededBits);
 							}
 						}
 					}
@@ -993,11 +1033,9 @@ namespace beepbox {
 					let neededInstrumentBits: number = 0;
 					while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
 					while (true) {
-						this.channelPatterns[channel] = [];
-						
 						const isDrum: boolean = this.getChannelIsDrum(channel);
 						
-						const octaveOffset: number = isDrum ? 0 : this.channelOctaves[channel] * 12;
+						const octaveOffset: number = isDrum ? 0 : this.channels[channel].octave * 12;
 						let note: Note | null = null;
 						let pin: NotePin | null = null;
 						let lastPitch: number = (isDrum ? 4 : 12) + octaveOffset;
@@ -1007,14 +1045,13 @@ namespace beepbox {
 							recentPitches[i] += octaveOffset;
 						}
 						for (let i: number = 0; i < this.patternsPerChannel; i++) {
-							const newPattern: Pattern | null = new Pattern();
+							const newPattern: Pattern = this.channels[channel].patterns[i];
 							newPattern.instrument = bits.read(neededInstrumentBits);
-							this.channelPatterns[channel][i] = newPattern;
 							
 							if (!beforeThree && bits.read(1) == 0) continue;
 							
 							let curPart: number = 0;
-							const newNotes: Note[] = [];
+							const newNotes: Note[] = newPattern.notes;
 							while (curPart < this.beatsPerBar * this.partsPerBeat) {
 								
 								const useOldShape: boolean = bits.read(1) == 1;
@@ -1114,8 +1151,7 @@ namespace beepbox {
 									newNotes.push(note);
 								}
 							}
-							newPattern.notes = newNotes;
-						} // for (let i: number = 0; i < patternsPerChannel; i++) {
+						}
 						
 						if (beforeThree) {
 							break;
@@ -1134,26 +1170,27 @@ namespace beepbox {
 				const instrumentArray: Object[] = [];
 				const isDrum: boolean = this.getChannelIsDrum(channel);
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
+					const instrument: Instrument = this.channels[channel].instruments[i];
 					if (isDrum) {
 						instrumentArray.push({
-							volume: (5 - this.instrumentVolumes[channel][i]) * 20,
-							wave: Config.drumNames[this.instrumentWaves[channel][i]],
-							envelope: Config.envelopeNames[this.instrumentEnvelopes[channel][i]],
+							volume: (5 - instrument.volume) * 20,
+							wave: Config.drumNames[instrument.wave],
+							envelope: Config.envelopeNames[instrument.envelope],
 						});
 					} else {
 						instrumentArray.push({
-							volume: (5 - this.instrumentVolumes[channel][i]) * 20,
-							wave: Config.waveNames[this.instrumentWaves[channel][i]],
-							envelope: Config.envelopeNames[this.instrumentEnvelopes[channel][i]],
-							filter: Config.filterNames[this.instrumentFilters[channel][i]],
-							chorus: Config.chorusNames[this.instrumentChorus[channel][i]],
-							effect: Config.effectNames[this.instrumentEffects[channel][i]],
+							volume: (5 - instrument.volume) * 20,
+							wave: Config.waveNames[instrument.wave],
+							envelope: Config.envelopeNames[instrument.envelope],
+							filter: Config.filterNames[instrument.filter],
+							chorus: Config.chorusNames[instrument.chorus],
+							effect: Config.effectNames[instrument.effect],
 						});
 					}
 				}
 				
 				const patternArray: Object[] = [];
-				for (const pattern of this.channelPatterns[channel]) {
+				for (const pattern of this.channels[channel].patterns) {
 					const noteArray: Object[] = [];
 					for (const note of pattern.notes) {
 						const pointArray: Object[] = [];
@@ -1179,17 +1216,17 @@ namespace beepbox {
 				
 				const sequenceArray: number[] = [];
 				if (enableIntro) for (let i: number = 0; i < this.loopStart; i++) {
-					sequenceArray.push(this.channelBars[channel][i]);
+					sequenceArray.push(this.channels[channel].bars[i]);
 				}
 				for (let l: number = 0; l < loopCount; l++) for (let i: number = this.loopStart; i < this.loopStart + this.loopLength; i++) {
-					sequenceArray.push(this.channelBars[channel][i]);
+					sequenceArray.push(this.channels[channel].bars[i]);
 				}
 				if (enableOutro) for (let i: number = this.loopStart + this.loopLength; i < this.barCount; i++) {
-					sequenceArray.push(this.channelBars[channel][i]);
+					sequenceArray.push(this.channels[channel].bars[i]);
 				}
 				
 				channelArray.push({
-					octaveScrollBar: this.channelOctaves[channel],
+					octaveScrollBar: this.channels[channel].octave,
 					instruments: instrumentArray,
 					patterns: patternArray,
 					sequence: sequenceArray,
@@ -1251,11 +1288,11 @@ namespace beepbox {
 			if (jsonObject.beatsPerMinute != undefined) {
 				const bpm: number = jsonObject.beatsPerMinute | 0;
 				this.tempo = Math.round(4.0 + 9.0 * Math.log(bpm / 120) / Math.LN2);
-				this.tempo = this._clip(0, Config.tempoSteps, this.tempo);
+				this.tempo = Song._clip(0, Config.tempoSteps, this.tempo);
 			}
 			
 			if (jsonObject.reverb != undefined) {
-				this.reverb = this._clip(0, Config.reverbRange, jsonObject.reverb | 0);
+				this.reverb = Song._clip(0, Config.reverbRange, jsonObject.reverb | 0);
 			}
 			
 			if (jsonObject.beatsPerBar != undefined) {
@@ -1285,15 +1322,16 @@ namespace beepbox {
 			this.barCount = maxBars;
 			
 			if (jsonObject.introBars != undefined) {
-				this.loopStart = this._clip(0, this.barCount, jsonObject.introBars | 0);
+				this.loopStart = Song._clip(0, this.barCount, jsonObject.introBars | 0);
 			}
 			if (jsonObject.loopBars != undefined) {
-				this.loopLength = this._clip(1, this.barCount - this.loopStart + 1, jsonObject.loopBars | 0);
+				this.loopLength = Song._clip(1, this.barCount - this.loopStart + 1, jsonObject.loopBars | 0);
 			}
 			
 			let pitchChannelCount = 0;
 			let drumChannelCount = 0;
 			if (jsonObject.channels) {
+				/*
 				this.instrumentVolumes.length = jsonObject.channels.length;
 				this.instrumentWaves.length = jsonObject.channels.length;
 				this.instrumentEnvelopes.length = jsonObject.channels.length;
@@ -1303,29 +1341,30 @@ namespace beepbox {
 				this.channelPatterns.length = jsonObject.channels.length;
 				this.channelOctaves.length = jsonObject.channels.length;
 				this.channelBars.length = jsonObject.channels.length;
+				*/
 				for (let channel: number = 0; channel < jsonObject.channels.length; channel++) {
 					let channelObject: any = jsonObject.channels[channel];
 					
+					if (this.channels.length <= channel) this.channels[channel] = new Channel();
+					
 					if (channelObject.octaveScrollBar != undefined) {
-						this.channelOctaves[channel] = this._clip(0, 5, channelObject.octaveScrollBar | 0);
+						this.channels[channel].octave = Song._clip(0, 5, channelObject.octaveScrollBar | 0);
 					}
 					
-					this.instrumentVolumes[channel] = [];
-					this.instrumentWaves[channel] = [];
-					this.instrumentEnvelopes[channel] = [];
-					this.instrumentFilters[channel] = [];
-					this.instrumentChorus[channel] = [];
-					this.instrumentEffects[channel] = [];
-					this.channelPatterns[channel] = [];
-					this.channelBars[channel] = [];
-					this.instrumentVolumes[channel].length = this.instrumentsPerChannel;
-					this.instrumentWaves[channel].length = this.instrumentsPerChannel;
-					this.instrumentEnvelopes[channel].length = this.instrumentsPerChannel;
-					this.instrumentFilters[channel].length = this.instrumentsPerChannel;
-					this.instrumentChorus[channel].length = this.instrumentsPerChannel;
-					this.instrumentEffects[channel].length = this.instrumentsPerChannel;
-					this.channelPatterns[channel].length = this.patternsPerChannel;
-					this.channelBars[channel].length = this.barCount;
+					for (let i: number = this.channels[channel].instruments.length; i < this.instrumentsPerChannel; i++) {
+						this.channels[channel].instruments[i] = new Instrument();
+					}
+					this.channels[channel].instruments.length = this.instrumentsPerChannel;
+					
+					for (let i: number = this.channels[channel].patterns.length; i < this.patternsPerChannel; i++) {
+						this.channels[channel].patterns[i] = new Pattern();
+					}
+					this.channels[channel].patterns.length = this.patternsPerChannel;
+					
+					for (let i: number = 0; i < this.barCount; i++) {
+						this.channels[channel].bars[i] = 1;
+					}
+					this.channels[channel].bars.length = this.barCount;
 					
 					let isDrum: boolean = false;
 					if (channelObject.type) {
@@ -1337,44 +1376,41 @@ namespace beepbox {
 					if (isDrum) drumChannelCount++; else pitchChannelCount++;
 					
 					for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
+						const instrument: Instrument = this.channels[channel].instruments[i];
 						let instrumentObject: any = undefined;
 						if (channelObject.instruments) instrumentObject = channelObject.instruments[i];
 						if (instrumentObject == undefined) instrumentObject = {};
 						if (instrumentObject.volume != undefined) {
-							this.instrumentVolumes[channel][i] = this._clip(0, Config.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
+							instrument.volume = Song._clip(0, Config.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
 						} else {
-							this.instrumentVolumes[channel][i] = 0;
+							instrument.volume = 0;
 						}
 						const oldEnvelopeNames: Dictionary<number> = {"binary": 0};
-						this.instrumentEnvelopes[channel][i] = oldEnvelopeNames[instrumentObject.envelope] != undefined ? oldEnvelopeNames[instrumentObject.envelope] : Config.envelopeNames.indexOf(instrumentObject.envelope);
-						if (this.instrumentEnvelopes[channel][i] == -1) this.instrumentEnvelopes[channel][i] = 1;
+						instrument.envelope = oldEnvelopeNames[instrumentObject.envelope] != undefined ? oldEnvelopeNames[instrumentObject.envelope] : Config.envelopeNames.indexOf(instrumentObject.envelope);
+						if (instrument.envelope == -1) instrument.envelope = 1;
 						if (isDrum) {
-							this.instrumentWaves[channel][i] = Config.drumNames.indexOf(instrumentObject.wave);
-							if (this.instrumentWaves[channel][i] == -1) this.instrumentWaves[channel][i] = 1;
-							this.instrumentFilters[channel][i] = 0;
-							this.instrumentChorus[channel][i] = 0;
-							this.instrumentEffects[channel][i] = 0;
+							instrument.wave = Config.drumNames.indexOf(instrumentObject.wave);
+							if (instrument.wave == -1) instrument.wave = 1;
 						} else {
-							this.instrumentWaves[channel][i] = Config.waveNames.indexOf(instrumentObject.wave);
-							if (this.instrumentWaves[channel][i] == -1) this.instrumentWaves[channel][i] = 1;
-							this.instrumentFilters[channel][i] = Config.filterNames.indexOf(instrumentObject.filter);
-							if (this.instrumentFilters[channel][i] == -1) this.instrumentFilters[channel][i] = 0;
-							this.instrumentChorus[channel][i] = Config.chorusNames.indexOf(instrumentObject.chorus);
-							if (this.instrumentChorus[channel][i] == -1) this.instrumentChorus[channel][i] = 0;
-							this.instrumentEffects[channel][i] = Config.effectNames.indexOf(instrumentObject.effect);
-							if (this.instrumentEffects[channel][i] == -1) this.instrumentEffects[channel][i] = 0;
+							instrument.wave = Config.waveNames.indexOf(instrumentObject.wave);
+							if (instrument.wave == -1) instrument.wave = 1;
+							instrument.filter = Config.filterNames.indexOf(instrumentObject.filter);
+							if (instrument.filter == -1) instrument.filter = 0;
+							instrument.chorus = Config.chorusNames.indexOf(instrumentObject.chorus);
+							if (instrument.chorus == -1) instrument.chorus = 0;
+							instrument.effect = Config.effectNames.indexOf(instrumentObject.effect);
+							if (instrument.effect == -1) instrument.effect = 0;
 						}
 					}
 				
 					for (let i: number = 0; i < this.patternsPerChannel; i++) {
-						const pattern: Pattern = new Pattern();
-						this.channelPatterns[channel][i] = pattern;
+						const pattern: Pattern = this.channels[channel].patterns[i];
 					
 						let patternObject: any = undefined;
 						if (channelObject.patterns) patternObject = channelObject.patterns[i];
 						if (patternObject == undefined) continue;
 					
-						pattern.instrument = this._clip(0, this.instrumentsPerChannel, (patternObject.instrument | 0) - 1);
+						pattern.instrument = Song._clip(0, this.instrumentsPerChannel, (patternObject.instrument | 0) - 1);
 					
 						if (patternObject.notes && patternObject.notes.length > 0) {
 							const maxNoteCount: number = Math.min(this.beatsPerBar * this.partsPerBeat, patternObject.notes.length >>> 0);
@@ -1463,16 +1499,17 @@ namespace beepbox {
 					}
 				
 					for (let i: number = 0; i < this.barCount; i++) {
-						this.channelBars[channel][i] = channelObject.sequence ? Math.min(this.patternsPerChannel, channelObject.sequence[i] >>> 0) : 0;
+						this.channels[channel].bars[i] = channelObject.sequence ? Math.min(this.patternsPerChannel, channelObject.sequence[i] >>> 0) : 0;
 					}
 				}
 			}
 			
 			this.pitchChannelCount = pitchChannelCount;
 			this.drumChannelCount = drumChannelCount;
+			this.channels.length = this.getChannelCount();
 		}
 		
-		private _clip(min: number, max: number, val: number): number {
+		private static _clip(min: number, max: number, val: number): number {
 			max = max - 1;
 			if (val <= max) {
 				if (val >= min) return val;
@@ -1483,9 +1520,9 @@ namespace beepbox {
 		}
 		
 		public getPattern(channel: number, bar: number): Pattern | null {
-			const patternIndex: number = this.channelBars[channel][bar];
+			const patternIndex: number = this.channels[channel].bars[bar];
 			if (patternIndex == 0) return null;
-			return this.channelPatterns[channel][patternIndex - 1];
+			return this.channels[channel].patterns[patternIndex - 1];
 		}
 		
 		public getPatternInstrument(channel: number, bar: number): number {
@@ -1506,7 +1543,7 @@ namespace beepbox {
 			if (song != null) {
 				for (let i: number = 0; i < song.instrumentsPerChannel; i++) {
 					for (let j: number = song.pitchChannelCount; j < song.pitchChannelCount + song.drumChannelCount; j++) {
-						Config.getDrumWave(song.instrumentWaves[j][i]);
+						Config.getDrumWave(song.channels[j].instruments[i].wave);
 					}
 				}
 				Synth.getGeneratedSynthesizer(song.pitchChannelCount, song.drumChannelCount);
@@ -1745,9 +1782,9 @@ namespace beepbox {
 		private static computeChannelInstrument(synth: Synth, song: Song, channel: number, time: number, sampleTime: number, samplesPerArpeggio: number, samples: number, isDrum: boolean) {
 			const pattern: Pattern | null = song.getPattern(channel, synth.bar);
 			
-			const envelope: number = pattern == null ? 0 : song.instrumentEnvelopes[channel][pattern.instrument];
+			const envelope: number = pattern == null ? 0 : song.channels[channel].instruments[pattern.instrument].envelope;
 			
-			const channelRoot: number = isDrum ? Config.drumPitchRoots[song.instrumentWaves[channel][pattern == null ? 0 : pattern.instrument]] : Config.keyTransposes[song.key];
+			const channelRoot: number = isDrum ? Config.drumPitchRoots[song.channels[channel].instruments[pattern == null ? 0 : pattern.instrument].wave] : Config.keyTransposes[song.key];
 			const intervalScale: number = isDrum ? Config.drumInterval : 1;
 			
 			let note: Note | null = null;
@@ -1783,8 +1820,8 @@ namespace beepbox {
 				const instrument = pattern ? pattern.instrument : 0; 
 				let pianoPitchDamping: number;
 				if (isDrum) {
-					if (Config.drumWaveIsSoft[song.instrumentWaves[channel][instrument]]) {
-						filter = Math.min(1.0, pianoFreq * sampleTime * Config.drumPitchFilterMult[song.instrumentWaves[channel][pattern!.instrument]]);
+					if (Config.drumWaveIsSoft[song.channels[channel].instruments[instrument].wave]) {
+						filter = Math.min(1.0, pianoFreq * sampleTime * Config.drumPitchFilterMult[song.channels[channel].instruments[pattern!.instrument].wave]);
 						pianoPitchDamping = 24.0;
 					} else {
 						pianoPitchDamping = 60.0;
@@ -1794,7 +1831,7 @@ namespace beepbox {
 				}
 				phaseDelta = pianoFreq * sampleTime;
 				noteVolume = Math.pow(2.0, -synth.pianoPitch * intervalScale / pianoPitchDamping);
-				vibratoScale = Math.pow(2.0, Config.effectVibratos[song.instrumentEffects[channel][instrument]] / 12.0) - 1.0;
+				vibratoScale = Math.pow(2.0, Config.effectVibratos[song.channels[channel].instruments[instrument].effect] / 12.0) - 1.0;
 			} else if (note == null) {
 				phaseDelta = 0.0;
 				phaseDeltaScale = 0.0;
@@ -1802,7 +1839,7 @@ namespace beepbox {
 				vibratoScale = 0.0;
 				resetPhases = true;
 			} else {
-				const chorusHarmonizes: boolean = Config.chorusHarmonizes[song.instrumentChorus[channel][pattern!.instrument]];
+				const chorusHarmonizes: boolean = Config.chorusHarmonizes[song.channels[channel].instruments[pattern!.instrument].chorus];
 				let pitch: number = note.pitches[0];
 				if (chorusHarmonizes) {
 					let harmonyOffset: number = 0.0;
@@ -1889,8 +1926,8 @@ namespace beepbox {
 				const endFreq:   number = synth.frequencyFromPitch(channelRoot + (pitch + endInterval) * intervalScale);
 				let pitchDamping: number;
 				if (isDrum) {
-					if (Config.drumWaveIsSoft[song.instrumentWaves[channel][pattern!.instrument]]) {
-						filter = Math.min(1.0, startFreq * sampleTime * Config.drumPitchFilterMult[song.instrumentWaves[channel][pattern!.instrument]]);
+					if (Config.drumWaveIsSoft[song.channels[channel].instruments[pattern!.instrument].wave]) {
+						filter = Math.min(1.0, startFreq * sampleTime * Config.drumPitchFilterMult[song.channels[channel].instruments[pattern!.instrument].wave]);
 						pitchDamping = 24.0;
 					} else {
 						pitchDamping = 60.0;
@@ -1911,14 +1948,14 @@ namespace beepbox {
 				if (timeSinceStart == 0.0 && !inhibitRestart) resetPhases = true;
 				
 				if (!isDrum) {
-					const filterScaleRate: number = Config.filterDecays[song.instrumentFilters[channel][pattern!.instrument]];
+					const filterScaleRate: number = Config.filterDecays[song.channels[channel].instruments[pattern!.instrument].filter];
 					filter = Math.pow(2, -filterScaleRate * startFilterTime * 4.0 * samplesPerArpeggio / synth.samplesPerSecond);
 					const endFilter: number = Math.pow(2, -filterScaleRate * endFilterTime * 4.0 * samplesPerArpeggio / synth.samplesPerSecond);
 					filterScale = Math.pow(endFilter / filter, 1.0 / samples);
 				}
 				
-				const vibratoDelay = Config.effectVibratoDelays[song.instrumentEffects[channel][pattern!.instrument]];
-				vibratoScale = (time - note.start < vibratoDelay) ? 0.0 : Math.pow(2.0, Config.effectVibratos[song.instrumentEffects[channel][pattern!.instrument]] / 12.0) - 1.0;
+				const vibratoDelay = Config.effectVibratoDelays[song.channels[channel].instruments[pattern!.instrument].effect];
+				vibratoScale = (time - note.start < vibratoDelay) ? 0.0 : Math.pow(2.0, Config.effectVibratos[song.channels[channel].instruments[pattern!.instrument].effect] / 12.0) - 1.0;
 			}
 			
 			return {
@@ -2031,13 +2068,13 @@ namespace beepbox {
 				
 				// Initialize instruments based on current pattern.
 				var instrumentChannel# = song.getPatternInstrument(#, synth.bar); // ALL
-				var maxChannel#Volume = 0.27 * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Config.waveVolumes[song.instrumentWaves[#][instrumentChannel#]] * beepbox.Config.filterVolumes[song.instrumentFilters[#][instrumentChannel#]] * beepbox.Config.chorusVolumes[song.instrumentChorus[#][instrumentChannel#]] * 0.5; // PITCH
-				var maxChannel#Volume = 0.19 * (song.instrumentVolumes[#][instrumentChannel#] == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.instrumentVolumes[#][instrumentChannel#]])) * beepbox.Config.drumVolumes[song.instrumentWaves[#][instrumentChannel#]]; // DRUM
-				var channel#Wave = beepbox.Config.waves[song.instrumentWaves[#][instrumentChannel#]]; // PITCH
-				var channel#Wave = beepbox.Config.getDrumWave(song.instrumentWaves[#][instrumentChannel#]); // DRUM
+				var maxChannel#Volume = 0.27 * (song.channels[#].instruments[instrumentChannel#].volume == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.channels[#].instruments[instrumentChannel#].volume])) * beepbox.Config.waveVolumes[song.channels[#].instruments[instrumentChannel#].wave] * beepbox.Config.filterVolumes[song.channels[#].instruments[instrumentChannel#].filter] * beepbox.Config.chorusVolumes[song.channels[#].instruments[instrumentChannel#].chorus] * 0.5; // PITCH
+				var maxChannel#Volume = 0.19 * (song.channels[#].instruments[instrumentChannel#].volume == 5 ? 0.0 : Math.pow(2, -beepbox.Config.volumeValues[song.channels[#].instruments[instrumentChannel#].volume])) * beepbox.Config.drumVolumes[song.channels[#].instruments[instrumentChannel#].wave]; // DRUM
+				var channel#Wave = beepbox.Config.waves[song.channels[#].instruments[instrumentChannel#].wave]; // PITCH
+				var channel#Wave = beepbox.Config.getDrumWave(song.channels[#].instruments[instrumentChannel#].wave); // DRUM
 				var channel#WaveLength = channel#Wave.length; // PITCH
-				var channel#FilterBase = Math.pow(2, -beepbox.Config.filterBases[song.instrumentFilters[#][instrumentChannel#]]); // PITCH
-				var channel#TremoloScale = beepbox.Config.effectTremolos[song.instrumentEffects[#][instrumentChannel#]]; // PITCH
+				var channel#FilterBase = Math.pow(2, -beepbox.Config.filterBases[song.channels[#].instruments[instrumentChannel#].filter]); // PITCH
+				var channel#TremoloScale = beepbox.Config.effectTremolos[song.channels[#].instruments[instrumentChannel#].effect]; // PITCH
 				
 				// Reuse initialized instruments until getting to the end of the sample period or the end of the current bar.
 				while (totalSamples > 0) {
@@ -2052,10 +2089,10 @@ namespace beepbox {
 					
 					var time = synth.part + synth.beat * song.partsPerBeat;
 				
-					var channel#ChorusA = Math.pow(2.0, (beepbox.Config.chorusOffsets[song.instrumentChorus[#][instrumentChannel#]] + beepbox.Config.chorusIntervals[song.instrumentChorus[#][instrumentChannel#]]) / 12.0); // PITCH
-					var channel#ChorusB = Math.pow(2.0, (beepbox.Config.chorusOffsets[song.instrumentChorus[#][instrumentChannel#]] - beepbox.Config.chorusIntervals[song.instrumentChorus[#][instrumentChannel#]]) / 12.0); // PITCH
-					var channel#ChorusSign = (song.instrumentChorus[#][instrumentChannel#] == 7) ? -1.0 : 1.0; // PITCH
-					if (song.instrumentChorus[#][instrumentChannel#] == 0) synth.channelPhaseB[#] = synth.channelPhaseA[#]; // PITCH
+					var channel#ChorusA = Math.pow(2.0, (beepbox.Config.chorusOffsets[song.channels[#].instruments[instrumentChannel#].chorus] + beepbox.Config.chorusIntervals[song.channels[#].instruments[instrumentChannel#].chorus]) / 12.0); // PITCH
+					var channel#ChorusB = Math.pow(2.0, (beepbox.Config.chorusOffsets[song.channels[#].instruments[instrumentChannel#].chorus] - beepbox.Config.chorusIntervals[song.channels[#].instruments[instrumentChannel#].chorus]) / 12.0); // PITCH
+					var channel#ChorusSign = (song.channels[#].instruments[instrumentChannel#].chorus == 7) ? -1.0 : 1.0; // PITCH
+					if (song.channels[#].instruments[instrumentChannel#].chorus == 0) synth.channelPhaseB[#] = synth.channelPhaseA[#]; // PITCH
 					
 					var channel#PhaseDelta = 0; // ALL
 					var channel#PhaseDeltaScale = 0; // ALL

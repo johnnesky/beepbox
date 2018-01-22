@@ -501,7 +501,7 @@ namespace beepbox {
 							
 							const nextInstrument: number = pattern.instrument;
 							
-							if (isChorus && song.instrumentChorus[channel][nextInstrument] == 0) {
+							if (isChorus && song.channels[channel].instruments[nextInstrument].chorus == 0) {
 								barStartTime += ticksPerBar;
 								continue;
 							}
@@ -512,9 +512,9 @@ namespace beepbox {
 								writeEventTime(barStartTime);
 								writeUint16(0xFF04); // instrument event. 
 								if (isDrums) {
-									let description: string = "noise: " + Config.drumNames[song.instrumentWaves[channel][nextInstrument]];
-									description += ", volume: " + Config.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
-									description += ", envelope: " + Config.envelopeNames[song.instrumentEnvelopes[channel][nextInstrument]];
+									let description: string = "noise: " + Config.drumNames[song.channels[channel].instruments[nextInstrument].wave];
+									description += ", volume: " + Config.volumeNames[song.channels[channel].instruments[nextInstrument].volume];
+									description += ", envelope: " + Config.envelopeNames[song.channels[channel].instruments[nextInstrument].envelope];
 									writeAscii(description);
 									
 									// Program (instrument) change event:
@@ -522,23 +522,23 @@ namespace beepbox {
 									writeUint8(0xC0 | midiChannel); // program change event for given channel
 									writeFlagAnd7Bits(0, 0x7E); // seashore, applause
 								} else {
-									let description: string = "wave: " + Config.waveNames[song.instrumentWaves[channel][nextInstrument]];
-									description += ", volume: " + Config.volumeNames[song.instrumentVolumes[channel][nextInstrument]];
-									description += ", envelope: " + Config.envelopeNames[song.instrumentEnvelopes[channel][nextInstrument]];
-									description += ", filter: " + Config.filterNames[song.instrumentFilters[channel][nextInstrument]];
-									description += ", chorus: " + Config.chorusNames[song.instrumentChorus[channel][nextInstrument]];
-									description += ", effect: " + Config.effectNames[song.instrumentEffects[channel][nextInstrument]];
+									let description: string = "wave: " + Config.waveNames[song.channels[channel].instruments[nextInstrument].wave];
+									description += ", volume: " + Config.volumeNames[song.channels[channel].instruments[nextInstrument].volume];
+									description += ", envelope: " + Config.envelopeNames[song.channels[channel].instruments[nextInstrument].envelope];
+									description += ", filter: " + Config.filterNames[song.channels[channel].instruments[nextInstrument].filter];
+									description += ", chorus: " + Config.chorusNames[song.channels[channel].instruments[nextInstrument].chorus];
+									description += ", effect: " + Config.effectNames[song.channels[channel].instruments[nextInstrument].effect];
 									writeAscii(description);
 									
-									const filterInstruments: number[] = Config.filterDecays[song.instrumentFilters[channel][nextInstrument]] == 0 ? Config.midiSustainInstruments : Config.midiDecayInstruments;
+									const filterInstruments: number[] = Config.filterDecays[song.channels[channel].instruments[nextInstrument].filter] == 0 ? Config.midiSustainInstruments : Config.midiDecayInstruments;
 									
 									// Program (instrument) change event:
 									writeEventTime(barStartTime);
 									writeUint8(0xC0 | midiChannel); // program change event for given channel
-									writeFlagAnd7Bits(0, filterInstruments[song.instrumentWaves[channel][nextInstrument]]); // instrument program
+									writeFlagAnd7Bits(0, filterInstruments[song.channels[channel].instruments[nextInstrument].wave]); // instrument program
 								}
 								
-								const instrumentVolumeChoice: number = song.instrumentVolumes[channel][nextInstrument];
+								const instrumentVolumeChoice: number = song.channels[channel].instruments[nextInstrument].volume;
 								//const channelVolume: number = (instrumentVolumeChoice == 5 ? 0 : Math.pow(2, -instrumentVolumeChoice));
 								const channelVolume: number = (5 - instrumentVolumeChoice) / 5;
 								writeEventTime(barStartTime);
@@ -547,14 +547,14 @@ namespace beepbox {
 								writeFlagAnd7Bits(0, Math.round(0x7f * channelVolume)); // volume
 							}
 							
-							const effectChoice: number = song.instrumentEffects[channel][nextInstrument];
+							const effectChoice: number = song.channels[channel].instruments[nextInstrument].effect;
 							const effectVibrato: number = Config.effectVibratos[effectChoice];
 							const effectTremolo: number = Config.effectTremolos[effectChoice];
 							const effectDuration: number = 0.14;
 							
-							let chorusOffset: number = Config.chorusIntervals[song.instrumentChorus[channel][nextInstrument]];
+							let chorusOffset: number = Config.chorusIntervals[song.channels[channel].instruments[nextInstrument].chorus];
 							if (!isChorus) chorusOffset *= -1;
-							chorusOffset += Config.chorusOffsets[song.instrumentChorus[channel][nextInstrument]];
+							chorusOffset += Config.chorusOffsets[song.channels[channel].instruments[nextInstrument].chorus];
 							
 							for (let noteIndex: number = 0; noteIndex < pattern.notes.length; noteIndex++) {
 								const note: Note = pattern.notes[noteIndex];
@@ -576,7 +576,7 @@ namespace beepbox {
 										const linearVolume: number = lerp(pinVolume, nextPinVolume, tick / length);
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, tick / length);
 										
-										const chorusHarmonizes: boolean = Config.chorusHarmonizes[song.instrumentChorus[channel][nextInstrument]];
+										const chorusHarmonizes: boolean = Config.chorusHarmonizes[song.channels[channel].instruments[nextInstrument].chorus];
 										const arpeggio: number = Math.floor(tick / ticksPerArpeggio) % 4;
 										let nextPitch: number = note.pitches[0];
 										if (chorusHarmonizes) {

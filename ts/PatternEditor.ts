@@ -693,16 +693,16 @@ namespace beepbox {
 					if (this._cursor.pitchIndex == -1) {
 						const sequence: ChangeSequence = new ChangeSequence();
 						if (this._cursor.curNote.pitches.length == 4) {
-							sequence.append(new ChangePitchAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curNote.pitches[0], 0, true));
+							sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.curNote.pitches[0], 0, true));
 						}
-						sequence.append(new ChangePitchAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));
+						sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));
 						this._doc.history.record(sequence);
 						this._copyPins(this._cursor.curNote);
 					} else {
 						if (this._cursor.curNote.pitches.length == 1) {
 							this._doc.history.record(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
 						} else {
-							this._doc.history.record(new ChangePitchAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
+							this._doc.history.record(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
 						}
 					}
 				}
@@ -761,7 +761,7 @@ namespace beepbox {
 			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * this._doc.song.partsPerBeat);
 			this._pitchHeight = this._doc.song.getChannelIsDrum(this._doc.channel) ? this._defaultDrumHeight : this._defaultPitchHeight;
 			this._pitchCount = this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount : Config.pitchCount;
-			this._octaveOffset = this._doc.song.channelOctaves[this._doc.channel] * 12;
+			this._octaveOffset = this._doc.song.channels[this._doc.channel].octave * 12;
 			
 			if (this._renderedPartsPerBeat != this._doc.song.partsPerBeat || 
 				this._renderedPitchChannelCount != this._doc.song.pitchChannelCount || 
@@ -836,7 +836,7 @@ namespace beepbox {
 							const notePath: SVGPathElement = <SVGPathElement> svgElement("path");
 							notePath.setAttribute("fill", this._doc.song.getNoteColorDim(channel));
 							notePath.setAttribute("pointer-events", "none");
-							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channelOctaves[channel] * 12);
+							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channels[channel].octave * 12);
 							this._svgNoteContainer.appendChild(notePath);
 						}
 					}

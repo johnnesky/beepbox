@@ -152,7 +152,7 @@ namespace beepbox {
 		}
 		
 		private _setPattern(pattern: number): void {
-			const currentValue: number = this._doc.song.channelBars[this._doc.channel][this._doc.bar];
+			const currentValue: number = this._doc.song.channels[this._doc.channel].bars[this._doc.bar];
 			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changePattern);
 			const oldValue: number = continuousChange ? this._changePattern!.oldValue : currentValue;
 			if (pattern != currentValue) {
@@ -263,7 +263,7 @@ namespace beepbox {
 			if (this._doc.channel == channel && this._doc.bar == bar) {
 				const up: boolean = (this._mouseY % this._channelHeight) < this._channelHeight / 2;
 				const patternCount: number = this._doc.song.patternsPerChannel;
-				this._setPattern((this._doc.song.channelBars[channel][bar] + (up ? 1 : patternCount)) % (patternCount + 1));
+				this._setPattern((this._doc.song.channels[channel].bars[bar] + (up ? 1 : patternCount)) % (patternCount + 1));
 			} else {
 				this._setChannelBar(channel, bar);
 			}
@@ -333,7 +333,7 @@ namespace beepbox {
 				this._select.removeChild(<Node> this._select.lastChild);
 			}
 			this._renderedPatternCount = patternCount;
-			const selectedPattern: number = this._doc.song.channelBars[this._doc.channel][this._doc.bar];
+			const selectedPattern: number = this._doc.song.channels[this._doc.channel].bars[this._doc.bar];
 			if (this._select.selectedIndex != selectedPattern) this._select.selectedIndex = selectedPattern;
 		}
 		
@@ -409,7 +409,7 @@ namespace beepbox {
 					
 					const box: Box = this._grid[j][i];
 					if (i < this._doc.song.barCount) {
-						box.setIndex(this._doc.song.channelBars[j][i], dim, selected, j, dim && !selected ? this._doc.song.getChannelColorDim(j) : this._doc.song.getChannelColorBright(j));
+						box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, j, dim && !selected ? this._doc.song.getChannelColorDim(j) : this._doc.song.getChannelColorBright(j));
 						box.container.style.visibility = "visible";
 					} else {
 						box.container.style.visibility = "hidden";
