@@ -151,7 +151,7 @@ namespace beepbox {
 		private _whenCursorMoved(): void {
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
 			if (this._dragging) {
-				const currentOctave: number = this._doc.song.channelOctaves[this._doc.channel];
+				const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
 				const continuousChange: boolean = this._doc.history.lastChangeWas(this._change);
 				const oldValue: number = continuousChange ? this._change!.oldValue : currentOctave;
 				
@@ -185,8 +185,8 @@ namespace beepbox {
 		private _whenCursorReleased = (event: Event): void => {
 			if (!this._doc.song.getChannelIsDrum(this._doc.channel) && !this._dragging && this._mouseDown) {
 				const continuousChange: boolean = this._doc.history.lastChangeWas(this._change);
-				const oldValue: number = continuousChange ? this._change!.oldValue : this._doc.song.channelOctaves[this._doc.channel];
-				const currentOctave: number = this._doc.song.channelOctaves[this._doc.channel];
+				const oldValue: number = continuousChange ? this._change!.oldValue : this._doc.song.channels[this._doc.channel].octave;
+				const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
 				
 				if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
 					if (currentOctave < 4) {
@@ -227,7 +227,7 @@ namespace beepbox {
 		}
 		
 		private _documentChanged = (): void => {
-			this._barBottom = this._editorHeight - (this._octaveHeight * this._doc.song.channelOctaves[this._doc.channel]);
+			this._barBottom = this._editorHeight - (this._octaveHeight * this._doc.song.channels[this._doc.channel].octave);
 			this._render();
 		}
 		

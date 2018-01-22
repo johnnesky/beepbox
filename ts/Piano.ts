@@ -142,7 +142,7 @@ namespace beepbox {
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._updateCursorPitch();
-			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
+			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
 			this._updatePreview();
 		}
 		
@@ -161,7 +161,7 @@ namespace beepbox {
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._updateCursorPitch();
 			this._doc.synth.pianoPressed = true;
-			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
+			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
 		}
 		
 		private _whenTouchMoved = (event: TouchEvent): void => {
@@ -171,7 +171,7 @@ namespace beepbox {
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._updateCursorPitch();
-			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
+			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
 		}
 		
 		private _whenTouchReleased = (event: TouchEvent): void => {
@@ -195,7 +195,7 @@ namespace beepbox {
 			this._pitchHeight = isDrum ? 40 : 13;
 			this._pitchCount = isDrum ? Config.drumCount : Config.pitchCount;
 			this._updateCursorPitch();
-			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channelOctaves[this._doc.channel] * 12;
+			this._doc.synth.pianoPitch = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
 			this._doc.synth.pianoChannel = this._doc.channel;
 			this._render();
 		}

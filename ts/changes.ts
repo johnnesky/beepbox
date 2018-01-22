@@ -103,10 +103,10 @@ namespace beepbox {
 	export class ChangeEnvelope extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.instrumentEnvelopes[doc.channel][doc.getCurrentInstrument()];
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].envelope;
 			if (oldValue != newValue) {
 				this._didSomething();
-				doc.song.instrumentEnvelopes[doc.channel][doc.getCurrentInstrument()] = newValue;
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].envelope = newValue;
 				doc.notifier.changed();
 			}
 		}
@@ -115,8 +115,8 @@ namespace beepbox {
 	export class ChangePattern extends Change {
 		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
 			super();
-			if (newValue > doc.song.channelPatterns[doc.channel].length) throw new Error("invalid pattern");
-			doc.song.channelBars[doc.channel][doc.bar] = newValue;
+			if (newValue > doc.song.patternsPerChannel) throw new Error("invalid pattern");
+			doc.song.channels[doc.channel].bars[doc.bar] = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -126,13 +126,11 @@ namespace beepbox {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
 			if (doc.song.barCount != newValue) {
-				const newChannelBars: number[][] = [];
-				for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-					const channel: number[] = [];
-					for (let j: number = 0; j < newValue; j++) {
-						channel.push(j < doc.song.barCount ? doc.song.channelBars[i][j] : 1);
+				for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
+					for (let bar: number = doc.song.barCount; bar < newValue; bar++) {
+						doc.song.channels[channel].bars[bar] = 1;
 					}
-					newChannelBars.push(channel);
+					doc.song.channels[channel].bars.length = newValue;
 				}
 				
 				let newBar: number = doc.bar;
@@ -150,7 +148,6 @@ namespace beepbox {
 				doc.song.loopStart = newLoopStart;
 				doc.song.loopLength = newLoopLength;
 				doc.song.barCount = newValue;
-				doc.song.channelBars = newChannelBars;
 				doc.notifier.changed();
 				
 				this._didSomething();
@@ -162,6 +159,7 @@ namespace beepbox {
 		constructor(doc: SongDocument, newPitchChannelCount: number, newDrumChannelCount: number) {
 			super();
 			if (doc.song.pitchChannelCount != newPitchChannelCount || doc.song.drumChannelCount != newDrumChannelCount) {
+				/*
 				const channelPatterns: Pattern[][] = [];
 				const channelBars: number[][] = [];
 				const channelOctaves: number[] = [];
@@ -171,31 +169,20 @@ namespace beepbox {
 				const instrumentEffects: number[][] = [];
 				const instrumentChorus: number[][] = [];
 				const instrumentVolumes: number[][] = [];
+				*/
+				const newChannels: Channel[] = [];
 				
 				for (let i: number = 0; i < newPitchChannelCount; i++) {
 					const channel = i;
 					const oldChannel = i;
 					if (i < doc.song.pitchChannelCount) {
-						channelPatterns[channel] = doc.song.channelPatterns[oldChannel];
-						channelBars[channel] = doc.song.channelBars[oldChannel];
-						channelOctaves[channel] = doc.song.channelOctaves[oldChannel];
-						instrumentWaves[channel] = doc.song.instrumentWaves[oldChannel];
-						instrumentFilters[channel] = doc.song.instrumentFilters[oldChannel];
-						instrumentEnvelopes[channel] = doc.song.instrumentEnvelopes[oldChannel];
-						instrumentEffects[channel] = doc.song.instrumentEffects[oldChannel];
-						instrumentChorus[channel] = doc.song.instrumentChorus[oldChannel];
-						instrumentVolumes[channel] = doc.song.instrumentVolumes[oldChannel];
+						newChannels[channel] = doc.song.channels[oldChannel]
 					} else {
-						channelPatterns[channel] = [];
-						for (let j = 0; j < doc.song.patternsPerChannel; j++) channelPatterns[channel][j] = new Pattern();
-						channelBars[channel] = filledArray(doc.song.barCount, 1);
-						channelOctaves[channel] = 2;
-						instrumentWaves[channel] = filledArray(doc.song.instrumentsPerChannel, 1);
-						instrumentFilters[channel] = filledArray(doc.song.instrumentsPerChannel, 0);
-						instrumentEnvelopes[channel] = filledArray(doc.song.instrumentsPerChannel, 1);
-						instrumentEffects[channel] = filledArray(doc.song.instrumentsPerChannel, 0);
-						instrumentChorus[channel] = filledArray(doc.song.instrumentsPerChannel, 0);
-						instrumentVolumes[channel] = filledArray(doc.song.instrumentsPerChannel, 0);
+						newChannels[channel] = new Channel();
+						newChannels[channel].octave = 2;
+						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) newChannels[channel].instruments[j] = new Instrument();
+						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) newChannels[channel].patterns[j] = new Pattern();
+						for (let j: number = 0; j < doc.song.barCount; j++) newChannels[channel].bars[j] = 1;
 					}
 				}
 
@@ -203,40 +190,23 @@ namespace beepbox {
 					const channel = i + newPitchChannelCount;
 					const oldChannel = i + doc.song.pitchChannelCount;
 					if (i < doc.song.drumChannelCount) {
-						channelPatterns[channel] = doc.song.channelPatterns[oldChannel];
-						channelBars[channel] = doc.song.channelBars[oldChannel];
-						channelOctaves[channel] = doc.song.channelOctaves[oldChannel];
-						instrumentWaves[channel] = doc.song.instrumentWaves[oldChannel];
-						instrumentFilters[channel] = doc.song.instrumentFilters[oldChannel];
-						instrumentEnvelopes[channel] = doc.song.instrumentEnvelopes[oldChannel];
-						instrumentEffects[channel] = doc.song.instrumentEffects[oldChannel];
-						instrumentChorus[channel] = doc.song.instrumentChorus[oldChannel];
-						instrumentVolumes[channel] = doc.song.instrumentVolumes[oldChannel];
+						newChannels[channel] = doc.song.channels[oldChannel]
 					} else {
-						channelPatterns[channel] = [];
-						for (let j = 0; j < doc.song.patternsPerChannel; j++) channelPatterns[channel][j] = new Pattern();
-						channelBars[channel] = filledArray(doc.song.barCount, 1);
-						channelOctaves[channel] = 0;
-						instrumentWaves[channel] = filledArray(doc.song.instrumentsPerChannel, 1);
-						instrumentFilters[channel] = filledArray(doc.song.instrumentsPerChannel, 0);
-						instrumentEnvelopes[channel] = filledArray(doc.song.instrumentsPerChannel, 1);
-						instrumentEffects[channel] = filledArray(doc.song.instrumentsPerChannel, 0);
-						instrumentChorus[channel] = filledArray(doc.song.instrumentsPerChannel, 0);
-						instrumentVolumes[channel] = filledArray(doc.song.instrumentsPerChannel, 0);
+						newChannels[channel] = new Channel();
+						newChannels[channel].octave = 0;
+						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) newChannels[channel].instruments[j] = new Instrument();
+						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) newChannels[channel].patterns[j] = new Pattern();
+						for (let j: number = 0; j < doc.song.barCount; j++) newChannels[channel].bars[j] = 1;
 					}
 				}
 				
 				doc.song.pitchChannelCount = newPitchChannelCount;
 				doc.song.drumChannelCount = newDrumChannelCount;
-				doc.song.channelPatterns = channelPatterns;
-				doc.song.channelBars = channelBars;
-				doc.song.channelOctaves = channelOctaves;
-				doc.song.instrumentWaves = instrumentWaves;
-				doc.song.instrumentFilters = instrumentFilters;
-				doc.song.instrumentEnvelopes = instrumentEnvelopes;
-				doc.song.instrumentEffects = instrumentEffects;
-				doc.song.instrumentChorus = instrumentChorus;
-				doc.song.instrumentVolumes = instrumentVolumes;
+				for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
+					doc.song.channels[channel] = newChannels[channel];
+				}
+				doc.song.channels.length = doc.song.getChannelCount();
+				
 				doc.channel = Math.min(doc.channel, newPitchChannelCount + newDrumChannelCount - 1);
 				doc.notifier.changed();
 				
@@ -252,8 +222,8 @@ namespace beepbox {
 				if (doc.song.beatsPerBar > newValue) {
 					const sequence: ChangeSequence = new ChangeSequence();
 					for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-						for (let j: number = 0; j < doc.song.channelPatterns[i].length; j++) {
-							sequence.append(new ChangeNoteTruncate(doc, doc.song.channelPatterns[i][j], newValue * doc.song.partsPerBeat, doc.song.beatsPerBar * doc.song.partsPerBeat));
+						for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
+							sequence.append(new ChangeNoteTruncate(doc, doc.song.channels[i].patterns[j], newValue * doc.song.partsPerBeat, doc.song.beatsPerBar * doc.song.partsPerBeat));
 						}
 					}
 				}
@@ -282,10 +252,10 @@ namespace beepbox {
 	export class ChangeChorus extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.instrumentChorus[doc.channel][doc.getCurrentInstrument()];
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].chorus;
 			if (oldValue != newValue) {
 				this._didSomething();
-				doc.song.instrumentChorus[doc.channel][doc.getCurrentInstrument()] = newValue;
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].chorus = newValue;
 				doc.notifier.changed();
 			}
 		}
@@ -294,9 +264,9 @@ namespace beepbox {
 	export class ChangeEffect extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.instrumentEffects[doc.channel][doc.getCurrentInstrument()];
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].effect;
 			if (oldValue != newValue) {
-				doc.song.instrumentEffects[doc.channel][doc.getCurrentInstrument()] = newValue;
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].effect = newValue;
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -306,9 +276,9 @@ namespace beepbox {
 	export class ChangeFilter extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.instrumentFilters[doc.channel][doc.getCurrentInstrument()];
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filter;
 			if (oldValue != newValue) {
-				doc.song.instrumentFilters[doc.channel][doc.getCurrentInstrument()] = newValue;
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filter = newValue;
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -316,71 +286,21 @@ namespace beepbox {
 	}
 	
 	export class ChangeInstrumentsPerChannel extends Change {
-		constructor(doc: SongDocument, instrumentsPerChannel: number) {
+		constructor(doc: SongDocument, newInstrumentsPerChannel: number) {
 			super();
-			const oldInstrumentsPerChannel: number = doc.song.instrumentsPerChannel;
-			const newInstrumentsPerChannel: number = instrumentsPerChannel;
 			if (doc.song.instrumentsPerChannel != newInstrumentsPerChannel) {
-				// todo: adjust size of instrument arrays, make sure no references to invalid instruments
-				const oldInstrumentWaves: number[][]   = doc.song.instrumentWaves;
-				const oldInstrumentFilters: number[][] = doc.song.instrumentFilters;
-				const oldInstrumentEnvelopes: number[][] = doc.song.instrumentEnvelopes;
-				const oldInstrumentEffects: number[][] = doc.song.instrumentEffects;
-				const oldInstrumentChorus: number[][]  = doc.song.instrumentChorus;
-				const oldInstrumentVolumes: number[][] = doc.song.instrumentVolumes;
-				const newInstrumentWaves: number[][]   = [];
-				const newInstrumentFilters: number[][] = [];
-				const newInstrumentEnvelopes: number[][] = [];
-				const newInstrumentEffects: number[][] = [];
-				const newInstrumentChorus: number[][]  = [];
-				const newInstrumentVolumes: number[][] = [];
-				const oldArrays: number[][][] = [oldInstrumentWaves, oldInstrumentFilters, oldInstrumentEnvelopes, oldInstrumentEffects, oldInstrumentChorus, oldInstrumentVolumes];
-				const newArrays: number[][][] = [newInstrumentWaves, newInstrumentFilters, newInstrumentEnvelopes, newInstrumentEffects, newInstrumentChorus, newInstrumentVolumes];
-				for (let k: number = 0; k < newArrays.length; k++) {
-					const oldArray: number[][] = oldArrays[k];
-					const newArray: number[][] = newArrays[k];
-					for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-						const channel: number[] = [];
-						for (let j: number = 0; j < newInstrumentsPerChannel; j++) {
-							if (j < oldInstrumentsPerChannel) {
-								channel.push(oldArray[i][j]);
-							} else {
-								if (k == 0) { // square wave or white noise
-									channel.push(1);
-								} else if (k == 2) { // sudden envelope
-									channel.push(1);
-								} else {
-									channel.push(0);
-								}
-							}
-						}
-						newArray.push(channel);
+				for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
+					for (let j: number = doc.song.instrumentsPerChannel; j < newInstrumentsPerChannel; j++) {
+						doc.song.channels[channel].instruments[j] = new Instrument();
 					}
-				}
-				
-				const newInstrumentIndices: number[][] = [];
-				for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-					const oldIndices: number[] = [];
-					const newIndices: number[] = [];
+					doc.song.channels[channel].instruments.length = newInstrumentsPerChannel;
 					for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
-						const oldIndex: number = doc.song.channelPatterns[i][j].instrument;
-						oldIndices.push(oldIndex);
-						newIndices.push(oldIndex < newInstrumentsPerChannel ? oldIndex : 0);
+						if (doc.song.channels[channel].patterns[j].instrument >= newInstrumentsPerChannel) {
+							doc.song.channels[channel].patterns[j].instrument = 0;
+						}
 					}
-					newInstrumentIndices.push(newIndices);
 				}
 				doc.song.instrumentsPerChannel = newInstrumentsPerChannel;
-				doc.song.instrumentWaves   = newInstrumentWaves;
-				doc.song.instrumentFilters = newInstrumentFilters;
-				doc.song.instrumentEnvelopes = newInstrumentEnvelopes;
-				doc.song.instrumentEffects = newInstrumentEffects;
-				doc.song.instrumentChorus  = newInstrumentChorus;
-				doc.song.instrumentVolumes = newInstrumentVolumes;
-				for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-					for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
-						doc.song.channelPatterns[i][j].instrument = newInstrumentIndices[i][j];
-					}
-				}
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -412,14 +332,12 @@ namespace beepbox {
 	
 	export class ChangePitchAdded extends UndoableChange {
 		private _doc: SongDocument;
-		private _pattern: Pattern;
 		private _note: Note;
 		private _pitch: number;
 		private _index: number;
-		constructor(doc: SongDocument, pattern: Pattern, note: Note, pitch: number, index: number, deletion: boolean = false) {
+		constructor(doc: SongDocument, note: Note, pitch: number, index: number, deletion: boolean = false) {
 			super(deletion);
 			this._doc = doc;
-			this._pattern = pattern;
 			this._note = note;
 			this._pitch = pitch;
 			this._index = index;
@@ -441,7 +359,7 @@ namespace beepbox {
 	export class ChangeOctave extends Change {
 		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
 			super();
-			doc.song.channelOctaves[doc.channel] = newValue;
+			doc.song.channels[doc.channel].octave = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -452,8 +370,8 @@ namespace beepbox {
 			super();
 			if (doc.song.partsPerBeat != newValue) {
 				for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-					for (let j: number = 0; j < doc.song.channelPatterns[i].length; j++) {
-						this.append(new ChangeRhythm(doc, doc.song.channelPatterns[i][j], doc.song.partsPerBeat, newValue));
+					for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
+						this.append(new ChangeRhythm(doc, doc.song.channels[i].patterns[j], doc.song.partsPerBeat, newValue));
 					}
 				}
 				doc.song.partsPerBeat = newValue;
@@ -497,8 +415,8 @@ namespace beepbox {
 			super();
 			if (doc.song.patternsPerChannel != newValue) {
 				for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-					const channelBars: number[] = doc.song.channelBars[i];
-					const channelPatterns: Pattern[] = doc.song.channelPatterns[i];
+					const channelBars: number[] = doc.song.channels[i].bars;
+					const channelPatterns: Pattern[] = doc.song.channels[i].patterns;
 					for (let j: number = 0; j < channelBars.length; j++) {
 						if (channelBars[j] > newValue) channelBars[j] = 0;
 					}
@@ -762,11 +680,11 @@ namespace beepbox {
 	}
 	
 	export class ChangeNoteTruncate extends ChangeSequence {
-		constructor(doc: SongDocument, bar: Pattern, start: number, end: number, skipNote?: Note) {
+		constructor(doc: SongDocument, pattern: Pattern, start: number, end: number, skipNote?: Note) {
 			super();
 			let i: number = 0;
-			while (i < bar.notes.length) {
-				const note: Note = bar.notes[i];
+			while (i < pattern.notes.length) {
+				const note: Note = pattern.notes[i];
 				if (note == skipNote && skipNote != undefined) {
 					i++;
 				} else if (note.end <= start) {
@@ -780,7 +698,7 @@ namespace beepbox {
 					this.append(new ChangeNoteLength(doc, note, end, note.end));
 					i++;
 				} else {
-					this.append(new ChangeNoteAdded(doc, bar, note, i, true));
+					this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
 				}
 			}
 		}
@@ -901,10 +819,10 @@ namespace beepbox {
 	}
 	
 	export class ChangeTranspose extends ChangeSequence {
-		constructor(doc: SongDocument, bar: Pattern, upward: boolean) {
+		constructor(doc: SongDocument, pattern: Pattern, upward: boolean) {
 			super();
-			for (let i: number = 0; i < bar.notes.length; i++) {
-				this.append(new ChangeTransposeNote(doc, bar.notes[i], upward));
+			for (let i: number = 0; i < pattern.notes.length; i++) {
+				this.append(new ChangeTransposeNote(doc, pattern.notes[i], upward));
 			}
 		}
 	}
@@ -912,7 +830,7 @@ namespace beepbox {
 	export class ChangeVolume extends Change {
 		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
 			super();
-			doc.song.instrumentVolumes[doc.channel][doc.getCurrentInstrument()] = newValue;
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].volume = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -977,17 +895,11 @@ namespace beepbox {
 	export class ChangeWave extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			if (doc.song.instrumentWaves[doc.channel][doc.getCurrentInstrument()] != newValue) {
-				doc.song.instrumentWaves[doc.channel][doc.getCurrentInstrument()] = newValue;
+			if (doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].wave != newValue) {
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].wave = newValue;
 				doc.notifier.changed();
 				this._didSomething();
 			}
 		}
-	}
-	
-	function filledArray<T>(count: number, value: T): T[] {
-		const array: T[] = [];
-		for (let i: number = 0; i < count; i++) array[i] = value;
-		return array;
 	}
 }

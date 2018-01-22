@@ -366,13 +366,13 @@ namespace beepbox {
 			this._instrumentSettingsGroup.style.color = this._doc.song.getNoteColorBright(this._doc.channel);
 			
 			const instrument: number = this._doc.getCurrentInstrument();
-			setSelectedIndex(this._waveNames, this._doc.song.instrumentWaves[this._doc.channel][instrument]);
-			setSelectedIndex(this._drumNames, this._doc.song.instrumentWaves[this._doc.channel][instrument]);
-			setSelectedIndex(this._filterDropDown, this._doc.song.instrumentFilters[this._doc.channel][instrument]);
-			setSelectedIndex(this._envelopeDropDown, this._doc.song.instrumentEnvelopes[this._doc.channel][instrument]);
-			setSelectedIndex(this._effectDropDown, this._doc.song.instrumentEffects[this._doc.channel][instrument]);
-			setSelectedIndex(this._chorusDropDown, this._doc.song.instrumentChorus[this._doc.channel][instrument]);
-			this._channelVolumeSlider.value = -this._doc.song.instrumentVolumes[this._doc.channel][instrument]+"";
+			setSelectedIndex(this._waveNames, this._doc.song.channels[this._doc.channel].instruments[instrument].wave);
+			setSelectedIndex(this._drumNames, this._doc.song.channels[this._doc.channel].instruments[instrument].wave);
+			setSelectedIndex(this._filterDropDown, this._doc.song.channels[this._doc.channel].instruments[instrument].filter);
+			setSelectedIndex(this._envelopeDropDown, this._doc.song.channels[this._doc.channel].instruments[instrument].envelope);
+			setSelectedIndex(this._effectDropDown, this._doc.song.channels[this._doc.channel].instruments[instrument].effect);
+			setSelectedIndex(this._chorusDropDown, this._doc.song.channels[this._doc.channel].instruments[instrument].chorus);
+			this._channelVolumeSlider.value = -this._doc.song.channels[this._doc.channel].instruments[instrument].volume+"";
 			setSelectedIndex(this._instrumentDropDown, instrument);
 			
 			this._piano.container.style.display = this._doc.showLetters ? "block" : "none";
@@ -602,7 +602,7 @@ namespace beepbox {
 		
 		private _whenSetVolume = (): void => {
 			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeVolume);
-			const oldValue: number = continuousChange ? this._changeVolume!.oldValue : this._doc.song.instrumentVolumes[this._doc.channel][this._doc.getCurrentInstrument()];
+			const oldValue: number = continuousChange ? this._changeVolume!.oldValue : this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].volume;
 			this._changeVolume = new ChangeVolume(this._doc, oldValue, -parseInt(this._channelVolumeSlider.value));
 			this._doc.history.record(this._changeVolume, continuousChange);
 		}
