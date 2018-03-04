@@ -217,35 +217,63 @@
 √ tempo slider could use tooltip for BPM
 √ add auto-follow and auto-play preferences. (I guess autoplay is only on computers? but defaults to true?)
 √ restructured song/channel/pattern/instrument js representation. 
-
-- phase modulation:
-	- interface to select type of channel. wave/phase? goes above instrument number.
-	- allow channels to be in any order regardless of type... how do they get colored? or can only pitch channels swap types? wait maybe pitch and drums both have a phase modulation variant...
-	- new change to swap channel type
-	- modulation sliders, ratio selectors, envelop selectors. steady/decay123/attack123/rise123/in-out123?/custom?
-	- forward compatible instrument url
-	- backward compatible url parsing
-	- forward compatible instrument JSON
-	- backward compatible url JSON
-	- check old song parsing, new song parsing, url compatibility with old beepbox, two-way json compatiblity
-	- update midi instrument export too
-	- dim modulator settings when modulation is zero.
-	- provide some visual indication for which modulators affect what.
-	- maybe drums can have their own phase modulation mode, with different fractions? can modulator pitches bend at different rates? maybe the "envelopes" are basically the same except instead of controlling modulation they control pitch?
+√ when you click the wave menu then use arrow keys to select drums the editor shouldn't lose focus.
+√ phase modulation:
+	√ interface to select type of channel.
+	√ modulation sliders, ratio selectors, envelop selectors.
+	√ make the piano share most of the instrument code with the notes, including arpeggio and operator frequencies... not that you can test that yet.
+	√ use custom pitches for each modulator if available
+	√ use "filterTime" for modulator decays
+	√ determine start and end operator envelopes.
+	√ rename old envelope to transition
+	√ separate phase for each operator, allow overriding fundamental frequency for each oscillator with notes.
+	√ algorithms, feedback!	
+	√ when there are multiple carriers, use a little chorus offset
+	√ adjust the total volume based on number of carriers
+	√ forward/backward compatible instrument url
+	√ operator envelope shapes
+	√ put a little number in front of every operator row.
+	√ JSON
+	√ update midi instrument export too.
 
 MAJOR REMAINING FEATURES:
-- phase modulation
 - instrument options: reverb,chorus,fadeout,distortion (applied to all enabled channels at once?)
 - embedded player
 - playlist editor
+- live keyboard/midi performance. (make sure piano can play while song is paused?)
 - remember recent songs
 - export mp3/ogg and audio buffer
 - audio worklet thread
 - translation
 
 MISC:
-- I don't like how when you click the wave menu then use arrow keys to select drums the editor loses focus.
+- more feather speeds?
+- make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page.
+- ugh, now tremolo is its own thing... but I still have the "effect" menu, with built-in tremolo? Maybe split that out into a separate thing so that both wave types can share the vibrato. Oh uh and maybe support more vibrato and tremelo speeds? Stop using that beautiful LFO? Hm, should I sync tremelo to the beats? I kinda feel like that might actually work. I think two per beat would roughly correspond to the previous behavior. Should vibrato also sync to the beats? vibrato is trickier because people actually use it, and the vibrato speed has a bigger effect on the perceived timbre. Oh and of course this affects midi export too! tremelos: fast light heavy slow? light and heavy versions of three speeds?
+- oh wow, rapidly dragging sliders causes unintended undoing! That's bad!!! dragging sliders back and forth rapidly causes spurious undoing!
+- wait... I could parse the algorithm name, pull out the arrows and parens, rotate them 90 degrees and put them between the numbers. That's... diabolical. Wait that doesn't work for a single example: 1<3 2<4 because the numbers are out of order! >:(
+- reuse song channel objects beyond the first four when re-parsing a song url. Maybe don't reset instruments when reloading songs, to temporarily preserve settings for other instrument types. (but when loading older songs, newer instrument properties should have default values... okay here's the deal: reset the instruments when you get to the instrument type command, resetting only settings relevant to the instrument. However, for song data formats before six, reset all instruments immediately, because they don't have type commands... also drums? ugh this is a mess!)
+- rename sustain to steady, or just leave it off and say "medium" etc. Maybe rename "sharp" to "bright" or something. I'd say "high" but I wouldn't want people to think it's a high pass filter.
+- wave filter with a higher cutoff, maybe none. "sustain full" or "none" depending on where I insert it in the list, may need new url version. can probably drop the word "sustain"? (if so, don't forget to remember it for json parsing!)
+- add a little "?" next to "Type" when in FM mode, brings up a popup explaining how to use it, link to a song showcasing some ideas to get you started.
+- seamless transitions combined with decaying operators sounds poppy... maybe seamless transitions should always fade out if the next note is null AND the note ends before the end of the bar.
+- live piano should track time since note started for delayed vibrato, envelopes, decays, etc.
+- maybe add rising wave filter as well, similar to operator envelopes
+- maybe put little numbers on the notes in the pattern editor when in phase mod mode and there's more than one pitch.
+- scale channel#ChorusSign appropriately so that both wave signals have the correct volume for their pitch.
+- for waves, have 2 versions of channel#PhaseDelta for the chorus, get rid of harmonyMult.
+- Ooh, should there be a "release" envelope to fade out? until another note starts and cuts it off? Also on "0" pattern bars, use the previous instrument in that channel to continue the fade out.
+- polyphonic fm export when there are multiple carriers. careful of overlapping note on/off events combined with slides...
+- dim modulator settings when modulation is zero.
+- maybe drums can have their own phase modulation mode, with different fractions? can modulator pitches bend at different rates? maybe the "envelopes" are basically the same except instead of controlling modulation they control pitch?
+- someone said it doesn't work on ios?
+- consider trying polyBLEPs on the basic waves, add an extra sample on the end for interpolation based on frequency.
+- honestly, the seamless transition should fade out anyway if there's no note after.
+- and it would be nice if "slide" envelope worked across bars.
+- on mobile, should move the new/edit/prefs/export/import etc buttons to the bottom, just above beepbox 2.X, but keep the play/volume controls between the track editor and the song/instrument settings.
 - pitch bends mixed with arpeggios don’t properly check min/max bounds
+- is it possible to get pitch slides to work across bars?
+- Config.volumeNames is pointless now.
 - Distortion applying to some channels? new song setting: distortion, nonlinear mixing of channels... can't handle a range of volumes?
 - Maybe add a fadeout option that decays carrier volume until the next note starts? Or is that redundant since you can do the same thing with envelope editing?
 - Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer

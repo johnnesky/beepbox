@@ -81,7 +81,7 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor .selectContainer:not(.menu)::before {
 	content: "";
 	position: absolute;
-	right: 0.5em;
+	right: 0.3em;
 	top: 0.4em;
 	border-bottom: 0.4em solid currentColor;
 	border-left: 0.3em solid transparent;
@@ -91,7 +91,7 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor .selectContainer:not(.menu)::after {
 	content: "";
 	position: absolute;
-	right: 0.5em;
+	right: 0.3em;
 	bottom: 0.4em;
 	border-top: 0.4em solid currentColor;
 	border-left: 0.3em solid transparent;
@@ -113,7 +113,7 @@ styleSheet.appendChild(document.createTextNode(`
 }
 .beepboxEditor select {
 	margin: 0;
-	padding: 0 0.5em;
+	padding: 0 0.3em;
 	display: block;
 	height: 2em;
 	border: none;
@@ -122,6 +122,7 @@ styleSheet.appendChild(document.createTextNode(`
 	color: inherit;
 	font-size: inherit;
 	cursor: pointer;
+	font-family: inherit;
 
 	-webkit-appearance:none;
 	-moz-appearance: none;
@@ -153,6 +154,7 @@ styleSheet.appendChild(document.createTextNode(`
 	background: #444;
 	color: inherit;
 	font-size: inherit;
+	font-family: inherit;
 	cursor: pointer;
 }
 .beepboxEditor button:focus {
@@ -269,6 +271,19 @@ styleSheet.appendChild(document.createTextNode(`
 	color: #999;
 }
 
+.beepboxEditor .operatorRow {
+	margin: 0;
+	height: 2.5em;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.beepboxEditor .operatorRow > * {
+	flex-grow: 1;
+	flex-shrink: 1;
+}
+
 .beepboxEditor .editor-widget-column {
 	display: flex;
 	flex-direction: column;
@@ -292,8 +307,6 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor .editor-settings {
 	display: flex;
 	flex-direction: column;
-	flex-grow: 1;
-	justify-content: space-between;
 }
 
 .beepboxEditor .editor-song-settings {

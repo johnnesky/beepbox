@@ -100,13 +100,25 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeEnvelope extends Change {
+	export class ChangePitchChannelType extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].envelope;
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].type;
+			if (oldValue != newValue) {
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].type = newValue
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeTransition extends Change {
+		constructor(doc: SongDocument, newValue: number) {
+			super();
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].transition;
 			if (oldValue != newValue) {
 				this._didSomething();
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].envelope = newValue;
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].transition = newValue;
 				doc.notifier.changed();
 			}
 		}
@@ -159,17 +171,6 @@ namespace beepbox {
 		constructor(doc: SongDocument, newPitchChannelCount: number, newDrumChannelCount: number) {
 			super();
 			if (doc.song.pitchChannelCount != newPitchChannelCount || doc.song.drumChannelCount != newDrumChannelCount) {
-				/*
-				const channelPatterns: Pattern[][] = [];
-				const channelBars: number[][] = [];
-				const channelOctaves: number[] = [];
-				const instrumentWaves: number[][] = [];
-				const instrumentFilters: number[][] = [];
-				const instrumentEnvelopes: number[][] = [];
-				const instrumentEffects: number[][] = [];
-				const instrumentChorus: number[][] = [];
-				const instrumentVolumes: number[][] = [];
-				*/
 				const newChannels: Channel[] = [];
 				
 				for (let i: number = 0; i < newPitchChannelCount; i++) {
@@ -282,6 +283,84 @@ namespace beepbox {
 				doc.notifier.changed();
 				this._didSomething();
 			}
+		}
+	}
+	
+	export class ChangeAlgorithm extends Change {
+		constructor(doc: SongDocument, newValue: number) {
+			super();
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].algorithm;
+			if (oldValue != newValue) {
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].algorithm = newValue;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeFeedbackType extends Change {
+		constructor(doc: SongDocument, newValue: number) {
+			super();
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackType;
+			if (oldValue != newValue) {
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackType = newValue;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeFeedbackEnvelope extends Change {
+		constructor(doc: SongDocument, newValue: number) {
+			super();
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackEnvelope;
+			if (oldValue != newValue) {
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackEnvelope = newValue;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeOperatorEnvelope extends Change {
+		constructor(doc: SongDocument, operatorIndex: number, newValue: number) {
+			super();
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].envelope;
+			if (oldValue != newValue) {
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].envelope = newValue;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeOperatorFrequency extends Change {
+		constructor(doc: SongDocument, operatorIndex: number, newValue: number) {
+			super();
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].frequency;
+			if (oldValue != newValue) {
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].frequency = newValue;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeOperatorAmplitude extends Change {
+		constructor(doc: SongDocument, public operatorIndex: number, public oldValue: number, newValue: number) {
+			super();
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].amplitude = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangeFeedbackAmplitude extends Change {
+		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
+			super();
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackAmplitude = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
 		}
 	}
 	

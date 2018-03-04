@@ -63,7 +63,7 @@ namespace beepbox {
 			this.song = new Song(string);
 			this.synth = new Synth(this.song);
 			
-			this.autoPlay = localStorage.getItem("autoPlay") != "false";
+			this.autoPlay = localStorage.getItem("autoPlay") == "true";
 			this.autoFollow = localStorage.getItem("autoFollow") == "true";
 			this.showFifth = localStorage.getItem("showFifth") == "true";
 			this.showLetters = localStorage.getItem("showLetters") == "true";

@@ -501,7 +501,9 @@ namespace beepbox {
 							
 							const nextInstrument: number = pattern.instrument;
 							
-							if (isChorus && song.channels[channel].instruments[nextInstrument].chorus == 0) {
+							const instrument: Instrument = song.channels[channel].instruments[nextInstrument];
+							
+							if (isChorus && (isDrums || instrument.type == InstrumentType.fm || instrument.chorus == 0)) {
 								barStartTime += ticksPerBar;
 								continue;
 							}
@@ -509,52 +511,92 @@ namespace beepbox {
 							if (prevInstrument != nextInstrument) {
 								prevInstrument = nextInstrument;
 								
-								writeEventTime(barStartTime);
-								writeUint16(0xFF04); // instrument event. 
+								let description: string = ""; 
+								let instrumentProgram: number = 0x51; // default to sawtooth wave. 
 								if (isDrums) {
-									let description: string = "noise: " + Config.drumNames[song.channels[channel].instruments[nextInstrument].wave];
-									description += ", volume: " + Config.volumeNames[song.channels[channel].instruments[nextInstrument].volume];
-									description += ", envelope: " + Config.envelopeNames[song.channels[channel].instruments[nextInstrument].envelope];
-									writeAscii(description);
+									description += "type: " + Config.instrumentTypeNames[InstrumentType.noise];
+									description += ", noise: " + Config.drumNames[instrument.wave];
+									description += ", volume: " + Config.volumeNames[instrument.volume];
+									description += ", transition: " + Config.transitionNames[instrument.transition];
 									
-									// Program (instrument) change event:
-									writeEventTime(barStartTime);
-									writeUint8(0xC0 | midiChannel); // program change event for given channel
-									writeFlagAnd7Bits(0, 0x7E); // seashore, applause
+									instrumentProgram = 0x7E; // seashore, applause
 								} else {
-									let description: string = "wave: " + Config.waveNames[song.channels[channel].instruments[nextInstrument].wave];
-									description += ", volume: " + Config.volumeNames[song.channels[channel].instruments[nextInstrument].volume];
-									description += ", envelope: " + Config.envelopeNames[song.channels[channel].instruments[nextInstrument].envelope];
-									description += ", filter: " + Config.filterNames[song.channels[channel].instruments[nextInstrument].filter];
-									description += ", chorus: " + Config.chorusNames[song.channels[channel].instruments[nextInstrument].chorus];
-									description += ", effect: " + Config.effectNames[song.channels[channel].instruments[nextInstrument].effect];
-									writeAscii(description);
+									description += "type: " + Config.instrumentTypeNames[instrument.type];
 									
-									const filterInstruments: number[] = Config.filterDecays[song.channels[channel].instruments[nextInstrument].filter] == 0 ? Config.midiSustainInstruments : Config.midiDecayInstruments;
+									if (instrument.type == InstrumentType.chip) {
+										description += ", wave: " + Config.waveNames[instrument.wave];
+										description += ", volume: " + Config.volumeNames[instrument.volume];
+										description += ", transition: " + Config.transitionNames[instrument.transition];
+										description += ", filter: " + Config.filterNames[instrument.filter];
+										description += ", chorus: " + Config.chorusNames[instrument.chorus];
+										description += ", effect: " + Config.effectNames[instrument.effect];
 									
-									// Program (instrument) change event:
-									writeEventTime(barStartTime);
-									writeUint8(0xC0 | midiChannel); // program change event for given channel
-									writeFlagAnd7Bits(0, filterInstruments[song.channels[channel].instruments[nextInstrument].wave]); // instrument program
+										const filterInstruments: number[] = Config.filterDecays[instrument.filter] == 0 ? Config.midiSustainInstruments : Config.midiDecayInstruments;
+										instrumentProgram = filterInstruments[instrument.wave];
+									} else if (instrument.type == InstrumentType.fm) {
+										description += ", transition: " + Config.transitionNames[instrument.transition];
+										description += ", effect: " + Config.effectNames[instrument.effect];
+										description += ", algorithm: " + Config.midiAlgorithmNames[instrument.algorithm];
+										description += ", feedbackType: " + Config.midiFeedbackNames[instrument.feedbackType];
+										description += ", feedbackAmplitude: " + instrument.feedbackAmplitude;
+										description += ", feedbackEnvelope: " + Config.operatorEnvelopeNames[instrument.feedbackEnvelope];
+										
+										for (let i: number = 0; i < Config.operatorCount; i++) {
+											const operator: Operator = instrument.operators[i];
+											description += ", operator" + (i + 1) + ": {";
+											description += "frequency: " + Config.midiFrequencyNames[operator.frequency];
+											description += ", amplitude: " + operator.amplitude;
+											description += ", envelope: " + Config.operatorEnvelopeNames[operator.envelope];
+											description += "}";
+										}
+										
+										// No convenient way to pick an appropriate midi instrument, so just use sawtooth as a default. :/
+									} else {
+										throw new Error("Unrecognized instrument type.");
+									}
 								}
 								
-								const instrumentVolumeChoice: number = song.channels[channel].instruments[nextInstrument].volume;
-								//const channelVolume: number = (instrumentVolumeChoice == 5 ? 0 : Math.pow(2, -instrumentVolumeChoice));
-								const channelVolume: number = (5 - instrumentVolumeChoice) / 5;
+								writeEventTime(barStartTime);
+								writeUint16(0xFF04); // instrument event.
+								writeAscii(description);
+								
+								// Program (instrument) change event:
+								writeEventTime(barStartTime);
+								writeUint8(0xC0 | midiChannel); // program change event for given channel
+								writeFlagAnd7Bits(0, instrumentProgram);
+								
+								let channelVolume: number = (5 - instrument.volume) / 5;
+								if (!isDrums && instrument.type == InstrumentType.fm) channelVolume = 1.0;
+								
 								writeEventTime(barStartTime);
 								writeUint8(0xB0 | midiChannel); // control event for channel volume for given channel
 								writeFlagAnd7Bits(0, 0x07); // channel volume controller (most significant bits)
 								writeFlagAnd7Bits(0, Math.round(0x7f * channelVolume)); // volume
 							}
 							
-							const effectChoice: number = song.channels[channel].instruments[nextInstrument].effect;
+							const effectChoice: number = instrument.effect;
 							const effectVibrato: number = Config.effectVibratos[effectChoice];
 							const effectTremolo: number = Config.effectTremolos[effectChoice];
 							const effectDuration: number = 0.14;
 							
-							let chorusOffset: number = Config.chorusIntervals[song.channels[channel].instruments[nextInstrument].chorus];
-							if (!isChorus) chorusOffset *= -1;
-							chorusOffset += Config.chorusOffsets[song.channels[channel].instruments[nextInstrument].chorus];
+							let chorusOffset: number = 0.0;
+							let chorusHarmonizes: boolean = false;
+							let usesArpeggio: boolean = true;
+							//let polyphony: number = 1;
+							if (!isDrums) {
+								if (instrument.type == InstrumentType.chip) {
+									chorusOffset = Config.chorusIntervals[instrument.chorus];
+									if (!isChorus) chorusOffset *= -1;
+									chorusOffset += Config.chorusOffsets[instrument.chorus];
+									
+									chorusHarmonizes = Config.chorusHarmonizes[instrument.chorus];
+								} else if (instrument.type == InstrumentType.fm) {
+									usesArpeggio = false;
+									//polyphony = Config.operatorCarrierCounts[instrument.algorithm];
+								} else {
+									throw new Error("Unrecognized instrument type.");
+								}
+							}
 							
 							for (let noteIndex: number = 0; noteIndex < pattern.notes.length; noteIndex++) {
 								const note: Note = pattern.notes[noteIndex];
@@ -563,7 +605,7 @@ namespace beepbox {
 								let pinTime: number = noteStartTime;
 								let pinVolume: number = note.pins[0].volume;
 								let pinInterval: number = note.pins[0].interval;
-								let pitch: number = channelRoot + note.pitches[0] * intervalScale;
+								let prevPitch: number = channelRoot + note.pitches[0] * intervalScale;
 								
 								for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
 									const nextPinTime: number = noteStartTime + note.pins[pinIndex].time * ticksPerPart;
@@ -576,32 +618,35 @@ namespace beepbox {
 										const linearVolume: number = lerp(pinVolume, nextPinVolume, tick / length);
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, tick / length);
 										
-										const chorusHarmonizes: boolean = Config.chorusHarmonizes[song.channels[channel].instruments[nextInstrument].chorus];
 										const arpeggio: number = Math.floor(tick / ticksPerArpeggio) % 4;
 										let nextPitch: number = note.pitches[0];
-										if (chorusHarmonizes) {
-											if (isChorus) {
+										if (usesArpeggio) {
+											if (chorusHarmonizes) {
+												if (isChorus) {
+													if (note.pitches.length == 2) {
+														nextPitch = note.pitches[1];
+													} else if (note.pitches.length == 3) {
+														nextPitch = note.pitches[(arpeggio >> 1) + 1];
+													} else if (note.pitches.length == 4) {
+														nextPitch = note.pitches[(arpeggio == 3 ? 1 : arpeggio) + 1];
+													}
+												}
+											} else {
 												if (note.pitches.length == 2) {
-													nextPitch = note.pitches[1];
+													nextPitch = note.pitches[arpeggio >> 1];
 												} else if (note.pitches.length == 3) {
-													nextPitch = note.pitches[(arpeggio >> 1) + 1];
+													nextPitch = note.pitches[arpeggio == 3 ? 1 : arpeggio];
 												} else if (note.pitches.length == 4) {
-													nextPitch = note.pitches[(arpeggio == 3 ? 1 : arpeggio) + 1];
+													nextPitch = note.pitches[arpeggio];
 												}
 											}
-										} else {
-											if (note.pitches.length == 2) {
-												nextPitch = note.pitches[arpeggio >> 1];
-											} else if (note.pitches.length == 3) {
-												nextPitch = note.pitches[arpeggio == 3 ? 1 : arpeggio];
-											} else if (note.pitches.length == 4) {
-												nextPitch = note.pitches[arpeggio];
-											}
 										}
-										const fractionalPitch: number = channelRoot + nextPitch * intervalScale + linearInterval + chorusOffset;
-										nextPitch = Math.round(fractionalPitch);
-										let pitchOffset: number = fractionalPitch - nextPitch;
 										
+										const interval: number = linearInterval * intervalScale + chorusOffset;
+										const wholeInterval: number = Math.round(interval);
+										const fractionalInterval: number = interval - wholeInterval;
+										
+										let pitchOffset: number = fractionalInterval;
 										const effectCurve: number = Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / effectDuration);
 										if (effectChoice != 2 || tickTime - noteStartTime >= 3 * ticksPerPart) {
 											pitchOffset += effectVibrato * effectCurve;
@@ -618,7 +663,6 @@ namespace beepbox {
 											writeUint8(0xE0 | midiChannel); // pitch bend event
 											writeFlagAnd7Bits(0, pitchBend & 0x7f); // least significant bits
 											writeFlagAnd7Bits(0, (pitchBend >> 7) & 0x7f); // most significant bits
-											prevPitchBend = pitchBend;
 										}
 										
 										if (expression != prevExpression) {
@@ -626,15 +670,15 @@ namespace beepbox {
 											writeUint8(0xB0 | midiChannel); // control event for expression for given channel
 											writeFlagAnd7Bits(0, 0x0B); // expression controller (most significant bits)
 											writeFlagAnd7Bits(0, expression); // pressure, most significant bits
-											prevExpression = expression;
 										}
 										
+										nextPitch = channelRoot + nextPitch * intervalScale + wholeInterval;
 										if (tickTime == noteStartTime) {
 											writeEventTime(tickTime);
 											writeUint8(0x90 | midiChannel); // note on event for given channel
 											writeFlagAnd7Bits(0, nextPitch); // pitch
 											writeFlagAnd7Bits(0, 0x40); // pressure
-										} else if (nextPitch != pitch) {
+										} else if (nextPitch != prevPitch) {
 											writeEventTime(tickTime);
 											writeUint8(0x90 | midiChannel); // note on event for given channel
 											writeFlagAnd7Bits(0, nextPitch); // new pitch
@@ -642,11 +686,13 @@ namespace beepbox {
 											
 											writeEventTime(tickTime);
 											writeUint8(0x80 | midiChannel); // note off event for given channel
-											writeFlagAnd7Bits(0, pitch); // old pitch
+											writeFlagAnd7Bits(0, prevPitch); // old pitch
 											writeFlagAnd7Bits(0, 0x40); // pressure
 										}
 										
-										pitch = nextPitch;
+										prevPitchBend = pitchBend;
+										prevExpression = expression;
+										prevPitch = nextPitch;
 									}
 									
 									pinTime = nextPinTime;
@@ -656,7 +702,7 @@ namespace beepbox {
 								
 								writeEventTime(barStartTime + note.end * ticksPerPart);
 								writeUint8(0x80 | midiChannel); // note off event for given channel
-								writeFlagAnd7Bits(0, pitch); // pitch
+								writeFlagAnd7Bits(0, prevPitch); // pitch
 								writeFlagAnd7Bits(0, 0x40); // pressure
 							}
 						}
