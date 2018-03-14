@@ -819,5 +819,10 @@ namespace beepbox {
 		}
 	}
 	
+	// BeepBox uses browser history state as its own undo history. Browsers typically
+	// remember scroll position for each history state, but BeepBox users would prefer not 
+	// auto scrolling when undoing. Sadly this tweak doesn't work on Edge or IE.
+	if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+	
 	editor.updatePlayButton();
 }
