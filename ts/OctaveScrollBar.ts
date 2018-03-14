@@ -110,6 +110,7 @@ namespace beepbox {
 			
 			if (this._mouseY >= this._barBottom - this._barHeight && this._mouseY <= this._barBottom) {
 				this._dragging = true;
+				this._change = null;
 				this._dragStart = this._mouseY;
 			}
 		}
@@ -126,6 +127,7 @@ namespace beepbox {
 			
 			if (this._mouseY >= this._barBottom - this._barHeight && this._mouseY <= this._barBottom) {
 				this._dragging = true;
+				this._change = null;
 				this._dragStart = this._mouseY;
 			}
 		}
@@ -152,8 +154,8 @@ namespace beepbox {
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
 			if (this._dragging) {
 				const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
-				const continuousChange: boolean = this._doc.history.lastChangeWas(this._change);
-				const oldValue: number = continuousChange ? this._change!.oldValue : currentOctave;
+				const continuingProspectiveChange: boolean = this._doc.lastChangeWas(this._change);
+				const oldValue: number = continuingProspectiveChange ? this._change!.oldValue : currentOctave;
 				
 				let octave: number = currentOctave;
 				while (this._mouseY - this._dragStart < -this._octaveHeight * 0.5) {
@@ -173,30 +175,32 @@ namespace beepbox {
 					}
 				}
 				
-				if (octave != currentOctave) {
-					this._change = new ChangeOctave(this._doc, oldValue, octave);
-					this._doc.history.record(this._change, continuousChange);
-				}
+				this._change = new ChangeOctave(this._doc, oldValue, octave);
+				this._doc.setProspectiveChange(this._change);
 			}
 			
 			if (this._mouseOver) this._updatePreview();
 		}
 		
 		private _whenCursorReleased = (event: Event): void => {
-			if (!this._doc.song.getChannelIsDrum(this._doc.channel) && !this._dragging && this._mouseDown) {
-				const continuousChange: boolean = this._doc.history.lastChangeWas(this._change);
-				const oldValue: number = continuousChange ? this._change!.oldValue : this._doc.song.channels[this._doc.channel].octave;
-				const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
-				
-				if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
-					if (currentOctave < 4) {
-						this._change = new ChangeOctave(this._doc, oldValue, currentOctave + 1);
-						this._doc.history.record(this._change, continuousChange);
-					}
+			if (!this._doc.song.getChannelIsDrum(this._doc.channel) && this._mouseDown) {
+				if (this._dragging) {
+					if (this._change != null) this._doc.record(this._change);
 				} else {
-					if (currentOctave > 0) {
-						this._change = new ChangeOctave(this._doc, oldValue, currentOctave - 1);
-						this._doc.history.record(this._change, continuousChange);
+					const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._change);
+					const oldValue: number = canReplaceLastChange ? this._change!.oldValue : this._doc.song.channels[this._doc.channel].octave;
+					const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
+				
+					if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
+						if (currentOctave < 4) {
+							this._change = new ChangeOctave(this._doc, oldValue, currentOctave + 1);
+							this._doc.record(this._change, canReplaceLastChange);
+						}
+					} else {
+						if (currentOctave > 0) {
+							this._change = new ChangeOctave(this._doc, oldValue, currentOctave - 1);
+							this._doc.record(this._change, canReplaceLastChange);
+						}
 					}
 				}
 			}

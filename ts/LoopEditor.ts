@@ -182,7 +182,7 @@ namespace beepbox {
 			if (this._mouseDown) {
 				let oldStart: number = this._doc.song.loopStart;
 				let oldEnd: number = this._doc.song.loopStart + this._doc.song.loopLength;
-				if (this._change != null && this._doc.history.lastChangeWas(this._change)) {
+				if (this._change != null && this._doc.lastChangeWas(this._change)) {
 					oldStart = this._change.oldStart;
 					oldEnd = oldStart + this._change.oldLength;
 				}
@@ -221,7 +221,7 @@ namespace beepbox {
 					const endPoints: Endpoints = this._findEndPoints(bar);
 					this._change = new ChangeLoop(this._doc, oldStart, oldEnd - oldStart, endPoints.start, endPoints.length);
 				}
-				this._doc.history.setProspectiveChange(this._change);
+				this._doc.setProspectiveChange(this._change);
 			} else {
 				this._updateCursorStatus();
 				this._updatePreview();
@@ -239,7 +239,7 @@ namespace beepbox {
 		}
 		
 		private _whenCursorReleased = (event: Event): void => {
-			if (this._change != null) this._doc.history.record(this._change);
+			if (this._change != null) this._doc.record(this._change);
 			this._change = null;
 			this._mouseDown = false;
 			this._updateCursorStatus();

@@ -448,7 +448,7 @@ namespace beepbox {
 			this._updateCursorStatus();
 			this._updatePreview();
 			this._dragChange = new ChangeSequence();
-			this._doc.history.setProspectiveChange(this._dragChange);
+			this._doc.setProspectiveChange(this._dragChange);
 		}
 		
 		private _whenMouseMoved = (event: MouseEvent): void => {
@@ -481,9 +481,9 @@ namespace beepbox {
 			// references. Loading song from hash via undo/redo breaks that,
 			// so changes are no longer undoable and the cursor status may be
 			// invalid. Abort further drag changes until the mouse is released.
-			const continuousChange: boolean = this._doc.history.lastChangeWas(this._dragChange);
+			const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
 			
-			if (this._mouseDown && this._cursor.valid && continuousChange) {
+			if (this._mouseDown && this._cursor.valid && continuousState) {
 				if (!this._mouseDragging) {
 					const dx: number = this._mouseX - this._mouseXStart;
 					const dy: number = this._mouseY - this._mouseYStart;
@@ -501,7 +501,7 @@ namespace beepbox {
 					const currentPart: number = Math.floor(this._mouseX / this._partWidth);
 					const sequence: ChangeSequence = new ChangeSequence();
 					this._dragChange = sequence;
-					this._doc.history.setProspectiveChange(this._dragChange);
+					this._doc.setProspectiveChange(this._dragChange);
 					
 					if (this._cursor.curNote == null) {
 						let backwards: boolean;
@@ -675,20 +675,20 @@ namespace beepbox {
 		private _whenCursorReleased = (event: Event): void => {
 			if (!this._cursor.valid) return;
 			if (this._pattern == null) return;
-			const continuousChange: boolean = this._doc.history.lastChangeWas(this._dragChange);
-			if (this._mouseDragging && continuousChange) {
+			const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
+			if (this._mouseDragging && continuousState) {
 				if (this._dragChange != null) {
-					this._doc.history.record(this._dragChange);
+					this._doc.record(this._dragChange);
 					this._dragChange = null;
 				}
-			} else if (this._mouseDown && continuousChange) {
+			} else if (this._mouseDown && continuousState) {
 				if (this._cursor.curNote == null) {
 					const note: Note = makeNote(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.song.getChannelIsDrum(this._doc.channel));
 					note.pins = [];
 					for (const oldPin of this._cursor.pins) {
 						note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
 					}
-					this._doc.history.record(new ChangeNoteAdded(this._doc, this._pattern, note, this._cursor.curIndex));
+					this._doc.record(new ChangeNoteAdded(this._doc, this._pattern, note, this._cursor.curIndex));
 				} else {
 					if (this._cursor.pitchIndex == -1) {
 						const sequence: ChangeSequence = new ChangeSequence();
@@ -696,13 +696,13 @@ namespace beepbox {
 							sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.curNote.pitches[0], 0, true));
 						}
 						sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));
-						this._doc.history.record(sequence);
+						this._doc.record(sequence);
 						this._copyPins(this._cursor.curNote);
 					} else {
 						if (this._cursor.curNote.pitches.length == 1) {
-							this._doc.history.record(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
+							this._doc.record(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
 						} else {
-							this._doc.history.record(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
+							this._doc.record(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
 						}
 					}
 				}

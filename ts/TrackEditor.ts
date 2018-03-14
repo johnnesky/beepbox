@@ -148,16 +148,16 @@ namespace beepbox {
 		private _setChannelBar(channel: number, bar: number): void {
 			new ChangeChannelBar(this._doc, channel, bar);
 			this._digits = "";
-			this._doc.history.forgetLastChange();
+			this._doc.forgetLastChange();
 		}
 		
 		private _setPattern(pattern: number): void {
 			const currentValue: number = this._doc.song.channels[this._doc.channel].bars[this._doc.bar];
-			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changePattern);
-			const oldValue: number = continuousChange ? this._changePattern!.oldValue : currentValue;
+			const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changePattern);
+			const oldValue: number = canReplaceLastChange ? this._changePattern!.oldValue : currentValue;
 			if (pattern != currentValue) {
 				this._changePattern = new ChangePattern(this._doc, oldValue, pattern);
-				this._doc.history.record(this._changePattern, continuousChange);
+				this._doc.record(this._changePattern, canReplaceLastChange);
 			}
 		}
 		
