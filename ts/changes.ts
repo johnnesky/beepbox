@@ -347,7 +347,7 @@ namespace beepbox {
 	}
 	
 	export class ChangeOperatorAmplitude extends Change {
-		constructor(doc: SongDocument, public operatorIndex: number, public oldValue: number, newValue: number) {
+		constructor(doc: SongDocument, operatorIndex: number, oldValue: number, newValue: number) {
 			super();
 			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].amplitude = newValue;
 			doc.notifier.changed();
@@ -356,7 +356,7 @@ namespace beepbox {
 	}
 	
 	export class ChangeFeedbackAmplitude extends Change {
-		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackAmplitude = newValue;
 			doc.notifier.changed();
@@ -677,7 +677,7 @@ namespace beepbox {
 	}
 	
 	export class ChangeTempo extends Change {
-		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.tempo = newValue;
 			doc.notifier.changed();
@@ -686,7 +686,7 @@ namespace beepbox {
 	}
 	
 	export class ChangeReverb extends Change {
-		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.reverb = newValue;
 			doc.notifier.changed();
@@ -907,7 +907,7 @@ namespace beepbox {
 	}
 	
 	export class ChangeVolume extends Change {
-		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].volume = newValue;
 			doc.notifier.changed();

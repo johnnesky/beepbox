@@ -58,6 +58,34 @@ namespace beepbox {
 		drums: boolean;
 	}
 	
+	class Slider {
+		private _change: Change | null = null;
+		private _value: number = 0;
+		private _oldValue: number = 0;
+		
+		constructor(public readonly input: HTMLInputElement, private readonly _doc: SongDocument, private readonly _getChange: (oldValue: number, newValue: number)=>Change) {
+			input.addEventListener("input", this._whenInput);
+			input.addEventListener("change", this._whenChange);
+		}
+		
+		public updateValue(value: number): void {
+			this._value = value;
+			this.input.value = String(value);
+		}
+		
+		private _whenInput = (): void => {
+			const continuingProspectiveChange: boolean = this._doc.lastChangeWas(this._change);
+			if (!continuingProspectiveChange) this._oldValue = this._value;
+			this._change = this._getChange(this._oldValue, parseInt(this.input.value));
+			this._doc.setProspectiveChange(this._change);
+		};
+		
+		private _whenChange = (): void => {
+			this._doc.record(this._change!);
+			this._change = null;
+		};
+	}
+	
 	export class SongEditor {
 		public prompt: Prompt | null = null;
 		
@@ -121,8 +149,8 @@ namespace beepbox {
 		]);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select({}), Config.scaleNames);
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select({}), Config.keyNames);
-		private readonly _tempoSlider: HTMLInputElement = input({style: "margin: 0px;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"});
-		private readonly _reverbSlider: HTMLInputElement = input({style: "margin: 0px;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"});
+		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0px;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
+		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0px;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
 		private readonly _partSelect: HTMLSelectElement = buildOptions(select({}), Config.partNames);
 		private readonly _pitchChannelTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.pitchChannelTypeNames);
 		private readonly _pitchChannelTypeSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Type: ")]), div({className: "selectContainer"}, [this._pitchChannelTypeSelect])]);
@@ -130,8 +158,8 @@ namespace beepbox {
 		private readonly _algorithmSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Algorithm: ")]), div({className: "selectContainer"}, [this._algorithmSelect])]);
 		private readonly _instrumentSelect: HTMLSelectElement = select({});
 		private readonly _instrumentSelectRow: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, [span({}, [text("Instrument: ")]), div({className: "selectContainer"}, [this._instrumentSelect])]);
-		private readonly _instrumentVolumeSlider: HTMLInputElement = input({style: "margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"});
-		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Volume: ")]), this._instrumentVolumeSlider]);
+		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
+		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Volume: ")]), this._instrumentVolumeSlider.input]);
 		private readonly _waveSelect: HTMLSelectElement = buildOptions(select({}), Config.waveNames);
 		private readonly _drumSelect: HTMLSelectElement = buildOptions(select({}), Config.drumNames);
 		private readonly _waveSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Wave: ")]), div({className: "selectContainer"}, [this._waveSelect, this._drumSelect])]);
@@ -146,12 +174,12 @@ namespace beepbox {
 		private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorFeedbackNames);
 		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Feedback:")]), div({className: "selectContainer"}, [this._feedbackTypeSelect])]);
 		
-		private readonly _feedbackAmplitudeSlider: HTMLInputElement = input({style: "margin: 0px; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"});
+		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({style: "margin: 0px; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
 		private readonly _feedbackEnvelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Feedback Envelope"}), Config.operatorEnvelopeNames);
 		private readonly _feedbackRow2: HTMLDivElement = div({className: "operatorRow"}, [
 			div({style: "margin-right: .1em; visibility: hidden;"}, [text(1 + ".")]),
 			div({style: "width: 3em; margin-right: .3em;"}),
-			this._feedbackAmplitudeSlider,
+			this._feedbackAmplitudeSlider.input,
 			div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, [this._feedbackEnvelopeSelect]),
 		]);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({}, [
@@ -227,11 +255,11 @@ namespace beepbox {
 							]),
 							div({className: "selectRow"}, [
 								span({}, [text("Tempo: ")]),
-								this._tempoSlider,
+								this._tempoSlider.input,
 							]),
 							div({className: "selectRow"}, [
 								span({}, [text("Reverb: ")]),
-								this._reverbSlider,
+								this._reverbSlider.input,
 							]),
 							div({className: "selectRow"}, [
 								span({}, [text("Rhythm: ")]),
@@ -253,13 +281,8 @@ namespace beepbox {
 		
 		private _wasPlaying: boolean;
 		private _changeTranspose: ChangeTranspose | null = null;
-		private _changeTempo: ChangeTempo | null = null;
-		private _changeReverb: ChangeReverb | null = null;
-		private _changeVolume: ChangeVolume | null = null;
-		private _changeOperatorAmplitude: ChangeOperatorAmplitude | null = null;
-		private _changeFeedbackAmplitude: ChangeFeedbackAmplitude | null = null;
 		private readonly _operatorNumbers: HTMLDivElement[] = []
-		private readonly _operatorAmplitudeSliders: HTMLInputElement[] = []
+		private readonly _operatorAmplitudeSliders: Slider[] = []
 		private readonly _operatorEnvelopeSelects: HTMLSelectElement[] = []
 		private readonly _operatorFrequencySelects: HTMLSelectElement[] = []
 		
@@ -276,12 +299,12 @@ namespace beepbox {
 				const operatorIndex: number = i;
 				const operatorNumber: HTMLDivElement = div({style: "margin-right: .1em;"}, [text(i + 1 + ".")]);
 				const frequencySelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Frequency"}), Config.operatorFrequencyNames);
-				const amplitudeSlider: HTMLInputElement = input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Amplitude"});
+				const amplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue));
 				const envelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Envelope"}), Config.operatorEnvelopeNames);
 				const row = div({className: "operatorRow"}, [
 					operatorNumber,
 					div({className: "selectContainer", style: "width: 3em; margin-right: .3em;"}, [frequencySelect]),
-					amplitudeSlider,
+					amplitudeSlider.input,
 					div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, [envelopeSelect]),
 				]);
 				this._phaseModGroup.appendChild(row);
@@ -290,18 +313,11 @@ namespace beepbox {
 				this._operatorEnvelopeSelects[i] = envelopeSelect;
 				this._operatorFrequencySelects[i] = frequencySelect;
 				
-				amplitudeSlider.addEventListener("input", () => {
-					// Oh geeze this is hacky!
-					const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeOperatorAmplitude) && this._changeOperatorAmplitude!.operatorIndex == operatorIndex;
-					const oldValue: number = continuousChange ? this._changeOperatorAmplitude!.oldValue : this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].operators[operatorIndex].amplitude;
-					this._changeOperatorAmplitude = new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, parseInt(amplitudeSlider.value));
-					this._doc.history.record(this._changeOperatorAmplitude, continuousChange);
-				});
 				envelopeSelect.addEventListener("change", () => {
-					this._doc.history.record(new ChangeOperatorEnvelope(this._doc, operatorIndex, envelopeSelect.selectedIndex));
+					this._doc.record(new ChangeOperatorEnvelope(this._doc, operatorIndex, envelopeSelect.selectedIndex));
 				});
 				frequencySelect.addEventListener("change", () => {
-					this._doc.history.record(new ChangeOperatorFrequency(this._doc, operatorIndex, frequencySelect.selectedIndex));
+					this._doc.record(new ChangeOperatorFrequency(this._doc, operatorIndex, frequencySelect.selectedIndex));
 				});
 			}
 			
@@ -309,15 +325,11 @@ namespace beepbox {
 			this._optionsMenu.addEventListener("change", this._optionsMenuHandler);
 			this._scaleSelect.addEventListener("change", this._whenSetScale);
 			this._keySelect.addEventListener("change", this._whenSetKey);
-			this._tempoSlider.addEventListener("input", this._whenSetTempo);
-			this._reverbSlider.addEventListener("input", this._whenSetReverb);
 			this._partSelect.addEventListener("change", this._whenSetPartsPerBeat);
 			this._pitchChannelTypeSelect.addEventListener("change", this._whenSetPitchChannelType);
 			this._algorithmSelect.addEventListener("change", this._whenSetAlgorithm);
 			this._instrumentSelect.addEventListener("change", this._whenSetInstrument);
-			this._instrumentVolumeSlider.addEventListener("input", this._whenSetVolume);
 			this._feedbackTypeSelect.addEventListener("change", this._whenSetFeedbackType);
-			this._feedbackAmplitudeSlider.addEventListener("input", this._whenSetFeedbackAmplitude);
 			this._feedbackEnvelopeSelect.addEventListener("change", this._whenSetFeedbackEnvelope);
 			this._waveSelect.addEventListener("change", this._whenSetWave);
 			this._drumSelect.addEventListener("change", this._whenSetDrum);
@@ -408,9 +420,9 @@ namespace beepbox {
 			
 			setSelectedIndex(this._scaleSelect, this._doc.song.scale);
 			setSelectedIndex(this._keySelect, this._doc.song.key);
-			this._tempoSlider.value = "" + this._doc.song.tempo;
-			this._tempoSlider.title = this._doc.song.getBeatsPerMinute() + " beats per minute";
-			this._reverbSlider.value = "" + this._doc.song.reverb;
+			this._tempoSlider.updateValue(this._doc.song.tempo);
+			this._tempoSlider.input.title = this._doc.song.getBeatsPerMinute() + " beats per minute";
+			this._reverbSlider.updateValue(this._doc.song.reverb);
 			setSelectedIndex(this._partSelect, Config.partCounts.indexOf(this._doc.song.partsPerBeat));
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				this._instrumentVolumeSliderRow.style.display = "";
@@ -475,13 +487,13 @@ namespace beepbox {
 			setSelectedIndex(this._effectSelect, instrument.effect);
 			setSelectedIndex(this._chorusSelect, instrument.chorus);
 			setSelectedIndex(this._feedbackTypeSelect, instrument.feedbackType);
-			this._feedbackAmplitudeSlider.value = instrument.feedbackAmplitude + "";
+			this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
 			setSelectedIndex(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
-			this._instrumentVolumeSlider.value = -instrument.volume + "";
+			this._instrumentVolumeSlider.updateValue(-instrument.volume);
 			setSelectedIndex(this._instrumentSelect, instrumentIndex);
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				this._operatorNumbers[i].style.color = (i < Config.operatorCarrierCounts[instrument.algorithm]) ? "" : "#999";
-				this._operatorAmplitudeSliders[i].value = instrument.operators[i].amplitude + "";
+				this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
 				setSelectedIndex(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
 				setSelectedIndex(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
 			}
@@ -645,7 +657,7 @@ namespace beepbox {
 			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
 			
 			if (patternCopy != null && patternCopy.drums == this._doc.song.getChannelIsDrum(this._doc.channel)) {
-				this._doc.history.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beatsPerBar, patternCopy.partsPerBeat));
+				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beatsPerBar, patternCopy.partsPerBeat));
 			}
 		}
 		
@@ -653,13 +665,13 @@ namespace beepbox {
 			const pattern: Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
 			
-			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeTranspose);
+			const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTranspose);
 			this._changeTranspose = new ChangeTranspose(this._doc, pattern, upward);
-			this._doc.history.record(this._changeTranspose, continuousChange);
+			this._doc.record(this._changeTranspose, canReplaceLastChange);
 		}
 		
 		private _whenNewSongPressed = (): void => {
-			this._doc.history.record(new ChangeSong(this._doc, ""));
+			this._doc.record(new ChangeSong(this._doc, ""));
 			this._patternEditor.resetCopiedPins();
 		}
 		
@@ -668,89 +680,61 @@ namespace beepbox {
 		}
 		
 		private _whenSetScale = (): void => {
-			this._doc.history.record(new ChangeScale(this._doc, this._scaleSelect.selectedIndex));
+			this._doc.record(new ChangeScale(this._doc, this._scaleSelect.selectedIndex));
 		}
 		
 		private _whenSetKey = (): void => {
-			this._doc.history.record(new ChangeKey(this._doc, this._keySelect.selectedIndex));
-		}
-		
-		private _whenSetTempo = (): void => {
-			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeTempo);
-			const oldValue: number = continuousChange ? this._changeTempo!.oldValue : this._doc.song.tempo;
-			this._changeTempo = new ChangeTempo(this._doc, oldValue, parseInt(this._tempoSlider.value));
-			this._doc.history.record(this._changeTempo, continuousChange);
-		}
-		
-		private _whenSetReverb = (): void => {
-			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeReverb);
-			const oldValue: number = continuousChange ? this._changeReverb!.oldValue : this._doc.song.reverb;
-			this._changeReverb = new ChangeReverb(this._doc, oldValue, parseInt(this._reverbSlider.value));
-			this._doc.history.record(this._changeReverb, continuousChange);
+			this._doc.record(new ChangeKey(this._doc, this._keySelect.selectedIndex));
 		}
 		
 		private _whenSetPartsPerBeat = (): void => {
-			this._doc.history.record(new ChangePartsPerBeat(this._doc, Config.partCounts[this._partSelect.selectedIndex]));
+			this._doc.record(new ChangePartsPerBeat(this._doc, Config.partCounts[this._partSelect.selectedIndex]));
 		}
 		
 		private _whenSetPitchChannelType = (): void => {
-			this._doc.history.record(new ChangePitchChannelType(this._doc, this._pitchChannelTypeSelect.selectedIndex));
+			this._doc.record(new ChangePitchChannelType(this._doc, this._pitchChannelTypeSelect.selectedIndex));
 		}
 		
 		private _whenSetFeedbackType = (): void => {
-			this._doc.history.record(new ChangeFeedbackType(this._doc, this._feedbackTypeSelect.selectedIndex));
-		}
-		
-		private _whenSetFeedbackAmplitude = (): void => {
-			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeFeedbackAmplitude);
-			const oldValue: number = continuousChange ? this._changeFeedbackAmplitude!.oldValue : this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].feedbackAmplitude;
-			this._changeFeedbackAmplitude = new ChangeFeedbackAmplitude(this._doc, oldValue, parseInt(this._feedbackAmplitudeSlider.value));
-			this._doc.history.record(this._changeFeedbackAmplitude, continuousChange);
+			this._doc.record(new ChangeFeedbackType(this._doc, this._feedbackTypeSelect.selectedIndex));
 		}
 		
 		private _whenSetFeedbackEnvelope = (): void => {
-			this._doc.history.record(new ChangeFeedbackEnvelope(this._doc, this._feedbackEnvelopeSelect.selectedIndex));
+			this._doc.record(new ChangeFeedbackEnvelope(this._doc, this._feedbackEnvelopeSelect.selectedIndex));
 		}
 		
 		private _whenSetAlgorithm = (): void => {
-			this._doc.history.record(new ChangeAlgorithm(this._doc, this._algorithmSelect.selectedIndex));
+			this._doc.record(new ChangeAlgorithm(this._doc, this._algorithmSelect.selectedIndex));
 		}
 		
 		private _whenSetInstrument = (): void => {
 			const pattern : Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
-			this._doc.history.record(new ChangePatternInstrument(this._doc, this._instrumentSelect.selectedIndex, pattern));
+			this._doc.record(new ChangePatternInstrument(this._doc, this._instrumentSelect.selectedIndex, pattern));
 		}
 		
 		private _whenSetWave = (): void => {
-			this._doc.history.record(new ChangeWave(this._doc, this._waveSelect.selectedIndex));
+			this._doc.record(new ChangeWave(this._doc, this._waveSelect.selectedIndex));
 		}
 		
 		private _whenSetDrum = (): void => {
-			this._doc.history.record(new ChangeWave(this._doc, this._drumSelect.selectedIndex));
+			this._doc.record(new ChangeWave(this._doc, this._drumSelect.selectedIndex));
 		}
 		
 		private _whenSetFilter = (): void => {
-			this._doc.history.record(new ChangeFilter(this._doc, this._filterSelect.selectedIndex));
+			this._doc.record(new ChangeFilter(this._doc, this._filterSelect.selectedIndex));
 		}
 		
 		private _whenSetTransition = (): void => {
-			this._doc.history.record(new ChangeTransition(this._doc, this._transitionSelect.selectedIndex));
+			this._doc.record(new ChangeTransition(this._doc, this._transitionSelect.selectedIndex));
 		}
 		
 		private _whenSetEffect = (): void => {
-			this._doc.history.record(new ChangeEffect(this._doc, this._effectSelect.selectedIndex));
+			this._doc.record(new ChangeEffect(this._doc, this._effectSelect.selectedIndex));
 		}
 		
 		private _whenSetChorus = (): void => {
-			this._doc.history.record(new ChangeChorus(this._doc, this._chorusSelect.selectedIndex));
-		}
-		
-		private _whenSetVolume = (): void => {
-			const continuousChange: boolean = this._doc.history.lastChangeWas(this._changeVolume);
-			const oldValue: number = continuousChange ? this._changeVolume!.oldValue : this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].volume;
-			this._changeVolume = new ChangeVolume(this._doc, oldValue, -parseInt(this._instrumentVolumeSlider.value));
-			this._doc.history.record(this._changeVolume, continuousChange);
+			this._doc.record(new ChangeChorus(this._doc, this._chorusSelect.selectedIndex));
 		}
 		
 		private _editMenuHandler = (event:Event): void => {

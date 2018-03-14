@@ -37,7 +37,6 @@ namespace beepbox {
 		
 		public song: Song;
 		public synth: Synth;
-		public history: SongDocument = this; // TODO: Delete this line.
 		public notifier: ChangeNotifier = new ChangeNotifier();
 		public channel: number = 0;
 		public bar: number = 0;
@@ -155,15 +154,17 @@ namespace beepbox {
 			this._shouldPushState = false;
 		}
 		
-		public record(change: Change, continuingChange: boolean = false): void {
+		public record(change: Change, replaceState: boolean = false): void {
 			if (change.isNoop()) {
 				this._recentChange = null;
-				if (continuingChange) {
+				if (replaceState) {
 					window.history.back();
 				}
 			} else {
 				this._recentChange = change;
-				this._shouldPushState = this._shouldPushState || !continuingChange;
+				if (!replaceState) {
+					this._shouldPushState = true;
+				}
 				if (!this._waitingToUpdateState) {
 					window.requestAnimationFrame(this._updateHistoryState);
 					this._waitingToUpdateState = true;

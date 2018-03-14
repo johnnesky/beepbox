@@ -167,7 +167,7 @@ namespace beepbox {
 			group.append(new ChangeInstrumentsPerChannel(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));
 			group.append(new ChangeChannelCount(this._doc, SongDurationPrompt._validate(this._pitchChannelStepper), SongDurationPrompt._validate(this._drumChannelStepper)));
 			this._doc.prompt = null;
-			this._doc.history.record(group, true);
+			this._doc.record(group, true);
 		}
 	}
 }
