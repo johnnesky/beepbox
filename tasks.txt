@@ -237,9 +237,9 @@
 	√ update midi instrument export too.
 √ dragging sliders back and forth rapidly caused spurious undoing!
 √ geeze, I really don't like how undoing affects scrolling. is there anything I can do about that? Yes! (except on IE.)
+√ more flare speeds?
 
 NEXT RELEASE:
-- more feather speeds?
 - ugh, now tremolo is its own thing... but I still have the "effect" menu, with built-in tremolo? Maybe split that out into a separate thing so that both wave types can share the vibrato. Oh uh and maybe support more vibrato and tremelo speeds? Stop using that beautiful LFO? Hm, should I sync tremelo to the beats? I kinda feel like that might actually work. I think two per beat would roughly correspond to the previous behavior. Should vibrato also sync to the beats? vibrato is trickier because people actually use it, and the vibrato speed has a bigger effect on the perceived timbre. Oh and of course this affects midi export too! tremelos: fast light heavy slow? light and heavy versions of three speeds?
 - reuse song channel objects beyond the first four when re-parsing a song url. Maybe don't reset instruments when reloading songs, to temporarily preserve settings for other instrument types. (but when loading older songs, newer instrument properties should have default values... okay here's the deal: reset the instruments when you get to the instrument type command, resetting only settings relevant to the instrument. However, for song data formats before six, reset all instruments immediately, because they don't have type commands... also drums? ugh this is a mess!)
 - rename sustain to steady, or just leave it off and say "medium" etc. Maybe rename "sharp" to "bright" or something. I'd say "high" but I wouldn't want people to think it's a high pass filter.

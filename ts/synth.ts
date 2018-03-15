@@ -39,7 +39,7 @@ namespace beepbox {
 		custom,
 		steady,
 		punch,
-		feather,
+		flare,
 		pluck,
 		tremolo,
 	}
@@ -163,10 +163,10 @@ namespace beepbox {
 		public static readonly operatorFrequencies: ReadonlyArray<number> =    [ 1.0,   1.0,   2.0,   2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,  9.0,  11.0,  13.0,  15.0];
 		public static readonly operatorHzOffsets: ReadonlyArray<number> =      [ 0.0,   1.5,   0.0,  -1.3,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0];
 		public static readonly operatorAmplitudeSigns: ReadonlyArray<number> = [ 1.0,  -1.0,   1.0,  -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,   1.0,   1.0,   1.0];
-		public static readonly operatorEnvelopeNames: ReadonlyArray<string> = ["custom", "steady", "punch", "feather", "pluck1", "pluck2", "pluck3", "swell1", "swell2", "swell3", "tremolo1", "tremolo2", "tremolo3"];
-		public static readonly operatorEnvelopeType: ReadonlyArray<EnvelopeType> = [EnvelopeType.custom, EnvelopeType.steady, EnvelopeType.punch, EnvelopeType.feather, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.tremolo, EnvelopeType.tremolo, EnvelopeType.tremolo];
-		public static readonly operatorEnvelopeSpeed: ReadonlyArray<number> = [0.0, 0.0, 0.0, 4.0, 32.0, 8.0, 2.0, 32.0, 8.0, 2.0, 4.0, 2.0, 1.0];
-		public static readonly operatorEnvelopeInverted: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, true, true, true, false, false, false];
+		public static readonly operatorEnvelopeNames: ReadonlyArray<string> = ["custom", "steady", "punch", "flare 1", "flare 2", "flare 3", "pluck 1", "pluck 2", "pluck 3", "swell 1", "swell 2", "swell 3", "tremolo1", "tremolo2", "tremolo3"];
+		public static readonly operatorEnvelopeType: ReadonlyArray<EnvelopeType> = [EnvelopeType.custom, EnvelopeType.steady, EnvelopeType.punch, EnvelopeType.flare, EnvelopeType.flare, EnvelopeType.flare, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.tremolo, EnvelopeType.tremolo, EnvelopeType.tremolo];
+		public static readonly operatorEnvelopeSpeed: ReadonlyArray<number> = [0.0, 0.0, 0.0, 32.0, 8.0, 2.0, 32.0, 8.0, 2.0, 32.0, 8.0, 2.0, 4.0, 2.0, 1.0];
+		public static readonly operatorEnvelopeInverted: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, false, true, true, true, false, false, false];
 		public static readonly operatorFeedbackNames: ReadonlyArray<string> = [
 			"1⟲",
 			"2⟲",
@@ -2251,8 +2251,10 @@ namespace beepbox {
 					return 0.5 - Math.cos(beats * 2.0 * Math.PI * Config.operatorEnvelopeSpeed[envelope]) * 0.5;
 				case EnvelopeType.punch: 
 					return Math.max(1.0, 2.0 - time * 10.0);
-				case EnvelopeType.feather:
-					return Math.min(1.0 / (1.0 + time * Config.operatorEnvelopeSpeed[envelope]), time * 10.0);
+				case EnvelopeType.flare:
+					const speed: number = Config.operatorEnvelopeSpeed[envelope];
+					const attack: number = 0.25 / Math.sqrt(speed);
+					return time < attack ? time / attack : 1.0 / (1.0 + (time - attack) * speed);
 				default: throw new Error("Unrecognized operator envelope type.");
 			}
 		}
