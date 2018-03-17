@@ -449,7 +449,7 @@ styleSheet.appendChild(document.createTextNode(`
 		flex-grow: 1;
 	}
 	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings select {
-		width: 9em;
+		width: 8.6em;
 	}
 	.beepboxEditor .editor-menus > * {
 		flex-grow: 1;

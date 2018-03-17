@@ -92,10 +92,10 @@ namespace beepbox {
 		public static readonly drumBasePitches: ReadonlyArray<number> = [69, 69, 69, 69, 96];
 		public static readonly drumPitchFilterMult: ReadonlyArray<number> = [100.0, 8.0, 100.0, 100.0, 1.0];
 		public static readonly drumWaveIsSoft: ReadonlyArray<boolean> = [false, true, false, false, true];
-		public static readonly filterNames: ReadonlyArray<string> = ["sustain sharp", "sustain medium", "sustain soft", "decay sharp", "decay medium", "decay soft"];
-		public static readonly filterBases: ReadonlyArray<number> = [2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
-		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
-		public static readonly filterVolumes: ReadonlyArray<number> = [0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
+		public static readonly filterNames: ReadonlyArray<string> = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
+		public static readonly filterBases: ReadonlyArray<number> = [0.0, 2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
+		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
+		public static readonly filterVolumes: ReadonlyArray<number> = [0.2, 0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
 		public static readonly transitionNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide"];
 		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremolo light", "tremolo heavy"];
 		public static readonly effectVibratos: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
@@ -214,7 +214,7 @@ namespace beepbox {
 			[[1], [], [], [2]],
 			[[1], [2], [], [3]],
 		];
-		public static readonly pitchChannelTypeNames: ReadonlyArray<string> = ["chip (simple)", "FM (expert)"];
+		public static readonly pitchChannelTypeNames: ReadonlyArray<string> = ["chip", "FM (expert)"];
 		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise"];
 		public static readonly pitchChannelColorsDim: ReadonlyArray<string>    = ["#0099a1", "#a1a100", "#c75000", "#00a100", "#d020d0", "#7777b0"];
 		public static readonly pitchChannelColorsBright: ReadonlyArray<string> = ["#25f3ff", "#ffff25", "#ff9752", "#50ff50", "#ff90ff", "#a0a0ff"];
@@ -660,7 +660,7 @@ namespace beepbox {
 	export class Instrument {
 		public type: InstrumentType = 0;
 		public wave: number = 1;
-		public filter: number = 0;
+		public filter: number = 1;
 		public transition: number = 1;
 		public effect: number = 0;
 		public chorus: number = 0;
@@ -680,7 +680,7 @@ namespace beepbox {
 		public reset(): void {
 			this.type = 0;
 			this.wave = 1;
-			this.filter = 0;
+			this.filter = 1;
 			this.transition = 1;
 			this.effect = 0;
 			this.chorus = 0;
@@ -1158,11 +1158,11 @@ namespace beepbox {
 				} else if (command == SongTagCode.filter) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channels[channel].instruments[0].filter = [0, 2, 3, 5][Song._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+						this.channels[channel].instruments[0].filter = [1, 3, 4, 5][Song._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
 					} else if (beforeSix) {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.channels[channel].instruments[i].filter = Song._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.channels[channel].instruments[i].filter = Song._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
 							}
 						}
 					} else {
@@ -1689,8 +1689,11 @@ namespace beepbox {
 								}
 								instrument.wave = Config.waveNames.indexOf(instrumentObject.wave);
 								if (instrument.wave == -1) instrument.wave = 1;
-								instrument.filter = Config.filterNames.indexOf(instrumentObject.filter);
+								
+								const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
+								instrument.filter = oldFilterNames[instrumentObject.filter] != undefined ? oldFilterNames[instrumentObject.filter] : Config.filterNames.indexOf(instrumentObject.filter);
 								if (instrument.filter == -1) instrument.filter = 0;
+								
 								instrument.chorus = Config.chorusNames.indexOf(instrumentObject.chorus);
 								if (instrument.chorus == -1) instrument.chorus = 0;
 								instrument.effect = Config.effectNames.indexOf(instrumentObject.effect);

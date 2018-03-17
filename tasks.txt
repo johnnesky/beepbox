@@ -238,23 +238,23 @@
 √ dragging sliders back and forth rapidly caused spurious undoing!
 √ geeze, I really don't like how undoing affects scrolling. is there anything I can do about that? Yes! (except on IE.)
 √ more flare speeds?
+√ wave filter with a higher cutoff, maybe none. "sustain full" or "none" depending on where I insert it in the list, may need new url version. can probably drop the word "sustain"? (if so, don't forget to remember it for json parsing!)
+√ rename sustain to steady, or just leave it off and say "medium" etc. Maybe rename "sharp" to "bright" or something. 
 
 NEXT RELEASE:
-- ugh, now tremolo is its own thing... but I still have the "effect" menu, with built-in tremolo? Maybe split that out into a separate thing so that both wave types can share the vibrato. Oh uh and maybe support more vibrato and tremelo speeds? Stop using that beautiful LFO? Hm, should I sync tremelo to the beats? I kinda feel like that might actually work. I think two per beat would roughly correspond to the previous behavior. Should vibrato also sync to the beats? vibrato is trickier because people actually use it, and the vibrato speed has a bigger effect on the perceived timbre. Oh and of course this affects midi export too! tremelos: fast light heavy slow? light and heavy versions of three speeds?
-- reuse song channel objects beyond the first four when re-parsing a song url. Maybe don't reset instruments when reloading songs, to temporarily preserve settings for other instrument types. (but when loading older songs, newer instrument properties should have default values... okay here's the deal: reset the instruments when you get to the instrument type command, resetting only settings relevant to the instrument. However, for song data formats before six, reset all instruments immediately, because they don't have type commands... also drums? ugh this is a mess!)
-- rename sustain to steady, or just leave it off and say "medium" etc. Maybe rename "sharp" to "bright" or something. I'd say "high" but I wouldn't want people to think it's a high pass filter.
-- wave filter with a higher cutoff, maybe none. "sustain full" or "none" depending on where I insert it in the list, may need new url version. can probably drop the word "sustain"? (if so, don't forget to remember it for json parsing!)
-- add a little "?" next to "Type" when in FM mode, brings up a popup explaining how to use it, link to a song showcasing some ideas to get you started.
-- seamless transitions combined with decaying operators sounds poppy... maybe seamless transitions should always fade out if the next note is null AND the note ends before the end of the bar.
-- maybe add rising wave filter as well, similar to operator envelopes
-- maybe put little numbers on the notes in the pattern editor when in phase mod mode and there's more than one pitch.
 - scale channel#ChorusSign appropriately so that both wave signals have the correct volume for their pitch.
 - for waves, have 2 versions of channel#PhaseDelta for the chorus, get rid of harmonyMult.
+- ugh, now tremolo is its own thing... but I still have the "effect" menu, with built-in tremolo? Maybe split that out into a separate thing so that both wave types can share the vibrato. Oh uh and maybe support more vibrato and tremelo speeds? Stop using that beautiful LFO? Hm, should I sync tremelo to the beats? I kinda feel like that might actually work. I think two per beat would roughly correspond to the previous behavior. Should vibrato also sync to the beats? vibrato is trickier because people actually use it, and the vibrato speed has a bigger effect on the perceived timbre. Oh and of course this affects midi export too! tremelos: fast light heavy slow? light and heavy versions of three speeds? I could throw tremelo into the transition menu, but that's just moving the problem of redundant features in FM mode from one menu to another, and confusing that menu. I could leave it alone, but it's, uh, pretty ugly. I could make a new envelope menu with all the same options as operator envelopes for consistency, but the name "envelope" would confuse json parsing of old versions, and more importantly, would the new envelope menu have a "custom" option, or would custom envelopes always be applied?
+- reuse song channel objects beyond the first four when re-parsing a song url. Maybe don't reset instruments when reloading songs, to temporarily preserve settings for other instrument types. (but when loading older songs, newer instrument properties should have default values... okay here's the deal: reset the instruments when you get to the instrument type command, resetting only settings relevant to the instrument. However, for song data formats before six, reset all instruments immediately, because they don't have type commands... also drums? ugh this is a mess!)
+- add a little "?" next to "Type" when in FM mode, brings up a popup explaining how to use it, link to a song showcasing some ideas to get you started.
+- while we're at it, custom harmony could use a "?" hint.
+- seamless transitions sound poppy. maybe seamless transitions should always fade out if the next note is null AND the note ends before the end of the bar.
+- maybe put little numbers on the notes in the pattern editor when in phase mod mode and there's more than one pitch.
 - Ooh, should there be a "release" envelope to fade out? until another note starts and cuts it off? Also on "0" pattern bars, use the previous instrument in that channel to continue the fade out.
-- Config.volumeNames is pointless now.
 - someone said it doesn't work on ios?
 - on mobile, should move the new/edit/prefs/export/import etc buttons to the bottom, just above beepbox 2.X, but keep the play/volume controls between the track editor and the song/instrument settings.
 - pitch bends mixed with arpeggios don’t properly check min/max bounds
+- guitar wave? :P
 
 MAJOR REMAINING FEATURES:
 - embedded player
