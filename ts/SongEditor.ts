@@ -112,7 +112,7 @@ namespace beepbox {
 		private readonly _prevBarButton: HTMLButtonElement = button({className: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)"});
 		private readonly _nextBarButton: HTMLButtonElement = button({className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
 		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1"});
-		private readonly _editMenu: HTMLSelectElement = select({style: "width:100%;"}, [
+		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
 			option("", "Edit", true, true),
 			option("undo", "Undo (Z)", false, false),
 			option("redo", "Redo (Y)", false, false),
@@ -123,7 +123,7 @@ namespace beepbox {
 			option("duration", "Custom song size...", false, false),
 			option("import", "Import JSON...", false, false),
 		]);
-		private readonly _optionsMenu: HTMLSelectElement = select({style: "width:100%;"}, [
+		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
 			option("", "Preferences", true, true),
 			option("autoPlay", "Auto Play On Load", false, false),
 			option("autoFollow", "Auto Follow Track", false, false),
@@ -239,7 +239,6 @@ namespace beepbox {
 							this._exportButton,
 						]),
 					]),
-					div({className: "fullWidthOnly", style: "flex: 0 1 10px;"}),
 					div({className: "editor-settings"}, [
 						div({className: "editor-song-settings"}, [
 							div({style: "margin: 3px 0; text-align: center; color: #999;"}, [
@@ -266,7 +265,6 @@ namespace beepbox {
 								div({className: "selectContainer"}, [this._partSelect]),
 							]),
 						]),
-						div({className: "fullWidthOnly", style: "flex: 0 1 10px;"}),
 						div({className: "editor-instrument-settings"}, [
 							div({style: "margin: 3px 0; text-align: center; color: #999;"}, [
 								text("Instrument Settings")
@@ -299,7 +297,7 @@ namespace beepbox {
 				const operatorIndex: number = i;
 				const operatorNumber: HTMLDivElement = div({style: "margin-right: .1em;"}, [text(i + 1 + ".")]);
 				const frequencySelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Frequency"}), Config.operatorFrequencyNames);
-				const amplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue));
+				const amplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Volume"}), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue));
 				const envelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Envelope"}), Config.operatorEnvelopeNames);
 				const row = div({className: "operatorRow"}, [
 					operatorNumber,
@@ -492,10 +490,15 @@ namespace beepbox {
 			this._instrumentVolumeSlider.updateValue(-instrument.volume);
 			setSelectedIndex(this._instrumentSelect, instrumentIndex);
 			for (let i: number = 0; i < Config.operatorCount; i++) {
-				this._operatorNumbers[i].style.color = (i < Config.operatorCarrierCounts[instrument.algorithm]) ? "" : "#999";
+				const isCarrier: boolean = (i < Config.operatorCarrierCounts[instrument.algorithm]);
+				this._operatorNumbers[i].style.color = isCarrier ? "" : "#999";
+				setSelectedIndex(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
 				this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
 				setSelectedIndex(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
-				setSelectedIndex(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
+				const operatorName: string = (isCarrier ? "Voice " : "Modulator ") + (i + 1);
+				this._operatorFrequencySelects[i].title = operatorName + " Frequency";
+				this._operatorAmplitudeSliders[i].input.title = operatorName + (isCarrier ? " Volume" : " Amplitude");
+				this._operatorEnvelopeSelects[i].title = operatorName + " Envelope";
 			}
 			
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
