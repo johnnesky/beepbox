@@ -105,6 +105,7 @@ namespace beepbox {
 		public static readonly chorusIntervals: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02, 0.05];
 		public static readonly chorusOffsets: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0, 0.0];
 		public static readonly chorusVolumes: ReadonlyArray<number> = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0, 1.0];
+		public static readonly chorusSigns: ReadonlyArray<number> = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0];
 		public static readonly chorusHarmonizes: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, true];
 		public static readonly volumeNames: ReadonlyArray<string> = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
 		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
@@ -279,7 +280,7 @@ namespace beepbox {
 			return new Float64Array(wave);
 		}
 		
-		// Drum waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
+		// NOISE waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
 		private static readonly _drumWaves: Array<Float32Array | null> = [null, null, null, null, null];
 		
 		public static getDrumWave(index: number): Float32Array {
@@ -869,7 +870,7 @@ namespace beepbox {
 							throw new Error("Unknown instrument type.");
 						}
 					} else {
-						// drum
+						// NOISE
 						buffer.push(SongTagCode.startInstrument, base64IntToCharCode[InstrumentType.noise]);
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
 						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
@@ -1904,6 +1905,7 @@ namespace beepbox {
 		public filterScale: number = 0.0;
 		public vibratoScale: number = 0.0;
 		public harmonyMult: number = 0.0;
+		public harmonyVolumeMult: number = 1.0;
 		public feedbackOutputs: number[] = [];
 		public feedbackMult: number = 0.0;
 		public feedbackDelta: number = 0.0;
@@ -2279,6 +2281,7 @@ namespace beepbox {
 			synthChannel.filterScale = 1.0;
 			synthChannel.vibratoScale = 0.0;
 			synthChannel.harmonyMult = 1.0;
+			synthChannel.harmonyVolumeMult = 1.0;
 			
 			let partsSinceStart: number = 0.0;
 			let arpeggio: number = synth.arpeggio;
@@ -2482,6 +2485,7 @@ namespace beepbox {
 							harmonyOffset = pitches[(arpeggio == 3 ? 1 : arpeggio) + 1] - pitches[0];
 						}
 						synthChannel.harmonyMult = Math.pow(2.0, harmonyOffset / 12.0);
+						synthChannel.harmonyVolumeMult = Math.pow(2.0, -harmonyOffset / pitchDamping)
 					} else {
 						if (pitches.length == 2) {
 							pitch = pitches[arpeggio >> 1];
@@ -2579,7 +2583,7 @@ namespace beepbox {
 									synthSource.push(line.replace(/#/g, channel + "").replace("/*channel" + channel + "Operator$Scaled*/", outputs.join(" + ")));
 								}
 							}
-						} else if (line.indexOf("// DRUM") != -1) {
+						} else if (line.indexOf("// NOISE") != -1) {
 							for (let channel = song.pitchChannelCount; channel < song.pitchChannelCount + song.drumChannelCount; channel++) {
 								synthSource.push(line.replace(/#/g, channel + ""));
 							}
@@ -2644,7 +2648,7 @@ namespace beepbox {
 			var instrumentChannel# = song.getPatternInstrument(#, synth.bar); // ALL
 			var instrument# = song.channels[#].instruments[instrumentChannel#]; // ALL
 			var channel#Wave = beepbox.Config.waves[instrument#.wave]; // CHIP
-			var channel#Wave = beepbox.Config.getDrumWave(instrument#.wave); // DRUM
+			var channel#Wave = beepbox.Config.getDrumWave(instrument#.wave); // NOISE
 			var channel#WaveLength = channel#Wave.length; // CHIP
 			var channel#FilterBase = Math.pow(2, -beepbox.Config.filterBases[instrument#.filter]); // CHIP
 			var channel#TremoloScale = beepbox.Config.effectTremolos[instrument#.effect]; // PITCH
@@ -2662,35 +2666,34 @@ namespace beepbox {
 				
 				var time = synth.part + synth.beat * song.partsPerBeat;
 				
-				var channel#ChorusA = Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument#.chorus] + beepbox.Config.chorusIntervals[instrument#.chorus]) / 12.0); // CHIP
-				var channel#ChorusB = Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument#.chorus] - beepbox.Config.chorusIntervals[instrument#.chorus]) / 12.0); // CHIP
-				var channel#ChorusSign = (instrument#.chorus == 7) ? -1.0 : 1.0; // CHIP
-				if (instrument#.chorus == 0) synth.channels[#].phases[1] = synth.channels[#].phases[0]; // CHIP
-				
 				beepbox.Synth.computeChannelInstrument(synth, song, #, time, sampleTime, samplesPerArpeggio, samples); // ALL
 				var synthChannel# = synth.channels[#]; // ALL
 				
-				var channel#PhaseDelta = synthChannel#.phaseDeltas[0]; // CHIP
-				var channel#PhaseDelta = synthChannel#.phaseDeltas[0] / 32768.0; // DRUM
+				var channel#ChorusA = Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument#.chorus] + beepbox.Config.chorusIntervals[instrument#.chorus]) / 12.0); // CHIP
+				var channel#ChorusB = Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument#.chorus] - beepbox.Config.chorusIntervals[instrument#.chorus]) / 12.0); // CHIP
+				var channel#ChorusSign = synthChannel#.harmonyVolumeMult * beepbox.Config.chorusSigns[instrument#.chorus]; // CHIP
+				if (instrument#.chorus == 0) synthChannel#.phases[1] = synthChannel#.phases[0]; // CHIP
+				channel#ChorusB *= synthChannel#.harmonyMult; // CHIP
+				var channel#ChorusDeltaRatio = channel#ChorusB / channel#ChorusA; // CHIP
+				
+				var channel#PhaseDelta = synthChannel#.phaseDeltas[0] * channel#ChorusA; // CHIP
+				var channel#PhaseDelta = synthChannel#.phaseDeltas[0] / 32768.0; // NOISE
 				var channel#PhaseDeltaScale = synthChannel#.phaseDeltaScale; // ALL
 				var channel#Volume = synthChannel#.volumeStarts[0]; // CHIP
-				var channel#Volume = synthChannel#.volumeStarts[0]; // DRUM
+				var channel#Volume = synthChannel#.volumeStarts[0]; // NOISE
 				var channel#VolumeDelta = synthChannel#.volumeDeltas[0]; // CHIP
-				var channel#VolumeDelta = synthChannel#.volumeDeltas[0]; // DRUM
+				var channel#VolumeDelta = synthChannel#.volumeDeltas[0]; // NOISE
 				var channel#Filter = synthChannel#.filter * channel#FilterBase; // CHIP
-				var channel#Filter = synthChannel#.filter; // DRUM
+				var channel#Filter = synthChannel#.filter; // NOISE
 				var channel#FilterScale = synthChannel#.filterScale; // CHIP
 				var channel#VibratoScale = synthChannel#.vibratoScale; // PITCH
-				
-				// TODO: get rid of this, use multiple deltas instead:
-				channel#ChorusB *= synthChannel#.harmonyMult; // CHIP
 				
 				var effectY     = Math.sin(synth.effectPhase);
 				var prevEffectY = Math.sin(synth.effectPhase - synth.effectAngle);
 				
 				var channel#PhaseA = synth.channels[#].phases[0] % 1; // CHIP
 				var channel#PhaseB = synth.channels[#].phases[1] % 1; // CHIP
-				var channel#Phase  = synth.channels[#].phases[0] % 1; // DRUM
+				var channel#Phase  = synth.channels[#].phases[0] % 1; // NOISE
 				
 				var channel#Operator$Phase       = ((synth.channels[#].phases[$] % 1) + ` + Synth.negativePhaseGuard + `) * ` + Config.sineWaveLength + `; // FM
 				var channel#Operator$PhaseDelta  = synthChannel#.phaseDeltas[$]; // FM
@@ -2717,18 +2720,18 @@ namespace beepbox {
 					prevEffectY = temp;
 					
 					channel#Sample += ((channel#Wave[0|(channel#PhaseA * channel#WaveLength)] + channel#Wave[0|(channel#PhaseB * channel#WaveLength)] * channel#ChorusSign) * channel#Volume * channel#Tremolo - channel#Sample) * channel#Filter; // CHIP
-					channel#Sample += (channel#Wave[0|(channel#Phase * 32768.0)] * channel#Volume - channel#Sample) * channel#Filter; // DRUM
+					channel#Sample += (channel#Wave[0|(channel#Phase * 32768.0)] * channel#Volume - channel#Sample) * channel#Filter; // NOISE
 					channel#Volume += channel#VolumeDelta; // CHIP
-					channel#Volume += channel#VolumeDelta; // DRUM
-					channel#PhaseA += channel#PhaseDelta * channel#Vibrato * channel#ChorusA; // CHIP
-					channel#PhaseB += channel#PhaseDelta * channel#Vibrato * channel#ChorusB; // CHIP
-					channel#Phase += channel#PhaseDelta; // DRUM
+					channel#Volume += channel#VolumeDelta; // NOISE
+					channel#PhaseA += channel#PhaseDelta * channel#Vibrato; // CHIP
+					channel#PhaseB += channel#PhaseDelta * channel#Vibrato * channel#ChorusDeltaRatio; // CHIP
+					channel#Phase += channel#PhaseDelta; // NOISE
 					channel#Filter *= channel#FilterScale; // CHIP
 					channel#PhaseA -= 0|channel#PhaseA; // CHIP
 					channel#PhaseB -= 0|channel#PhaseB; // CHIP
-					channel#Phase -= 0|channel#Phase; // DRUM
+					channel#Phase -= 0|channel#Phase; // NOISE
 					channel#PhaseDelta *= channel#PhaseDeltaScale; // CHIP
-					channel#PhaseDelta *= channel#PhaseDeltaScale; // DRUM
+					channel#PhaseDelta *= channel#PhaseDeltaScale; // NOISE
 					
 					// INSERT OPERATOR COMPUTATION HERE
 					channel#Sample = channel#Tremolo * (/*channel#Operator$Scaled*/); // CARRIER OUTPUTS
@@ -2765,7 +2768,7 @@ namespace beepbox {
 					delayPos = (delayPos + 1) & 0x3FFF;
 					
 					var sample = delaySample0 + delaySample1 + delaySample2 + delaySample3
-						+ channel#Sample // DRUM
+						+ channel#Sample // NOISE
 					;
 					
 					var abs = sample < 0.0 ? -sample : sample;
@@ -2780,7 +2783,7 @@ namespace beepbox {
 				
 				synthChannel#.phases[0] = channel#PhaseA; // CHIP
 				synthChannel#.phases[1] = channel#PhaseB; // CHIP
-				synthChannel#.phases[0] = channel#Phase; // DRUM
+				synthChannel#.phases[0] = channel#Phase; // NOISE
 				synthChannel#.phases[$] = channel#Operator$Phase / ` + Config.sineWaveLength + `; // FM
 				synthChannel#.feedbackOutputs[$] = channel#Operator$Output; // FM
 				synthChannel#.sample = channel#Sample; // ALL
