@@ -369,8 +369,11 @@ namespace beepbox {
 			super();
 			if (doc.song.instrumentsPerChannel != newInstrumentsPerChannel) {
 				for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
+					const sampleInstrument: Instrument = doc.song.channels[channel].instruments[doc.song.instrumentsPerChannel - 1];
 					for (let j: number = doc.song.instrumentsPerChannel; j < newInstrumentsPerChannel; j++) {
-						doc.song.channels[channel].instruments[j] = new Instrument();
+						const newInstrument: Instrument = new Instrument();
+						newInstrument.copy(sampleInstrument);
+						doc.song.channels[channel].instruments[j] = newInstrument;
 					}
 					doc.song.channels[channel].instruments.length = newInstrumentsPerChannel;
 					for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
