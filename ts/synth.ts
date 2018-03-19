@@ -643,9 +643,9 @@ namespace beepbox {
 	}
 	
 	export class Operator {
+		public frequency: number = 0;
 		public amplitude: number = 0;
 		public envelope: number = 0;
-		public frequency: number = 0;
 		
 		constructor(index: number) {
 			this.reset(index);
@@ -655,6 +655,12 @@ namespace beepbox {
 			this.frequency = 0;
 			this.amplitude = (index <= 1) ? Config.operatorAmplitudeMax : 0;
 			this.envelope = (index == 0) ? 0 : 1;
+		}
+		
+		public copy(other: Operator): void {
+			this.frequency = other.frequency;
+			this.amplitude = other.amplitude;
+			this.envelope = other.envelope;
 		}
 	}
 	
@@ -694,6 +700,53 @@ namespace beepbox {
 				this.operators[i].reset(i);
 			}
 		}
+		
+		public setTypeAndReset(type: InstrumentType): void {
+			this.type = type;
+			switch (type) {
+				case InstrumentType.chip:
+					this.wave = 1;
+					this.filter = 1;
+					this.transition = 1;
+					this.effect = 0;
+					this.chorus = 0;
+					this.volume = 0;
+					break;
+				case InstrumentType.fm:
+					this.wave = 1;
+					this.transition = 1;
+					this.volume = 0;
+					break;
+				case InstrumentType.noise:
+					this.transition = 1;
+					this.effect = 0;
+					this.algorithm = 0;
+					this.feedbackType = 0;
+					this.feedbackAmplitude = 0;
+					this.feedbackEnvelope = 1;
+					for (let i: number = 0; i < this.operators.length; i++) {
+						this.operators[i].reset(i);
+					}
+					break;
+			}
+		}
+		
+		public copy(other: Instrument): void {
+			this.type = other.type;
+			this.wave = other.wave;
+			this.filter = other.filter;
+			this.transition = other.transition;
+			this.effect = other.effect;
+			this.chorus = other.chorus;
+			this.volume = other.volume;
+			this.algorithm = other.algorithm;
+			this.feedbackType = other.feedbackType;
+			this.feedbackAmplitude = other.feedbackAmplitude;
+			this.feedbackEnvelope = other.feedbackEnvelope;
+			for (let i: number = 0; i < this.operators.length; i++) {
+				this.operators[i].copy(other.operators[i]);
+			}
+		}
 	}
 	
 	export class Channel {
@@ -729,7 +782,7 @@ namespace beepbox {
 			if (string != undefined) {
 				this.fromBase64String(string);
 			} else {
-				this.initToDefault();
+				this.initToDefault(true);
 			}
 		}
 		
@@ -754,7 +807,7 @@ namespace beepbox {
 			return channel < this.pitchChannelCount ? Config.pitchNoteColorsBright[channel] : Config.drumNoteColorsBright[channel - this.pitchChannelCount];
 		}
 		
-		public initToDefault(): void {
+		public initToDefault(andResetChannels: boolean = true): void {
 			this.scale = 0;
 			this.key = Config.keyNames.length - 1;
 			this.loopStart = 0;
@@ -766,43 +819,42 @@ namespace beepbox {
 			this.patternsPerChannel = 8;
 			this.partsPerBeat = 4;
 			this.instrumentsPerChannel = 1;
-			this.pitchChannelCount = 3;
-			this.drumChannelCount = 1;
 			
-			// TODO: It's kinda wasteful to discard channels, patterns, and instruments just because they're
-			// not included in the default settings. Maybe leave them there once the've been created, but
-			// just don't use them until a song is loaded that needs them.
-			for (let channelIndex = 0; channelIndex < this.getChannelCount(); channelIndex++) {
-				if (this.channels.length <= channelIndex) {
-					this.channels[channelIndex] = new Channel(/*channelIndex >= this.pitchChannelCount*/);
-				}
-				const channel: Channel = this.channels[channelIndex];
-				channel.octave = 3 - channelIndex; // [3, 2, 1, 0]; Descending octaves with drums at zero in last channel.
-				
-				for (let pattern = 0; pattern < this.patternsPerChannel; pattern++) {
-					if (channel.patterns.length <= pattern) {
-						channel.patterns[pattern] = new Pattern();
-					} else {
-						channel.patterns[pattern].reset();
+			if (andResetChannels) {
+				this.pitchChannelCount = 3;
+				this.drumChannelCount = 1;
+				for (let channelIndex = 0; channelIndex < this.getChannelCount(); channelIndex++) {
+					if (this.channels.length <= channelIndex) {
+						this.channels[channelIndex] = new Channel();
 					}
-				}
-				channel.patterns.length = this.patternsPerChannel;
+					const channel: Channel = this.channels[channelIndex];
+					channel.octave = 3 - channelIndex; // [3, 2, 1, 0]; Descending octaves with drums at zero in last channel.
 				
-				for (let instrument = 0; instrument < this.instrumentsPerChannel; instrument++) {
-					if (channel.instruments.length <= instrument) {
-						channel.instruments[instrument] = new Instrument();
-					} else {
-						channel.instruments[instrument].reset();
+					for (let pattern = 0; pattern < this.patternsPerChannel; pattern++) {
+						if (channel.patterns.length <= pattern) {
+							channel.patterns[pattern] = new Pattern();
+						} else {
+							channel.patterns[pattern].reset();
+						}
 					}
-				}
-				channel.instruments.length = this.instrumentsPerChannel;
+					channel.patterns.length = this.patternsPerChannel;
 				
-				for (let bar = 0; bar < this.barCount; bar++) {
-					channel.bars[bar] = 1;
+					for (let instrument = 0; instrument < this.instrumentsPerChannel; instrument++) {
+						if (channel.instruments.length <= instrument) {
+							channel.instruments[instrument] = new Instrument();
+						} else {
+							channel.instruments[instrument].reset();
+						}
+					}
+					channel.instruments.length = this.instrumentsPerChannel;
+				
+					for (let bar = 0; bar < this.barCount; bar++) {
+						channel.bars[bar] = 1;
+					}
+					channel.bars.length = this.barCount;
 				}
-				channel.bars.length = this.barCount;
+				this.channels.length = this.getChannelCount();
 			}
-			this.channels.length = this.getChannelCount();
 		}
 		
 		public toBase64String(): string {
@@ -1018,8 +1070,8 @@ namespace beepbox {
 		}
 		
 		public fromBase64String(compressed: string): void {
-			if (compressed == null) {
-				this.initToDefault();
+			if (compressed == null || compressed == "") {
+				this.initToDefault(true);
 				return;
 			}
 			let charIndex: number = 0;
@@ -1033,7 +1085,6 @@ namespace beepbox {
 				return;
 			}
 			
-			this.initToDefault();
 			const version: number = Song._base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 			if (version == -1 || version > Song._latestVersion || version < Song._oldestVersion) return;
 			const beforeThree: boolean = version < 3;
@@ -1041,6 +1092,8 @@ namespace beepbox {
 			const beforeFive:  boolean = version < 5;
 			const beforeSix:   boolean = version < 6;
 			const base64CharCodeToInt: ReadonlyArray<number> = Song._base64CharCodeToInt;
+			this.initToDefault(beforeSix);
+			
 			if (beforeThree) {
 				// Originally, the only instrument transition was "seamless" and the only drum wave was "retro".
 				for (const channel of this.channels) channel.instruments[0].transition = 0;
@@ -1059,7 +1112,7 @@ namespace beepbox {
 					this.pitchChannelCount = Song._clip(Config.pitchChannelCountMin, Config.pitchChannelCountMax + 1, this.pitchChannelCount);
 					this.drumChannelCount = Song._clip(Config.drumChannelCountMin, Config.drumChannelCountMax + 1, this.drumChannelCount);
 					for (let channelIndex = this.channels.length; channelIndex < this.getChannelCount(); channelIndex++) {
-						this.channels[channelIndex] = new Channel(/*channelIndex >= this.pitchChannelCount*/);
+						this.channels[channelIndex] = new Channel();
 					}
 					this.channels.length = this.getChannelCount();
 				} else if (command == SongTagCode.scale) {
@@ -1140,7 +1193,8 @@ namespace beepbox {
 						instrumentChannelIterator++;
 						instrumentIndexIterator = 0;
 					}
-					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].type = Song._clip(0, 2, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					instrument.setTypeAndReset(Song._clip(0, 2, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]));
 				} else if (command == SongTagCode.wave) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
@@ -1317,6 +1371,7 @@ namespace beepbox {
 						for (let i: number = 0; i < this.patternsPerChannel; i++) {
 							const newPattern: Pattern = this.channels[channel].patterns[i];
 							newPattern.instrument = bits.read(neededInstrumentBits);
+							newPattern.reset();
 							
 							if (!beforeThree && bits.read(1) == 0) continue;
 							
@@ -1548,7 +1603,7 @@ namespace beepbox {
 		}
 		
 		public fromJsonObject(jsonObject: any): void {
-			this.initToDefault();
+			this.initToDefault(true);
 			if (!jsonObject) return;
 			const version: any = jsonObject.version;
 			if (version > Song._format) return;
