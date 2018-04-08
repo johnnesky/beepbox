@@ -253,7 +253,6 @@
 √ dim oscillator envelope when volume/modulation is zero.
 
 NEXT RELEASE:
-- do we really need all those algorithm and feedback options? :/ I basically don't use most of them. If I change anything, update the demo song.
 - any more spectrum-based drums?
 - check other browsers
 - someone said it doesn't work on ios?
