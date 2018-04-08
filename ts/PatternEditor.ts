@@ -844,8 +844,9 @@ namespace beepbox {
 			
 			if (this._pattern != null) {
 				for (const note of this._pattern.notes) {
-					for (const pitch of note.pitches) {
-						let notePath: SVGPathElement = <SVGPathElement> svgElement("path");
+					for (let i: number = 0; i < note.pitches.length; i++) {
+						const pitch: number = note.pitches[i];
+						let notePath = <SVGPathElement> svgElement("path");
 						notePath.setAttribute("fill", this._doc.song.getNoteColorDim(this._doc.channel));
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
@@ -855,6 +856,22 @@ namespace beepbox {
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
+						
+						if (note.pitches.length > 1) {
+							const instrumentType: InstrumentType = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].type;
+							if (instrumentType == InstrumentType.fm) {
+								let oscillatorLabel = <SVGTextElement> svgElement("text");
+								oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
+								oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));
+								oscillatorLabel.setAttribute("width", "30");
+								oscillatorLabel.setAttribute("fill", "black");
+								oscillatorLabel.setAttribute("text-anchor", "start");
+								oscillatorLabel.setAttribute("dominant-baseline", "central");
+								oscillatorLabel.setAttribute("pointer-events", "none");
+								oscillatorLabel.textContent = "" + (i + 1);
+								this._svgNoteContainer.appendChild(oscillatorLabel);
+							}
+						}
 					}
 				}
 				
