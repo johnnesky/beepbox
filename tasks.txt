@@ -244,14 +244,18 @@
 √ scale channel#ChorusSign appropriately so that both wave signals have the correct volume for their pitch. Also the negative sign shouldn't be hardcoded, should be in Config.
 √ When increasing number of instruments, copy last existing instrument.
 √ reuse song channel objects beyond the first four when re-parsing a song url. Maybe don't reset instruments when reloading songs, to temporarily preserve settings for other instrument types. (but when loading older songs, newer instrument properties should have default values... okay here's the deal: reset the instruments when you get to the instrument type command, resetting only settings relevant to the instrument. However, for song data formats before six, reset all instruments immediately, because they don't have type commands... also drums? ugh this is a mess!)
+√ add a little "?" next to "Type" when in FM mode, brings up a popup explaining how to use it, link to a song showcasing some ideas to get you started.
+√ while we're at it, custom harmony could use a "?" hint. Anything else?
 
 NEXT RELEASE:
-- add a little "?" next to "Type" when in FM mode, brings up a popup explaining how to use it, link to a song showcasing some ideas to get you started.
-- while we're at it, custom harmony could use a "?" hint. Anything else?
 - seamless transitions sound poppy. maybe seamless transitions should always fade out if the next note is null AND the note ends before the end of the bar.
 - maybe put little numbers on the notes in the pattern editor when in FM mode and there's more than one pitch.
 - someone said it doesn't work on ios?
 - pitch bends mixed with arpeggios don’t properly check min/max bounds
+- do we really need all those algorithm and feedback options? :/ I basically don't use most of them. If I change anything, update the demo song.
+- the instructions in index.html need some work, see notes in email.
+- any more spectrum-based drums?
+- license the source code under CC0?
 - guitar wave? :P
 
 MAJOR REMAINING FEATURES:
@@ -273,10 +277,9 @@ MISC:
 - Improve naming/documentation/api so it's clear how replaceState and prospectiveChange would interact if used together. prospectiveChange is only used for keeping track of oldValue while dragging to determine if a recorded change ultimately isNoop() and should be commmitted. replaceState is used when a change is overwriting the previously committed change, like transposing notes. However, prospective change erases information about previously *committed* change, making it unclear if replaceState should be used. Additionally, if multiple inputs are setting prospectiveChange simultaneously, it's unclear what the correct oldValue is and thus whether either change isNoop(). (I considered just committing prospective changes when a competing input is used, but that could result in frequent, useless commits while dragging two inputs simultaneously.)
 - maybe drums can have their own phase modulation mode, with different fractions? can modulator pitches bend at different rates? maybe the "envelopes" are basically the same except instead of controlling modulation they control pitch?
 - consider trying polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency.
-- is it possible to get pitch slides to work across bars?
-- the seamless transition should fade out if there's no note after, can it detect notes across bars?
+- is it possible to get pitch slides (and seamless transitions) to detect notes across bars?
 - Maybe add a fadeout option that decays carrier volume until the next note starts? Or is that redundant since you can do the same thing with envelope editing? (could it extend into the next bar? for 0 pattern bars, use same instrument as previous bar?)
-- Distortion applying to some channels? new song setting: distortion, nonlinear mixing of channels... can't handle a range of volumes?
+- Guitar distortion applying to some channels? new song setting: distortion, nonlinear mixing of channels... can't handle a range of volumes?
 - Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
 - remember recent songs in cookies or local shared object.
 - asynchronous export. worker thread?
@@ -284,7 +287,6 @@ MISC:
 - document synth api
 - export mp3 and ogg?
 - do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
-- Don't throw away allocated patterns, instruments, and channels when downsizing songs? If you don't want to leave them in the song arrays, put them in pools?
 
 EMBEDDED PLAYER:
 - put title in data format if provided. show "artist - title" in placeholder text. make sure it is sanitized for security. :)

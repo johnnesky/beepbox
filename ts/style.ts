@@ -400,6 +400,17 @@ styleSheet.appendChild(document.createTextNode(`
 	background: currentColor;
 	cursor: pointer;
 }
+.beepboxEditor .hintButton {
+	border: 1px solid currentColor;
+	border-radius: 50%;
+	text-decoration: none;
+	width: 1em;
+	height: 1em;
+	text-align: center;
+	margin-left: auto;
+	margin-right: .4em;
+	cursor: pointer;
+}
 
 /* wide screen */
 @media (min-width: 701px) {

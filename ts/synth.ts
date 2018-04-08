@@ -159,8 +159,8 @@ namespace beepbox {
 		public static readonly operatorCarrierCounts: ReadonlyArray<number> = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4];
 		public static readonly operatorCarrierChorus: ReadonlyArray<number> = [0.0, 0.04, -0.073, 0.091];
 		public static readonly operatorAmplitudeMax: number = 15;
-		public static readonly operatorFrequencyNames: ReadonlyArray<string> = ["×1", "×1.ε", "×2", "×2.ε", "×3", "×4", "×5", "×6", "×7", "×8", "×9", "×11", "×13", "×15"];
-		public static readonly midiFrequencyNames: ReadonlyArray<string> = ["x1", "x1.e", "x2", "x2.e", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x11", "x13", "x15"];
+		public static readonly operatorFrequencyNames: ReadonlyArray<string> = ["×1", "×~1", "×2", "×~2", "×3", "×4", "×5", "×6", "×7", "×8", "×9", "×11", "×13", "×15"];
+		public static readonly midiFrequencyNames: ReadonlyArray<string> = ["x1", "x~1", "x2", "x~2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x11", "x13", "x15"];
 		public static readonly operatorFrequencies: ReadonlyArray<number> =    [ 1.0,   1.0,   2.0,   2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,  9.0,  11.0,  13.0,  15.0];
 		public static readonly operatorHzOffsets: ReadonlyArray<number> =      [ 0.0,   1.5,   0.0,  -1.3,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0];
 		public static readonly operatorAmplitudeSigns: ReadonlyArray<number> = [ 1.0,  -1.0,   1.0,  -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,   1.0,   1.0,   1.0];
@@ -1370,8 +1370,8 @@ namespace beepbox {
 						}
 						for (let i: number = 0; i < this.patternsPerChannel; i++) {
 							const newPattern: Pattern = this.channels[channel].patterns[i];
-							newPattern.instrument = bits.read(neededInstrumentBits);
 							newPattern.reset();
+							newPattern.instrument = bits.read(neededInstrumentBits);
 							
 							if (!beforeThree && bits.read(1) == 0) continue;
 							

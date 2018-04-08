@@ -100,7 +100,7 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangePitchChannelType extends Change {
+	export class ChangeInstrumentType extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
 			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].type;
