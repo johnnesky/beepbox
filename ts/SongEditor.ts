@@ -283,7 +283,7 @@ namespace beepbox {
 		
 		private _wasPlaying: boolean;
 		private _changeTranspose: ChangeTranspose | null = null;
-		private readonly _operatorNumbers: HTMLDivElement[] = []
+		private readonly _operatorRows: HTMLDivElement[] = []
 		private readonly _operatorAmplitudeSliders: Slider[] = []
 		private readonly _operatorEnvelopeSelects: HTMLSelectElement[] = []
 		private readonly _operatorFrequencySelects: HTMLSelectElement[] = []
@@ -299,7 +299,7 @@ namespace beepbox {
 			]));
 			for (let i = 0; i < Config.operatorCount; i++) {
 				const operatorIndex: number = i;
-				const operatorNumber: HTMLDivElement = div({style: "margin-right: .1em;"}, [text(i + 1 + ".")]);
+				const operatorNumber: HTMLDivElement = div({style: "margin-right: .1em; color: #999;"}, [text(i + 1 + ".")]);
 				const frequencySelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Frequency"}), Config.operatorFrequencyNames);
 				const amplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Volume"}), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue));
 				const envelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Envelope"}), Config.operatorEnvelopeNames);
@@ -310,7 +310,7 @@ namespace beepbox {
 					div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, [envelopeSelect]),
 				]);
 				this._phaseModGroup.appendChild(row);
-				this._operatorNumbers[i] = operatorNumber;
+				this._operatorRows[i] = row;
 				this._operatorAmplitudeSliders[i] = amplitudeSlider;
 				this._operatorEnvelopeSelects[i] = envelopeSelect;
 				this._operatorFrequencySelects[i] = frequencySelect;
@@ -501,11 +501,12 @@ namespace beepbox {
 			setSelectedIndex(this._feedbackTypeSelect, instrument.feedbackType);
 			this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
 			setSelectedIndex(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
+			this._feedbackEnvelopeSelect.parentElement!.style.color = (instrument.feedbackAmplitude > 0) ? "" : "#999";
 			this._instrumentVolumeSlider.updateValue(-instrument.volume);
 			setSelectedIndex(this._instrumentSelect, instrumentIndex);
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				const isCarrier: boolean = (i < Config.operatorCarrierCounts[instrument.algorithm]);
-				this._operatorNumbers[i].style.color = isCarrier ? "" : "#999";
+				this._operatorRows[i].style.color = isCarrier ? "white" : "";
 				setSelectedIndex(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
 				this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
 				setSelectedIndex(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
@@ -513,6 +514,7 @@ namespace beepbox {
 				this._operatorFrequencySelects[i].title = operatorName + " Frequency";
 				this._operatorAmplitudeSliders[i].input.title = operatorName + (isCarrier ? " Volume" : " Amplitude");
 				this._operatorEnvelopeSelects[i].title = operatorName + " Envelope";
+				this._operatorEnvelopeSelects[i].parentElement!.style.color = (instrument.operators[i].amplitude > 0) ? "" : "#999";
 			}
 			
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
