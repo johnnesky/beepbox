@@ -34,6 +34,8 @@ SOFTWARE.
 /// <reference path="SongDurationPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
+/// <reference path="InstrumentTypePrompt.ts" />
+/// <reference path="ChorusPrompt.ts" />
 
 namespace beepbox {
 	const {button, div, span, select, option, input, text} = html;
@@ -152,8 +154,9 @@ namespace beepbox {
 		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0px;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
 		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0px;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
 		private readonly _partSelect: HTMLSelectElement = buildOptions(select({}), Config.partNames);
-		private readonly _pitchChannelTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.pitchChannelTypeNames);
-		private readonly _pitchChannelTypeSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Type: ")]), div({className: "selectContainer"}, [this._pitchChannelTypeSelect])]);
+		private readonly _instrumentTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.pitchChannelTypeNames);
+		private readonly _instrumentTypeHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
+		private readonly _instrumentTypeSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Type: ")]), this._instrumentTypeHint, div({className: "selectContainer"}, [this._instrumentTypeSelect])]);
 		private readonly _algorithmSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorAlgorithmNames);
 		private readonly _algorithmSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Algorithm: ")]), div({className: "selectContainer"}, [this._algorithmSelect])]);
 		private readonly _instrumentSelect: HTMLSelectElement = select({});
@@ -167,7 +170,8 @@ namespace beepbox {
 		private readonly _filterSelect: HTMLSelectElement = buildOptions(select({}), Config.filterNames);
 		private readonly _filterSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Filter: ")]), div({className: "selectContainer"}, [this._filterSelect])]);
 		private readonly _chorusSelect: HTMLSelectElement = buildOptions(select({}), Config.chorusNames);
-		private readonly _chorusSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chorus: ")]), div({className: "selectContainer"}, [this._chorusSelect])]);
+		private readonly _chorusHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
+		private readonly _chorusSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chorus: ")]), this._chorusHint, div({className: "selectContainer"}, [this._chorusSelect])]);
 		private readonly _effectSelect: HTMLSelectElement = buildOptions(select({}), Config.effectNames);
 		private readonly _effectSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Effect: ")]), div({className: "selectContainer"}, [this._effectSelect])]);
 		private readonly _phaseModGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"}, []);
@@ -184,7 +188,7 @@ namespace beepbox {
 		]);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({}, [
 			this._instrumentSelectRow,
-			this._pitchChannelTypeSelectRow,
+			this._instrumentTypeSelectRow,
 			this._instrumentVolumeSliderRow,
 			this._waveSelectRow,
 			div({className: "selectRow"}, [
@@ -324,7 +328,7 @@ namespace beepbox {
 			this._scaleSelect.addEventListener("change", this._whenSetScale);
 			this._keySelect.addEventListener("change", this._whenSetKey);
 			this._partSelect.addEventListener("change", this._whenSetPartsPerBeat);
-			this._pitchChannelTypeSelect.addEventListener("change", this._whenSetPitchChannelType);
+			this._instrumentTypeSelect.addEventListener("change", this._whenSetInstrumentType);
 			this._algorithmSelect.addEventListener("change", this._whenSetAlgorithm);
 			this._instrumentSelect.addEventListener("change", this._whenSetInstrument);
 			this._feedbackTypeSelect.addEventListener("change", this._whenSetFeedbackType);
@@ -341,6 +345,8 @@ namespace beepbox {
 			this._newSongButton.addEventListener("click", this._whenNewSongPressed);
 			this._exportButton.addEventListener("click", this._openExportPrompt);
 			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
+			this._instrumentTypeHint.addEventListener("click", this._openInstrumentTypePrompt);
+			this._chorusHint.addEventListener("click", this._openChorusPrompt);
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
@@ -367,14 +373,22 @@ namespace beepbox {
 			if (promptName) {
 				switch (promptName) {
 					case "export":
-						this.prompt = new ExportPrompt(this._doc, this)
+						this.prompt = new ExportPrompt(this._doc, this);
 						break;
 					case "import":
-						this.prompt = new ImportPrompt(this._doc, this)
+						this.prompt = new ImportPrompt(this._doc, this);
 						break;
 					case "duration":
-						this.prompt = new SongDurationPrompt(this._doc, this)
+						this.prompt = new SongDurationPrompt(this._doc, this);
 						break;
+					case "instrumentType":
+						this.prompt = new InstrumentTypePrompt(this._doc, this);
+						break;
+					case "chorus":
+						this.prompt = new ChorusPrompt(this._doc, this);
+						break;
+					default:
+						throw new Error("Unrecognized prompt type.");
 				}
 				
 				if (this.prompt) {
@@ -426,7 +440,7 @@ namespace beepbox {
 				this._instrumentVolumeSliderRow.style.display = "";
 				this._drumSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
-				this._pitchChannelTypeSelectRow.style.display = "none";
+				this._instrumentTypeSelectRow.style.display = "none";
 				this._algorithmSelectRow.style.display = "none";
 				this._phaseModGroup.style.display = "none";
 				this._feedbackRow1.style.display = "none";
@@ -436,11 +450,11 @@ namespace beepbox {
 				this._chorusSelectRow.style.display = "none";
 				this._effectSelectRow.style.display = "none";
 			} else {
-				this._pitchChannelTypeSelectRow.style.display = "";
+				this._instrumentTypeSelectRow.style.display = "";
 				this._effectSelectRow.style.display = "";
 				this._drumSelect.style.display = "none";
 				
-				if (instrument.type == 0) { // basic wave
+				if (instrument.type == InstrumentType.chip) {
 					this._instrumentVolumeSliderRow.style.display = "";
 					this._waveSelect.style.display = "";
 					this._waveSelectRow.style.display = "";
@@ -462,7 +476,7 @@ namespace beepbox {
 				}
 			}
 			
-			setSelectedIndex(this._pitchChannelTypeSelect, instrument.type);
+			setSelectedIndex(this._instrumentTypeSelect, instrument.type);
 			setSelectedIndex(this._algorithmSelect, instrument.algorithm);
 			
 			this._instrumentSelectRow.style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";
@@ -504,6 +518,8 @@ namespace beepbox {
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
 			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
 			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
+			this._instrumentTypeHint.style.display = (instrument.type == InstrumentType.fm) ? "" : "none";
+			this._chorusHint.style.display = (Config.chorusHarmonizes[instrument.chorus]) ? "" : "none";
 			
 			let patternWidth: number = 512;
 			if (this._doc.showLetters) patternWidth -= 32;
@@ -682,6 +698,14 @@ namespace beepbox {
 			this._openPrompt("export");
 		}
 		
+		private _openInstrumentTypePrompt = (): void => {
+			this._openPrompt("instrumentType");
+		}
+		
+		private _openChorusPrompt = (): void => {
+			this._openPrompt("chorus");
+		}
+		
 		private _whenSetScale = (): void => {
 			this._doc.record(new ChangeScale(this._doc, this._scaleSelect.selectedIndex));
 		}
@@ -694,8 +718,8 @@ namespace beepbox {
 			this._doc.record(new ChangePartsPerBeat(this._doc, Config.partCounts[this._partSelect.selectedIndex]));
 		}
 		
-		private _whenSetPitchChannelType = (): void => {
-			this._doc.record(new ChangePitchChannelType(this._doc, this._pitchChannelTypeSelect.selectedIndex));
+		private _whenSetInstrumentType = (): void => {
+			this._doc.record(new ChangeInstrumentType(this._doc, this._instrumentTypeSelect.selectedIndex));
 		}
 		
 		private _whenSetFeedbackType = (): void => {

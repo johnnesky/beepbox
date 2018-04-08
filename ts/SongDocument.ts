@@ -75,7 +75,7 @@ namespace beepbox {
 			let state: HistoryState | null = window.history.state;
 			if (state == null) {
 				// When the page is first loaded, indicate that undo is NOT possible.
-				state = {canUndo: false, sequenceNumber: 0, bar: 0, channel: 0, prompt: this.prompt};
+				state = {canUndo: false, sequenceNumber: 0, bar: 0, channel: 0, prompt: null};
 				window.history.replaceState(state, "", "#" + this.song.toBase64String());
 			}
 			window.addEventListener("hashchange", this._whenHistoryStateChanged);
@@ -86,6 +86,7 @@ namespace beepbox {
 			this._barFromCurrentState = state.bar;
 			this._channelFromCurrentState = state.channel;
 			this.barScrollPos = Math.max(0, this.bar - (this.trackVisibleBars - 6));
+			this.prompt = state.prompt;
 			
 			// For all input events, catch them when they are about to finish bubbling,
 			// presumably after all handlers are done updating the model and update the

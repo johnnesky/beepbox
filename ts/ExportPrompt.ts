@@ -48,7 +48,10 @@ namespace beepbox {
 			setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
 			anchor.href = url;
 			anchor.download = name;
-			anchor.dispatchEvent(new MouseEvent("click"));
+			// Chrome bug regression: We need to delay dispatching the click
+			// event. Seems to be related to going back in the browser history.
+			// https://bugs.chromium.org/p/chromium/issues/detail?id=825100
+			setTimeout(function() { anchor.dispatchEvent(new MouseEvent("click")); }, 0);
 		} else if (navigator.vendor.indexOf("Apple") > -1) {
 			// Safari 10.1 doesn't need this hack, delete it later.
 			var reader = new FileReader();
