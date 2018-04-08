@@ -515,7 +515,6 @@ namespace beepbox {
 						}
 						
 						let defaultLength: number = 1;
-						//for (const blessedLength of [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 36]) {
 						for (let i: number = 0; i <= this._doc.song.beatsPerBar * this._doc.song.partsPerBeat; i++) {
 							if (i >= 5 &&
 							    i % this._doc.song.partsPerBeat != 0 &&
@@ -653,9 +652,9 @@ namespace beepbox {
 							if (minPitch > pitch) minPitch = pitch;
 							if (maxPitch < pitch) maxPitch = pitch;
 						}
-						minPitch -= this._cursor.curNote.pitches[0];
-						maxPitch -= this._cursor.curNote.pitches[0];
-						const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, Config.maxPitch - maxPitch);
+						minPitch -= this._cursor.curNote.pitches[this._cursor.pitchIndex];
+						maxPitch -= this._cursor.curNote.pitches[this._cursor.pitchIndex];
+						const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, (this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount-1 : Config.maxPitch) - maxPitch);
 						sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
 						this._copyPins(this._cursor.curNote);
 						

@@ -2423,10 +2423,13 @@ namespace beepbox {
 					const transition: number = instrument.transition;
 					if (tickTimeStart == noteStart) {
 						if (transition == 0) {
+							// seamless start
 							resetPhases = false;
 						} else if (transition == 2) {
+							// smooth start
 							transitionVolumeTickStart = 0.0;
 						} else if (transition == 3) {
+							// slide start
 							if (prevNote == null) {
 								transitionVolumeTickStart = 0.0;
 							} else if (prevNote.pins[prevNote.pins.length-1].volume == 0 || note.pins[0].volume == 0) {
@@ -2439,9 +2442,16 @@ namespace beepbox {
 						}
 					}
 					if (tickTimeEnd == noteEnd) {
-						if (transition == 1 || transition == 2) {
+						if (transition == 0) {
+							// seamless ending: fade out, unless adjacent to another note or at end of bar.
+							if (nextNote == null && note.start + endPin.time != song.partsPerBeat * song.beatsPerBar) {
+								transitionVolumeTickEnd = 0.0;
+							}
+						} else if (transition == 1 || transition == 2) {
+							// sudden/smooth ending
 							transitionVolumeTickEnd = 0.0;
 						} else if (transition == 3) {
+							// slide ending
 							if (nextNote == null) {
 								transitionVolumeTickEnd = 0.0;
 							} else if (note.pins[note.pins.length-1].volume == 0 || nextNote.pins[0].volume == 0) {
