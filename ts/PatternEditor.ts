@@ -857,7 +857,7 @@ namespace beepbox {
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
 						
-						if (note.pitches.length > 1) {
+						if (note.pitches.length > 1 && !this._doc.song.getChannelIsDrum(this._doc.channel)) {
 							const instrumentType: InstrumentType = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].type;
 							if (instrumentType == InstrumentType.fm) {
 								let oscillatorLabel = <SVGTextElement> svgElement("text");

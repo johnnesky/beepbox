@@ -151,7 +151,7 @@
 				You can download <a download="beepbox_offline.html" href="beepbox_offline.html">an offline version of BeepBox</a> to use when you don't have access to the internet. The features are otherwise the same.
 			</p>
 			<p>
-				You can download and use <a href="https://bitbucket.org/shaktool/beepbox">the source code</a> under the MIT license. In particular, you can use the synth code <a href="synth_example.html">as demonstrated here</a> to play BeepBox songs in your own Flash or JavaScript projects! 
+				You can download and use <a href="https://bitbucket.org/shaktool/beepbox">the source code</a> under the MIT license. In particular, you can use the synth code <a href="synth_example.html">as demonstrated here</a> to play BeepBox songs in your own JavaScript projects! 
 			</p>
 		</div>
 		<div class="twitter-column">
@@ -168,62 +168,23 @@
 	<script type="text/javascript" src="beepbox_editor.min.js"></script>
 	-->
 	<script type="text/javascript">
-
-if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
-	document.getElementById("introduction").innerHTML = "BeepBox is an online tool for sketching and sharing chiptune melodies. Make sure that your volume is turned up, then press the play button!";
-	document.getElementById("keyboard-instructions").style.display = "none";
-	document.getElementById("bar-editing").innerHTML = "Tap the other boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
-}
-
-var hasAudioContext = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
-if (hasAudioContext) {
-	// Go ahead and load js beepbox editor interface:
-	var fileref = document.createElement("script");
-	fileref.setAttribute("type", "text/javascript");
-	fileref.setAttribute("src", "beepbox_editor.min.js");
-	document.head.appendChild(fileref);
-} else {
-	document.getElementById("beepboxEditorContainer").innerHTML = '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=11,0,0,0" width="700" height="645" id="BeepBox" align="middle"><param name="allowScriptAccess" value="always" /><param name="movie" value="BeepBoxOnline.swf" /><param name="quality" value="high" /><param name="bgcolor" value="#000000" /><embed src="BeepBoxOnline.swf" quality="high" bgcolor="#000000" width="700" height="645" name="BeepBox" align="middle" allowScriptAccess="always" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer" /></object>';
-	
-	var hashInterval = null;
-	var myhash = "**blank**";
-	
-	function getFlashMovieObject(movieName) {
-		if (window.document[movieName])  {
-			return window.document[movieName];
+		
+		if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
+			document.getElementById("introduction").innerHTML = "BeepBox is an online tool for sketching and sharing chiptune melodies. Make sure that your volume is turned up, then press the play button!";
+			document.getElementById("keyboard-instructions").style.display = "none";
+			document.getElementById("bar-editing").innerHTML = "Tap the other boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
 		}
-		if (navigator.appName.indexOf("Microsoft Internet")==-1) {
-			if (document.embeds && document.embeds[movieName])
-				return document.embeds[movieName]; 
-		} else // if (navigator.appName.indexOf("Microsoft Internet")!=-1)
-		{
-			return document.getElementById(movieName);
+		
+		var hasAudioContext = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
+		if (hasAudioContext) {
+			// Go ahead and load js beepbox editor interface:
+			var fileref = document.createElement("script");
+			fileref.setAttribute("type", "text/javascript");
+			fileref.setAttribute("src", "beepbox_editor.min.js");
+			document.head.appendChild(fileref);
+		} else {
+			document.getElementById("beepboxEditorContainer").innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, or Opera.";
 		}
-	}
-	
-	function pageDidLoad() {
-		hashInterval = setInterval('checkHash()', 100);
-	}
-	
-	function checkHash() {
-		if (myhash != location.hash) {
-			var flashMovie = getFlashMovieObject("BeepBox");
-			if (flashMovie && flashMovie.hashUpdatedExternally) {
-				myhash = location.hash;
-				flashMovie.hashUpdatedExternally(myhash);
-			}
-		}
-	}
-	
-	function documentUpdated(message) {
-		if (location.hash != message) {
-			location.hash = message;
-			myhash = message;
-		}
-	}
-	
-	hashInterval = setInterval('checkHash()', 100);
-}
-
-</script>
+		
+	</script>
 </body></html>

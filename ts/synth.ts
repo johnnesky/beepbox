@@ -87,11 +87,13 @@ namespace beepbox {
 		public static readonly waveNames: ReadonlyArray<string> = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
 		public static readonly waveVolumes: ReadonlyArray<number> = [1.0,         0.5,       0.5,          0.5,          0.65,          0.5,          0.4,         0.4,      0.94];
 		// the "clang" and "buzz" drums are inspired by similar drums in the modded beepbox! :D
-		public static readonly drumNames: ReadonlyArray<string> = ["retro", "white", "clang", "buzz", "hollow"];
-		public static readonly drumVolumes: ReadonlyArray<number> = [0.25, 1.0, 0.4, 0.3, 1.5];
-		public static readonly drumBasePitches: ReadonlyArray<number> = [69, 69, 69, 69, 96];
-		public static readonly drumPitchFilterMult: ReadonlyArray<number> = [100.0, 8.0, 100.0, 100.0, 1.0];
-		public static readonly drumWaveIsSoft: ReadonlyArray<boolean> = [false, true, false, false, true];
+		public static readonly drumNames: ReadonlyArray<string> = ["retro", "white", "clang", "buzz", "hollow", /*"tom-tom", "cymbal", "bass"*/];
+		public static readonly drumVolumes: ReadonlyArray<number> = [0.25, 1.0, 0.4, 0.3, 1.5, /*1.5, 1.5, 1.5*/];
+		public static readonly drumBasePitches: ReadonlyArray<number> = [69, 69, 69, 69, 96, /*96, 90, 126*/];
+		public static readonly drumPitchFilterMult: ReadonlyArray<number> = [100.0, 8.0, 100.0, 100.0, 1.0, /*1.0, 1.0, 1.0*/];
+		public static readonly drumWaveIsSoft: ReadonlyArray<boolean> = [false, true, false, false, true, /*true, true, true*/];
+		// Noise waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
+		private static readonly _drumWaves: Array<Float32Array | null> = [null, null, null, null, null, /*null, null, null*/];
 		public static readonly filterNames: ReadonlyArray<string> = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
 		public static readonly filterBases: ReadonlyArray<number> = [0.0, 2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
 		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
@@ -159,8 +161,8 @@ namespace beepbox {
 		public static readonly operatorCarrierCounts: ReadonlyArray<number> = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4];
 		public static readonly operatorCarrierChorus: ReadonlyArray<number> = [0.0, 0.04, -0.073, 0.091];
 		public static readonly operatorAmplitudeMax: number = 15;
-		public static readonly operatorFrequencyNames: ReadonlyArray<string> = ["×1", "×~1", "×2", "×~2", "×3", "×4", "×5", "×6", "×7", "×8", "×9", "×11", "×13", "×15"];
-		public static readonly midiFrequencyNames: ReadonlyArray<string> = ["x1", "x~1", "x2", "x~2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x11", "x13", "x15"];
+		public static readonly operatorFrequencyNames: ReadonlyArray<string> = ["1×", "~1×", "2×", "~2×", "3×", "4×", "5×", "6×", "7×", "8×", "9×", "11×", "13×", "15×"];
+		public static readonly midiFrequencyNames: ReadonlyArray<string> = ["1x", "~1x", "2x", "~2x", "3x", "4x", "5x", "6x", "7x", "8x", "9x", "11x", "13x", "15x"];
 		public static readonly operatorFrequencies: ReadonlyArray<number> =    [ 1.0,   1.0,   2.0,   2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,  9.0,  11.0,  13.0,  15.0];
 		public static readonly operatorHzOffsets: ReadonlyArray<number> =      [ 0.0,   1.5,   0.0,  -1.3,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0];
 		public static readonly operatorAmplitudeSigns: ReadonlyArray<number> = [ 1.0,  -1.0,   1.0,  -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,   1.0,   1.0,   1.0];
@@ -175,8 +177,6 @@ namespace beepbox {
 			"4⟲",
 			"1⟲ 2⟲",
 			"3⟲ 4⟲",
-//			"1⟲ 2⟲ 3⟲",
-//			"2⟲ 3⟲ 4⟲",
 			"1⟲ 2⟲ 3⟲ 4⟲",
 			"1→2",
 			"1→3",
@@ -187,9 +187,6 @@ namespace beepbox {
 			"1→3 2→4",
 			"1→4 2→3",
 			"1→2→3→4",
-//			"1⟲ 2→3",
-//			"1⟲ 2→4",
-//			"1⟲ 2⟲ 3→4",
 		];
 		public static readonly midiFeedbackNames: ReadonlyArray<string> = [
 			"1",
@@ -198,8 +195,6 @@ namespace beepbox {
 			"4",
 			"1 2",
 			"3 4",
-//			"1 2 3",
-//			"2 3 4",
 			"1 2 3 4",
 			"1>2",
 			"1>3",
@@ -210,9 +205,6 @@ namespace beepbox {
 			"1>3 2>4",
 			"1>4 2>3",
 			"1>2>3>4",
-//			"1 2>3",
-//			"1 2>4",
-//			"1 2 3>4",
 		];
 		public static readonly operatorFeedbackIndices: ReadonlyArray<ReadonlyArray<ReadonlyArray<number>>> = [
 			[[1], [], [], []],
@@ -221,8 +213,6 @@ namespace beepbox {
 			[[], [], [], [4]],
 			[[1], [2], [], []],
 			[[], [], [3], [4]],
-//			[[1], [2], [3], []],
-//			[[], [2], [3], [4]],
 			[[1], [2], [3], [4]],
 			[[], [1], [], []],
 			[[], [], [1], []],
@@ -233,9 +223,6 @@ namespace beepbox {
 			[[], [], [1], [2]],
 			[[], [], [2], [1]],
 			[[], [1], [2], [3]],
-//			[[1], [], [2], []],
-//			[[1], [], [], [2]],
-//			[[1], [2], [], [3]],
 		];
 		public static readonly pitchChannelTypeNames: ReadonlyArray<string> = ["chip", "FM (expert)"];
 		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise"];
@@ -302,9 +289,6 @@ namespace beepbox {
 			return new Float64Array(wave);
 		}
 		
-		// NOISE waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
-		private static readonly _drumWaves: Array<Float32Array | null> = [null, null, null, null, null];
-		
 		public static getDrumWave(index: number): Float32Array {
 			let wave: Float32Array | null = Config._drumWaves[index];
 			if (wave == null) {
@@ -350,27 +334,61 @@ namespace beepbox {
                         drumBuffer = newBuffer;
                     }
 				} else if (index == 4) {
-					// "Hollow" drums, designed in frequency space and then converted via FFT:
-					for (let i: number = 1 << 10; i < (1 << 11); i++) {
-						const amplitude: number = 2.0;
-						const radians: number = Math.random() * Math.PI * 2.0;
-						wave[i] = Math.cos(radians) * amplitude;
-						wave[32768 - i] = Math.sin(radians) * amplitude;
-					}
-					for (let i: number = 1 << 11; i < (1 << 14); i++) {
-						const amplitude: number = 0.25;
-						const radians: number = Math.random() * Math.PI * 2.0;
-						wave[i] = Math.cos(radians) * amplitude;
-						wave[32768 - i] = Math.sin(radians) * amplitude;
-					}
+					// "hollow" drums, designed in frequency space and then converted via FFT:
+					Config.drawNoiseSpectrum(wave, 10, 11, 1, 1, 0);
+					Config.drawNoiseSpectrum(wave, 11, 14, -2, -2, 0);
 					inverseRealFourierTransform(wave);
 					scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
+				/*
+				} else if (index == 5) {
+					// "tom-tom" drums, designed in frequency space and then converted via FFT:
+					Config.drawNoiseSpectrum(wave, 10, 14, 0, -4, 0);
+					inverseRealFourierTransform(wave);
+					scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
+				} else if (index == 6) {
+					// "cymbal" drums, designed in frequency space and then converted via FFT:
+					Config.drawNoiseSpectrum(wave, 9, 9.4, -1, -1, -0.5);
+					Config.drawNoiseSpectrum(wave, 9.7, 10, -1, -1, -0.5);
+					Config.drawNoiseSpectrum(wave, 10.3, 10.6, -1, -1, -0.5);
+					Config.drawNoiseSpectrum(wave, 10.9, 11.1, -1, -1, -0.5);
+					Config.drawNoiseSpectrum(wave, 11.3, 11.4, 0, 0, -0.5);
+					Config.drawNoiseSpectrum(wave, 11.5, 11.7, 1.5, 1.5, -0.5);
+					Config.drawNoiseSpectrum(wave, 11.7, 12, -1, -1, -0.5);
+					Config.drawNoiseSpectrum(wave, 12, 12.1, 2, 2, -0.5);
+					Config.drawNoiseSpectrum(wave, 12.1, 12.6, 0, 2, -0.5);
+					Config.drawNoiseSpectrum(wave, 12.6, 13, 0, 0, -0.5);
+					Config.drawNoiseSpectrum(wave, 13, 14, 1, -3, -0.5);
+					inverseRealFourierTransform(wave);
+					scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
+				} else if (index == 7) {
+					// "bass" drums, designed in frequency space and then converted via FFT:
+					Config.drawNoiseSpectrum(wave, 7, 8, -2, 4, 0);
+					Config.drawNoiseSpectrum(wave, 8, 9, 4, -2, 0);
+					Config.drawNoiseSpectrum(wave, 9, 14, -2, -6, 0);
+					inverseRealFourierTransform(wave);
+					scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
+				*/
 				} else {
 					throw new Error("Unrecognized drum index: " + index);
 				}
 			}
 			
 			return wave;
+		}
+		
+		private static drawNoiseSpectrum(wave: Float32Array, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overalSlope: number): void {
+			const referenceOctave: number = 11;
+			const referenceIndex: number = 1 << referenceOctave;
+			const lowIndex: number = Math.pow(2, lowOctave) | 0;
+			const highIndex: number = Math.pow(2, highOctave) | 0;
+			const log2: number = Math.log(2);
+			for (let i: number = lowIndex; i < highIndex; i++) {
+				let amplitude: number = Math.pow(2, lowPower + (highPower - lowPower) * (Math.log(i) / log2 - lowOctave) / (highOctave - lowOctave));
+				amplitude *= Math.pow(i / referenceIndex, overalSlope);
+				const radians: number = Math.random() * Math.PI * 2.0;
+				wave[i] = Math.cos(radians) * amplitude;
+				wave[32768 - i] = Math.sin(radians) * amplitude;
+			}
 		}
 		
 		private static generateSineWave(): Float64Array {
