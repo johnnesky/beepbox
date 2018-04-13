@@ -252,12 +252,6 @@
 √ put little numbers on the notes in the pattern editor when in FM mode and there's more than one pitch.
 √ dim oscillator envelope when volume/modulation is zero.
 
-NEXT RELEASE:
-- check other browsers
-- someone said it doesn't work on ios?
-- license the source code under CC0?
-- guitar wave? anything else from the mods?
-
 MAJOR REMAINING FEATURES:
 - embedded player
 - playlist editor
@@ -269,6 +263,7 @@ MAJOR REMAINING FEATURES:
 - translation
 
 MISC:
+- in firefox, after selecting options, spacebar both reopens options and toggles play.
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, thunder, rain, fire, wind, maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard?
 - make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page.
 - remember recent songs in local shared object.
