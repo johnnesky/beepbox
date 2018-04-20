@@ -161,11 +161,11 @@ namespace beepbox {
 		public static readonly operatorCarrierCounts: ReadonlyArray<number> = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 4];
 		public static readonly operatorCarrierChorus: ReadonlyArray<number> = [0.0, 0.04, -0.073, 0.091];
 		public static readonly operatorAmplitudeMax: number = 15;
-		public static readonly operatorFrequencyNames: ReadonlyArray<string> = ["1×", "~1×", "2×", "~2×", "3×", "4×", "5×", "6×", "7×", "8×", "9×", "11×", "13×", "15×"];
-		public static readonly midiFrequencyNames: ReadonlyArray<string> = ["1x", "~1x", "2x", "~2x", "3x", "4x", "5x", "6x", "7x", "8x", "9x", "11x", "13x", "15x"];
-		public static readonly operatorFrequencies: ReadonlyArray<number> =    [ 1.0,   1.0,   2.0,   2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,  9.0,  11.0,  13.0,  15.0];
-		public static readonly operatorHzOffsets: ReadonlyArray<number> =      [ 0.0,   1.5,   0.0,  -1.3,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,   0.0,   0.0,   0.0];
-		public static readonly operatorAmplitudeSigns: ReadonlyArray<number> = [ 1.0,  -1.0,   1.0,  -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,   1.0,   1.0,   1.0];
+		public static readonly operatorFrequencyNames: ReadonlyArray<string> = ["1×", "~1×", "2×", "~2×", "3×", "4×", "5×", "6×", "7×", "8×", "9×", "11×", "13×", "16×", "20×"];
+		public static readonly midiFrequencyNames: ReadonlyArray<string> = ["1x", "~1x", "2x", "~2x", "3x", "4x", "5x", "6x", "7x", "8x", "9x", "11x", "13x", "16x", "20x"];
+		public static readonly operatorFrequencies: ReadonlyArray<number> =    [ 1.0,   1.0,   2.0,   2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,  9.0, 11.0, 13.0, 16.0, 20.0];
+		public static readonly operatorHzOffsets: ReadonlyArray<number> =      [ 0.0,   1.5,   0.0,  -1.3,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0];
+		public static readonly operatorAmplitudeSigns: ReadonlyArray<number> = [ 1.0,  -1.0,   1.0,  -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0];
 		public static readonly operatorEnvelopeNames: ReadonlyArray<string> = ["custom", "steady", "punch", "flare 1", "flare 2", "flare 3", "pluck 1", "pluck 2", "pluck 3", "swell 1", "swell 2", "swell 3", "tremolo1", "tremolo2", "tremolo3"];
 		public static readonly operatorEnvelopeType: ReadonlyArray<EnvelopeType> = [EnvelopeType.custom, EnvelopeType.steady, EnvelopeType.punch, EnvelopeType.flare, EnvelopeType.flare, EnvelopeType.flare, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.tremolo, EnvelopeType.tremolo, EnvelopeType.tremolo];
 		public static readonly operatorEnvelopeSpeed: ReadonlyArray<number> = [0.0, 0.0, 0.0, 32.0, 8.0, 2.0, 32.0, 8.0, 2.0, 32.0, 8.0, 2.0, 4.0, 2.0, 1.0];
@@ -175,8 +175,10 @@ namespace beepbox {
 			"2⟲",
 			"3⟲",
 			"4⟲",
-			"1⟲ 2⟲",
-			"3⟲ 4⟲",
+			"1⟲ 2⟲",
+			"3⟲ 4⟲",
+			"1⟲ 2⟲ 3⟲",
+			"2⟲ 3⟲ 4⟲",
 			"1⟲ 2⟲ 3⟲ 4⟲",
 			"1→2",
 			"1→3",
@@ -184,8 +186,8 @@ namespace beepbox {
 			"2→3",
 			"2→4",
 			"3→4",
-			"1→3 2→4",
-			"1→4 2→3",
+			"1→3 2→4",
+			"1→4 2→3",
 			"1→2→3→4",
 		];
 		public static readonly midiFeedbackNames: ReadonlyArray<string> = [
@@ -195,6 +197,8 @@ namespace beepbox {
 			"4",
 			"1 2",
 			"3 4",
+			"1 2 3",
+			"2 3 4",
 			"1 2 3 4",
 			"1>2",
 			"1>3",
@@ -213,6 +217,8 @@ namespace beepbox {
 			[[], [], [], [4]],
 			[[1], [2], [], []],
 			[[], [], [3], [4]],
+			[[1], [2], [3], []],
+			[[], [2], [3], [4]],
 			[[1], [2], [3], [4]],
 			[[], [1], [], []],
 			[[], [], [1], []],
@@ -715,7 +721,7 @@ namespace beepbox {
 		public algorithm: number = 0;
 		public feedbackType: number = 0;
 		public feedbackAmplitude: number = 0;
-		public feedbackEnvelope: number = 0;
+		public feedbackEnvelope: number = 1;
 		public readonly operators: Operator[] = [];
 		
 		constructor() {
