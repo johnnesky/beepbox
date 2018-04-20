@@ -207,7 +207,7 @@ namespace beepbox {
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"}, [
 			this._editorBox,
 			div({className: "editor-widget-column"}, [
-				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.2.3")]),
+				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.3")]),
 				div({className: "editor-widgets"}, [
 					div({className: "editor-controls"}, [
 						div({className: "playback-controls"}, [
