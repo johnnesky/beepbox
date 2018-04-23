@@ -251,6 +251,9 @@
 √ pitch bends mixed with arpeggios don’t properly check min/max bounds
 √ put little numbers on the notes in the pattern editor when in FM mode and there's more than one pitch.
 √ dim oscillator envelope when volume/modulation is zero.
+√ loop could be dragged past ends of song, goes negative...
+√ couldn't sandwich note between two existing adjacent notes.
+√ Impasaurus said I made the retro drum sound more "periodic", whoops! Seems like the playhead keeps resetting to zero if there are gaps between drums... fixed!
 
 MAJOR REMAINING FEATURES:
 - embedded player
@@ -263,6 +266,7 @@ MAJOR REMAINING FEATURES:
 - translation
 
 MISC:
+- switching bars doesn't seem to split transposes into multiple change states?
 - in firefox, after selecting options, spacebar both reopens options and toggles play. Same problem with arrow keys, and even ctrl+brackets to change tabs. Apparently this is a known firefox bug. https://bugzilla.mozilla.org/show_bug.cgi?id=1019630
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, thunder, rain, fire, wind, maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard?
 - make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page.

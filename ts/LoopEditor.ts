@@ -194,6 +194,8 @@ namespace beepbox {
 				if (this._cursor.mode == this._startMode) {
 					start = oldStart + Math.round(bar - this._cursor.startBar);
 					end = oldEnd;
+					if (start < 0) start = 0;
+					if (start >= this._doc.song.barCount) start = this._doc.song.barCount;
 					if (start == end) {
 						start = end - 1;
 					} else if (start > end) {
@@ -201,12 +203,12 @@ namespace beepbox {
 						start = end;
 						end = temp;
 					}
-					if (start < 0) start = 0;
-					if (end >= this._doc.song.barCount) end = this._doc.song.barCount;
 					this._change = new ChangeLoop(this._doc, oldStart, oldEnd - oldStart, start, end - start);
 				} else if (this._cursor.mode == this._endMode) {
 					start = oldStart;
 					end = oldEnd + Math.round(bar - this._cursor.startBar);
+					if (end < 0) end = 0;
+					if (end >= this._doc.song.barCount) end = this._doc.song.barCount;
 					if (end == start) {
 						end = start + 1;
 					} else if (end < start) {
@@ -214,8 +216,6 @@ namespace beepbox {
 						start = end;
 						end = temp;
 					}
-					if (start < 0) start = 0;
-					if (end >= this._doc.song.barCount) end = this._doc.song.barCount;
 					this._change = new ChangeLoop(this._doc, oldStart, oldEnd - oldStart, start, end - start);
 				} else if (this._cursor.mode == this._bothMode) {
 					const endPoints: Endpoints = this._findEndPoints(bar);
