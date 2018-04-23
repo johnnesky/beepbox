@@ -212,7 +212,7 @@ namespace beepbox {
 					const arc: number = Math.sqrt(1.0 / Math.sqrt(4.0) - Math.pow(intervalRatio - 0.5, 2.0)) - 0.5;
 					const bendHeight: number = Math.abs(nextPin.interval - prevPin.interval);
 					interval = prevPin.interval * (1.0 - intervalRatio) + nextPin.interval * intervalRatio;
-					error = arc * bendHeight + 1.0;
+					error = arc * bendHeight + 0.95;
 					break;
 				}
 				
@@ -232,7 +232,8 @@ namespace beepbox {
 				mousePitch -= interval;
 				this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount - 1 : Config.maxPitch) - maxInterval);
 				
-				if (this._doc.channel != 3) {
+				// Snap to nearby existing note if present.
+				if (!this._doc.song.getChannelIsDrum(this._doc.channel)) {
 					let nearest: number = error;
 					for (let i: number = 0; i < this._cursor.curNote.pitches.length; i++) {
 						const distance: number = Math.abs(this._cursor.curNote.pitches[i] - mousePitch + 0.5);

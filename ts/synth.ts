@@ -2640,7 +2640,9 @@ namespace beepbox {
 				synthChannel.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / samples);
 				synthChannel.vibratoScale = (partsSinceStart < Config.effectVibratoDelays[instrument.effect]) ? 0.0 : Math.pow(2.0, Config.effectVibratos[instrument.effect] / 12.0) - 1.0;
 			} else {
-				synthChannel.reset();
+				if (!isDrum) {
+					synthChannel.reset();
+				}
 				for (let i: number = 0; i < Config.operatorCount; i++) {
 					synthChannel.phaseDeltas[0] = 0.0;
 					synthChannel.volumeStarts[0] = 0.0;
