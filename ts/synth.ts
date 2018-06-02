@@ -2025,7 +2025,6 @@ namespace beepbox {
 				this.feedbackOutputs[i] = 0.0;
 			}
 			this.sample = 0.0;
-			this.active = false;
 		}
 	}
 	
