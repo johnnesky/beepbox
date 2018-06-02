@@ -31,6 +31,10 @@ interface Window {
 }
 
 namespace beepbox {
+	// For performance debugging:
+	let samplesAccumulated: number = 0;
+	let samplePerformance: number = 0;
+	
 	interface Dictionary<T> {
 		[K: string]: T;
 	}
@@ -1969,33 +1973,30 @@ namespace beepbox {
 			return Math.round(120.0 * Math.pow(2.0, (-4.0 + this.tempo) / 9.0));
 		}
 		
+		// TODO: The instrument itself, or maybe Synth, should determine its fingerprint, not Song. And only FM instruments even need it.
 		private readonly _fingerprint: Array<string | number> = [];
-		public getChannelFingerprint(bar: number): string {
-			const channelCount: number = this.getChannelCount();
+		public getChannelFingerprint(instrument: Instrument, channel: Number): string {
 			let charCount: number = 0;
-			for (let channel: number = 0; channel < channelCount; channel++) {
-				if (channel < this.pitchChannelCount) {
-					const instrumentIndex: number = this.getPatternInstrument(channel, bar);
-					const instrument: Instrument = this.channels[channel].instruments[instrumentIndex];
-					if (instrument.type == InstrumentType.chip) {
-						this._fingerprint[charCount++] = "c";
-					} else if (instrument.type == InstrumentType.fm) {
-						this._fingerprint[charCount++] = "f"
-						this._fingerprint[charCount++] = instrument.algorithm;
-						this._fingerprint[charCount++] = instrument.feedbackType;
-					} else {
-						throw new Error("Unknown instrument type.");
-					}
+			if (channel < this.pitchChannelCount) {
+				if (instrument.type == InstrumentType.chip) {
+					return "c"; // this._fingerprint[charCount++] = "c";
+				} else if (instrument.type == InstrumentType.fm) {
+					this._fingerprint[charCount++] = "f"
+					this._fingerprint[charCount++] = instrument.algorithm;
+					this._fingerprint[charCount++] = instrument.feedbackType;
 				} else {
-					this._fingerprint[charCount++] = "d";
+					throw new Error("Unknown instrument type.");
 				}
+			} else {
+				return "d"; // this._fingerprint[charCount++] = "d";
 			}
 			this._fingerprint.length = charCount;
 			return this._fingerprint.join("");
 		}
 	}
 	
-	class SynthChannel {
+	class Tone {
+		public active: boolean = false;
 		public sample: number = 0.0;
 		public readonly phases: number[] = [];
 		public readonly phaseDeltas: number[] = [];
@@ -2021,6 +2022,7 @@ namespace beepbox {
 				this.feedbackOutputs[i] = 0.0;
 			}
 			this.sample = 0.0;
+			this.active = false;
 		}
 	}
 	
@@ -2034,9 +2036,9 @@ namespace beepbox {
 					for (let j: number = song.pitchChannelCount; j < song.pitchChannelCount + song.drumChannelCount; j++) {
 						Config.getDrumWave(song.channels[j].instruments[i].wave);
 					}
-				}
-				for (let i: number = 0; i < song.barCount; i++) {
-					Synth.getGeneratedSynthesizer(song, i);
+					for (let j: number = 0; j < song.getChannelCount(); j++) {
+						Synth.getGeneratedSynthesizer(song, song.channels[j].instruments[i], j);
+					}
 				}
 			}
 		}
@@ -2070,20 +2072,21 @@ namespace beepbox {
 		private arpeggioSampleCountdown: number = 0;
 		private paused: boolean = true;
 		
-		private readonly channels: SynthChannel[] = [];
+		private readonly tones: Tone[] = [];
 		private stillGoing: boolean = false;
 		private effectPhase: number = 0.0;
 		private limit: number = 0.0;
 		
-		private delayLine: Float32Array = new Float32Array(16384);
-		private delayPos: number = 0;
-		private delayFeedback0: number = 0.0;
-		private delayFeedback1: number = 0.0;
-		private delayFeedback2: number = 0.0;
-		private delayFeedback3: number = 0.0;
+		private samplesForReverb: Float32Array | null = null;
+		private reverbDelayLine: Float32Array = new Float32Array(16384);
+		private reverbDelayPos: number = 0;
+		private reverbFeedback0: number = 0.0;
+		private reverbFeedback1: number = 0.0;
+		private reverbFeedback2: number = 0.0;
+		private reverbFeedback3: number = 0.0;
 		
-		private audioCtx: any;
-		private scriptNode: any;
+		private audioCtx: any | null = null;
+		private scriptNode: any | null = null;
 		
 		public get playing(): boolean {
 			return !this.paused;
@@ -2194,14 +2197,14 @@ namespace beepbox {
 			this.arpeggioSampleCountdown = 0;
 			this.effectPhase = 0.0;
 			
-			for (const channel of this.channels) channel.reset();
+			for (const tone of this.tones) tone.reset();
 			
-			this.delayPos = 0;
-			this.delayFeedback0 = 0.0;
-			this.delayFeedback1 = 0.0;
-			this.delayFeedback2 = 0.0;
-			this.delayFeedback3 = 0.0;
-			for (let i: number = 0; i < this.delayLine.length; i++) this.delayLine[i] = 0.0;
+			this.reverbDelayPos = 0;
+			this.reverbFeedback0 = 0.0;
+			this.reverbFeedback1 = 0.0;
+			this.reverbFeedback2 = 0.0;
+			this.reverbFeedback3 = 0.0;
+			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
 		}
 		
 		public nextBar(): void {
@@ -2245,6 +2248,7 @@ namespace beepbox {
 			this.synthesize(outputData, outputBuffer.length);
 		}
 		
+		private static readonly generatedSynthesizersByChannel: Function[] = [];
 		public synthesize(data: Float32Array, bufferLength: number): void {
 			if (this.song == null) {
 				for (let i: number = 0; i < bufferLength; i++) {
@@ -2254,10 +2258,10 @@ namespace beepbox {
 			}
 			
 			const channelCount: number = this.song.getChannelCount();
-			for (let i: number = this.channels.length; i < channelCount; i++) {
-				this.channels[i] = new SynthChannel();
+			for (let i: number = this.tones.length; i < channelCount; i++) {
+				this.tones[i] = new Tone();
 			}
-			this.channels.length = channelCount;
+			this.tones.length = channelCount;
 			
 			const samplesPerArpeggio: number = this.getSamplesPerArpeggio();
 			let bufferIndex: number = 0;
@@ -2299,47 +2303,160 @@ namespace beepbox {
 				this.enableIntro = false;
 			}
 			
- 			while (true) {
-				if (ended) {
-					while (bufferIndex < bufferLength) {
-						data[bufferIndex] = 0.0;
-						bufferIndex++;
-					}
-					break;
+			const synthStartTime: number = performance.now();
+			
+			// Zero out buffers with a partially unrolled loop before instruments accumulate sample values:
+			for (let i: number = 0; i < bufferLength;) {
+				data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0;
+			}
+			if (this.samplesForReverb == null || this.samplesForReverb.length < bufferLength) {
+				this.samplesForReverb = new Float32Array(bufferLength);
+			}
+			const samplesForReverb: Float32Array = this.samplesForReverb;
+			for (let i: number = 0; i < bufferLength;) {
+				samplesForReverb[i++] = 0.0; samplesForReverb[i++] = 0.0; samplesForReverb[i++] = 0.0; samplesForReverb[i++] = 0.0;
+			}
+			
+			while (bufferIndex < bufferLength && !ended) {
+				
+				// Cache synthesizer function until next bar starts:
+				for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
+					const instrument: Instrument = this.song.channels[channel].instruments[this.song.getPatternInstrument(channel, this.bar)];
+					Synth.generatedSynthesizersByChannel[channel] = Synth.getGeneratedSynthesizer(this.song, instrument, channel);
 				}
 				
-				const generatedSynthesizer: Function = Synth.getGeneratedSynthesizer(this.song, this.bar);
-				bufferIndex = generatedSynthesizer(this, this.song, data, bufferLength, bufferIndex, samplesPerArpeggio);
-				
-				const finishedBuffer: boolean = (bufferIndex == -1);
-				if (finishedBuffer) {
-					break;
-				} else {
-					// bar changed, reset for next bar:
-					this.beat = 0;
-					this.effectPhase = 0.0;
-					this.bar++;
-					if (this.bar < this.song.loopStart) {
-						if (!this.enableIntro) this.bar = this.song.loopStart;
-					} else {
-						this.enableIntro = false;
-					}
-					if (this.bar >= this.song.loopStart + this.song.loopLength) {
-						if (this.loopCount > 0) this.loopCount--;
-						if (this.loopCount > 0 || !this.enableOutro) {
-							this.bar = this.song.loopStart;
+				while (bufferIndex < bufferLength) {
+			
+					const samplesLeftInBuffer: number = bufferLength - bufferIndex;
+					const runLength: number = (this.arpeggioSampleCountdown <= samplesLeftInBuffer)
+						? this.arpeggioSampleCountdown
+						: samplesLeftInBuffer;
+					for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
+						const instrument: Instrument = this.song.channels[channel].instruments[this.song.getPatternInstrument(channel, this.bar)];
+						Synth.computeTone(this, this.song, channel, samplesPerArpeggio, runLength, instrument);
+						const tone = this.tones[channel];
+						const synthBuffer = this.song.getChannelIsDrum(channel) ? data : samplesForReverb;
+						if (tone.active) {
+							Synth.generatedSynthesizersByChannel[channel](this, this.song, synthBuffer, bufferIndex, runLength, tone, instrument);
 						}
 					}
-					if (this.bar >= this.song.barCount) {
-						this.bar = 0;
-						this.enableIntro = true;
-						ended = true;
-						this.pause();
+					bufferIndex += runLength;
+					
+					this.effectPhase = (this.effectPhase + this.effectAngle * runLength) % (Math.PI * 2.0);
+					
+					this.arpeggioSampleCountdown -= runLength;
+					if (this.arpeggioSampleCountdown <= 0) {
+						this.arpeggio++;
+						this.arpeggioSampleCountdown = samplesPerArpeggio;
+						if (this.arpeggio == 4) {
+							this.arpeggio = 0;
+							this.part++;
+							if (this.part == this.song.partsPerBeat) {
+								this.part = 0;
+								this.beat++;
+								if (this.beat == this.song.beatsPerBar) {
+									// bar changed, reset for next bar:
+									this.beat = 0;
+									this.bar++;
+									this.effectPhase = 0.0;
+									if (this.bar < this.song.loopStart) {
+										if (!this.enableIntro) this.bar = this.song.loopStart;
+									} else {
+										this.enableIntro = false;
+									}
+									if (this.bar >= this.song.loopStart + this.song.loopLength) {
+										if (this.loopCount > 0) this.loopCount--;
+										if (this.loopCount > 0 || !this.enableOutro) {
+											this.bar = this.song.loopStart;
+										}
+									}
+									if (this.bar >= this.song.barCount) {
+										this.bar = 0;
+										this.enableIntro = true;
+										ended = true;
+										this.pause();
+									}
+									
+									// When bar ends, may need to generate new synthesizer:
+									break;
+								}
+							}
+						}
 					}
 				}
 			}
 			
+			// Post processing:
+			const volume: number = +this.volume;
+			const reverbDelayLine: Float32Array = this.reverbDelayLine;
+			let reverbDelayPos: number = 0|this.reverbDelayPos;
+			let reverbFeedback0: number = +this.reverbFeedback0;
+			let reverbFeedback1: number = +this.reverbFeedback1;
+			let reverbFeedback2: number = +this.reverbFeedback2;
+			let reverbFeedback3: number = +this.reverbFeedback3;
+			const reverb: number = Math.pow(this.song.reverb / beepbox.Config.reverbRange, 0.667) * 0.425;
+			const limitDecay: number = +this.limitDecay;
+			let limit: number = +this.limit;
+			for (let i: number = 0; i < bufferLength; i++) {
+				const sampleForReverb: number = samplesForReverb[i];
+				
+				// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
+				// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
+				// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
+				// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
+				const reverbDelayPos1: number = (reverbDelayPos +  3041) & 0x3FFF;
+				const reverbDelayPos2: number = (reverbDelayPos +  6426) & 0x3FFF;
+				const reverbDelayPos3: number = (reverbDelayPos + 10907) & 0x3FFF;
+				const delaySample0: number = (reverbDelayLine[reverbDelayPos] + sampleForReverb);
+				const delaySample1: number = reverbDelayLine[reverbDelayPos1];
+				const delaySample2: number = reverbDelayLine[reverbDelayPos2];
+				const delaySample3: number = reverbDelayLine[reverbDelayPos3];
+				const delayTemp0: number = -delaySample0 + delaySample1;
+				const delayTemp1: number = -delaySample0 - delaySample1;
+				const delayTemp2: number = -delaySample2 + delaySample3;
+				const delayTemp3: number = -delaySample2 - delaySample3;
+				reverbFeedback0 += ((delayTemp0 + delayTemp2) * reverb - reverbFeedback0) * 0.5;
+				reverbFeedback1 += ((delayTemp1 + delayTemp3) * reverb - reverbFeedback1) * 0.5;
+				reverbFeedback2 += ((delayTemp0 - delayTemp2) * reverb - reverbFeedback2) * 0.5;
+				reverbFeedback3 += ((delayTemp1 - delayTemp3) * reverb - reverbFeedback3) * 0.5;
+				reverbDelayLine[reverbDelayPos1] = reverbFeedback0;
+				reverbDelayLine[reverbDelayPos2] = reverbFeedback1;
+				reverbDelayLine[reverbDelayPos3] = reverbFeedback2;
+				reverbDelayLine[reverbDelayPos ] = reverbFeedback3;
+				reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
+				
+				const sample = data[i] + delaySample0 + delaySample1 + delaySample2 + delaySample3;
+				
+				const abs: number = sample < 0.0 ? -sample : sample;
+				if (limit < abs) limit = abs;
+				data[i] = (sample / (limit * 0.75 + 0.25)) * volume;
+				limit -= limitDecay;
+			}
+			
+			this.reverbDelayPos = reverbDelayPos;
+			this.reverbFeedback0 = reverbFeedback0;
+			this.reverbFeedback1 = reverbFeedback1;
+			this.reverbFeedback2 = reverbFeedback2;
+			this.reverbFeedback3 = reverbFeedback3;
+			this.limit = limit;
+			
 			this.playheadInternal = (((this.arpeggio + 1.0 - this.arpeggioSampleCountdown / samplesPerArpeggio) / 4.0 + this.part) / this.song.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
+			
+			const synthDuration: number = performance.now() - synthStartTime;
+			
+			// Performance measurements:
+			samplesAccumulated += bufferLength;
+			samplePerformance += synthDuration;
+			/*
+			if (samplesAccumulated >= 44100 * 4) {
+				const secondsGenerated = samplesAccumulated / 44100;
+				const secondsRequired = samplePerformance / 1000;
+				const ratio = secondsRequired / secondsGenerated;
+				console.log(ratio);
+				samplePerformance = 0;
+				samplesAccumulated = 0;
+			}
+			*/
 		}
 		
 		private static computeOperatorEnvelope(envelope: number, time: number, beats: number, customVolume: number): number {
@@ -2365,11 +2482,10 @@ namespace beepbox {
 			}
 		}
 		
-		private static computeChannelInstrument(synth: Synth, song: Song, channel: number, time: number, sampleTime: number, samplesPerArpeggio: number, samples: number): void {
+		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerArpeggio: number, runLength: number, instrument: Instrument): void {
 			const isDrum: boolean = song.getChannelIsDrum(channel);
-			const synthChannel: SynthChannel = synth.channels[channel];
+			const tone: Tone = synth.tones[channel];
 			const pattern: Pattern | null = song.getPattern(channel, synth.bar);
-			const instrument: Instrument = song.channels[channel].instruments[pattern == null ? 0 : pattern.instrument];
 			const pianoMode = (synth.pianoPressed && channel == synth.pianoChannel);
 			const basePitch: number = isDrum ? Config.drumBasePitches[instrument.wave] : Config.keyTransposes[song.key];
 			const intervalScale: number = isDrum ? Config.drumInterval : 1;
@@ -2377,12 +2493,13 @@ namespace beepbox {
 			const secondsPerPart: number = 4.0 * samplesPerArpeggio / synth.samplesPerSecond;
 			const beatsPerPart: number = 1.0 / song.partsPerBeat;
 			
-			synthChannel.phaseDeltaScale = 0.0;
-			synthChannel.filter = 1.0;
-			synthChannel.filterScale = 1.0;
-			synthChannel.vibratoScale = 0.0;
-			synthChannel.harmonyMult = 1.0;
-			synthChannel.harmonyVolumeMult = 1.0;
+			tone.phaseDeltaScale = 0.0;
+			tone.filter = 1.0;
+			tone.filterScale = 1.0;
+			tone.vibratoScale = 0.0;
+			tone.harmonyMult = 1.0;
+			tone.harmonyVolumeMult = 1.0;
+			tone.active = false;
 			
 			let partsSinceStart: number = 0.0;
 			let arpeggio: number = synth.arpeggio;
@@ -2404,9 +2521,9 @@ namespace beepbox {
 			let decayTimeEnd:   number = 0.0;
 			
 			for (let i: number = 0; i < Config.operatorCount; i++) {
-				synthChannel.phaseDeltas[i] = 0.0;
-				synthChannel.volumeStarts[i] = 0.0;
-				synthChannel.volumeDeltas[i] = 0.0;
+				tone.phaseDeltas[i] = 0.0;
+				tone.volumeStarts[i] = 0.0;
+				tone.volumeDeltas[i] = 0.0;
 			}
 			
 			if (pianoMode) {
@@ -2416,6 +2533,8 @@ namespace beepbox {
 				resetPhases = false;
 				// TODO: track time since live piano note started for transition, envelope, decays, delayed vibrato, etc.
 			} else if (pattern != null) {
+				const time: number = synth.part + synth.beat * song.partsPerBeat;
+				
 				let note: Note | null = null;
 				let prevNote: Note | null = null;
 				let nextNote: Note | null = null;
@@ -2462,8 +2581,8 @@ namespace beepbox {
 					let decayTimeTickStart: number = partTimeTickStart;
 					let decayTimeTickEnd:   number = partTimeTickEnd;
 					
-					const startRatio: number = 1.0 - (arpeggioSampleCountdown + samples) / samplesPerArpeggio;
-					const endRatio:   number = 1.0 - (arpeggioSampleCountdown)           / samplesPerArpeggio;
+					const startRatio: number = 1.0 - (arpeggioSampleCountdown            ) / samplesPerArpeggio;
+					const endRatio:   number = 1.0 - (arpeggioSampleCountdown - runLength) / samplesPerArpeggio;
 					resetPhases = (tickTimeStart + startRatio - noteStart == 0.0);
 					
 					const transition: number = instrument.transition;
@@ -2523,6 +2642,9 @@ namespace beepbox {
 			}
 			
 			if (pitches != null) {
+				const sampleTime: number = 1.0 / synth.samplesPerSecond;
+				tone.active = true;
+				
 				if (!isDrum && instrument.type == InstrumentType.fm) {
 					// phase modulation!
 					
@@ -2538,8 +2660,8 @@ namespace beepbox {
 						const startPitch: number = (pitch + intervalStart) * intervalScale + chorusInterval;
 						const startFreq: number = freqMult * (synth.frequencyFromPitch(basePitch + startPitch)) + Config.operatorHzOffsets[instrument.operators[i].frequency];
 						
-						synthChannel.phaseDeltas[i] = startFreq * sampleTime * Config.sineWaveLength;
-						if (resetPhases) synthChannel.reset();
+						tone.phaseDeltas[i] = startFreq * sampleTime * Config.sineWaveLength;
+						if (resetPhases) tone.reset();
 						
 						const amplitudeCurve: number = Synth.operatorAmplitudeCurve(instrument.operators[i].amplitude);
 						const amplitudeMult: number = amplitudeCurve * Config.operatorAmplitudeSigns[instrument.operators[i].frequency];
@@ -2567,22 +2689,22 @@ namespace beepbox {
 						volumeStart *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, envelopeVolumeStart);
 						volumeEnd *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, envelopeVolumeEnd);
 						
-						synthChannel.volumeStarts[i] = volumeStart;
-						synthChannel.volumeDeltas[i] = (volumeEnd - volumeStart) / samples;
+						tone.volumeStarts[i] = volumeStart;
+						tone.volumeDeltas[i] = (volumeEnd - volumeStart) / runLength;
 					}
 					
 					const feedbackAmplitude: number = Config.sineWaveLength * 0.3 * instrument.feedbackAmplitude / 15.0;
 					let feedbackStart: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, envelopeVolumeStart);
 					let feedbackEnd: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, envelopeVolumeEnd);
-					synthChannel.feedbackMult = feedbackStart;
-					synthChannel.feedbackDelta = (feedbackEnd - synthChannel.feedbackMult) / samples;
+					tone.feedbackMult = feedbackStart;
+					tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 					
 					sineVolumeBoost *= 1.0 - instrument.feedbackAmplitude / 15.0;
 					
 					sineVolumeBoost *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolume - 1) / 2.0);
 					for (let i: number = 0; i < carrierCount; i++) {
-						synthChannel.volumeStarts[i] *= 1.0 + sineVolumeBoost * 3.0;
-						synthChannel.volumeDeltas[i] *= 1.0 + sineVolumeBoost * 3.0;
+						tone.volumeStarts[i] *= 1.0 + sineVolumeBoost * 3.0;
+						tone.volumeDeltas[i] *= 1.0 + sineVolumeBoost * 3.0;
 					}
 				} else {
 					let pitch: number = pitches[0];
@@ -2595,8 +2717,8 @@ namespace beepbox {
 						} else if (pitches.length == 4) {
 							harmonyOffset = pitches[(arpeggio == 3 ? 1 : arpeggio) + 1] - pitches[0];
 						}
-						synthChannel.harmonyMult = Math.pow(2.0, harmonyOffset / 12.0);
-						synthChannel.harmonyVolumeMult = Math.pow(2.0, -harmonyOffset / pitchDamping)
+						tone.harmonyMult = Math.pow(2.0, harmonyOffset / 12.0);
+						tone.harmonyVolumeMult = Math.pow(2.0, -harmonyOffset / pitchDamping)
 					} else {
 						if (pitches.length == 2) {
 							pitch = pitches[arpeggio >> 1];
@@ -2613,337 +2735,244 @@ namespace beepbox {
 					const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
 					const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
 					if (isDrum && Config.drumWaveIsSoft[instrument.wave]) {
-						synthChannel.filter = Math.min(1.0, startFreq * sampleTime * Config.drumPitchFilterMult[instrument.wave]);
+						tone.filter = Math.min(1.0, startFreq * sampleTime * Config.drumPitchFilterMult[instrument.wave]);
 					}
 					let settingsVolumeMult: number;
 					if (!isDrum) {
 						const filterScaleRate: number = Config.filterDecays[instrument.filter];
-						synthChannel.filter = Math.pow(2, -filterScaleRate * secondsPerPart * decayTimeStart);
+						tone.filter = Math.pow(2, -filterScaleRate * secondsPerPart * decayTimeStart);
 						const endFilter: number = Math.pow(2, -filterScaleRate * secondsPerPart * decayTimeEnd);
-						synthChannel.filterScale = Math.pow(endFilter / synthChannel.filter, 1.0 / samples);
+						tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
 						settingsVolumeMult = 0.27 * 0.5 * Config.waveVolumes[instrument.wave] * Config.filterVolumes[instrument.filter] * Config.chorusVolumes[instrument.chorus];
 					} else {
 						settingsVolumeMult = 0.19 * Config.drumVolumes[instrument.wave];
 					}
 					if (resetPhases && !isDrum) {
-						synthChannel.reset();
+						tone.reset();
 					}
 					
-					synthChannel.phaseDeltas[0] = startFreq * sampleTime;
+					tone.phaseDeltas[0] = startFreq * sampleTime;
 					
 					const instrumentVolumeMult: number = (instrument.volume == 5) ? 0.0 : Math.pow(2, -Config.volumeValues[instrument.volume]);
-					synthChannel.volumeStarts[0] = transitionVolumeStart * envelopeVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
+					tone.volumeStarts[0] = transitionVolumeStart * envelopeVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
 					const volumeEnd: number = transitionVolumeEnd * envelopeVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
-					synthChannel.volumeDeltas[0] = (volumeEnd - synthChannel.volumeStarts[0]) / samples;
+					tone.volumeDeltas[0] = (volumeEnd - tone.volumeStarts[0]) / runLength;
 				}
 				
-				synthChannel.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / samples);
-				synthChannel.vibratoScale = (partsSinceStart < Config.effectVibratoDelays[instrument.effect]) ? 0.0 : Math.pow(2.0, Config.effectVibratos[instrument.effect] / 12.0) - 1.0;
+				tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
+				tone.vibratoScale = (partsSinceStart < Config.effectVibratoDelays[instrument.effect]) ? 0.0 : Math.pow(2.0, Config.effectVibratos[instrument.effect] / 12.0) - 1.0;
 			} else {
 				if (!isDrum) {
-					synthChannel.reset();
+					tone.reset();
 				}
 				for (let i: number = 0; i < Config.operatorCount; i++) {
-					synthChannel.phaseDeltas[0] = 0.0;
-					synthChannel.volumeStarts[0] = 0.0;
-					synthChannel.volumeDeltas[0] = 0.0;
+					tone.phaseDeltas[0] = 0.0;
+					tone.volumeStarts[0] = 0.0;
+					tone.volumeDeltas[0] = 0.0;
 				}
 			}
 		}
 		
 		private static readonly generatedSynthesizers: Dictionary<Function> = {};
 		
-		private static getGeneratedSynthesizer(song: Song, bar: number): Function {
-			const fingerprint: string = song.getChannelFingerprint(bar);
+		private static getGeneratedSynthesizer(song: Song, instrument: Instrument, channel: number): Function {
+			const fingerprint: string = song.getChannelFingerprint(instrument, channel);
 			if (Synth.generatedSynthesizers[fingerprint] == undefined) {
-				const synthSource: string[] = [];
-				const instruments: Instrument[] = [];
-				for (let channel = 0; channel < song.pitchChannelCount; channel++) {
-					instruments[channel] = song.channels[channel].instruments[song.getPatternInstrument(channel, bar)];
-				}
-				
-				for (const line of Synth.synthSourceTemplate) {
-					if (line.indexOf("#") != -1) {
-						if (line.indexOf("// PITCH") != -1) {
-							for (let channel = 0; channel < song.pitchChannelCount; channel++) {
-								synthSource.push(line.replace(/#/g, channel + ""));
-							}
-						} else if (line.indexOf("// CHIP") != -1) {
-							for (let channel = 0; channel < song.pitchChannelCount; channel++) {
-								if (instruments[channel].type == InstrumentType.chip) {
-									synthSource.push(line.replace(/#/g, channel + ""));
+				let generatedFunction: Function;
+				if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.fm) {
+					const synthSource: string[] = [];
+					
+					for (const line of Synth.fmSourceTemplate) {
+						if (line.indexOf("// CARRIER OUTPUTS") != -1) {
+							if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.fm) {
+								const outputs: string[] = [];
+								for (let j: number = 0; j < Config.operatorCarrierCounts[instrument.algorithm]; j++) {
+									outputs.push("operator" + j + "Scaled");
 								}
+								synthSource.push(line.replace("/*operator#Scaled*/", outputs.join(" + ")));
 							}
-						} else if (line.indexOf("// FM") != -1) {
-							for (let channel = 0; channel < song.pitchChannelCount; channel++) {
-								if (instruments[channel].type == InstrumentType.fm) {
-									if (line.indexOf("$") != -1) {
-										for (let j = 0; j < Config.operatorCount; j++) {
-											synthSource.push(line.replace(/#/g, channel + "").replace(/\$/g, j + ""));
+						} else if (line.indexOf("// INSERT OPERATOR COMPUTATION HERE") != -1) {
+							for (let j: number = Config.operatorCount - 1; j >= 0; j--) {
+								for (const operatorLine of Synth.operatorSourceTemplate) {
+									if (operatorLine.indexOf("/* + operator@Scaled*/") != -1) {
+										let modulators = "";
+										for (const modulatorNumber of Config.operatorModulatedBy[instrument.algorithm][j]) {
+											modulators += " + operator" + (modulatorNumber - 1) + "Scaled";
 										}
+									
+										const feedbackIndices: ReadonlyArray<number> = Config.operatorFeedbackIndices[instrument.feedbackType][j];
+										if (feedbackIndices.length > 0) {
+											modulators += " + feedbackMult * (";
+											const feedbacks: string[] = [];
+											for (const modulatorNumber of feedbackIndices) {
+												feedbacks.push("operator" + (modulatorNumber - 1) + "Output");
+											}
+											modulators += feedbacks.join(" + ") + ")";
+										}
+										synthSource.push(operatorLine.replace(/\#/g, j + "").replace("/* + operator@Scaled*/", modulators));
 									} else {
-										synthSource.push(line.replace(/#/g, channel + ""));
+										synthSource.push(operatorLine.replace(/\#/g, j + ""));
 									}
 								}
 							}
-						} else if (line.indexOf("// CARRIER OUTPUTS") != -1) {
-							for (let channel = 0; channel < song.pitchChannelCount; channel++) {
-								if (instruments[channel].type == InstrumentType.fm) {
-									const outputs: string[] = [];
-									for (let j = 0; j < Config.operatorCarrierCounts[instruments[channel].algorithm]; j++) {
-										outputs.push("channel" + channel + "Operator" + j + "Scaled");
-									}
-									synthSource.push(line.replace(/#/g, channel + "").replace("/*channel" + channel + "Operator$Scaled*/", outputs.join(" + ")));
-								}
-							}
-						} else if (line.indexOf("// NOISE") != -1) {
-							for (let channel = song.pitchChannelCount; channel < song.pitchChannelCount + song.drumChannelCount; channel++) {
-								synthSource.push(line.replace(/#/g, channel + ""));
-							}
-						} else if (line.indexOf("// ALL") != -1) {
-							for (let channel = 0; channel < song.pitchChannelCount + song.drumChannelCount; channel++) {
-								synthSource.push(line.replace(/#/g, channel + ""));
+						} else if (line.indexOf("#") != -1) {
+							for (let j = 0; j < Config.operatorCount; j++) {
+								synthSource.push(line.replace(/\#/g, j + ""));
 							}
 						} else {
-							throw new Error("Missing channel type annotation for line: " + line);
+							synthSource.push(line);
 						}
-					} else if (line.indexOf("// INSERT OPERATOR COMPUTATION HERE") != -1) {
-						for (let j = Config.operatorCount - 1; j >= 0; j--) {
-							for (const operatorLine of Synth.operatorSourceTemplate) {
-								for (let channel = 0; channel < song.pitchChannelCount; channel++) {
-									if (instruments[channel].type == InstrumentType.fm) {
-										
-										if (operatorLine.indexOf("/* + channel#Operator@Scaled*/") != -1) {
-											let modulators = "";
-											for (const modulatorNumber of Config.operatorModulatedBy[instruments[channel].algorithm][j]) {
-												modulators += " + channel" + channel + "Operator" + (modulatorNumber - 1) + "Scaled";
-											}
-											
-											const feedbackIndices: ReadonlyArray<number> = Config.operatorFeedbackIndices[instruments[channel].feedbackType][j];
-											if (feedbackIndices.length > 0) {
-												modulators += " + channel" + channel + "FeedbackMult * (";
-												const feedbacks: string[] = [];
-												for (const modulatorNumber of feedbackIndices) {
-													feedbacks.push("channel" + channel + "Operator" + (modulatorNumber - 1) + "Output");
-												}
-												modulators += feedbacks.join(" + ") + ")";
-											}
-											synthSource.push(operatorLine.replace(/#/g, channel + "").replace(/\$/g, j + "").replace("/* + channel" + channel + "Operator@Scaled*/", modulators));
-										} else {
-											synthSource.push(operatorLine.replace(/#/g, channel + "").replace(/\$/g, j + ""));
-										}
-									}
-								}
-							}
-						}
-					} else {
-						synthSource.push(line);
 					}
+					
+					//console.log(synthSource.join("\n"));
+					
+					generatedFunction = new Function("synth", "song", "data", "bufferIndex", "runLength", "tone", "instrument", synthSource.join("\n"));
+				} else if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.chip) {
+					generatedFunction = Synth.chipSynth;
+				} else if (song.getChannelIsDrum(channel)) {
+					generatedFunction = Synth.noiseSynth; 
+				} else {
+					throw new Error("Unrecognized instrument type: " + instrument.type);
 				}
-				
-				//console.log(synthSource.join("\n"));
-				
-				Synth.generatedSynthesizers[fingerprint] = new Function("synth", "song", "data", "bufferLength", "bufferIndex", "samplesPerArpeggio", synthSource.join("\n"));
+				Synth.generatedSynthesizers[fingerprint] = generatedFunction;
 			}
 			return Synth.generatedSynthesizers[fingerprint];
 		}
 		
-		private static synthSourceTemplate: string[] = (`
-			var sampleTime = 1.0 / synth.samplesPerSecond;
-			var effectYMult = +synth.effectYMult;
-			var limitDecay = +synth.limitDecay;
-			var volume = +synth.volume;
-			var delayLine = synth.delayLine;
-			var reverb = Math.pow(song.reverb / beepbox.Config.reverbRange, 0.667) * 0.425;
-			var sineWave = beepbox.Config.sineWave;
+		private static chipSynth(synth: Synth, song: Song, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
+			// TODO: Skip this line and oscillator below unless using an effect:
+			const effectYMult: number = +synth.effectYMult;
+			let effectY: number     = +Math.sin(synth.effectPhase);
+			let prevEffectY: number = +Math.sin(synth.effectPhase - synth.effectAngle);
 			
-			// Initialize instruments based on current pattern.
-			var instrumentChannel# = song.getPatternInstrument(#, synth.bar); // ALL
-			var instrument# = song.channels[#].instruments[instrumentChannel#]; // ALL
-			var channel#Wave = beepbox.Config.waves[instrument#.wave]; // CHIP
-			var channel#Wave = beepbox.Config.getDrumWave(instrument#.wave); // NOISE
-			var channel#WaveLength = channel#Wave.length; // CHIP
-			var channel#FilterBase = Math.pow(2, -beepbox.Config.filterBases[instrument#.filter]); // CHIP
-			var channel#TremoloScale = beepbox.Config.effectTremolos[instrument#.effect]; // PITCH
+			const wave: Float64Array = beepbox.Config.waves[instrument.wave];
+			const waveLength: number = +wave.length;
+			const filterBase: number = +Math.pow(2, -beepbox.Config.filterBases[instrument.filter]);
+			const tremoloScale: number = +beepbox.Config.effectTremolos[instrument.effect];
 			
-			while (bufferIndex < bufferLength) {
+			const chorusA: number = +Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument.chorus] + beepbox.Config.chorusIntervals[instrument.chorus]) / 12.0);
+			const chorusB: number =  Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument.chorus] - beepbox.Config.chorusIntervals[instrument.chorus]) / 12.0) * tone.harmonyMult;
+			const chorusSign: number = tone.harmonyVolumeMult * beepbox.Config.chorusSigns[instrument.chorus];
+			if (instrument.chorus == 0) tone.phases[1] = tone.phases[0];
+			const deltaRatio: number = chorusB / chorusA;
+			let phaseDelta: number = tone.phaseDeltas[0] * chorusA;
+			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			let volume: number = +tone.volumeStarts[0];
+			const volumeDelta: number = +tone.volumeDeltas[0];
+			let filter: number = tone.filter * filterBase;
+			const filterScale: number = +tone.filterScale;
+			const vibratoScale: number = +tone.vibratoScale;
+			let phaseA: number = tone.phases[0] % 1;
+			let phaseB: number = tone.phases[1] % 1;
+			let sample: number = +tone.sample;
+			
+			const stopIndex: number = bufferIndex + runLength;
+			while (bufferIndex < stopIndex) {
+				const vibrato: number = 1.0 + vibratoScale * effectY;
+				const tremolo: number = 1.0 + tremoloScale * (effectY - 1.0);
+				const temp: number = effectY;
+				effectY = effectYMult * effectY - prevEffectY;
+				prevEffectY = temp;
 				
-				var samples;
-				var samplesLeftInBuffer = bufferLength - bufferIndex;
-				if (synth.arpeggioSampleCountdown <= samplesLeftInBuffer) {
-					samples = synth.arpeggioSampleCountdown;
-				} else {
-					samples = samplesLeftInBuffer;
-				}
-				synth.arpeggioSampleCountdown -= samples;
+				const waveA: number = wave[0|(phaseA * waveLength)];
+				const waveB: number = wave[0|(phaseB * waveLength)] * chorusSign;
+				const combinedWave: number = (waveA + waveB) * volume * tremolo;
+				sample += (combinedWave - sample) * filter;
+				volume += volumeDelta;
+				phaseA += phaseDelta * vibrato;
+				phaseB += phaseDelta * vibrato * deltaRatio;
+				filter *= filterScale;
+				phaseA -= 0|phaseA;
+				phaseB -= 0|phaseB;
+				phaseDelta *= phaseDeltaScale;
 				
-				var time = synth.part + synth.beat * song.partsPerBeat;
-				
-				beepbox.Synth.computeChannelInstrument(synth, song, #, time, sampleTime, samplesPerArpeggio, samples); // ALL
-				var synthChannel# = synth.channels[#]; // ALL
-				
-				var channel#ChorusA = Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument#.chorus] + beepbox.Config.chorusIntervals[instrument#.chorus]) / 12.0); // CHIP
-				var channel#ChorusB = Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument#.chorus] - beepbox.Config.chorusIntervals[instrument#.chorus]) / 12.0); // CHIP
-				var channel#ChorusSign = synthChannel#.harmonyVolumeMult * beepbox.Config.chorusSigns[instrument#.chorus]; // CHIP
-				if (instrument#.chorus == 0) synthChannel#.phases[1] = synthChannel#.phases[0]; // CHIP
-				channel#ChorusB *= synthChannel#.harmonyMult; // CHIP
-				var channel#ChorusDeltaRatio = channel#ChorusB / channel#ChorusA; // CHIP
-				
-				var channel#PhaseDelta = synthChannel#.phaseDeltas[0] * channel#ChorusA; // CHIP
-				var channel#PhaseDelta = synthChannel#.phaseDeltas[0] / 32768.0; // NOISE
-				var channel#PhaseDeltaScale = synthChannel#.phaseDeltaScale; // ALL
-				var channel#Volume = synthChannel#.volumeStarts[0]; // CHIP
-				var channel#Volume = synthChannel#.volumeStarts[0]; // NOISE
-				var channel#VolumeDelta = synthChannel#.volumeDeltas[0]; // CHIP
-				var channel#VolumeDelta = synthChannel#.volumeDeltas[0]; // NOISE
-				var channel#Filter = synthChannel#.filter * channel#FilterBase; // CHIP
-				var channel#Filter = synthChannel#.filter; // NOISE
-				var channel#FilterScale = synthChannel#.filterScale; // CHIP
-				var channel#VibratoScale = synthChannel#.vibratoScale; // PITCH
-				
-				var effectY     = Math.sin(synth.effectPhase);
-				var prevEffectY = Math.sin(synth.effectPhase - synth.effectAngle);
-				
-				var channel#PhaseA = synth.channels[#].phases[0] % 1; // CHIP
-				var channel#PhaseB = synth.channels[#].phases[1] % 1; // CHIP
-				var channel#Phase  = synth.channels[#].phases[0] % 1; // NOISE
-				
-				var channel#Operator$Phase       = ((synth.channels[#].phases[$] % 1) + ` + Synth.negativePhaseGuard + `) * ` + Config.sineWaveLength + `; // FM
-				var channel#Operator$PhaseDelta  = synthChannel#.phaseDeltas[$]; // FM
-				var channel#Operator$OutputMult  = synthChannel#.volumeStarts[$]; // FM
-				var channel#Operator$OutputDelta = synthChannel#.volumeDeltas[$]; // FM
-				var channel#Operator$Output      = synthChannel#.feedbackOutputs[$]; // FM
-				var channel#FeedbackMult         = synthChannel#.feedbackMult; // FM
-				var channel#FeedbackDelta        = synthChannel#.feedbackDelta; // FM
-				
-				var channel#Sample = +synth.channels[#].sample; // ALL
-				
-				var delayPos = 0|synth.delayPos;
-				var delayFeedback0 = +synth.delayFeedback0;
-				var delayFeedback1 = +synth.delayFeedback1;
-				var delayFeedback2 = +synth.delayFeedback2;
-				var delayFeedback3 = +synth.delayFeedback3;
-				var limit = +synth.limit;
-				
-				while (samples) {
-					var channel#Vibrato = 1.0 + channel#VibratoScale * effectY; // PITCH
-					var channel#Tremolo = 1.0 + channel#TremoloScale * (effectY - 1.0); // PITCH
-					var temp = effectY;
-					effectY = effectYMult * effectY - prevEffectY;
-					prevEffectY = temp;
-					
-					channel#Sample += ((channel#Wave[0|(channel#PhaseA * channel#WaveLength)] + channel#Wave[0|(channel#PhaseB * channel#WaveLength)] * channel#ChorusSign) * channel#Volume * channel#Tremolo - channel#Sample) * channel#Filter; // CHIP
-					channel#Sample += (channel#Wave[0|(channel#Phase * 32768.0)] * channel#Volume - channel#Sample) * channel#Filter; // NOISE
-					channel#Volume += channel#VolumeDelta; // CHIP
-					channel#Volume += channel#VolumeDelta; // NOISE
-					channel#PhaseA += channel#PhaseDelta * channel#Vibrato; // CHIP
-					channel#PhaseB += channel#PhaseDelta * channel#Vibrato * channel#ChorusDeltaRatio; // CHIP
-					channel#Phase += channel#PhaseDelta; // NOISE
-					channel#Filter *= channel#FilterScale; // CHIP
-					channel#PhaseA -= 0|channel#PhaseA; // CHIP
-					channel#PhaseB -= 0|channel#PhaseB; // CHIP
-					channel#Phase -= 0|channel#Phase; // NOISE
-					channel#PhaseDelta *= channel#PhaseDeltaScale; // CHIP
-					channel#PhaseDelta *= channel#PhaseDeltaScale; // NOISE
-					
-					// INSERT OPERATOR COMPUTATION HERE
-					channel#Sample = channel#Tremolo * (/*channel#Operator$Scaled*/); // CARRIER OUTPUTS
-					channel#FeedbackMult += channel#FeedbackDelta; // FM
-					channel#Operator$OutputMult += channel#Operator$OutputDelta; // FM
-					channel#Operator$Phase += channel#Operator$PhaseDelta * channel#Vibrato; // FM
-					channel#Operator$PhaseDelta *= channel#PhaseDeltaScale; // FM
-					
-					// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
-					// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
-					// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
-					// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
-					var delayPos1 = (delayPos +  3041) & 0x3FFF;
-					var delayPos2 = (delayPos +  6426) & 0x3FFF;
-					var delayPos3 = (delayPos + 10907) & 0x3FFF;
-					var delaySample0 = (delayLine[delayPos]
-						+ channel#Sample // PITCH
-					);
-					var delaySample1 = delayLine[delayPos1];
-					var delaySample2 = delayLine[delayPos2];
-					var delaySample3 = delayLine[delayPos3];
-					var delayTemp0 = -delaySample0 + delaySample1;
-					var delayTemp1 = -delaySample0 - delaySample1;
-					var delayTemp2 = -delaySample2 + delaySample3;
-					var delayTemp3 = -delaySample2 - delaySample3;
-					delayFeedback0 += ((delayTemp0 + delayTemp2) * reverb - delayFeedback0) * 0.5;
-					delayFeedback1 += ((delayTemp1 + delayTemp3) * reverb - delayFeedback1) * 0.5;
-					delayFeedback2 += ((delayTemp0 - delayTemp2) * reverb - delayFeedback2) * 0.5;
-					delayFeedback3 += ((delayTemp1 - delayTemp3) * reverb - delayFeedback3) * 0.5;
-					delayLine[delayPos1] = delayFeedback0;
-					delayLine[delayPos2] = delayFeedback1;
-					delayLine[delayPos3] = delayFeedback2;
-					delayLine[delayPos ] = delayFeedback3;
-					delayPos = (delayPos + 1) & 0x3FFF;
-					
-					var sample = delaySample0 + delaySample1 + delaySample2 + delaySample3
-						+ channel#Sample // NOISE
-					;
-					
-					var abs = sample < 0.0 ? -sample : sample;
-					limit -= limitDecay;
-					if (limit < abs) limit = abs;
-					sample /= limit * 0.75 + 0.25;
-					sample *= volume;
-					data[bufferIndex] = sample;
-					bufferIndex++;
-					samples--;
-				}
-				
-				synthChannel#.phases[0] = channel#PhaseA; // CHIP
-				synthChannel#.phases[1] = channel#PhaseB; // CHIP
-				synthChannel#.phases[0] = channel#Phase; // NOISE
-				synthChannel#.phases[$] = channel#Operator$Phase / ` + Config.sineWaveLength + `; // FM
-				synthChannel#.feedbackOutputs[$] = channel#Operator$Output; // FM
-				synthChannel#.sample = channel#Sample; // ALL
-				
-				synth.delayPos = delayPos;
-				synth.delayFeedback0 = delayFeedback0;
-				synth.delayFeedback1 = delayFeedback1;
-				synth.delayFeedback2 = delayFeedback2;
-				synth.delayFeedback3 = delayFeedback3;
-				synth.limit = limit;
-				
-				if (effectYMult * effectY - prevEffectY > prevEffectY) {
-					synth.effectPhase = Math.asin(effectY);
-				} else {
-					synth.effectPhase = Math.PI - Math.asin(effectY);
-				}
-				
-				if (synth.arpeggioSampleCountdown == 0) {
-					synth.arpeggio++;
-					synth.arpeggioSampleCountdown = samplesPerArpeggio;
-					if (synth.arpeggio == 4) {
-						synth.arpeggio = 0;
-						synth.part++;
-						if (synth.part == song.partsPerBeat) {
-							synth.part = 0;
-							synth.beat++;
-							if (synth.beat == song.beatsPerBar) {
-								// The bar ended, may need to regenerate synthesizer.
-								return bufferIndex;
-							}
-						}
-					}
-				}
+				data[bufferIndex] += sample;
+				bufferIndex++;
 			}
 			
-			// Indicate that the buffer is finished generating.
-			return -1;
+			tone.phases[0] = phaseA;
+			tone.phases[1] = phaseB;
+			tone.sample = sample;
+		}
+		
+		private static fmSourceTemplate: string[] = (`
+			// TODO: Skip this line and oscillator below unless using an effect:
+			var effectYMult = +synth.effectYMult;
+			var effectY     = +Math.sin(synth.effectPhase);
+			var prevEffectY = +Math.sin(synth.effectPhase - synth.effectAngle);
+			
+			var sineWave = beepbox.Config.sineWave;
+			
+			var tremoloScale = +beepbox.Config.effectTremolos[instrument.effect];
+			
+			var phaseDeltaScale = +tone.phaseDeltaScale;
+			var vibratoScale = +tone.vibratoScale;
+			var operator#Phase       = +((tone.phases[#] % 1) + ` + Synth.negativePhaseGuard + `) * ` + Config.sineWaveLength + `;
+			var operator#PhaseDelta  = +tone.phaseDeltas[#];
+			var operator#OutputMult  = +tone.volumeStarts[#];
+			var operator#OutputDelta = +tone.volumeDeltas[#];
+			var operator#Output      = +tone.feedbackOutputs[#];
+			var feedbackMult         = +tone.feedbackMult;
+			var feedbackDelta        = +tone.feedbackDelta;
+			var sample = +tone.sample;
+			
+			var stopIndex = bufferIndex + runLength;
+			while (bufferIndex < stopIndex) {
+				var vibrato = 1.0 + vibratoScale * effectY;
+				var tremolo = 1.0 + tremoloScale * (effectY - 1.0);
+				var temp = effectY;
+				effectY = effectYMult * effectY - prevEffectY;
+				prevEffectY = temp;
+				
+				// INSERT OPERATOR COMPUTATION HERE
+				sample = tremolo * (/*operator#Scaled*/); // CARRIER OUTPUTS
+				feedbackMult += feedbackDelta;
+				operator#OutputMult += operator#OutputDelta;
+				operator#Phase += operator#PhaseDelta * vibrato;
+				operator#PhaseDelta *= phaseDeltaScale;
+				
+				data[bufferIndex] += sample;
+				bufferIndex++;
+			}
+			
+			tone.phases[#] = operator#Phase / ` + Config.sineWaveLength + `;
+			tone.feedbackOutputs[#] = operator#Output;
+			tone.sample = sample;
 		`).split("\n");
 		
 		private static operatorSourceTemplate: string[] = (`
-						var channel#Operator$PhaseMix = channel#Operator$Phase/* + channel#Operator@Scaled*/;
-						var channel#Operator$PhaseInt = channel#Operator$PhaseMix|0;
-						var channel#Operator$Index    = channel#Operator$PhaseInt & ` + Config.sineWaveMask + `;
-						var channel#Operator$Sample   = sineWave[channel#Operator$Index];
-						channel#Operator$Output       = channel#Operator$Sample + (sineWave[channel#Operator$Index + 1] - channel#Operator$Sample) * (channel#Operator$PhaseMix - channel#Operator$PhaseInt);
-						var channel#Operator$Scaled   = channel#Operator$OutputMult * channel#Operator$Output;
+				var operator#PhaseMix = operator#Phase/* + operator@Scaled*/;
+				var operator#PhaseInt = operator#PhaseMix|0;
+				var operator#Index    = operator#PhaseInt & ` + Config.sineWaveMask + `;
+				var operator#Sample   = sineWave[operator#Index];
+				operator#Output       = operator#Sample + (sineWave[operator#Index + 1] - operator#Sample) * (operator#PhaseMix - operator#PhaseInt);
+				var operator#Scaled   = operator#OutputMult * operator#Output;
 		`).split("\n");
+		
+		private static noiseSynth(synth: Synth, song: Song, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
+			const wave: Float64Array = beepbox.Config.getDrumWave(instrument.wave);
+			let phaseDelta: number = +tone.phaseDeltas[0] / 32768.0;
+			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			let volume: number = +tone.volumeStarts[0];
+			const volumeDelta: number = +tone.volumeDeltas[0];
+			const filter: number = +tone.filter;
+			let phase: number = tone.phases[0] % 1;
+			let sample: number = +tone.sample;
+			
+			const stopIndex: number = bufferIndex + runLength;
+			while (bufferIndex < stopIndex) {
+				sample += (wave[0|(phase * 32768.0)] * volume - sample) * filter;
+				volume += volumeDelta;
+				phase += phaseDelta;
+				phase -= 0|phase;
+				phaseDelta *= phaseDeltaScale;
+				data[bufferIndex] += sample;
+				bufferIndex++;
+			}
+			
+			tone.phases[0] = phase;
+			tone.sample = sample;
+		}
 		
 		private frequencyFromPitch(pitch: number): number {
 			return 440.0 * Math.pow(2.0, (pitch - 69.0) / 12.0);
