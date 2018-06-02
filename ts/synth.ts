@@ -1776,6 +1776,9 @@ namespace beepbox {
 						if (instrument.transition == -1) instrument.transition = 1;
 						
 						if (isDrum) {
+							instrument.type = Config.instrumentTypeNames.indexOf(instrumentObject.type);
+							if (instrument.type == -1) instrument.type = InstrumentType.noise;
+							
 							if (instrumentObject.volume != undefined) {
 								instrument.volume = Song._clip(0, Config.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
 							} else {
@@ -2335,9 +2338,11 @@ namespace beepbox {
 						const instrument: Instrument = this.song.channels[channel].instruments[this.song.getPatternInstrument(channel, this.bar)];
 						Synth.computeTone(this, this.song, channel, samplesPerArpeggio, runLength, instrument);
 						const tone = this.tones[channel];
-						const synthBuffer = this.song.getChannelIsDrum(channel) ? data : samplesForReverb;
+						const synthBuffer = this.song.getChannelIsDrum(channel)
+							? data
+							: samplesForReverb;
 						if (tone.active) {
-							Synth.generatedSynthesizersByChannel[channel](this, this.song, synthBuffer, bufferIndex, runLength, tone, instrument);
+							Synth.generatedSynthesizersByChannel[channel](this, synthBuffer, bufferIndex, runLength, tone, instrument);
 						}
 					}
 					bufferIndex += runLength;
@@ -2773,13 +2778,12 @@ namespace beepbox {
 			}
 		}
 		
-		private static readonly generatedSynthesizers: Dictionary<Function> = {};
+		private static readonly fmSynthFunctionCache: Dictionary<Function> = {};
 		
 		private static getGeneratedSynthesizer(song: Song, instrument: Instrument, channel: number): Function {
-			const fingerprint: string = song.getChannelFingerprint(instrument, channel);
-			if (Synth.generatedSynthesizers[fingerprint] == undefined) {
-				let generatedFunction: Function;
-				if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.fm) {
+			if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.fm) {
+				const fingerprint: string = song.getChannelFingerprint(instrument, channel);
+				if (Synth.fmSynthFunctionCache[fingerprint] == undefined) {
 					const synthSource: string[] = [];
 					
 					for (const line of Synth.fmSourceTemplate) {
@@ -2826,20 +2830,19 @@ namespace beepbox {
 					
 					//console.log(synthSource.join("\n"));
 					
-					generatedFunction = new Function("synth", "song", "data", "bufferIndex", "runLength", "tone", "instrument", synthSource.join("\n"));
-				} else if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.chip) {
-					generatedFunction = Synth.chipSynth;
-				} else if (song.getChannelIsDrum(channel)) {
-					generatedFunction = Synth.noiseSynth; 
-				} else {
-					throw new Error("Unrecognized instrument type: " + instrument.type);
+					Synth.fmSynthFunctionCache[fingerprint] = new Function("synth", "data", "bufferIndex", "runLength", "tone", "instrument", synthSource.join("\n"));
 				}
-				Synth.generatedSynthesizers[fingerprint] = generatedFunction;
+				return Synth.fmSynthFunctionCache[fingerprint];
+			} else if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.chip) {
+				return Synth.chipSynth;
+			} else if (song.getChannelIsDrum(channel)) {
+				return Synth.noiseSynth; 
+			} else {
+				throw new Error("Unrecognized instrument type: " + instrument.type);
 			}
-			return Synth.generatedSynthesizers[fingerprint];
 		}
 		
-		private static chipSynth(synth: Synth, song: Song, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
+		private static chipSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
 			// TODO: Skip this line and oscillator below unless using an effect:
 			const effectYMult: number = +synth.effectYMult;
 			let effectY: number     = +Math.sin(synth.effectPhase);
@@ -2949,7 +2952,7 @@ namespace beepbox {
 				var operator#Scaled   = operator#OutputMult * operator#Output;
 		`).split("\n");
 		
-		private static noiseSynth(synth: Synth, song: Song, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
+		private static noiseSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
 			const wave: Float64Array = beepbox.Config.getDrumWave(instrument.wave);
 			let phaseDelta: number = +tone.phaseDeltas[0] / 32768.0;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
