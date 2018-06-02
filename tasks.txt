@@ -176,6 +176,20 @@
 √ rename note to pitch, tone to note. 
 √ octave scroll dragging should just be one History change, and it would be nice if dragging sliders didn't generate a bunch of undo history events. Ooh, let's do it for transpose too.
 √ merge undo history with browser history.
+	√ Use hashchanged instead of animation frame to compare hash values.
+	√ Use pushstate to set hash in url, and include a "state" object indicating whether you can undo.
+	√ On page load, replace state saying "this is the start of history".
+	√ If the hash was entered manually, there will be no state. Replace state to indicate undo is possible.
+	√ When using undo, check if state says we can undo, and if so, use history.back().
+	√ Remove undo() and redo() methods in ChangeHistory.
+	√ Stop tracking Changes in ChangeHistory.
+	√ Reuse the same Song object.
+	√ For "prospective" changes, if recentChange is different, remember start state and push new state.
+	√ For "prospective" changes, if recentChange is the same, replace state or undo if reverted.
+	√ Mark undoable changes in the type system.
+	√ How much of ChangeHistory and individual Changes can I delete? 
+	√ Delay setting hash until animation frame
+	√ Use charCodes instead of new strings in base64 stuff.
 √ optimize song.toString using charCodes. rename song.toString to song.toBase64String.
 √ rename "_on" to "_when". rename attack to envelope.
 √ when undoing changes selected bar, track editor should scroll to display it.
@@ -254,8 +268,14 @@
 √ loop could be dragged past ends of song, goes negative...
 √ couldn't sandwich note between two existing adjacent notes.
 √ Impasaurus said I made the retro drum sound more "periodic", whoops! Seems like the playhead keeps resetting to zero if there are gaps between drums... fixed!
+√ Restructured synthesizer, now each tone is computed in separate passes and reverb is applied after all tones. Much cleaner, and surprisingly still fast. If not all channels are in use, even faster!
 
 MAJOR REMAINING FEATURES:
+- "chorus" option(s) in effects. rename existing chorus.
+- "fadeout" option(s) in transition, would use polyphony, structured similar to openscores. (if the same pitch is played twice, does it cancel the old tone?)
+- template fm instruments
+- better drums?
+- "inspire me" random song generator.
 - embedded player
 - playlist editor
 - live keyboard/midi performance. (make sure piano can play while song is paused?)
@@ -264,8 +284,13 @@ MAJOR REMAINING FEATURES:
 - remember recent songs
 - export mp3/ogg and audio buffer
 - translation
+- web app for home screen. (is there a requirement for a service worker?)
 
 MISC:
+- "ɯoʇsnɔ": The inverse of "custom", meaning that an operator goes up when custom envelopes go down.
+- FM instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else.
+- built-in link shortener?
+- Could I use FM instruments to imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument.
 - switching bars doesn't seem to split transposes into multiple change states?
 - in firefox, after selecting options, spacebar both reopens options and toggles play. Same problem with arrow keys, and even ctrl+brackets to change tabs. Apparently this is a known firefox bug. https://bugzilla.mozilla.org/show_bug.cgi?id=1019630
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, thunder, rain, fire, wind, maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard?
