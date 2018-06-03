@@ -52,6 +52,7 @@ namespace beepbox {
 		chip = 0,
 		fm = 1,
 		noise = 2,
+		length,
 	}
 	
 	export class Config {
@@ -715,7 +716,7 @@ namespace beepbox {
 	}
 	
 	export class Instrument {
-		public type: InstrumentType = 0;
+		public type: InstrumentType = InstrumentType.chip;
 		public wave: number = 1;
 		public filter: number = 1;
 		public transition: number = 1;
@@ -731,23 +732,6 @@ namespace beepbox {
 		constructor() {
 			for (let i = 0; i < Config.operatorCount; i++) {
 				this.operators.push(new Operator(i));
-			}
-		}
-		
-		public reset(): void {
-			this.type = 0;
-			this.wave = 1;
-			this.filter = 1;
-			this.transition = 1;
-			this.effect = 0;
-			this.chorus = 0;
-			this.volume = 0;
-			this.algorithm = 0;
-			this.feedbackType = 0;
-			this.feedbackAmplitude = 0;
-			this.feedbackEnvelope = 1;
-			for (let i: number = 0; i < this.operators.length; i++) {
-				this.operators[i].reset(i);
 			}
 		}
 		
@@ -892,9 +876,8 @@ namespace beepbox {
 					for (let instrument = 0; instrument < this.instrumentsPerChannel; instrument++) {
 						if (channel.instruments.length <= instrument) {
 							channel.instruments[instrument] = new Instrument();
-						} else {
-							channel.instruments[instrument].reset();
 						}
+						channel.instruments[instrument].setTypeAndReset(channelIndex < this.pitchChannelCount ? InstrumentType.chip : InstrumentType.noise);
 					}
 					channel.instruments.length = this.instrumentsPerChannel;
 				
@@ -935,48 +918,44 @@ namespace beepbox {
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					const instrument: Instrument = this.channels[channel].instruments[i];
-					
-					if (channel < this.pitchChannelCount) {
-						buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
-						if (instrument.type == InstrumentType.chip) {
-							// chip
-							buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
-							buffer.push(SongTagCode.filter, base64IntToCharCode[instrument.filter]);
-							buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
-							buffer.push(SongTagCode.effect, base64IntToCharCode[instrument.effect]);
-							buffer.push(SongTagCode.chorus,base64IntToCharCode[instrument.chorus]);
-							buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
-						} else if (instrument.type == InstrumentType.fm) {
-							// FM
-							buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
-							buffer.push(SongTagCode.effect, base64IntToCharCode[instrument.effect]);
-							
-							buffer.push(SongTagCode.algorithm, base64IntToCharCode[instrument.algorithm]);
-							buffer.push(SongTagCode.feedbackType, base64IntToCharCode[instrument.feedbackType]);
-							buffer.push(SongTagCode.feedbackAmplitude, base64IntToCharCode[instrument.feedbackAmplitude]);
-							buffer.push(SongTagCode.feedbackEnvelope, base64IntToCharCode[instrument.feedbackEnvelope]);
-							
-							buffer.push(SongTagCode.operatorFrequencies);
-							for (let o: number = 0; o < Config.operatorCount; o++) {
-								buffer.push(base64IntToCharCode[instrument.operators[o].frequency]);
-							}
-							buffer.push(SongTagCode.operatorAmplitudes);
-							for (let o: number = 0; o < Config.operatorCount; o++) {
-								buffer.push(base64IntToCharCode[instrument.operators[o].amplitude]);
-							}
-							buffer.push(SongTagCode.operatorEnvelopes);
-							for (let o: number = 0; o < Config.operatorCount; o++) {
-								buffer.push(base64IntToCharCode[instrument.operators[o].envelope]);
-							}
-						} else {
-							throw new Error("Unknown instrument type.");
+					buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
+					if (instrument.type == InstrumentType.chip) {
+						// chip
+						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
+						buffer.push(SongTagCode.filter, base64IntToCharCode[instrument.filter]);
+						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
+						buffer.push(SongTagCode.effect, base64IntToCharCode[instrument.effect]);
+						buffer.push(SongTagCode.chorus,base64IntToCharCode[instrument.chorus]);
+						buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
+					} else if (instrument.type == InstrumentType.fm) {
+						// FM
+						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
+						buffer.push(SongTagCode.effect, base64IntToCharCode[instrument.effect]);
+						
+						buffer.push(SongTagCode.algorithm, base64IntToCharCode[instrument.algorithm]);
+						buffer.push(SongTagCode.feedbackType, base64IntToCharCode[instrument.feedbackType]);
+						buffer.push(SongTagCode.feedbackAmplitude, base64IntToCharCode[instrument.feedbackAmplitude]);
+						buffer.push(SongTagCode.feedbackEnvelope, base64IntToCharCode[instrument.feedbackEnvelope]);
+						
+						buffer.push(SongTagCode.operatorFrequencies);
+						for (let o: number = 0; o < Config.operatorCount; o++) {
+							buffer.push(base64IntToCharCode[instrument.operators[o].frequency]);
 						}
-					} else {
-						// NOISE
-						buffer.push(SongTagCode.startInstrument, base64IntToCharCode[InstrumentType.noise]);
+						buffer.push(SongTagCode.operatorAmplitudes);
+						for (let o: number = 0; o < Config.operatorCount; o++) {
+							buffer.push(base64IntToCharCode[instrument.operators[o].amplitude]);
+						}
+						buffer.push(SongTagCode.operatorEnvelopes);
+						for (let o: number = 0; o < Config.operatorCount; o++) {
+							buffer.push(base64IntToCharCode[instrument.operators[o].envelope]);
+						}
+					} else if (instrument.type == InstrumentType.noise) {
+						// noise
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
 						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
 						buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
+					} else {
+						throw new Error("Unknown instrument type.");
 					}
 				}
 			}
@@ -1221,10 +1200,15 @@ namespace beepbox {
 					this.instrumentsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					this.instrumentsPerChannel = Math.max(Config.instrumentsPerChannelMin, Math.min(Config.instrumentsPerChannelMax, this.instrumentsPerChannel));
 					for (let channel = 0; channel < this.getChannelCount(); channel++) {
-						for (let instrument = this.channels[channel].instruments.length; instrument < this.instrumentsPerChannel; instrument++) {
-							this.channels[channel].instruments[instrument] = new Instrument();
+						for (let instrumentIndex = this.channels[channel].instruments.length; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
+							this.channels[channel].instruments[instrumentIndex] = new Instrument();
 						}
 						this.channels[channel].instruments.length = this.instrumentsPerChannel;
+						if (beforeSix) {
+							for (let instrumentIndex = 0; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
+								this.channels[channel].instruments[instrumentIndex].setTypeAndReset(channel < this.pitchChannelCount ? InstrumentType.chip : InstrumentType.noise);
+							}
+						}
 					}
 				} else if (command == SongTagCode.rhythm) {
 					this.partsPerBeat = Config.partCounts[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
@@ -1244,7 +1228,7 @@ namespace beepbox {
 						instrumentIndexIterator = 0;
 					}
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					instrument.setTypeAndReset(Song._clip(0, 2, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]));
+					instrument.setTypeAndReset(Song._clip(0, InstrumentType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]));
 				} else if (command == SongTagCode.wave) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
@@ -1546,46 +1530,44 @@ namespace beepbox {
 				const isDrum: boolean = this.getChannelIsDrum(channel);
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					const instrument: Instrument = this.channels[channel].instruments[i];
-					if (isDrum) {
+					if (instrument.type == InstrumentType.noise) {
 						instrumentArray.push({
-							type: Config.instrumentTypeNames[InstrumentType.noise],
+							type: Config.instrumentTypeNames[instrument.type],
 							volume: (5 - instrument.volume) * 20,
 							wave: Config.drumNames[instrument.wave],
 							transition: Config.transitionNames[instrument.transition],
 						});
-					} else {
-						if (instrument.type == InstrumentType.chip) {
-							instrumentArray.push({
-								type: Config.instrumentTypeNames[instrument.type],
-								volume: (5 - instrument.volume) * 20,
-								wave: Config.waveNames[instrument.wave],
-								transition: Config.transitionNames[instrument.transition],
-								filter: Config.filterNames[instrument.filter],
-								chorus: Config.chorusNames[instrument.chorus],
-								effect: Config.effectNames[instrument.effect],
+					} else if (instrument.type == InstrumentType.chip) {
+						instrumentArray.push({
+							type: Config.instrumentTypeNames[instrument.type],
+							volume: (5 - instrument.volume) * 20,
+							wave: Config.waveNames[instrument.wave],
+							transition: Config.transitionNames[instrument.transition],
+							filter: Config.filterNames[instrument.filter],
+							chorus: Config.chorusNames[instrument.chorus],
+							effect: Config.effectNames[instrument.effect],
+						});
+					} else if (instrument.type == InstrumentType.fm) {
+						const operatorArray: Object[] = [];
+						for (const operator of instrument.operators) {
+							operatorArray.push({
+								frequency: Config.operatorFrequencyNames[operator.frequency],
+								amplitude: operator.amplitude,
+								envelope: Config.operatorEnvelopeNames[operator.envelope],
 							});
-						} else if (instrument.type == InstrumentType.fm) {
-							const operatorArray: Object[] = [];
-							for (const operator of instrument.operators) {
-								operatorArray.push({
-									frequency: Config.operatorFrequencyNames[operator.frequency],
-									amplitude: operator.amplitude,
-									envelope: Config.operatorEnvelopeNames[operator.envelope],
-								});
-							}
-							instrumentArray.push({
-								type: Config.instrumentTypeNames[instrument.type],
-								transition: Config.transitionNames[instrument.transition],
-								effect: Config.effectNames[instrument.effect],
-								algorithm: Config.operatorAlgorithmNames[instrument.algorithm],
-								feedbackType: Config.operatorFeedbackNames[instrument.feedbackType],
-								feedbackAmplitude: instrument.feedbackAmplitude,
-								feedbackEnvelope: Config.operatorEnvelopeNames[instrument.feedbackEnvelope],
-								operators: operatorArray,
-							});
-						} else {
-							throw new Error("Unrecognized instrument type");
 						}
+						instrumentArray.push({
+							type: Config.instrumentTypeNames[instrument.type],
+							transition: Config.transitionNames[instrument.transition],
+							effect: Config.effectNames[instrument.effect],
+							algorithm: Config.operatorAlgorithmNames[instrument.algorithm],
+							feedbackType: Config.operatorFeedbackNames[instrument.feedbackType],
+							feedbackAmplitude: instrument.feedbackAmplitude,
+							feedbackEnvelope: Config.operatorEnvelopeNames[instrument.feedbackEnvelope],
+							operators: operatorArray,
+						});
+					} else {
+						throw new Error("Unrecognized instrument type");
 					}
 				}
 				
@@ -1775,10 +1757,10 @@ namespace beepbox {
 						instrument.transition = oldTransitionNames[transitionObject] != undefined ? oldTransitionNames[transitionObject] : Config.transitionNames.indexOf(transitionObject);
 						if (instrument.transition == -1) instrument.transition = 1;
 						
-						if (isDrum) {
-							instrument.type = Config.instrumentTypeNames.indexOf(instrumentObject.type);
-							if (instrument.type == -1) instrument.type = InstrumentType.noise;
-							
+						instrument.type = Config.instrumentTypeNames.indexOf(instrumentObject.type);
+						if (instrument.type == -1) instrument.type = isDrum ? InstrumentType.noise : InstrumentType.chip;
+						
+						if (instrument.type == InstrumentType.noise) {
 							if (instrumentObject.volume != undefined) {
 								instrument.volume = Song._clip(0, Config.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
 							} else {
@@ -1786,62 +1768,57 @@ namespace beepbox {
 							}
 							instrument.wave = Config.drumNames.indexOf(instrumentObject.wave);
 							if (instrument.wave == -1) instrument.wave = 1;
-						} else {
-							instrument.type = Config.instrumentTypeNames.indexOf(instrumentObject.type);
-							if (instrument.type == -1) instrument.type = InstrumentType.chip;
-							
-							if (instrument.type == InstrumentType.chip) {
-								if (instrumentObject.volume != undefined) {
-									instrument.volume = Song._clip(0, Config.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
-								} else {
-									instrument.volume = 0;
-								}
-								instrument.wave = Config.waveNames.indexOf(instrumentObject.wave);
-								if (instrument.wave == -1) instrument.wave = 1;
-								
-								const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
-								instrument.filter = oldFilterNames[instrumentObject.filter] != undefined ? oldFilterNames[instrumentObject.filter] : Config.filterNames.indexOf(instrumentObject.filter);
-								if (instrument.filter == -1) instrument.filter = 0;
-								
-								instrument.chorus = Config.chorusNames.indexOf(instrumentObject.chorus);
-								if (instrument.chorus == -1) instrument.chorus = 0;
-								instrument.effect = Config.effectNames.indexOf(instrumentObject.effect);
-								if (instrument.effect == -1) instrument.effect = 0;
-							} else if (instrument.type == InstrumentType.fm) {
-								instrument.effect = Config.effectNames.indexOf(instrumentObject.effect);
-								if (instrument.effect == -1) instrument.effect = 0;
-								
-								instrument.algorithm = Config.operatorAlgorithmNames.indexOf(instrumentObject.algorithm);
-								if (instrument.algorithm == -1) instrument.algorithm = 0;
-								instrument.feedbackType = Config.operatorFeedbackNames.indexOf(instrumentObject.feedbackType);
-								if (instrument.feedbackType == -1) instrument.feedbackType = 0;
-								if (instrumentObject.feedbackAmplitude != undefined) {
-									instrument.feedbackAmplitude = Song._clip(0, Config.operatorAmplitudeMax + 1, instrumentObject.feedbackAmplitude | 0);
-								} else {
-									instrument.feedbackAmplitude = 0;
-								}
-								instrument.feedbackEnvelope = Config.operatorEnvelopeNames.indexOf(instrumentObject.feedbackEnvelope);
-								if (instrument.feedbackEnvelope == -1) instrument.feedbackEnvelope = 0;
-								
-								for (let j: number = 0; j < Config.operatorCount; j++) {
-									const operator: Operator = instrument.operators[j];
-									let operatorObject: any = undefined;
-									if (instrumentObject.operators) operatorObject = instrumentObject.operators[j];
-									if (operatorObject == undefined) operatorObject = {};
-									
-									operator.frequency = Config.operatorFrequencyNames.indexOf(operatorObject.frequency);
-									if (operator.frequency == -1) operator.frequency = 0;
-									if (operatorObject.amplitude != undefined) {
-										operator.amplitude = Song._clip(0, Config.operatorAmplitudeMax + 1, operatorObject.amplitude | 0);
-									} else {
-										operator.amplitude = 0;
-									}
-									operator.envelope = Config.operatorEnvelopeNames.indexOf(operatorObject.envelope);
-									if (operator.envelope == -1) operator.envelope = 0;
-								}
+						} else if (instrument.type == InstrumentType.chip) {
+							if (instrumentObject.volume != undefined) {
+								instrument.volume = Song._clip(0, Config.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
 							} else {
-								throw new Error("Unrecognized instrument type.");
+								instrument.volume = 0;
 							}
+							instrument.wave = Config.waveNames.indexOf(instrumentObject.wave);
+							if (instrument.wave == -1) instrument.wave = 1;
+							
+							const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
+							instrument.filter = oldFilterNames[instrumentObject.filter] != undefined ? oldFilterNames[instrumentObject.filter] : Config.filterNames.indexOf(instrumentObject.filter);
+							if (instrument.filter == -1) instrument.filter = 0;
+							
+							instrument.chorus = Config.chorusNames.indexOf(instrumentObject.chorus);
+							if (instrument.chorus == -1) instrument.chorus = 0;
+							instrument.effect = Config.effectNames.indexOf(instrumentObject.effect);
+							if (instrument.effect == -1) instrument.effect = 0;
+						} else if (instrument.type == InstrumentType.fm) {
+							instrument.effect = Config.effectNames.indexOf(instrumentObject.effect);
+							if (instrument.effect == -1) instrument.effect = 0;
+							
+							instrument.algorithm = Config.operatorAlgorithmNames.indexOf(instrumentObject.algorithm);
+							if (instrument.algorithm == -1) instrument.algorithm = 0;
+							instrument.feedbackType = Config.operatorFeedbackNames.indexOf(instrumentObject.feedbackType);
+							if (instrument.feedbackType == -1) instrument.feedbackType = 0;
+							if (instrumentObject.feedbackAmplitude != undefined) {
+								instrument.feedbackAmplitude = Song._clip(0, Config.operatorAmplitudeMax + 1, instrumentObject.feedbackAmplitude | 0);
+							} else {
+								instrument.feedbackAmplitude = 0;
+							}
+							instrument.feedbackEnvelope = Config.operatorEnvelopeNames.indexOf(instrumentObject.feedbackEnvelope);
+							if (instrument.feedbackEnvelope == -1) instrument.feedbackEnvelope = 0;
+							
+							for (let j: number = 0; j < Config.operatorCount; j++) {
+								const operator: Operator = instrument.operators[j];
+								let operatorObject: any = undefined;
+								if (instrumentObject.operators) operatorObject = instrumentObject.operators[j];
+								if (operatorObject == undefined) operatorObject = {};
+								
+								operator.frequency = Config.operatorFrequencyNames.indexOf(operatorObject.frequency);
+								if (operator.frequency == -1) operator.frequency = 0;
+								if (operatorObject.amplitude != undefined) {
+									operator.amplitude = Song._clip(0, Config.operatorAmplitudeMax + 1, operatorObject.amplitude | 0);
+								} else {
+									operator.amplitude = 0;
+								}
+								operator.envelope = Config.operatorEnvelopeNames.indexOf(operatorObject.envelope);
+								if (operator.envelope == -1) operator.envelope = 0;
+							}
+						} else {
+							throw new Error("Unrecognized instrument type.");
 						}
 					}
 				
@@ -1975,27 +1952,6 @@ namespace beepbox {
 		public getBeatsPerMinute(): number {
 			return Math.round(120.0 * Math.pow(2.0, (-4.0 + this.tempo) / 9.0));
 		}
-		
-		// TODO: The instrument itself, or maybe Synth, should determine its fingerprint, not Song. And only FM instruments even need it.
-		private readonly _fingerprint: Array<string | number> = [];
-		public getChannelFingerprint(instrument: Instrument, channel: Number): string {
-			let charCount: number = 0;
-			if (channel < this.pitchChannelCount) {
-				if (instrument.type == InstrumentType.chip) {
-					return "c"; // this._fingerprint[charCount++] = "c";
-				} else if (instrument.type == InstrumentType.fm) {
-					this._fingerprint[charCount++] = "f"
-					this._fingerprint[charCount++] = instrument.algorithm;
-					this._fingerprint[charCount++] = instrument.feedbackType;
-				} else {
-					throw new Error("Unknown instrument type.");
-				}
-			} else {
-				return "d"; // this._fingerprint[charCount++] = "d";
-			}
-			this._fingerprint.length = charCount;
-			return this._fingerprint.join("");
-		}
 	}
 	
 	class Tone {
@@ -2039,7 +1995,7 @@ namespace beepbox {
 						Config.getDrumWave(song.channels[j].instruments[i].wave);
 					}
 					for (let j: number = 0; j < song.getChannelCount(); j++) {
-						Synth.getGeneratedSynthesizer(song, song.channels[j].instruments[i], j);
+						Synth.getGeneratedSynthesizer(song.channels[j].instruments[i]);
 					}
 				}
 			}
@@ -2250,7 +2206,6 @@ namespace beepbox {
 			this.synthesize(outputData, outputBuffer.length);
 		}
 		
-		private static readonly generatedSynthesizersByChannel: Function[] = [];
 		public synthesize(data: Float32Array, bufferLength: number): void {
 			if (this.song == null) {
 				for (let i: number = 0; i < bufferLength; i++) {
@@ -2321,12 +2276,6 @@ namespace beepbox {
 			
 			while (bufferIndex < bufferLength && !ended) {
 				
-				// Cache synthesizer function until next bar starts:
-				for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
-					const instrument: Instrument = this.song.channels[channel].instruments[this.song.getPatternInstrument(channel, this.bar)];
-					Synth.generatedSynthesizersByChannel[channel] = Synth.getGeneratedSynthesizer(this.song, instrument, channel);
-				}
-				
 				while (bufferIndex < bufferLength) {
 			
 					const samplesLeftInBuffer: number = bufferLength - bufferIndex;
@@ -2337,11 +2286,12 @@ namespace beepbox {
 						const instrument: Instrument = this.song.channels[channel].instruments[this.song.getPatternInstrument(channel, this.bar)];
 						Synth.computeTone(this, this.song, channel, samplesPerArpeggio, runLength, instrument);
 						const tone = this.tones[channel];
-						const synthBuffer = this.song.getChannelIsDrum(channel)
-							? data
-							: samplesForReverb;
 						if (tone.active) {
-							Synth.generatedSynthesizersByChannel[channel](this, synthBuffer, bufferIndex, runLength, tone, instrument);
+							const synthBuffer = this.song.getChannelIsDrum(channel)
+								? data
+								: samplesForReverb;
+							const synthesizer: Function = Synth.getGeneratedSynthesizer(instrument);
+							synthesizer(this, synthBuffer, bufferIndex, runLength, tone, instrument);
 						}
 					}
 					bufferIndex += runLength;
@@ -2779,15 +2729,15 @@ namespace beepbox {
 		
 		private static readonly fmSynthFunctionCache: Dictionary<Function> = {};
 		
-		private static getGeneratedSynthesizer(song: Song, instrument: Instrument, channel: number): Function {
-			if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.fm) {
-				const fingerprint: string = song.getChannelFingerprint(instrument, channel);
+		private static getGeneratedSynthesizer(instrument: Instrument): Function {
+			if (instrument.type == InstrumentType.fm) {
+				const fingerprint: string = instrument.algorithm + "_" + instrument.feedbackType;
 				if (Synth.fmSynthFunctionCache[fingerprint] == undefined) {
 					const synthSource: string[] = [];
 					
 					for (const line of Synth.fmSourceTemplate) {
 						if (line.indexOf("// CARRIER OUTPUTS") != -1) {
-							if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.fm) {
+							if (instrument.type == InstrumentType.fm) {
 								const outputs: string[] = [];
 								for (let j: number = 0; j < Config.operatorCarrierCounts[instrument.algorithm]; j++) {
 									outputs.push("operator" + j + "Scaled");
@@ -2832,9 +2782,9 @@ namespace beepbox {
 					Synth.fmSynthFunctionCache[fingerprint] = new Function("synth", "data", "bufferIndex", "runLength", "tone", "instrument", synthSource.join("\n"));
 				}
 				return Synth.fmSynthFunctionCache[fingerprint];
-			} else if (!song.getChannelIsDrum(channel) && instrument.type == InstrumentType.chip) {
+			} else if (instrument.type == InstrumentType.chip) {
 				return Synth.chipSynth;
-			} else if (song.getChannelIsDrum(channel)) {
+			} else if (instrument.type == InstrumentType.noise) {
 				return Synth.noiseSynth; 
 			} else {
 				throw new Error("Unrecognized instrument type: " + instrument.type);

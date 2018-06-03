@@ -436,7 +436,7 @@ namespace beepbox {
 			this._tempoSlider.input.title = this._doc.song.getBeatsPerMinute() + " beats per minute";
 			this._reverbSlider.updateValue(this._doc.song.reverb);
 			setSelectedIndex(this._partSelect, Config.partCounts.indexOf(this._doc.song.partsPerBeat));
-			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
+			if (instrument.type == InstrumentType.noise) {
 				this._instrumentVolumeSliderRow.style.display = "";
 				this._drumSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
@@ -449,31 +449,33 @@ namespace beepbox {
 				this._filterSelectRow.style.display = "none";
 				this._chorusSelectRow.style.display = "none";
 				this._effectSelectRow.style.display = "none";
-			} else {
+			} else if (instrument.type == InstrumentType.chip) {
 				this._instrumentTypeSelectRow.style.display = "";
 				this._effectSelectRow.style.display = "";
 				this._drumSelect.style.display = "none";
-				
-				if (instrument.type == InstrumentType.chip) {
-					this._instrumentVolumeSliderRow.style.display = "";
-					this._waveSelect.style.display = "";
-					this._waveSelectRow.style.display = "";
-					this._filterSelectRow.style.display = "";
-					this._chorusSelectRow.style.display = "";
-					this._algorithmSelectRow.style.display = "none";
-					this._phaseModGroup.style.display = "none";
-					this._feedbackRow1.style.display = "none";
-					this._feedbackRow2.style.display = "none";
-				} else {
-					this._algorithmSelectRow.style.display = "";
-					this._phaseModGroup.style.display = "";
-					this._feedbackRow1.style.display = "";
-					this._feedbackRow2.style.display = "";
-					this._instrumentVolumeSliderRow.style.display = "none";
-					this._waveSelectRow.style.display = "none";
-					this._filterSelectRow.style.display = "none";
-					this._chorusSelectRow.style.display = "none";
-				}
+				this._instrumentVolumeSliderRow.style.display = "";
+				this._waveSelect.style.display = "";
+				this._waveSelectRow.style.display = "";
+				this._filterSelectRow.style.display = "";
+				this._chorusSelectRow.style.display = "";
+				this._algorithmSelectRow.style.display = "none";
+				this._phaseModGroup.style.display = "none";
+				this._feedbackRow1.style.display = "none";
+				this._feedbackRow2.style.display = "none";
+			} else if (instrument.type == InstrumentType.fm) {
+				this._instrumentTypeSelectRow.style.display = "";
+				this._effectSelectRow.style.display = "";
+				this._drumSelect.style.display = "none";
+				this._algorithmSelectRow.style.display = "";
+				this._phaseModGroup.style.display = "";
+				this._feedbackRow1.style.display = "";
+				this._feedbackRow2.style.display = "";
+				this._instrumentVolumeSliderRow.style.display = "none";
+				this._waveSelectRow.style.display = "none";
+				this._filterSelectRow.style.display = "none";
+				this._chorusSelectRow.style.display = "none";
+			} else {
+				throw new Error("Unrecognized instrument type: " + instrument.type);
 			}
 			
 			setSelectedIndex(this._instrumentTypeSelect, instrument.type);

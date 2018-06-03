@@ -272,7 +272,7 @@
 
 MAJOR REMAINING FEATURES:
 - "chorus" option(s) in effects. rename existing chorus.
-- "fadeout" option(s) in transition, would use polyphony, structured similar to openscores. (if the same pitch is played twice, does it cancel the old tone?)
+- "fadeout" option(s) in transition, would use polyphony, structured similar to openscores. (if the same pitch is played twice, does it cancel the old tone?) How should I keep track of tones?
 - template fm instruments
 - better drums?
 - "inspire me" random song generator.
@@ -290,8 +290,10 @@ MISC:
 - "ɯoʇsnɔ": The inverse of "custom", meaning that an operator goes up when custom envelopes go down.
 - FM instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else.
 - built-in link shortener?
-- Could I use FM instruments to imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument.
+- Could I use FM instruments to imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument. It may be time to stop using two midi channels for chip chorus.
 - switching bars doesn't seem to split transposes into multiple change states?
+- The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
+- Record the "type" of channels (separately from instruments). Can be pitch or drum. Use instead of getChannelIsDrum. When exporting base64, write the pitch channels first even if they were somehow rearranged, but JSON could theoretically have channels in any order.
 - in firefox, after selecting options, spacebar both reopens options and toggles play. Same problem with arrow keys, and even ctrl+brackets to change tabs. Apparently this is a known firefox bug. https://bugzilla.mozilla.org/show_bug.cgi?id=1019630
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, thunder, rain, fire, wind, maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard?
 - make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page.

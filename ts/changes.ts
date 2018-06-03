@@ -181,9 +181,17 @@ namespace beepbox {
 					} else {
 						newChannels[channel] = new Channel();
 						newChannels[channel].octave = 2;
-						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) newChannels[channel].instruments[j] = new Instrument();
-						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) newChannels[channel].patterns[j] = new Pattern();
-						for (let j: number = 0; j < doc.song.barCount; j++) newChannels[channel].bars[j] = 1;
+						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) {
+							const instrument: Instrument = new Instrument();
+							instrument.setTypeAndReset(InstrumentType.chip);
+							newChannels[channel].instruments[j] = instrument;
+						}
+						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
+							newChannels[channel].patterns[j] = new Pattern();
+						}
+						for (let j: number = 0; j < doc.song.barCount; j++) {
+							newChannels[channel].bars[j] = 1;
+						}
 					}
 				}
 
@@ -195,9 +203,17 @@ namespace beepbox {
 					} else {
 						newChannels[channel] = new Channel();
 						newChannels[channel].octave = 0;
-						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) newChannels[channel].instruments[j] = new Instrument();
-						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) newChannels[channel].patterns[j] = new Pattern();
-						for (let j: number = 0; j < doc.song.barCount; j++) newChannels[channel].bars[j] = 1;
+						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) {
+							const instrument: Instrument = new Instrument();
+							instrument.setTypeAndReset(InstrumentType.noise);
+							newChannels[channel].instruments[j] = instrument;
+						}
+						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
+							newChannels[channel].patterns[j] = new Pattern();
+						}
+						for (let j: number = 0; j < doc.song.barCount; j++) {
+							newChannels[channel].bars[j] = 1;
+						}
 					}
 				}
 				
