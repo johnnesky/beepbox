@@ -167,6 +167,7 @@ namespace beepbox {
 		private readonly _drumSelect: HTMLSelectElement = buildOptions(select({}), Config.drumNames);
 		private readonly _waveSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Wave: ")]), div({className: "selectContainer"}, [this._waveSelect, this._drumSelect])]);
 		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select({}), Config.transitionNames);
+		private readonly _delaySelect: HTMLSelectElement = buildOptions(select({}), Config.delayNames);
 		private readonly _filterSelect: HTMLSelectElement = buildOptions(select({}), Config.filterNames);
 		private readonly _filterSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Filter: ")]), div({className: "selectContainer"}, [this._filterSelect])]);
 		private readonly _chorusSelect: HTMLSelectElement = buildOptions(select({}), Config.chorusNames);
@@ -198,6 +199,10 @@ namespace beepbox {
 			this._filterSelectRow,
 			this._chorusSelectRow,
 			this._effectSelectRow,
+			div({className: "selectRow"}, [
+				span({}, [text("Delay: ")]),
+				div({className: "selectContainer"}, [this._delaySelect]),
+			]),
 			this._algorithmSelectRow,
 			this._phaseModGroup,
 			this._feedbackRow1,
@@ -336,6 +341,7 @@ namespace beepbox {
 			this._waveSelect.addEventListener("change", this._whenSetWave);
 			this._drumSelect.addEventListener("change", this._whenSetDrum);
 			this._transitionSelect.addEventListener("change", this._whenSetTransition);
+			this._delaySelect.addEventListener("change", this._whenSetDelay);
 			this._filterSelect.addEventListener("change", this._whenSetFilter);
 			this._chorusSelect.addEventListener("change", this._whenSetChorus);
 			this._effectSelect.addEventListener("change", this._whenSetEffect);
@@ -498,6 +504,7 @@ namespace beepbox {
 			setSelectedIndex(this._drumSelect, instrument.wave);
 			setSelectedIndex(this._filterSelect, instrument.filter);
 			setSelectedIndex(this._transitionSelect, instrument.transition);
+			setSelectedIndex(this._delaySelect, instrument.delay);
 			setSelectedIndex(this._effectSelect, instrument.effect);
 			setSelectedIndex(this._chorusSelect, instrument.chorus);
 			setSelectedIndex(this._feedbackTypeSelect, instrument.feedbackType);
@@ -758,6 +765,10 @@ namespace beepbox {
 		
 		private _whenSetTransition = (): void => {
 			this._doc.record(new ChangeTransition(this._doc, this._transitionSelect.selectedIndex));
+		}
+		
+		private _whenSetDelay = (): void => {
+			this._doc.record(new ChangeDelay(this._doc, this._delaySelect.selectedIndex));
 		}
 		
 		private _whenSetEffect = (): void => {
