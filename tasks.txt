@@ -287,6 +287,7 @@ MAJOR REMAINING FEATURES:
 - web app for home screen. (is there a requirement for a service worker?)
 
 MISC:
+- divert www traffic to beepbox.co
 - "ɯoʇsnɔ": The inverse of "custom", meaning that an operator goes up when custom envelopes go down.
 - FM instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else.
 - built-in link shortener?

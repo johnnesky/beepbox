@@ -124,6 +124,18 @@ namespace beepbox {
 		}
 	}
 	
+	export class ChangeDelay extends Change {
+		constructor(doc: SongDocument, newValue: number) {
+			super();
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].delay;
+			if (oldValue != newValue) {
+				this._didSomething();
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].delay = newValue;
+				doc.notifier.changed();
+			}
+		}
+	}
+	
 	export class ChangePattern extends Change {
 		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
 			super();
