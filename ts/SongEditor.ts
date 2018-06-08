@@ -198,11 +198,11 @@ namespace beepbox {
 			]),
 			this._filterSelectRow,
 			this._chorusSelectRow,
-			this._effectSelectRow,
 			div({className: "selectRow"}, [
 				span({}, [text("Delay: ")]),
 				div({className: "selectContainer"}, [this._delaySelect]),
 			]),
+			this._effectSelectRow,
 			this._algorithmSelectRow,
 			this._phaseModGroup,
 			this._feedbackRow1,

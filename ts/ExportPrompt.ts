@@ -516,47 +516,44 @@ namespace beepbox {
 								
 								let description: string = ""; 
 								let instrumentProgram: number = 0x51; // default to sawtooth wave. 
-								if (isDrums) {
-									description += "type: " + Config.instrumentTypeNames[InstrumentType.noise];
+								
+								description += "type: " + Config.instrumentTypeNames[instrument.type];
+								description += ", transition: " + Config.transitionNames[instrument.transition];
+								description += ", delay: " + Config.delayNames[instrument.delay];
+								
+								if (instrument.type == InstrumentType.noise) {
 									description += ", noise: " + Config.drumNames[instrument.wave];
 									description += ", volume: " + Config.volumeNames[instrument.volume];
-									description += ", transition: " + Config.transitionNames[instrument.transition];
-									
+								
 									instrumentProgram = 0x7E; // seashore, applause
-								} else {
-									description += "type: " + Config.instrumentTypeNames[instrument.type];
+								} else if (instrument.type == InstrumentType.chip) {
+									description += ", wave: " + Config.waveNames[instrument.wave];
+									description += ", volume: " + Config.volumeNames[instrument.volume];
+									description += ", filter: " + Config.filterNames[instrument.filter];
+									description += ", chorus: " + Config.chorusNames[instrument.chorus];
+									description += ", effect: " + Config.effectNames[instrument.effect];
+								
+									const filterInstruments: number[] = Config.filterDecays[instrument.filter] == 0 ? Config.midiSustainInstruments : Config.midiDecayInstruments;
+									instrumentProgram = filterInstruments[instrument.wave];
+								} else if (instrument.type == InstrumentType.fm) {
+									description += ", effect: " + Config.effectNames[instrument.effect];
+									description += ", algorithm: " + Config.midiAlgorithmNames[instrument.algorithm];
+									description += ", feedbackType: " + Config.midiFeedbackNames[instrument.feedbackType];
+									description += ", feedbackAmplitude: " + instrument.feedbackAmplitude;
+									description += ", feedbackEnvelope: " + Config.operatorEnvelopeNames[instrument.feedbackEnvelope];
 									
-									if (instrument.type == InstrumentType.chip) {
-										description += ", wave: " + Config.waveNames[instrument.wave];
-										description += ", volume: " + Config.volumeNames[instrument.volume];
-										description += ", transition: " + Config.transitionNames[instrument.transition];
-										description += ", filter: " + Config.filterNames[instrument.filter];
-										description += ", chorus: " + Config.chorusNames[instrument.chorus];
-										description += ", effect: " + Config.effectNames[instrument.effect];
-									
-										const filterInstruments: number[] = Config.filterDecays[instrument.filter] == 0 ? Config.midiSustainInstruments : Config.midiDecayInstruments;
-										instrumentProgram = filterInstruments[instrument.wave];
-									} else if (instrument.type == InstrumentType.fm) {
-										description += ", transition: " + Config.transitionNames[instrument.transition];
-										description += ", effect: " + Config.effectNames[instrument.effect];
-										description += ", algorithm: " + Config.midiAlgorithmNames[instrument.algorithm];
-										description += ", feedbackType: " + Config.midiFeedbackNames[instrument.feedbackType];
-										description += ", feedbackAmplitude: " + instrument.feedbackAmplitude;
-										description += ", feedbackEnvelope: " + Config.operatorEnvelopeNames[instrument.feedbackEnvelope];
-										
-										for (let i: number = 0; i < Config.operatorCount; i++) {
-											const operator: Operator = instrument.operators[i];
-											description += ", operator" + (i + 1) + ": {";
-											description += "frequency: " + Config.midiFrequencyNames[operator.frequency];
-											description += ", amplitude: " + operator.amplitude;
-											description += ", envelope: " + Config.operatorEnvelopeNames[operator.envelope];
-											description += "}";
-										}
-										
-										// No convenient way to pick an appropriate midi instrument, so just use sawtooth as a default. :/
-									} else {
-										throw new Error("Unrecognized instrument type.");
+									for (let i: number = 0; i < Config.operatorCount; i++) {
+										const operator: Operator = instrument.operators[i];
+										description += ", operator" + (i + 1) + ": {";
+										description += "frequency: " + Config.midiFrequencyNames[operator.frequency];
+										description += ", amplitude: " + operator.amplitude;
+										description += ", envelope: " + Config.operatorEnvelopeNames[operator.envelope];
+										description += "}";
 									}
+									
+									// No convenient way to pick an appropriate midi instrument, so just use sawtooth as a default. :/
+								} else {
+									throw new Error("Unrecognized instrument type.");
 								}
 								
 								writeEventTime(barStartTime);
