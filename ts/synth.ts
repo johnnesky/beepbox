@@ -39,13 +39,15 @@ namespace beepbox {
 		[K: string]: T;
 	}
 	
-	const enum EnvelopeType {
+	export const enum EnvelopeType {
 		custom,
 		steady,
 		punch,
 		flare,
 		pluck,
 		tremolo,
+		tremolo2,
+		decay,
 	}
 	
 	export const enum InstrumentType {
@@ -99,10 +101,12 @@ namespace beepbox {
 		public static readonly drumWaveIsSoft: ReadonlyArray<boolean> = [false, true, false, false, true, /*true, true, true*/];
 		// Noise waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
 		private static readonly _drumWaves: Array<Float32Array | null> = [null, null, null, null, null, /*null, null, null*/];
-		public static readonly filterNames: ReadonlyArray<string> = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
-		public static readonly filterBases: ReadonlyArray<number> = [0.0, 2.0, 3.5, 5.0, 1.0, 2.5, 4.0];
-		public static readonly filterDecays: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 10.0, 7.0, 4.0];
-		public static readonly filterVolumes: ReadonlyArray<number> = [0.2, 0.4, 0.7, 1.0, 0.5, 0.75, 1.0];
+		public static readonly filterCutoffMaxHz: number = 8000; // This is carefully calculated to correspond to no change when filtering at 48000 samples per second.
+		public static readonly filterCutoffMinHz: number = 10;
+		public static readonly filterMax: number = 0.95;
+		public static readonly filterMaxResonance: number = 0.95;
+		public static readonly filterCutoffRange: number = 11;
+		public static readonly filterResonanceRange: number = 8;
 		public static readonly transitionNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide"];
 		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremolo light", "tremolo heavy"];
 		public static readonly effectVibratos: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
@@ -114,7 +118,7 @@ namespace beepbox {
 		public static readonly chorusVolumes: ReadonlyArray<number> = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0, 1.0];
 		public static readonly chorusSigns: ReadonlyArray<number> = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0];
 		public static readonly chorusHarmonizes: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, true];
-		public static readonly delayNames: ReadonlyArray<string> = ["none", "reverb", "sweeping chorus", "chorus & reverb"];
+		public static readonly delayNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
 		public static readonly volumeNames: ReadonlyArray<string> = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
 		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
 		public static readonly operatorCount: number = 4;
@@ -172,10 +176,10 @@ namespace beepbox {
 		public static readonly operatorFrequencies: ReadonlyArray<number> =    [ 1.0,   1.0,   2.0,   2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,  9.0, 11.0, 13.0, 16.0, 20.0];
 		public static readonly operatorHzOffsets: ReadonlyArray<number> =      [ 0.0,   1.5,   0.0,  -1.3,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0];
 		public static readonly operatorAmplitudeSigns: ReadonlyArray<number> = [ 1.0,  -1.0,   1.0,  -1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0];
-		public static readonly operatorEnvelopeNames: ReadonlyArray<string> = ["custom", "steady", "punch", "flare 1", "flare 2", "flare 3", "pluck 1", "pluck 2", "pluck 3", "swell 1", "swell 2", "swell 3", "tremolo1", "tremolo2", "tremolo3"];
-		public static readonly operatorEnvelopeType: ReadonlyArray<EnvelopeType> = [EnvelopeType.custom, EnvelopeType.steady, EnvelopeType.punch, EnvelopeType.flare, EnvelopeType.flare, EnvelopeType.flare, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.tremolo, EnvelopeType.tremolo, EnvelopeType.tremolo];
-		public static readonly operatorEnvelopeSpeed: ReadonlyArray<number> = [0.0, 0.0, 0.0, 32.0, 8.0, 2.0, 32.0, 8.0, 2.0, 32.0, 8.0, 2.0, 4.0, 2.0, 1.0];
-		public static readonly operatorEnvelopeInverted: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, false, true, true, true, false, false, false];
+		public static readonly operatorEnvelopeNames: ReadonlyArray<string> = ["custom", "steady", "punch", "flare 1", "flare 2", "flare 3", "pluck 1", "pluck 2", "pluck 3", "swell 1", "swell 2", "swell 3", "tremolo1", "tremolo2", "tremolo3", "tremolo4", "tremolo5", "tremolo6", "decay 1", "decay 2", "decay 3"];
+		public static readonly operatorEnvelopeType: ReadonlyArray<EnvelopeType> = [EnvelopeType.custom, EnvelopeType.steady, EnvelopeType.punch, EnvelopeType.flare, EnvelopeType.flare, EnvelopeType.flare, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.pluck, EnvelopeType.tremolo, EnvelopeType.tremolo, EnvelopeType.tremolo, EnvelopeType.tremolo2, EnvelopeType.tremolo2, EnvelopeType.tremolo2, EnvelopeType.decay, EnvelopeType.decay, EnvelopeType.decay];
+		public static readonly operatorEnvelopeSpeed: ReadonlyArray<number> = [0.0, 0.0, 0.0, 32.0, 8.0, 2.0, 32.0, 8.0, 2.0, 32.0, 8.0, 2.0, 4.0, 2.0, 1.0, 4.0, 2.0, 1.0, 10.0, 7.0, 4.0];
+		public static readonly operatorEnvelopeInverted: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, false, true, true, true, false, false, false, false, false, false, false, false, false];
 		public static readonly operatorFeedbackNames: ReadonlyArray<string> = [
 			"1⟲",
 			"2⟲",
@@ -512,14 +516,20 @@ namespace beepbox {
 		
 		volume = CharCode.v,
 		wave = CharCode.w,
-		
+		filterCutoff = CharCode.x,
+		filterResonance = CharCode.y,
+		filterEnvelope = CharCode.z,
 		algorithm = CharCode.A,
 		feedbackAmplitude = CharCode.B,
+		
 		operatorEnvelopes = CharCode.E,
 		feedbackType = CharCode.F,
+		
 		operatorAmplitudes = CharCode.P,
 		operatorFrequencies = CharCode.Q,
+		
 		startInstrument = CharCode.T,
+		
 		feedbackEnvelope = CharCode.V,
 	}
 	
@@ -719,7 +729,9 @@ namespace beepbox {
 	export class Instrument {
 		public type: InstrumentType = InstrumentType.chip;
 		public wave: number = 1;
-		public filter: number = 1;
+		public filterCutoff: number = 6;
+		public filterResonance: number = 0;
+		public filterEnvelope: number = 1;
 		public transition: number = 1;
 		public effect: number = 0;
 		public chorus: number = 0;
@@ -742,7 +754,9 @@ namespace beepbox {
 			switch (type) {
 				case InstrumentType.chip:
 					this.wave = 1;
-					this.filter = 1;
+					this.filterCutoff = 6;
+					this.filterResonance = 0;
+					this.filterEnvelope = 1;
 					this.transition = 1;
 					this.effect = 0;
 					this.chorus = 0;
@@ -773,7 +787,9 @@ namespace beepbox {
 		public copy(other: Instrument): void {
 			this.type = other.type;
 			this.wave = other.wave;
-			this.filter = other.filter;
+			this.filterCutoff = other.filterCutoff;
+			this.filterResonance = other.filterResonance;
+			this.filterEnvelope = other.filterEnvelope;
 			this.transition = other.transition;
 			this.effect = other.effect;
 			this.chorus = other.chorus;
@@ -928,7 +944,9 @@ namespace beepbox {
 					if (instrument.type == InstrumentType.chip) {
 						// chip
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
-						buffer.push(SongTagCode.filter, base64IntToCharCode[instrument.filter]);
+						buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
+						buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
+						buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]);
 						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
 						buffer.push(SongTagCode.effect, base64IntToCharCode[instrument.effect]);
 						buffer.push(SongTagCode.chorus, base64IntToCharCode[instrument.chorus]);
@@ -1254,18 +1272,37 @@ namespace beepbox {
 						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = Song._clip(0, isDrums ? Config.drumNames.length : Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				} else if (command == SongTagCode.filter) {
+					const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
+					const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
+					const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
+					
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channels[channel].instruments[0].filter = [1, 3, 4, 5][Song._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+						const legacyFilter: number = [1, 3, 4, 5][Song._clip(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+						this.channels[channel].instruments[0].filterCutoff = legacyToCutoff[legacyFilter];
+						this.channels[channel].instruments[0].filterEnvelope = legacyToEnvelope[legacyFilter];
+						this.channels[channel].instruments[0].filterResonance = 0;
 					} else if (beforeSix) {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.channels[channel].instruments[i].filter = Song._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
+								const legacyFilter: number = Song._clip(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
+								this.channels[channel].instruments[i].filterCutoff = legacyToCutoff[legacyFilter];
+								this.channels[channel].instruments[i].filterEnvelope = legacyToEnvelope[legacyFilter];
+								this.channels[channel].instruments[i].filterResonance = 0;
 							}
 						}
 					} else {
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filter = Song._clip(0, Config.filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						const legacyFilter: number = Song._clip(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterCutoff = legacyToCutoff[legacyFilter];
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterEnvelope = legacyToEnvelope[legacyFilter];
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterResonance = 0;
 					}
+				} else if (command == SongTagCode.filterCutoff) {
+					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterCutoff = Song._clip(0, Config.filterCutoffRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				} else if (command == SongTagCode.filterResonance) {
+					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterResonance = Song._clip(0, Config.filterResonanceRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				} else if (command == SongTagCode.filterEnvelope) {
+					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterEnvelope = Song._clip(0, Config.operatorEnvelopeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.transition) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
@@ -1555,7 +1592,9 @@ namespace beepbox {
 							volume: (5 - instrument.volume) * 20,
 							wave: Config.waveNames[instrument.wave],
 							transition: Config.transitionNames[instrument.transition],
-							filter: Config.filterNames[instrument.filter],
+							filterCutoffHz: Math.round(Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5)),
+							filterResonance: 100 * instrument.filterResonance / (Config.filterResonanceRange - 1),
+							filterEnvelope: Config.operatorEnvelopeNames[instrument.filterEnvelope],
 							chorus: Config.chorusNames[instrument.chorus],
 							delay: Config.chorusNames[instrument.delay],
 							effect: Config.effectNames[instrument.effect],
@@ -1794,9 +1833,30 @@ namespace beepbox {
 							instrument.wave = Config.waveNames.indexOf(instrumentObject.wave);
 							if (instrument.wave == -1) instrument.wave = 1;
 							
-							const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
-							instrument.filter = oldFilterNames[instrumentObject.filter] != undefined ? oldFilterNames[instrumentObject.filter] : Config.filterNames.indexOf(instrumentObject.filter);
-							if (instrument.filter == -1) instrument.filter = 0;
+							if (instrumentObject.filterCutoffHz != undefined) {
+								instrument.filterCutoff = Song._clip(0, Config.filterCutoffRange, Math.round((Config.filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject.filterCutoffHz | 0) / Config.filterCutoffMaxHz) / Math.log(2)));
+							} else {
+								instrument.filterCutoff = 6;
+							}
+							if (instrumentObject.filterResonance != undefined) {
+								instrument.filterResonance = Song._clip(0, Config.filterResonanceRange, Math.round((Config.filterResonanceRange - 1) * (instrumentObject.filterResonance | 0) / 100));
+							} else {
+								instrument.filterResonance = 0;
+							}
+							instrument.filterEnvelope = Config.operatorEnvelopeNames.indexOf(instrumentObject.filterEnvelope);
+							if (instrument.filterEnvelope == -1) instrument.filterEnvelope = 0;
+							
+							if (instrumentObject.filter != undefined) {
+								const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
+								const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
+								const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
+								const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
+								let legacyFilter: number = oldFilterNames[instrumentObject.filter] != undefined ? oldFilterNames[instrumentObject.filter] : filterNames.indexOf(instrumentObject.filter);
+								if (legacyFilter == -1) legacyFilter = 0;
+								instrument.filterCutoff = legacyToCutoff[legacyFilter];
+								instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
+								instrument.filterResonance = 0;
+							}
 							
 							instrument.chorus = Config.chorusNames.indexOf(instrumentObject.chorus);
 							if (instrument.chorus == -1) instrument.chorus = 0;
@@ -1981,6 +2041,8 @@ namespace beepbox {
 		public phaseDeltaScale: number = 0.0;
 		public filter: number = 0.0;
 		public filterScale: number = 0.0;
+		public filterSample0: number = 0.0;
+		public filterSample1: number = 0.0;
 		public vibratoScale: number = 0.0;
 		public harmonyMult: number = 0.0;
 		public harmonyVolumeMult: number = 1.0;
@@ -1998,6 +2060,8 @@ namespace beepbox {
 				this.feedbackOutputs[i] = 0.0;
 			}
 			this.sample = 0.0;
+			this.filterSample0 = 0.0;
+			this.filterSample1 = 0.0;
 		}
 	}
 	
@@ -2401,7 +2465,7 @@ namespace beepbox {
 			let reverbFeedback1: number = +this.reverbFeedback1;
 			let reverbFeedback2: number = +this.reverbFeedback2;
 			let reverbFeedback3: number = +this.reverbFeedback3;
-			const reverb: number = Math.pow(this.song.reverb / beepbox.Config.reverbRange, 0.667) * 0.425;
+			const reverb: number = Math.pow(this.song.reverb / Config.reverbRange, 0.667) * 0.425;
 			const limitDecay: number = +this.limitDecay;
 			let limit: number = +this.limit;
 			for (let i: number = 0; i < bufferLength; i++) {
@@ -2502,12 +2566,16 @@ namespace beepbox {
 					}
 				case EnvelopeType.tremolo: 
 					return 0.5 - Math.cos(beats * 2.0 * Math.PI * Config.operatorEnvelopeSpeed[envelope]) * 0.5;
+				case EnvelopeType.tremolo2: 
+					return 0.75 - Math.cos(beats * 2.0 * Math.PI * Config.operatorEnvelopeSpeed[envelope]) * 0.25;
 				case EnvelopeType.punch: 
 					return Math.max(1.0, 2.0 - time * 10.0);
 				case EnvelopeType.flare:
 					const speed: number = Config.operatorEnvelopeSpeed[envelope];
 					const attack: number = 0.25 / Math.sqrt(speed);
 					return time < attack ? time / attack : 1.0 / (1.0 + (time - attack) * speed);
+				case EnvelopeType.decay:
+					return Math.pow(2, -Config.operatorEnvelopeSpeed[envelope] * time);
 				default: throw new Error("Unrecognized operator envelope type.");
 			}
 		}
@@ -2769,11 +2837,21 @@ namespace beepbox {
 					}
 					let settingsVolumeMult: number;
 					if (!isDrum) {
-						const filterScaleRate: number = Config.filterDecays[instrument.filter];
-						tone.filter = Math.pow(2, -filterScaleRate * secondsPerPart * decayTimeStart);
-						const endFilter: number = Math.pow(2, -filterScaleRate * secondsPerPart * decayTimeEnd);
+						const filterCutoffHz: number = Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5);
+						const filterBase: number = 2.0 * Math.sin(Math.PI * filterCutoffHz / synth.samplesPerSecond);
+						const filterMin: number = 2.0 * Math.sin(Math.PI * Config.filterCutoffMinHz / synth.samplesPerSecond);
+						tone.filter = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, envelopeVolumeStart);
+						let endFilter: number = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, envelopeVolumeEnd);
+						tone.filter = Math.min(Config.filterMax, Math.max(filterMin, tone.filter));
+						endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
 						tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
-						settingsVolumeMult = 0.27 * 0.5 * Config.waveVolumes[instrument.wave] * Config.filterVolumes[instrument.filter] * Config.chorusVolumes[instrument.chorus];
+						
+						let filterVolume: number = -0.1 * (instrument.filterCutoff - (Config.filterCutoffRange - 1));
+						const envelopeType: EnvelopeType = Config.operatorEnvelopeType[instrument.filterEnvelope];
+						if (envelopeType == EnvelopeType.decay) filterVolume = (filterVolume + 1) * 0.5;
+						filterVolume = Math.max(0.2, filterVolume);
+						
+						settingsVolumeMult = 0.27 * 0.5 * Config.waveVolumes[instrument.wave] * filterVolume * Config.chorusVolumes[instrument.chorus];
 					} else {
 						settingsVolumeMult = 0.19 * Config.drumVolumes[instrument.wave];
 					}
@@ -2784,8 +2862,20 @@ namespace beepbox {
 					tone.phaseDeltas[0] = startFreq * sampleTime;
 					
 					const instrumentVolumeMult: number = (instrument.volume == 5) ? 0.0 : Math.pow(2, -Config.volumeValues[instrument.volume]);
-					tone.volumeStarts[0] = transitionVolumeStart * envelopeVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
-					const volumeEnd: number = transitionVolumeEnd * envelopeVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
+					tone.volumeStarts[0] = transitionVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
+					let volumeEnd: number = transitionVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
+					
+					if (Config.operatorEnvelopeType[instrument.filterEnvelope] != EnvelopeType.custom) {
+						tone.volumeStarts[0] *= envelopeVolumeStart;
+						volumeEnd *= envelopeVolumeEnd;
+					}
+					
+					if (instrument.filterResonance > 0) {
+						const resonanceVolume: number = 1.5 - 0.1 * (instrument.filterResonance - 1);
+						tone.volumeStarts[0] *= resonanceVolume;
+						volumeEnd *= resonanceVolume;
+					}
+					
 					tone.volumeDeltas[0] = (volumeEnd - tone.volumeStarts[0]) / runLength;
 				}
 				
@@ -2868,31 +2958,37 @@ namespace beepbox {
 		}
 		
 		private static chipSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
-			// TODO: Skip this line and oscillator below unless using an effect:
+			// TODO: Skip this line and oscillator below unless using an effect?
 			const effectYMult: number = +synth.effectYMult;
 			let effectY: number     = +Math.sin(synth.effectPhase);
 			let prevEffectY: number = +Math.sin(synth.effectPhase - synth.effectAngle);
 			
-			const wave: Float64Array = beepbox.Config.waves[instrument.wave];
+			const wave: Float64Array = Config.waves[instrument.wave];
 			const waveLength: number = +wave.length;
-			const filterBase: number = +Math.pow(2, -beepbox.Config.filterBases[instrument.filter]);
-			const tremoloScale: number = +beepbox.Config.effectTremolos[instrument.effect];
+			const tremoloScale: number = +Config.effectTremolos[instrument.effect];
 			
-			const chorusA: number = +Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument.chorus] + beepbox.Config.chorusIntervals[instrument.chorus]) / 12.0);
-			const chorusB: number =  Math.pow(2.0, (beepbox.Config.chorusOffsets[instrument.chorus] - beepbox.Config.chorusIntervals[instrument.chorus]) / 12.0) * tone.harmonyMult;
-			const chorusSign: number = tone.harmonyVolumeMult * beepbox.Config.chorusSigns[instrument.chorus];
+			const chorusA: number = +Math.pow(2.0, (Config.chorusOffsets[instrument.chorus] + Config.chorusIntervals[instrument.chorus]) / 12.0);
+			const chorusB: number =  Math.pow(2.0, (Config.chorusOffsets[instrument.chorus] - Config.chorusIntervals[instrument.chorus]) / 12.0) * tone.harmonyMult;
+			const chorusSign: number = tone.harmonyVolumeMult * Config.chorusSigns[instrument.chorus];
 			if (instrument.chorus == 0) tone.phases[1] = tone.phases[0];
 			const deltaRatio: number = chorusB / chorusA;
 			let phaseDelta: number = tone.phaseDeltas[0] * chorusA;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStarts[0];
 			const volumeDelta: number = +tone.volumeDeltas[0];
-			let filter: number = tone.filter * filterBase;
-			const filterScale: number = +tone.filterScale;
 			const vibratoScale: number = +tone.vibratoScale;
 			let phaseA: number = tone.phases[0] % 1;
 			let phaseB: number = tone.phases[1] % 1;
 			let sample: number = +tone.sample;
+			
+			let filter1: number = +tone.filter;
+			let filter2: number = (instrument.filterResonance == 0) ? 1.0 : filter1;
+			const filterScale1: number = +tone.filterScale;
+			const filterScale2: number = (instrument.filterResonance == 0) ? 1.0 : filterScale1;
+			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.filterResonance - 1) / (Config.filterResonanceRange - 2), 0.5);
+			let filterSample0: number = +tone.filterSample0;
+			let filterSample1: number = +tone.filterSample1;
+			//console.log(filterMax, filterModulator, filterResonance, filterScale);
 			
 			const stopIndex: number = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
@@ -2904,12 +3000,18 @@ namespace beepbox {
 				
 				const waveA: number = wave[0|(phaseA * waveLength)];
 				const waveB: number = wave[0|(phaseB * waveLength)] * chorusSign;
-				const combinedWave: number = (waveA + waveB) * volume * tremolo;
-				sample += (combinedWave - sample) * filter;
+				const combinedWave: number = (waveA + waveB);
+				
+				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
+				filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
+				filterSample1 += filter2 * (filterSample0 - filterSample1);
+				sample = filterSample1 * volume * tremolo;
+				
 				volume += volumeDelta;
 				phaseA += phaseDelta * vibrato;
 				phaseB += phaseDelta * vibrato * deltaRatio;
-				filter *= filterScale;
+				filter1 *= filterScale1;
+				filter2 *= filterScale2;
 				phaseA -= 0|phaseA;
 				phaseB -= 0|phaseB;
 				phaseDelta *= phaseDeltaScale;
@@ -2921,10 +3023,16 @@ namespace beepbox {
 			tone.phases[0] = phaseA;
 			tone.phases[1] = phaseB;
 			tone.sample = sample;
+			
+			const epsilon: number = (1.0e-24);
+			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
+			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
+			tone.filterSample0 = filterSample0;
+			tone.filterSample1 = filterSample1;
 		}
 		
 		private static fmSourceTemplate: string[] = (`
-			// TODO: Skip this line and oscillator below unless using an effect:
+			// TODO: Skip this line and oscillator below unless using an effect?
 			var effectYMult = +synth.effectYMult;
 			var effectY     = +Math.sin(synth.effectPhase);
 			var prevEffectY = +Math.sin(synth.effectPhase - synth.effectAngle);
@@ -2978,7 +3086,7 @@ namespace beepbox {
 		`).split("\n");
 		
 		private static noiseSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
-			const wave: Float64Array = beepbox.Config.getDrumWave(instrument.wave);
+			const wave: Float64Array = Config.getDrumWave(instrument.wave);
 			let phaseDelta: number = +tone.phaseDeltas[0] / 32768.0;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStarts[0];

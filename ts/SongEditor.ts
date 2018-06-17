@@ -113,7 +113,7 @@ namespace beepbox {
 		private readonly _playButton: HTMLButtonElement = button({style: "width: 80px;", type: "button"});
 		private readonly _prevBarButton: HTMLButtonElement = button({className: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)"});
 		private readonly _nextBarButton: HTMLButtonElement = button({className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
-		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0px;", type: "range", min: "0", max: "100", value: "50", step: "1"});
+		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "100", value: "50", step: "1"});
 		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
 			option("", "Edit", true, true),
 			option("undo", "Undo (Z)", false, false),
@@ -151,8 +151,8 @@ namespace beepbox {
 		]);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select({}), Config.scaleNames);
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select({}), Config.keyNames);
-		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0px;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
-		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0px;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
+		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
+		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
 		private readonly _partSelect: HTMLSelectElement = buildOptions(select({}), Config.partNames);
 		private readonly _instrumentTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.pitchChannelTypeNames);
 		private readonly _instrumentTypeHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
@@ -161,15 +161,19 @@ namespace beepbox {
 		private readonly _algorithmSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Algorithm: ")]), div({className: "selectContainer"}, [this._algorithmSelect])]);
 		private readonly _instrumentSelect: HTMLSelectElement = select({});
 		private readonly _instrumentSelectRow: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, [span({}, [text("Instrument: ")]), div({className: "selectContainer"}, [this._instrumentSelect])]);
-		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0px;", type: "range", min: "-5", max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
+		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "-5", max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
 		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Volume: ")]), this._instrumentVolumeSlider.input]);
 		private readonly _waveSelect: HTMLSelectElement = buildOptions(select({}), Config.waveNames);
 		private readonly _drumSelect: HTMLSelectElement = buildOptions(select({}), Config.drumNames);
 		private readonly _waveSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Wave: ")]), div({className: "selectContainer"}, [this._waveSelect, this._drumSelect])]);
 		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select({}), Config.transitionNames);
 		private readonly _delaySelect: HTMLSelectElement = buildOptions(select({}), Config.delayNames);
-		private readonly _filterSelect: HTMLSelectElement = buildOptions(select({}), Config.filterNames);
-		private readonly _filterSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Filter: ")]), div({className: "selectContainer"}, [this._filterSelect])]);
+		private readonly _filterCutoffSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue));
+		private readonly _filterCutoffSliderRow: HTMLDivElement = div({className: "selectRow", title: "Filter Cutoff Frequency"}, [span({}, [text("Filter: ")]), this._filterCutoffSlider.input]);
+		private readonly _filterResonanceSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterResonanceRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterResonance(this._doc, oldValue, newValue));
+		private readonly _filterResonanceSliderRow: HTMLDivElement = div({className: "selectRow", title: "Filter Resonance"}, [span({}, [text("Resonance: ")]), this._filterResonanceSlider.input]);
+		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorEnvelopeNames);
+		private readonly _filterEnvelopeSelectRow: HTMLDivElement = div({className: "selectRow", title: "Filter Envelope"}, [span({}, [text("Envelope: ")]), div({className: "selectContainer"}, [this._filterEnvelopeSelect])]);
 		private readonly _chorusSelect: HTMLSelectElement = buildOptions(select({}), Config.chorusNames);
 		private readonly _chorusHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
 		private readonly _chorusSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chorus: ")]), this._chorusHint, div({className: "selectContainer"}, [this._chorusSelect])]);
@@ -179,7 +183,7 @@ namespace beepbox {
 		private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorFeedbackNames);
 		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Feedback:")]), div({className: "selectContainer"}, [this._feedbackTypeSelect])]);
 		
-		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({style: "margin: 0px; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
+		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
 		private readonly _feedbackEnvelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Feedback Envelope"}), Config.operatorEnvelopeNames);
 		private readonly _feedbackRow2: HTMLDivElement = div({className: "operatorRow"}, [
 			div({style: "margin-right: .1em; visibility: hidden;"}, [text(1 + ".")]),
@@ -196,7 +200,9 @@ namespace beepbox {
 				span({}, [text("Transition: ")]),
 				div({className: "selectContainer"}, [this._transitionSelect]),
 			]),
-			this._filterSelectRow,
+			this._filterCutoffSliderRow,
+			this._filterResonanceSliderRow,
+			this._filterEnvelopeSelectRow,
 			this._chorusSelectRow,
 			div({className: "selectRow"}, [
 				span({}, [text("Delay: ")]),
@@ -342,7 +348,7 @@ namespace beepbox {
 			this._drumSelect.addEventListener("change", this._whenSetDrum);
 			this._transitionSelect.addEventListener("change", this._whenSetTransition);
 			this._delaySelect.addEventListener("change", this._whenSetDelay);
-			this._filterSelect.addEventListener("change", this._whenSetFilter);
+			this._filterEnvelopeSelect.addEventListener("change", this._whenSetFilterEnvelope);
 			this._chorusSelect.addEventListener("change", this._whenSetChorus);
 			this._effectSelect.addEventListener("change", this._whenSetEffect);
 			this._playButton.addEventListener("click", this._togglePlay);
@@ -452,7 +458,9 @@ namespace beepbox {
 				this._feedbackRow1.style.display = "none";
 				this._feedbackRow2.style.display = "none";
 				this._waveSelect.style.display = "none";
-				this._filterSelectRow.style.display = "none";
+				this._filterCutoffSliderRow.style.display = "none";
+				this._filterResonanceSliderRow.style.display = "none";
+				this._filterEnvelopeSelectRow.style.display = "none";
 				this._chorusSelectRow.style.display = "none";
 				this._effectSelectRow.style.display = "none";
 			} else if (instrument.type == InstrumentType.chip) {
@@ -462,7 +470,9 @@ namespace beepbox {
 				this._instrumentVolumeSliderRow.style.display = "";
 				this._waveSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
-				this._filterSelectRow.style.display = "";
+				this._filterCutoffSliderRow.style.display = "";
+				this._filterResonanceSliderRow.style.display = "";
+				this._filterEnvelopeSelectRow.style.display = "";
 				this._chorusSelectRow.style.display = "";
 				this._algorithmSelectRow.style.display = "none";
 				this._phaseModGroup.style.display = "none";
@@ -478,7 +488,9 @@ namespace beepbox {
 				this._feedbackRow2.style.display = "";
 				this._instrumentVolumeSliderRow.style.display = "none";
 				this._waveSelectRow.style.display = "none";
-				this._filterSelectRow.style.display = "none";
+				this._filterCutoffSliderRow.style.display = "none";
+				this._filterResonanceSliderRow.style.display = "none";
+				this._filterEnvelopeSelectRow.style.display = "none";
 				this._chorusSelectRow.style.display = "none";
 			} else {
 				throw new Error("Unrecognized instrument type: " + instrument.type);
@@ -502,7 +514,9 @@ namespace beepbox {
 			
 			setSelectedIndex(this._waveSelect, instrument.wave);
 			setSelectedIndex(this._drumSelect, instrument.wave);
-			setSelectedIndex(this._filterSelect, instrument.filter);
+			this._filterCutoffSlider.updateValue(instrument.filterCutoff);
+			this._filterResonanceSlider.updateValue(instrument.filterResonance);
+			setSelectedIndex(this._filterEnvelopeSelect, instrument.filterEnvelope);
 			setSelectedIndex(this._transitionSelect, instrument.transition);
 			setSelectedIndex(this._delaySelect, instrument.delay);
 			setSelectedIndex(this._effectSelect, instrument.effect);
@@ -759,8 +773,8 @@ namespace beepbox {
 			this._doc.record(new ChangeWave(this._doc, this._drumSelect.selectedIndex));
 		}
 		
-		private _whenSetFilter = (): void => {
-			this._doc.record(new ChangeFilter(this._doc, this._filterSelect.selectedIndex));
+		private _whenSetFilterEnvelope = (): void => {
+			this._doc.record(new ChangeFilterEnvelope(this._doc, this._filterEnvelopeSelect.selectedIndex));
 		}
 		
 		private _whenSetTransition = (): void => {
