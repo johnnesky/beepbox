@@ -302,12 +302,30 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeFilter extends Change {
+	export class ChangeFilterCutoff extends Change {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super();
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filterCutoff = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangeFilterResonance extends Change {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super();
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filterResonance = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangeFilterEnvelope extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filter;
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filterEnvelope;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filter = newValue;
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filterEnvelope = newValue;
 				doc.notifier.changed();
 				this._didSomething();
 			}

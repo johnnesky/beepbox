@@ -524,16 +524,21 @@ namespace beepbox {
 								if (instrument.type == InstrumentType.noise) {
 									description += ", noise: " + Config.drumNames[instrument.wave];
 									description += ", volume: " + Config.volumeNames[instrument.volume];
-								
+									
 									instrumentProgram = 0x7E; // seashore, applause
 								} else if (instrument.type == InstrumentType.chip) {
 									description += ", wave: " + Config.waveNames[instrument.wave];
 									description += ", volume: " + Config.volumeNames[instrument.volume];
-									description += ", filter: " + Config.filterNames[instrument.filter];
+									description += ", filterCutoff: " + instrument.filterCutoff;
+									description += ", filterResonance: " + instrument.filterResonance;
+									description += ", filterEnvelope: " + Config.operatorEnvelopeNames[instrument.filterEnvelope];
 									description += ", chorus: " + Config.chorusNames[instrument.chorus];
 									description += ", effect: " + Config.effectNames[instrument.effect];
-								
-									const filterInstruments: number[] = Config.filterDecays[instrument.filter] == 0 ? Config.midiSustainInstruments : Config.midiDecayInstruments;
+									
+									const envelopeType: EnvelopeType = Config.operatorEnvelopeType[instrument.filterEnvelope];
+									const filterInstruments: number[] = (envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.pluck)
+										? Config.midiDecayInstruments
+										: Config.midiSustainInstruments;
 									instrumentProgram = filterInstruments[instrument.wave];
 								} else if (instrument.type == InstrumentType.fm) {
 									description += ", effect: " + Config.effectNames[instrument.effect];

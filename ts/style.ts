@@ -260,7 +260,7 @@ styleSheet.appendChild(document.createTextNode(`
 
 .beepboxEditor .selectRow {
 	margin: 0;
-	height: 2.5em;
+	height: 2.2em;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -273,7 +273,7 @@ styleSheet.appendChild(document.createTextNode(`
 
 .beepboxEditor .operatorRow {
 	margin: 0;
-	height: 2.5em;
+	height: 2.2em;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -436,12 +436,12 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .playback-bar-controls {
 		display: flex;
 		flex-direction: row;
-		margin: .2em 0;
+		margin: .1em 0;
 	}
 	.beepboxEditor .playback-volume-controls {
 		display: flex;
 		flex-direction: row;
-		margin: .2em 0;
+		margin: .1em 0;
 		align-items: center;
 	}
 	.beepboxEditor .pauseButton, .beepboxEditor .playButton {
@@ -464,7 +464,7 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.beepboxEditor .editor-menus > * {
 		flex-grow: 1;
-		margin: .2em 0;
+		margin: .1em 0;
 	}
 	.beepboxEditor .editor-menus > button {
 		padding: 0 2em;
@@ -488,7 +488,7 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.beepboxEditor .editor-menus > * {
 		flex-grow: 1;
-		margin: .2em;
+		margin: .1em;
 	}
 	.beepboxEditor .editor-menus > button {
 		padding-left: 2em;
@@ -503,7 +503,7 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .playback-controls {
 		display: flex;
 		flex-direction: row;
-		margin: .2em 0;
+		margin: .1em 0;
 	}
 	.beepboxEditor .playback-bar-controls {
 		display: flex;
@@ -515,7 +515,7 @@ styleSheet.appendChild(document.createTextNode(`
 		flex-direction: row;
 		align-items: center;
 		flex-grow: 1;
-		margin: 0 .2em;
+		margin: 0 .1em;
 	}
 	.beepboxEditor .editor-widget-column {
 		flex-direction: column-reverse;
@@ -526,11 +526,11 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .pauseButton, .beepboxEditor .playButton,
 	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
 		flex-grow: 1;
-		margin: 0 .2em;
+		margin: 0 .1em;
 	}
 	.beepboxEditor .editor-song-settings, .beepboxEditor .editor-instrument-settings {
 		flex-grow: 1;
-		margin: 0 .2em;
+		margin: 0 .1em;
 	}
 	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings .selectContainer {
 		width: 60%;
