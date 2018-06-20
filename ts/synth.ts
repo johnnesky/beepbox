@@ -118,7 +118,7 @@ namespace beepbox {
 		public static readonly chorusVolumes: ReadonlyArray<number> = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0, 1.0];
 		public static readonly chorusSigns: ReadonlyArray<number> = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0];
 		public static readonly chorusHarmonizes: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, true];
-		public static readonly delayNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
+		public static readonly delayNames: ReadonlyArray<string> = ["none", "reverb", "shifting chorus", "chorus & reverb"];
 		public static readonly volumeNames: ReadonlyArray<string> = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
 		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
 		public static readonly operatorCount: number = 4;
@@ -766,11 +766,14 @@ namespace beepbox {
 				case InstrumentType.fm:
 					this.transition = 1;
 					this.effect = 0;
+					this.delay = 1;
+					this.filterCutoff = 10;
+					this.filterResonance = 0;
+					this.filterEnvelope = 1;
 					this.algorithm = 0;
 					this.feedbackType = 0;
 					this.feedbackAmplitude = 0;
 					this.feedbackEnvelope = 1;
-					this.delay = 1;
 					for (let i: number = 0; i < this.operators.length; i++) {
 						this.operators[i].reset(i);
 					}
@@ -780,7 +783,12 @@ namespace beepbox {
 					this.transition = 1;
 					this.volume = 0;
 					this.delay = 0;
+					this.filterCutoff = 10;
+					this.filterResonance = 0;
+					this.filterEnvelope = 1;
 					break;
+				default:
+					throw new Error("Unrecognized instrument type: " + type);
 			}
 		}
 		
@@ -941,23 +949,20 @@ namespace beepbox {
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					const instrument: Instrument = this.channels[channel].instruments[i];
 					buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
+					buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
+					buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
+					buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
+					buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]);
+					buffer.push(SongTagCode.delay, base64IntToCharCode[instrument.delay]);
 					if (instrument.type == InstrumentType.chip) {
 						// chip
+						buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
-						buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
-						buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
-						buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]);
-						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
 						buffer.push(SongTagCode.effect, base64IntToCharCode[instrument.effect]);
 						buffer.push(SongTagCode.chorus, base64IntToCharCode[instrument.chorus]);
-						buffer.push(SongTagCode.delay, base64IntToCharCode[instrument.delay]);
-						buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
 					} else if (instrument.type == InstrumentType.fm) {
 						// FM
-						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
 						buffer.push(SongTagCode.effect, base64IntToCharCode[instrument.effect]);
-						buffer.push(SongTagCode.delay, base64IntToCharCode[instrument.delay]);
-						
 						buffer.push(SongTagCode.algorithm, base64IntToCharCode[instrument.algorithm]);
 						buffer.push(SongTagCode.feedbackType, base64IntToCharCode[instrument.feedbackType]);
 						buffer.push(SongTagCode.feedbackAmplitude, base64IntToCharCode[instrument.feedbackAmplitude]);
@@ -978,9 +983,7 @@ namespace beepbox {
 					} else if (instrument.type == InstrumentType.noise) {
 						// noise
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
-						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
 						buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
-						buffer.push(SongTagCode.delay, base64IntToCharCode[instrument.delay]);
 					} else {
 						throw new Error("Unknown instrument type.");
 					}
@@ -1578,27 +1581,22 @@ namespace beepbox {
 				const isDrum: boolean = this.getChannelIsDrum(channel);
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					const instrument: Instrument = this.channels[channel].instruments[i];
+					const instrumentObject: any = {
+						type: Config.instrumentTypeNames[instrument.type],
+						transition: Config.transitionNames[instrument.transition],
+						delay: Config.chorusNames[instrument.delay],
+						filterCutoffHz: Math.round(Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5)),
+						filterResonance: 100 * instrument.filterResonance / (Config.filterResonanceRange - 1),
+						filterEnvelope: Config.operatorEnvelopeNames[instrument.filterEnvelope],
+					};
 					if (instrument.type == InstrumentType.noise) {
-						instrumentArray.push({
-							type: Config.instrumentTypeNames[instrument.type],
-							volume: (5 - instrument.volume) * 20,
-							wave: Config.drumNames[instrument.wave],
-							transition: Config.transitionNames[instrument.transition],
-							delay: Config.chorusNames[instrument.delay],
-						});
+						instrumentObject.volume = (5 - instrument.volume) * 20;
+						instrumentObject.wave = Config.drumNames[instrument.wave];
 					} else if (instrument.type == InstrumentType.chip) {
-						instrumentArray.push({
-							type: Config.instrumentTypeNames[instrument.type],
-							volume: (5 - instrument.volume) * 20,
-							wave: Config.waveNames[instrument.wave],
-							transition: Config.transitionNames[instrument.transition],
-							filterCutoffHz: Math.round(Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5)),
-							filterResonance: 100 * instrument.filterResonance / (Config.filterResonanceRange - 1),
-							filterEnvelope: Config.operatorEnvelopeNames[instrument.filterEnvelope],
-							chorus: Config.chorusNames[instrument.chorus],
-							delay: Config.chorusNames[instrument.delay],
-							effect: Config.effectNames[instrument.effect],
-						});
+						instrumentObject.volume = (5 - instrument.volume) * 20;
+						instrumentObject.wave = Config.waveNames[instrument.wave];
+						instrumentObject.chorus = Config.chorusNames[instrument.chorus];
+						instrumentObject.effect = Config.effectNames[instrument.effect];
 					} else if (instrument.type == InstrumentType.fm) {
 						const operatorArray: Object[] = [];
 						for (const operator of instrument.operators) {
@@ -1608,20 +1606,16 @@ namespace beepbox {
 								envelope: Config.operatorEnvelopeNames[operator.envelope],
 							});
 						}
-						instrumentArray.push({
-							type: Config.instrumentTypeNames[instrument.type],
-							transition: Config.transitionNames[instrument.transition],
-							delay: Config.chorusNames[instrument.delay],
-							effect: Config.effectNames[instrument.effect],
-							algorithm: Config.operatorAlgorithmNames[instrument.algorithm],
-							feedbackType: Config.operatorFeedbackNames[instrument.feedbackType],
-							feedbackAmplitude: instrument.feedbackAmplitude,
-							feedbackEnvelope: Config.operatorEnvelopeNames[instrument.feedbackEnvelope],
-							operators: operatorArray,
-						});
+						instrumentObject.effect = Config.effectNames[instrument.effect];
+						instrumentObject.algorithm = Config.operatorAlgorithmNames[instrument.algorithm];
+						instrumentObject.feedbackType = Config.operatorFeedbackNames[instrument.feedbackType];
+						instrumentObject.feedbackAmplitude = instrument.feedbackAmplitude;
+						instrumentObject.feedbackEnvelope = Config.operatorEnvelopeNames[instrument.feedbackEnvelope];
+						instrumentObject.operators = operatorArray;
 					} else {
 						throw new Error("Unrecognized instrument type");
 					}
+					instrumentArray.push(instrumentObject);
 				}
 				
 				const patternArray: Object[] = [];
@@ -1810,11 +1804,36 @@ namespace beepbox {
 						instrument.transition = oldTransitionNames[transitionObject] != undefined ? oldTransitionNames[transitionObject] : Config.transitionNames.indexOf(transitionObject);
 						if (instrument.transition == -1) instrument.transition = 1;
 						
+						instrument.type = Config.instrumentTypeNames.indexOf(instrumentObject.type);
+						if (instrument.type == -1) instrument.type = isDrum ? InstrumentType.noise : InstrumentType.chip;
+						
 						instrument.delay = Config.chorusNames.indexOf(instrumentObject.delay);
 						if (instrument.delay == -1) instrument.delay = isDrum ? 0 : 1;
 						
-						instrument.type = Config.instrumentTypeNames.indexOf(instrumentObject.type);
-						if (instrument.type == -1) instrument.type = isDrum ? InstrumentType.noise : InstrumentType.chip;
+						if (instrumentObject.filterCutoffHz != undefined) {
+							instrument.filterCutoff = Song._clip(0, Config.filterCutoffRange, Math.round((Config.filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject.filterCutoffHz | 0) / Config.filterCutoffMaxHz) / Math.log(2)));
+						} else {
+							instrument.filterCutoff = (instrument.type == InstrumentType.chip) ? 6 : 10;
+						}
+						if (instrumentObject.filterResonance != undefined) {
+							instrument.filterResonance = Song._clip(0, Config.filterResonanceRange, Math.round((Config.filterResonanceRange - 1) * (instrumentObject.filterResonance | 0) / 100));
+						} else {
+							instrument.filterResonance = 0;
+						}
+						instrument.filterEnvelope = Config.operatorEnvelopeNames.indexOf(instrumentObject.filterEnvelope);
+						if (instrument.filterEnvelope == -1) instrument.filterEnvelope = 1;
+						
+						if (instrumentObject.filter != undefined) {
+							const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
+							const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
+							const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
+							const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
+							let legacyFilter: number = oldFilterNames[instrumentObject.filter] != undefined ? oldFilterNames[instrumentObject.filter] : filterNames.indexOf(instrumentObject.filter);
+							if (legacyFilter == -1) legacyFilter = 0;
+							instrument.filterCutoff = legacyToCutoff[legacyFilter];
+							instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
+							instrument.filterResonance = 0;
+						}
 						
 						if (instrument.type == InstrumentType.noise) {
 							if (instrumentObject.volume != undefined) {
@@ -1832,32 +1851,6 @@ namespace beepbox {
 							}
 							instrument.wave = Config.waveNames.indexOf(instrumentObject.wave);
 							if (instrument.wave == -1) instrument.wave = 1;
-							
-							if (instrumentObject.filterCutoffHz != undefined) {
-								instrument.filterCutoff = Song._clip(0, Config.filterCutoffRange, Math.round((Config.filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject.filterCutoffHz | 0) / Config.filterCutoffMaxHz) / Math.log(2)));
-							} else {
-								instrument.filterCutoff = 6;
-							}
-							if (instrumentObject.filterResonance != undefined) {
-								instrument.filterResonance = Song._clip(0, Config.filterResonanceRange, Math.round((Config.filterResonanceRange - 1) * (instrumentObject.filterResonance | 0) / 100));
-							} else {
-								instrument.filterResonance = 0;
-							}
-							instrument.filterEnvelope = Config.operatorEnvelopeNames.indexOf(instrumentObject.filterEnvelope);
-							if (instrument.filterEnvelope == -1) instrument.filterEnvelope = 0;
-							
-							if (instrumentObject.filter != undefined) {
-								const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
-								const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
-								const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
-								const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
-								let legacyFilter: number = oldFilterNames[instrumentObject.filter] != undefined ? oldFilterNames[instrumentObject.filter] : filterNames.indexOf(instrumentObject.filter);
-								if (legacyFilter == -1) legacyFilter = 0;
-								instrument.filterCutoff = legacyToCutoff[legacyFilter];
-								instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
-								instrument.filterResonance = 0;
-							}
-							
 							instrument.chorus = Config.chorusNames.indexOf(instrumentObject.chorus);
 							if (instrument.chorus == -1) instrument.chorus = 0;
 							instrument.effect = Config.effectNames.indexOf(instrumentObject.effect);
@@ -2038,6 +2031,8 @@ namespace beepbox {
 		public readonly phaseDeltas: number[] = [];
 		public readonly volumeStarts: number[] = [];
 		public readonly volumeDeltas: number[] = [];
+		public volumeStart: number = 0.0;
+		public volumeDelta: number = 0.0;
 		public phaseDeltaScale: number = 0.0;
 		public filter: number = 0.0;
 		public filterScale: number = 0.0;
@@ -2743,7 +2738,7 @@ namespace beepbox {
 				const sampleTime: number = 1.0 / synth.samplesPerSecond;
 				tone.active = true;
 				
-				if (!isDrum && instrument.type == InstrumentType.fm) {
+				if (instrument.type == InstrumentType.fm) {
 					// phase modulation!
 					
 					let sineVolumeBoost: number = 1.0;
@@ -2771,8 +2766,8 @@ namespace beepbox {
 							const endPitch: number = (pitch + intervalEnd) * intervalScale;
 							const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
 							const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
-							volumeStart *= pitchVolumeStart * volumeMult * transitionVolumeStart;
-							volumeEnd *= pitchVolumeEnd * volumeMult * transitionVolumeEnd;
+							volumeStart *= pitchVolumeStart * volumeMult;
+							volumeEnd *= pitchVolumeEnd * volumeMult;
 							
 							totalCarrierVolume += amplitudeCurve;
 						} else {
@@ -2797,13 +2792,15 @@ namespace beepbox {
 					tone.feedbackMult = feedbackStart;
 					tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 					
-					sineVolumeBoost *= 1.0 - instrument.feedbackAmplitude / 15.0;
+					const filterVolume: number = 5.0 * Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, envelopeVolumeStart, envelopeVolumeEnd);
 					
+					tone.volumeStart = filterVolume * transitionVolumeStart;
+					tone.volumeDelta = filterVolume * (transitionVolumeEnd - transitionVolumeStart) / runLength;
+					
+					sineVolumeBoost *= 1.0 - instrument.feedbackAmplitude / 15.0;
 					sineVolumeBoost *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolume - 1) / 2.0);
-					for (let i: number = 0; i < carrierCount; i++) {
-						tone.volumeStarts[i] *= 1.0 + sineVolumeBoost * 3.0;
-						tone.volumeDeltas[i] *= 1.0 + sineVolumeBoost * 3.0;
-					}
+					tone.volumeStart *= 1.0 + sineVolumeBoost * 3.0;
+					tone.volumeDelta *= 1.0 + sineVolumeBoost * 3.0;
 				} else {
 					let pitch: number = pitches[0];
 					if (Config.chorusHarmonizes[instrument.chorus]) {
@@ -2832,28 +2829,12 @@ namespace beepbox {
 					const startFreq: number = synth.frequencyFromPitch(basePitch + startPitch);
 					const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
 					const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
-					if (isDrum && Config.drumWaveIsSoft[instrument.wave]) {
-						tone.filter = Math.min(1.0, startFreq * sampleTime * Config.drumPitchFilterMult[instrument.wave]);
-					}
+					const filterVolume: number = Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, envelopeVolumeStart, envelopeVolumeEnd);
 					let settingsVolumeMult: number;
 					if (!isDrum) {
-						const filterCutoffHz: number = Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5);
-						const filterBase: number = 2.0 * Math.sin(Math.PI * filterCutoffHz / synth.samplesPerSecond);
-						const filterMin: number = 2.0 * Math.sin(Math.PI * Config.filterCutoffMinHz / synth.samplesPerSecond);
-						tone.filter = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, envelopeVolumeStart);
-						let endFilter: number = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, envelopeVolumeEnd);
-						tone.filter = Math.min(Config.filterMax, Math.max(filterMin, tone.filter));
-						endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
-						tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
-						
-						let filterVolume: number = -0.1 * (instrument.filterCutoff - (Config.filterCutoffRange - 1));
-						const envelopeType: EnvelopeType = Config.operatorEnvelopeType[instrument.filterEnvelope];
-						if (envelopeType == EnvelopeType.decay) filterVolume = (filterVolume + 1) * 0.5;
-						filterVolume = Math.max(0.2, filterVolume);
-						
 						settingsVolumeMult = 0.27 * 0.5 * Config.waveVolumes[instrument.wave] * filterVolume * Config.chorusVolumes[instrument.chorus];
 					} else {
-						settingsVolumeMult = 0.19 * Config.drumVolumes[instrument.wave];
+						settingsVolumeMult = 0.19 * Config.drumVolumes[instrument.wave] * 5.0 * filterVolume;
 					}
 					if (resetPhases && !isDrum) {
 						tone.reset();
@@ -2862,21 +2843,21 @@ namespace beepbox {
 					tone.phaseDeltas[0] = startFreq * sampleTime;
 					
 					const instrumentVolumeMult: number = (instrument.volume == 5) ? 0.0 : Math.pow(2, -Config.volumeValues[instrument.volume]);
-					tone.volumeStarts[0] = transitionVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
+					tone.volumeStart = transitionVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
 					let volumeEnd: number = transitionVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
 					
 					if (Config.operatorEnvelopeType[instrument.filterEnvelope] != EnvelopeType.custom) {
-						tone.volumeStarts[0] *= envelopeVolumeStart;
+						tone.volumeStart *= envelopeVolumeStart;
 						volumeEnd *= envelopeVolumeEnd;
 					}
 					
 					if (instrument.filterResonance > 0) {
 						const resonanceVolume: number = 1.5 - 0.1 * (instrument.filterResonance - 1);
-						tone.volumeStarts[0] *= resonanceVolume;
+						tone.volumeStart *= resonanceVolume;
 						volumeEnd *= resonanceVolume;
 					}
 					
-					tone.volumeDeltas[0] = (volumeEnd - tone.volumeStarts[0]) / runLength;
+					tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
 				}
 				
 				tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
@@ -2885,12 +2866,31 @@ namespace beepbox {
 				if (!isDrum) {
 					tone.reset();
 				}
+				/*
+				// I don't think I need this anymore:
 				for (let i: number = 0; i < Config.operatorCount; i++) {
 					tone.phaseDeltas[0] = 0.0;
 					tone.volumeStarts[0] = 0.0;
 					tone.volumeDeltas[0] = 0.0;
 				}
+				*/
 			}
+		}
+		
+		private static setUpResonantFilter(synth: Synth, instrument: Instrument, tone: Tone, runLength: number, secondsPerPart: number, beatsPerPart: number, decayTimeStart: number, decayTimeEnd: number, partTimeStart: number, partTimeEnd: number, envelopeVolumeStart: number, envelopeVolumeEnd: number): number {
+			const filterCutoffHz: number = Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5);
+			const filterBase: number = 2.0 * Math.sin(Math.PI * filterCutoffHz / synth.samplesPerSecond);
+			const filterMin: number = 2.0 * Math.sin(Math.PI * Config.filterCutoffMinHz / synth.samplesPerSecond);
+			tone.filter = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, envelopeVolumeStart);
+			let endFilter: number = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, envelopeVolumeEnd);
+			tone.filter = Math.min(Config.filterMax, Math.max(filterMin, tone.filter));
+			endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
+			tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
+			
+			let filterVolume: number = -0.1 * (instrument.filterCutoff - (Config.filterCutoffRange - 1));
+			const envelopeType: EnvelopeType = Config.operatorEnvelopeType[instrument.filterEnvelope];
+			if (envelopeType == EnvelopeType.decay) filterVolume = (filterVolume + 1) * 0.5;
+			return Math.max(0.2, filterVolume);
 		}
 		
 		private static readonly fmSynthFunctionCache: Dictionary<Function> = {};
@@ -2974,8 +2974,8 @@ namespace beepbox {
 			const deltaRatio: number = chorusB / chorusA;
 			let phaseDelta: number = tone.phaseDeltas[0] * chorusA;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
-			let volume: number = +tone.volumeStarts[0];
-			const volumeDelta: number = +tone.volumeDeltas[0];
+			let volume: number = +tone.volumeStart;
+			const volumeDelta: number = +tone.volumeDelta;
 			const vibratoScale: number = +tone.vibratoScale;
 			let phaseA: number = tone.phases[0] % 1;
 			let phaseB: number = tone.phases[1] % 1;
@@ -2988,7 +2988,6 @@ namespace beepbox {
 			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.filterResonance - 1) / (Config.filterResonanceRange - 2), 0.5);
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
-			//console.log(filterMax, filterModulator, filterResonance, filterScale);
 			
 			const stopIndex: number = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
@@ -3043,7 +3042,7 @@ namespace beepbox {
 			
 			var phaseDeltaScale = +tone.phaseDeltaScale;
 			var vibratoScale = +tone.vibratoScale;
-			var operator#Phase       = +((tone.phases[#] % 1) + ` + Synth.negativePhaseGuard + `) * ` + Config.sineWaveLength + `;
+			var operator#Phase       = +((tone.phases[#] % 1) + beepbox.Synth.negativePhaseGuard) * beepbox.Config.sineWaveLength;
 			var operator#PhaseDelta  = +tone.phaseDeltas[#];
 			var operator#OutputMult  = +tone.volumeStarts[#];
 			var operator#OutputDelta = +tone.volumeDeltas[#];
@@ -3051,6 +3050,16 @@ namespace beepbox {
 			var feedbackMult         = +tone.feedbackMult;
 			var feedbackDelta        = +tone.feedbackDelta;
 			var sample = +tone.sample;
+			var volume = +tone.volumeStart;
+			var volumeDelta = +tone.volumeDelta;
+			
+			var filter1 = +tone.filter;
+			var filter2 = (instrument.filterResonance == 0) ? 1.0 : filter1;
+			var filterScale1 = +tone.filterScale;
+			var filterScale2 = (instrument.filterResonance == 0) ? 1.0 : filterScale1;
+			var filterResonance = beepbox.Config.filterMaxResonance * Math.pow(Math.max(0, instrument.filterResonance - 1) / (beepbox.Config.filterResonanceRange - 2), 0.5);
+			var filterSample0 = +tone.filterSample0;
+			var filterSample1 = +tone.filterSample1;
 			
 			var stopIndex = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
@@ -3061,11 +3070,20 @@ namespace beepbox {
 				prevEffectY = temp;
 				
 				// INSERT OPERATOR COMPUTATION HERE
-				sample = tremolo * (/*operator#Scaled*/); // CARRIER OUTPUTS
+				var fmOutput = tremolo * (/*operator#Scaled*/); // CARRIER OUTPUTS
+				
+				var feedback = filterResonance + filterResonance / (1.0 - filter1);
+				filterSample0 += filter1 * (fmOutput - filterSample0 + feedback * (filterSample0 - filterSample1));
+				filterSample1 += filter2 * (filterSample0 - filterSample1);
+				sample = filterSample1 * volume * tremolo;
+				
+				volume += volumeDelta;
 				feedbackMult += feedbackDelta;
 				operator#OutputMult += operator#OutputDelta;
 				operator#Phase += operator#PhaseDelta * vibrato;
 				operator#PhaseDelta *= phaseDeltaScale;
+				filter1 *= filterScale1;
+				filter2 *= filterScale2;
 				
 				data[bufferIndex] += sample;
 				bufferIndex++;
@@ -3074,6 +3092,12 @@ namespace beepbox {
 			tone.phases[#] = operator#Phase / ` + Config.sineWaveLength + `;
 			tone.feedbackOutputs[#] = operator#Output;
 			tone.sample = sample;
+			
+			var epsilon = (1.0e-24);
+			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
+			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
+			tone.filterSample0 = filterSample0;
+			tone.filterSample1 = filterSample1;
 		`).split("\n");
 		
 		private static operatorSourceTemplate: string[] = (`
@@ -3089,25 +3113,51 @@ namespace beepbox {
 			const wave: Float64Array = Config.getDrumWave(instrument.wave);
 			let phaseDelta: number = +tone.phaseDeltas[0] / 32768.0;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
-			let volume: number = +tone.volumeStarts[0];
-			const volumeDelta: number = +tone.volumeDeltas[0];
-			const filter: number = +tone.filter;
+			let volume: number = +tone.volumeStart;
+			const volumeDelta: number = +tone.volumeDelta;
 			let phase: number = tone.phases[0] % 1;
 			let sample: number = +tone.sample;
 			
+			let filter1: number = +tone.filter;
+			let filter2: number = (instrument.filterResonance == 0) ? 1.0 : filter1;
+			const filterScale1: number = +tone.filterScale;
+			const filterScale2: number = (instrument.filterResonance == 0) ? 1.0 : filterScale1;
+			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.filterResonance - 1) / (Config.filterResonanceRange - 2), 0.5);
+			let filterSample0: number = +tone.filterSample0;
+			let filterSample1: number = +tone.filterSample1;
+			
+			const pitchRelativefilter: number = Config.drumWaveIsSoft[instrument.wave]
+				? Math.min(1.0, tone.phaseDeltas[0] * Config.drumPitchFilterMult[instrument.wave])
+				: 1.0;
+			
 			const stopIndex: number = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
-				sample += (wave[0|(phase * 32768.0)] * volume - sample) * filter;
-				volume += volumeDelta;
+				const waveSample: number = wave[0|(phase * 32768.0)];
+				
+				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
+				filterSample0 += filter1 * (waveSample - filterSample0 + feedback * (filterSample0 - filterSample1));
+				filterSample1 += filter2 * (filterSample0 - filterSample1);
+				
+				sample += (filterSample1 - sample) * pitchRelativefilter;
+				
 				phase += phaseDelta;
+				filter1 *= filterScale1;
+				filter2 *= filterScale2;
 				phase -= 0|phase;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += sample;
+				data[bufferIndex] += sample * volume;
+				volume += volumeDelta;
 				bufferIndex++;
 			}
 			
 			tone.phases[0] = phase;
 			tone.sample = sample;
+			
+			const epsilon: number = (1.0e-24);
+			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
+			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
+			tone.filterSample0 = filterSample0;
+			tone.filterSample1 = filterSample1;
 		}
 		
 		private frequencyFromPitch(pitch: number): number {

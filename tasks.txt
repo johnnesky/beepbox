@@ -289,21 +289,28 @@ MAJOR REMAINING FEATURES:
 
 MISC:
 - Should fm/drums support filters? (should they be modulated by note pitch?)
+- Add a "title" attribute to the "Effect" option calling it "LFO Effect". Better yet, add tooltips to all of the options.
 - get rid of Config.volumeNames
 - copy/paste instruments!
-- maybe command+S should do something useful?
-- maybe sum adjacent fm synth samples (at half volume) to cancel out inaudible feedback artifacts?
+- fadeout transition: I kinda wanna cancel a fadeout if it is the same pitch as a subsequent note. But wait! If there's a pitch bend, does that affect the pitch comparison? What about arpeggio or custom harmony? Pitch bend can't really effect the fading out note (because there are no more pins) but it can affect the new note. Maybe fadeout mode should introduce the slightly random pitch as a catch-all? If I'm gonna add polyphony for fadeout envelope, might as well add it as a full option instead of arpeggio/operator control, so chords can have a variable number of notes. Maybe "soft" onset fadeouts should have slightly random pitch.
 - divert www traffic to beepbox.co
-- instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else. Could I imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument. It may be time to stop using two midi channels for chip chorus.
+- Drum phase should be measured in wave buffer samples, and converted to indices with & 0x7FFF. Then give drum tones a random phase (up to 0x7fff) on reset, and reset drum tones during rests like the rest of the instruments, so that filters are also reset.
+- instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else. Could I imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument. It may be time to stop using two midi channels for chip chorus. Replace Type with Templates. Custom chip and custom FM are generic options at the top that can't be selected directly. (The data format doesn't indicate which template you're using, except maybe json.) The template menu automatically detects if your instrument matches a template, and selects custom for you otherwise. Selecting a template may randomly select some parameters for variety.
+- One of the template instruments (after custom chip and custom FM) should just be a random generator!)
 - switching bars doesn't seem to split transposes into multiple change states?
-- The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, thunder, rain, fire, wind, randomly spaced (x / (1 + x^2)), maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard, orchestra hit? (can noise instruments be selected on pitch channels? maybe wiyh different available noise waves?)
+- combine new, export, and import JSON into a File menu. (and random!)
+- maybe command+S should do something useful?
+- Song options icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth note triplet symbol for rhythm. 
 - make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page.
-- polyphonic fm midi export when there are multiple carriers. careful of overlapping note on/off events combined with slides...
 - consider trying polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency.
+- polyphonic fm midi export when there are multiple carriers. careful of overlapping note on/off events combined with slides...
+- wav export quality: CD (44100) vs Video (48000) standards, 1x, downsampled from 2x, downsampled from 4x to 2x. How does this affect FM feedback?
+- maybe sum adjacent fm synth samples (at half volume) to cancel out inaudible feedback artifacts? for the carrier wave(s), try that integral thing to reduce the aliasing... or is that not really the problem here? (fortunately the integral of a sine wave is just an offset sinewave!) The FM feedback has been bugging me because it has a tendency to alternate between high and low values every other output sample. This is probably (?) inaudible, but is nevertheless an artifact. I could probably mitigate it by adding each FM sample to the previous sample before outputting (and cutting the volume in half to compensate). Does this help with more complicated structures? Note that this won't fix the audible FM aliasing, I'm not sure if there's anything besides super sampling that would fix that.
+- The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
 - do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
-- live piano should track time since note started for delayed vibrato, envelopes, decays, etc.
 - built-in link shortener?
+- live piano should track time since note started for delayed vibrato, envelopes, decays, etc.
 - remember recent songs in local shared object.
 - asynchronous export. worker thread?
 - is it possible to get pitch slides and seamless transitions to detect notes across bars?
@@ -344,6 +351,7 @@ PLAYLIST EDITOR:
 - custom cover art, color schemes in playlists and embed player.
 
 MAYBE:
+- Right now, the rhythm and scale options each control an axis of the pattern editor, but one forces existing notes to realign and the other doesn't. Both should have an option to realign or not! And notes would have a resolution of 24 parts per beat? How would arpeggio work? It's probably okay if "parts" and "arpeggios" don't transition at exact sample boundaries, rather than fractional sample points. Maybe still keep beats aligned to sample boundaries, but you can have more precise BPM tempos by loosening up the alignment.
 - when importing json, console.log stuff that doesn't parse correctly?
 - maybe noise waves should be a separate property from chip waves?
 - Record the "type" of channels (separately from instruments). Can be pitch or drum. Use instead of getChannelIsDrum. When exporting base64, write the pitch channels first even if they were somehow rearranged, but JSON could theoretically have channels in any order.

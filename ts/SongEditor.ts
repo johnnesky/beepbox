@@ -169,11 +169,8 @@ namespace beepbox {
 		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select({}), Config.transitionNames);
 		private readonly _delaySelect: HTMLSelectElement = buildOptions(select({}), Config.delayNames);
 		private readonly _filterCutoffSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue));
-		private readonly _filterCutoffSliderRow: HTMLDivElement = div({className: "selectRow", title: "Filter Cutoff Frequency"}, [span({}, [text("Filter: ")]), this._filterCutoffSlider.input]);
 		private readonly _filterResonanceSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterResonanceRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterResonance(this._doc, oldValue, newValue));
-		private readonly _filterResonanceSliderRow: HTMLDivElement = div({className: "selectRow", title: "Filter Resonance"}, [span({}, [text("Resonance: ")]), this._filterResonanceSlider.input]);
 		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorEnvelopeNames);
-		private readonly _filterEnvelopeSelectRow: HTMLDivElement = div({className: "selectRow", title: "Filter Envelope"}, [span({}, [text("Envelope: ")]), div({className: "selectContainer"}, [this._filterEnvelopeSelect])]);
 		private readonly _chorusSelect: HTMLSelectElement = buildOptions(select({}), Config.chorusNames);
 		private readonly _chorusHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
 		private readonly _chorusSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chorus: ")]), this._chorusHint, div({className: "selectContainer"}, [this._chorusSelect])]);
@@ -200,9 +197,18 @@ namespace beepbox {
 				span({}, [text("Transition: ")]),
 				div({className: "selectContainer"}, [this._transitionSelect]),
 			]),
-			this._filterCutoffSliderRow,
-			this._filterResonanceSliderRow,
-			this._filterEnvelopeSelectRow,
+			div({className: "selectRow", title: "Filter Cutoff Frequency"}, [
+				span({}, [text("Filter: ")]),
+				this._filterCutoffSlider.input,
+			]),
+			div({className: "selectRow", title: "Filter Resonance"}, [
+				span({}, [text("Resonance: ")]),
+				this._filterResonanceSlider.input,
+			]),
+			div({className: "selectRow", title: "Filter Envelope"}, [
+				span({}, [text("Envelope: ")]),
+				div({className: "selectContainer"}, [this._filterEnvelopeSelect]),
+			]),
 			this._chorusSelectRow,
 			div({className: "selectRow"}, [
 				span({}, [text("Delay: ")]),
@@ -458,9 +464,6 @@ namespace beepbox {
 				this._feedbackRow1.style.display = "none";
 				this._feedbackRow2.style.display = "none";
 				this._waveSelect.style.display = "none";
-				this._filterCutoffSliderRow.style.display = "none";
-				this._filterResonanceSliderRow.style.display = "none";
-				this._filterEnvelopeSelectRow.style.display = "none";
 				this._chorusSelectRow.style.display = "none";
 				this._effectSelectRow.style.display = "none";
 			} else if (instrument.type == InstrumentType.chip) {
@@ -470,9 +473,6 @@ namespace beepbox {
 				this._instrumentVolumeSliderRow.style.display = "";
 				this._waveSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
-				this._filterCutoffSliderRow.style.display = "";
-				this._filterResonanceSliderRow.style.display = "";
-				this._filterEnvelopeSelectRow.style.display = "";
 				this._chorusSelectRow.style.display = "";
 				this._algorithmSelectRow.style.display = "none";
 				this._phaseModGroup.style.display = "none";
@@ -488,9 +488,6 @@ namespace beepbox {
 				this._feedbackRow2.style.display = "";
 				this._instrumentVolumeSliderRow.style.display = "none";
 				this._waveSelectRow.style.display = "none";
-				this._filterCutoffSliderRow.style.display = "none";
-				this._filterResonanceSliderRow.style.display = "none";
-				this._filterEnvelopeSelectRow.style.display = "none";
 				this._chorusSelectRow.style.display = "none";
 			} else {
 				throw new Error("Unrecognized instrument type: " + instrument.type);
