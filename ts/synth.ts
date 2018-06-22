@@ -119,7 +119,7 @@ namespace beepbox {
 		public static readonly chorusSigns: ReadonlyArray<number> = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0];
 		public static readonly chorusHarmonizes: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, true];
 		public static readonly delayNames: ReadonlyArray<string> = ["none", "reverb", "shifting chorus", "chorus & reverb"];
-		public static readonly volumeNames: ReadonlyArray<string> = ["loudest", "loud", "medium", "quiet", "quietest", "mute"];
+		public static readonly volumeRange: number = 6;
 		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
 		public static readonly operatorCount: number = 4;
 		public static readonly operatorAlgorithmNames: ReadonlyArray<string> = [
@@ -1353,15 +1353,15 @@ namespace beepbox {
 				} else if (command == SongTagCode.volume) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channels[channel].instruments[0].volume = Song._clip(0, Config.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].instruments[0].volume = Song._clip(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else if (beforeSix) {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.channels[channel].instruments[i].volume = Song._clip(0, Config.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								this.channels[channel].instruments[i].volume = Song._clip(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							}
 						}
 					} else {
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].volume = Song._clip(0, Config.volumeNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].volume = Song._clip(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				} else if (command == SongTagCode.algorithm) {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].algorithm = Song._clip(0, Config.operatorAlgorithmNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -1586,7 +1586,7 @@ namespace beepbox {
 						transition: Config.transitionNames[instrument.transition],
 						delay: Config.chorusNames[instrument.delay],
 						filterCutoffHz: Math.round(Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5)),
-						filterResonance: 100 * instrument.filterResonance / (Config.filterResonanceRange - 1),
+						filterResonance: Math.round(100 * instrument.filterResonance / (Config.filterResonanceRange - 1)),
 						filterEnvelope: Config.operatorEnvelopeNames[instrument.filterEnvelope],
 					};
 					if (instrument.type == InstrumentType.noise) {
@@ -1837,7 +1837,7 @@ namespace beepbox {
 						
 						if (instrument.type == InstrumentType.noise) {
 							if (instrumentObject.volume != undefined) {
-								instrument.volume = Song._clip(0, Config.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
+								instrument.volume = Song._clip(0, Config.volumeRange, Math.round(5 - (instrumentObject.volume | 0) / 20));
 							} else {
 								instrument.volume = 0;
 							}
@@ -1845,7 +1845,7 @@ namespace beepbox {
 							if (instrument.wave == -1) instrument.wave = 1;
 						} else if (instrument.type == InstrumentType.chip) {
 							if (instrumentObject.volume != undefined) {
-								instrument.volume = Song._clip(0, Config.volumeNames.length, Math.round(5 - (instrumentObject.volume | 0) / 20));
+								instrument.volume = Song._clip(0, Config.volumeRange, Math.round(5 - (instrumentObject.volume | 0) / 20));
 							} else {
 								instrument.volume = 0;
 							}
