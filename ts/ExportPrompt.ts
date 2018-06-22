@@ -520,18 +520,18 @@ namespace beepbox {
 								description += "type: " + Config.instrumentTypeNames[instrument.type];
 								description += ", transition: " + Config.transitionNames[instrument.transition];
 								description += ", delay: " + Config.delayNames[instrument.delay];
+								description += ", filterCutoff: " + Math.round(Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5));
+								description += ", filterResonance: " + Math.round(100 * instrument.filterResonance / (Config.filterResonanceRange - 1));
+								description += ", filterEnvelope: " + Config.operatorEnvelopeNames[instrument.filterEnvelope];
 								
 								if (instrument.type == InstrumentType.noise) {
 									description += ", noise: " + Config.drumNames[instrument.wave];
-									description += ", volume: " + Config.volumeNames[instrument.volume];
+									description += ", volume: " + ((5 - instrument.volume) * 20);
 									
 									instrumentProgram = 0x7E; // seashore, applause
 								} else if (instrument.type == InstrumentType.chip) {
 									description += ", wave: " + Config.waveNames[instrument.wave];
-									description += ", volume: " + Config.volumeNames[instrument.volume];
-									description += ", filterCutoff: " + instrument.filterCutoff;
-									description += ", filterResonance: " + instrument.filterResonance;
-									description += ", filterEnvelope: " + Config.operatorEnvelopeNames[instrument.filterEnvelope];
+									description += ", volume: " + ((5 - instrument.volume) * 20);
 									description += ", chorus: " + Config.chorusNames[instrument.chorus];
 									description += ", effect: " + Config.effectNames[instrument.effect];
 									
