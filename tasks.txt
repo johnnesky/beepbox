@@ -273,6 +273,7 @@
 √ resonant filter with envelope
 √ Added resonance filters to fm/drums.
 √ get rid of Config.volumeNames
+√ Optimized wave phase and lookup table math slightly. Gave drum tones a random phase on reset, and reset drum tones during rests like the rest of the instruments, so that filters are also reset.
 
 MAJOR REMAINING FEATURES:
 - "fadeout" option(s) in transition, would use polyphony, structured similar to openscores. (if the same pitch is played twice, does it cancel the old tone?) How should I keep track of tones?
@@ -295,7 +296,6 @@ MISC:
 - fadeout transition: I kinda wanna cancel a fadeout if it is the same pitch as a subsequent note. But wait! If there's a pitch bend, does that affect the pitch comparison? What about arpeggio or custom harmony? Pitch bend can't really effect the fading out note (because there are no more pins) but it can affect the new note. Maybe fadeout mode should introduce the slightly random pitch as a catch-all? If I'm gonna add polyphony for fadeout envelope, might as well add it as a full option instead of arpeggio/operator control, so chords can have a variable number of notes. Maybe "soft" onset fadeouts should have slightly random pitch. Proposed new options: "overlap"/"crossfade" is soft with a quick fadeout that coincides with the following note, "decay" is sudden with a medium decay, and "pad" is soft with a very long decay.
 - divert www traffic to beepbox.co
 - channel color lookups should wrap around.
-- Drum phase should be measured in wave buffer samples, and converted to indices with & 0x7FFF. Then give drum tones a random phase (up to 0x7fff) on reset, and reset drum tones during rests like the rest of the instruments, so that filters are also reset.
 - instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else. Could I imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument. It may be time to stop using two midi channels for chip chorus. Replace Type with Templates. Custom chip and custom FM are generic options at the top that can't be selected directly. (The data format doesn't indicate which template you're using, except maybe json.) The template menu automatically detects if your instrument matches a template, and selects custom for you otherwise. Selecting a template may randomly select some parameters for variety.
 - One of the template instruments (after custom chip and custom FM) should just be a random generator!)
 - switching bars doesn't seem to split transposes into multiple change states?
