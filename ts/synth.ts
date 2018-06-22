@@ -2744,6 +2744,7 @@ namespace beepbox {
 					let sineVolumeBoost: number = 1.0;
 					let totalCarrierVolume: number = 0.0;
 					
+					if (resetPhases) tone.reset();
 					const carrierCount: number = Config.operatorCarrierCounts[instrument.algorithm];
 					for (let i: number = 0; i < Config.operatorCount; i++) {
 						const associatedCarrierIndex: number = Config.operatorAssociatedCarrier[instrument.algorithm][i] - 1;
@@ -2754,7 +2755,6 @@ namespace beepbox {
 						const startFreq: number = freqMult * (synth.frequencyFromPitch(basePitch + startPitch)) + Config.operatorHzOffsets[instrument.operators[i].frequency];
 						
 						tone.phaseDeltas[i] = startFreq * sampleTime * Config.sineWaveLength;
-						if (resetPhases) tone.reset();
 						
 						const amplitudeCurve: number = Synth.operatorAmplitudeCurve(instrument.operators[i].amplitude);
 						const amplitudeMult: number = amplitudeCurve * Config.operatorAmplitudeSigns[instrument.operators[i].frequency];
@@ -2836,7 +2836,7 @@ namespace beepbox {
 					} else {
 						settingsVolumeMult = 0.19 * Config.drumVolumes[instrument.wave] * 5.0 * filterVolume;
 					}
-					if (resetPhases && !isDrum) {
+					if (resetPhases) {
 						tone.reset();
 					}
 					
@@ -2863,17 +2863,7 @@ namespace beepbox {
 				tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
 				tone.vibratoScale = (partsSinceStart < Config.effectVibratoDelays[instrument.effect]) ? 0.0 : Math.pow(2.0, Config.effectVibratos[instrument.effect] / 12.0) - 1.0;
 			} else {
-				if (!isDrum) {
-					tone.reset();
-				}
-				/*
-				// I don't think I need this anymore:
-				for (let i: number = 0; i < Config.operatorCount; i++) {
-					tone.phaseDeltas[0] = 0.0;
-					tone.volumeStarts[0] = 0.0;
-					tone.volumeDeltas[0] = 0.0;
-				}
-				*/
+				tone.reset();
 			}
 		}
 		
@@ -2972,13 +2962,13 @@ namespace beepbox {
 			const chorusSign: number = tone.harmonyVolumeMult * Config.chorusSigns[instrument.chorus];
 			if (instrument.chorus == 0) tone.phases[1] = tone.phases[0];
 			const deltaRatio: number = chorusB / chorusA;
-			let phaseDelta: number = tone.phaseDeltas[0] * chorusA;
+			let phaseDelta: number = tone.phaseDeltas[0] * chorusA * waveLength;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
 			const vibratoScale: number = +tone.vibratoScale;
-			let phaseA: number = tone.phases[0] % 1;
-			let phaseB: number = tone.phases[1] % 1;
+			let phaseA: number = (tone.phases[0] % 1) * waveLength;
+			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 			let sample: number = +tone.sample;
 			
 			let filter1: number = +tone.filter;
@@ -2997,8 +2987,8 @@ namespace beepbox {
 				effectY = effectYMult * effectY - prevEffectY;
 				prevEffectY = temp;
 				
-				const waveA: number = wave[0|(phaseA * waveLength)];
-				const waveB: number = wave[0|(phaseB * waveLength)] * chorusSign;
+				const waveA: number = wave[(0|phaseA) % waveLength];
+				const waveB: number = wave[(0|phaseB) % waveLength] * chorusSign;
 				const combinedWave: number = (waveA + waveB);
 				
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
@@ -3011,16 +3001,14 @@ namespace beepbox {
 				phaseB += phaseDelta * vibrato * deltaRatio;
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
-				phaseA -= 0|phaseA;
-				phaseB -= 0|phaseB;
 				phaseDelta *= phaseDeltaScale;
 				
 				data[bufferIndex] += sample;
 				bufferIndex++;
 			}
 			
-			tone.phases[0] = phaseA;
-			tone.phases[1] = phaseB;
+			tone.phases[0] = phaseA / waveLength;
+			tone.phases[1] = phaseB / waveLength;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
@@ -3111,11 +3099,15 @@ namespace beepbox {
 		
 		private static noiseSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
 			const wave: Float64Array = Config.getDrumWave(instrument.wave);
-			let phaseDelta: number = +tone.phaseDeltas[0] / 32768.0;
+			let phaseDelta: number = +tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
-			let phase: number = tone.phases[0] % 1;
+			let phase: number = (tone.phases[0] % 1) * 32768.0;
+			if (tone.phases[0] == 0) {
+				// Zero phase means the tone was reset, just give noise a random start phase instead:
+				phase = Math.random() * 32768.0;
+			}
 			let sample: number = +tone.sample;
 			
 			let filter1: number = +tone.filter;
@@ -3132,7 +3124,7 @@ namespace beepbox {
 			
 			const stopIndex: number = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
-				const waveSample: number = wave[0|(phase * 32768.0)];
+				const waveSample: number = wave[phase & 0x7fff];
 				
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (waveSample - filterSample0 + feedback * (filterSample0 - filterSample1));
@@ -3143,14 +3135,13 @@ namespace beepbox {
 				phase += phaseDelta;
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
-				phase -= 0|phase;
 				phaseDelta *= phaseDeltaScale;
 				data[bufferIndex] += sample * volume;
 				volume += volumeDelta;
 				bufferIndex++;
 			}
 			
-			tone.phases[0] = phase;
+			tone.phases[0] = phase / 32768.0;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
