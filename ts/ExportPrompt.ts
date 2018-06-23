@@ -265,7 +265,7 @@ namespace beepbox {
 			if (bytesPerSample > 1) {
 				// usually samples are signed. 
 				for (let i: number = 0; i < sampleFrames; i++) {
-					val = Math.floor(recordedSamples[i * stride] * ((1 << (bitsPerSample - 1)) - 1));
+					val = Math.floor(Math.max(-1, Math.min(1, recordedSamples[i * stride])) * ((1 << (bitsPerSample - 1)) - 1));
 					for (let k: number = 0; k < repeat; k++) {
 						if (bytesPerSample == 2) {
 							data.setInt16(index, val, true); index += 2;
@@ -279,7 +279,7 @@ namespace beepbox {
 			} else {
 				// 8 bit samples are a special case: they are unsigned.
 				for (let i: number = 0; i < sampleFrames; i++) {
-					val = Math.floor(recordedSamples[i*stride] * 127 + 128);
+					val = Math.floor(Math.max(-1, Math.min(1, recordedSamples[i * stride])) * 127 + 128);
 					for (let k: number = 0; k < repeat; k++) {
 						data.setUint8(index, val > 255 ? 255 : (val < 0 ? 0 : val)); index++;
 					}
