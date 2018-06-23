@@ -527,6 +527,15 @@ namespace beepbox {
 		}
 	}
 	
+	export class ChangePasteInstrument extends ChangeGroup {
+		constructor(doc: SongDocument, instrument: Instrument, instrumentCopy: any) {
+			super();
+			instrument.fromJsonObject(instrumentCopy, instrumentCopy.isDrum);
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+	
 	export class ChangePatternInstrument extends Change {
 		constructor(doc: SongDocument, newValue: number, pattern: Pattern) {
 			super();
