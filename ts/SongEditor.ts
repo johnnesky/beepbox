@@ -120,6 +120,8 @@ namespace beepbox {
 			option("redo", "Redo (Y)", false, false),
 			option("copy", "Copy Pattern (C)", false, false),
 			option("paste", "Paste Pattern (V)", false, false),
+			option("copyInstrument", "Copy Instrument", false, false),
+			option("pasteInstrument", "Paste Instrument", false, false),
 			option("transposeUp", "Shift Notes Up (+)", false, false),
 			option("transposeDown", "Shift Notes Down (-)", false, false),
 			option("duration", "Custom song size...", false, false),
@@ -702,6 +704,23 @@ namespace beepbox {
 			}
 		}
 		
+		private _copyInstrument(): void {
+			const channel: Channel = this._doc.song.channels[this._doc.channel];
+			const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
+			const instrumentCopy: any = instrument.toJsonObject();
+			instrumentCopy.isDrum = this._doc.song.getChannelIsDrum(this._doc.channel);
+			window.localStorage.setItem("instrumentCopy", JSON.stringify(instrumentCopy));
+		}
+		
+		private _pasteInstrument(): void {
+			const channel: Channel = this._doc.song.channels[this._doc.channel];
+			const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
+			const instrumentCopy: any = JSON.parse(String(window.localStorage.getItem("instrumentCopy")));
+			if (instrumentCopy != null && instrumentCopy.isDrum == this._doc.song.getChannelIsDrum(this._doc.channel)) {
+				this._doc.record(new ChangePasteInstrument(this._doc, instrument, instrumentCopy));
+			}
+		}
+		
 		private _transpose(upward: boolean): void {
 			const pattern: Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
@@ -803,6 +822,12 @@ namespace beepbox {
 					break;
 				case "paste":
 					this._paste();
+					break;
+				case "copyInstrument":
+					this._copyInstrument();
+					break;
+				case "pasteInstrument":
+					this._pasteInstrument();
 					break;
 				case "transposeUp":
 					this._transpose(true);
