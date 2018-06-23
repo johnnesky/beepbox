@@ -498,7 +498,7 @@ namespace beepbox {
 		effect = CharCode.c,
 		transition = CharCode.d,
 		loopEnd = CharCode.e,
-		filter = CharCode.f,
+		filterCutoff = CharCode.f,
 		barCount = CharCode.g,
 		chorus = CharCode.h,
 		instrumentCount = CharCode.i,
@@ -516,7 +516,7 @@ namespace beepbox {
 		
 		volume = CharCode.v,
 		wave = CharCode.w,
-		filterCutoff = CharCode.x,
+		
 		filterResonance = CharCode.y,
 		filterEnvelope = CharCode.z,
 		algorithm = CharCode.A,
@@ -967,7 +967,7 @@ namespace beepbox {
 	export class Song {
 		private static readonly _format: string = "BeepBox";
 		private static readonly _oldestVersion: number = 2;
-		private static readonly _latestVersion: number = 6;
+		private static readonly _latestVersion: number = 7;
 		private static readonly _base64CharCodeToInt: ReadonlyArray<number> = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,62,62,0,0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0,0,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,0,0,0,0,63,0,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,0,0,0,0,0]; // 62 could be represented by either "-" or "." for historical reasons. New songs should use "-".
 		private static readonly _base64IntToCharCode: ReadonlyArray<number> = [48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,45,95];
 		
@@ -1302,6 +1302,7 @@ namespace beepbox {
 			const beforeFour:  boolean = version < 4;
 			const beforeFive:  boolean = version < 5;
 			const beforeSix:   boolean = version < 6;
+			const beforeSeven: boolean = version < 7;
 			const base64CharCodeToInt: ReadonlyArray<number> = Song._base64CharCodeToInt;
 			this.initToDefault(beforeSix);
 			
@@ -1426,34 +1427,36 @@ namespace beepbox {
 						const isDrums = (instrumentChannelIterator >= this.pitchChannelCount);
 						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, isDrums ? Config.drumNames.length : Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
-				} else if (command == SongTagCode.filter) {
-					const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
-					const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
-					const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
+				} else if (command == SongTagCode.filterCutoff) {
+					if (beforeSeven) {
+						const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
+						const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
+						const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
 					
-					if (beforeThree) {
-						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						const legacyFilter: number = [1, 3, 4, 5][clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
-						this.channels[channel].instruments[0].filterCutoff = legacyToCutoff[legacyFilter];
-						this.channels[channel].instruments[0].filterEnvelope = legacyToEnvelope[legacyFilter];
-						this.channels[channel].instruments[0].filterResonance = 0;
-					} else if (beforeSix) {
-						for (channel = 0; channel < this.getChannelCount(); channel++) {
-							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
-								this.channels[channel].instruments[i].filterCutoff = legacyToCutoff[legacyFilter];
-								this.channels[channel].instruments[i].filterEnvelope = legacyToEnvelope[legacyFilter];
-								this.channels[channel].instruments[i].filterResonance = 0;
+						if (beforeThree) {
+							channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+							const legacyFilter: number = [1, 3, 4, 5][clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+							this.channels[channel].instruments[0].filterCutoff = legacyToCutoff[legacyFilter];
+							this.channels[channel].instruments[0].filterEnvelope = legacyToEnvelope[legacyFilter];
+							this.channels[channel].instruments[0].filterResonance = 0;
+						} else if (beforeSix) {
+							for (channel = 0; channel < this.getChannelCount(); channel++) {
+								for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
+									const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
+									this.channels[channel].instruments[i].filterCutoff = legacyToCutoff[legacyFilter];
+									this.channels[channel].instruments[i].filterEnvelope = legacyToEnvelope[legacyFilter];
+									this.channels[channel].instruments[i].filterResonance = 0;
+								}
 							}
+						} else {
+							const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterCutoff = legacyToCutoff[legacyFilter];
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterEnvelope = legacyToEnvelope[legacyFilter];
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterResonance = 0;
 						}
 					} else {
-						const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterCutoff = legacyToCutoff[legacyFilter];
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterEnvelope = legacyToEnvelope[legacyFilter];
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterResonance = 0;
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterCutoff = clamp(0, Config.filterCutoffRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
-				} else if (command == SongTagCode.filterCutoff) {
-					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterCutoff = clamp(0, Config.filterCutoffRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.filterResonance) {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterResonance = clamp(0, Config.filterResonanceRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.filterEnvelope) {
