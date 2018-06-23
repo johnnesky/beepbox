@@ -177,7 +177,7 @@ namespace beepbox {
 		private readonly _chorusHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
 		private readonly _chorusSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chorus: ")]), this._chorusHint, div({className: "selectContainer"}, [this._chorusSelect])]);
 		private readonly _effectSelect: HTMLSelectElement = buildOptions(select({}), Config.effectNames);
-		private readonly _effectSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Effect: ")]), div({className: "selectContainer"}, [this._effectSelect])]);
+		private readonly _effectSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("LFO Effect: ")]), div({className: "selectContainer"}, [this._effectSelect])]);
 		private readonly _phaseModGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"}, []);
 		private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorFeedbackNames);
 		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Feedback:")]), div({className: "selectContainer"}, [this._feedbackTypeSelect])]);

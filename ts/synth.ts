@@ -1003,16 +1003,24 @@ namespace beepbox {
 		}
 		
 		public getChannelColorDim(channel: number): string {
-			return channel < this.pitchChannelCount ? Config.pitchChannelColorsDim[channel] : Config.drumChannelColorsDim[channel - this.pitchChannelCount];
+			return channel < this.pitchChannelCount
+				? Config.pitchChannelColorsDim[channel % Config.pitchChannelColorsDim.length]
+				: Config.drumChannelColorsDim[(channel - this.pitchChannelCount) % Config.drumChannelColorsDim.length];
 		}
 		public getChannelColorBright(channel: number): string {
-			return channel < this.pitchChannelCount ? Config.pitchChannelColorsBright[channel] : Config.drumChannelColorsBright[channel - this.pitchChannelCount];
+			return channel < this.pitchChannelCount
+				? Config.pitchChannelColorsBright[channel % Config.pitchChannelColorsBright.length]
+				: Config.drumChannelColorsBright[(channel - this.pitchChannelCount) % Config.drumChannelColorsBright.length];
 		}
 		public getNoteColorDim(channel: number): string {
-			return channel < this.pitchChannelCount ? Config.pitchNoteColorsDim[channel] : Config.drumNoteColorsDim[channel - this.pitchChannelCount];
+			return channel < this.pitchChannelCount
+				? Config.pitchNoteColorsDim[channel % Config.pitchNoteColorsDim.length]
+				: Config.drumNoteColorsDim[(channel - this.pitchChannelCount) % Config.drumNoteColorsDim.length];
 		}
 		public getNoteColorBright(channel: number): string {
-			return channel < this.pitchChannelCount ? Config.pitchNoteColorsBright[channel] : Config.drumNoteColorsBright[channel - this.pitchChannelCount];
+			return channel < this.pitchChannelCount
+				? Config.pitchNoteColorsBright[channel % Config.pitchNoteColorsBright.length]
+				: Config.drumNoteColorsBright[(channel - this.pitchChannelCount) % Config.drumNoteColorsBright.length];
 		}
 		
 		public initToDefault(andResetChannels: boolean = true): void {
