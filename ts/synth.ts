@@ -2110,9 +2110,6 @@ namespace beepbox {
 		private static readonly negativePhaseGuard: number = 1000;
 		
 		public samplesPerSecond: number = 44100;
-		private effectDuration: number = 0.14;
-		private effectAngle: number = Math.PI * 2.0 / (this.effectDuration * this.samplesPerSecond);
-		private effectYMult: number = 2.0 * Math.cos(this.effectAngle);
 		private limitDecay: number = 1.0 / (2.0 * this.samplesPerSecond);
 		
 		public song: Song | null = null;
@@ -2134,7 +2131,6 @@ namespace beepbox {
 		
 		private readonly tones: Tone[] = [];
 		private stillGoing: boolean = false;
-		private effectPhase: number = 0.0;
 		private limit: number = 0.0;
 		
 		private samplesForChorus: Float32Array | null = null;
@@ -2233,8 +2229,6 @@ namespace beepbox {
 			this.scriptNode.connect(this.audioCtx.destination);
 			
 			this.samplesPerSecond = this.audioCtx.sampleRate;
-			this.effectAngle = Math.PI * 2.0 / (this.effectDuration * this.samplesPerSecond);
-			this.effectYMult = 2.0 * Math.cos(this.effectAngle);
 			this.limitDecay = 1.0 / (2.0 * this.samplesPerSecond);
 		}
 		
@@ -2262,7 +2256,6 @@ namespace beepbox {
 			this.part = 0;
 			this.arpeggio = 0;
 			this.arpeggioSampleCountdown = 0;
-			this.effectPhase = 0.0;
 			
 			for (const tone of this.tones) tone.reset();
 			
@@ -2419,8 +2412,6 @@ namespace beepbox {
 					}
 					bufferIndex += runLength;
 					
-					this.effectPhase = (this.effectPhase + this.effectAngle * runLength) % (Math.PI * 2.0);
-					
 					this.arpeggioSampleCountdown -= runLength;
 					if (this.arpeggioSampleCountdown <= 0) {
 						this.arpeggio++;
@@ -2435,7 +2426,6 @@ namespace beepbox {
 									// bar changed, reset for next bar:
 									this.beat = 0;
 									this.bar++;
-									this.effectPhase = 0.0;
 									if (this.bar < this.song.loopStart) {
 										if (!this.enableIntro) this.bar = this.song.loopStart;
 									} else {
@@ -2631,8 +2621,8 @@ namespace beepbox {
 			let intervalEnd: number = 0.0;
 			let transitionVolumeStart: number = 1.0;
 			let transitionVolumeEnd: number = 1.0;
-			let envelopeVolumeStart: number = 0.0;
-			let envelopeVolumeEnd: number = 0.0;
+			let customVolumeStart: number = 0.0;
+			let customVolumeEnd: number = 0.0;
 			// TODO: probably part time can be calculated independently of any notes?
 			let partTimeStart: number = 0.0;
 			let partTimeEnd:   number = 0.0;
@@ -2648,7 +2638,7 @@ namespace beepbox {
 			if (pianoMode) {
 				pitches = synth.pianoPitch;
 				transitionVolumeStart = transitionVolumeEnd = 1;
-				envelopeVolumeStart = envelopeVolumeEnd = 1;
+				customVolumeStart = customVolumeEnd = 1;
 				resetPhases = false;
 				// TODO: track time since live piano note started for transition, envelope, decays, delayed vibrato, etc.
 			} else if (pattern != null) {
@@ -2689,8 +2679,8 @@ namespace beepbox {
 					const tickTimeEnd:   number = time * 4 + arpeggio + 1;
 					const pinRatioStart: number = (tickTimeStart - pinStart) / (pinEnd - pinStart);
 					const pinRatioEnd:   number = (tickTimeEnd   - pinStart) / (pinEnd - pinStart);
-					let envelopeVolumeTickStart: number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioStart;
-					let envelopeVolumeTickEnd:   number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioEnd;
+					let customVolumeTickStart: number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioStart;
+					let customVolumeTickEnd:   number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioEnd;
 					let transitionVolumeTickStart: number = 1.0;
 					let transitionVolumeTickEnd:   number = 1.0;
 					let intervalTickStart: number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioStart;
@@ -2749,8 +2739,8 @@ namespace beepbox {
 					
 					intervalStart = intervalTickStart + (intervalTickEnd - intervalTickStart) * startRatio;
 					intervalEnd   = intervalTickStart + (intervalTickEnd - intervalTickStart) * endRatio;
-					envelopeVolumeStart = synth.volumeConversion(envelopeVolumeTickStart + (envelopeVolumeTickEnd - envelopeVolumeTickStart) * startRatio);
-					envelopeVolumeEnd   = synth.volumeConversion(envelopeVolumeTickStart + (envelopeVolumeTickEnd - envelopeVolumeTickStart) * endRatio);
+					customVolumeStart = synth.volumeConversion(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio);
+					customVolumeEnd   = synth.volumeConversion(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
 					transitionVolumeStart = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * startRatio;
 					transitionVolumeEnd   = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * endRatio;
 					partTimeStart = note.start + partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * startRatio;
@@ -2764,6 +2754,23 @@ namespace beepbox {
 				const sampleTime: number = 1.0 / synth.samplesPerSecond;
 				tone.active = true;
 				
+				if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm) {
+					const effectPeriod: number = 0.14;
+					const lfoEffectStart: number = Math.sin(Math.PI * 2.0 * secondsPerPart * partTimeStart / effectPeriod);
+					const lfoEffectEnd:   number = Math.sin(Math.PI * 2.0 * secondsPerPart * partTimeEnd   / effectPeriod);
+					const vibratoScale: number = (partsSinceStart < Config.effectVibratoDelays[instrument.effect]) ? 0.0 : Config.effectVibratos[instrument.effect];
+					const tremoloScale: number = Config.effectTremolos[instrument.effect];
+					const vibratoStart: number = vibratoScale * lfoEffectStart;
+					const vibratoEnd:   number = vibratoScale * lfoEffectEnd;
+					const tremoloStart: number = 1.0 + tremoloScale * (lfoEffectStart - 1.0);
+					const tremoloEnd:   number = 1.0 + tremoloScale * (lfoEffectEnd - 1.0);
+					
+					intervalStart += vibratoStart;
+					intervalEnd   += vibratoEnd;
+					transitionVolumeStart *= tremoloStart;
+					transitionVolumeEnd   *= tremoloEnd;
+				}
+				
 				if (instrument.type == InstrumentType.fm) {
 					// phase modulation!
 					
@@ -2771,6 +2778,7 @@ namespace beepbox {
 					let totalCarrierVolume: number = 0.0;
 					
 					if (resetPhases) tone.reset();
+					
 					const carrierCount: number = Config.operatorCarrierCounts[instrument.algorithm];
 					for (let i: number = 0; i < Config.operatorCount; i++) {
 						const associatedCarrierIndex: number = Config.operatorAssociatedCarrier[instrument.algorithm][i] - 1;
@@ -2805,20 +2813,20 @@ namespace beepbox {
 						}
 						const envelope: number = instrument.operators[i].envelope;
 						
-						volumeStart *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, envelopeVolumeStart);
-						volumeEnd *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, envelopeVolumeEnd);
+						volumeStart *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+						volumeEnd *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
 						
 						tone.volumeStarts[i] = volumeStart;
 						tone.volumeDeltas[i] = (volumeEnd - volumeStart) / runLength;
 					}
 					
 					const feedbackAmplitude: number = Config.sineWaveLength * 0.3 * instrument.feedbackAmplitude / 15.0;
-					let feedbackStart: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, envelopeVolumeStart);
-					let feedbackEnd: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, envelopeVolumeEnd);
+					let feedbackStart: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+					let feedbackEnd: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
 					tone.feedbackMult = feedbackStart;
 					tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 					
-					const filterVolume: number = 5.0 * Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, envelopeVolumeStart, envelopeVolumeEnd);
+					const filterVolume: number = 5.0 * Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, customVolumeStart, customVolumeEnd);
 					
 					tone.volumeStart = filterVolume * transitionVolumeStart;
 					tone.volumeDelta = filterVolume * (transitionVolumeEnd - transitionVolumeStart) / runLength;
@@ -2855,7 +2863,7 @@ namespace beepbox {
 					const startFreq: number = synth.frequencyFromPitch(basePitch + startPitch);
 					const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
 					const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
-					const filterVolume: number = Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, envelopeVolumeStart, envelopeVolumeEnd);
+					const filterVolume: number = Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, customVolumeStart, customVolumeEnd);
 					let settingsVolumeMult: number;
 					if (!isDrum) {
 						settingsVolumeMult = 0.27 * 0.5 * Config.waveVolumes[instrument.wave] * filterVolume * Config.chorusVolumes[instrument.chorus];
@@ -2873,8 +2881,8 @@ namespace beepbox {
 					let volumeEnd: number = transitionVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
 					
 					if (Config.operatorEnvelopeType[instrument.filterEnvelope] != EnvelopeType.custom) {
-						tone.volumeStart *= envelopeVolumeStart;
-						volumeEnd *= envelopeVolumeEnd;
+						tone.volumeStart *= customVolumeStart;
+						volumeEnd *= customVolumeEnd;
 					}
 					
 					if (instrument.filterResonance > 0) {
@@ -2887,18 +2895,17 @@ namespace beepbox {
 				}
 				
 				tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
-				tone.vibratoScale = (partsSinceStart < Config.effectVibratoDelays[instrument.effect]) ? 0.0 : Math.pow(2.0, Config.effectVibratos[instrument.effect] / 12.0) - 1.0;
 			} else {
 				tone.reset();
 			}
 		}
 		
-		private static setUpResonantFilter(synth: Synth, instrument: Instrument, tone: Tone, runLength: number, secondsPerPart: number, beatsPerPart: number, decayTimeStart: number, decayTimeEnd: number, partTimeStart: number, partTimeEnd: number, envelopeVolumeStart: number, envelopeVolumeEnd: number): number {
+		private static setUpResonantFilter(synth: Synth, instrument: Instrument, tone: Tone, runLength: number, secondsPerPart: number, beatsPerPart: number, decayTimeStart: number, decayTimeEnd: number, partTimeStart: number, partTimeEnd: number, customVolumeStart: number, customVolumeEnd: number): number {
 			const filterCutoffHz: number = Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5);
 			const filterBase: number = 2.0 * Math.sin(Math.PI * filterCutoffHz / synth.samplesPerSecond);
 			const filterMin: number = 2.0 * Math.sin(Math.PI * Config.filterCutoffMinHz / synth.samplesPerSecond);
-			tone.filter = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, envelopeVolumeStart);
-			let endFilter: number = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, envelopeVolumeEnd);
+			tone.filter = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+			let endFilter: number = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
 			tone.filter = Math.min(Config.filterMax, Math.max(filterMin, tone.filter));
 			endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
 			tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
@@ -2974,14 +2981,8 @@ namespace beepbox {
 		}
 		
 		private static chipSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
-			// TODO: Skip this line and oscillator below unless using an effect?
-			const effectYMult: number = +synth.effectYMult;
-			let effectY: number     = +Math.sin(synth.effectPhase);
-			let prevEffectY: number = +Math.sin(synth.effectPhase - synth.effectAngle);
-			
 			const wave: Float64Array = Config.waves[instrument.wave];
 			const waveLength: number = +wave.length;
-			const tremoloScale: number = +Config.effectTremolos[instrument.effect];
 			
 			const chorusA: number = +Math.pow(2.0, (Config.chorusOffsets[instrument.chorus] + Config.chorusIntervals[instrument.chorus]) / 12.0);
 			const chorusB: number =  Math.pow(2.0, (Config.chorusOffsets[instrument.chorus] - Config.chorusIntervals[instrument.chorus]) / 12.0) * tone.harmonyMult;
@@ -2992,7 +2993,6 @@ namespace beepbox {
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
-			const vibratoScale: number = +tone.vibratoScale;
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 			let sample: number = +tone.sample;
@@ -3007,12 +3007,6 @@ namespace beepbox {
 			
 			const stopIndex: number = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
-				const vibrato: number = 1.0 + vibratoScale * effectY;
-				const tremolo: number = 1.0 + tremoloScale * (effectY - 1.0);
-				const temp: number = effectY;
-				effectY = effectYMult * effectY - prevEffectY;
-				prevEffectY = temp;
-				
 				const waveA: number = wave[(0|phaseA) % waveLength];
 				const waveB: number = wave[(0|phaseB) % waveLength] * chorusSign;
 				const combinedWave: number = (waveA + waveB);
@@ -3020,11 +3014,11 @@ namespace beepbox {
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
-				sample = filterSample1 * volume * tremolo;
+				sample = filterSample1 * volume;
 				
 				volume += volumeDelta;
-				phaseA += phaseDelta * vibrato;
-				phaseB += phaseDelta * vibrato * deltaRatio;
+				phaseA += phaseDelta;
+				phaseB += phaseDelta * deltaRatio;
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
@@ -3045,17 +3039,9 @@ namespace beepbox {
 		}
 		
 		private static fmSourceTemplate: string[] = (`
-			// TODO: Skip this line and oscillator below unless using an effect?
-			var effectYMult = +synth.effectYMult;
-			var effectY     = +Math.sin(synth.effectPhase);
-			var prevEffectY = +Math.sin(synth.effectPhase - synth.effectAngle);
-			
 			var sineWave = beepbox.Config.sineWave;
 			
-			var tremoloScale = +beepbox.Config.effectTremolos[instrument.effect];
-			
 			var phaseDeltaScale = +tone.phaseDeltaScale;
-			var vibratoScale = +tone.vibratoScale;
 			var operator#Phase       = +((tone.phases[#] % 1) + beepbox.Synth.negativePhaseGuard) * beepbox.Config.sineWaveLength;
 			var operator#PhaseDelta  = +tone.phaseDeltas[#];
 			var operator#OutputMult  = +tone.volumeStarts[#];
@@ -3077,24 +3063,18 @@ namespace beepbox {
 			
 			var stopIndex = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
-				var vibrato = 1.0 + vibratoScale * effectY;
-				var tremolo = 1.0 + tremoloScale * (effectY - 1.0);
-				var temp = effectY;
-				effectY = effectYMult * effectY - prevEffectY;
-				prevEffectY = temp;
-				
 				// INSERT OPERATOR COMPUTATION HERE
-				var fmOutput = tremolo * (/*operator#Scaled*/); // CARRIER OUTPUTS
+				var fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
 				
 				var feedback = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (fmOutput - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
-				sample = filterSample1 * volume * tremolo;
+				sample = filterSample1 * volume;
 				
 				volume += volumeDelta;
 				feedbackMult += feedbackDelta;
 				operator#OutputMult += operator#OutputDelta;
-				operator#Phase += operator#PhaseDelta * vibrato;
+				operator#Phase += operator#PhaseDelta;
 				operator#PhaseDelta *= phaseDeltaScale;
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
@@ -3124,7 +3104,7 @@ namespace beepbox {
 		`).split("\n");
 		
 		private static noiseSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
-			const wave: Float64Array = Config.getDrumWave(instrument.wave);
+			const wave: Float32Array = Config.getDrumWave(instrument.wave);
 			let phaseDelta: number = +tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
