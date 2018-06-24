@@ -303,6 +303,14 @@ styleSheet.appendChild(document.createTextNode(`
 	display: flex;
 	flex-direction: column;
 }
+.beepboxEditor .editor-menus > * {
+	flex-grow: 1;
+	margin: .1em 0;
+}
+.beepboxEditor .editor-menus > button {
+	padding: 0 2em;
+	white-space: nowrap;
+}
 
 .beepboxEditor .editor-settings {
 	display: flex;
@@ -462,14 +470,6 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings select {
 		width: 8.6em;
 	}
-	.beepboxEditor .editor-menus > * {
-		flex-grow: 1;
-		margin: .1em 0;
-	}
-	.beepboxEditor .editor-menus > button {
-		padding: 0 2em;
-		white-space: nowrap;
-	}
 }
 
 /* narrow screen */
@@ -482,17 +482,6 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.beepboxEditor .editorBox {
 		max-height: 75vh;
-	}
-	.beepboxEditor .editor-menus {
-		flex-direction: row;
-	}
-	.beepboxEditor .editor-menus > * {
-		flex-grow: 1;
-		margin: .1em;
-	}
-	.beepboxEditor .editor-menus > button {
-		padding-left: 2em;
-		white-space: nowrap;
 	}
 	.beepboxEditor .trackContainer {
 		overflow-x: auto;
@@ -532,7 +521,7 @@ styleSheet.appendChild(document.createTextNode(`
 		flex-grow: 1;
 		margin: 0 .1em;
 	}
-	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings .selectContainer {
+	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings .selectContainer:not(.menu) {
 		width: 60%;
 	}
 	.beepboxEditor .editor-settings select {
