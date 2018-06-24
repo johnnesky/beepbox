@@ -277,6 +277,7 @@
 √ copy/paste instruments! (Pasting either patterns or instruments should be grayed out if not compatible?)
 √ channel color lookups should wrap around.
 √ In mobile layout, the new/edit/prefs/export menus can fit into the left column above song settings.
+√ Bake the LFO effects into the pitch bend and volume envelope, like operator envelope.
 
 MAJOR REMAINING FEATURES:
 - "fadeout" option(s) in transition, would use polyphony, structured similar to openscores. (if the same pitch is played twice, does it cancel the old tone?) How should I keep track of tones?
@@ -294,8 +295,8 @@ MAJOR REMAINING FEATURES:
 - web app for home screen. (is there a requirement for a service worker?)
 
 MISC:
-- Bake the LFO effects into the pitch bend and volume envelope, like operator envelope.
 - Divide each beat into 24 note stops and 48 arpeggio/volume/vibrato stops. 
+- Target ES6 and get a new minifier. (maybe new uglifier? hopefully something that mangles _ private members.)
 - fadeout transition: I kinda wanna cancel a fadeout if it is the same pitch as a subsequent note. But wait! If there's a pitch bend, does that affect the pitch comparison? What about arpeggio or custom harmony? Pitch bend can't really effect the fading out note (because there are no more pins) but it can affect the new note. Maybe fadeout mode should introduce the slightly random pitch as a catch-all? If I'm gonna add polyphony for fadeout envelope, might as well add it as a full option instead of arpeggio/operator control, so chords can have a variable number of notes. Maybe "soft" onset fadeouts should have slightly random pitch. Proposed new options: "overlap"/"crossfade" is soft with a quick fadeout that coincides with the following note, "decay"/"release" is sudden with a medium decay, and "pad" is soft with a very long decay. Also I should finally make the transition fade duration independent from the rhythm option, and "seamless" should probably have a shorter fadeout than "smooth", for example.
 - divert www traffic to beepbox.co
 - switching bars doesn't seem to split transposes into multiple change states?

@@ -88,7 +88,7 @@ namespace beepbox {
 			}
 			return dest;
 			function transferWith(wordSize: number, source: ArrayBuffer, dest: ArrayBuffer, nextOffset: number, leftBytes: number) {
-				let ViewClass = Uint8Array;
+				let ViewClass: any = Uint8Array;
 				switch (wordSize) {
 					case 8:
 						ViewClass = Float64Array;
