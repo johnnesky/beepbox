@@ -46,6 +46,8 @@ namespace beepbox {
 		public showLetters: boolean;
 		public showChannels: boolean;
 		public showScrollBar: boolean;
+		public forceScaleChanges: boolean;
+		public forceRhythmChanges: boolean;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
@@ -68,6 +70,8 @@ namespace beepbox {
 			this.showLetters = localStorage.getItem("showLetters") == "true";
 			this.showChannels = localStorage.getItem("showChannels") == "true";
 			this.showScrollBar = localStorage.getItem("showScrollBar") == "true";
+			this.forceScaleChanges = localStorage.getItem("forceScaleChanges") == "true";
+			this.forceRhythmChanges = localStorage.getItem("forceRhythmChanges") != "false";
 			if (localStorage.getItem("volume") != null) this.volume = Number(localStorage.getItem("volume"));
 			
 			this.synth.volume = this._calcVolume();
@@ -209,6 +213,8 @@ namespace beepbox {
 			localStorage.setItem("showLetters", this.showLetters ? "true" : "false");
 			localStorage.setItem("showChannels", this.showChannels ? "true" : "false");
 			localStorage.setItem("showScrollBar", this.showScrollBar ? "true" : "false");
+			localStorage.setItem("forceScaleChanges", this.forceScaleChanges ? "true" : "false");
+			localStorage.setItem("forceRhythmChanges", this.forceRhythmChanges ? "true" : "false");
 			localStorage.setItem("volume", String(this.volume));
 		}
 		

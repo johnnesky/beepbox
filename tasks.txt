@@ -278,6 +278,8 @@
 √ channel color lookups should wrap around.
 √ In mobile layout, the new/edit/prefs/export menus can fit into the left column above song settings.
 √ Bake the LFO effects into the pitch bend and volume envelope, like operator envelope.
+√ Divide each beat into a standard 24 note stops and 48 arpeggio/volume/vibrato stops. 
+√ Allow mixing rhythms.
 
 MAJOR REMAINING FEATURES:
 - "fadeout" option(s) in transition, would use polyphony, structured similar to openscores. (if the same pitch is played twice, does it cancel the old tone?) How should I keep track of tones?
@@ -295,13 +297,17 @@ MAJOR REMAINING FEATURES:
 - web app for home screen. (is there a requirement for a service worker?)
 
 MISC:
-- Divide each beat into 24 note stops and 48 arpeggio/volume/vibrato stops. 
 - Target ES6 and get a new minifier. (maybe new uglifier? hopefully something that mangles _ private members.)
-- fadeout transition: I kinda wanna cancel a fadeout if it is the same pitch as a subsequent note. But wait! If there's a pitch bend, does that affect the pitch comparison? What about arpeggio or custom harmony? Pitch bend can't really effect the fading out note (because there are no more pins) but it can affect the new note. Maybe fadeout mode should introduce the slightly random pitch as a catch-all? If I'm gonna add polyphony for fadeout envelope, might as well add it as a full option instead of arpeggio/operator control, so chords can have a variable number of notes. Maybe "soft" onset fadeouts should have slightly random pitch. Proposed new options: "overlap"/"crossfade" is soft with a quick fadeout that coincides with the following note, "decay"/"release" is sudden with a medium decay, and "pad" is soft with a very long decay. Also I should finally make the transition fade duration independent from the rhythm option, and "seamless" should probably have a shorter fadeout than "smooth", for example.
+- Dragging notes while autofollow switches bars can cause notes to overlap. e.g. one pattern has a bunch of existing notes, you starting deforming one of them, then the pattern editor switches to a different pattern, it stops checking for overlap in the original pattern. Simplest solution: invalidate/commit a drag change when switching patterns?
+- Optionally force scale changes to apply to existing notes. Look at existing notes and/or scale to decide how to transition to new scale.
+- fadeout transition: I kinda wanna cancel a fadeout if it is the same pitch as a subsequent note. But wait! If there's a pitch bend, does that affect the pitch comparison? What about arpeggio or custom harmony? Pitch bend can't really effect the fading out note (because there are no more pins) but it can affect the new note. Maybe fadeout mode should introduce the slightly random pitch as a catch-all? If I'm gonna add polyphony for fadeout envelope, might as well add it as a full option instead of arpeggio/operator control, so chords can have a variable number of notes. Maybe "soft" onset fadeouts should have slightly random pitch. Proposed new options: "overlap"/"crossfade" is soft with a quick fadeout that coincides with the following note, "decay"/"release" is sudden with a medium decay, and "pad" is soft with a very long decay. Also I should finally make the transition fade duration independent from the rhythm option, and "seamless" should probably have a shorter fadeout than "smooth", for example. May need to impose a hard limit on how many tones can be playing at once per channel, can I do that without popping when I cut them off?
+- live piano should track time since note started for delayed vibrato, envelopes, decays, etc.
+- live piano should still play when song is paused
 - divert www traffic to beepbox.co
+- it would be cool to have some way to make the pitch waver/jitter randomly like a voice... probably under LFO effects as a kind of vibrato.
 - switching bars doesn't seem to split transposes into multiple change states?
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, snaps/claps, thunder, rain, fire, wind, randomly spaced (x / (1 + x^2)), maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard, orchestra hit? (can noise instruments be selected on pitch channels? maybe wiyh different available noise waves?)
-- instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else. Could I imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument. It may be time to stop using two midi channels for chip chorus. Replace Type with Templates. Custom chip and custom FM are generic options at the top that can't be selected directly. (The data format doesn't indicate which template you're using, except maybe json.) The template menu automatically detects if your instrument matches a template, and selects custom for you otherwise. Selecting a template may randomly select some parameters for variety.
+- instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else. Could I imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument. It may be time to stop using two midi channels for chip chorus. Replace Type with Templates. Custom chip and custom FM are generic options at the top that can't be selected directly. (The data format doesn't indicate which template you're using, except maybe json.) The template menu automatically detects if your instrument matches a template, and selects custom for you otherwise. Selecting a template may randomly select some parameters for variety. If you enable the preference to always show all instrument options, then the "new song" feature will default to "custom chip" but otherwise it'll default to a template instrument.
 - One of the template instruments (after custom chip and custom FM) should just be a random generator!)
 - Song options icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth note triplet symbol for rhythm. 
 - random song generator!?
@@ -311,6 +317,7 @@ MISC:
 - make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page. notify me about any questionable tweets?
 - consider trying polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency.
 - polyphonic fm midi export when there are multiple carriers. careful of overlapping note on/off events combined with slides...
+- It's probably okay if "parts" and "arpeggios" don't transition at exact sample boundaries, rather than fractional sample points. Maybe still keep beats aligned to sample boundaries, but you can have more precise BPM tempos by loosening up the alignment.
 - maybe command+S should do something useful?
 - wav export quality: CD (44100) vs Video (48000) standards, 1x, downsampled from 2x to 1x, downsampled from 4x to 2x. How does this affect FM feedback and noise volume?
 - Maybe support stereo delay effects in high quality mode.
@@ -318,7 +325,6 @@ MISC:
 - The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
 - do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
 - built-in link shortener?
-- live piano should track time since note started for delayed vibrato, envelopes, decays, etc.
 - remember recent songs in local shared object.
 - asynchronous export. worker thread?
 - is it possible to get pitch slides and seamless transitions to detect notes across bars?
@@ -359,7 +365,6 @@ PLAYLIST EDITOR:
 - custom cover art, color schemes in playlists and embed player.
 
 MAYBE:
-- Right now, the rhythm and scale options each control an axis of the pattern editor, but one forces existing notes to realign and the other doesn't. Both should have an option to realign or not! And notes would have a resolution of 24 parts per beat? How would arpeggio work? It's probably okay if "parts" and "arpeggios" don't transition at exact sample boundaries, rather than fractional sample points. Maybe still keep beats aligned to sample boundaries, but you can have more precise BPM tempos by loosening up the alignment.
 - when importing json, console.log stuff that doesn't parse correctly?
 - maybe noise waves should be a separate property from chip waves?
 - Record the "type" of channels (separately from instruments). Can be pitch or drum. Use instead of getChannelIsDrum. When exporting base64, write the pitch channels first even if they were somehow rearranged, but JSON could theoretically have channels in any order.
@@ -369,7 +374,6 @@ MAYBE:
 - compacting and concatenating songs!
 - can I improve the interaction for volume envelope dragging and pitch dragging? illustrate volume envelope dragging to make it less confusing. 
 - snap to tone edges from other channels, to help making NES style harmonies. 
-- piano should still play when song is paused
 - translation/localization
 - I could parse the algorithm name, pull out the arrows and parens, rotate them 90 degrees and put them between the numbers. That's... diabolical. Wait that doesn't work for a single example: 1<3 2<4 because the numbers are out of order! >:( (What about feedback arrows?)
 - ugh, now tremolo is its own thing in FM... but I still have the old "effect" menu, with built-in tremolo? Maybe split that out into a separate thing so that both chip and FM can share the vibrato but not tremelo. Oh uh and maybe support more vibrato and tremelo speeds? Stop using that beautiful LFO? Hm, should I sync all tremelo to the beats? I kinda feel like that might actually work. I think two per beat would roughly correspond to the previous behavior. Should vibrato also sync to the beats? vibrato is trickier because people actually use it, and the vibrato speed has a big effect on the perceived timbre. Oh and of course this affects midi export too! tremelos: fast light heavy slow? light and heavy versions of three speeds? I could throw tremelo into the transition menu, but that's just moving the problem of redundant features in FM mode from one menu to another, and confusing that menu. I could leave it alone, but it's, uh, pretty ugly. I could make a new envelope menu for chip instruments with all the same options as operator envelopes for consistency, but the name "envelope" would confuse json parsing of old versions, and more importantly, would the new envelope menu have a "custom" option, or would custom envelopes always be applied?

@@ -56,7 +56,7 @@ namespace beepbox {
 	interface PatternCopy {
 		notes: Note[];
 		beatsPerBar: number;
-		partsPerBeat: number;
+		rhythmStepsPerBeat: number;
 		drums: boolean;
 	}
 	
@@ -135,6 +135,8 @@ namespace beepbox {
 			option("showFifth", "Highlight 'Fifth' Notes", false, false),
 			option("showChannels", "Show All Channels", false, false),
 			option("showScrollBar", "Octave Scroll Bar", false, false),
+			option("forceScaleChanges", "Force Scale Changes", false, false),
+			option("forceRhythmChanges", "Force Rhythm Changes", false, false),
 		]);
 		private readonly _newSongButton: HTMLButtonElement = button({type: "button"}, [
 			text("New"),
@@ -155,7 +157,7 @@ namespace beepbox {
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select({}), Config.keyNames);
 		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
 		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
-		private readonly _partSelect: HTMLSelectElement = buildOptions(select({}), Config.partNames);
+		private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select({}), Config.rhythmNames);
 		private readonly _instrumentTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.pitchChannelTypeNames);
 		private readonly _instrumentTypeHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
 		private readonly _instrumentTypeSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Type: ")]), this._instrumentTypeHint, div({className: "selectContainer"}, [this._instrumentTypeSelect])]);
@@ -285,7 +287,7 @@ namespace beepbox {
 							]),
 							div({className: "selectRow"}, [
 								span({}, [text("Rhythm: ")]),
-								div({className: "selectContainer"}, [this._partSelect]),
+								div({className: "selectContainer"}, [this._rhythmSelect]),
 							]),
 						]),
 						div({className: "editor-instrument-settings"}, [
@@ -346,7 +348,7 @@ namespace beepbox {
 			this._optionsMenu.addEventListener("change", this._optionsMenuHandler);
 			this._scaleSelect.addEventListener("change", this._whenSetScale);
 			this._keySelect.addEventListener("change", this._whenSetKey);
-			this._partSelect.addEventListener("change", this._whenSetPartsPerBeat);
+			this._rhythmSelect.addEventListener("change", this._whenSetRhythm);
 			this._instrumentTypeSelect.addEventListener("change", this._whenSetInstrumentType);
 			this._algorithmSelect.addEventListener("change", this._whenSetAlgorithm);
 			this._instrumentSelect.addEventListener("change", this._whenSetInstrument);
@@ -437,6 +439,8 @@ namespace beepbox {
 				(this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes",
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
+				(this._doc.forceScaleChanges ? "✓ " : "") + "Force Scale Changes",
+				(this._doc.forceRhythmChanges ? "✓ " : "") + "Force Rhythm Changes",
 			]
 			for (let i: number = 0; i < optionCommands.length; i++) {
 				const option: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.children[i + 1];
@@ -455,7 +459,7 @@ namespace beepbox {
 			this._tempoSlider.updateValue(this._doc.song.tempo);
 			this._tempoSlider.input.title = this._doc.song.getBeatsPerMinute() + " beats per minute";
 			this._reverbSlider.updateValue(this._doc.song.reverb);
-			setSelectedIndex(this._partSelect, Config.partCounts.indexOf(this._doc.song.partsPerBeat));
+			setSelectedIndex(this._rhythmSelect, this._doc.song.rhythm);
 			if (instrument.type == InstrumentType.noise) {
 				this._instrumentVolumeSliderRow.style.display = "";
 				this._drumSelect.style.display = "";
@@ -686,7 +690,7 @@ namespace beepbox {
 			const patternCopy: PatternCopy = {
 				notes: pattern.notes,
 				beatsPerBar: this._doc.song.beatsPerBar,
-				partsPerBeat: this._doc.song.partsPerBeat,
+				rhythmStepsPerBeat: Config.rhythmStepsPerBeat[this._doc.song.rhythm],
 				drums: this._doc.song.getChannelIsDrum(this._doc.channel),
 			};
 			
@@ -700,7 +704,7 @@ namespace beepbox {
 			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
 			
 			if (patternCopy != null && patternCopy.drums == this._doc.song.getChannelIsDrum(this._doc.channel)) {
-				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beatsPerBar, patternCopy.partsPerBeat));
+				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beatsPerBar, patternCopy.rhythmStepsPerBeat));
 			}
 		}
 		
@@ -755,8 +759,8 @@ namespace beepbox {
 			this._doc.record(new ChangeKey(this._doc, this._keySelect.selectedIndex));
 		}
 		
-		private _whenSetPartsPerBeat = (): void => {
-			this._doc.record(new ChangePartsPerBeat(this._doc, Config.partCounts[this._partSelect.selectedIndex]));
+		private _whenSetRhythm = (): void => {
+			this._doc.record(new ChangeRhythm(this._doc, this._rhythmSelect.selectedIndex));
 		}
 		
 		private _whenSetInstrumentType = (): void => {
@@ -864,6 +868,12 @@ namespace beepbox {
 					break;
 				case "showScrollBar":
 					this._doc.showScrollBar = !this._doc.showScrollBar;
+					break;
+				case "forceScaleChanges":
+					this._doc.forceScaleChanges = !this._doc.forceScaleChanges;
+					break;
+				case "forceRhythmChanges":
+					this._doc.forceRhythmChanges = !this._doc.forceRhythmChanges;
 					break;
 			}
 			this._optionsMenu.selectedIndex = 0;
