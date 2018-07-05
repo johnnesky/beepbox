@@ -116,7 +116,7 @@ namespace beepbox {
 		private _renderedBeatWidth: number = -1;
 		private _renderedFifths: boolean = false;
 		private _renderedDrums: boolean = false;
-		private _renderedPartsPerBeat: number = -1;
+		private _renderedRhythm: number = -1;
 		private _renderedPitchChannelCount: number = -1;
 		private _renderedDrumChannelCount: number = -1;
 		private _followPlayheadBar: number = -1;
@@ -159,14 +159,27 @@ namespace beepbox {
 		}
 		
 		private _getMaxDivision(): number {
-			if (this._doc.song.partsPerBeat % 3 == 0) {
+			const rhythmStepsPerBeat: number = Config.rhythmStepsPerBeat[this._doc.song.rhythm];
+			if (rhythmStepsPerBeat % 4 == 0) {
+				// Beat is divisible by 2 (and 4).
+				return Config.partsPerBeat / 2;
+			} else if (rhythmStepsPerBeat % 3 == 0) {
 				// Beat is divisible by 3.
-				return this._doc.song.partsPerBeat / 3;
-			} else if (this._doc.song.partsPerBeat % 2 == 0) {
+				return Config.partsPerBeat / 3;
+			} else if (rhythmStepsPerBeat % 2 == 0) {
 				// Beat is divisible by 2.
-				return this._doc.song.partsPerBeat / 2;
+				return Config.partsPerBeat / 2;
 			}
-			return this._doc.song.partsPerBeat;
+			return Config.partsPerBeat;
+		}
+		
+		private _getMinDivision(): number {
+			return Config.partsPerBeat / Config.rhythmStepsPerBeat[this._doc.song.rhythm];
+		}
+		
+		private _snapToMinDivision(input: number): number {
+			const minDivision: number = this._getMinDivision();
+			return Math.floor(input / minDivision) * minDivision;
 		}
 		
 		private _updateCursorStatus(): void {
@@ -176,15 +189,22 @@ namespace beepbox {
 			
 			if (this._mouseX < 0 || this._mouseX > this._editorWidth || this._mouseY < 0 || this._mouseY > this._editorHeight) return;
 			
-			this._cursor.part = Math.floor(Math.max(0, Math.min(this._doc.song.beatsPerBar * this._doc.song.partsPerBeat - 1, this._mouseX / this._partWidth)));
+			const minDivision: number = this._getMinDivision();
+			const exactPart: number = this._mouseX / this._partWidth;
+			this._cursor.part =
+				Math.floor(
+					Math.max(0,
+						Math.min(this._doc.song.beatsPerBar * Config.partsPerBeat - minDivision, exactPart)
+					)
+				/ minDivision) * minDivision;
 			
 			for (const note of this._pattern.notes) {
-				if (note.end <= this._cursor.part) {
+				if (note.end <= exactPart) {
 					this._cursor.prevNote = note;
 					this._cursor.curIndex++;
-				} else if (note.start <= this._cursor.part && note.end > this._cursor.part) {
+				} else if (note.start <= exactPart && note.end > exactPart) {
 					this._cursor.curNote = note;
-				} else if (note.start > this._cursor.part) {
+				} else if (note.start > exactPart) {
 					this._cursor.nextNote = note;
 					break;
 				}
@@ -252,29 +272,29 @@ namespace beepbox {
 			} else {
 				this._cursor.pitch = this._snapToPitch(mousePitch, 0, Config.maxPitch);
 				const defaultLength: number = this._copiedPins[this._copiedPins.length-1].time;
-				const fullBeats: number = Math.floor(this._cursor.part / this._doc.song.partsPerBeat);
+				const fullBeats: number = Math.floor(this._cursor.part / Config.partsPerBeat);
 				const maxDivision: number = this._getMaxDivision();
-				const modMouse: number = this._cursor.part % this._doc.song.partsPerBeat;
+				const modMouse: number = this._cursor.part % Config.partsPerBeat;
 				if (defaultLength == 1) {
 					this._cursor.start = this._cursor.part;
-				} else if (defaultLength > this._doc.song.partsPerBeat) {
-					this._cursor.start = fullBeats * this._doc.song.partsPerBeat;
-				} else if (defaultLength == this._doc.song.partsPerBeat) {
-					this._cursor.start = fullBeats * this._doc.song.partsPerBeat;
-					if (maxDivision < this._doc.song.partsPerBeat && modMouse > maxDivision) {
+				} else if (defaultLength > Config.partsPerBeat) {
+					this._cursor.start = fullBeats * Config.partsPerBeat;
+				} else if (defaultLength == Config.partsPerBeat) {
+					this._cursor.start = fullBeats * Config.partsPerBeat;
+					if (maxDivision < Config.partsPerBeat && modMouse > maxDivision) {
 						this._cursor.start += Math.floor(modMouse / maxDivision) * maxDivision;
 					}
 				} else {
-					this._cursor.start = fullBeats * this._doc.song.partsPerBeat;
-					let division = this._doc.song.partsPerBeat % defaultLength == 0 ? defaultLength : Math.min(defaultLength, maxDivision);
-					while (division < maxDivision && this._doc.song.partsPerBeat % division != 0) {
+					this._cursor.start = fullBeats * Config.partsPerBeat;
+					let division = Config.partsPerBeat % defaultLength == 0 ? defaultLength : Math.min(defaultLength, maxDivision);
+					while (division < maxDivision && Config.partsPerBeat % division != 0) {
 						division++;
 					}
 					this._cursor.start += Math.floor(modMouse / division) * division;
 				}
 				this._cursor.end = this._cursor.start + defaultLength;
 				let forceStart: number = 0;
-				let forceEnd: number = this._doc.song.beatsPerBar * this._doc.song.partsPerBeat;
+				let forceEnd: number = this._doc.song.beatsPerBar * Config.partsPerBeat;
 				if (this._cursor.prevNote != null) {
 					forceStart = this._cursor.prevNote.end;
 				}
@@ -485,6 +505,8 @@ namespace beepbox {
 			const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
 			
 			if (this._mouseDown && this._cursor.valid && continuousState) {
+				const minDivision: number = this._getMinDivision();
+				
 				if (!this._mouseDragging) {
 					const dx: number = this._mouseX - this._mouseXStart;
 					const dy: number = this._mouseY - this._mouseYStart;
@@ -499,12 +521,13 @@ namespace beepbox {
 						this._dragChange.undo();
 					}
 					
-					const currentPart: number = Math.floor(this._mouseX / this._partWidth);
+					const currentPart: number = this._snapToMinDivision(this._mouseX / this._partWidth);
 					const sequence: ChangeSequence = new ChangeSequence();
 					this._dragChange = sequence;
 					this._doc.setProspectiveChange(this._dragChange);
 					
 					if (this._cursor.curNote == null) {
+						
 						let backwards: boolean;
 						let directLength: number;
 						if (currentPart < this._cursor.start) {
@@ -512,19 +535,20 @@ namespace beepbox {
 							directLength = this._cursor.start - currentPart;
 						} else {
 							backwards = false;
-							directLength = currentPart - this._cursor.start + 1;
+							directLength = currentPart - this._cursor.start + minDivision;
 						}
 						
-						let defaultLength: number = 1;
-						for (let i: number = 0; i <= this._doc.song.beatsPerBar * this._doc.song.partsPerBeat; i++) {
-							if (i >= 5 &&
-							    i % this._doc.song.partsPerBeat != 0 &&
-							    i != this._doc.song.partsPerBeat * 3.0 / 2.0 &&
-							    i != this._doc.song.partsPerBeat * 4.0 / 3.0 &&
-							    i != this._doc.song.partsPerBeat * 5.0 / 3.0)
+						let defaultLength: number = minDivision;
+						for (let i: number = minDivision; i <= this._doc.song.beatsPerBar * Config.partsPerBeat; i += minDivision) {
+							if (i >= 5 * minDivision &&
+							    i % Config.partsPerBeat != 0 &&
+							    i != Config.partsPerBeat * 3.0 / 2.0 &&
+							    i != Config.partsPerBeat * 4.0 / 3.0 &&
+							    i != Config.partsPerBeat * 5.0 / 3.0)
 							{
 								continue;
 							}
+							
 							const blessedLength: number = i;
 							if (blessedLength == directLength) {
 								defaultLength = blessedLength;
@@ -535,7 +559,7 @@ namespace beepbox {
 							}
 							
 							if (blessedLength > directLength) {
-								if (defaultLength < directLength - 1) {
+								if (defaultLength < directLength - minDivision) {
 									defaultLength = blessedLength;
 								}
 								break;
@@ -557,7 +581,7 @@ namespace beepbox {
 							end = start + defaultLength;
 						}
 						if (start < 0) start = 0;
-						if (end > this._doc.song.beatsPerBar * this._doc.song.partsPerBeat) end = this._doc.song.beatsPerBar * this._doc.song.partsPerBeat;
+						if (end > this._doc.song.beatsPerBar * Config.partsPerBeat) end = this._doc.song.beatsPerBar * Config.partsPerBeat;
 						
 						sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, start, end));
 						let i: number;
@@ -573,12 +597,12 @@ namespace beepbox {
 						this._dragVolume = theNote.pins[backwards ? 0 : 1].volume;
 						this._dragVisible = true;
 					} else if (this._mouseHorizontal) {
-						const shift: number = Math.round((this._mouseX - this._mouseXStart) / this._partWidth);
+						const shift: number = (this._mouseX - this._mouseXStart) / this._partWidth;
 						
 						const shiftedPin: NotePin = this._cursor.curNote.pins[this._cursor.nearPinIndex];
-						let shiftedTime: number = this._cursor.curNote.start + shiftedPin.time + shift;
+						let shiftedTime: number = Math.round((this._cursor.curNote.start + shiftedPin.time + shift) / minDivision) * minDivision;
 						if (shiftedTime < 0) shiftedTime = 0;
-						if (shiftedTime > this._doc.song.beatsPerBar * this._doc.song.partsPerBeat) shiftedTime = this._doc.song.beatsPerBar * this._doc.song.partsPerBeat;
+						if (shiftedTime > this._doc.song.beatsPerBar * Config.partsPerBeat) shiftedTime = this._doc.song.beatsPerBar * Config.partsPerBeat;
 						
 						if (shiftedTime <= this._cursor.curNote.start && this._cursor.nearPinIndex == this._cursor.curNote.pins.length - 1 ||
 						    shiftedTime >= this._cursor.curNote.end   && this._cursor.nearPinIndex == 0)
@@ -600,7 +624,12 @@ namespace beepbox {
 							this._copyPins(this._cursor.curNote);
 						}
 					} else if (this._cursor.pitchIndex == -1) {
-						const bendPart: number = Math.round(Math.max(this._cursor.curNote.start, Math.min(this._cursor.curNote.end, this._mouseX / this._partWidth))) - this._cursor.curNote.start;
+						const bendPart: number = 
+							Math.max(this._cursor.curNote.start,
+								Math.min(this._cursor.curNote.end,
+									Math.round(this._mouseX / (this._partWidth * minDivision)) * minDivision
+								)
+							) - this._cursor.curNote.start;
 						
 						let prevPin: NotePin;
 						let nextPin: NotePin = this._cursor.curNote.pins[0];
@@ -632,14 +661,14 @@ namespace beepbox {
 						let bendStart: number;
 						let bendEnd: number;
 						if (this._mouseX >= this._mouseXStart) {
-							bendStart = this._cursor.part;
-							bendEnd   = currentPart + 1;
+							bendStart = Math.max(this._cursor.curNote.start, this._cursor.part);
+							bendEnd   = currentPart + minDivision;
 						} else {
-							bendStart = this._cursor.part + 1;
+							bendStart = Math.min(this._cursor.curNote.end, this._cursor.part + minDivision);
 							bendEnd   = currentPart;
 						}
 						if (bendEnd < 0) bendEnd = 0;
-						if (bendEnd > this._doc.song.beatsPerBar * this._doc.song.partsPerBeat) bendEnd = this._doc.song.beatsPerBar * this._doc.song.partsPerBeat;
+						if (bendEnd > this._doc.song.beatsPerBar * Config.partsPerBeat) bendEnd = this._doc.song.beatsPerBar * Config.partsPerBeat;
 						if (bendEnd > this._cursor.curNote.end) {
 							sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, this._cursor.curNote.start, bendEnd, this._cursor.curNote));
 						}
@@ -758,16 +787,16 @@ namespace beepbox {
 		private _documentChanged = (): void => {
 			this._editorWidth = this._doc.showLetters ? (this._doc.showScrollBar ? 460 : 480) : (this._doc.showScrollBar ? 492 : 512);
 			this._pattern = this._doc.getCurrentPattern();
-			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * this._doc.song.partsPerBeat);
+			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * Config.partsPerBeat);
 			this._pitchHeight = this._doc.song.getChannelIsDrum(this._doc.channel) ? this._defaultDrumHeight : this._defaultPitchHeight;
 			this._pitchCount = this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount : Config.pitchCount;
 			this._octaveOffset = this._doc.song.channels[this._doc.channel].octave * 12;
 			
-			if (this._renderedPartsPerBeat != this._doc.song.partsPerBeat || 
+			if (this._renderedRhythm != this._doc.song.rhythm || 
 				this._renderedPitchChannelCount != this._doc.song.pitchChannelCount || 
 				this._renderedDrumChannelCount != this._doc.song.drumChannelCount)
 			{
-				this._renderedPartsPerBeat = this._doc.song.partsPerBeat;
+				this._renderedRhythm = this._doc.song.rhythm;
 				this._renderedPitchChannelCount = this._doc.song.pitchChannelCount;
 				this._renderedDrumChannelCount = this._doc.song.drumChannelCount;
 				this.resetCopiedPins();
@@ -883,13 +912,17 @@ namespace beepbox {
 		}
 		
 		private _drawNote(svgElement: SVGPathElement, pitch: number, start: number, pins: NotePin[], radius: number, showVolume: boolean, offset: number): void {
+			const totalWidth: number = this._partWidth * (pins[pins.length - 1].time + pins[0].time);
+			const endOffset: number = 0.5 * Math.min(2, totalWidth - 1);
+			
 			let nextPin: NotePin = pins[0];
-			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + 1) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
+			
+			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + endOffset) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
 			for (let i: number = 1; i < pins.length; i++) {
 				let prevPin: NotePin = nextPin;
 				nextPin = pins[i];
-				let prevSide: number = this._partWidth * (start + prevPin.time) + (i == 1 ? 1 : 0);
-				let nextSide: number = this._partWidth * (start + nextPin.time) - (i == pins.length - 1 ? 1 : 0);
+				let prevSide: number = this._partWidth * (start + prevPin.time) + (i == 1 ? endOffset : 0);
+				let nextSide: number = this._partWidth * (start + nextPin.time) - (i == pins.length - 1 ? endOffset : 0);
 				let prevHeight: number = this._pitchToPixelHeight(pitch + prevPin.interval - offset);
 				let nextHeight: number = this._pitchToPixelHeight(pitch + nextPin.interval - offset);
 				let prevVolume: number = showVolume ? prevPin.volume / 3.0 : 1.0;
@@ -902,8 +935,8 @@ namespace beepbox {
 			for (let i: number = pins.length - 2; i >= 0; i--) {
 				let prevPin: NotePin = nextPin;
 				nextPin = pins[i];
-				let prevSide: number = this._partWidth * (start + prevPin.time) - (i == pins.length - 2 ? 1 : 0);
-				let nextSide: number = this._partWidth * (start + nextPin.time) + (i == 0 ? 1 : 0);
+				let prevSide: number = this._partWidth * (start + prevPin.time) - (i == pins.length - 2 ? endOffset : 0);
+				let nextSide: number = this._partWidth * (start + nextPin.time) + (i == 0 ? endOffset : 0);
 				let prevHeight: number = this._pitchToPixelHeight(pitch + prevPin.interval - offset);
 				let nextHeight: number = this._pitchToPixelHeight(pitch + nextPin.interval - offset);
 				let prevVolume: number = showVolume ? prevPin.volume / 3.0 : 1.0;

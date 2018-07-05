@@ -362,8 +362,7 @@ namespace beepbox {
 			
 			const song: Song = this._doc.song;
 			const ticksPerBeat: number = 96;
-			const ticksPerPart: number = ticksPerBeat / song.partsPerBeat;
-			const ticksPerArpeggio: number = ticksPerPart / 4;
+			const ticksPerPart: number = ticksPerBeat / Config.partsPerBeat;
 			const secondsPerMinute: number = 60;
 			const microsecondsPerMinute: number = secondsPerMinute * 1000000;
 			const beatsPerMinute: number = song.getBeatsPerMinute();
@@ -623,27 +622,17 @@ namespace beepbox {
 										const linearVolume: number = lerp(pinVolume, nextPinVolume, tick / length);
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, tick / length);
 										
-										const arpeggio: number = Math.floor(tick / ticksPerArpeggio) % 4;
 										let nextPitch: number = note.pitches[0];
-										if (usesArpeggio) {
+										if (usesArpeggio && note.pitches.length > 1) {
+											const arpeggio: number = Math.floor(tick / (Config.ticksPerArpeggio[song.rhythm] * ticksPerPart / Config.ticksPerPart));
 											if (chorusHarmonizes) {
 												if (isChorus) {
-													if (note.pitches.length == 2) {
-														nextPitch = note.pitches[1];
-													} else if (note.pitches.length == 3) {
-														nextPitch = note.pitches[(arpeggio >> 1) + 1];
-													} else if (note.pitches.length == 4) {
-														nextPitch = note.pitches[(arpeggio == 3 ? 1 : arpeggio) + 1];
-													}
+													const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][note.pitches.length - 2];
+													nextPitch = note.pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]];
 												}
 											} else {
-												if (note.pitches.length == 2) {
-													nextPitch = note.pitches[arpeggio >> 1];
-												} else if (note.pitches.length == 3) {
-													nextPitch = note.pitches[arpeggio == 3 ? 1 : arpeggio];
-												} else if (note.pitches.length == 4) {
-													nextPitch = note.pitches[arpeggio];
-												}
+												const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][note.pitches.length - 1];
+												nextPitch = note.pitches[arpeggioPattern[arpeggio % arpeggioPattern.length]];
 											}
 										}
 										

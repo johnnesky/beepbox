@@ -89,8 +89,17 @@ namespace beepbox {
 		public static readonly patternsPerChannelMax: number = 64;
 		public static readonly instrumentsPerChannelMin: number = 1;
 		public static readonly instrumentsPerChannelMax: number = 10;
-		public static readonly partNames: ReadonlyArray<string> = ["÷3 (triplets)", "÷4 (standard)", "÷6", "÷8"];
-		public static readonly partCounts: ReadonlyArray<number> = [3, 4, 6, 8];
+		public static readonly rhythmNames: ReadonlyArray<string> = ["÷3 (triplets)", "÷4 (standard)", "÷6", "÷8"];
+		public static readonly rhythmStepsPerBeat: ReadonlyArray<number> = [3, 4, 6, 8];
+		public static readonly ticksPerArpeggio: ReadonlyArray<number> = [4, 3, 4, 3];
+		public static readonly arpeggioPatterns: ReadonlyArray<ReadonlyArray<ReadonlyArray<number>>> = [
+			[[0], [0, 0, 1, 1], [0, 1, 2, 1], [0, 1, 2, 3]],
+			[[0], [0, 0, 1, 1], [0, 1, 2, 1], [0, 1, 2, 3]],
+			[[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]],
+			[[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]],
+		];
+		public static readonly partsPerBeat: number = 24;
+		public static readonly ticksPerPart: number = 2;
 		public static readonly waveNames: ReadonlyArray<string> = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
 		public static readonly waveVolumes: ReadonlyArray<number> = [1.0,         0.5,       0.5,          0.5,          0.65,          0.5,          0.4,         0.4,      0.94];
 		// the "clang" and "buzz" drums are inspired by similar drums in the modded beepbox! :D
@@ -108,10 +117,15 @@ namespace beepbox {
 		public static readonly filterCutoffRange: number = 11;
 		public static readonly filterResonanceRange: number = 8;
 		public static readonly transitionNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide"];
+		public static readonly transitionAttackTicks: ReadonlyArray<number> = [0, 0, 3, 3];
+		public static readonly transitionReleaseTicks: ReadonlyArray<number> = [1, 3, 3, 3];
+		public static readonly transitionIsSeamless: ReadonlyArray<boolean> = [true, false, false, true];
+		public static readonly transitionSlides: ReadonlyArray<boolean> = [false, false, false, true];
+		public static readonly transitionSlideTicks: ReadonlyArray<number> = [3, 3, 3, 3];
 		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "tremolo light", "tremolo heavy"];
 		public static readonly effectVibratos: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.0, 0.0];
 		public static readonly effectTremolos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-		public static readonly effectVibratoDelays: ReadonlyArray<number> = [0, 0, 3, 0, 0, 0];
+		public static readonly effectVibratoDelays: ReadonlyArray<number> = [0, 0, 18, 0, 0, 0];
 		public static readonly chorusNames: ReadonlyArray<string> = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed", "custom harmony"];
 		public static readonly chorusIntervals: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02, 0.05];
 		public static readonly chorusOffsets: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0, 0.0];
@@ -576,6 +590,10 @@ namespace beepbox {
 		}
 		
 		public readPartDuration(): number {
+			return this.readLongTail(1, 3);
+		}
+		
+		public readLegacyPartDuration(): number {
 			return this.readLongTail(1, 2);
 		}
 		
@@ -620,7 +638,7 @@ namespace beepbox {
 		}
 		
 		public writePartDuration(value: number): void {
-			this.writeLongTail(1, 2, value);
+			this.writeLongTail(1, 3, value);
 		}
 		
 		public writePinCount(value: number): void {
@@ -968,8 +986,8 @@ namespace beepbox {
 		private static readonly _format: string = "BeepBox";
 		private static readonly _oldestVersion: number = 2;
 		private static readonly _latestVersion: number = 7;
-		private static readonly _base64CharCodeToInt: ReadonlyArray<number> = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,62,62,0,0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0,0,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,0,0,0,0,63,0,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,0,0,0,0,0]; // 62 could be represented by either "-" or "." for historical reasons. New songs should use "-".
 		private static readonly _base64IntToCharCode: ReadonlyArray<number> = [48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,45,95];
+		private static readonly _base64CharCodeToInt: ReadonlyArray<number> = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,62,62,0,0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0,0,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,0,0,0,0,63,0,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,0,0,0,0,0]; // 62 could be represented by either "-" or "." for historical reasons. New songs should use "-".
 		
 		public scale: number;
 		public key: number;
@@ -978,7 +996,7 @@ namespace beepbox {
 		public beatsPerBar: number;
 		public barCount: number;
 		public patternsPerChannel: number;
-		public partsPerBeat: number;
+		public rhythm: number;
 		public instrumentsPerChannel: number;
 		public loopStart: number;
 		public loopLength: number;
@@ -1033,7 +1051,7 @@ namespace beepbox {
 			this.beatsPerBar = 8;
 			this.barCount = 16;
 			this.patternsPerChannel = 8;
-			this.partsPerBeat = 4;
+			this.rhythm = 1;
 			this.instrumentsPerChannel = 1;
 			
 			if (andResetChannels) {
@@ -1090,7 +1108,7 @@ namespace beepbox {
 			buffer.push(SongTagCode.barCount, base64IntToCharCode[(this.barCount - 1) >> 6], base64IntToCharCode[(this.barCount - 1) & 0x3f]);
 			buffer.push(SongTagCode.patternCount, base64IntToCharCode[this.patternsPerChannel - 1]);
 			buffer.push(SongTagCode.instrumentCount, base64IntToCharCode[this.instrumentsPerChannel - 1]);
-			buffer.push(SongTagCode.rhythm, base64IntToCharCode[Config.partCounts.indexOf(this.partsPerBeat)]);
+			buffer.push(SongTagCode.rhythm, base64IntToCharCode[this.rhythm]);
 			
 			buffer.push(SongTagCode.channelOctave);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
@@ -1164,35 +1182,35 @@ namespace beepbox {
 				for (let i: number = 0; i < recentPitches.length; i++) {
 					recentPitches[i] += octaveOffset;
 				}
-				for (const p of this.channels[channel].patterns) {
-					bits.write(neededInstrumentBits, p.instrument);
+				for (const pattern of this.channels[channel].patterns) {
+					bits.write(neededInstrumentBits, pattern.instrument);
 					
-					if (p.notes.length > 0) {
+					if (pattern.notes.length > 0) {
 						bits.write(1, 1);
 						
 						let curPart: number = 0;
-						for (const t of p.notes) {
-							if (t.start > curPart) {
+						for (const note of pattern.notes) {
+							if (note.start > curPart) {
 								bits.write(2, 0); // rest
-								bits.writePartDuration(t.start - curPart);
+								bits.writePartDuration(note.start - curPart);
 							}
 							
 							const shapeBits: BitFieldWriter = new BitFieldWriter();
 							
 							// 0: 1 pitch, 10: 2 pitches, 110: 3 pitches, 111: 4 pitches
-							for (let i: number = 1; i < t.pitches.length; i++) shapeBits.write(1,1);
-							if (t.pitches.length < 4) shapeBits.write(1,0);
+							for (let i: number = 1; i < note.pitches.length; i++) shapeBits.write(1,1);
+							if (note.pitches.length < 4) shapeBits.write(1,0);
 							
-							shapeBits.writePinCount(t.pins.length - 1);
+							shapeBits.writePinCount(note.pins.length - 1);
 							
-							shapeBits.write(2, t.pins[0].volume); // volume
+							shapeBits.write(2, note.pins[0].volume); // volume
 							
 							let shapePart: number = 0;
-							let startPitch: number = t.pitches[0];
+							let startPitch: number = note.pitches[0];
 							let currentPitch: number = startPitch;
 							const pitchBends: number[] = [];
-							for (let i: number = 1; i < t.pins.length; i++) {
-								const pin: NotePin = t.pins[i];
+							for (let i: number = 1; i < note.pins.length; i++) {
+								const pin: NotePin = note.pins[i];
 								const nextPitch: number = startPitch + pin.interval;
 								if (currentPitch != nextPitch) {
 									shapeBits.write(1, 1);
@@ -1219,7 +1237,7 @@ namespace beepbox {
 							recentShapes.unshift(shapeString);
 							if (recentShapes.length > 10) recentShapes.pop();
 							
-							const allPitches: number[] = t.pitches.concat(pitchBends);
+							const allPitches: number[] = note.pitches.concat(pitchBends);
 							for (let i: number = 0; i < allPitches.length; i++) {
 								const pitch: number = allPitches[i];
 								const pitchIndex: number = recentPitches.indexOf(pitch);
@@ -1247,18 +1265,18 @@ namespace beepbox {
 								recentPitches.unshift(pitch);
 								if (recentPitches.length > 8) recentPitches.pop();
 								
-								if (i == t.pitches.length - 1) {
-									lastPitch = t.pitches[0];
+								if (i == note.pitches.length - 1) {
+									lastPitch = note.pitches[0];
 								} else {
 									lastPitch = pitch;
 								}
 							}
-							curPart = t.end;
+							curPart = note.end;
 						}
 						
-						if (curPart < this.beatsPerBar * this.partsPerBeat) {
+						if (curPart < this.beatsPerBar * Config.partsPerBeat) {
 							bits.write(2, 0); // rest
-							bits.writePartDuration(this.beatsPerBar * this.partsPerBeat - curPart);
+							bits.writePartDuration(this.beatsPerBar * Config.partsPerBeat - curPart);
 						}
 					} else {
 						bits.write(1, 0);
@@ -1394,7 +1412,7 @@ namespace beepbox {
 						}
 					}
 				} else if (command == SongTagCode.rhythm) {
-					this.partsPerBeat = Config.partCounts[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
+					this.rhythm = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 				} else if (command == SongTagCode.channelOctave) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
@@ -1435,27 +1453,37 @@ namespace beepbox {
 					
 						if (beforeThree) {
 							channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+							const instrument: Instrument = this.channels[channel].instruments[0];
 							const legacyFilter: number = [1, 3, 4, 5][clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
-							this.channels[channel].instruments[0].filterCutoff = legacyToCutoff[legacyFilter];
-							this.channels[channel].instruments[0].filterEnvelope = legacyToEnvelope[legacyFilter];
-							this.channels[channel].instruments[0].filterResonance = 0;
+							instrument.filterCutoff = legacyToCutoff[legacyFilter];
+							instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
+							instrument.filterResonance = 0;
 						} else if (beforeSix) {
 							for (channel = 0; channel < this.getChannelCount(); channel++) {
 								for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-									const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
-									this.channels[channel].instruments[i].filterCutoff = legacyToCutoff[legacyFilter];
-									this.channels[channel].instruments[i].filterEnvelope = legacyToEnvelope[legacyFilter];
-									this.channels[channel].instruments[i].filterResonance = 0;
+									const instrument: Instrument = this.channels[channel].instruments[i];
+									if (channel < this.pitchChannelCount) {
+										const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
+										instrument.filterCutoff = legacyToCutoff[legacyFilter];
+										instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
+										instrument.filterResonance = 0;
+									} else {
+										instrument.filterCutoff = 10;
+										instrument.filterEnvelope = 1;
+										instrument.filterResonance = 0;
+									}
 								}
 							}
 						} else {
 							const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterCutoff = legacyToCutoff[legacyFilter];
-							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterEnvelope = legacyToEnvelope[legacyFilter];
-							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterResonance = 0;
+							const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+							instrument.filterCutoff = legacyToCutoff[legacyFilter];
+							instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
+							instrument.filterResonance = 0;
 						}
 					} else {
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterCutoff = clamp(0, Config.filterCutoffRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+						instrument.filterCutoff = clamp(0, Config.filterCutoffRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				} else if (command == SongTagCode.filterResonance) {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterResonance = clamp(0, Config.filterResonanceRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -1617,7 +1645,7 @@ namespace beepbox {
 							
 							let curPart: number = 0;
 							const newNotes: Note[] = newPattern.notes;
-							while (curPart < this.beatsPerBar * this.partsPerBeat) {
+							while (curPart < this.beatsPerBar * Config.partsPerBeat) {
 								
 								const useOldShape: boolean = bits.read(1) == 1;
 								let newNote: boolean = false;
@@ -1629,7 +1657,9 @@ namespace beepbox {
 								}
 								
 								if (!useOldShape && !newNote) {
-									const restLength: number = bits.readPartDuration();
+									const restLength: number = beforeSeven
+										? bits.readLegacyPartDuration() * Config.partsPerBeat / Config.rhythmStepsPerBeat[this.rhythm]
+										: bits.readPartDuration();
 									curPart += restLength;
 								} else {
 									let shape: any;
@@ -1654,7 +1684,9 @@ namespace beepbox {
 											pinObj = {};
 											pinObj.pitchBend = bits.read(1) == 1;
 											if (pinObj.pitchBend) shape.bendCount++;
-											shape.length += bits.readPartDuration();
+											shape.length += beforeSeven
+												? bits.readLegacyPartDuration() * Config.partsPerBeat / Config.rhythmStepsPerBeat[this.rhythm]
+												: bits.readPartDuration();
 											pinObj.time = shape.length;
 											pinObj.volume = bits.read(2);
 											shape.pins.push(pinObj);
@@ -1791,7 +1823,8 @@ namespace beepbox {
 				introBars: this.loopStart,
 				loopBars: this.loopLength,
 				beatsPerBar: this.beatsPerBar,
-				ticksPerBeat: this.partsPerBeat,
+				rhythm: Config.rhythmStepsPerBeat[this.rhythm],
+				ticksPerBeat: Config.partsPerBeat,
 				beatsPerMinute: this.getBeatsPerMinute(), // represents tempo
 				reverb: this.reverb,
 				//outroBars: this.barCount - this.loopStart - this.loopLength; // derive this from bar arrays?
@@ -1804,8 +1837,8 @@ namespace beepbox {
 		public fromJsonObject(jsonObject: any): void {
 			this.initToDefault(true);
 			if (!jsonObject) return;
-			const version: any = jsonObject.version;
-			if (version > Song._format) return;
+			const version: number = jsonObject.version | 0;
+			if (version > Song._latestVersion) return;
 			
 			this.scale = 11; // default to expert.
 			if (jsonObject.scale != undefined) {
@@ -1848,10 +1881,18 @@ namespace beepbox {
 				this.beatsPerBar = Math.max(Config.beatsPerBarMin, Math.min(Config.beatsPerBarMax, jsonObject.beatsPerBar | 0));
 			}
 			
+			let importedPartsPerBeat: number = Config.partsPerBeat;
 			if (jsonObject.ticksPerBeat != undefined) {
-				this.partsPerBeat = jsonObject.ticksPerBeat | 0;
-				if (Config.partCounts.indexOf(this.partsPerBeat) == -1) {
-					this.partsPerBeat = Config.partCounts[Config.partCounts.length - 1];
+				importedPartsPerBeat = (jsonObject.ticksPerBeat | 0) || Config.partsPerBeat;
+				this.rhythm = Config.rhythmStepsPerBeat.indexOf(importedPartsPerBeat);
+				if (this.rhythm == -1) {
+					this.rhythm = 1;
+				}
+			}
+			if (jsonObject.rhythm != undefined) {
+				this.rhythm = Config.rhythmStepsPerBeat.indexOf(jsonObject.rhythm);
+				if (this.rhythm == -1) {
+					this.rhythm = 1;
 				}
 			}
 			
@@ -1917,7 +1958,7 @@ namespace beepbox {
 						const instrument: Instrument = this.channels[channel].instruments[i];
 						instrument.fromJsonObject(channelObject.instruments[i], isDrum);
 					}
-				
+					
 					for (let i: number = 0; i < this.patternsPerChannel; i++) {
 						const pattern: Pattern = this.channels[channel].patterns[i];
 					
@@ -1928,7 +1969,7 @@ namespace beepbox {
 						pattern.instrument = clamp(0, this.instrumentsPerChannel, (patternObject.instrument | 0) - 1);
 					
 						if (patternObject.notes && patternObject.notes.length > 0) {
-							const maxNoteCount: number = Math.min(this.beatsPerBar * this.partsPerBeat, patternObject.notes.length >>> 0);
+							const maxNoteCount: number = Math.min(this.beatsPerBar * Config.partsPerBeat, patternObject.notes.length >>> 0);
 						
 							///@TODO: Consider supporting notes specified in any timing order, sorting them and truncating as necessary. 
 							let tickClock: number = 0;
@@ -1958,10 +1999,12 @@ namespace beepbox {
 									const pointObject: any = noteObject.points[k];
 									if (pointObject == undefined || pointObject.tick == undefined) continue;
 									const interval: number = (pointObject.pitchBend == undefined) ? 0 : (pointObject.pitchBend | 0);
-									const time: number = pointObject.tick | 0;
+									
+									const time: number = Math.round((pointObject.tick | 0) * Config.partsPerBeat / importedPartsPerBeat);
+									
 									const volume: number = (pointObject.volume == undefined) ? 3 : Math.max(0, Math.min(3, Math.round((pointObject.volume | 0) * 3 / 100)));
 								
-									if (time > this.beatsPerBar * this.partsPerBeat) continue;
+									if (time > this.beatsPerBar * Config.partsPerBeat) continue;
 									if (note.pins.length == 0) {
 										if (time < noteClock) continue;
 										note.start = time;
@@ -2125,12 +2168,11 @@ namespace beepbox {
 		private bar: number = 0;
 		private beat: number = 0;
 		private part: number = 0;
-		private arpeggio: number = 0;
-		private arpeggioSampleCountdown: number = 0;
+		private tick: number = 0;
+		private tickSampleCountdown: number = 0;
 		private paused: boolean = true;
 		
 		private readonly tones: Tone[] = [];
-		private stillGoing: boolean = false;
 		private limit: number = 0.0;
 		
 		private samplesForChorus: Float32Array | null = null;
@@ -2166,13 +2208,13 @@ namespace beepbox {
 				this.bar = Math.floor(remainder);
 				remainder = this.song.beatsPerBar * (remainder - this.bar);
 				this.beat = Math.floor(remainder);
-				remainder = this.song.partsPerBeat * (remainder - this.beat);
+				remainder = Config.partsPerBeat * (remainder - this.beat);
 				this.part = Math.floor(remainder);
-				remainder = 4 * (remainder - this.part);
-				this.arpeggio = Math.floor(remainder);
-				const samplesPerArpeggio: number = this.getSamplesPerArpeggio();
-				remainder = samplesPerArpeggio * (remainder - this.arpeggio);
-				this.arpeggioSampleCountdown = Math.floor(samplesPerArpeggio - remainder);
+				remainder = Config.ticksPerPart * (remainder - this.part);
+				this.tick = Math.floor(remainder);
+				const samplesPerTick: number = this.getSamplesPerTick();
+				remainder = samplesPerTick * (remainder - this.tick);
+				this.tickSampleCountdown = Math.floor(samplesPerTick - remainder);
 				if (this.bar < this.song.loopStart) {
 					this.enableIntro = true;
 				}
@@ -2184,7 +2226,7 @@ namespace beepbox {
 		
 		public get totalSamples(): number {
 			if (this.song == null) return 0;
-			const samplesPerBar: number = this.getSamplesPerArpeggio() * 4 * this.song.partsPerBeat * this.song.beatsPerBar;
+			const samplesPerBar: number = this.getSamplesPerTick() * Config.ticksPerPart * Config.partsPerBeat * this.song.beatsPerBar;
 			let loopMinCount: number = this.loopCount;
 			if (loopMinCount < 0) loopMinCount = 1;
 			let bars: number = this.song.loopLength * loopMinCount;
@@ -2238,8 +2280,8 @@ namespace beepbox {
 			this.scriptNode.disconnect(this.audioCtx.destination);
 			if (this.audioCtx.close) {
 				this.audioCtx.close(); // firefox is missing this function?
-				this.audioCtx = null;
 			}
+			this.audioCtx = null;
 			this.scriptNode = null;
 		}
 		
@@ -2254,8 +2296,8 @@ namespace beepbox {
 			this.playheadInternal = this.bar;
 			this.beat = 0;
 			this.part = 0;
-			this.arpeggio = 0;
-			this.arpeggioSampleCountdown = 0;
+			this.tick = 0;
+			this.tickSampleCountdown = 0;
 			
 			for (const tone of this.tones) tone.reset();
 			
@@ -2310,7 +2352,7 @@ namespace beepbox {
 		}
 		
 		public synthesize(data: Float32Array, bufferLength: number): void {
-			if (this.song == null) {
+			if (this.song == null || this.paused) {
 				for (let i: number = 0; i < bufferLength; i++) {
 					data[i] = 0.0;
 				}
@@ -2323,26 +2365,26 @@ namespace beepbox {
 			}
 			this.tones.length = channelCount;
 			
-			const samplesPerArpeggio: number = this.getSamplesPerArpeggio();
+			const samplesPerTick: number = this.getSamplesPerTick();
 			let bufferIndex: number = 0;
 			let ended: boolean = false;
 			
 			// Check the bounds of the playhead:
-			if (this.arpeggioSampleCountdown == 0 || this.arpeggioSampleCountdown > samplesPerArpeggio) {
-				this.arpeggioSampleCountdown = samplesPerArpeggio;
+			if (this.tickSampleCountdown == 0 || this.tickSampleCountdown > samplesPerTick) {
+				this.tickSampleCountdown = samplesPerTick;
 			}
-			if (this.part >= this.song.partsPerBeat) {
+			if (this.part >= Config.partsPerBeat) {
 				this.beat++;
 				this.part = 0;
-				this.arpeggio = 0;
-				this.arpeggioSampleCountdown = samplesPerArpeggio;
+				this.tick = 0;
+				this.tickSampleCountdown = samplesPerTick;
 			}
 			if (this.beat >= this.song.beatsPerBar) {
 				this.bar++;
 				this.beat = 0;
 				this.part = 0;
-				this.arpeggio = 0;
-				this.arpeggioSampleCountdown = samplesPerArpeggio;
+				this.tick = 0;
+				this.tickSampleCountdown = samplesPerTick;
 				
 				if (this.loopCount == -1) {
 					if (this.bar < this.song.loopStart && !this.enableIntro) this.bar = this.song.loopStart;
@@ -2397,12 +2439,12 @@ namespace beepbox {
 				while (bufferIndex < bufferLength) {
 			
 					const samplesLeftInBuffer: number = bufferLength - bufferIndex;
-					const runLength: number = (this.arpeggioSampleCountdown <= samplesLeftInBuffer)
-						? this.arpeggioSampleCountdown
+					const runLength: number = (this.tickSampleCountdown <= samplesLeftInBuffer)
+						? this.tickSampleCountdown
 						: samplesLeftInBuffer;
 					for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
 						const instrument: Instrument = this.song.channels[channel].instruments[this.song.getPatternInstrument(channel, this.bar)];
-						Synth.computeTone(this, this.song, channel, samplesPerArpeggio, runLength, instrument);
+						Synth.computeTone(this, this.song, channel, samplesPerTick, runLength, instrument);
 						const tone = this.tones[channel];
 						if (tone.active) {
 							const synthBuffer: Float32Array = synthBufferByDelay[instrument.delay];
@@ -2412,14 +2454,14 @@ namespace beepbox {
 					}
 					bufferIndex += runLength;
 					
-					this.arpeggioSampleCountdown -= runLength;
-					if (this.arpeggioSampleCountdown <= 0) {
-						this.arpeggio++;
-						this.arpeggioSampleCountdown = samplesPerArpeggio;
-						if (this.arpeggio == 4) {
-							this.arpeggio = 0;
+					this.tickSampleCountdown -= runLength;
+					if (this.tickSampleCountdown <= 0) {
+						this.tick++;
+						this.tickSampleCountdown = samplesPerTick;
+						if (this.tick == Config.ticksPerPart) {
+							this.tick = 0;
 							this.part++;
-							if (this.part == this.song.partsPerBeat) {
+							if (this.part == Config.partsPerBeat) {
 								this.part = 0;
 								this.beat++;
 								if (this.beat == this.song.beatsPerBar) {
@@ -2545,7 +2587,7 @@ namespace beepbox {
 			this.reverbFeedback3 = reverbFeedback3;
 			this.limit = limit;
 			
-			this.playheadInternal = (((this.arpeggio + 1.0 - this.arpeggioSampleCountdown / samplesPerArpeggio) / 4.0 + this.part) / this.song.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
+			this.playheadInternal = (((this.tick + 1.0 - this.tickSampleCountdown / samplesPerTick) / 2.0 + this.part) / Config.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
 			
 			const synthDuration: number = performance.now() - synthStartTime;
 			
@@ -2591,7 +2633,7 @@ namespace beepbox {
 			}
 		}
 		
-		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerArpeggio: number, runLength: number, instrument: Instrument): void {
+		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerTick: number, runLength: number, instrument: Instrument): void {
 			const isDrum: boolean = song.getChannelIsDrum(channel);
 			const tone: Tone = synth.tones[channel];
 			const pattern: Pattern | null = song.getPattern(channel, synth.bar);
@@ -2599,8 +2641,8 @@ namespace beepbox {
 			const basePitch: number = isDrum ? Config.drumBasePitches[instrument.wave] : Config.keyTransposes[song.key];
 			const intervalScale: number = isDrum ? Config.drumInterval : 1;
 			const pitchDamping: number = isDrum ? (Config.drumWaveIsSoft[instrument.wave] ? 24.0 : 60.0) : 48.0;
-			const secondsPerPart: number = 4.0 * samplesPerArpeggio / synth.samplesPerSecond;
-			const beatsPerPart: number = 1.0 / song.partsPerBeat;
+			const secondsPerPart: number = Config.ticksPerPart * samplesPerTick / synth.samplesPerSecond;
+			const beatsPerPart: number = 1.0 / Config.partsPerBeat;
 			
 			tone.phaseDeltaScale = 0.0;
 			tone.filter = 1.0;
@@ -2611,8 +2653,8 @@ namespace beepbox {
 			tone.active = false;
 			
 			let partsSinceStart: number = 0.0;
-			let arpeggio: number = synth.arpeggio;
-			let arpeggioSampleCountdown: number = synth.arpeggioSampleCountdown;
+			let tick: number = synth.tick;
+			let tickSampleCountdown: number = synth.tickSampleCountdown;
 			
 			let pitches: number[] | null = null;
 			let resetPhases: boolean = true;
@@ -2642,7 +2684,7 @@ namespace beepbox {
 				resetPhases = false;
 				// TODO: track time since live piano note started for transition, envelope, decays, delayed vibrato, etc.
 			} else if (pattern != null) {
-				const time: number = synth.part + synth.beat * song.partsPerBeat;
+				const time: number = synth.part + synth.beat * Config.partsPerBeat;
 				
 				let note: Note | null = null;
 				let prevNote: Note | null = null;
@@ -2670,13 +2712,16 @@ namespace beepbox {
 					}
 					const startPin: NotePin = note.pins[endPinIndex-1];
 					const endPin: NotePin = note.pins[endPinIndex];
-					const noteStart: number = note.start * 4;
-					const noteEnd:   number = note.end   * 4;
-					const pinStart: number  = (note.start + startPin.time) * 4;
-					const pinEnd:   number  = (note.start +   endPin.time) * 4;
+					const noteStartTick: number = note.start * Config.ticksPerPart;
+					const noteEndTick:   number = note.end   * Config.ticksPerPart;
+					const noteLengthTicks: number = noteEndTick - noteStartTick;
+					const pinStart: number  = (note.start + startPin.time) * Config.ticksPerPart;
+					const pinEnd:   number  = (note.start +   endPin.time) * Config.ticksPerPart;
 					
-					const tickTimeStart: number = time * 4 + arpeggio;
-					const tickTimeEnd:   number = time * 4 + arpeggio + 1;
+					const tickTimeStart: number = time * Config.ticksPerPart + tick;
+					const tickTimeEnd:   number = time * Config.ticksPerPart + tick + 1;
+					const noteTicksPassedTickStart: number = tickTimeStart - noteStartTick;
+					const noteTicksPassedTickEnd: number = tickTimeEnd - noteStartTick;
 					const pinRatioStart: number = (tickTimeStart - pinStart) / (pinEnd - pinStart);
 					const pinRatioEnd:   number = (tickTimeEnd   - pinStart) / (pinEnd - pinStart);
 					let customVolumeTickStart: number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioStart;
@@ -2690,11 +2735,63 @@ namespace beepbox {
 					let decayTimeTickStart: number = partTimeTickStart;
 					let decayTimeTickEnd:   number = partTimeTickEnd;
 					
-					const startRatio: number = 1.0 - (arpeggioSampleCountdown            ) / samplesPerArpeggio;
-					const endRatio:   number = 1.0 - (arpeggioSampleCountdown - runLength) / samplesPerArpeggio;
-					resetPhases = (tickTimeStart + startRatio - noteStart == 0.0);
+					const startRatio: number = 1.0 - (tickSampleCountdown            ) / samplesPerTick;
+					const endRatio:   number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
+					resetPhases = (tickTimeStart + startRatio - noteStartTick == 0.0);
 					
+					// if seamless, don't reset phases at start. (it's probably not necessary to constantly reset phases if there are no notes? Just do it once when note starts? But make sure that reset phases doesn't also reset stuff that this function did to set up the tone. Remember when the first run length was lost!
+					// if slide, average the interval, decayTime, and custom volume at the endpoints and interpolate between over slide duration.
+					// note that currently seamless and slide make different assumptions about whether a note at the end of a bar will connect with the next bar!
 					const transition: number = instrument.transition;
+					const maximumTransitionTicks: number = noteLengthTicks * 0.5;
+					if (Config.transitionIsSeamless[transition] && prevNote != null) {
+						resetPhases = false;
+						if (Config.transitionSlides[transition]) {
+							const slideTicks: number = Math.min(maximumTransitionTicks, Config.transitionSlideTicks[transition]);
+							const slideRatioStartTick: number = Math.max(0.0, 1.0 - noteTicksPassedTickStart / slideTicks);
+							const slideRatioEndTick:   number = Math.max(0.0, 1.0 - noteTicksPassedTickEnd / slideTicks);
+							const intervalDiff: number = ((prevNote.pitches[0] + prevNote.pins[prevNote.pins.length-1].interval) - note.pitches[0]) * 0.5;
+							const volumeDiff: number = (prevNote.pins[prevNote.pins.length-1].volume - note.pins[0].volume) * 0.5;
+							const decayTimeDiff: number = (prevNote.end - prevNote.start) * 0.5;
+							intervalTickStart += slideRatioStartTick * intervalDiff;
+							intervalTickEnd += slideRatioEndTick * intervalDiff;
+							customVolumeTickStart += slideRatioStartTick * volumeDiff;
+							customVolumeTickEnd += slideRatioEndTick * volumeDiff;
+							decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
+							decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
+						}
+					} else {
+						const attackTicks: number = Math.min(maximumTransitionTicks, Config.transitionAttackTicks[transition]);
+						if (attackTicks > 0.0) {
+							transitionVolumeTickStart *= Math.min(1.0, noteTicksPassedTickStart / attackTicks);
+							transitionVolumeTickEnd   *= Math.min(1.0, noteTicksPassedTickEnd / attackTicks);
+						}
+					}
+					if (Config.transitionIsSeamless[transition] && !Config.transitionSlides[transition] && note.end == Config.partsPerBeat * song.beatsPerBar) {
+						// Special case for seamless, no-slide transition: assume the next bar starts with another seamless note, don't fade out.
+					} else if (Config.transitionIsSeamless[transition] && nextNote != null) {
+						if (Config.transitionSlides[transition]) {
+							const slideTicks: number = Math.min(maximumTransitionTicks, Config.transitionSlideTicks[transition]);
+							const slideRatioStartTick: number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickStart) / slideTicks);
+							const slideRatioEndTick:   number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickEnd) / slideTicks);
+							const intervalDiff: number = (nextNote.pitches[0] - (note.pitches[0] + note.pins[note.pins.length-1].interval)) * 0.5;
+							const volumeDiff: number = (nextNote.pins[0].volume - note.pins[note.pins.length-1].volume) * 0.5;
+							const decayTimeDiff: number = -(note.end - note.start) * 0.5;
+							intervalTickStart += slideRatioStartTick * intervalDiff;
+							intervalTickEnd += slideRatioEndTick * intervalDiff;
+							customVolumeTickStart += slideRatioStartTick * volumeDiff;
+							customVolumeTickEnd += slideRatioEndTick * volumeDiff;
+							decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
+							decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
+						}
+					} else {
+						const releaseTicks: number = Math.min(maximumTransitionTicks, Config.transitionReleaseTicks[transition]);
+						if (releaseTicks > 0.0) {
+							transitionVolumeTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / releaseTicks);
+							transitionVolumeTickEnd   *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickEnd) / releaseTicks);
+						}
+					}
+					/*
 					if (tickTimeStart == noteStart) {
 						if (transition == 0) {
 							// seamless start
@@ -2718,7 +2815,7 @@ namespace beepbox {
 					if (tickTimeEnd == noteEnd) {
 						if (transition == 0) {
 							// seamless ending: fade out, unless adjacent to another note or at end of bar.
-							if (nextNote == null && note.start + endPin.time != song.partsPerBeat * song.beatsPerBar) {
+							if (nextNote == null && note.start + endPin.time != Config.partsPerBeat * song.beatsPerBar) {
 								transitionVolumeTickEnd = 0.0;
 							}
 						} else if (transition == 1 || transition == 2) {
@@ -2736,6 +2833,7 @@ namespace beepbox {
 							}
 						}
 					}
+					*/
 					
 					intervalStart = intervalTickStart + (intervalTickEnd - intervalTickStart) * startRatio;
 					intervalEnd   = intervalTickStart + (intervalTickEnd - intervalTickStart) * endRatio;
@@ -2770,6 +2868,8 @@ namespace beepbox {
 					transitionVolumeStart *= tremoloStart;
 					transitionVolumeEnd   *= tremoloEnd;
 				}
+				
+				const filterVolume: number = Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, customVolumeStart, customVolumeEnd);
 				
 				if (instrument.type == InstrumentType.fm) {
 					// phase modulation!
@@ -2826,10 +2926,8 @@ namespace beepbox {
 					tone.feedbackMult = feedbackStart;
 					tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 					
-					const filterVolume: number = 5.0 * Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, customVolumeStart, customVolumeEnd);
-					
-					tone.volumeStart = filterVolume * transitionVolumeStart;
-					tone.volumeDelta = filterVolume * (transitionVolumeEnd - transitionVolumeStart) / runLength;
+					tone.volumeStart = filterVolume * 5.0 * transitionVolumeStart;
+					tone.volumeDelta = filterVolume * 5.0 * (transitionVolumeEnd - transitionVolumeStart) / runLength;
 					
 					sineVolumeBoost *= 1.0 - instrument.feedbackAmplitude / 15.0;
 					sineVolumeBoost *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolume - 1) / 2.0);
@@ -2837,24 +2935,17 @@ namespace beepbox {
 					tone.volumeDelta *= 1.0 + sineVolumeBoost * 3.0;
 				} else {
 					let pitch: number = pitches[0];
-					if (Config.chorusHarmonizes[instrument.chorus]) {
-						let harmonyOffset: number = 0.0;
-						if (pitches.length == 2) {
-							harmonyOffset = pitches[1] - pitches[0];
-						} else if (pitches.length == 3) {
-							harmonyOffset = pitches[(arpeggio >> 1) + 1] - pitches[0];
-						} else if (pitches.length == 4) {
-							harmonyOffset = pitches[(arpeggio == 3 ? 1 : arpeggio) + 1] - pitches[0];
-						}
-						tone.harmonyMult = Math.pow(2.0, harmonyOffset / 12.0);
-						tone.harmonyVolumeMult = Math.pow(2.0, -harmonyOffset / pitchDamping)
-					} else {
-						if (pitches.length == 2) {
-							pitch = pitches[arpeggio >> 1];
-						} else if (pitches.length == 3) {
-							pitch = pitches[arpeggio == 3 ? 1 : arpeggio];
-						} else if (pitches.length == 4) {
-							pitch = pitches[arpeggio];
+					
+					if (pitches.length > 1) {
+						const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.ticksPerArpeggio[song.rhythm]);
+						if (Config.chorusHarmonizes[instrument.chorus]) {
+							const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][pitches.length - 2];
+							const harmonyOffset: number = pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]] - pitches[0];
+							tone.harmonyMult = Math.pow(2.0, harmonyOffset / 12.0);
+							tone.harmonyVolumeMult = Math.pow(2.0, -harmonyOffset / pitchDamping)
+						} else {
+							const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][pitches.length - 1];
+							pitch = pitches[arpeggioPattern[arpeggio % arpeggioPattern.length]];
 						}
 					}
 					
@@ -2863,7 +2954,6 @@ namespace beepbox {
 					const startFreq: number = synth.frequencyFromPitch(basePitch + startPitch);
 					const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
 					const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
-					const filterVolume: number = Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, customVolumeStart, customVolumeEnd);
 					let settingsVolumeMult: number;
 					if (!isDrum) {
 						settingsVolumeMult = 0.27 * 0.5 * Config.waveVolumes[instrument.wave] * filterVolume * Config.chorusVolumes[instrument.chorus];
@@ -3162,16 +3252,16 @@ namespace beepbox {
 		}
 		
 		private volumeConversion(noteVolume: number): number {
-			return Math.pow(noteVolume / 3.0, 1.5);
+			return Math.pow(Math.max(0.0, noteVolume) / 3.0, 1.5);
 		}
 		
-		private getSamplesPerArpeggio(): number {
+		private getSamplesPerTick(): number {
 			if (this.song == null) return 0;
 			const beatsPerMinute: number = this.song.getBeatsPerMinute();
 			const beatsPerSecond: number = beatsPerMinute / 60.0;
-			const partsPerSecond: number = beatsPerSecond * this.song.partsPerBeat;
-			const arpeggioPerSecond: number = partsPerSecond * 4.0;
-			return Math.floor(this.samplesPerSecond / arpeggioPerSecond);
+			const partsPerSecond: number = beatsPerSecond * Config.partsPerBeat;
+			const tickPerSecond: number = partsPerSecond * Config.ticksPerPart;
+			return Math.floor(this.samplesPerSecond / tickPerSecond);
 		}
 	}
 }

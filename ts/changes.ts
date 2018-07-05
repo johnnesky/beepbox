@@ -252,7 +252,7 @@ namespace beepbox {
 					const sequence: ChangeSequence = new ChangeSequence();
 					for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
 						for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
-							sequence.append(new ChangeNoteTruncate(doc, doc.song.channels[i].patterns[j], newValue * doc.song.partsPerBeat, doc.song.beatsPerBar * doc.song.partsPerBeat));
+							sequence.append(new ChangeNoteTruncate(doc, doc.song.channels[i].patterns[j], newValue * Config.partsPerBeat, doc.song.beatsPerBar * Config.partsPerBeat));
 						}
 					}
 				}
@@ -493,16 +493,18 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangePartsPerBeat extends ChangeGroup {
+	export class ChangeRhythm extends ChangeGroup {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			if (doc.song.partsPerBeat != newValue) {
-				for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-					for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
-						this.append(new ChangeRhythm(doc, doc.song.channels[i].patterns[j], doc.song.partsPerBeat, newValue));
+			if (doc.song.rhythm != newValue) {
+				if (doc.forceRhythmChanges) {
+					for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
+						for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
+							this.append(new ChangeRhythmStepsPerBeat(doc, doc.song.channels[i].patterns[j], Config.rhythmStepsPerBeat[doc.song.rhythm], Config.rhythmStepsPerBeat[newValue]));
+						}
 					}
 				}
-				doc.song.partsPerBeat = newValue;
+				doc.song.rhythm = newValue;
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -510,16 +512,18 @@ namespace beepbox {
 	}
 	
 	export class ChangePaste extends ChangeGroup {
-		constructor(doc: SongDocument, pattern: Pattern, notes: Note[], newBeatsPerBar: number, newPartsPerBeat: number) {
+		constructor(doc: SongDocument, pattern: Pattern, notes: Note[], newBeatsPerBar: number, newRhythmStepsPerBeat: number) {
 			super();
 			pattern.notes = notes;
 			
-			if (doc.song.partsPerBeat != newPartsPerBeat) {
-				this.append(new ChangeRhythm(doc, pattern, newPartsPerBeat, doc.song.partsPerBeat));
+			if (doc.forceRhythmChanges) {
+				if (Config.rhythmStepsPerBeat[doc.song.rhythm] != newRhythmStepsPerBeat) {
+					this.append(new ChangeRhythmStepsPerBeat(doc, pattern, newRhythmStepsPerBeat, Config.rhythmStepsPerBeat[doc.song.rhythm]));
+				}
 			}
 			
 			if (doc.song.beatsPerBar != newBeatsPerBar) {
-				this.append(new ChangeNoteTruncate(doc, pattern, doc.song.beatsPerBar * doc.song.partsPerBeat, newBeatsPerBar * doc.song.partsPerBeat));
+				this.append(new ChangeNoteTruncate(doc, pattern, doc.song.beatsPerBar * Config.partsPerBeat, newBeatsPerBar * Config.partsPerBeat));
 			}
 			
 			doc.notifier.changed();
@@ -673,18 +677,19 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeRhythm extends ChangeSequence {
-		constructor(doc: SongDocument, bar: Pattern, oldPartsPerBeat: number, newPartsPerBeat: number) {
+	class ChangeRhythmStepsPerBeat extends ChangeSequence {
+		constructor(doc: SongDocument, bar: Pattern, oldRhythmStepsPerBeat: number, newRhythmStepsPerBeat: number) {
 			super();
-			let changeRhythm: (oldTime:number)=>number;
+			const minDivision: number = Config.partsPerBeat / newRhythmStepsPerBeat;
+			const changeRhythm: (oldTime:number)=>number = function(oldTime: number): number {
+				if (oldRhythmStepsPerBeat > newRhythmStepsPerBeat) {
+					return Math.ceil(oldTime / minDivision) * minDivision;
+				} else if (oldRhythmStepsPerBeat < newRhythmStepsPerBeat) {
+					return Math.floor(oldTime / minDivision) * minDivision;
+				}
+				return oldTime;
+			};
 			
-			if (oldPartsPerBeat > newPartsPerBeat) {
-				changeRhythm = (oldTime: number)=> Math.ceil(oldTime * newPartsPerBeat / oldPartsPerBeat);
-			} else if (oldPartsPerBeat < newPartsPerBeat) {
-				changeRhythm = (oldTime: number)=> Math.floor(oldTime * newPartsPerBeat / oldPartsPerBeat);
-			} else {
-				throw new Error("ChangeRhythm couldn't handle rhythm change from " + oldPartsPerBeat + " to " + newPartsPerBeat + ".");
-			}
 			let i: number = 0;
 			while (i < bar.notes.length) {
 				const note: Note = bar.notes[i];
@@ -698,7 +703,7 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeRhythmNote extends ChangePins {
+	class ChangeRhythmNote extends ChangePins {
 		constructor(doc: SongDocument, note: Note, changeRhythm: (oldTime:number)=>number) {
 			super(doc, note);
 			
