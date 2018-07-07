@@ -701,7 +701,7 @@ namespace beepbox {
 			}
 		}
 		
-		private _whenCursorReleased = (event: Event): void => {
+		private _whenCursorReleased = (event: Event | null): void => {
 			if (!this._cursor.valid) return;
 			if (this._pattern == null) return;
 			const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
@@ -785,8 +785,14 @@ namespace beepbox {
 		}
 		
 		private _documentChanged = (): void => {
+			const nextPattern: Pattern | null = this._doc.getCurrentPattern();
+			if (this._pattern != nextPattern) {
+				this._whenCursorReleased(null);
+				this._dragChange = null;
+			}
+			this._pattern = nextPattern;
+			
 			this._editorWidth = this._doc.showLetters ? (this._doc.showScrollBar ? 460 : 480) : (this._doc.showScrollBar ? 492 : 512);
-			this._pattern = this._doc.getCurrentPattern();
 			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * Config.partsPerBeat);
 			this._pitchHeight = this._doc.song.getChannelIsDrum(this._doc.channel) ? this._defaultDrumHeight : this._defaultPitchHeight;
 			this._pitchCount = this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount : Config.pitchCount;
