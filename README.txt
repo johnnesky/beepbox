@@ -6,16 +6,18 @@ Use this code to play songs in your game that were designed in the BeepBox
 editor. These songs are much smaller in file size than equivalent MP3s, at 
 the cost of the processing time required to generate the song in code. 
 
-JavaScript:
+JavaScript Synth:
 Copy beepbox-synth/beepbox_synth.js into your JavaScript project. See 
 beepbox-synth/synth_example.html for an example of how to use it.
 
-TypeScript:
-Copy ts/synth.ts into your TypeScript project. 
+JavaScript Editor:
+Copy beepbox-synth/beepbox_editor.js into your JavaScript project. 
 
-ActionScript:
-Copy the as/beepbox/synth package into your Flash project. See 
-as/SynthExample.as for an exmaple of how to use it. 
+TypeScript Synth:
+Install npm and TypeScript, then copy ts/synth.ts and ts/FFT.ts into your TypeScript project or run: compile_beepbox_synth.sh
+
+TypeScript Editor:
+Install npm, TypeScript, and uglify-es (NOT uglify-js), then run: compile_beepbox_editor.sh
 
 Beep Box can be accessed at:
 http://www.beepbox.co/

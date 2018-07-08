@@ -2,7 +2,7 @@
 
 # Compile ts/SongEditor.ts into beepbox_editor.js
 tsc \
-	--target ES5 \
+	--target ES6 \
 	--strictNullChecks \
 	--noImplicitAny \
 	--noImplicitReturns \
@@ -15,9 +15,7 @@ tsc \
 uglifyjs \
 	--compress \
 	--mangle \
-	--mangle-props \
-	--mangle-regex="/^_.+/" \
-	--screw-ie8 \
+	--mangle-props regex="/^_.+/" \
 	beepbox-synth/beepbox_editor.js \
 	-o beepbox-synth/beepbox_editor.min.js
 

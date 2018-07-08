@@ -282,6 +282,7 @@
 √ Allow mixing rhythms.
 √ Dragging notes while autofollow switches bars could cause notes to overlap.
 √ vibrato shaky
+√ Target ES6 and use uglify-es.
 
 MAJOR REMAINING FEATURES:
 - "fadeout" option(s) in transition, would use polyphony, structured similar to openscores. (if the same pitch is played twice, does it cancel the old tone?) How should I keep track of tones?
@@ -298,10 +299,9 @@ MAJOR REMAINING FEATURES:
 - translation
 - web app for home screen. (is there a requirement for a service worker?)
 
-MISC:
+NEXT RELEASE:
 - Optionally force scale changes to apply to existing notes. Look at existing notes and/or scale to decide how to transition to new scale.
-- divert www traffic to beepbox.co
-- Target ES6 and get a new minifier. (maybe new uglifier? hopefully something that mangles _ private members.)
+- An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
 - fadeout transition: I kinda wanna cancel a fadeout if it is the same pitch as a subsequent note. But wait! If there's a pitch bend, does that affect the pitch comparison? What about arpeggio or custom harmony? Pitch bend can't really effect the fading out note (because there are no more pins) but it can affect the new note. Maybe fadeout mode should introduce the slightly random pitch as a catch-all? If I'm gonna add polyphony for fadeout envelope, might as well add it as a full option instead of arpeggio/operator control, so chords can have a variable number of notes. Maybe "soft" onset fadeouts should have slightly random pitch. Proposed new options: "overlap"/"crossfade" is soft with a quick fadeout that coincides with the following note, "decay"/"release" is sudden with a medium decay, and "pad" is soft with a very long decay. Also I should finally make the transition fade duration independent from the rhythm option, and "seamless" should probably have a shorter fadeout than "smooth", for example. May need to impose a hard limit on how many tones can be playing at once per channel, can I do that without popping when I cut them off?
 - live piano should track time since note started for delayed vibrato, envelopes, decays, etc.
 - live piano should still play when song is paused
@@ -310,12 +310,21 @@ MISC:
 - instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else. Could I imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument. It may be time to stop using two midi channels for chip chorus. Replace Type with Templates. Custom chip and custom FM are generic options at the top that can't be selected directly. (The data format doesn't indicate which template you're using, except maybe json.) The template menu automatically detects if your instrument matches a template, and selects custom for you otherwise. Selecting a template may randomly select some parameters for variety. If you enable the preference to always show all instrument options, then the "new song" feature will default to "custom chip" but otherwise it'll default to a template instrument.
 - One of the template instruments (after custom chip and custom FM) should just be a random generator!)
 - Song options icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth note triplet symbol for rhythm. 
+- Add a "title" attributes or tooltips to all of the options.
+- consider trying polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency.
+
+MISC:
+- built-in link shortener?
+- do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
+- make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page. notify me about any questionable tweets?
 - random song generator!?
 - combine new, export, and import JSON into a File menu. (and random!)
-- Add a "title" attributes or tooltips to all of the options.
+- remember recent songs in local shared object.
 - add a tutorial + music theory primer. exercise restraint choosing pitches, develop a rhythm first, explore intervals/pitch relationships. It would be cool to have mini beepbox editors with preloaded songs demonstrating concepts, with play, reset, and "open in full editor" options. Mostly it would focus on the pattern editor, but may have one-off additions like a tempo slider to demonstrate tempo.
-- make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page. notify me about any questionable tweets?
-- consider trying polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency.
+- asynchronous export. worker thread?
+- is it possible to get pitch slides and seamless transitions to detect notes across bars?
+- a way to pre-generate a javascript sound buffer.
+- in firefox, after selecting options, spacebar both reopens options and toggles play. Same problem with arrow keys, and even ctrl+brackets to change tabs. Apparently this is a known firefox bug. https://bugzilla.mozilla.org/show_bug.cgi?id=1019630
 - polyphonic fm midi export when there are multiple carriers. careful of overlapping note on/off events combined with slides...
 - It's probably okay if "parts" and "arpeggios" don't transition at exact sample boundaries, rather than fractional sample points. Maybe still keep beats aligned to sample boundaries, but you can have more precise BPM tempos by loosening up the alignment.
 - maybe command+S should do something useful?
@@ -323,13 +332,7 @@ MISC:
 - Maybe support stereo delay effects in high quality mode.
 - maybe sum adjacent fm synth samples (at half volume) to cancel out inaudible feedback artifacts? for the carrier wave(s), try that integral thing to reduce the aliasing... or is that not really the problem here? (fortunately the integral of a sine wave is just an offset sinewave!) The FM feedback has been bugging me because it has a tendency to alternate between high and low values every other output sample. This is probably (?) inaudible, but is nevertheless an artifact. I could probably mitigate it by adding each FM sample to the previous sample before outputting (and cutting the volume in half to compensate). Does this help with more complicated structures? Note that this won't fix the audible FM aliasing, I'm not sure if there's anything besides super sampling that would fix that.
 - The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
-- do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
-- built-in link shortener?
-- remember recent songs in local shared object.
-- asynchronous export. worker thread?
-- is it possible to get pitch slides and seamless transitions to detect notes across bars?
-- a way to pre-generate a javascript sound buffer.
-- in firefox, after selecting options, spacebar both reopens options and toggles play. Same problem with arrow keys, and even ctrl+brackets to change tabs. Apparently this is a known firefox bug. https://bugzilla.mozilla.org/show_bug.cgi?id=1019630
+- divert www traffic to beepbox.co. Okay wow this is a lot more complicated than it ought to be... You can only get load balancing on most available web servers by using CNAME records to repeat the request with a different domain whose DNS records are managed by the web server provider, which will choose an appropriate IP address for your location. For naked domains, your dns records can only provide static hardcoded IP addresses, (assuming you don't rapidly manage the ip addresses yourself via the user interface!) which can be cycled to distribute the load but generally isn't smart enough to actually detect server availability. :/
 - export mp3 and ogg?
 - document synth api
 

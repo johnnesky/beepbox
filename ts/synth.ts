@@ -125,7 +125,7 @@ namespace beepbox {
 		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "vibrato shaky", "tremolo light", "tremolo heavy"];
 		public static readonly effectVibratos: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.13, 0.0, 0.0];
 		public static readonly effectTremolos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.5];
-		public static readonly effectPeriods: ReadonlyArray<ReadonlyArray<number>> = [[0.14], [0.14], [0.14], [0.14], [0.1, 0.1618, 0.321], [0.14], [0.14]];
+		public static readonly effectPeriods: ReadonlyArray<ReadonlyArray<number>> = [[0.14], [0.14], [0.14], [0.14], [0.1, 0.1618, 0.3], [0.14], [0.14]];
 		public static readonly effectVibratoDelays: ReadonlyArray<number> = [0, 0, 18, 0, 0, 0, 0];
 		public static readonly chorusNames: ReadonlyArray<string> = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed", "custom harmony"];
 		public static readonly chorusIntervals: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02, 0.05];
