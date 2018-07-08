@@ -2868,12 +2868,11 @@ namespace beepbox {
 						let volumeEnd: number = amplitudeMult;
 						if (i < carrierCount) {
 							// carrier
-							const volumeMult: number = 0.03;
 							const endPitch: number = (pitch + intervalEnd) * intervalScale;
 							const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
 							const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
-							volumeStart *= pitchVolumeStart * volumeMult;
-							volumeEnd *= pitchVolumeEnd * volumeMult;
+							volumeStart *= pitchVolumeStart;
+							volumeEnd *= pitchVolumeEnd;
 							
 							totalCarrierVolume += amplitudeCurve;
 						} else {
@@ -2898,8 +2897,9 @@ namespace beepbox {
 					tone.feedbackMult = feedbackStart;
 					tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 					
-					tone.volumeStart = filterVolume * 5.0 * transitionVolumeStart;
-					tone.volumeDelta = filterVolume * 5.0 * (transitionVolumeEnd - transitionVolumeStart) / runLength;
+					const volumeMult: number = 0.15;
+					tone.volumeStart = filterVolume * volumeMult * transitionVolumeStart;
+					tone.volumeDelta = filterVolume * volumeMult * (transitionVolumeEnd - transitionVolumeStart) / runLength;
 					
 					sineVolumeBoost *= 1.0 - instrument.feedbackAmplitude / 15.0;
 					sineVolumeBoost *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolume - 1) / 2.0);
@@ -2944,13 +2944,13 @@ namespace beepbox {
 						volumeEnd *= customVolumeEnd;
 					}
 					
-					if (instrument.filterResonance > 0) {
-						const resonanceVolume: number = 1.5 - 0.1 * (instrument.filterResonance - 1);
-						tone.volumeStart *= resonanceVolume;
-						volumeEnd *= resonanceVolume;
-					}
-					
 					tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
+				}
+				
+				if (instrument.filterResonance > 0) {
+					const resonanceVolume: number = 1.5 - 0.1 * (instrument.filterResonance - 1);
+					tone.volumeStart *= resonanceVolume;
+					tone.volumeDelta *= resonanceVolume;
 				}
 				
 				tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
