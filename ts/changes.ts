@@ -367,24 +367,24 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeChorus extends Change {
+	export class ChangeInterval extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].chorus;
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].interval;
 			if (oldValue != newValue) {
 				this._didSomething();
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].chorus = newValue;
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].interval = newValue;
 				doc.notifier.changed();
 			}
 		}
 	}
 	
-	export class ChangeEffect extends Change {
+	export class ChangeVibrato extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].effect;
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].vibrato;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].effect = newValue;
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].vibrato = newValue;
 				doc.notifier.changed();
 				this._didSomething();
 			}

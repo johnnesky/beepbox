@@ -387,16 +387,16 @@ namespace beepbox {
 				}
 			}
 			
-			const tracks = [{isMeta:  true, channel: -1, midiChannel: -1, isChorus: false, isDrums: false}];
+			const tracks = [{isMeta:  true, channel: -1, midiChannel: -1, isInterval: false, isDrums: false}];
 			let midiChannelCounter = 0;
 			for (let channel: number = 0; channel < this._doc.song.getChannelCount(); channel++) {
 				if (this._doc.song.getChannelIsDrum(channel)) {
-					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isChorus: false, isDrums: true});
+					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isInterval: false, isDrums: true});
 					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
 				} else {
-					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isChorus: false, isDrums: false});
+					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isInterval: false, isDrums: false});
 					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
-					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isChorus:  true, isDrums: false});
+					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isInterval:  true, isDrums: false});
 					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
 				}
 			}
@@ -410,7 +410,7 @@ namespace beepbox {
 			for (const track of tracks) {
 				writeUint32(0x4D54726B); // "MTrk": Track chunk type
 				
-				const {isMeta, channel, midiChannel, isChorus, isDrums} = track;
+				const {isMeta, channel, midiChannel, isInterval, isDrums} = track;
 				
 				// We're gonna come back here once we know how many bytes this track is.
 				const trackLengthIndex: number = writeIndex;
@@ -474,7 +474,7 @@ namespace beepbox {
 					// For remaining tracks, set up the instruments and write the notes:
 					
 					let channelName: string = song.getChannelIsDrum(channel) ? Config.midiDrumChannelNames[channel - song.pitchChannelCount] : Config.midiPitchChannelNames[channel];
-					if (isChorus) channelName += " chorus";
+					if (isInterval) channelName += " interval";
 					writeEventTime(0);
 					writeUint16(0xFF03); // track name meta event.
 					writeAscii(channelName);
@@ -505,7 +505,7 @@ namespace beepbox {
 							
 							const instrument: Instrument = song.channels[channel].instruments[nextInstrument];
 							
-							if (isChorus && (isDrums || instrument.type == InstrumentType.fm || instrument.chorus == 0)) {
+							if (isInterval && (isDrums || instrument.type == InstrumentType.fm || instrument.interval == 0)) {
 								barStartTime += ticksPerBar;
 								continue;
 							}
@@ -531,8 +531,8 @@ namespace beepbox {
 								} else if (instrument.type == InstrumentType.chip) {
 									description += ", wave: " + Config.waveNames[instrument.wave];
 									description += ", volume: " + ((5 - instrument.volume) * 20);
-									description += ", chorus: " + Config.chorusNames[instrument.chorus];
-									description += ", effect: " + Config.effectNames[instrument.effect];
+									description += ", interval: " + Config.intervalNames[instrument.interval];
+									description += ", vibrato: " + Config.vibratoNames[instrument.vibrato];
 									
 									const envelopeType: EnvelopeType = Config.operatorEnvelopeType[instrument.filterEnvelope];
 									const filterInstruments: number[] = (envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.pluck)
@@ -540,7 +540,7 @@ namespace beepbox {
 										: Config.midiSustainInstruments;
 									instrumentProgram = filterInstruments[instrument.wave];
 								} else if (instrument.type == InstrumentType.fm) {
-									description += ", effect: " + Config.effectNames[instrument.effect];
+									description += ", vibrato: " + Config.vibratoNames[instrument.vibrato];
 									description += ", algorithm: " + Config.midiAlgorithmNames[instrument.algorithm];
 									description += ", feedbackType: " + Config.midiFeedbackNames[instrument.feedbackType];
 									description += ", feedbackAmplitude: " + instrument.feedbackAmplitude;
@@ -578,22 +578,20 @@ namespace beepbox {
 								writeFlagAnd7Bits(0, Math.round(0x7f * channelVolume)); // volume
 							}
 							
-							const effectChoice: number = instrument.effect;
-							const effectVibrato: number = Config.effectVibratos[effectChoice];
-							const effectTremolo: number = Config.effectTremolos[effectChoice];
-							const effectDuration: number = 0.14;
+							const effectVibrato: number = Config.vibratoAmplitudes[instrument.vibrato];
+							const effectTremolo: number = Config.effectTremolos[instrument.vibrato];
 							
-							let chorusOffset: number = 0.0;
-							let chorusHarmonizes: boolean = false;
+							let intervalOffset: number = 0.0;
+							let intervalHarmonizes: boolean = false;
 							let usesArpeggio: boolean = true;
 							//let polyphony: number = 1;
 							if (!isDrums) {
 								if (instrument.type == InstrumentType.chip) {
-									chorusOffset = Config.chorusIntervals[instrument.chorus];
-									if (!isChorus) chorusOffset *= -1;
-									chorusOffset += Config.chorusOffsets[instrument.chorus];
+									intervalOffset = Config.intervalSpreads[instrument.interval];
+									if (!isInterval) intervalOffset *= -1;
+									intervalOffset += Config.intervalOffsets[instrument.interval];
 									
-									chorusHarmonizes = Config.chorusHarmonizes[instrument.chorus];
+									intervalHarmonizes = Config.intervalHarmonizes[instrument.interval];
 								} else if (instrument.type == InstrumentType.fm) {
 									usesArpeggio = false;
 									//polyphony = Config.operatorCarrierCounts[instrument.algorithm];
@@ -625,8 +623,8 @@ namespace beepbox {
 										let nextPitch: number = note.pitches[0];
 										if (usesArpeggio && note.pitches.length > 1) {
 											const arpeggio: number = Math.floor(tick / (Config.ticksPerArpeggio[song.rhythm] * ticksPerPart / Config.ticksPerPart));
-											if (chorusHarmonizes) {
-												if (isChorus) {
+											if (intervalHarmonizes) {
+												if (isInterval) {
 													const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][note.pitches.length - 2];
 													nextPitch = note.pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]];
 												}
@@ -636,13 +634,18 @@ namespace beepbox {
 											}
 										}
 										
-										const interval: number = linearInterval * intervalScale + chorusOffset;
+										const interval: number = linearInterval * intervalScale + intervalOffset;
 										const wholeInterval: number = Math.round(interval);
 										const fractionalInterval: number = interval - wholeInterval;
 										
 										let pitchOffset: number = fractionalInterval;
-										const effectCurve: number = Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / effectDuration);
-										if (effectChoice != 2 || tickTime - noteStartTime >= 3 * ticksPerPart) {
+										
+										let effectCurve: number = 0.0;
+										for (const vibratoPeriod of Config.vibratoPeriods[instrument.vibrato]) {
+											effectCurve += Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / vibratoPeriod);
+										}
+										
+										if (tickTime - noteStartTime >= ticksPerPart * Config.vibratoDelays[instrument.vibrato]) {
 											pitchOffset += effectVibrato * effectCurve;
 										}
 										const pitchBend: number = Math.max(0, Math.min(0x3fff, Math.round(0x2000 + 0x1000 * pitchOffset)));

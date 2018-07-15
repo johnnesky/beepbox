@@ -30,14 +30,14 @@ SOFTWARE.
 namespace beepbox {
 	const {button, div, text} = html;
 
-	export class ChorusPrompt implements Prompt {
+	export class IntervalPrompt implements Prompt {
 		private readonly _cancelButton: HTMLButtonElement = button({}, [text("Close")]);
 		
 		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
 			div({style: "font-size: 2em"}, [text("Custom Harmony")]),
 			div({style: "text-align: left;"}, [text(
 				'BeepBox "chip" instruments play two waves at once, each with their own pitch. ' +
-				'The "Chorus" setting usually determines how far apart these pitches are, but in "custom harmony" mode, you can control these pitches individually by making two simultaneous notes, one above the other. ' +
+				'The "Interval" setting usually determines how far apart these pitches are, but in "custom harmony" mode, you can control these pitches individually by making two simultaneous notes, one above the other. ' +
 				'This replaces the "arpeggio/trill" effect, and gives you greater control over your harmony. '
 			)]),
 			this._cancelButton,

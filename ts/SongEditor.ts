@@ -35,7 +35,7 @@ SOFTWARE.
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
 /// <reference path="InstrumentTypePrompt.ts" />
-/// <reference path="ChorusPrompt.ts" />
+/// <reference path="IntervalPrompt.ts" />
 
 namespace beepbox {
 	const {button, div, span, select, option, input, text} = html;
@@ -176,11 +176,11 @@ namespace beepbox {
 		private readonly _filterCutoffSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue));
 		private readonly _filterResonanceSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterResonanceRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterResonance(this._doc, oldValue, newValue));
 		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorEnvelopeNames);
-		private readonly _chorusSelect: HTMLSelectElement = buildOptions(select({}), Config.chorusNames);
-		private readonly _chorusHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
-		private readonly _chorusSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chorus: ")]), this._chorusHint, div({className: "selectContainer"}, [this._chorusSelect])]);
-		private readonly _effectSelect: HTMLSelectElement = buildOptions(select({}), Config.effectNames);
-		private readonly _effectSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("LFO Effect: ")]), div({className: "selectContainer"}, [this._effectSelect])]);
+		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select({}), Config.intervalNames);
+		private readonly _intervalHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
+		private readonly _intervalSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Interval:")]), this._intervalHint, div({className: "selectContainer"}, [this._intervalSelect])]);
+		private readonly _vibratoSelect: HTMLSelectElement = buildOptions(select({}), Config.vibratoNames);
+		private readonly _vibratoSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Vibrato: ")]), div({className: "selectContainer"}, [this._vibratoSelect])]);
 		private readonly _phaseModGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"}, []);
 		private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorFeedbackNames);
 		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Feedback:")]), div({className: "selectContainer"}, [this._feedbackTypeSelect])]);
@@ -199,27 +199,27 @@ namespace beepbox {
 			this._instrumentVolumeSliderRow,
 			this._waveSelectRow,
 			div({className: "selectRow"}, [
-				span({}, [text("Transition: ")]),
+				span({}, [text("Transition:")]),
 				div({className: "selectContainer"}, [this._transitionSelect]),
 			]),
-			div({className: "selectRow", title: "Filter Cutoff Frequency"}, [
-				span({}, [text("Filter: ")]),
+			div({className: "selectRow", title: "Low-pass Filter Cutoff Frequency"}, [
+				span({}, [text("Filter Cut:")]),
 				this._filterCutoffSlider.input,
 			]),
-			div({className: "selectRow", title: "Filter Resonance"}, [
-				span({}, [text("Resonance: ")]),
+			div({className: "selectRow", title: "Low-pass Filter Peak Resonance"}, [
+				span({}, [text("Filter Peak:")]),
 				this._filterResonanceSlider.input,
 			]),
-			div({className: "selectRow", title: "Filter Envelope"}, [
-				span({}, [text("Envelope: ")]),
+			div({className: "selectRow", title: "Low-pass Filter Envelope"}, [
+				span({}, [text("Filter Env:")]),
 				div({className: "selectContainer"}, [this._filterEnvelopeSelect]),
 			]),
-			this._chorusSelectRow,
+			this._vibratoSelectRow,
 			div({className: "selectRow"}, [
-				span({}, [text("Delay: ")]),
+				span({}, [text("Delay:")]),
 				div({className: "selectContainer"}, [this._delaySelect]),
 			]),
-			this._effectSelectRow,
+			this._intervalSelectRow,
 			this._algorithmSelectRow,
 			this._phaseModGroup,
 			this._feedbackRow1,
@@ -360,8 +360,8 @@ namespace beepbox {
 			this._transitionSelect.addEventListener("change", this._whenSetTransition);
 			this._delaySelect.addEventListener("change", this._whenSetDelay);
 			this._filterEnvelopeSelect.addEventListener("change", this._whenSetFilterEnvelope);
-			this._chorusSelect.addEventListener("change", this._whenSetChorus);
-			this._effectSelect.addEventListener("change", this._whenSetEffect);
+			this._intervalSelect.addEventListener("change", this._whenSetInterval);
+			this._vibratoSelect.addEventListener("change", this._whenSetVibrato);
 			this._playButton.addEventListener("click", this._togglePlay);
 			this._prevBarButton.addEventListener("click", this._whenPrevBarPressed);
 			this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
@@ -369,7 +369,7 @@ namespace beepbox {
 			this._exportButton.addEventListener("click", this._openExportPrompt);
 			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
 			this._instrumentTypeHint.addEventListener("click", this._openInstrumentTypePrompt);
-			this._chorusHint.addEventListener("click", this._openChorusPrompt);
+			this._intervalHint.addEventListener("click", this._openIntervalPrompt);
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
@@ -407,8 +407,8 @@ namespace beepbox {
 					case "instrumentType":
 						this.prompt = new InstrumentTypePrompt(this._doc, this);
 						break;
-					case "chorus":
-						this.prompt = new ChorusPrompt(this._doc, this);
+					case "interval":
+						this.prompt = new IntervalPrompt(this._doc, this);
 						break;
 					default:
 						throw new Error("Unrecognized prompt type.");
@@ -471,23 +471,23 @@ namespace beepbox {
 				this._feedbackRow1.style.display = "none";
 				this._feedbackRow2.style.display = "none";
 				this._waveSelect.style.display = "none";
-				this._chorusSelectRow.style.display = "none";
-				this._effectSelectRow.style.display = "none";
+				this._intervalSelectRow.style.display = "none";
+				this._vibratoSelectRow.style.display = "none";
 			} else if (instrument.type == InstrumentType.chip) {
 				this._instrumentTypeSelectRow.style.display = "";
-				this._effectSelectRow.style.display = "";
+				this._vibratoSelectRow.style.display = "";
 				this._drumSelect.style.display = "none";
 				this._instrumentVolumeSliderRow.style.display = "";
 				this._waveSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
-				this._chorusSelectRow.style.display = "";
+				this._intervalSelectRow.style.display = "";
 				this._algorithmSelectRow.style.display = "none";
 				this._phaseModGroup.style.display = "none";
 				this._feedbackRow1.style.display = "none";
 				this._feedbackRow2.style.display = "none";
 			} else if (instrument.type == InstrumentType.fm) {
 				this._instrumentTypeSelectRow.style.display = "";
-				this._effectSelectRow.style.display = "";
+				this._vibratoSelectRow.style.display = "";
 				this._drumSelect.style.display = "none";
 				this._algorithmSelectRow.style.display = "";
 				this._phaseModGroup.style.display = "";
@@ -495,7 +495,7 @@ namespace beepbox {
 				this._feedbackRow2.style.display = "";
 				this._instrumentVolumeSliderRow.style.display = "none";
 				this._waveSelectRow.style.display = "none";
-				this._chorusSelectRow.style.display = "none";
+				this._intervalSelectRow.style.display = "none";
 			} else {
 				throw new Error("Unrecognized instrument type: " + instrument.type);
 			}
@@ -523,8 +523,8 @@ namespace beepbox {
 			setSelectedIndex(this._filterEnvelopeSelect, instrument.filterEnvelope);
 			setSelectedIndex(this._transitionSelect, instrument.transition);
 			setSelectedIndex(this._delaySelect, instrument.delay);
-			setSelectedIndex(this._effectSelect, instrument.effect);
-			setSelectedIndex(this._chorusSelect, instrument.chorus);
+			setSelectedIndex(this._vibratoSelect, instrument.vibrato);
+			setSelectedIndex(this._intervalSelect, instrument.interval);
 			setSelectedIndex(this._feedbackTypeSelect, instrument.feedbackType);
 			this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
 			setSelectedIndex(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
@@ -548,7 +548,7 @@ namespace beepbox {
 			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
 			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
 			this._instrumentTypeHint.style.display = (instrument.type == InstrumentType.fm) ? "" : "none";
-			this._chorusHint.style.display = (Config.chorusHarmonizes[instrument.chorus]) ? "" : "none";
+			this._intervalHint.style.display = (Config.intervalHarmonizes[instrument.interval]) ? "" : "none";
 			
 			let patternWidth: number = 512;
 			if (this._doc.showLetters) patternWidth -= 32;
@@ -749,8 +749,8 @@ namespace beepbox {
 			this._openPrompt("instrumentType");
 		}
 		
-		private _openChorusPrompt = (): void => {
-			this._openPrompt("chorus");
+		private _openIntervalPrompt = (): void => {
+			this._openPrompt("interval");
 		}
 		
 		private _whenSetScale = (): void => {
@@ -807,12 +807,12 @@ namespace beepbox {
 			this._doc.record(new ChangeDelay(this._doc, this._delaySelect.selectedIndex));
 		}
 		
-		private _whenSetEffect = (): void => {
-			this._doc.record(new ChangeEffect(this._doc, this._effectSelect.selectedIndex));
+		private _whenSetVibrato = (): void => {
+			this._doc.record(new ChangeVibrato(this._doc, this._vibratoSelect.selectedIndex));
 		}
 		
-		private _whenSetChorus = (): void => {
-			this._doc.record(new ChangeChorus(this._doc, this._chorusSelect.selectedIndex));
+		private _whenSetInterval = (): void => {
+			this._doc.record(new ChangeInterval(this._doc, this._intervalSelect.selectedIndex));
 		}
 		
 		private _editMenuHandler = (event:Event): void => {
