@@ -25,6 +25,95 @@ SOFTWARE.
 /// <reference path="SongDocument.ts" />
 
 namespace beepbox {
+	function generateScaleMap(oldScaleValue: number, newScaleValue: number): number[] {
+		const oldScaleFlags: ReadonlyArray<boolean> = Config.scaleFlags[oldScaleValue];
+		const newScaleFlags: ReadonlyArray<boolean> = Config.scaleFlags[newScaleValue];
+		const oldScale: number[] = [];
+		const newScale: number[] = [];
+		for (let i: number = 0; i <  12; i++) {
+			if (oldScaleFlags[i]) oldScale.push(i);
+			if (newScaleFlags[i]) newScale.push(i);
+		}
+		const largerToSmaller: boolean = oldScale.length > newScale.length;
+		const smallerScale: number[] = largerToSmaller ? newScale : oldScale;
+		const largerScale: number[] = largerToSmaller ? oldScale : newScale;
+
+		const roles: string[] = ["root", "second", "second", "third", "third", "fourth", "tritone", "fifth", "sixth", "sixth", "seventh", "seventh", "root"];
+		let bestScore: number = Number.MAX_SAFE_INTEGER;
+		let bestIndexMap: number[] = [];
+		const stack: number[][] = [[0]]; // Root always maps to root.
+
+		while (stack.length > 0) {
+			const indexMap: number[] = stack.pop()!;
+	
+			if (indexMap.length == smallerScale.length) {
+				// Score this mapping.
+				let score: number = 0;
+				for (let i: number = 0; i < indexMap.length; i++) {
+					score += Math.abs(smallerScale[i] - largerScale[indexMap[i]]);
+					if (roles[smallerScale[i]] != roles[largerScale[indexMap[i]]]) {
+						// Penalize changing roles.
+						score += 0.75;
+					}
+				}
+				if (bestScore > score) {
+					bestScore = score;
+					bestIndexMap = indexMap;
+				}
+			} else {
+				// Recursively choose next indices for mapping.
+				const lowIndex: number = indexMap[indexMap.length - 1] + 1;
+				const highIndex: number = largerScale.length - smallerScale.length + indexMap.length;
+				for (let i: number = lowIndex; i <= highIndex; i++) {
+					stack.push(indexMap.concat(i));
+				}
+			}
+		}
+
+		const sparsePitchMap: number[][] = [];
+		for (let i: number = 0; i < bestIndexMap.length; i++) {
+			const smallerScalePitch = smallerScale[i];
+			const largerScalePitch = largerScale[bestIndexMap[i]];
+			sparsePitchMap[i] = largerToSmaller
+				? [largerScalePitch, smallerScalePitch]
+				: [smallerScalePitch, largerScalePitch];
+		}
+
+		// To make it easier to wrap around.
+		sparsePitchMap.push([12, 12]);
+		newScale.push(12);
+
+		let sparseIndex: number = 0;
+		const fullPitchMap: number[] = [];
+		for (let i: number = 0; i <  12; i++) {
+			const oldLow: number = sparsePitchMap[sparseIndex][0];
+			const newLow: number = sparsePitchMap[sparseIndex][1];
+			const oldHigh: number = sparsePitchMap[sparseIndex + 1][0];
+			const newHigh: number = sparsePitchMap[sparseIndex + 1][1];
+			if (i == oldHigh - 1) sparseIndex++;
+	
+			const transformedPitch: number = (i - oldLow) * (newHigh - newLow) / (oldHigh - oldLow) + newLow;
+	
+			let nearestPitch: number = 0;
+			let nearestPitchDistance: number = Number.MAX_SAFE_INTEGER;
+			for (const newPitch of newScale) {
+				let distance: number = Math.abs(newPitch - transformedPitch);
+				if (roles[newPitch] != roles[i]) {
+					// Again, penalize changing roles.
+					distance += 0.1;
+				}
+				if (nearestPitchDistance > distance) {
+					nearestPitchDistance = distance;
+					nearestPitch = newPitch;
+				}
+			}
+	
+			fullPitchMap[i] = nearestPitch;
+		}
+		
+		return fullPitchMap;
+	}
+	
 	export class ChangePins extends UndoableChange {
 		protected _oldStart: number;
 		protected _newStart: number;
@@ -496,6 +585,7 @@ namespace beepbox {
 	export class ChangeRhythm extends ChangeGroup {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
+			
 			if (doc.song.rhythm != newValue) {
 				if (doc.forceRhythmChanges) {
 					for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
@@ -512,18 +602,21 @@ namespace beepbox {
 	}
 	
 	export class ChangePaste extends ChangeGroup {
-		constructor(doc: SongDocument, pattern: Pattern, notes: Note[], newBeatsPerBar: number, newRhythmStepsPerBeat: number) {
+		constructor(doc: SongDocument, pattern: Pattern, notes: Note[], oldBeatsPerBar: number, oldRhythmStepsPerBeat: number, oldScale: number) {
 			super();
 			pattern.notes = notes;
 			
 			if (doc.forceRhythmChanges) {
-				if (Config.rhythmStepsPerBeat[doc.song.rhythm] != newRhythmStepsPerBeat) {
-					this.append(new ChangeRhythmStepsPerBeat(doc, pattern, newRhythmStepsPerBeat, Config.rhythmStepsPerBeat[doc.song.rhythm]));
-				}
+				this.append(new ChangeRhythmStepsPerBeat(doc, pattern, oldRhythmStepsPerBeat, Config.rhythmStepsPerBeat[doc.song.rhythm]));
 			}
 			
-			if (doc.song.beatsPerBar != newBeatsPerBar) {
-				this.append(new ChangeNoteTruncate(doc, pattern, doc.song.beatsPerBar * Config.partsPerBeat, newBeatsPerBar * Config.partsPerBeat));
+			if (doc.forceScaleChanges && !doc.song.getChannelIsDrum(doc.channel)) {
+				const scaleMap: number[] = generateScaleMap(oldScale, doc.song.scale);
+				this.append(new ChangePatternScale(doc, pattern, scaleMap));
+			}
+			
+			if (doc.song.beatsPerBar < oldBeatsPerBar) {
+				this.append(new ChangeNoteTruncate(doc, pattern, doc.song.beatsPerBar * Config.partsPerBeat, oldBeatsPerBar * Config.partsPerBeat));
 			}
 			
 			doc.notifier.changed();
@@ -686,8 +779,9 @@ namespace beepbox {
 					return Math.ceil(oldTime / minDivision) * minDivision;
 				} else if (oldRhythmStepsPerBeat < newRhythmStepsPerBeat) {
 					return Math.floor(oldTime / minDivision) * minDivision;
+				} else {
+					return Math.round(oldTime / minDivision) * minDivision;
 				}
-				return oldTime;
 			};
 			
 			let i: number = 0;
@@ -715,10 +809,20 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeScale extends Change {
+	export class ChangeScale extends ChangeGroup {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
 			if (doc.song.scale != newValue) {
+				
+				if (doc.forceScaleChanges) {
+					const scaleMap: number[] = generateScaleMap(doc.song.scale, newValue);
+					for (let i: number = 0; i < doc.song.pitchChannelCount; i++) {
+						for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
+							this.append(new ChangePatternScale(doc, doc.song.channels[i].patterns[j], scaleMap));
+						}
+					}
+				}
+				
 				doc.song.scale = newValue;
 				doc.notifier.changed();
 				this._didSomething();
@@ -846,7 +950,7 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeTransposeNote extends UndoableChange {
+	class ChangeTransposeNote extends UndoableChange {
 		protected _doc: SongDocument;
 		protected _note: Note;
 		protected _oldStart: number;
@@ -966,6 +1070,61 @@ namespace beepbox {
 			for (let i: number = 0; i < pattern.notes.length; i++) {
 				this.append(new ChangeTransposeNote(doc, pattern.notes[i], upward));
 			}
+		}
+	}
+	
+	export class ChangePatternScale extends Change {
+		constructor(doc: SongDocument, pattern: Pattern, scaleMap: number[]) {
+			super();
+			const maxPitch: number = Config.maxPitch;
+			for (const note of pattern.notes) {
+				
+				const newPitches: number[] = [];
+				const newPins: NotePin[] = [];
+				for (let i: number = 0; i < note.pitches.length; i++) {
+					const pitch: number = note.pitches[i];
+					const transformedPitch: number = scaleMap[pitch % 12] + (pitch - (pitch % 12));
+					if (newPitches.indexOf(transformedPitch) == -1) {
+						newPitches.push(transformedPitch);
+					}
+				}
+				
+				let min: number = 0;
+				let max: number = maxPitch;
+				
+				for (let i: number = 1; i < newPitches.length; i++) {
+					const diff: number = newPitches[0] - newPitches[i];
+					if (min < diff) min = diff;
+					if (max > diff + maxPitch) max = diff + maxPitch;
+				}
+			
+				for (const oldPin of note.pins) {
+					let interval: number = oldPin.interval + note.pitches[0];
+					if (interval < min) interval = min;
+					if (interval > max) interval = max;
+					const transformedInterval: number = scaleMap[interval % 12] + (interval - (interval % 12));
+					newPins.push(makeNotePin(transformedInterval - newPitches[0], oldPin.time, oldPin.volume));
+				}
+			
+				if (newPins[0].interval != 0) throw new Error("wrong pin start interval");
+			
+				for (let i: number = 1; i < newPins.length - 1; ) {
+					if (newPins[i-1].interval == newPins[i].interval && 
+						newPins[i].interval == newPins[i+1].interval && 
+						newPins[i-1].volume == newPins[i].volume && 
+						newPins[i].volume == newPins[i+1].volume)
+					{
+						newPins.splice(i, 1);
+					} else {
+						i++;
+					}
+				}
+				
+				note.pitches = newPitches;
+				note.pins = newPins;
+			}
+			this._didSomething();
+			doc.notifier.changed();
 		}
 	}
 	

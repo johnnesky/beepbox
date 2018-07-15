@@ -57,6 +57,7 @@ namespace beepbox {
 		notes: Note[];
 		beatsPerBar: number;
 		rhythmStepsPerBeat: number;
+		scale: number;
 		drums: boolean;
 	}
 	
@@ -691,6 +692,7 @@ namespace beepbox {
 				notes: pattern.notes,
 				beatsPerBar: this._doc.song.beatsPerBar,
 				rhythmStepsPerBeat: Config.rhythmStepsPerBeat[this._doc.song.rhythm],
+				scale: this._doc.song.scale,
 				drums: this._doc.song.getChannelIsDrum(this._doc.channel),
 			};
 			
@@ -704,7 +706,7 @@ namespace beepbox {
 			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
 			
 			if (patternCopy != null && patternCopy.drums == this._doc.song.getChannelIsDrum(this._doc.channel)) {
-				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beatsPerBar, patternCopy.rhythmStepsPerBeat));
+				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy.notes, patternCopy.beatsPerBar, patternCopy.rhythmStepsPerBeat, patternCopy.scale));
 			}
 		}
 		

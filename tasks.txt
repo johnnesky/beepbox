@@ -283,6 +283,7 @@
 √ Dragging notes while autofollow switches bars could cause notes to overlap.
 √ vibrato shaky
 √ Target ES6 and use uglify-es.
+√ Optionally force scale changes to apply to existing notes.
 
 MAJOR REMAINING FEATURES:
 - "fadeout" option(s) in transition, would use polyphony, structured similar to openscores. (if the same pitch is played twice, does it cancel the old tone?) How should I keep track of tones?
@@ -300,7 +301,6 @@ MAJOR REMAINING FEATURES:
 - web app for home screen. (is there a requirement for a service worker?)
 
 NEXT RELEASE:
-- Optionally force scale changes to apply to existing notes. Look at existing notes and/or scale to decide how to transition to new scale.
 - An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
 - fadeout transition: I kinda wanna cancel a fadeout if it is the same pitch as a subsequent note. But wait! If there's a pitch bend, does that affect the pitch comparison? What about arpeggio or custom harmony? Pitch bend can't really effect the fading out note (because there are no more pins) but it can affect the new note. Maybe fadeout mode should introduce the slightly random pitch as a catch-all? If I'm gonna add polyphony for fadeout envelope, might as well add it as a full option instead of arpeggio/operator control, so chords can have a variable number of notes. Maybe "soft" onset fadeouts should have slightly random pitch. Proposed new options: "overlap"/"crossfade" is soft with a quick fadeout that coincides with the following note, "decay"/"release" is sudden with a medium decay, and "pad" is soft with a very long decay. Also I should finally make the transition fade duration independent from the rhythm option, and "seamless" should probably have a shorter fadeout than "smooth", for example. May need to impose a hard limit on how many tones can be playing at once per channel, can I do that without popping when I cut them off?
 - live piano should track time since note started for delayed vibrato, envelopes, decays, etc.
@@ -314,6 +314,7 @@ NEXT RELEASE:
 - consider trying polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency.
 
 MISC:
+- Get rid of flash code... after porting the embed player.
 - built-in link shortener?
 - do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
 - make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page. notify me about any questionable tweets?
