@@ -285,33 +285,41 @@
 √ Target ES6 and use uglify-es.
 √ Optionally force scale changes to apply to existing notes.
 √ 0.1% of all songs use effect tremolo. Replace it with filter tremolo, which is more useful.
+√ fadeout transition: crossfade, fadeout, pad.
 
 MAJOR REMAINING FEATURES:
-- "fadeout" option(s) in transition, would use polyphony, structured similar to openscores. (if the same pitch is played twice, does it cancel the old tone?) How should I keep track of tones?
 - template instruments
 - better drums?
 - "inspire me" random song generator.
 - embedded player
-- playlist editor
-- live keyboard/midi performance. (make sure piano can play while song is paused?)
 - audio worklet thread
+- web app for home screen. (is there a requirement for a service worker?)
+- live keyboard/midi performance. (make sure piano can play while song is paused?)
+- playlist editor
 - distortion?
 - remember recent songs
 - export mp3/ogg and audio buffer
 - translation
-- web app for home screen. (is there a requirement for a service worker?)
 
 NEXT RELEASE:
-- fadeout transition: I kinda wanna cancel a fadeout if it is the same pitch as a subsequent note. But wait! If there's a pitch bend, does that affect the pitch comparison? What about arpeggio or custom harmony? Pitch bend can't really effect the fading out note (because there are no more pins) but it can affect the new note. Maybe fadeout mode should introduce the slightly random pitch as a catch-all? If I'm gonna add polyphony for fadeout envelope, might as well add it as a full option instead of arpeggio/operator control, so chords can have a variable number of notes. Maybe "soft" onset fadeouts should have slightly random pitch. Proposed new options: "overlap"/"crossfade" is soft with a quick fadeout that coincides with the following note, "decay"/"release" is sudden with a medium decay, and "pad" is soft with a very long decay. Also I should finally make the transition fade duration independent from the rhythm option, and "seamless" should probably have a shorter fadeout than "smooth", for example. May need to impose a hard limit on how many tones can be playing at once per channel, can I do that without popping when I cut them off?
-- live piano should track time since note started for delayed vibrato, envelopes, decays, etc.
-- live piano should still play when song is paused
+- As a way of limiting the number of simultaneously released tones, when the length of the list of tones gets too long in one channel, make the oldest (lowest index) tone fade out rapidly over the following part or tick and then free it.
+- menu select title option should have "hidden" attribute, along with selected and disabled.
+- Add more fractional pulse waves. 1/3, 1/5, 1/6, 1/7? I'm interested in 1/7 for pianos... unicode fractions? ½ ⅓ ¼ ⅕ ⅙ ⅐ ⅛
+- Collapse the delay menu into toggleable options, add polyphony to the menu?
+- Hmm, sometimes Firefox won't play any sound... seems like it happens when I load www.beepbox.co, and then click a twitter link to beepbox.co, maybe some kind of security/user experience thing to prevent unwanted sound from cross-domain links?
 - switching bars doesn't seem to split transposes into multiple change states?
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, snaps/claps, thunder, rain, fire, wind, randomly spaced (x / (1 + x^2)), maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard, orchestra hit? (can noise instruments be selected on pitch channels? maybe wiyh different available noise waves?)
 - instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else. Could I imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument. It may be time to stop using two midi channels for chip chorus. Replace Type with Templates. Custom chip and custom FM are generic options at the top that can't be selected directly. (The data format doesn't indicate which template you're using, except maybe json.) The template menu automatically detects if your instrument matches a template, and selects custom for you otherwise. Selecting a template may randomly select some parameters for variety. If you enable the preference to always show all instrument options, then the "new song" feature will default to "custom chip" but otherwise it'll default to a template instrument.
 - One of the template instruments (after custom chip and custom FM) should just be a random generator!)
+- New preference option: "Always show instrument options". Defaults to on for next release, but maybe off later. When off, template instruments hide the complicated instrument options unnless you select "custom chip/FM instrument" or click a "customize instrument" button under the template list. Eventually the default song on load can use template instruments, so t users won't see the extra options. Hmm: if an instrument was custom, but you change a setting so that it coincidentally matches a template, does it suddenly hide the options on you? Maybe it actually does save whether or not the instrument is a template.
 - Song options icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth note triplet symbol for rhythm. 
 - Add a "title" attributes or tooltips to all of the options, and/or make all instrument option names clickable with pointer cursor and hover highlight, replacing "?" hint circles.
 - consider trying polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency.
+- The "new", "import", and "random" options should reset the playhead and selected bar/channel. 
+- Maybe make several tabs at the bottom for instructions, about, twitter, mastadon, etc, and save which tab was selected when reloading.
+- Maybe make a note on the page that if anyone is nostalgic for a simpler, chiptune-focused beepbox, they can check out modbox or sandbox, or maybe even put up a link to an older version of beepbox (in JS).
+- If the page loses and regains focus, re-read preferences and update the interface? In case another tab changed preferences.
+- Before deploying a new version, deploy the *old* version with a shorter cache expiration, so that the new version can reach people faster. 
 
 MISC:
 - Get rid of flash code... after porting the embed player.
@@ -336,6 +344,11 @@ MISC:
 - It's probably okay if "parts" and "arpeggios" don't transition at exact sample boundaries, rather than fractional sample points. Maybe still keep beats aligned to sample boundaries, but you can have more precise BPM tempos by loosening up the alignment.
 - maybe command+S should do something useful?
 - wav export quality: CD (44100) vs Video (48000) standards, 1x, downsampled from 2x to 1x, downsampled from 4x to 2x. How does this affect FM feedback and noise volume?
+- live piano should track time since note started for delayed vibrato, envelopes, etc. In piano mode, release active tones if pitch changes (or if previous tone wasn't piano mode, or if new isn't piano mode and previous was?)
+- live piano should still play when song is paused
+- When viewing a 0 pattern bar, check if there is an unused (and unreferenced) pattern, and if so, get ready to use that one in the pattern editor, show the available scale pitch rows, and if the user adds a note, the change sequence should include settings the bar to use the pattern. If no pattern is available, leave the background black and display a note that more patterns can be added from the edit song size feature. (If a pattern has notes in it, but is unreferenced, should it be coopted? Maybe after all the empty patterns are used?)
+- recording performances via keyboard or even midi... If you record over an existing pattern, do you erase it? Does it depend on whether you actually perform any notes during that pattern? If you perform over a 0 pattern bar, does it automatically find the next blank pattern and start using it? Can it automatically extend the number of patterns? Why not allow that for normal 0 pattern editing? The black background in the pattern editor always kinda bugged me anyway. Maybe different channels can have different numbers of patterns!
+- Eventually, maybe even stop forcing the user to manually choose pattern counts, and just autopopulate patterns as needed. And also provide mobile-style context buttons above selected bar to facilitate sharing patterns across bars, sort of a paste-shared vs paste-unique, and selecting a range of bars, looping the selection over more bars... Basically making it easier to use on mobile and without needing to remember numbers.
 - Maybe support stereo delay effects in high quality mode.
 - maybe sum adjacent fm synth samples (at half volume) to cancel out inaudible feedback artifacts? for the carrier wave(s), try that integral thing to reduce the aliasing... or is that not really the problem here? (fortunately the integral of a sine wave is just an offset sinewave!) The FM feedback has been bugging me because it has a tendency to alternate between high and low values every other output sample. This is probably (?) inaudible, but is nevertheless an artifact. I could probably mitigate it by adding each FM sample to the previous sample before outputting (and cutting the volume in half to compensate). Does this help with more complicated structures? Note that this won't fix the audible FM aliasing, I'm not sure if there's anything besides super sampling that would fix that.
 - The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
@@ -379,8 +392,11 @@ PLAYLIST EDITOR:
 - custom cover art, color schemes in playlists and embed player.
 
 MAYBE:
+- Make a page with a recording of my voice explaining how sound works, along with some musical samples. Visualize the audio in several different ways, including timespace amplitude, timespace spectrogram, and frequency-synced amplitude to easily follow the shapes of semi-periodic waves. Make a script that checks the progress of the audio track and transitions between the visualizations as appropriate. Make a few non-live slides comparing different sounds and frequencies and showing how the periodic waves are composed out of sums of sine waves. 
+- Should I add echo and/or flanger as a delay effect? Should Echo have feedback? Can you configure the echo delay length? (If no feedback, you could configure the delay length by changing how far into the future to write the samples.) Also flanger. Maybe just have one LFO controlling flanger, like how there's one LFO for vibrato. But maybe flanger's not worth it, especially when there's already the old chorus setting which is similar.
+- It should be possible to reselect the same scale/rhythm to force notes onto it? Or just go to expert and back.
 - when importing json, console.log stuff that doesn't parse correctly?
-- Custom scale designer. There are six rows, one for each role (e.g. second, third, seventh... excluding root which is required), with checkboxes to enable each. Next to the checkbox is a menu to choose whether the role is "high second", "low second" or both. The options for the third are "major third :)" and "minor third :(" or both. The fifth has no menu, and the options for the fourth are "fourth", "tritone D:", and both. There's a visualization of the scale as pitches, to the right of the menus, sharing the same rows. You can also click the pitches on the scale to toggle them, and the checkboxes and menu update accordingly. There's also a visualization of the available major and minor chords with roman numerals, a column for each available chord highlighting the associate pitches. There's also a circular visualization of the circle of fifths, also with highlighted keys at the roots of chords, color-coded the same as the roman numeral visualization.
+- Custom scale designer. There are six rows, one for each role (e.g. second, third, seventh... excluding root which is required), with checkboxes to enable each. Next to the checkbox is a menu to choose whether the role is "high second", "low second" or both. The options for the third are "major third :)" and "minor third :(" or both. The fifth has no menu, and the options for the fourth are "fourth", "tritone D:", and both. Maybe instead of checkboxes just have "none" or "off" in the menu. There's a visualization of the scale as pitches, to the right of the menus, sharing the same rows. You can also click the pitches on the scale to toggle them, and the checkboxes and menu update accordingly. There's also a visualization of the available major and minor chords with roman numerals, a column for each available chord highlighting the associate pitches. There's also a circular visualization of the circle of fifths, also with highlighted keys at the roots of chords, color-coded the same as the roman numeral visualization. Ooh, and a button to rotate through the available "modes" of the scale. And a menu at the top to use an existing scale as a template.
 - maybe noise waves should be a separate property from chip waves?
 - Record the "type" of channels (separately from instruments). Can be pitch or drum. Use instead of getChannelIsDrum. When exporting base64, write the pitch channels first even if they were somehow rearranged, but JSON could theoretically have channels in any order.
 - maybe drums can have their own phase modulation mode, with different fractions for frequency? can modulator pitches bend at different rates? maybe the "envelopes" are basically the same except instead of controlling modulation they control pitch?

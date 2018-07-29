@@ -116,18 +116,18 @@ namespace beepbox {
 		public static readonly filterMaxResonance: number = 0.95;
 		public static readonly filterCutoffRange: number = 11;
 		public static readonly filterResonanceRange: number = 8;
-		public static readonly transitionNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide"];
-		public static readonly transitionAttackTicks: ReadonlyArray<number> = [0, 0, 3, 3];
-		public static readonly transitionReleaseTicks: ReadonlyArray<number> = [1, 3, 3, 3];
-		public static readonly transitionIsSeamless: ReadonlyArray<boolean> = [true, false, false, true];
-		public static readonly transitionSlides: ReadonlyArray<boolean> = [false, false, false, true];
-		public static readonly transitionSlideTicks: ReadonlyArray<number> = [3, 3, 3, 3];
+		public static readonly transitionNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide", "crossfade", "fadeout", "pad"];
+		public static readonly transitionAttackTicks: ReadonlyArray<number> = [0, 0, 3, 3, 6, 0, 6];
+		public static readonly transitionReleaseTicks: ReadonlyArray<number> = [1, 3, 3, 3, 6, 48, 96];
+		public static readonly transitionIsSeamless: ReadonlyArray<boolean> = [true, false, false, true, false, false, false];
+		public static readonly transitionSlides: ReadonlyArray<boolean> = [false, false, false, true, false, false, false];
+		public static readonly transitionReleases: ReadonlyArray<boolean> = [false, false, false, false, true, true, true];
+		public static readonly transitionSlideTicks: ReadonlyArray<number> = [3, 3, 3, 3, 3, 3, 3];
 		public static readonly vibratoNames: ReadonlyArray<string> = ["none", "light", "delayed", "heavy", "shaky"];
-		public static readonly effectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy", "vibrato shaky"/*, "tremolo light", "tremolo heavy"*/];
-		public static readonly vibratoAmplitudes: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.13/*, 0.0, 0.0*/];
-		public static readonly effectTremolos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0/*, 0.25, 0.5*/];
-		public static readonly vibratoPeriods: ReadonlyArray<ReadonlyArray<number>> = [[0.14], [0.14], [0.14], [0.14], [0.1, 0.1618, 0.3]/*, [0.14], [0.14]*/];
-		public static readonly vibratoDelays: ReadonlyArray<number> = [0, 0, 18, 0, 0/*, 0, 0*/];
+		public static readonly vibratoAmplitudes: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.11 /*, 0.0, 0.0*/];
+		public static readonly effectTremolos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0 /*, 0.25, 0.5*/];
+		public static readonly vibratoPeriods: ReadonlyArray<ReadonlyArray<number>> = [[0.14], [0.14], [0.14], [0.14], [0.1, 0.1618, 0.3] /*, [0.14], [0.14]*/];
+		public static readonly vibratoDelays: ReadonlyArray<number> = [0, 0, 18, 0, 0 /*, 0, 0*/];
 		public static readonly intervalNames: ReadonlyArray<string> = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed", "custom harmony"];
 		public static readonly intervalSpreads: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02, 0.05];
 		public static readonly intervalOffsets: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0, 0.0];
@@ -919,6 +919,7 @@ namespace beepbox {
 				this.filterResonance = 0;
 			}
 			
+			const legacyEffectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy"];
 			if (this.type == InstrumentType.noise) {
 				if (instrumentObject.volume != undefined) {
 					this.volume = clamp(0, Config.volumeRange, Math.round(5 - (instrumentObject.volume | 0) / 20));
@@ -948,7 +949,7 @@ namespace beepbox {
 					this.vibrato = Config.vibratoNames.indexOf(instrumentObject.vibrato);
 					if (this.vibrato == -1) this.vibrato = 0;
 				} else if (instrumentObject.effect != undefined) {
-					this.vibrato = Config.effectNames.indexOf(instrumentObject.effect);
+					this.vibrato = legacyEffectNames.indexOf(instrumentObject.effect);
 					if (this.vibrato == -1) this.vibrato = 0;
 				}
 			} else if (this.type == InstrumentType.fm) {
@@ -956,7 +957,7 @@ namespace beepbox {
 					this.vibrato = Config.vibratoNames.indexOf(instrumentObject.vibrato);
 					if (this.vibrato == -1) this.vibrato = 0;
 				} else if (instrumentObject.effect != undefined) {
-					this.vibrato = Config.effectNames.indexOf(instrumentObject.effect);
+					this.vibrato = legacyEffectNames.indexOf(instrumentObject.effect);
 					if (this.vibrato == -1) this.vibrato = 0;
 				}
 				
@@ -2125,7 +2126,16 @@ namespace beepbox {
 	}
 	
 	class Tone {
+		public instrument: Instrument;
+		public pitches: number[];
+		public note: Note | null = null;
+		public prevNote: Note | null = null;
+		public nextNote: Note | null = null;
 		public active: boolean = false;
+		public noteLengthTicks: number = 0;
+		public ticksSinceReleased: number = 0;
+		public lastInterval: number = 0;
+		public lastVolume: number = 0;
 		public sample: number = 0.0;
 		public readonly phases: number[] = [];
 		public readonly phaseDeltas: number[] = [];
@@ -2203,7 +2213,12 @@ namespace beepbox {
 		private tickSampleCountdown: number = 0;
 		private paused: boolean = true;
 		
-		private readonly tones: Tone[] = [];
+		private tonePoolLength: number = 0;
+		private readonly tonePool: Tone[] = [];
+		private readonly activeTones: Array<Tone | null> = [];
+		private releasedTonesLength: number[] = [];
+		private readonly releasedTones: Tone[][] = [];
+		
 		private limit: number = 0.0;
 		
 		private samplesForChorus: Float32Array | null = null;
@@ -2330,7 +2345,18 @@ namespace beepbox {
 			this.tick = 0;
 			this.tickSampleCountdown = 0;
 			
-			for (const tone of this.tones) tone.reset();
+			for (let i = 0; i < this.activeTones.length; i++) {
+				const tone: Tone | null = this.activeTones[i];
+				if (tone != null) this.freeTone(tone);
+				this.activeTones[i] = null;
+				
+				for (let j = 0; j < this.releasedTonesLength[i]; j++) {
+					const tone: Tone = this.releasedTones[i][j];
+					this.freeTone(tone);
+				}
+				
+				this.releasedTonesLength[i] = 0;
+			}
 			
 			this.reverbDelayPos = 0;
 			this.reverbFeedback0 = 0.0;
@@ -2393,10 +2419,14 @@ namespace beepbox {
 			}
 			
 			const channelCount: number = this.song.getChannelCount();
-			for (let i: number = this.tones.length; i < channelCount; i++) {
-				this.tones[i] = new Tone();
+			for (let i: number = this.activeTones.length; i < channelCount; i++) {
+				this.activeTones[i] = null;
+				this.releasedTones[i] = [];
+				this.releasedTonesLength[i] = 0;
 			}
-			this.tones.length = channelCount;
+			this.activeTones.length = channelCount;
+			this.releasedTones.length = channelCount;
+			this.releasedTonesLength.length = channelCount;
 			
 			const samplesPerTick: number = this.getSamplesPerTick();
 			let bufferIndex: number = 0;
@@ -2404,12 +2434,6 @@ namespace beepbox {
 			
 			// Check the bounds of the playhead:
 			if (this.tickSampleCountdown == 0 || this.tickSampleCountdown > samplesPerTick) {
-				this.tickSampleCountdown = samplesPerTick;
-			}
-			if (this.part >= Config.partsPerBeat) {
-				this.beat++;
-				this.part = 0;
-				this.tick = 0;
 				this.tickSampleCountdown = samplesPerTick;
 			}
 			if (this.beat >= this.song.beatsPerBar) {
@@ -2476,24 +2500,54 @@ namespace beepbox {
 						? this.tickSampleCountdown
 						: samplesLeftInBuffer;
 					for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
-						const instrument: Instrument = this.song.channels[channel].instruments[this.song.getPatternInstrument(channel, this.bar)];
-						Synth.computeTone(this, this.song, channel, samplesPerTick, runLength, instrument);
-						const tone = this.tones[channel];
-						if (tone.active) {
-							const synthBuffer: Float32Array = synthBufferByDelay[instrument.delay];
-							const synthesizer: Function = Synth.getInstrumentSynthFunction(instrument);
-							synthesizer(this, synthBuffer, bufferIndex, runLength, tone, instrument);
+						const tone: Tone | null = this.getCurrentActiveTone(this.song, channel);
+						if (tone != null) {
+							Synth.computeTone(this, this.song, channel, samplesPerTick, runLength, tone, false);
+							const synthBuffer: Float32Array = synthBufferByDelay[tone.instrument.delay];
+							const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
+							synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
+						}
+						for (let i: number = 0; i < this.releasedTonesLength[channel]; i++) {
+							const tone: Tone = this.releasedTones[channel][i];
+							if (tone.ticksSinceReleased >= Config.transitionReleaseTicks[tone.instrument.transition]) {
+								this.freeReleasedTone(channel, i);
+								i--;
+								continue;
+							}
+							Synth.computeTone(this, this.song, channel, samplesPerTick, runLength, tone, true);
+							const synthBuffer: Float32Array = synthBufferByDelay[tone.instrument.delay];
+							const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
+							synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
 						}
 					}
 					bufferIndex += runLength;
 					
 					this.tickSampleCountdown -= runLength;
 					if (this.tickSampleCountdown <= 0) {
+						
+						// Track how long tones have been released, and free them if they've expired.
+						for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
+							for (let i: number = 0; i < this.releasedTonesLength[channel]; i++) {
+								const tone: Tone = this.releasedTones[channel][i];
+								tone.ticksSinceReleased++;
+							}
+						}
+						
 						this.tick++;
 						this.tickSampleCountdown = samplesPerTick;
 						if (this.tick == Config.ticksPerPart) {
 							this.tick = 0;
 							this.part++;
+							
+							// Check if any active tones should be released.
+							for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
+								const tone: Tone | null = this.activeTones[channel];
+								if (tone != null && Config.transitionReleases[tone.instrument.transition] && tone.note != null && tone.note.end == this.part + this.beat * Config.partsPerBeat) {
+									this.releaseTone(channel, tone);
+									this.activeTones[channel] = null;
+								}
+							}
+							
 							if (this.part == Config.partsPerBeat) {
 								this.part = 0;
 								this.beat++;
@@ -2639,6 +2693,101 @@ namespace beepbox {
 			*/
 		}
 		
+		private freeTone(tone: Tone): void {
+			this.tonePool[this.tonePoolLength] = tone;
+			this.tonePoolLength++;
+		}
+		
+		private newTone(): Tone {
+			if (this.tonePoolLength > 0) {
+				this.tonePoolLength--;
+				const tone: Tone = this.tonePool[this.tonePoolLength];
+				tone.reset();
+				tone.active = false;
+				return tone;
+			}
+			return new Tone();
+		}
+		
+		private releaseTone(channel: number, tone: Tone): void {
+			this.releasedTones[channel][this.releasedTonesLength[channel]] = tone;
+			this.releasedTonesLength[channel]++;
+		}
+		
+		private freeReleasedTone(channel: number, toneIndex: number): void {
+			this.freeTone(this.releasedTones[channel][toneIndex]);
+			this.releasedTonesLength[channel]--;
+			for (let i = toneIndex; i < this.releasedTonesLength[channel]; i++) {
+				this.releasedTones[channel][i] = this.releasedTones[channel][i + 1];
+			}
+		}
+		
+		private getCurrentActiveTone(song: Song, channel: number): Tone | null {
+			const instrument: Instrument = song.channels[channel].instruments[song.getPatternInstrument(channel, this.bar)];
+			const pattern: Pattern | null = song.getPattern(channel, this.bar);
+			let pitches: number[] | null = null;
+			let note: Note | null = null;
+			let prevNote: Note | null = null;
+			let nextNote: Note | null = null;
+			
+			if (this.pianoPressed && channel == this.pianoChannel) {
+				pitches = this.pianoPitch;
+				note = prevNote = nextNote = null;
+				// TODO: track time since live piano note started for transition, envelope, decays, delayed vibrato, etc.
+			} else if (pattern != null) {
+				const time: number = this.part + this.beat * Config.partsPerBeat;
+				
+				for (let i: number = 0; i < pattern.notes.length; i++) {
+					if (pattern.notes[i].end <= time) {
+						prevNote = pattern.notes[i];
+					} else if (pattern.notes[i].start <= time && pattern.notes[i].end > time) {
+						note = pattern.notes[i];
+					} else if (pattern.notes[i].start > time) {
+						nextNote = pattern.notes[i];
+						break;
+					}
+				}
+				
+				if (note != null) {
+					if (prevNote != null && prevNote.end != note.start) prevNote = null;
+					if (nextNote != null && nextNote.start != note.end) nextNote = null;
+					pitches = note.pitches;
+				}
+			}
+			
+			let tone: Tone | null = this.activeTones[channel];
+			if (pitches != null) {
+				if (tone == null) {
+					tone = this.newTone();
+				/*
+				// Check piano mode and release if pitch changed??
+				} else if (note != tone.note && Config.transitionReleases[tone.instrument.transition] && !Config.transitionIsSeamless[tone.instrument.transition]) {
+					this.releaseTone(channel, tone);
+					tone = this.newTone();
+				*/
+				}
+				
+				tone.pitches = pitches;
+				tone.instrument = instrument;
+				tone.note = note;
+				tone.prevNote = prevNote;
+				tone.nextNote = nextNote;
+			} else {
+				if (tone != null) {
+					// Do we need this check here? Only for piano keys I guess?
+					if (Config.transitionReleases[tone.instrument.transition]) {
+						this.releaseTone(channel, tone);
+					} else {
+						this.freeTone(tone);
+					}
+				}
+				tone = null;
+			}
+			
+			this.activeTones[channel] = tone;
+			return tone;
+		}
+		
 		private static computeOperatorEnvelope(envelope: number, time: number, beats: number, customVolume: number): number {
 			switch(Config.operatorEnvelopeType[envelope]) {
 				case EnvelopeType.custom: return customVolume;
@@ -2666,17 +2815,24 @@ namespace beepbox {
 			}
 		}
 		
-		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerTick: number, runLength: number, instrument: Instrument): void {
+		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean): void {
+			const instrument: Instrument = tone.instrument;
 			const isDrum: boolean = song.getChannelIsDrum(channel);
-			const tone: Tone = synth.tones[channel];
-			const pattern: Pattern | null = song.getPattern(channel, synth.bar);
-			const pianoMode = (synth.pianoPressed && channel == synth.pianoChannel);
 			const basePitch: number = isDrum ? Config.drumBasePitches[instrument.wave] : Config.keyTransposes[song.key];
 			const intervalScale: number = isDrum ? Config.drumInterval : 1;
 			const pitchDamping: number = isDrum ? (Config.drumWaveIsSoft[instrument.wave] ? 24.0 : 60.0) : 48.0;
 			const secondsPerPart: number = Config.ticksPerPart * samplesPerTick / synth.samplesPerSecond;
 			const beatsPerPart: number = 1.0 / Config.partsPerBeat;
 			const toneWasActive: boolean = tone.active;
+			const tickSampleCountdown: number = synth.tickSampleCountdown;
+			const startRatio: number = 1.0 - (tickSampleCountdown            ) / samplesPerTick;
+			const endRatio:   number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
+			
+			const ticksIntoBar: number = (synth.beat * Config.partsPerBeat + synth.part) * Config.ticksPerPart + synth.tick;
+			const partTimeTickStart: number = (ticksIntoBar    ) / Config.ticksPerPart;
+			const partTimeTickEnd:   number = (ticksIntoBar + 1) / Config.ticksPerPart;
+			const partTimeStart = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * startRatio;
+			const partTimeEnd   = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * endRatio;
 			
 			tone.phaseDeltaScale = 0.0;
 			tone.filter = 1.0;
@@ -2687,10 +2843,8 @@ namespace beepbox {
 			tone.active = false;
 			
 			let partsSinceStart: number = 0.0;
-			let tick: number = synth.tick;
-			let tickSampleCountdown: number = synth.tickSampleCountdown;
 			
-			let pitches: number[] | null = null;
+			const pitches: number[] = tone.pitches;
 			let resetPhases: boolean = true;
 			
 			let intervalStart: number = 0.0;
@@ -2699,9 +2853,6 @@ namespace beepbox {
 			let transitionVolumeEnd: number = 1.0;
 			let customVolumeStart: number = 0.0;
 			let customVolumeEnd: number = 0.0;
-			// TODO: probably part time can be calculated independently of any notes?
-			let partTimeStart: number = 0.0;
-			let partTimeEnd:   number = 0.0;
 			let decayTimeStart: number = 0.0;
 			let decayTimeEnd:   number = 0.0;
 			
@@ -2711,135 +2862,138 @@ namespace beepbox {
 				tone.volumeDeltas[i] = 0.0;
 			}
 			
-			if (pianoMode) {
-				pitches = synth.pianoPitch;
+			if (released) {
+				const ticksSoFar: number = tone.noteLengthTicks + tone.ticksSinceReleased;
+				const startTicksSinceReleased: number = tone.ticksSinceReleased + startRatio;
+				const endTicksSinceReleased:   number = tone.ticksSinceReleased + endRatio;
+				const startTick: number = tone.noteLengthTicks + startTicksSinceReleased;
+				const endTick:   number = tone.noteLengthTicks + endTicksSinceReleased;
+				resetPhases = false;
+				partsSinceStart = Math.floor(ticksSoFar / Config.ticksPerPart);
+				intervalStart = tone.lastInterval;
+				intervalEnd   = tone.lastInterval;
+				customVolumeStart = synth.volumeConversion(tone.lastVolume);
+				customVolumeEnd   = synth.volumeConversion(tone.lastVolume);
+				transitionVolumeStart = synth.volumeConversion((1.0 - startTicksSinceReleased / Config.transitionReleaseTicks[tone.instrument.transition]) * 3.0);
+				transitionVolumeEnd   = synth.volumeConversion((1.0 - endTicksSinceReleased / Config.transitionReleaseTicks[tone.instrument.transition]) * 3.0);
+				decayTimeStart = startTick / Config.ticksPerPart;
+				decayTimeEnd   = endTick / Config.ticksPerPart;
+			} else if (tone.note == null) {
 				transitionVolumeStart = transitionVolumeEnd = 1;
 				customVolumeStart = customVolumeEnd = 1;
+				tone.lastInterval = 0;
+				tone.lastVolume = 3;
+				tone.ticksSinceReleased = 0;
+				tone.noteLengthTicks = 0; // TODO: track piano key held duration for released tones.
 				resetPhases = false;
 				// TODO: track time since live piano note started for transition, envelope, decays, delayed vibrato, etc.
-			} else if (pattern != null) {
+			} else {
+				const note: Note = tone.note;
+				const prevNote: Note | null = tone.prevNote;
+				const nextNote: Note | null = tone.nextNote;
+				
 				const time: number = synth.part + synth.beat * Config.partsPerBeat;
 				
-				let note: Note | null = null;
-				let prevNote: Note | null = null;
-				let nextNote: Note | null = null;
-				for (let i: number = 0; i < pattern.notes.length; i++) {
-					if (pattern.notes[i].end <= time) {
-						prevNote = pattern.notes[i];
-					} else if (pattern.notes[i].start <= time && pattern.notes[i].end > time) {
-						note = pattern.notes[i];
-					} else if (pattern.notes[i].start > time) {
-						nextNote = pattern.notes[i];
-						break;
-					}
-				}
-				if (note != null && prevNote != null && prevNote.end != note.start) prevNote = null;
-				if (note != null && nextNote != null && nextNote.start != note.end) nextNote = null;
+				partsSinceStart = time - note.start;
 				
-				if (note != null) {
-					pitches = note.pitches;
-					partsSinceStart = time - note.start;
-					
-					let endPinIndex: number;
-					for (endPinIndex = 1; endPinIndex < note.pins.length - 1; endPinIndex++) {
-						if (note.pins[endPinIndex].time + note.start > time) break;
-					}
-					const startPin: NotePin = note.pins[endPinIndex-1];
-					const endPin: NotePin = note.pins[endPinIndex];
-					const noteStartTick: number = note.start * Config.ticksPerPart;
-					const noteEndTick:   number = note.end   * Config.ticksPerPart;
-					const noteLengthTicks: number = noteEndTick - noteStartTick;
-					const pinStart: number  = (note.start + startPin.time) * Config.ticksPerPart;
-					const pinEnd:   number  = (note.start +   endPin.time) * Config.ticksPerPart;
-					
-					const tickTimeStart: number = time * Config.ticksPerPart + tick;
-					const tickTimeEnd:   number = time * Config.ticksPerPart + tick + 1;
-					const noteTicksPassedTickStart: number = tickTimeStart - noteStartTick;
-					const noteTicksPassedTickEnd: number = tickTimeEnd - noteStartTick;
-					const pinRatioStart: number = (tickTimeStart - pinStart) / (pinEnd - pinStart);
-					const pinRatioEnd:   number = (tickTimeEnd   - pinStart) / (pinEnd - pinStart);
-					let customVolumeTickStart: number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioStart;
-					let customVolumeTickEnd:   number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioEnd;
-					let transitionVolumeTickStart: number = 1.0;
-					let transitionVolumeTickEnd:   number = 1.0;
-					let intervalTickStart: number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioStart;
-					let intervalTickEnd:   number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioEnd;
-					let partTimeTickStart: number = startPin.time + (endPin.time - startPin.time) * pinRatioStart;
-					let partTimeTickEnd:   number = startPin.time + (endPin.time - startPin.time) * pinRatioEnd;
-					let decayTimeTickStart: number = partTimeTickStart;
-					let decayTimeTickEnd:   number = partTimeTickEnd;
-					
-					const startRatio: number = 1.0 - (tickSampleCountdown            ) / samplesPerTick;
-					const endRatio:   number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
-					resetPhases = (tickTimeStart + startRatio - noteStartTick == 0.0) || !toneWasActive;
-					
-					// if seamless, don't reset phases at start. (it's probably not necessary to constantly reset phases if there are no notes? Just do it once when note starts? But make sure that reset phases doesn't also reset stuff that this function did to set up the tone. Remember when the first run length was lost!
-					// if slide, average the interval, decayTime, and custom volume at the endpoints and interpolate between over slide duration.
-					// note that currently seamless and slide make different assumptions about whether a note at the end of a bar will connect with the next bar!
-					const transition: number = instrument.transition;
-					const maximumTransitionTicks: number = noteLengthTicks * 0.5;
-					if (Config.transitionIsSeamless[transition] && !Config.transitionSlides[transition] && note.start == 0) {
-						// Special case for seamless, no-slide transition: assume the previous bar ends with another seamless note, don't reset tone history.
-						resetPhases = !toneWasActive;
-					} else if (Config.transitionIsSeamless[transition] && prevNote != null) {
-						resetPhases = !toneWasActive;
-						if (Config.transitionSlides[transition]) {
-							const slideTicks: number = Math.min(maximumTransitionTicks, Config.transitionSlideTicks[transition]);
-							const slideRatioStartTick: number = Math.max(0.0, 1.0 - noteTicksPassedTickStart / slideTicks);
-							const slideRatioEndTick:   number = Math.max(0.0, 1.0 - noteTicksPassedTickEnd / slideTicks);
-							const intervalDiff: number = ((prevNote.pitches[0] + prevNote.pins[prevNote.pins.length-1].interval) - note.pitches[0]) * 0.5;
-							const volumeDiff: number = (prevNote.pins[prevNote.pins.length-1].volume - note.pins[0].volume) * 0.5;
-							const decayTimeDiff: number = (prevNote.end - prevNote.start) * 0.5;
-							intervalTickStart += slideRatioStartTick * intervalDiff;
-							intervalTickEnd += slideRatioEndTick * intervalDiff;
-							customVolumeTickStart += slideRatioStartTick * volumeDiff;
-							customVolumeTickEnd += slideRatioEndTick * volumeDiff;
-							decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
-							decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
-						}
-					} else {
-						const attackTicks: number = Math.min(maximumTransitionTicks, Config.transitionAttackTicks[transition]);
-						if (attackTicks > 0.0) {
-							transitionVolumeTickStart *= Math.min(1.0, noteTicksPassedTickStart / attackTicks);
-							transitionVolumeTickEnd   *= Math.min(1.0, noteTicksPassedTickEnd / attackTicks);
-						}
-					}
-					if (Config.transitionIsSeamless[transition] && !Config.transitionSlides[transition] && note.end == Config.partsPerBeat * song.beatsPerBar) {
-						// Special case for seamless, no-slide transition: assume the next bar starts with another seamless note, don't fade out.
-					} else if (Config.transitionIsSeamless[transition] && nextNote != null) {
-						if (Config.transitionSlides[transition]) {
-							const slideTicks: number = Math.min(maximumTransitionTicks, Config.transitionSlideTicks[transition]);
-							const slideRatioStartTick: number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickStart) / slideTicks);
-							const slideRatioEndTick:   number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickEnd) / slideTicks);
-							const intervalDiff: number = (nextNote.pitches[0] - (note.pitches[0] + note.pins[note.pins.length-1].interval)) * 0.5;
-							const volumeDiff: number = (nextNote.pins[0].volume - note.pins[note.pins.length-1].volume) * 0.5;
-							const decayTimeDiff: number = -(note.end - note.start) * 0.5;
-							intervalTickStart += slideRatioStartTick * intervalDiff;
-							intervalTickEnd += slideRatioEndTick * intervalDiff;
-							customVolumeTickStart += slideRatioStartTick * volumeDiff;
-							customVolumeTickEnd += slideRatioEndTick * volumeDiff;
-							decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
-							decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
-						}
-					} else {
-						const releaseTicks: number = Math.min(maximumTransitionTicks, Config.transitionReleaseTicks[transition]);
-						if (releaseTicks > 0.0) {
-							transitionVolumeTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / releaseTicks);
-							transitionVolumeTickEnd   *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickEnd) / releaseTicks);
-						}
-					}
-					
-					intervalStart = intervalTickStart + (intervalTickEnd - intervalTickStart) * startRatio;
-					intervalEnd   = intervalTickStart + (intervalTickEnd - intervalTickStart) * endRatio;
-					customVolumeStart = synth.volumeConversion(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio);
-					customVolumeEnd   = synth.volumeConversion(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
-					transitionVolumeStart = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * startRatio;
-					transitionVolumeEnd   = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * endRatio;
-					partTimeStart = note.start + partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * startRatio;
-					partTimeEnd   = note.start + partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * endRatio;
-					decayTimeStart = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * startRatio;
-					decayTimeEnd   = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * endRatio;
+				let endPinIndex: number;
+				for (endPinIndex = 1; endPinIndex < note.pins.length - 1; endPinIndex++) {
+					if (note.pins[endPinIndex].time + note.start > time) break;
 				}
+				const startPin: NotePin = note.pins[endPinIndex-1];
+				const endPin: NotePin = note.pins[endPinIndex];
+				const noteStartTick: number = note.start * Config.ticksPerPart;
+				const noteEndTick:   number = note.end   * Config.ticksPerPart;
+				const noteLengthTicks: number = noteEndTick - noteStartTick;
+				const pinStart: number  = (note.start + startPin.time) * Config.ticksPerPart;
+				const pinEnd:   number  = (note.start +   endPin.time) * Config.ticksPerPart;
+				
+				tone.lastInterval = note.pins[note.pins.length - 1].interval;
+				tone.lastVolume = note.pins[note.pins.length - 1].volume;
+				tone.ticksSinceReleased = 0;
+				tone.noteLengthTicks = noteLengthTicks;
+				
+				const tickTimeStart: number = time * Config.ticksPerPart + synth.tick;
+				const tickTimeEnd:   number = time * Config.ticksPerPart + synth.tick + 1;
+				const noteTicksPassedTickStart: number = tickTimeStart - noteStartTick;
+				const noteTicksPassedTickEnd: number = tickTimeEnd - noteStartTick;
+				const pinRatioStart: number = (tickTimeStart - pinStart) / (pinEnd - pinStart);
+				const pinRatioEnd:   number = (tickTimeEnd   - pinStart) / (pinEnd - pinStart);
+				let customVolumeTickStart: number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioStart;
+				let customVolumeTickEnd:   number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioEnd;
+				let transitionVolumeTickStart: number = 1.0;
+				let transitionVolumeTickEnd:   number = 1.0;
+				let intervalTickStart: number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioStart;
+				let intervalTickEnd:   number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioEnd;
+				let decayTimeTickStart: number = partTimeTickStart - note.start;
+				let decayTimeTickEnd:   number = partTimeTickEnd - note.start;
+				
+				resetPhases = (tickTimeStart + startRatio - noteStartTick == 0.0) || !toneWasActive;
+				
+				// if seamless, don't reset phases at start. (it's probably not necessary to constantly reset phases if there are no notes? Just do it once when note starts? But make sure that reset phases doesn't also reset stuff that this function did to set up the tone. Remember when the first run length was lost!
+				// if slide, average the interval, decayTime, and custom volume at the endpoints and interpolate between over slide duration.
+				// note that currently seamless and slide make different assumptions about whether a note at the end of a bar will connect with the next bar!
+				const transition: number = instrument.transition;
+				const maximumTransitionTicks: number = noteLengthTicks * 0.5;
+				if (Config.transitionIsSeamless[transition] && !Config.transitionSlides[transition] && note.start == 0) {
+					// Special case for seamless, no-slide transition: assume the previous bar ends with another seamless note, don't reset tone history.
+					resetPhases = !toneWasActive;
+				} else if (Config.transitionIsSeamless[transition] && prevNote != null) {
+					resetPhases = !toneWasActive;
+					if (Config.transitionSlides[transition]) {
+						const slideTicks: number = Math.min(maximumTransitionTicks, Config.transitionSlideTicks[transition]);
+						const slideRatioStartTick: number = Math.max(0.0, 1.0 - noteTicksPassedTickStart / slideTicks);
+						const slideRatioEndTick:   number = Math.max(0.0, 1.0 - noteTicksPassedTickEnd / slideTicks);
+						const intervalDiff: number = ((prevNote.pitches[0] + prevNote.pins[prevNote.pins.length-1].interval) - note.pitches[0]) * 0.5;
+						const volumeDiff: number = (prevNote.pins[prevNote.pins.length-1].volume - note.pins[0].volume) * 0.5;
+						const decayTimeDiff: number = (prevNote.end - prevNote.start) * 0.5;
+						intervalTickStart += slideRatioStartTick * intervalDiff;
+						intervalTickEnd += slideRatioEndTick * intervalDiff;
+						customVolumeTickStart += slideRatioStartTick * volumeDiff;
+						customVolumeTickEnd += slideRatioEndTick * volumeDiff;
+						decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
+						decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
+					}
+				} else {
+					const attackTicks: number = Math.min(maximumTransitionTicks, Config.transitionAttackTicks[transition]);
+					if (attackTicks > 0.0) {
+						transitionVolumeTickStart *= Math.min(1.0, noteTicksPassedTickStart / attackTicks);
+						transitionVolumeTickEnd   *= Math.min(1.0, noteTicksPassedTickEnd / attackTicks);
+					}
+				}
+				if (Config.transitionIsSeamless[transition] && !Config.transitionSlides[transition] && note.end == Config.partsPerBeat * song.beatsPerBar) {
+					// Special case for seamless, no-slide transition: assume the next bar starts with another seamless note, don't fade out.
+				} else if (Config.transitionIsSeamless[transition] && nextNote != null) {
+					if (Config.transitionSlides[transition]) {
+						const slideTicks: number = Math.min(maximumTransitionTicks, Config.transitionSlideTicks[transition]);
+						const slideRatioStartTick: number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickStart) / slideTicks);
+						const slideRatioEndTick:   number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickEnd) / slideTicks);
+						const intervalDiff: number = (nextNote.pitches[0] - (note.pitches[0] + note.pins[note.pins.length-1].interval)) * 0.5;
+						const volumeDiff: number = (nextNote.pins[0].volume - note.pins[note.pins.length-1].volume) * 0.5;
+						const decayTimeDiff: number = -(note.end - note.start) * 0.5;
+						intervalTickStart += slideRatioStartTick * intervalDiff;
+						intervalTickEnd += slideRatioEndTick * intervalDiff;
+						customVolumeTickStart += slideRatioStartTick * volumeDiff;
+						customVolumeTickEnd += slideRatioEndTick * volumeDiff;
+						decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
+						decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
+					}
+				} else if (!Config.transitionReleases[transition]) {
+					const releaseTicks: number = Math.min(maximumTransitionTicks, Config.transitionReleaseTicks[transition]);
+					if (releaseTicks > 0.0) {
+						transitionVolumeTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / releaseTicks);
+						transitionVolumeTickEnd   *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickEnd) / releaseTicks);
+					}
+				}
+				
+				intervalStart = intervalTickStart + (intervalTickEnd - intervalTickStart) * startRatio;
+				intervalEnd   = intervalTickStart + (intervalTickEnd - intervalTickStart) * endRatio;
+				customVolumeStart = synth.volumeConversion(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio);
+				customVolumeEnd   = synth.volumeConversion(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
+				transitionVolumeStart = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * startRatio;
+				transitionVolumeEnd   = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * endRatio;
+				decayTimeStart = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * startRatio;
+				decayTimeEnd   = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * endRatio;
 			}
 			
 			if (pitches != null) {
@@ -2981,8 +3135,6 @@ namespace beepbox {
 				}
 				
 				tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
-			} else {
-				//tone.reset(); // I don't think I need this anymore?
 			}
 		}
 		
