@@ -198,6 +198,7 @@ namespace beepbox {
 			this._instrumentTypeSelectRow,
 			this._instrumentVolumeSliderRow,
 			this._waveSelectRow,
+			this._intervalSelectRow,
 			div({className: "selectRow"}, [
 				span({}, [text("Transition:")]),
 				div({className: "selectContainer"}, [this._transitionSelect]),
@@ -219,7 +220,6 @@ namespace beepbox {
 				span({}, [text("Delay:")]),
 				div({className: "selectContainer"}, [this._delaySelect]),
 			]),
-			this._intervalSelectRow,
 			this._algorithmSelectRow,
 			this._phaseModGroup,
 			this._feedbackRow1,
