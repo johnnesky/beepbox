@@ -286,6 +286,8 @@
 √ Optionally force scale changes to apply to existing notes.
 √ 0.1% of all songs use effect tremolo. Replace it with filter tremolo, which is more useful.
 √ fadeout transition: crossfade, fadeout, pad.
+√ Add more fractional pulse waves, 1/3 and 1/6, and also moved and renamed plateau to rounded.
+√ menu select title option should have "hidden" attribute, along with selected and disabled.
 
 MAJOR REMAINING FEATURES:
 - template instruments
@@ -302,10 +304,9 @@ MAJOR REMAINING FEATURES:
 - translation
 
 NEXT RELEASE:
-- As a way of limiting the number of simultaneously released tones, when the length of the list of tones gets too long in one channel, make the oldest (lowest index) tone fade out rapidly over the following part or tick and then free it.
-- menu select title option should have "hidden" attribute, along with selected and disabled.
-- Add more fractional pulse waves. 1/3, 1/5, 1/6, 1/7? I'm interested in 1/7 for pianos... unicode fractions? ½ ⅓ ¼ ⅕ ⅙ ⅐ ⅛
 - Collapse the delay menu into toggleable options, add polyphony to the menu?
+- As a way of limiting the number of simultaneously released tones, when the length of the list of tones gets too long in one channel, make the oldest (lowest index) tone fade out rapidly over the following part or tick and then free it.
+- Add a Config flag array for "chip" instruments, for whether or not to linearly interpolate wave samples or use polybleps for the retro/chip waves. that way i can add orchestra hit waves. I guess I also need an octave offset. and maybe even rename chip to wave instruments. sadly I will need a separate synth function for these waves. maybe do the same thing for drums and retroactively apply it to the hollow wave. also if I make another version of drums it probably doesn't need the frequency relative filter!
 - Hmm, sometimes Firefox won't play any sound... seems like it happens when I load www.beepbox.co, and then click a twitter link to beepbox.co, maybe some kind of security/user experience thing to prevent unwanted sound from cross-domain links?
 - switching bars doesn't seem to split transposes into multiple change states?
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, snaps/claps, thunder, rain, fire, wind, randomly spaced (x / (1 + x^2)), maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard, orchestra hit? (can noise instruments be selected on pitch channels? maybe wiyh different available noise waves?)

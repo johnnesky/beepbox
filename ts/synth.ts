@@ -100,8 +100,8 @@ namespace beepbox {
 		];
 		public static readonly partsPerBeat: number = 24;
 		public static readonly ticksPerPart: number = 2;
-		public static readonly waveNames: ReadonlyArray<string> = ["triangle", "square", "pulse wide", "pulse narrow", "sawtooth", "double saw", "double pulse", "spiky", "plateau"];
-		public static readonly waveVolumes: ReadonlyArray<number> = [1.0,         0.5,       0.5,          0.5,          0.65,          0.5,          0.4,         0.4,      0.94];
+		public static readonly waveNames: ReadonlyArray<string> = ["rounded", "triangle", "square", "⅓ pulse", "¼ pulse", "⅙ pulse", "⅛ pulse", "sawtooth", "double saw", "double pulse", "spiky"];
+		public static readonly waveVolumes: ReadonlyArray<number> = [ 0.94,       1.0,       0.5,       0.5,       0.5,       0.5,       0.5,       0.65,         0.5,          0.4,         0.4];
 		// the "clang" and "buzz" drums are inspired by similar drums in the modded beepbox! :D
 		public static readonly drumNames: ReadonlyArray<string> = ["retro", "white", "clang", "buzz", "hollow", /*"tom-tom", "cymbal", "bass"*/];
 		public static readonly drumVolumes: ReadonlyArray<number> = [0.25, 1.0, 0.4, 0.3, 1.5, /*1.5, 1.5, 1.5*/];
@@ -299,15 +299,17 @@ namespace beepbox {
 		public static readonly drumChannelCountMin: number = 0;
 		public static readonly drumChannelCountMax: number = 2;
 		public static readonly waves: ReadonlyArray<Float64Array> = [
+			Config._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]),
 			Config._centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0]),
 			Config._centerWave([1.0, -1.0]),
+			Config._centerWave([1.0, -1.0, -1.0]),
 			Config._centerWave([1.0, -1.0, -1.0, -1.0]),
+			Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0]),
 			Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]),
 			Config._centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0]),
 			Config._centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2]),
 			Config._centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0]),
 			Config._centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0]),
-			Config._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]),
 		];
 		public static readonly sineWaveLength: number = 1 << 8; // 256
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
@@ -934,7 +936,9 @@ namespace beepbox {
 				} else {
 					this.volume = 0;
 				}
-				this.wave = Config.waveNames.indexOf(instrumentObject.wave);
+				
+				const legacyWaveNames: Dictionary<number> = {"triangle": 1, "square": 2, "pulse wide": 4, "pulse narrow": 6, "sawtooth": 7, "double saw": 8, "double pulse": 9, "spiky": 10, "plateau": 0};
+				this.wave = legacyWaveNames[instrumentObject.wave] != undefined ? legacyWaveNames[instrumentObject.wave] : Config.waveNames.indexOf(instrumentObject.wave);
 				if (this.wave == -1) this.wave = 1;
 
 				if (instrumentObject.interval != undefined) {
@@ -1452,18 +1456,33 @@ namespace beepbox {
 					instrument.setTypeAndReset(clamp(0, InstrumentType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]));
 				} else if (command == SongTagCode.wave) {
 					if (beforeThree) {
+						const legacyWaves: number[] = [1, 2, 4, 6, 7, 8, 9, 10, 0];
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channels[channel].instruments[0].wave = clamp(0, Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].instruments[0].wave = clamp(0, Config.waveNames.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
 					} else if (beforeSix) {
+						const legacyWaves: number[] = [1, 2, 4, 6, 7, 8, 9, 10, 0];
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
-							const isDrums = (channel >= this.pitchChannelCount);
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.channels[channel].instruments[i].wave = clamp(0, isDrums ? Config.drumNames.length : Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								if (channel >= this.pitchChannelCount) {
+									this.channels[channel].instruments[i].wave = clamp(0, Config.drumNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								} else {
+									this.channels[channel].instruments[i].wave = clamp(0, Config.waveNames.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
+								}
 							}
 						}
+					} else if (beforeSeven) {
+						const legacyWaves: number[] = [1, 2, 4, 6, 7, 8, 9, 10, 0];
+						if (instrumentChannelIterator >= this.pitchChannelCount) {
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, Config.drumNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						} else {
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, Config.waveNames.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
+						}
 					} else {
-						const isDrums = (instrumentChannelIterator >= this.pitchChannelCount);
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, isDrums ? Config.drumNames.length : Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						if (instrumentChannelIterator >= this.pitchChannelCount) {
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, Config.drumNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						} else {
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, Config.waveNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						}
 					}
 				} else if (command == SongTagCode.filterCutoff) {
 					if (beforeSeven) {

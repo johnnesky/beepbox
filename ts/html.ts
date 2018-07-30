@@ -42,11 +42,12 @@ namespace beepbox {
 		export function select(attributes?: Record<string, string | number>, children?: Node[]): HTMLSelectElement {
 			return <HTMLSelectElement> element("select", attributes, children);
 		}
-		export function option(value: string | number, display: string | number, selected = false, disabled = false): HTMLOptionElement {
+		export function option(value: string | number, display: string | number, selected = false, disabled = false, hidden = false): HTMLOptionElement {
 			const o = <HTMLOptionElement> document.createElement("option");
 			o.value = <string> value;
 			o.selected = selected;
 			o.disabled = disabled;
+			o.hidden = hidden;
 			o.appendChild(text(<string> display));
 			return o;
 		}
