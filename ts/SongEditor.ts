@@ -116,7 +116,7 @@ namespace beepbox {
 		private readonly _nextBarButton: HTMLButtonElement = button({className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
 		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "100", value: "50", step: "1"});
 		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
-			option("", "Edit", true, true, true),
+			option("", "Edit", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option("undo", "Undo (Z)"),
 			option("redo", "Redo (Y)"),
 			option("copy", "Copy Pattern (C)"),
@@ -129,10 +129,10 @@ namespace beepbox {
 			option("import", "Import JSON..."),
 		]);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
-			option("", "Preferences", true, true, true),
+			option("", "Preferences", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option("autoPlay", "Auto Play On Load"),
 			option("autoFollow", "Auto Follow Track"),
-			option("showLetters", "Show Piano"),
+			option("showLetters", "Show Piano Keys"),
 			option("showFifth", "Highlight 'Fifth' Notes"),
 			option("showChannels", "Show All Channels"),
 			option("showScrollBar", "Octave Scroll Bar"),
@@ -436,7 +436,7 @@ namespace beepbox {
 			const optionCommands: ReadonlyArray<string> = [
 				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
 				(this._doc.autoFollow ? "✓ " : "") + "Auto Follow Track",
-				(this._doc.showLetters ? "✓ " : "") + "Show Piano",
+				(this._doc.showLetters ? "✓ " : "") + "Show Piano Keys",
 				(this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes",
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",

@@ -52,15 +52,6 @@ namespace beepbox {
 			// event. Seems to be related to going back in the browser history.
 			// https://bugs.chromium.org/p/chromium/issues/detail?id=825100
 			setTimeout(function() { anchor.dispatchEvent(new MouseEvent("click")); }, 0);
-		} else if (navigator.vendor.indexOf("Apple") > -1) {
-			// Safari 10.1 doesn't need this hack, delete it later.
-			var reader = new FileReader();
-			reader.onloadend = function() {
-				console.log(reader.result);
-				var url = reader.result.replace(/^data:[^;]*;/, 'data:attachment/file;');
-				if (!window.open(url, "_blank")) window.location.href = url;
-			};
-			reader.readAsDataURL(blob);
 		} else {
 			const url: string = URL.createObjectURL(blob);
 			setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
@@ -197,7 +188,7 @@ namespace beepbox {
 			const input: HTMLInputElement = <HTMLInputElement>event.target;
 			const deleteChars = /[\+\*\$\?\|\{\}\\\/<>#%!`&'"=:@]/gi;
 			if (deleteChars.test(input.value)) {
-				let cursorPos: number = input.selectionStart;
+				let cursorPos: number = <number>input.selectionStart;
 				input.value = input.value.replace(deleteChars, "");
 				cursorPos--;
 				input.setSelectionRange(cursorPos, cursorPos);
