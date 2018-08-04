@@ -101,7 +101,7 @@ namespace beepbox {
 		public static readonly partsPerBeat: number = 24;
 		public static readonly ticksPerPart: number = 2;
 		public static readonly waveNames: ReadonlyArray<string> = ["rounded", "triangle", "square", "¹/₃ pulse", "¹/₄ pulse", "¹/₆ pulse", "¹/₈ pulse", "¹/₁₂ pulse", "¹/₁₆ pulse", "sawtooth", "double saw", "double pulse", "spiky"];
-		public static readonly waveVolumes: ReadonlyArray<number> = [ 0.94,       1.0,       0.5,       0.5,       0.5,       0.5,       0.5,        0.5,          0.5,        0.65,         0.5,          0.4,         0.4];
+		public static readonly waveVolumes: ReadonlyArray<number> = [ 0.94,       1.0,       0.5,       0.5,         0.5,        0.5,          0.5,          0.5,          0.5,        0.65,         0.5,          0.4,         0.4];
 		// the "clang" and "buzz" drums are inspired by similar drums in the modded beepbox! :D
 		public static readonly drumNames: ReadonlyArray<string> = ["retro", "white", "clang", "buzz", "hollow", /*"tom-tom", "cymbal", "bass"*/];
 		public static readonly drumVolumes: ReadonlyArray<number> = [0.25, 1.0, 0.4, 0.3, 1.5, /*1.5, 1.5, 1.5*/];
@@ -116,13 +116,13 @@ namespace beepbox {
 		public static readonly filterMaxResonance: number = 0.95;
 		public static readonly filterCutoffRange: number = 11;
 		public static readonly filterResonanceRange: number = 8;
-		public static readonly transitionNames: ReadonlyArray<string> = ["seamless", "sudden", "smooth", "slide", "crossfade", "fadeout", "pad"];
-		public static readonly transitionAttackTicks: ReadonlyArray<number> = [0, 0, 3, 3, 6, 0, 6];
-		public static readonly transitionReleaseTicks: ReadonlyArray<number> = [1, 3, 3, 3, 6, 48, 96];
-		public static readonly transitionIsSeamless: ReadonlyArray<boolean> = [true, false, false, true, false, false, false];
-		public static readonly transitionSlides: ReadonlyArray<boolean> = [false, false, false, true, false, false, false];
-		public static readonly transitionReleases: ReadonlyArray<boolean> = [false, false, false, false, true, true, true];
-		public static readonly transitionSlideTicks: ReadonlyArray<number> = [3, 3, 3, 3, 3, 3, 3];
+		public static readonly transitionNames: ReadonlyArray<string> = ["seamless", "hard", "soft", "slide", "cross-fade", "fast fade", "medium fade", "slow fade"];
+		public static readonly transitionAttackSeconds: ReadonlyArray<number> = [0.0, 0.0, 0.025, 0.025, 0.04, 0, 0.0125, 0.06];
+		public static readonly transitionReleaseTicks: ReadonlyArray<number> = [1, 3, 3, 3, 6, 48, 72, 96];
+		public static readonly transitionIsSeamless: ReadonlyArray<boolean> = [true, false, false, true, false, false, false, false];
+		public static readonly transitionSlides: ReadonlyArray<boolean> = [false, false, false, true, false, false, false, false];
+		public static readonly transitionReleases: ReadonlyArray<boolean> = [false, false, false, false, true, true, true, true];
+		public static readonly transitionSlideTicks: ReadonlyArray<number> = [3, 3, 3, 3, 3, 3, 3, 6];
 		public static readonly vibratoNames: ReadonlyArray<string> = ["none", "light", "delayed", "heavy", "shaky"];
 		public static readonly vibratoAmplitudes: ReadonlyArray<number> = [0.0, 0.15, 0.3, 0.45, 0.11 /*, 0.0, 0.0*/];
 		public static readonly effectTremolos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0 /*, 0.25, 0.5*/];
@@ -890,7 +890,7 @@ namespace beepbox {
 			this.type = Config.instrumentTypeNames.indexOf(instrumentObject.type);
 			if (this.type == -1) this.type = isDrum ? InstrumentType.noise : InstrumentType.chip;
 			
-			const oldTransitionNames: Dictionary<number> = {"binary": 0};
+			const oldTransitionNames: Dictionary<number> = {"binary": 0, "sudden": 1, "smooth": 2};
 			const transitionObject = instrumentObject.transition || instrumentObject.envelope; // the transition property used to be called envelope, so try that too.
 			this.transition = oldTransitionNames[transitionObject] != undefined ? oldTransitionNames[transitionObject] : Config.transitionNames.indexOf(transitionObject);
 			if (this.transition == -1) this.transition = 1;
@@ -2847,6 +2847,7 @@ namespace beepbox {
 		
 		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean): void {
 			const instrument: Instrument = tone.instrument;
+			const transition: number = instrument.transition;
 			const isDrum: boolean = song.getChannelIsDrum(channel);
 			const basePitch: number = isDrum ? Config.drumBasePitches[instrument.wave] : Config.keyTransposes[song.key];
 			const intervalScale: number = isDrum ? Config.drumInterval : 1;
@@ -2857,12 +2858,12 @@ namespace beepbox {
 			const tickSampleCountdown: number = synth.tickSampleCountdown;
 			const startRatio: number = 1.0 - (tickSampleCountdown            ) / samplesPerTick;
 			const endRatio:   number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
-			
 			const ticksIntoBar: number = (synth.beat * Config.partsPerBeat + synth.part) * Config.ticksPerPart + synth.tick;
 			const partTimeTickStart: number = (ticksIntoBar    ) / Config.ticksPerPart;
 			const partTimeTickEnd:   number = (ticksIntoBar + 1) / Config.ticksPerPart;
 			const partTimeStart = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * startRatio;
 			const partTimeEnd   = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * endRatio;
+			const pitches: number[] = tone.pitches;
 			
 			tone.phaseDeltaScale = 0.0;
 			tone.filter = 1.0;
@@ -2872,11 +2873,8 @@ namespace beepbox {
 			tone.harmonyVolumeMult = 1.0;
 			tone.active = false;
 			
-			let partsSinceStart: number = 0.0;
-			
-			const pitches: number[] = tone.pitches;
 			let resetPhases: boolean = true;
-			
+			let partsSinceStart: number = 0.0;
 			let intervalStart: number = 0.0;
 			let intervalEnd: number = 0.0;
 			let transitionVolumeStart: number = 1.0;
@@ -2963,15 +2961,14 @@ namespace beepbox {
 				// if seamless, don't reset phases at start. (it's probably not necessary to constantly reset phases if there are no notes? Just do it once when note starts? But make sure that reset phases doesn't also reset stuff that this function did to set up the tone. Remember when the first run length was lost!
 				// if slide, average the interval, decayTime, and custom volume at the endpoints and interpolate between over slide duration.
 				// note that currently seamless and slide make different assumptions about whether a note at the end of a bar will connect with the next bar!
-				const transition: number = instrument.transition;
-				const maximumTransitionTicks: number = noteLengthTicks * 0.5;
+				const maximumSlideTicks: number = noteLengthTicks * 0.5;
 				if (Config.transitionIsSeamless[transition] && !Config.transitionSlides[transition] && note.start == 0) {
 					// Special case for seamless, no-slide transition: assume the previous bar ends with another seamless note, don't reset tone history.
 					resetPhases = !toneWasActive;
 				} else if (Config.transitionIsSeamless[transition] && prevNote != null) {
 					resetPhases = !toneWasActive;
 					if (Config.transitionSlides[transition]) {
-						const slideTicks: number = Math.min(maximumTransitionTicks, Config.transitionSlideTicks[transition]);
+						const slideTicks: number = Math.min(maximumSlideTicks, Config.transitionSlideTicks[transition]);
 						const slideRatioStartTick: number = Math.max(0.0, 1.0 - noteTicksPassedTickStart / slideTicks);
 						const slideRatioEndTick:   number = Math.max(0.0, 1.0 - noteTicksPassedTickEnd / slideTicks);
 						const intervalDiff: number = ((prevNote.pitches[0] + prevNote.pins[prevNote.pins.length-1].interval) - note.pitches[0]) * 0.5;
@@ -2984,18 +2981,12 @@ namespace beepbox {
 						decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
 						decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
 					}
-				} else {
-					const attackTicks: number = Math.min(maximumTransitionTicks, Config.transitionAttackTicks[transition]);
-					if (attackTicks > 0.0) {
-						transitionVolumeTickStart *= Math.min(1.0, noteTicksPassedTickStart / attackTicks);
-						transitionVolumeTickEnd   *= Math.min(1.0, noteTicksPassedTickEnd / attackTicks);
-					}
 				}
 				if (Config.transitionIsSeamless[transition] && !Config.transitionSlides[transition] && note.end == Config.partsPerBeat * song.beatsPerBar) {
 					// Special case for seamless, no-slide transition: assume the next bar starts with another seamless note, don't fade out.
 				} else if (Config.transitionIsSeamless[transition] && nextNote != null) {
 					if (Config.transitionSlides[transition]) {
-						const slideTicks: number = Math.min(maximumTransitionTicks, Config.transitionSlideTicks[transition]);
+						const slideTicks: number = Math.min(maximumSlideTicks, Config.transitionSlideTicks[transition]);
 						const slideRatioStartTick: number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickStart) / slideTicks);
 						const slideRatioEndTick:   number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickEnd) / slideTicks);
 						const intervalDiff: number = (nextNote.pitches[0] - (note.pitches[0] + note.pins[note.pins.length-1].interval)) * 0.5;
@@ -3009,7 +3000,7 @@ namespace beepbox {
 						decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
 					}
 				} else if (!Config.transitionReleases[transition]) {
-					const releaseTicks: number = Math.min(maximumTransitionTicks, Config.transitionReleaseTicks[transition]);
+					const releaseTicks: number = Config.transitionReleaseTicks[transition];
 					if (releaseTicks > 0.0) {
 						transitionVolumeTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / releaseTicks);
 						transitionVolumeTickEnd   *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickEnd) / releaseTicks);
@@ -3050,6 +3041,14 @@ namespace beepbox {
 					transitionVolumeEnd   *= tremoloEnd;
 				}
 				
+				if (!Config.transitionIsSeamless[transition] || (!(!Config.transitionSlides[transition] && tone.note != null && tone.note.start == 0) && !(tone.prevNote != null))) {
+					const attackSeconds: number = Config.transitionAttackSeconds[transition];
+					if (attackSeconds > 0.0) {
+						transitionVolumeStart *= Math.min(1.0, secondsPerPart * decayTimeStart / attackSeconds);
+						transitionVolumeEnd   *= Math.min(1.0, secondsPerPart * decayTimeEnd / attackSeconds);
+					}
+				}
+
 				const filterVolume: number = Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, customVolumeStart, customVolumeEnd);
 				
 				if (resetPhases) {

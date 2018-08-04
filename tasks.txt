@@ -288,6 +288,8 @@
 √ fadeout transition: crossfade, fadeout, pad.
 √ Add more fractional pulse waves, 1/3 and 1/6, and also moved and renamed plateau to rounded.
 √ menu select title option should have "hidden" attribute, along with selected and disabled.
+√ Attack/onset time should be measured in seconds. Fadeout can stay relative to tempo though. Removed constraint that transition cannot be longer than half of note duration, and allowed released tones to continue fading in.
+√ Added another transition and more pulse widths, renamed transitions.
 
 MAJOR REMAINING FEATURES:
 - template instruments
@@ -304,8 +306,6 @@ MAJOR REMAINING FEATURES:
 - translation
 
 NEXT RELEASE:
-- Attack/onset time shouldn't be relative to tempo. All attack onset speeds should be measured in seconds. Fadeout can stay relative to tempo though. Also Pad shouldn't have a hard onset for very short notes. (Due to constraint that transition cannot be longer than half of note.) It's unintuitive for single-part notes. Maybe just let transitions overlap/multiply/min? And make released tones smart enough to continue fading in.
-- I'm considering making the attack time for "fadeout" to 1 instead of 0. Or just make a new setting, between "fadeout" and "pad". Maybe "sustain"?
 - The held and released tones should be combined into a single list. If this exceeds 8 tones per channel, the oldest ones fade out fast.  
 - Collapse the delay menu into toggleable options, add polyphony to the menu? How should I handle legacy "custom harmony" and its weirdo arpeggio? I guess call it "harmony+arpeggio" If in seamless/slide mode and polyphonic mode, pitches get associated across notes based on pitch index in pitch array.
 - As a way of limiting the number of simultaneously released tones, when the length of the list of tones gets too long in one channel, make the oldest (lowest index) tone fade out rapidly over the following part or tick and then free it.
