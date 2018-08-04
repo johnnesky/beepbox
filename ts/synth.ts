@@ -1547,24 +1547,33 @@ namespace beepbox {
 						const legacyEnvelopes: number[] = [1, 1, 1, 13];
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						this.channels[channel].instruments[0].vibrato = legacyEffects[effect];
-						this.channels[channel].instruments[0].filterEnvelope = legacyEnvelopes[effect];
+						const instrument: Instrument = this.channels[channel].instruments[0];
+						instrument.vibrato = legacyEffects[effect];
+						instrument.filterEnvelope = (instrument.filterEnvelope == 1)
+							? legacyEnvelopes[effect]
+							: instrument.filterEnvelope;
 					} else if (beforeSix) {
 						const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
 						const legacyEnvelopes: number[] = [1, 1, 1, 1, 16, 13];
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 								const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-								this.channels[channel].instruments[i].vibrato = legacyEffects[effect];
-								this.channels[channel].instruments[i].filterEnvelope = legacyEnvelopes[effect];
+								const instrument: Instrument = this.channels[channel].instruments[i];
+								instrument.vibrato = legacyEffects[effect];
+								instrument.filterEnvelope = (instrument.filterEnvelope == 1)
+									? legacyEnvelopes[effect]
+									: instrument.filterEnvelope;
 							}
 						}
 					} else if (beforeSeven) {
 						const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
 						const legacyEnvelopes: number[] = [1, 1, 1, 1, 16, 13];
 						const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].vibrato = legacyEffects[effect];
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterEnvelope = legacyEnvelopes[effect];
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+						instrument.vibrato = legacyEffects[effect];
+						instrument.filterEnvelope = (instrument.filterEnvelope == 1)
+							? legacyEnvelopes[effect]
+							: instrument.filterEnvelope;
 					} else {
 						const vibrato: number = clamp(0, Config.vibratoNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].vibrato = vibrato;
