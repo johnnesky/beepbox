@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 /// <reference path="FFT.ts" />
+/// <reference path="Deque.ts" />
 
 interface Window {
 	AudioContext: any;
@@ -2246,8 +2247,7 @@ namespace beepbox {
 		private tonePoolLength: number = 0;
 		private readonly tonePool: Tone[] = [];
 		private readonly activeTones: Array<Tone | null> = [];
-		private releasedTonesLength: number[] = [];
-		private readonly releasedTones: Tone[][] = [];
+		private readonly releasedTones: Array<Deque<Tone>> = [];
 		
 		private limit: number = 0.0;
 		
@@ -2374,25 +2374,12 @@ namespace beepbox {
 			this.part = 0;
 			this.tick = 0;
 			this.tickSampleCountdown = 0;
-			
-			for (let i = 0; i < this.activeTones.length; i++) {
-				const tone: Tone | null = this.activeTones[i];
-				if (tone != null) this.freeTone(tone);
-				this.activeTones[i] = null;
-				
-				for (let j = 0; j < this.releasedTonesLength[i]; j++) {
-					const tone: Tone = this.releasedTones[i][j];
-					this.freeTone(tone);
-				}
-				
-				this.releasedTonesLength[i] = 0;
-			}
-			
 			this.reverbDelayPos = 0;
 			this.reverbFeedback0 = 0.0;
 			this.reverbFeedback1 = 0.0;
 			this.reverbFeedback2 = 0.0;
 			this.reverbFeedback3 = 0.0;
+			this.freeAllTones();
 			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
 			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
 		}
@@ -2451,12 +2438,10 @@ namespace beepbox {
 			const channelCount: number = this.song.getChannelCount();
 			for (let i: number = this.activeTones.length; i < channelCount; i++) {
 				this.activeTones[i] = null;
-				this.releasedTones[i] = [];
-				this.releasedTonesLength[i] = 0;
+				this.releasedTones[i] = new Deque<Tone>();
 			}
 			this.activeTones.length = channelCount;
 			this.releasedTones.length = channelCount;
-			this.releasedTonesLength.length = channelCount;
 			
 			const samplesPerTick: number = this.getSamplesPerTick();
 			let bufferIndex: number = 0;
@@ -2537,8 +2522,8 @@ namespace beepbox {
 							const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
 							synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
 						}
-						for (let i: number = 0; i < this.releasedTonesLength[channel]; i++) {
-							const tone: Tone = this.releasedTones[channel][i];
+						for (let i: number = 0; i < this.releasedTones[channel].size(); i++) {
+							const tone: Tone = this.releasedTones[channel].get(i);
 							if (tone.ticksSinceReleased >= Config.transitionReleaseTicks[tone.instrument.transition]) {
 								this.freeReleasedTone(channel, i);
 								i--;
@@ -2557,8 +2542,8 @@ namespace beepbox {
 						
 						// Track how long tones have been released, and free them if they've expired.
 						for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
-							for (let i: number = 0; i < this.releasedTonesLength[channel]; i++) {
-								const tone: Tone = this.releasedTones[channel][i];
+							for (let i: number = 0; i < this.releasedTones[channel].size(); i++) {
+								const tone: Tone = this.releasedTones[channel].get(i);
 								tone.ticksSinceReleased++;
 							}
 						}
@@ -2740,15 +2725,23 @@ namespace beepbox {
 		}
 		
 		private releaseTone(channel: number, tone: Tone): void {
-			this.releasedTones[channel][this.releasedTonesLength[channel]] = tone;
-			this.releasedTonesLength[channel]++;
+			this.releasedTones[channel].pushBack(tone);
 		}
 		
 		private freeReleasedTone(channel: number, toneIndex: number): void {
-			this.freeTone(this.releasedTones[channel][toneIndex]);
-			this.releasedTonesLength[channel]--;
-			for (let i = toneIndex; i < this.releasedTonesLength[channel]; i++) {
-				this.releasedTones[channel][i] = this.releasedTones[channel][i + 1];
+			this.freeTone(this.releasedTones[channel].get(toneIndex));
+			this.releasedTones[channel].remove(toneIndex);
+		}
+
+		public freeAllTones(): void {
+			for (let i = 0; i < this.activeTones.length; i++) {
+				const tone: Tone | null = this.activeTones[i];
+				if (tone != null) this.freeTone(tone);
+				this.activeTones[i] = null;
+				
+				while (this.releasedTones[i].size() > 0) {
+					this.freeTone(this.releasedTones[i].popBack());
+				}
 			}
 		}
 		
@@ -3177,10 +3170,10 @@ namespace beepbox {
 			endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
 			tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
 			
-			let filterVolume: number = -0.1 * (instrument.filterCutoff - (Config.filterCutoffRange - 1));
+			let filterVolume: number = Math.max(0.2, -0.1 * (instrument.filterCutoff - (Config.filterCutoffRange - 1)));
 			const envelopeType: EnvelopeType = Config.operatorEnvelopeType[instrument.filterEnvelope];
-			if (envelopeType == EnvelopeType.decay) filterVolume = (filterVolume + 1) * 0.5;
-			return Math.max(0.2, filterVolume);
+			if (envelopeType == EnvelopeType.decay) filterVolume += 0.2;
+			return filterVolume;
 		}
 		
 		private static readonly fmSynthFunctionCache: Dictionary<Function> = {};
