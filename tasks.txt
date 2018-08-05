@@ -290,6 +290,7 @@
 √ menu select title option should have "hidden" attribute, along with selected and disabled.
 √ Attack/onset time should be measured in seconds. Fadeout can stay relative to tempo though. Removed constraint that transition cannot be longer than half of note duration, and allowed released tones to continue fading in.
 √ Added another transition and more pulse widths, renamed transitions.
+√ live input tones should track time since note started for delayed vibrato, envelopes, etc, and release active tones if pitch changes.
 
 MAJOR REMAINING FEATURES:
 - template instruments
@@ -306,7 +307,7 @@ MAJOR REMAINING FEATURES:
 - translation
 
 NEXT RELEASE:
-- The held and released tones should be combined into a single list. If this exceeds 8 tones per channel, the oldest ones fade out fast. As a way of limiting the number of simultaneously released tones, when the length of the list of tones gets too long in one channel, make the oldest (lowest index) tone fade out rapidly over the following part or tick and then free it.
+- If held & released tones exceeds 8 tones per channel, the oldest ones fade out fast. As a way of limiting the number of simultaneously released tones, when the length of the list of tones gets too long in one channel, make the oldest (lowest index) tone fade out rapidly over the following part or tick and then free it.
 - Polyphony. Collapse the delay menu into toggleable options, add polyphony to the menu? How should I handle legacy "custom harmony" and its weirdo arpeggio? I guess call it "harmony+arpeggio" If in seamless/slide mode and polyphonic mode, pitches get associated across notes based on pitch index in pitch array.
 - An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
 - Wait arg it's still possible to make zero length notes by dragging to the far left! (In ÷8?)
@@ -338,8 +339,8 @@ MISC:
 - built-in link shortener?
 - do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
 - make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page. notify me about any questionable tweets? While we're at it, improve the home page twitter feed, maybe a new api or iframe is available now.
-- live piano should track time since note started for delayed vibrato, envelopes, etc. In piano mode, release active tones if pitch changes (or if previous tone wasn't piano mode, or if new isn't piano mode and previous was?)
-- live piano should still play when song is paused
+- Live input tones should still play when song is paused.
+- Live input tones should handle slide mode better.
 - When viewing a 0 pattern bar, check if there is an unused (and unreferenced) pattern, and if so, get ready to use that one in the pattern editor, show the available scale pitch rows, and if the user adds a note, the change sequence should include settings the bar to use the pattern. If no pattern is available, leave the background black and display a note that more patterns can be added from the edit song size feature. (If a pattern has notes in it, but is unreferenced, should it be coopted? Maybe after all the empty patterns are used?)
 - recording performances via keyboard or even midi... If you record over an existing pattern, do you erase it? Does it depend on whether you actually perform any notes during that pattern? If you perform over a 0 pattern bar, does it automatically find the next blank pattern and start using it? Can it automatically extend the number of patterns? Why not allow that for normal 0 pattern editing? The black background in the pattern editor always kinda bugged me anyway. Maybe different channels can have different numbers of patterns!
 - Eventually, maybe even stop forcing the user to manually choose pattern counts, and just autopopulate patterns as needed. And also provide mobile-style context buttons above selected bar to facilitate sharing patterns across bars, sort of a paste-shared vs paste-unique, and selecting a range of bars, looping the selection over more bars... Basically making it easier to use on mobile and without needing to remember numbers.
