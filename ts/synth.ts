@@ -2158,13 +2158,15 @@ namespace beepbox {
 	
 	class Tone {
 		public instrument: Instrument;
-		public pitches: number[];
+		public readonly pitches: number[] = [0, 0, 0, 0];
+		public pitchCount: number = 0;
 		public note: Note | null = null;
 		public prevNote: Note | null = null;
 		public nextNote: Note | null = null;
 		public active: boolean = false;
 		public noteLengthTicks: number = 0;
 		public ticksSinceReleased: number = 0;
+		public liveInputSamplesHeld: number = 0;
 		public lastInterval: number = 0;
 		public lastVolume: number = 0;
 		public sample: number = 0.0;
@@ -2198,6 +2200,7 @@ namespace beepbox {
 			this.sample = 0.0;
 			this.filterSample0 = 0.0;
 			this.filterSample1 = 0.0;
+			this.liveInputSamplesHeld = 0.0;
 		}
 	}
 	
@@ -2228,9 +2231,9 @@ namespace beepbox {
 		private limitDecay: number = 1.0 / (2.0 * this.samplesPerSecond);
 		
 		public song: Song | null = null;
-		public pianoPressed: boolean = false;
-		public pianoPitch: number[] = [0];
-		public pianoChannel: number = 0;
+		public liveInputPressed: boolean = false;
+		public liveInputPitches: number[] = [0];
+		public liveInputChannel: number = 0;
 		public enableIntro: boolean = true;
 		public enableOutro: boolean = false;
 		public loopCount: number = -1;
@@ -2244,10 +2247,10 @@ namespace beepbox {
 		private tickSampleCountdown: number = 0;
 		private paused: boolean = true;
 		
-		private tonePoolLength: number = 0;
-		private readonly tonePool: Tone[] = [];
+		private readonly tonePool: Deque<Tone> = new Deque<Tone>();
 		private readonly activeTones: Array<Tone | null> = [];
 		private readonly releasedTones: Array<Deque<Tone>> = [];
+		private liveInputTone: Tone | null = null;
 		
 		private limit: number = 0.0;
 		
@@ -2515,12 +2518,40 @@ namespace beepbox {
 						? this.tickSampleCountdown
 						: samplesLeftInBuffer;
 					for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
+
+						if (channel == this.liveInputChannel) {
+							if (this.liveInputPressed) {
+								let tone: Tone | null = this.liveInputTone;
+								// TODO: track time since liveInput tone started for transition, envelope, decays, delayed vibrato, etc.
+								if (tone == null) {
+									tone = this.newTone();
+								} else if (!Config.transitionIsSeamless[tone.instrument.transition] && tone.pitches[0] != this.liveInputPitches[0]) {
+									// pitches[0] changed, start a new tone.
+									this.releaseTone(channel, tone);
+									tone = this.newTone();
+								}
+								
+								const instrument: Instrument = this.song.channels[channel].instruments[this.song.getPatternInstrument(channel, this.bar)];
+								for (let i: number = 0; i < this.liveInputPitches.length; i++) {
+									tone.pitches[i] = this.liveInputPitches[i];
+								}
+								tone.pitchCount = this.liveInputPitches.length;
+								tone.instrument = instrument;
+								tone.note = tone.prevNote = tone.nextNote = null;
+								this.liveInputTone = tone;
+
+								this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, false);
+							} else {
+								if (this.liveInputTone != null) {
+									this.releaseTone(channel, this.liveInputTone);
+								}
+								this.liveInputTone = null;
+							}
+						}
+
 						const tone: Tone | null = this.getCurrentActiveTone(this.song, channel);
 						if (tone != null) {
-							Synth.computeTone(this, this.song, channel, samplesPerTick, runLength, tone, false);
-							const synthBuffer: Float32Array = synthBufferByDelay[tone.instrument.delay];
-							const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
-							synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
+							this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, false);
 						}
 						for (let i: number = 0; i < this.releasedTones[channel].size(); i++) {
 							const tone: Tone = this.releasedTones[channel].get(i);
@@ -2529,10 +2560,8 @@ namespace beepbox {
 								i--;
 								continue;
 							}
-							Synth.computeTone(this, this.song, channel, samplesPerTick, runLength, tone, true);
-							const synthBuffer: Float32Array = synthBufferByDelay[tone.instrument.delay];
-							const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
-							synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
+
+							this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, true);
 						}
 					}
 					bufferIndex += runLength;
@@ -2709,14 +2738,12 @@ namespace beepbox {
 		}
 		
 		private freeTone(tone: Tone): void {
-			this.tonePool[this.tonePoolLength] = tone;
-			this.tonePoolLength++;
+			this.tonePool.pushBack(tone);
 		}
 		
 		private newTone(): Tone {
-			if (this.tonePoolLength > 0) {
-				this.tonePoolLength--;
-				const tone: Tone = this.tonePool[this.tonePoolLength];
+			if (this.tonePool.size() > 0) {
+				const tone: Tone = this.tonePool.popBack();
 				tone.reset();
 				tone.active = false;
 				return tone;
@@ -2753,11 +2780,7 @@ namespace beepbox {
 			let prevNote: Note | null = null;
 			let nextNote: Note | null = null;
 			
-			if (this.pianoPressed && channel == this.pianoChannel) {
-				pitches = this.pianoPitch;
-				note = prevNote = nextNote = null;
-				// TODO: track time since live piano note started for transition, envelope, decays, delayed vibrato, etc.
-			} else if (pattern != null) {
+			if (pattern != null) {
 				const time: number = this.part + this.beat * Config.partsPerBeat;
 				
 				for (let i: number = 0; i < pattern.notes.length; i++) {
@@ -2782,22 +2805,19 @@ namespace beepbox {
 			if (pitches != null) {
 				if (tone == null) {
 					tone = this.newTone();
-				/*
-				// Check piano mode and release if pitch changed??
-				} else if (note != tone.note && Config.transitionReleases[tone.instrument.transition] && !Config.transitionIsSeamless[tone.instrument.transition]) {
-					this.releaseTone(channel, tone);
-					tone = this.newTone();
-				*/
 				}
 				
-				tone.pitches = pitches;
+				for (let i = 0; i < pitches.length; i++) {
+					tone.pitches[i] = pitches[i];
+				}
+				tone.pitchCount = pitches.length;
 				tone.instrument = instrument;
 				tone.note = note;
 				tone.prevNote = prevNote;
 				tone.nextNote = nextNote;
 			} else {
 				if (tone != null) {
-					// Do we need this check here? Only for piano keys I guess?
+					// Do we need this check here? Only for liveInput keys I guess? Oh also for seamless tones ending when bar ends but there's no note starting the next bar to pick it up...
 					if (Config.transitionReleases[tone.instrument.transition]) {
 						this.releaseTone(channel, tone);
 					} else {
@@ -2809,6 +2829,13 @@ namespace beepbox {
 			
 			this.activeTones[channel] = tone;
 			return tone;
+		}
+
+		private playTone(song: Song, bufferIndex: number, synthBufferByDelay: Float32Array[], channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean): void {
+			Synth.computeTone(this, song, channel, samplesPerTick, runLength, tone, released);
+			const synthBuffer: Float32Array = synthBufferByDelay[tone.instrument.delay];
+			const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
+			synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
 		}
 		
 		private static computeOperatorEnvelope(envelope: number, time: number, beats: number, customVolume: number): number {
@@ -2856,7 +2883,6 @@ namespace beepbox {
 			const partTimeTickEnd:   number = (ticksIntoBar + 1) / Config.ticksPerPart;
 			const partTimeStart = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * startRatio;
 			const partTimeEnd   = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * endRatio;
-			const pitches: number[] = tone.pitches;
 			
 			tone.phaseDeltaScale = 0.0;
 			tone.filter = 1.0;
@@ -2905,9 +2931,17 @@ namespace beepbox {
 				tone.lastInterval = 0;
 				tone.lastVolume = 3;
 				tone.ticksSinceReleased = 0;
-				tone.noteLengthTicks = 0; // TODO: track piano key held duration for released tones.
 				resetPhases = false;
-				// TODO: track time since live piano note started for transition, envelope, decays, delayed vibrato, etc.
+
+				const heldTicksStart: number = tone.liveInputSamplesHeld / samplesPerTick;
+				tone.liveInputSamplesHeld += runLength;
+				const heldTicksEnd: number = tone.liveInputSamplesHeld / samplesPerTick;
+				tone.noteLengthTicks = heldTicksEnd;
+				const heldPartsStart: number = heldTicksStart / Config.ticksPerPart;
+				const heldPartsEnd: number = heldTicksEnd / Config.ticksPerPart;
+				partsSinceStart = Math.floor(heldPartsStart);
+				decayTimeStart = heldPartsStart;
+				decayTimeEnd   = heldPartsEnd;
 			} else {
 				const note: Note = tone.note;
 				const prevNote: Note | null = tone.prevNote;
@@ -3010,154 +3044,152 @@ namespace beepbox {
 				decayTimeEnd   = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * endRatio;
 			}
 			
-			if (pitches != null) {
-				const sampleTime: number = 1.0 / synth.samplesPerSecond;
-				tone.active = true;
-				
-				if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm) {
-					let lfoEffectStart: number = 0.0;
-					let lfoEffectEnd:   number = 0.0;
-					for (const vibratoPeriod of Config.vibratoPeriods[instrument.vibrato]) {
-						lfoEffectStart += Math.sin(Math.PI * 2.0 * secondsPerPart * partTimeStart / vibratoPeriod);
-						lfoEffectEnd += Math.sin(Math.PI * 2.0 * secondsPerPart * partTimeEnd   / vibratoPeriod);
-					}
-					const vibratoScale: number = (partsSinceStart < Config.vibratoDelays[instrument.vibrato]) ? 0.0 : Config.vibratoAmplitudes[instrument.vibrato];
-					const tremoloScale: number = Config.effectTremolos[instrument.vibrato];
-					const vibratoStart: number = vibratoScale * lfoEffectStart;
-					const vibratoEnd:   number = vibratoScale * lfoEffectEnd;
-					const tremoloStart: number = 1.0 + tremoloScale * (lfoEffectStart - 1.0);
-					const tremoloEnd:   number = 1.0 + tremoloScale * (lfoEffectEnd - 1.0);
-					
-					intervalStart += vibratoStart;
-					intervalEnd   += vibratoEnd;
-					transitionVolumeStart *= tremoloStart;
-					transitionVolumeEnd   *= tremoloEnd;
+			const sampleTime: number = 1.0 / synth.samplesPerSecond;
+			tone.active = true;
+			
+			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm) {
+				let lfoEffectStart: number = 0.0;
+				let lfoEffectEnd:   number = 0.0;
+				for (const vibratoPeriod of Config.vibratoPeriods[instrument.vibrato]) {
+					lfoEffectStart += Math.sin(Math.PI * 2.0 * secondsPerPart * partTimeStart / vibratoPeriod);
+					lfoEffectEnd += Math.sin(Math.PI * 2.0 * secondsPerPart * partTimeEnd   / vibratoPeriod);
 				}
+				const vibratoScale: number = (partsSinceStart < Config.vibratoDelays[instrument.vibrato]) ? 0.0 : Config.vibratoAmplitudes[instrument.vibrato];
+				const tremoloScale: number = Config.effectTremolos[instrument.vibrato];
+				const vibratoStart: number = vibratoScale * lfoEffectStart;
+				const vibratoEnd:   number = vibratoScale * lfoEffectEnd;
+				const tremoloStart: number = 1.0 + tremoloScale * (lfoEffectStart - 1.0);
+				const tremoloEnd:   number = 1.0 + tremoloScale * (lfoEffectEnd - 1.0);
 				
-				if (!Config.transitionIsSeamless[transition] || (!(!Config.transitionSlides[transition] && tone.note != null && tone.note.start == 0) && !(tone.prevNote != null))) {
-					const attackSeconds: number = Config.transitionAttackSeconds[transition];
-					if (attackSeconds > 0.0) {
-						transitionVolumeStart *= Math.min(1.0, secondsPerPart * decayTimeStart / attackSeconds);
-						transitionVolumeEnd   *= Math.min(1.0, secondsPerPart * decayTimeEnd / attackSeconds);
-					}
-				}
-
-				const filterVolume: number = Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, customVolumeStart, customVolumeEnd);
-				
-				if (resetPhases) {
-					tone.reset();
-				}
-				
-				if (instrument.type == InstrumentType.fm) {
-					// phase modulation!
-					
-					let sineVolumeBoost: number = 1.0;
-					let totalCarrierVolume: number = 0.0;
-					
-					const carrierCount: number = Config.operatorCarrierCounts[instrument.algorithm];
-					for (let i: number = 0; i < Config.operatorCount; i++) {
-						const associatedCarrierIndex: number = Config.operatorAssociatedCarrier[instrument.algorithm][i] - 1;
-						const pitch: number = pitches[(i < pitches.length) ? i : ((associatedCarrierIndex < pitches.length) ? associatedCarrierIndex : 0)];
-						const freqMult = Config.operatorFrequencies[instrument.operators[i].frequency];
-						const interval = Config.operatorCarrierInterval[associatedCarrierIndex];
-						const startPitch: number = (pitch + intervalStart) * intervalScale + interval;
-						const startFreq: number = freqMult * (synth.frequencyFromPitch(basePitch + startPitch)) + Config.operatorHzOffsets[instrument.operators[i].frequency];
-						
-						tone.phaseDeltas[i] = startFreq * sampleTime * Config.sineWaveLength;
-						
-						const amplitudeCurve: number = Synth.operatorAmplitudeCurve(instrument.operators[i].amplitude);
-						const amplitudeMult: number = amplitudeCurve * Config.operatorAmplitudeSigns[instrument.operators[i].frequency];
-						let volumeStart: number = amplitudeMult;
-						let volumeEnd: number = amplitudeMult;
-						if (i < carrierCount) {
-							// carrier
-							const endPitch: number = (pitch + intervalEnd) * intervalScale;
-							const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
-							const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
-							volumeStart *= pitchVolumeStart;
-							volumeEnd *= pitchVolumeEnd;
-							
-							totalCarrierVolume += amplitudeCurve;
-						} else {
-							// modulator
-							volumeStart *= Config.sineWaveLength * 1.5;
-							volumeEnd *= Config.sineWaveLength * 1.5;
-							
-							sineVolumeBoost *= 1.0 - Math.min(1.0, instrument.operators[i].amplitude / 15);
-						}
-						const envelope: number = instrument.operators[i].envelope;
-						
-						volumeStart *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
-						volumeEnd *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
-						
-						tone.volumeStarts[i] = volumeStart;
-						tone.volumeDeltas[i] = (volumeEnd - volumeStart) / runLength;
-					}
-					
-					const feedbackAmplitude: number = Config.sineWaveLength * 0.3 * instrument.feedbackAmplitude / 15.0;
-					let feedbackStart: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
-					let feedbackEnd: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
-					tone.feedbackMult = feedbackStart;
-					tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
-					
-					const volumeMult: number = 0.15;
-					tone.volumeStart = filterVolume * volumeMult * transitionVolumeStart;
-					tone.volumeDelta = filterVolume * volumeMult * (transitionVolumeEnd - transitionVolumeStart) / runLength;
-					
-					sineVolumeBoost *= 1.0 - instrument.feedbackAmplitude / 15.0;
-					sineVolumeBoost *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolume - 1) / 2.0);
-					tone.volumeStart *= 1.0 + sineVolumeBoost * 3.0;
-					tone.volumeDelta *= 1.0 + sineVolumeBoost * 3.0;
-				} else {
-					let pitch: number = pitches[0];
-					
-					if (pitches.length > 1) {
-						const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.ticksPerArpeggio[song.rhythm]);
-						if (Config.intervalHarmonizes[instrument.interval]) {
-							const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][pitches.length - 2];
-							const harmonyOffset: number = pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]] - pitches[0];
-							tone.harmonyMult = Math.pow(2.0, harmonyOffset / 12.0);
-							tone.harmonyVolumeMult = Math.pow(2.0, -harmonyOffset / pitchDamping)
-						} else {
-							const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][pitches.length - 1];
-							pitch = pitches[arpeggioPattern[arpeggio % arpeggioPattern.length]];
-						}
-					}
-					
-					const startPitch: number = (pitch + intervalStart) * intervalScale;
-					const endPitch: number = (pitch + intervalEnd) * intervalScale;
-					const startFreq: number = synth.frequencyFromPitch(basePitch + startPitch);
-					const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
-					const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
-					let settingsVolumeMult: number;
-					if (!isDrum) {
-						settingsVolumeMult = 0.27 * 0.5 * Config.waveVolumes[instrument.wave] * filterVolume * Config.intervalVolumes[instrument.interval];
-					} else {
-						settingsVolumeMult = 0.19 * Config.drumVolumes[instrument.wave] * 5.0 * filterVolume;
-					}
-					
-					tone.phaseDeltas[0] = startFreq * sampleTime;
-					
-					const instrumentVolumeMult: number = (instrument.volume == 5) ? 0.0 : Math.pow(2, -Config.volumeValues[instrument.volume]);
-					tone.volumeStart = transitionVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
-					let volumeEnd: number = transitionVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
-					
-					if (Config.operatorEnvelopeType[instrument.filterEnvelope] != EnvelopeType.custom) {
-						tone.volumeStart *= customVolumeStart;
-						volumeEnd *= customVolumeEnd;
-					}
-					
-					tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
-				}
-				
-				if (instrument.filterResonance > 0) {
-					const resonanceVolume: number = 1.5 - 0.1 * (instrument.filterResonance - 1);
-					tone.volumeStart *= resonanceVolume;
-					tone.volumeDelta *= resonanceVolume;
-				}
-				
-				tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
+				intervalStart += vibratoStart;
+				intervalEnd   += vibratoEnd;
+				transitionVolumeStart *= tremoloStart;
+				transitionVolumeEnd   *= tremoloEnd;
 			}
+			
+			if (!Config.transitionIsSeamless[transition] || (!(!Config.transitionSlides[transition] && tone.note != null && tone.note.start == 0) && !(tone.prevNote != null))) {
+				const attackSeconds: number = Config.transitionAttackSeconds[transition];
+				if (attackSeconds > 0.0) {
+					transitionVolumeStart *= Math.min(1.0, secondsPerPart * decayTimeStart / attackSeconds);
+					transitionVolumeEnd   *= Math.min(1.0, secondsPerPart * decayTimeEnd / attackSeconds);
+				}
+			}
+
+			const filterVolume: number = Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, customVolumeStart, customVolumeEnd);
+			
+			if (resetPhases) {
+				tone.reset();
+			}
+			
+			if (instrument.type == InstrumentType.fm) {
+				// phase modulation!
+				
+				let sineVolumeBoost: number = 1.0;
+				let totalCarrierVolume: number = 0.0;
+				
+				const carrierCount: number = Config.operatorCarrierCounts[instrument.algorithm];
+				for (let i: number = 0; i < Config.operatorCount; i++) {
+					const associatedCarrierIndex: number = Config.operatorAssociatedCarrier[instrument.algorithm][i] - 1;
+					const pitch: number = tone.pitches[(i < tone.pitchCount) ? i : ((associatedCarrierIndex < tone.pitchCount) ? associatedCarrierIndex : 0)];
+					const freqMult = Config.operatorFrequencies[instrument.operators[i].frequency];
+					const interval = Config.operatorCarrierInterval[associatedCarrierIndex];
+					const startPitch: number = (pitch + intervalStart) * intervalScale + interval;
+					const startFreq: number = freqMult * (synth.frequencyFromPitch(basePitch + startPitch)) + Config.operatorHzOffsets[instrument.operators[i].frequency];
+					
+					tone.phaseDeltas[i] = startFreq * sampleTime * Config.sineWaveLength;
+					
+					const amplitudeCurve: number = Synth.operatorAmplitudeCurve(instrument.operators[i].amplitude);
+					const amplitudeMult: number = amplitudeCurve * Config.operatorAmplitudeSigns[instrument.operators[i].frequency];
+					let volumeStart: number = amplitudeMult;
+					let volumeEnd: number = amplitudeMult;
+					if (i < carrierCount) {
+						// carrier
+						const endPitch: number = (pitch + intervalEnd) * intervalScale;
+						const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
+						const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
+						volumeStart *= pitchVolumeStart;
+						volumeEnd *= pitchVolumeEnd;
+						
+						totalCarrierVolume += amplitudeCurve;
+					} else {
+						// modulator
+						volumeStart *= Config.sineWaveLength * 1.5;
+						volumeEnd *= Config.sineWaveLength * 1.5;
+						
+						sineVolumeBoost *= 1.0 - Math.min(1.0, instrument.operators[i].amplitude / 15);
+					}
+					const envelope: number = instrument.operators[i].envelope;
+					
+					volumeStart *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+					volumeEnd *= Synth.computeOperatorEnvelope(envelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
+					
+					tone.volumeStarts[i] = volumeStart;
+					tone.volumeDeltas[i] = (volumeEnd - volumeStart) / runLength;
+				}
+				
+				const feedbackAmplitude: number = Config.sineWaveLength * 0.3 * instrument.feedbackAmplitude / 15.0;
+				let feedbackStart: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+				let feedbackEnd: number = feedbackAmplitude * Synth.computeOperatorEnvelope(instrument.feedbackEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
+				tone.feedbackMult = feedbackStart;
+				tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
+				
+				const volumeMult: number = 0.15;
+				tone.volumeStart = filterVolume * volumeMult * transitionVolumeStart;
+				tone.volumeDelta = filterVolume * volumeMult * (transitionVolumeEnd - transitionVolumeStart) / runLength;
+				
+				sineVolumeBoost *= 1.0 - instrument.feedbackAmplitude / 15.0;
+				sineVolumeBoost *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolume - 1) / 2.0);
+				tone.volumeStart *= 1.0 + sineVolumeBoost * 3.0;
+				tone.volumeDelta *= 1.0 + sineVolumeBoost * 3.0;
+			} else {
+				let pitch: number = tone.pitches[0];
+				
+				if (tone.pitchCount > 1) {
+					const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.ticksPerArpeggio[song.rhythm]);
+					if (Config.intervalHarmonizes[instrument.interval]) {
+						const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][tone.pitchCount - 2];
+						const harmonyOffset: number = tone.pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]] - tone.pitches[0];
+						tone.harmonyMult = Math.pow(2.0, harmonyOffset / 12.0);
+						tone.harmonyVolumeMult = Math.pow(2.0, -harmonyOffset / pitchDamping)
+					} else {
+						const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][tone.pitchCount - 1];
+						pitch = tone.pitches[arpeggioPattern[arpeggio % arpeggioPattern.length]];
+					}
+				}
+				
+				const startPitch: number = (pitch + intervalStart) * intervalScale;
+				const endPitch: number = (pitch + intervalEnd) * intervalScale;
+				const startFreq: number = synth.frequencyFromPitch(basePitch + startPitch);
+				const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
+				const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
+				let settingsVolumeMult: number;
+				if (!isDrum) {
+					settingsVolumeMult = 0.27 * 0.5 * Config.waveVolumes[instrument.wave] * filterVolume * Config.intervalVolumes[instrument.interval];
+				} else {
+					settingsVolumeMult = 0.19 * Config.drumVolumes[instrument.wave] * 5.0 * filterVolume;
+				}
+				
+				tone.phaseDeltas[0] = startFreq * sampleTime;
+				
+				const instrumentVolumeMult: number = (instrument.volume == 5) ? 0.0 : Math.pow(2, -Config.volumeValues[instrument.volume]);
+				tone.volumeStart = transitionVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
+				let volumeEnd: number = transitionVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
+				
+				if (Config.operatorEnvelopeType[instrument.filterEnvelope] != EnvelopeType.custom) {
+					tone.volumeStart *= customVolumeStart;
+					volumeEnd *= customVolumeEnd;
+				}
+				
+				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
+			}
+			
+			if (instrument.filterResonance > 0) {
+				const resonanceVolume: number = 1.5 - 0.1 * (instrument.filterResonance - 1);
+				tone.volumeStart *= resonanceVolume;
+				tone.volumeDelta *= resonanceVolume;
+			}
+			
+			tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
 		}
 		
 		private static setUpResonantFilter(synth: Synth, instrument: Instrument, tone: Tone, runLength: number, secondsPerPart: number, beatsPerPart: number, decayTimeStart: number, decayTimeEnd: number, partTimeStart: number, partTimeEnd: number, customVolumeStart: number, customVolumeEnd: number): number {
