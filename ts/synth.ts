@@ -299,6 +299,7 @@ namespace beepbox {
 		public static readonly pitchChannelCountMax: number = 6;
 		public static readonly drumChannelCountMin: number = 0;
 		public static readonly drumChannelCountMax: number = 2;
+		public static readonly maximumTonesPerChannel: number = 8;
 		public static readonly waves: ReadonlyArray<Float64Array> = [
 			Config._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]),
 			Config._centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0]),
@@ -2248,7 +2249,7 @@ namespace beepbox {
 		private paused: boolean = true;
 		
 		private readonly tonePool: Deque<Tone> = new Deque<Tone>();
-		private readonly activeTones: Array<Tone | null> = [];
+		private readonly activeTones: Array<Deque<Tone>> = [];
 		private readonly releasedTones: Array<Deque<Tone>> = [];
 		private liveInputTone: Tone | null = null;
 		
@@ -2440,7 +2441,7 @@ namespace beepbox {
 			
 			const channelCount: number = this.song.getChannelCount();
 			for (let i: number = this.activeTones.length; i < channelCount; i++) {
-				this.activeTones[i] = null;
+				this.activeTones[i] = new Deque<Tone>();
 				this.releasedTones[i] = new Deque<Tone>();
 			}
 			this.activeTones.length = channelCount;
@@ -2540,7 +2541,7 @@ namespace beepbox {
 								tone.note = tone.prevNote = tone.nextNote = null;
 								this.liveInputTone = tone;
 
-								this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, false);
+								this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, false, false);
 							} else {
 								if (this.liveInputTone != null) {
 									this.releaseTone(channel, this.liveInputTone);
@@ -2549,11 +2550,12 @@ namespace beepbox {
 							}
 						}
 
-						const tone: Tone | null = this.getCurrentActiveTone(this.song, channel);
-						if (tone != null) {
-							this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, false);
+						this.determineCurrentActiveTones(this.song, channel);
+						for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
+							const tone: Tone = this.activeTones[channel].get(i);
+							this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, false, false);
 						}
-						for (let i: number = 0; i < this.releasedTones[channel].size(); i++) {
+						for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
 							const tone: Tone = this.releasedTones[channel].get(i);
 							if (tone.ticksSinceReleased >= Config.transitionReleaseTicks[tone.instrument.transition]) {
 								this.freeReleasedTone(channel, i);
@@ -2561,7 +2563,9 @@ namespace beepbox {
 								continue;
 							}
 
-							this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, true);
+							const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
+
+							this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
 						}
 					}
 					bufferIndex += runLength;
@@ -2569,11 +2573,17 @@ namespace beepbox {
 					this.tickSampleCountdown -= runLength;
 					if (this.tickSampleCountdown <= 0) {
 						
-						// Track how long tones have been released, and free them if they've expired.
+						// Track how long tones have been released, and free them if there are too many.
 						for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
-							for (let i: number = 0; i < this.releasedTones[channel].size(); i++) {
+							for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
 								const tone: Tone = this.releasedTones[channel].get(i);
 								tone.ticksSinceReleased++;
+
+								const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
+								if (shouldFadeOutFast) {
+									this.freeReleasedTone(channel, i);
+									i--;
+								}
 							}
 						}
 						
@@ -2585,10 +2595,17 @@ namespace beepbox {
 							
 							// Check if any active tones should be released.
 							for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
-								const tone: Tone | null = this.activeTones[channel];
-								if (tone != null && Config.transitionReleases[tone.instrument.transition] && tone.note != null && tone.note.end == this.part + this.beat * Config.partsPerBeat) {
-									this.releaseTone(channel, tone);
-									this.activeTones[channel] = null;
+								for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
+									const tone: Tone = this.activeTones[channel].get(i);
+									if (!Config.transitionIsSeamless[tone.instrument.transition] && tone.note != null && tone.note.end == this.part + this.beat * Config.partsPerBeat) {
+										if (Config.transitionReleases[tone.instrument.transition]) {
+											this.releaseTone(channel, tone);
+										} else {
+											this.freeTone(tone);
+										}
+										this.activeTones[channel].remove(i);
+										i--;
+									}
 								}
 							}
 							
@@ -2742,7 +2759,7 @@ namespace beepbox {
 		}
 		
 		private newTone(): Tone {
-			if (this.tonePool.size() > 0) {
+			if (this.tonePool.count() > 0) {
 				const tone: Tone = this.tonePool.popBack();
 				tone.reset();
 				tone.active = false;
@@ -2752,7 +2769,7 @@ namespace beepbox {
 		}
 		
 		private releaseTone(channel: number, tone: Tone): void {
-			this.releasedTones[channel].pushBack(tone);
+			this.releasedTones[channel].pushFront(tone);
 		}
 		
 		private freeReleasedTone(channel: number, toneIndex: number): void {
@@ -2761,18 +2778,23 @@ namespace beepbox {
 		}
 
 		public freeAllTones(): void {
+			if (this.liveInputTone != null) {
+				this.freeTone(this.liveInputTone);
+				this.liveInputTone = null;
+			}
 			for (let i = 0; i < this.activeTones.length; i++) {
-				const tone: Tone | null = this.activeTones[i];
-				if (tone != null) this.freeTone(tone);
-				this.activeTones[i] = null;
-				
-				while (this.releasedTones[i].size() > 0) {
+				while (this.activeTones[i].count() > 0) {
+					this.freeTone(this.activeTones[i].popBack());
+				}
+			}
+			for (let i = 0; i < this.releasedTones.length; i++) {
+				while (this.releasedTones[i].count() > 0) {
 					this.freeTone(this.releasedTones[i].popBack());
 				}
 			}
 		}
 		
-		private getCurrentActiveTone(song: Song, channel: number): Tone | null {
+		private determineCurrentActiveTones(song: Song, channel: number): void {
 			const instrument: Instrument = song.channels[channel].instruments[song.getPatternInstrument(channel, this.bar)];
 			const pattern: Pattern | null = song.getPattern(channel, this.bar);
 			let pitches: number[] | null = null;
@@ -2801,10 +2823,14 @@ namespace beepbox {
 				}
 			}
 			
-			let tone: Tone | null = this.activeTones[channel];
+			const toneList: Deque<Tone> = this.activeTones[channel];
 			if (pitches != null) {
-				if (tone == null) {
+				let tone: Tone;
+				if (toneList.count() == 0) {
 					tone = this.newTone();
+					toneList.pushBack(tone);
+				} else {
+					tone = toneList.get(0);
 				}
 				
 				for (let i = 0; i < pitches.length; i++) {
@@ -2816,23 +2842,19 @@ namespace beepbox {
 				tone.prevNote = prevNote;
 				tone.nextNote = nextNote;
 			} else {
-				if (tone != null) {
-					// Do we need this check here? Only for liveInput keys I guess? Oh also for seamless tones ending when bar ends but there's no note starting the next bar to pick it up...
-					if (Config.transitionReleases[tone.instrument.transition]) {
-						this.releaseTone(channel, tone);
+				while (toneList.count() > 0) {
+					// Automatically free or release seamless tones if there's no new note to take over.
+					if (Config.transitionReleases[toneList.peakBack().instrument.transition]) {
+						this.releaseTone(channel, toneList.popBack());
 					} else {
-						this.freeTone(tone);
+						this.freeTone(toneList.popBack());
 					}
 				}
-				tone = null;
 			}
-			
-			this.activeTones[channel] = tone;
-			return tone;
 		}
 
-		private playTone(song: Song, bufferIndex: number, synthBufferByDelay: Float32Array[], channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean): void {
-			Synth.computeTone(this, song, channel, samplesPerTick, runLength, tone, released);
+		private playTone(song: Song, bufferIndex: number, synthBufferByDelay: Float32Array[], channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
+			Synth.computeTone(this, song, channel, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
 			const synthBuffer: Float32Array = synthBufferByDelay[tone.instrument.delay];
 			const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
 			synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
@@ -2865,7 +2887,7 @@ namespace beepbox {
 			}
 		}
 		
-		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean): void {
+		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
 			const instrument: Instrument = tone.instrument;
 			const transition: number = instrument.transition;
 			const isDrum: boolean = song.getChannelIsDrum(channel);
@@ -2925,6 +2947,11 @@ namespace beepbox {
 				transitionVolumeEnd   = synth.volumeConversion((1.0 - endTicksSinceReleased / Config.transitionReleaseTicks[tone.instrument.transition]) * 3.0);
 				decayTimeStart = startTick / Config.ticksPerPart;
 				decayTimeEnd   = endTick / Config.ticksPerPart;
+
+				if (shouldFadeOutFast) {
+					transitionVolumeStart *= 1.0 - startRatio;
+					transitionVolumeEnd *= 1.0 - endRatio;
+				}
 			} else if (tone.note == null) {
 				transitionVolumeStart = transitionVolumeEnd = 1;
 				customVolumeStart = customVolumeEnd = 1;
