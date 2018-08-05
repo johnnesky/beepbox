@@ -291,6 +291,7 @@
 √ Attack/onset time should be measured in seconds. Fadeout can stay relative to tempo though. Removed constraint that transition cannot be longer than half of note duration, and allowed released tones to continue fading in.
 √ Added another transition and more pulse widths, renamed transitions.
 √ live input tones should track time since note started for delayed vibrato, envelopes, etc, and release active tones if pitch changes.
+√ If held & released tones exceeds 8 tones per channel, the oldest ones should fade out fast. 
 
 MAJOR REMAINING FEATURES:
 - template instruments
@@ -307,8 +308,7 @@ MAJOR REMAINING FEATURES:
 - translation
 
 NEXT RELEASE:
-- If held & released tones exceeds 8 tones per channel, the oldest ones fade out fast. As a way of limiting the number of simultaneously released tones, when the length of the list of tones gets too long in one channel, make the oldest (lowest index) tone fade out rapidly over the following part or tick and then free it.
-- Polyphony. Collapse the delay menu into toggleable options, add polyphony to the menu? How should I handle legacy "custom harmony" and its weirdo arpeggio? I guess call it "harmony+arpeggio" If in seamless/slide mode and polyphonic mode, pitches get associated across notes based on pitch index in pitch array.
+- Polyphony, as a new option in a new menu called "chords". Other options: "arpeggio" and "special".
 - An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
 - Wait arg it's still possible to make zero length notes by dragging to the far left! (In ÷8?)
 - Getting kinda nervous about how the chorus introduces noise/aliasing from irregular sampling. Also wondering about whether there are less "flanger"-like chorus effects available that I can implement efficiently. Maybe subdivide the post-processing on tick boundary as well, then the chorus doesn't even need to generate sine waves, it can just precompute the delay endpoints like tone vibrato.
