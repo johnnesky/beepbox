@@ -523,6 +523,7 @@ namespace beepbox {
 									description += ", wave: " + Config.waveNames[instrument.wave];
 									description += ", volume: " + ((5 - instrument.volume) * 20);
 									description += ", interval: " + Config.intervalNames[instrument.interval];
+									description += ", chord: " + Config.chordNames[instrument.chord];
 									description += ", vibrato: " + Config.vibratoNames[instrument.vibrato];
 									
 									const envelopeType: EnvelopeType = Config.operatorEnvelopeType[instrument.filterEnvelope];
@@ -532,6 +533,7 @@ namespace beepbox {
 									instrumentProgram = filterInstruments[instrument.wave];
 								} else if (instrument.type == InstrumentType.fm) {
 									description += ", vibrato: " + Config.vibratoNames[instrument.vibrato];
+									description += ", chord: " + Config.chordNames[instrument.chord];
 									description += ", algorithm: " + Config.midiAlgorithmNames[instrument.algorithm];
 									description += ", feedbackType: " + Config.midiFeedbackNames[instrument.feedbackType];
 									description += ", feedbackAmplitude: " + instrument.feedbackAmplitude;
@@ -573,7 +575,7 @@ namespace beepbox {
 							const effectTremolo: number = Config.effectTremolos[instrument.vibrato];
 							
 							let intervalOffset: number = 0.0;
-							let intervalHarmonizes: boolean = false;
+							let chordHarmonizes: boolean = false;
 							let usesArpeggio: boolean = true;
 							//let polyphony: number = 1;
 							if (!isDrums) {
@@ -582,7 +584,7 @@ namespace beepbox {
 									if (!isInterval) intervalOffset *= -1;
 									intervalOffset += Config.intervalOffsets[instrument.interval];
 									
-									intervalHarmonizes = Config.intervalHarmonizes[instrument.interval];
+									chordHarmonizes = Config.chordHarmonizes[instrument.chord];
 								} else if (instrument.type == InstrumentType.fm) {
 									usesArpeggio = false;
 									//polyphony = Config.operatorCarrierCounts[instrument.algorithm];
@@ -614,7 +616,7 @@ namespace beepbox {
 										let nextPitch: number = note.pitches[0];
 										if (usesArpeggio && note.pitches.length > 1) {
 											const arpeggio: number = Math.floor(tick / (Config.ticksPerArpeggio[song.rhythm] * ticksPerPart / Config.ticksPerPart));
-											if (intervalHarmonizes) {
+											if (chordHarmonizes) {
 												if (isInterval) {
 													const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][note.pitches.length - 2];
 													nextPitch = note.pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]];

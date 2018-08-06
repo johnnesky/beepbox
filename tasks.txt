@@ -292,6 +292,7 @@
 √ Added another transition and more pulse widths, renamed transitions.
 √ live input tones should track time since note started for delayed vibrato, envelopes, etc, and release active tones if pitch changes.
 √ If held & released tones exceeds 8 tones per channel, the oldest ones should fade out fast. 
+√ Polyphony, as a new option in a new menu called "chords". Other options: "arpeggio" and "custom interval".
 
 MAJOR REMAINING FEATURES:
 - template instruments
@@ -308,7 +309,7 @@ MAJOR REMAINING FEATURES:
 - translation
 
 NEXT RELEASE:
-- Polyphony, as a new option in a new menu called "chords". Other options: "arpeggio" and "special".
+- Use a single midi channel per beepbox channel. Stack notes unless using arpeggio. Don't try to apply "chip interval". Fix broken midi files?
 - An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
 - Wait arg it's still possible to make zero length notes by dragging to the far left! (In ÷8?)
 - Getting kinda nervous about how the chorus introduces noise/aliasing from irregular sampling. Also wondering about whether there are less "flanger"-like chorus effects available that I can implement efficiently. Maybe subdivide the post-processing on tick boundary as well, then the chorus doesn't even need to generate sine waves, it can just precompute the delay endpoints like tone vibrato.

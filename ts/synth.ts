@@ -129,15 +129,17 @@ namespace beepbox {
 		public static readonly effectTremolos: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0 /*, 0.25, 0.5*/];
 		public static readonly vibratoPeriods: ReadonlyArray<ReadonlyArray<number>> = [[0.14], [0.14], [0.14], [0.14], [0.1, 0.1618, 0.3] /*, [0.14], [0.14]*/];
 		public static readonly vibratoDelays: ReadonlyArray<number> = [0, 0, 18, 0, 0 /*, 0, 0*/];
-		public static readonly intervalNames: ReadonlyArray<string> = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed", "custom harmony"];
-		public static readonly intervalSpreads: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02, 0.05];
-		public static readonly intervalOffsets: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0, 0.0];
-		public static readonly intervalVolumes: ReadonlyArray<number> = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0, 1.0];
-		public static readonly intervalSigns: ReadonlyArray<number> = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0];
-		public static readonly intervalHarmonizes: ReadonlyArray<boolean> = [false, false, false, false, false, false, false, false, true];
+		public static readonly intervalNames: ReadonlyArray<string> = ["union", "shimmer", "hum", "honky tonk", "dissonant", "fifths", "octaves", "bowed"];
+		public static readonly intervalSpreads: ReadonlyArray<number> = [0.0, 0.02, 0.05, 0.1, 0.25, 3.5, 6, 0.02];
+		public static readonly intervalOffsets: ReadonlyArray<number> = [0.0, 0.0, 0.0, 0.0, 0.0, 3.5, 6, 0.0];
+		public static readonly intervalVolumes: ReadonlyArray<number> = [0.7, 0.8, 1.0, 1.0, 0.9, 0.9, 0.8, 1.0];
+		public static readonly intervalSigns: ReadonlyArray<number> = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
 		public static readonly delayNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
 		public static readonly volumeRange: number = 6;
 		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
+		public static readonly chordNames: ReadonlyArray<string> = ["normal", "arpeggio", "custom interval"];
+		public static readonly chordHarmonizes: ReadonlyArray<boolean> = [true, false, true];
+		public static readonly chordArpeggiates: ReadonlyArray<boolean> = [false, true, true];
 		public static readonly operatorCount: number = 4;
 		public static readonly operatorAlgorithmNames: ReadonlyArray<string> = [
 			"1←(2 3 4)",
@@ -543,6 +545,7 @@ namespace beepbox {
 		filterEnvelope = CharCode.z,
 		algorithm = CharCode.A,
 		feedbackAmplitude = CharCode.B,
+		chord = CharCode.C,
 		
 		operatorEnvelopes = CharCode.E,
 		feedbackType = CharCode.F,
@@ -772,6 +775,7 @@ namespace beepbox {
 		public vibrato: number = 0;
 		public interval: number = 0;
 		public delay: number = 0;
+		public chord: number = 1;
 		public volume: number = 0;
 		public algorithm: number = 0;
 		public feedbackType: number = 0;
@@ -798,11 +802,13 @@ namespace beepbox {
 					this.interval = 0;
 					this.volume = 0;
 					this.delay = 1;
+					this.chord = 1;
 					break;
 				case InstrumentType.fm:
 					this.transition = 1;
 					this.vibrato = 0;
 					this.delay = 1;
+					this.chord = 2;
 					this.filterCutoff = 10;
 					this.filterResonance = 0;
 					this.filterEnvelope = 1;
@@ -819,6 +825,7 @@ namespace beepbox {
 					this.transition = 1;
 					this.volume = 0;
 					this.delay = 0;
+					this.chord = 1;
 					this.filterCutoff = 10;
 					this.filterResonance = 0;
 					this.filterEnvelope = 1;
@@ -838,6 +845,7 @@ namespace beepbox {
 			this.vibrato = other.vibrato;
 			this.interval = other.interval;
 			this.delay = other.delay;
+			this.chord = other.chord;
 			this.volume = other.volume;
 			this.algorithm = other.algorithm;
 			this.feedbackType = other.feedbackType;
@@ -865,6 +873,7 @@ namespace beepbox {
 				instrumentObject.wave = Config.waveNames[this.wave];
 				instrumentObject.interval = Config.intervalNames[this.interval];
 				instrumentObject.vibrato = Config.vibratoNames[this.vibrato];
+				instrumentObject.chord = Config.chordNames[this.chord];
 			} else if (this.type == InstrumentType.fm) {
 				const operatorArray: Object[] = [];
 				for (const operator of this.operators) {
@@ -875,6 +884,7 @@ namespace beepbox {
 					});
 				}
 				instrumentObject.vibrato = Config.vibratoNames[this.vibrato];
+				instrumentObject.chord = Config.chordNames[this.chord];
 				instrumentObject.algorithm = Config.operatorAlgorithmNames[this.algorithm];
 				instrumentObject.feedbackType = Config.operatorFeedbackNames[this.feedbackType];
 				instrumentObject.feedbackAmplitude = this.feedbackAmplitude;
@@ -889,8 +899,9 @@ namespace beepbox {
 		public fromJsonObject(instrumentObject: any, isDrum: boolean): void {
 			if (instrumentObject == undefined) instrumentObject = {};
 			
-			this.type = Config.instrumentTypeNames.indexOf(instrumentObject.type);
-			if (this.type == -1) this.type = isDrum ? InstrumentType.noise : InstrumentType.chip;
+			let type: InstrumentType = Config.instrumentTypeNames.indexOf(instrumentObject.type);
+			if (type == -1) type = isDrum ? InstrumentType.noise : InstrumentType.chip;
+			this.setTypeAndReset(type);
 			
 			const oldTransitionNames: Dictionary<number> = {"binary": 0, "sudden": 1, "smooth": 2};
 			const transitionObject = instrumentObject.transition || instrumentObject.envelope; // the transition property used to be called envelope, so try that too.
@@ -960,6 +971,15 @@ namespace beepbox {
 					this.vibrato = legacyEffectNames.indexOf(instrumentObject.effect);
 					if (this.vibrato == -1) this.vibrato = 0;
 				}
+				
+				this.chord = Config.chordNames.indexOf(instrumentObject.chord);
+				if (this.chord == -1) this.chord = 1;
+
+				// The original chorus setting had an option that now maps to two different settings. Override those if necessary.
+				if (instrumentObject.chorus == "custom harmony") {
+					this.interval = 2;
+					this.chord = 2;
+				}
 			} else if (this.type == InstrumentType.fm) {
 				if (instrumentObject.vibrato != undefined) {
 					this.vibrato = Config.vibratoNames.indexOf(instrumentObject.vibrato);
@@ -969,6 +989,9 @@ namespace beepbox {
 					if (this.vibrato == -1) this.vibrato = 0;
 				}
 				
+				this.chord = Config.chordNames.indexOf(instrumentObject.chord);
+				if (this.chord == -1) this.chord = 2;
+
 				this.algorithm = Config.operatorAlgorithmNames.indexOf(instrumentObject.algorithm);
 				if (this.algorithm == -1) this.algorithm = 0;
 				this.feedbackType = Config.operatorFeedbackNames.indexOf(instrumentObject.feedbackType);
@@ -1158,9 +1181,11 @@ namespace beepbox {
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
+						buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 					} else if (instrument.type == InstrumentType.fm) {
 						// FM
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
+						buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 						buffer.push(SongTagCode.algorithm, base64IntToCharCode[instrument.algorithm]);
 						buffer.push(SongTagCode.feedbackType, base64IntToCharCode[instrument.feedbackType]);
 						buffer.push(SongTagCode.feedbackAmplitude, base64IntToCharCode[instrument.feedbackAmplitude]);
@@ -1589,12 +1614,30 @@ namespace beepbox {
 					} else if (beforeSix) {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.channels[channel].instruments[i].interval = clamp(0, Config.intervalNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								const originalValue: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+								let interval: number = clamp(0, Config.intervalNames.length, originalValue);
+								if (originalValue == 8) {
+									// original "custom harmony" now maps to "hum" and "special".
+									interval = 2;
+									this.channels[channel].instruments[i].chord = 2;
+								}
+								this.channels[channel].instruments[i].interval = interval;
 							}
 						}
+					} else if (beforeSeven) {
+						const originalValue: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						let interval: number = clamp(0, Config.intervalNames.length, originalValue);
+						if (originalValue == 8) {
+							// original "custom harmony" now maps to "hum" and "special".
+							interval = 2;
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chord = 2;
+						}
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].interval = interval;
 					} else {
 						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].interval = clamp(0, Config.intervalNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
+				} else if (command == SongTagCode.chord) {
+					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chord = clamp(0, Config.chordNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.delay) {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].delay = clamp(0, Config.delayNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.volume) {
@@ -2164,6 +2207,8 @@ namespace beepbox {
 		public note: Note | null = null;
 		public prevNote: Note | null = null;
 		public nextNote: Note | null = null;
+		public prevNotePitchIndex: number = 0;
+		public nextNotePitchIndex: number = 0;
 		public active: boolean = false;
 		public noteLengthTicks: number = 0;
 		public ticksSinceReleased: number = 0;
@@ -2251,7 +2296,7 @@ namespace beepbox {
 		private readonly tonePool: Deque<Tone> = new Deque<Tone>();
 		private readonly activeTones: Array<Deque<Tone>> = [];
 		private readonly releasedTones: Array<Deque<Tone>> = [];
-		private liveInputTone: Tone | null = null;
+		private readonly liveInputTones: Deque<Tone> = new Deque<Tone>();
 		
 		private limit: number = 0.0;
 		
@@ -2521,32 +2566,11 @@ namespace beepbox {
 					for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
 
 						if (channel == this.liveInputChannel) {
-							if (this.liveInputPressed) {
-								let tone: Tone | null = this.liveInputTone;
-								// TODO: track time since liveInput tone started for transition, envelope, decays, delayed vibrato, etc.
-								if (tone == null) {
-									tone = this.newTone();
-								} else if (!Config.transitionIsSeamless[tone.instrument.transition] && tone.pitches[0] != this.liveInputPitches[0]) {
-									// pitches[0] changed, start a new tone.
-									this.releaseTone(channel, tone);
-									tone = this.newTone();
-								}
-								
-								const instrument: Instrument = this.song.channels[channel].instruments[this.song.getPatternInstrument(channel, this.bar)];
-								for (let i: number = 0; i < this.liveInputPitches.length; i++) {
-									tone.pitches[i] = this.liveInputPitches[i];
-								}
-								tone.pitchCount = this.liveInputPitches.length;
-								tone.instrument = instrument;
-								tone.note = tone.prevNote = tone.nextNote = null;
-								this.liveInputTone = tone;
+							this.determineLiveInputTones(this.song);
 
+							for (let i: number = 0; i < this.liveInputTones.count(); i++) {
+								const tone: Tone = this.liveInputTones.get(i);
 								this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, false, false);
-							} else {
-								if (this.liveInputTone != null) {
-									this.releaseTone(channel, this.liveInputTone);
-								}
-								this.liveInputTone = null;
 							}
 						}
 
@@ -2778,9 +2802,8 @@ namespace beepbox {
 		}
 
 		public freeAllTones(): void {
-			if (this.liveInputTone != null) {
-				this.freeTone(this.liveInputTone);
-				this.liveInputTone = null;
+			while (this.liveInputTones.count() > 0) {
+				this.freeTone(this.liveInputTones.popBack());
 			}
 			for (let i = 0; i < this.activeTones.length; i++) {
 				while (this.activeTones[i].count() > 0) {
@@ -2790,6 +2813,36 @@ namespace beepbox {
 			for (let i = 0; i < this.releasedTones.length; i++) {
 				while (this.releasedTones[i].count() > 0) {
 					this.freeTone(this.releasedTones[i].popBack());
+				}
+			}
+		}
+
+		private determineLiveInputTones(song: Song): void {
+			if (this.liveInputPressed) {
+				const instrument: Instrument = song.channels[this.liveInputChannel].instruments[song.getPatternInstrument(this.liveInputChannel, this.bar)];
+				
+				let tone: Tone;
+				if (this.liveInputTones.count() == 0) {
+					tone = this.newTone();
+					this.liveInputTones.pushBack(tone);
+				} else if (!Config.transitionIsSeamless[instrument.transition] && this.liveInputTones.peakFront().pitches[0] != this.liveInputPitches[0]) {
+					// pitches[0] changed, start a new tone.
+					this.releaseTone(this.liveInputChannel, this.liveInputTones.popFront());
+					tone = this.newTone();
+					this.liveInputTones.pushBack(tone);
+				} else {
+					tone = this.liveInputTones.get(0);
+				}
+				
+				for (let i: number = 0; i < this.liveInputPitches.length; i++) {
+					tone.pitches[i] = this.liveInputPitches[i];
+				}
+				tone.pitchCount = this.liveInputPitches.length;
+				tone.instrument = instrument;
+				tone.note = tone.prevNote = tone.nextNote = null;
+			} else {
+				while (this.liveInputTones.count() > 0) {
+					this.releaseTone(this.liveInputChannel, this.liveInputTones.popBack());
 				}
 			}
 		}
@@ -2825,22 +2878,7 @@ namespace beepbox {
 			
 			const toneList: Deque<Tone> = this.activeTones[channel];
 			if (pitches != null) {
-				let tone: Tone;
-				if (toneList.count() == 0) {
-					tone = this.newTone();
-					toneList.pushBack(tone);
-				} else {
-					tone = toneList.get(0);
-				}
-				
-				for (let i = 0; i < pitches.length; i++) {
-					tone.pitches[i] = pitches[i];
-				}
-				tone.pitchCount = pitches.length;
-				tone.instrument = instrument;
-				tone.note = note;
-				tone.prevNote = prevNote;
-				tone.nextNote = nextNote;
+				this.syncTones(channel, toneList, instrument, pitches, note, prevNote, nextNote);
 			} else {
 				while (toneList.count() > 0) {
 					// Automatically free or release seamless tones if there's no new note to take over.
@@ -2849,6 +2887,61 @@ namespace beepbox {
 					} else {
 						this.freeTone(toneList.popBack());
 					}
+				}
+			}
+		}
+
+		private syncTones(channel: number, toneList: Deque<Tone>, instrument: Instrument, pitches: number[], note: Note | null, prevNote: Note | null, nextNote: Note | null): void {
+			let toneCount: number = 0;
+			if (Config.chordArpeggiates[instrument.chord]) {
+				let tone: Tone;
+				if (toneList.count() == 0) {
+					tone = this.newTone();
+					toneList.pushBack(tone);
+				} else {
+					tone = toneList.get(0);
+				}
+				toneCount = 1;
+
+				for (let i = 0; i < pitches.length; i++) {
+					tone.pitches[i] = pitches[i];
+				}
+				tone.pitchCount = pitches.length;
+				tone.instrument = instrument;
+				tone.note = note;
+				tone.prevNote = prevNote;
+				tone.nextNote = nextNote;
+				tone.prevNotePitchIndex = 0;
+				tone.nextNotePitchIndex = 0;
+			} else {
+				for (let i: number = 0; i < pitches.length; i++) {
+					let tone: Tone;
+					if (toneList.count() > i) {
+						tone = toneList.get(i);
+					} else {
+						tone = this.newTone();
+						toneList.pushBack(tone);
+					}
+					toneCount++;
+
+					tone.pitches[0] = pitches[i];
+					tone.pitchCount = 1;
+					tone.instrument = instrument;
+					tone.note = note;
+
+					// TODO: handle these appropriately:
+					tone.prevNote = (prevNote && prevNote.pitches.length > i) ? prevNote : null;
+					tone.nextNote = (nextNote && nextNote.pitches.length > i) ? nextNote : null;
+					tone.prevNotePitchIndex = i;
+					tone.nextNotePitchIndex = i;
+				}
+			}
+			for (let i: number = toneCount; i < toneList.count(); i++) {
+				// Automatically free or release seamless tones if there's no new note to take over.
+				if (Config.transitionReleases[toneList.peakBack().instrument.transition]) {
+					this.releaseTone(channel, toneList.popBack());
+				} else {
+					this.freeTone(toneList.popBack());
 				}
 			}
 		}
@@ -3025,7 +3118,7 @@ namespace beepbox {
 						const slideTicks: number = Math.min(maximumSlideTicks, Config.transitionSlideTicks[transition]);
 						const slideRatioStartTick: number = Math.max(0.0, 1.0 - noteTicksPassedTickStart / slideTicks);
 						const slideRatioEndTick:   number = Math.max(0.0, 1.0 - noteTicksPassedTickEnd / slideTicks);
-						const intervalDiff: number = ((prevNote.pitches[0] + prevNote.pins[prevNote.pins.length-1].interval) - note.pitches[0]) * 0.5;
+						const intervalDiff: number = ((prevNote.pitches[tone.prevNotePitchIndex] + prevNote.pins[prevNote.pins.length-1].interval) - tone.pitches[0]) * 0.5;
 						const volumeDiff: number = (prevNote.pins[prevNote.pins.length-1].volume - note.pins[0].volume) * 0.5;
 						const decayTimeDiff: number = (prevNote.end - prevNote.start) * 0.5;
 						intervalTickStart += slideRatioStartTick * intervalDiff;
@@ -3043,7 +3136,7 @@ namespace beepbox {
 						const slideTicks: number = Math.min(maximumSlideTicks, Config.transitionSlideTicks[transition]);
 						const slideRatioStartTick: number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickStart) / slideTicks);
 						const slideRatioEndTick:   number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickEnd) / slideTicks);
-						const intervalDiff: number = (nextNote.pitches[0] - (note.pitches[0] + note.pins[note.pins.length-1].interval)) * 0.5;
+						const intervalDiff: number = (nextNote.pitches[tone.nextNotePitchIndex] - (tone.pitches[0] + note.pins[note.pins.length-1].interval)) * 0.5;
 						const volumeDiff: number = (nextNote.pins[0].volume - note.pins[note.pins.length-1].volume) * 0.5;
 						const decayTimeDiff: number = -(note.end - note.start) * 0.5;
 						intervalTickStart += slideRatioStartTick * intervalDiff;
@@ -3113,13 +3206,20 @@ namespace beepbox {
 				
 				let sineVolumeBoost: number = 1.0;
 				let totalCarrierVolume: number = 0.0;
+
+				let arpeggioInterval: number = 0;
+				if (tone.pitchCount > 1 && !Config.chordHarmonizes[instrument.chord]) {
+					const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.ticksPerArpeggio[song.rhythm]);
+					const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][tone.pitchCount - 1];
+					arpeggioInterval = tone.pitches[arpeggioPattern[arpeggio % arpeggioPattern.length]] - tone.pitches[0];
+				}
 				
 				const carrierCount: number = Config.operatorCarrierCounts[instrument.algorithm];
 				for (let i: number = 0; i < Config.operatorCount; i++) {
 					const associatedCarrierIndex: number = Config.operatorAssociatedCarrier[instrument.algorithm][i] - 1;
-					const pitch: number = tone.pitches[(i < tone.pitchCount) ? i : ((associatedCarrierIndex < tone.pitchCount) ? associatedCarrierIndex : 0)];
+					const pitch: number = tone.pitches[!Config.chordHarmonizes[instrument.chord] ? 0 : ((i < tone.pitchCount) ? i : ((associatedCarrierIndex < tone.pitchCount) ? associatedCarrierIndex : 0))];
 					const freqMult = Config.operatorFrequencies[instrument.operators[i].frequency];
-					const interval = Config.operatorCarrierInterval[associatedCarrierIndex];
+					const interval = Config.operatorCarrierInterval[associatedCarrierIndex] + arpeggioInterval;
 					const startPitch: number = (pitch + intervalStart) * intervalScale + interval;
 					const startFreq: number = freqMult * (synth.frequencyFromPitch(basePitch + startPitch)) + Config.operatorHzOffsets[instrument.operators[i].frequency];
 					
@@ -3170,10 +3270,10 @@ namespace beepbox {
 				tone.volumeDelta *= 1.0 + sineVolumeBoost * 3.0;
 			} else {
 				let pitch: number = tone.pitches[0];
-				
+
 				if (tone.pitchCount > 1) {
 					const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.ticksPerArpeggio[song.rhythm]);
-					if (Config.intervalHarmonizes[instrument.interval]) {
+					if (Config.chordHarmonizes[instrument.chord]) {
 						const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][tone.pitchCount - 2];
 						const harmonyOffset: number = tone.pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]] - tone.pitches[0];
 						tone.harmonyMult = Math.pow(2.0, harmonyOffset / 12.0);
@@ -3306,7 +3406,7 @@ namespace beepbox {
 			const intervalA: number = +Math.pow(2.0, (Config.intervalOffsets[instrument.interval] + Config.intervalSpreads[instrument.interval]) / 12.0);
 			const intervalB: number =  Math.pow(2.0, (Config.intervalOffsets[instrument.interval] - Config.intervalSpreads[instrument.interval]) / 12.0) * tone.harmonyMult;
 			const intervalSign: number = tone.harmonyVolumeMult * Config.intervalSigns[instrument.interval];
-			if (instrument.interval == 0) tone.phases[1] = tone.phases[0];
+			if (instrument.interval == 0 && !Config.chordHarmonizes[instrument.chord]) tone.phases[1] = tone.phases[0];
 			const deltaRatio: number = intervalB / intervalA;
 			let phaseDelta: number = tone.phaseDeltas[0] * intervalA * waveLength;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
