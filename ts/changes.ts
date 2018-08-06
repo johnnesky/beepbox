@@ -379,6 +379,18 @@ namespace beepbox {
 		}
 	}
 	
+	export class ChangeChord extends Change {
+		constructor(doc: SongDocument, newValue: number) {
+			super();
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].chord;
+			if (oldValue != newValue) {
+				this._didSomething();
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].chord = newValue;
+				doc.notifier.changed();
+			}
+		}
+	}
+	
 	export class ChangeVibrato extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();

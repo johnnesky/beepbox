@@ -133,7 +133,7 @@ namespace beepbox {
 			option("autoPlay", "Auto Play On Load"),
 			option("autoFollow", "Auto Follow Track"),
 			option("showLetters", "Show Piano Keys"),
-			option("showFifth", "Highlight 'Fifth' Notes"),
+			option("showFifth", 'Highlight "Fifth" Notes'),
 			option("showChannels", "Show All Channels"),
 			option("showScrollBar", "Octave Scroll Bar"),
 			option("forceScaleChanges", "Force Scale Changes"),
@@ -177,10 +177,12 @@ namespace beepbox {
 		private readonly _filterResonanceSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterResonanceRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterResonance(this._doc, oldValue, newValue));
 		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorEnvelopeNames);
 		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select({}), Config.intervalNames);
-		private readonly _intervalHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
-		private readonly _intervalSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Interval:")]), this._intervalHint, div({className: "selectContainer"}, [this._intervalSelect])]);
+		//private readonly _intervalHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
+		private readonly _intervalSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Interval:")]), /*this._intervalHint, */div({className: "selectContainer"}, [this._intervalSelect])]);
+		private readonly _chordSelect: HTMLSelectElement = buildOptions(select({}), Config.chordNames);
+		private readonly _chordSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chords:")]), div({className: "selectContainer"}, [this._chordSelect])]);
 		private readonly _vibratoSelect: HTMLSelectElement = buildOptions(select({}), Config.vibratoNames);
-		private readonly _vibratoSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Vibrato: ")]), div({className: "selectContainer"}, [this._vibratoSelect])]);
+		private readonly _vibratoSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Vibrato:")]), div({className: "selectContainer"}, [this._vibratoSelect])]);
 		private readonly _phaseModGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"}, []);
 		private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.operatorFeedbackNames);
 		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Feedback:")]), div({className: "selectContainer"}, [this._feedbackTypeSelect])]);
@@ -199,6 +201,7 @@ namespace beepbox {
 			this._instrumentVolumeSliderRow,
 			this._waveSelectRow,
 			this._intervalSelectRow,
+			this._chordSelectRow,
 			div({className: "selectRow"}, [
 				span({}, [text("Transition:")]),
 				div({className: "selectContainer"}, [this._transitionSelect]),
@@ -361,6 +364,7 @@ namespace beepbox {
 			this._delaySelect.addEventListener("change", this._whenSetDelay);
 			this._filterEnvelopeSelect.addEventListener("change", this._whenSetFilterEnvelope);
 			this._intervalSelect.addEventListener("change", this._whenSetInterval);
+			this._chordSelect.addEventListener("change", this._whenSetChord);
 			this._vibratoSelect.addEventListener("change", this._whenSetVibrato);
 			this._playButton.addEventListener("click", this._togglePlay);
 			this._prevBarButton.addEventListener("click", this._whenPrevBarPressed);
@@ -369,7 +373,7 @@ namespace beepbox {
 			this._exportButton.addEventListener("click", this._openExportPrompt);
 			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
 			this._instrumentTypeHint.addEventListener("click", this._openInstrumentTypePrompt);
-			this._intervalHint.addEventListener("click", this._openIntervalPrompt);
+			//this._intervalHint.addEventListener("click", this._openIntervalPrompt);
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
@@ -407,9 +411,11 @@ namespace beepbox {
 					case "instrumentType":
 						this.prompt = new InstrumentTypePrompt(this._doc, this);
 						break;
+						/*
 					case "interval":
 						this.prompt = new IntervalPrompt(this._doc, this);
 						break;
+						*/
 					default:
 						throw new Error("Unrecognized prompt type.");
 				}
@@ -437,7 +443,7 @@ namespace beepbox {
 				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
 				(this._doc.autoFollow ? "✓ " : "") + "Auto Follow Track",
 				(this._doc.showLetters ? "✓ " : "") + "Show Piano Keys",
-				(this._doc.showFifth ? "✓ " : "") + "Highlight 'Fifth' Notes",
+				(this._doc.showFifth ? "✓ " : "") + 'Highlight "Fifth" Notes',
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
 				(this._doc.forceScaleChanges ? "✓ " : "") + "Force Scale Changes",
@@ -472,6 +478,7 @@ namespace beepbox {
 				this._feedbackRow2.style.display = "none";
 				this._waveSelect.style.display = "none";
 				this._intervalSelectRow.style.display = "none";
+				this._chordSelectRow.style.display = "none";
 				this._vibratoSelectRow.style.display = "none";
 			} else if (instrument.type == InstrumentType.chip) {
 				this._instrumentTypeSelectRow.style.display = "";
@@ -481,6 +488,7 @@ namespace beepbox {
 				this._waveSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
 				this._intervalSelectRow.style.display = "";
+				this._chordSelectRow.style.display = "";
 				this._algorithmSelectRow.style.display = "none";
 				this._phaseModGroup.style.display = "none";
 				this._feedbackRow1.style.display = "none";
@@ -496,6 +504,7 @@ namespace beepbox {
 				this._instrumentVolumeSliderRow.style.display = "none";
 				this._waveSelectRow.style.display = "none";
 				this._intervalSelectRow.style.display = "none";
+				this._chordSelectRow.style.display = "";
 			} else {
 				throw new Error("Unrecognized instrument type: " + instrument.type);
 			}
@@ -525,6 +534,7 @@ namespace beepbox {
 			setSelectedIndex(this._delaySelect, instrument.delay);
 			setSelectedIndex(this._vibratoSelect, instrument.vibrato);
 			setSelectedIndex(this._intervalSelect, instrument.interval);
+			setSelectedIndex(this._chordSelect, instrument.chord);
 			setSelectedIndex(this._feedbackTypeSelect, instrument.feedbackType);
 			this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
 			setSelectedIndex(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
@@ -548,7 +558,7 @@ namespace beepbox {
 			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
 			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
 			this._instrumentTypeHint.style.display = (instrument.type == InstrumentType.fm) ? "" : "none";
-			this._intervalHint.style.display = (Config.intervalHarmonizes[instrument.interval]) ? "" : "none";
+			//this._intervalHint.style.display = (Config.intervalHarmonizes[instrument.interval]) ? "" : "none";
 			
 			let patternWidth: number = 512;
 			if (this._doc.showLetters) patternWidth -= 32;
@@ -748,11 +758,11 @@ namespace beepbox {
 		private _openInstrumentTypePrompt = (): void => {
 			this._openPrompt("instrumentType");
 		}
-		
+		/*
 		private _openIntervalPrompt = (): void => {
 			this._openPrompt("interval");
 		}
-		
+		*/
 		private _whenSetScale = (): void => {
 			this._doc.record(new ChangeScale(this._doc, this._scaleSelect.selectedIndex));
 		}
@@ -813,6 +823,10 @@ namespace beepbox {
 		
 		private _whenSetInterval = (): void => {
 			this._doc.record(new ChangeInterval(this._doc, this._intervalSelect.selectedIndex));
+		}
+		
+		private _whenSetChord = (): void => {
+			this._doc.record(new ChangeChord(this._doc, this._chordSelect.selectedIndex));
 		}
 		
 		private _editMenuHandler = (event:Event): void => {
