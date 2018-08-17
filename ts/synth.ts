@@ -272,26 +272,34 @@ namespace beepbox {
 		public static readonly midiPitchChannelNames: ReadonlyArray<string> = ["cyan channel", "yellow channel", "orange channel", "green channel", "purple channel", "blue channel"];
 		public static readonly midiDrumChannelNames: ReadonlyArray<string> = ["gray channel", "brown channel"];
 		public static readonly midiSustainInstruments: number[] = [
+			0x4A, // rounded -> recorder
 			0x47, // triangle -> clarinet
 			0x50, // square -> square wave
-			0x46, // pulse wide -> bassoon
-			0x44, // pulse narrow -> oboe
+			0x46, // ¹/₃ pulse -> bassoon
+			0x46, // ¹/₄ pulse -> bassoon
+			0x44, // ¹/₆ pulse -> oboe
+			0x44, // ¹/₈ pulse -> oboe
+			0x51, // ¹/₁₂ pulse -> sawtooth wave
+			0x51, // ¹/₁₆ pulse -> sawtooth wave
 			0x51, // sawtooth -> sawtooth wave
 			0x51, // double saw -> sawtooth wave
 			0x51, // double pulse -> sawtooth wave
 			0x51, // spiky -> sawtooth wave
-			0x4A, // plateau -> recorder
 		];
 		public static readonly midiDecayInstruments: number[] = [
+			0x21, // rounded -> fingered bass
 			0x2E, // triangle -> harp
 			0x2E, // square -> harp
-			0x06, // pulse wide -> harpsichord
-			0x18, // pulse narrow -> nylon guitar
+			0x06, // ¹/₃ pulse -> harpsichord
+			0x06, // ¹/₄ pulse -> harpsichord
+			0x18, // ¹/₆ pulse -> nylon guitar
+			0x18, // ¹/₈ pulse -> nylon guitar
+			0x19, // ¹/₁₂ pulse -> steel guitar
+			0x19, // ¹/₁₆ pulse -> steel guitar
 			0x19, // sawtooth -> steel guitar
 			0x19, // double saw -> steel guitar
 			0x6A, // double pulse -> shamisen
 			0x6A, // spiky -> shamisen
-			0x21, // plateau -> fingered bass
 		];
 		public static readonly drumInterval: number = 6;
 		public static readonly drumCount: number = 12;
@@ -3168,12 +3176,8 @@ namespace beepbox {
 			tone.active = true;
 			
 			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm) {
-				let lfoEffectStart: number = 0.0;
-				let lfoEffectEnd:   number = 0.0;
-				for (const vibratoPeriod of Config.vibratoPeriods[instrument.vibrato]) {
-					lfoEffectStart += Math.sin(Math.PI * 2.0 * secondsPerPart * partTimeStart / vibratoPeriod);
-					lfoEffectEnd += Math.sin(Math.PI * 2.0 * secondsPerPart * partTimeEnd   / vibratoPeriod);
-				}
+				const lfoEffectStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeStart);
+				const lfoEffectEnd:   number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeEnd);
 				const vibratoScale: number = (partsSinceStart < Config.vibratoDelays[instrument.vibrato]) ? 0.0 : Config.vibratoAmplitudes[instrument.vibrato];
 				const tremoloScale: number = Config.effectTremolos[instrument.vibrato];
 				const vibratoStart: number = vibratoScale * lfoEffectStart;
@@ -3317,6 +3321,14 @@ namespace beepbox {
 			}
 			
 			tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
+		}
+		
+		public static getLFOAmplitude(instrument: Instrument, secondsIntoBar: number): number {
+			let effect: number = 0.0;
+			for (const vibratoPeriod of Config.vibratoPeriods[instrument.vibrato]) {
+				effect += Math.sin(Math.PI * 2.0 * secondsIntoBar / vibratoPeriod);
+			}
+			return effect;
 		}
 		
 		private static setUpResonantFilter(synth: Synth, instrument: Instrument, tone: Tone, runLength: number, secondsPerPart: number, beatsPerPart: number, decayTimeStart: number, decayTimeEnd: number, partTimeStart: number, partTimeEnd: number, customVolumeStart: number, customVolumeEnd: number): number {

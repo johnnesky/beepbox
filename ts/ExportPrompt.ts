@@ -24,10 +24,7 @@ SOFTWARE.
 /// <reference path="SongDocument.ts" />
 /// <reference path="Prompt.ts" />
 /// <reference path="html.ts" />
-
-interface ArrayBufferConstructor {
-	transfer: any;
-}
+/// <reference path="ArrayBufferWriter.ts" />
 
 namespace beepbox {
 	const {button, div, input, text} = html;
@@ -59,58 +56,6 @@ namespace beepbox {
 		}
 	}
 	
-	// Polyfill for ArrayBuffer.transfer.
-	///@TODO: Check if ArrayBuffer.transfer is widely implemented.
-	if (!ArrayBuffer.transfer) {
-		ArrayBuffer.transfer = function(source: ArrayBuffer, length: number) {
-			const dest = new ArrayBuffer(length);
-			if (!(source instanceof ArrayBuffer) || !(dest instanceof ArrayBuffer)) {
-				throw new TypeError('Source and destination must be ArrayBuffer instances');
-			}
-			let nextOffset = 0;
-			let leftBytes = Math.min(source.byteLength, dest.byteLength);
-			const wordSizes = [8, 4, 2, 1];
-			for (const wordSize of wordSizes) {
-				if (leftBytes >= wordSize) {
-					const done = transferWith(wordSize, source, dest, nextOffset, leftBytes);
-					nextOffset = done.nextOffset;
-					leftBytes = done.leftBytes;
-				}
-			}
-			return dest;
-			function transferWith(wordSize: number, source: ArrayBuffer, dest: ArrayBuffer, nextOffset: number, leftBytes: number) {
-				let ViewClass: any = Uint8Array;
-				switch (wordSize) {
-					case 8:
-						ViewClass = Float64Array;
-						break;
-					case 4:
-						ViewClass = Float32Array;
-						break;
-					case 2:
-						ViewClass = Uint16Array;
-						break;
-					case 1:
-						ViewClass = Uint8Array;
-						break;
-					default:
-						ViewClass = Uint8Array;
-						break;
-				}
-				
-				const view_source = new ViewClass(source, nextOffset, (leftBytes / wordSize) | 0);
-				const view_dest = new ViewClass(dest, nextOffset, (leftBytes / wordSize) | 0);
-				for (let i = 0; i < view_dest.length; i++) {
-					view_dest[i] = view_source[i];
-				}
-				return {
-					nextOffset : view_source.byteOffset + view_source.byteLength,
-					leftBytes : leftBytes - view_dest.length * wordSize,
-				}
-			}
-		};
-	}
-
 	export class ExportPrompt implements Prompt {
 		private readonly _fileName: HTMLInputElement = input({type: "text", style: "width: 10em;", value: "BeepBox-Song", maxlength: 250});
 		private readonly _enableIntro: HTMLInputElement = input({type: "checkbox"});
@@ -284,82 +229,16 @@ namespace beepbox {
 		}
 		
 		private _whenExportToMidi = (): void => {
-			let writeIndex: number = 0;
-			let fileSize: number = 0;
-			let arrayBuffer: ArrayBuffer = new ArrayBuffer(1024);
-			let data: DataView = new DataView(arrayBuffer);
-			
-			function addBytes(numBytes: number): void {
-				fileSize += numBytes;
-				if (fileSize > arrayBuffer.byteLength) {
-					arrayBuffer = ArrayBuffer.transfer(arrayBuffer, Math.max(arrayBuffer.byteLength * 2, fileSize));
-					data = new DataView(arrayBuffer);
-				}
-			}
-			
-			function writeUint32(value: number): void {
-				value = value >>> 0;
-				addBytes(4);
-				data.setUint32(writeIndex, value, false);
-				writeIndex = fileSize;
-			}
-			function writeUint24(value: number): void {
-				value = value >>> 0;
-				addBytes(3);
-				data.setUint8(writeIndex  , (value>>16)&0xff);
-				data.setUint8(writeIndex+1, (value>> 8)&0xff);
-				data.setUint8(writeIndex+2, (value    )&0xff);
-				writeIndex = fileSize;
-			}
-			function writeUint16(value: number): void {
-				value = value >>> 0;
-				addBytes(2);
-				data.setUint16(writeIndex, value, false);
-				writeIndex = fileSize;
-			}
-			function writeUint8(value: number): void {
-				value = value >>> 0;
-				addBytes(1);
-				data.setUint8(writeIndex, value);
-				writeIndex = fileSize;
-			}
-			function writeFlagAnd7Bits(flag: number, value: number): void {
-				value = ((value >>> 0) & 0x7f) | ((flag & 0x01) << 7);
-				addBytes(1);
-				data.setUint8(writeIndex, value);
-				writeIndex = fileSize;
-			}
-			
-			function writeVariableLength(value: number): void {
-				value = value >>> 0;
-				if (value > 0x0fffffff) throw new Error("writeVariableLength value too big.");
-				let startWriting: boolean = false;
-				for (let i: number = 0; i < 4; i++) {
-					const shift: number = 21 - i * 7;
-					const bits: number = (value >>> shift) & 0x7f;
-					if (bits != 0 || i == 3) startWriting = true; // skip leading zero bytes, but always write the last byte even if it's zero. 
-					if (startWriting) writeFlagAnd7Bits(i == 3 ? 0 : 1, bits);
-				}
-			}
-			
-			function writeAscii(string: string): void {
-				writeVariableLength(string.length);
-				for (let i: number = 0; i < string.length; i++) {
-					const charCode: number = string.charCodeAt(i);
-					if (charCode > 0x7f) throw new Error("Trying to write unicode character as ascii.");
-					writeUint8(charCode); // technically charCodeAt returns 2 byte values, but this string should contain exclusively 1 byte values.
-				}
-			}
-			
 			const song: Song = this._doc.song;
-			const ticksPerBeat: number = 96;
-			const ticksPerPart: number = ticksPerBeat / Config.partsPerBeat;
+			const midiTicksPerBeepBoxTick: number = 2;
+			const midiTicksPerBeat: number = midiTicksPerBeepBoxTick * Config.ticksPerPart * Config.partsPerBeat;
+			const midiTicksPerPart: number = midiTicksPerBeepBoxTick * Config.ticksPerPart;
 			const secondsPerMinute: number = 60;
 			const microsecondsPerMinute: number = secondsPerMinute * 1000000;
 			const beatsPerMinute: number = song.getBeatsPerMinute();
 			const microsecondsPerBeat: number = Math.round(microsecondsPerMinute / beatsPerMinute);
-			const secondsPerTick: number = secondsPerMinute / (ticksPerBeat * beatsPerMinute);
-			const ticksPerBar: number = ticksPerBeat * song.beatsPerBar;
+			const secondsPerMidiTick: number = secondsPerMinute / (midiTicksPerBeat * beatsPerMinute);
+			const midiTicksPerBar: number = midiTicksPerBeat * song.beatsPerBar;
 			
 			const unrolledBars: number[] = [];
 			if (this._enableIntro.checked) {
@@ -381,38 +260,31 @@ namespace beepbox {
 			const tracks = [{isMeta:  true, channel: -1, midiChannel: -1, isInterval: false, isDrums: false}];
 			let midiChannelCounter = 0;
 			for (let channel: number = 0; channel < this._doc.song.getChannelCount(); channel++) {
-				if (this._doc.song.getChannelIsDrum(channel)) {
-					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isInterval: false, isDrums: true});
-					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
-				} else {
-					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isInterval: false, isDrums: false});
-					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
-					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isInterval:  true, isDrums: false});
-					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
-				}
+				tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isInterval: false, isDrums: this._doc.song.getChannelIsDrum(channel)});
+				if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
 			}
 			
-			writeUint32(0x4D546864); // "MThd": Header chunk type
-			writeUint32(6); // length of headers is 6 bytes
-			writeUint16(1); // file format is 1, meaning multiple simultaneous tracks
-			writeUint16(tracks.length);
-			writeUint16(ticksPerBeat); // number of "ticks" per beat, independent of tempo
+			const writer: ArrayBufferWriter = new ArrayBufferWriter(1024);
+			writer.writeUint32(0x4D546864); // "MThd": Header chunk type
+			writer.writeUint32(6); // length of headers is 6 bytes
+			writer.writeUint16(1); // file format is 1, meaning multiple simultaneous tracks
+			writer.writeUint16(tracks.length);
+			writer.writeUint16(midiTicksPerBeat); // number of "ticks" per beat, independent of tempo
 			
 			for (const track of tracks) {
-				writeUint32(0x4D54726B); // "MTrk": Track chunk type
+				writer.writeUint32(0x4D54726B); // "MTrk": Track chunk type
 				
-				const {isMeta, channel, midiChannel, isInterval, isDrums} = track;
+				const {isMeta, channel, midiChannel, isDrums} = track;
 				
 				// We're gonna come back here once we know how many bytes this track is.
-				const trackLengthIndex: number = writeIndex;
-				fileSize += 4; // placeholder for track size
-				writeIndex = fileSize;
+				const trackStartIndex: number = writer.getWriteIndex();
+				writer.writeUint32(0); // placeholder for track size
 				
 				let prevTime: number = 0;
 				let barStartTime: number = 0;
 				const writeEventTime = function(time: number): void {
 					if (time < prevTime) throw new Error("Midi event time cannot go backwards.");
-					writeVariableLength(time - prevTime);
+					writer.writeMidiVariableLength(time - prevTime);
 					prevTime = time;
 				}
 				
@@ -420,21 +292,21 @@ namespace beepbox {
 					// for first midi track, include tempo, time signature, and key signature information.
 					
 					writeEventTime(0);
-					writeUint16(0xFF01); // text meta event. 
-					writeAscii("http://www.beepbox.co/#" + song.toBase64String());
+					writer.writeUint16(0xFF01); // text meta event. 
+					writer.writeMidiAscii("Composed with beepbox.co");
 					
 					writeEventTime(0);
-					writeUint24(0xFF5103); // tempo meta event. data is 3 bytes.
-					writeUint24(microsecondsPerBeat); // Tempo in microseconds per "quarter" note, commonly known as a "beat"
+					writer.writeUint24(0xFF5103); // tempo meta event. data is 3 bytes.
+					writer.writeUint24(microsecondsPerBeat); // Tempo in microseconds per "quarter" note, commonly known as a "beat"
 					
 					writeEventTime(0);
-					writeUint24(0xFF5804); // time signature meta event. data is 4 bytes.
-					writeUint8(song.beatsPerBar); // numerator. @TODO: turn 8/4 into 4/4? 
-					writeUint8(2); // denominator exponent in 2^E. 2^2 = 4, and we will always use "quarter" notes.
-					writeUint8(24); // MIDI Clocks per metronome tick (should match beats), standard is 24
-					writeUint8(8); // number of 1/32 notes per 24 MIDI Clocks, standard is 8, meaning 24 clocks per "quarter" note.
+					writer.writeUint24(0xFF5804); // time signature meta event. data is 4 bytes.
+					writer.writeUint8(song.beatsPerBar); // numerator.
+					writer.writeUint8(2); // denominator exponent in 2^E. 2^2 = 4, and we will always use "quarter" notes.
+					writer.writeUint8(24); // MIDI Clocks per metronome tick (should match beats), standard is 24
+					writer.writeUint8(8); // number of 1/32 notes per 24 MIDI Clocks, standard is 8, meaning 24 clocks per "quarter" note.
 					
-					const isMinor: boolean = (song.scale < 10) && ((song.scale & 1) == 1);
+					const isMinor: boolean = Config.scaleFlags[song.scale][3] && !Config.scaleFlags[song.scale][4];
 					const key: number = 11 - song.key; // convert to scale where C=0, C#=1, counting up to B=11
 					let numSharps: number = key; // For even key values in major scale, number of sharps/flats is same...
 					if ((key & 1) == 1) numSharps += 6; // For odd key values (consider circle of fifths) rotate around the circle... kinda... Look conventional key signatures are just weird, okay?
@@ -442,45 +314,36 @@ namespace beepbox {
 					while (numSharps > 6) numSharps -= 12; // Range is (modulo 12) - 5. Midi supports -7 to +7, but I only have 12 options.
 					
 					writeEventTime(0);
-					writeUint24(0xFF5902); // time signature meta event. data is 2 bytes.
-					writeUint8(numSharps); // see above calculation. or don't, it doesn't actually make sense anyway. This is a really lame way to define key signature IMHO.
-					writeUint8(isMinor ? 1 : 0); // 0: major, 1: minor
+					writer.writeUint24(0xFF5902); // Time signature meta event. Data is 2 bytes.
+					writer.writeUint8(numSharps); // See above calculation. Assumes scale is diatonic. :/
+					writer.writeUint8(isMinor ? 1 : 0); // 0: major, 1: minor
 					
-					if (this._enableIntro.checked) barStartTime += ticksPerBar * song.loopStart;
+					if (this._enableIntro.checked) barStartTime += midiTicksPerBar * song.loopStart;
 					writeEventTime(barStartTime);
-					writeUint16(0xFF06); // marker meta event. 
-					writeAscii("Loop Start");
+					writer.writeUint16(0xFF06); // marker meta event. 
+					writer.writeMidiAscii("Loop Start");
 					
-					for (let loopIndex: number = 0; loopIndex < Number(this._loopDropDown.value); loopIndex++) {
-						barStartTime += ticksPerBar * song.loopLength;
+					for (let loopIndex: number = 0; loopIndex < parseInt(this._loopDropDown.value); loopIndex++) {
+						barStartTime += midiTicksPerBar * song.loopLength;
 						writeEventTime(barStartTime);
-						writeUint16(0xFF06); // marker meta event. 
-						writeAscii(loopIndex < Number(this._loopDropDown.value) - 1 ? "Loop Repeat" : "Loop End");
+						writer.writeUint16(0xFF06); // marker meta event. 
+						writer.writeMidiAscii(loopIndex < Number(this._loopDropDown.value) - 1 ? "Loop Repeat" : "Loop End");
 					}
 					
-					if (this._enableOutro.checked) barStartTime += ticksPerBar * (song.barCount - song.loopStart - song.loopLength);
-					if (barStartTime != ticksPerBar * unrolledBars.length) throw new Error("Miscalculated number of bars.");
+					if (this._enableOutro.checked) barStartTime += midiTicksPerBar * (song.barCount - song.loopStart - song.loopLength);
+					if (barStartTime != midiTicksPerBar * unrolledBars.length) throw new Error("Miscalculated number of bars.");
 					
 				} else {
 					// For remaining tracks, set up the instruments and write the notes:
 					
-					let channelName: string = song.getChannelIsDrum(channel) ? Config.midiDrumChannelNames[channel - song.pitchChannelCount] : Config.midiPitchChannelNames[channel];
-					if (isInterval) channelName += " interval";
+					let channelName: string = song.getChannelIsDrum(channel)
+						? Config.midiDrumChannelNames[(channel - song.pitchChannelCount) % Config.midiDrumChannelNames.length]
+						: Config.midiPitchChannelNames[channel % Config.midiPitchChannelNames.length];
 					writeEventTime(0);
-					writeUint16(0xFF03); // track name meta event.
-					writeAscii(channelName);
+					writer.writeUint16(0xFF03); // track name meta event.
+					writer.writeMidiAscii(channelName);
 					
-					writeEventTime(barStartTime);
-					writeUint8(0xB0 | midiChannel); // control event for mono mode for given channel
-					writeFlagAnd7Bits(0, 0x7E); // mono mode
-					writeFlagAnd7Bits(0, 1); // enable for one channel. @TODO: Should I enable for multiple channels at once?
-					
-					writeEventTime(barStartTime);
-					writeUint8(0xB0 | midiChannel); // control event for legato mode for given channel
-					writeFlagAnd7Bits(0, 0x44); // legato mode
-					writeFlagAnd7Bits(0, 0x7f); // enable.
-					
-					let prevInstrument: number = -1;
+					let prevInstrumentIndex: number = -1;
 					let prevPitchBend: number = -1;
 					let prevExpression: number = -1;
 					//let prevTremolo: number = -1;
@@ -492,226 +355,195 @@ namespace beepbox {
 						
 						if (pattern != null) {
 							
-							const nextInstrument: number = pattern.instrument;
+							const instrumentIndex: number = pattern.instrument;
 							
-							const instrument: Instrument = song.channels[channel].instruments[nextInstrument];
+							const instrument: Instrument = song.channels[channel].instruments[instrumentIndex];
 							
-							if (isInterval && (isDrums || instrument.type == InstrumentType.fm || instrument.interval == 0)) {
-								barStartTime += ticksPerBar;
-								continue;
-							}
-							
-							if (prevInstrument != nextInstrument) {
-								prevInstrument = nextInstrument;
+							if (prevInstrumentIndex != instrumentIndex) {
+								prevInstrumentIndex = instrumentIndex;
 								
-								let description: string = ""; 
+								writeEventTime(barStartTime);
+								writer.writeUint16(0xFF04); // instrument event.
+								writer.writeMidiAscii("Instrument " + (instrumentIndex + 1));
+								
 								let instrumentProgram: number = 0x51; // default to sawtooth wave. 
-								
-								description += "type: " + Config.instrumentTypeNames[instrument.type];
-								description += ", transition: " + Config.transitionNames[instrument.transition];
-								description += ", delay: " + Config.delayNames[instrument.delay];
-								description += ", filterCutoff: " + Math.round(Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5));
-								description += ", filterResonance: " + Math.round(100 * instrument.filterResonance / (Config.filterResonanceRange - 1));
-								description += ", filterEnvelope: " + Config.operatorEnvelopeNames[instrument.filterEnvelope];
-								
 								if (instrument.type == InstrumentType.noise) {
-									description += ", noise: " + Config.drumNames[instrument.wave];
-									description += ", volume: " + ((5 - instrument.volume) * 20);
-									
 									instrumentProgram = 0x7E; // seashore, applause
 								} else if (instrument.type == InstrumentType.chip) {
-									description += ", wave: " + Config.waveNames[instrument.wave];
-									description += ", volume: " + ((5 - instrument.volume) * 20);
-									description += ", interval: " + Config.intervalNames[instrument.interval];
-									description += ", chord: " + Config.chordNames[instrument.chord];
-									description += ", vibrato: " + Config.vibratoNames[instrument.vibrato];
-									
 									const envelopeType: EnvelopeType = Config.operatorEnvelopeType[instrument.filterEnvelope];
 									const filterInstruments: number[] = (envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.pluck)
 										? Config.midiDecayInstruments
 										: Config.midiSustainInstruments;
 									instrumentProgram = filterInstruments[instrument.wave];
 								} else if (instrument.type == InstrumentType.fm) {
-									description += ", vibrato: " + Config.vibratoNames[instrument.vibrato];
-									description += ", chord: " + Config.chordNames[instrument.chord];
-									description += ", algorithm: " + Config.midiAlgorithmNames[instrument.algorithm];
-									description += ", feedbackType: " + Config.midiFeedbackNames[instrument.feedbackType];
-									description += ", feedbackAmplitude: " + instrument.feedbackAmplitude;
-									description += ", feedbackEnvelope: " + Config.operatorEnvelopeNames[instrument.feedbackEnvelope];
-									
-									for (let i: number = 0; i < Config.operatorCount; i++) {
-										const operator: Operator = instrument.operators[i];
-										description += ", operator" + (i + 1) + ": {";
-										description += "frequency: " + Config.midiFrequencyNames[operator.frequency];
-										description += ", amplitude: " + operator.amplitude;
-										description += ", envelope: " + Config.operatorEnvelopeNames[operator.envelope];
-										description += "}";
-									}
-									
 									// No convenient way to pick an appropriate midi instrument, so just use sawtooth as a default. :/
 								} else {
 									throw new Error("Unrecognized instrument type.");
 								}
 								
-								writeEventTime(barStartTime);
-								writeUint16(0xFF04); // instrument event.
-								writeAscii(description);
-								
 								// Program (instrument) change event:
 								writeEventTime(barStartTime);
-								writeUint8(0xC0 | midiChannel); // program change event for given channel
-								writeFlagAnd7Bits(0, instrumentProgram);
+								writer.writeUint8(0xC0 | midiChannel); // program change event for given channel
+								writer.writeMidiFlagAnd7Bits(0, instrumentProgram);
 								
 								let channelVolume: number = (5 - instrument.volume) / 5;
-								if (!isDrums && instrument.type == InstrumentType.fm) channelVolume = 1.0;
+								if (instrument.type == InstrumentType.fm) channelVolume = 1.0;
 								
 								writeEventTime(barStartTime);
-								writeUint8(0xB0 | midiChannel); // control event for channel volume for given channel
-								writeFlagAnd7Bits(0, 0x07); // channel volume controller (most significant bits)
-								writeFlagAnd7Bits(0, Math.round(0x7f * channelVolume)); // volume
+								writer.writeUint8(0xB0 | midiChannel); // control event for channel volume for given channel
+								writer.writeMidiFlagAnd7Bits(0, 0x07); // channel volume controller (most significant bits)
+								writer.writeMidiFlagAnd7Bits(0, Math.round(0x7f * channelVolume)); // volume
 							}
 							
 							const effectVibrato: number = Config.vibratoAmplitudes[instrument.vibrato];
-							const effectTremolo: number = Config.effectTremolos[instrument.vibrato];
 							
-							let intervalOffset: number = 0.0;
 							let chordHarmonizes: boolean = false;
 							let usesArpeggio: boolean = true;
-							//let polyphony: number = 1;
+							let polyphony: number = 1;
 							if (!isDrums) {
-								if (instrument.type == InstrumentType.chip) {
-									intervalOffset = Config.intervalSpreads[instrument.interval];
-									if (!isInterval) intervalOffset *= -1;
-									intervalOffset += Config.intervalOffsets[instrument.interval];
-									
-									chordHarmonizes = Config.chordHarmonizes[instrument.chord];
-								} else if (instrument.type == InstrumentType.fm) {
-									usesArpeggio = false;
-									//polyphony = Config.operatorCarrierCounts[instrument.algorithm];
+								chordHarmonizes = Config.chordHarmonizes[instrument.chord];
+								usesArpeggio = Config.chordArpeggiates[instrument.chord];
+								if (usesArpeggio) {
+									if (chordHarmonizes) {
+										if (instrument.type == InstrumentType.chip) {
+											polyphony = 2;
+										} else if (instrument.type == InstrumentType.fm) {
+											polyphony = 4;
+										} else {
+											throw new Error("Unrecognized instrument type.");
+										}
+									}
 								} else {
-									throw new Error("Unrecognized instrument type.");
+									polyphony = 4;
 								}
 							}
 							
 							for (let noteIndex: number = 0; noteIndex < pattern.notes.length; noteIndex++) {
 								const note: Note = pattern.notes[noteIndex];
 								
-								const noteStartTime: number = barStartTime + note.start * ticksPerPart;
+								const noteStartTime: number = barStartTime + note.start * midiTicksPerPart;
 								let pinTime: number = noteStartTime;
 								let pinVolume: number = note.pins[0].volume;
 								let pinInterval: number = note.pins[0].interval;
-								let prevPitch: number = channelRoot + note.pitches[0] * intervalScale;
+								const prevPitches: number[] = [-1, -1, -1, -1];
+								const nextPitches: number[] = [-1, -1, -1, -1];
+								const toneCount: number = Math.min(polyphony, note.pitches.length);
 								
 								for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
-									const nextPinTime: number = noteStartTime + note.pins[pinIndex].time * ticksPerPart;
+									const nextPinTime: number = noteStartTime + note.pins[pinIndex].time * midiTicksPerPart;
 									const nextPinVolume: number = note.pins[pinIndex].volume;
 									const nextPinInterval: number = note.pins[pinIndex].interval;
 									
 									const length: number = nextPinTime - pinTime;
-									for (let tick: number = 0; tick < length; tick++) {
-										const tickTime: number = pinTime + tick;
-										const linearVolume: number = lerp(pinVolume, nextPinVolume, tick / length);
-										const linearInterval: number = lerp(pinInterval, nextPinInterval, tick / length);
+									for (let midiTick: number = 0; midiTick < length; midiTick++) {
+										const midiTickTime: number = pinTime + midiTick;
+										const linearVolume: number = lerp(pinVolume, nextPinVolume, midiTick / length);
+										const linearInterval: number = lerp(pinInterval, nextPinInterval, midiTick / length);
 										
-										let nextPitch: number = note.pitches[0];
-										if (usesArpeggio && note.pitches.length > 1) {
-											const arpeggio: number = Math.floor(tick / (Config.ticksPerArpeggio[song.rhythm] * ticksPerPart / Config.ticksPerPart));
-											if (chordHarmonizes) {
-												if (isInterval) {
-													const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][note.pitches.length - 2];
-													nextPitch = note.pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]];
-												}
-											} else {
-												const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][note.pitches.length - 1];
-												nextPitch = note.pitches[arpeggioPattern[arpeggio % arpeggioPattern.length]];
-											}
-										}
-										
-										const interval: number = linearInterval * intervalScale + intervalOffset;
+										const interval: number = linearInterval * intervalScale;
 										const wholeInterval: number = Math.round(interval);
 										const fractionalInterval: number = interval - wholeInterval;
 										
 										let pitchOffset: number = fractionalInterval;
 										
-										let effectCurve: number = 0.0;
-										for (const vibratoPeriod of Config.vibratoPeriods[instrument.vibrato]) {
-											effectCurve += Math.sin(Math.PI * 2.0 * (tickTime - barStartTime) * secondsPerTick / vibratoPeriod);
-										}
-										
-										if (tickTime - noteStartTime >= ticksPerPart * Config.vibratoDelays[instrument.vibrato]) {
+										const effectCurve: number = Synth.getLFOAmplitude(instrument, (midiTickTime - barStartTime) * secondsPerMidiTick);
+										if (midiTickTime - noteStartTime >= midiTicksPerPart * Config.vibratoDelays[instrument.vibrato]) {
 											pitchOffset += effectVibrato * effectCurve;
 										}
 										const pitchBend: number = Math.max(0, Math.min(0x3fff, Math.round(0x2000 + 0x1000 * pitchOffset)));
 										
-										//const volume: number = Math.pow(linearVolume / 3.0, 1.5);
 										const volume: number = linearVolume / 3;
-										const tremolo: number = 1.0 + effectTremolo * (effectCurve - 1.0);
-										let expression: number = Math.round(0x7f * volume * tremolo);
+										let expression: number = Math.round(0x7f * volume);
 										
 										if (pitchBend != prevPitchBend) {
-											writeEventTime(tickTime);
-											writeUint8(0xE0 | midiChannel); // pitch bend event
-											writeFlagAnd7Bits(0, pitchBend & 0x7f); // least significant bits
-											writeFlagAnd7Bits(0, (pitchBend >> 7) & 0x7f); // most significant bits
+											writeEventTime(midiTickTime);
+											writer.writeUint8(0xE0 | midiChannel); // pitch bend event
+											writer.writeMidiFlagAnd7Bits(0, pitchBend & 0x7f); // least significant bits
+											writer.writeMidiFlagAnd7Bits(0, (pitchBend >> 7) & 0x7f); // most significant bits
+											prevPitchBend = pitchBend;
 										}
 										
 										if (expression != prevExpression) {
-											writeEventTime(tickTime);
-											writeUint8(0xB0 | midiChannel); // control event for expression for given channel
-											writeFlagAnd7Bits(0, 0x0B); // expression controller (most significant bits)
-											writeFlagAnd7Bits(0, expression); // pressure, most significant bits
+											writeEventTime(midiTickTime);
+											writer.writeUint8(0xB0 | midiChannel); // control event for expression for given channel
+											writer.writeMidiFlagAnd7Bits(0, 0x0B); // expression controller (most significant bits)
+											writer.writeMidiFlagAnd7Bits(0, expression); // pressure, most significant bits
+											prevExpression = expression;
 										}
 										
-										nextPitch = channelRoot + nextPitch * intervalScale + wholeInterval;
-										if (tickTime == noteStartTime) {
-											writeEventTime(tickTime);
-											writeUint8(0x90 | midiChannel); // note on event for given channel
-											writeFlagAnd7Bits(0, nextPitch); // pitch
-											writeFlagAnd7Bits(0, 0x40); // pressure
-										} else if (nextPitch != prevPitch) {
-											writeEventTime(tickTime);
-											writeUint8(0x90 | midiChannel); // note on event for given channel
-											writeFlagAnd7Bits(0, nextPitch); // new pitch
-											writeFlagAnd7Bits(0, 0x40); // pressure
+										const noteStarting: boolean = midiTickTime == noteStartTime;
+										for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
+											let nextPitch: number = note.pitches[toneIndex];
+											if (usesArpeggio && note.pitches.length > toneIndex + 1 && toneIndex == toneCount - 1) {
+												const midiTicksSinceBeat = (midiTickTime - barStartTime) % midiTicksPerBeat;
+												const midiTicksPerArpeggio = Config.ticksPerArpeggio[song.rhythm] * midiTicksPerPart / Config.ticksPerPart;
+												const arpeggio: number = Math.floor(midiTicksSinceBeat / midiTicksPerArpeggio);
+												const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][note.pitches.length - 1 - toneIndex];
+												nextPitch = note.pitches[toneIndex + arpeggioPattern[arpeggio % arpeggioPattern.length]];
+											}
+											nextPitch = channelRoot + nextPitch * intervalScale + wholeInterval;
+											nextPitches[toneIndex] = nextPitch;
 											
-											writeEventTime(tickTime);
-											writeUint8(0x80 | midiChannel); // note off event for given channel
-											writeFlagAnd7Bits(0, prevPitch); // old pitch
-											writeFlagAnd7Bits(0, 0x40); // pressure
+											if (!noteStarting && prevPitches[toneIndex] != nextPitches[toneIndex]) {
+												writeEventTime(midiTickTime);
+												writer.writeUint8(0x80 | midiChannel); // note off event for given channel
+												writer.writeMidiFlagAnd7Bits(0, prevPitches[toneIndex]); // old pitch
+												writer.writeMidiFlagAnd7Bits(0, 0x60); // pressure
+											}
 										}
-										
-										prevPitchBend = pitchBend;
-										prevExpression = expression;
-										prevPitch = nextPitch;
+
+										for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
+											if (noteStarting || prevPitches[toneIndex] != nextPitches[toneIndex]) {
+												writeEventTime(midiTickTime);
+												writer.writeUint8(0x90 | midiChannel); // note on event for given channel
+												writer.writeMidiFlagAnd7Bits(0, nextPitches[toneIndex]); // new pitch
+												writer.writeMidiFlagAnd7Bits(0, 0x60); // pressure
+												prevPitches[toneIndex] = nextPitches[toneIndex];
+											}
+										}
 									}
 									
 									pinTime = nextPinTime;
 									pinVolume = nextPinVolume;
 									pinInterval = nextPinInterval;
 								}
+
+								const noteEndTime: number = barStartTime + note.end * midiTicksPerPart;
 								
-								writeEventTime(barStartTime + note.end * ticksPerPart);
-								writeUint8(0x80 | midiChannel); // note off event for given channel
-								writeFlagAnd7Bits(0, prevPitch); // pitch
-								writeFlagAnd7Bits(0, 0x40); // pressure
+								// End all tones.
+								for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
+									writeEventTime(noteEndTime);
+									writer.writeUint8(0x80 | midiChannel); // note off event for given channel
+									writer.writeMidiFlagAnd7Bits(0, prevPitches[toneIndex]); // pitch
+									writer.writeMidiFlagAnd7Bits(0, 0x40); // pressure
+								}
 							}
+						} else {
+							// Reset pitch bend
+							writeEventTime(barStartTime);
+							writer.writeUint8(0xE0 | midiChannel); // pitch bend event
+							writer.writeMidiFlagAnd7Bits(0, 0x2000 & 0x7f); // least significant bits
+							writer.writeMidiFlagAnd7Bits(0, (0x2000 >> 7) & 0x7f); // most significant bits
+							
+							// Reset expression
+							writeEventTime(barStartTime);
+							writer.writeUint8(0xB0 | midiChannel); // control event for expression for given channel
+							writer.writeMidiFlagAnd7Bits(0, 0x0B); // expression controller (most significant bits)
+							writer.writeMidiFlagAnd7Bits(0, 0x7f); // pressure, most significant bits
 						}
 						
-						barStartTime += ticksPerBar;
+						barStartTime += midiTicksPerBar;
 					}
 				}
 				
 				writeEventTime(barStartTime);
-				writeUint24(0xFF2F00); // end of track
+				writer.writeUint24(0xFF2F00); // end of track
 				
 				// Finally, write the length of the track in bytes at the front of the track.
-				data.setUint32(trackLengthIndex, writeIndex - trackLengthIndex - 4, false);
+				writer.rewriteUint32(trackStartIndex, writer.getWriteIndex() - trackStartIndex - 4);
 			}
 			
-			// Truncate arrayBuffer
-			arrayBuffer = ArrayBuffer.transfer(arrayBuffer, fileSize);
-			
-			const blob = new Blob([arrayBuffer], {type: "audio/midi"});
+			const blob = new Blob([writer.toCompactArrayBuffer()], {type: "audio/midi"});
 			save(blob, this._fileName.value.trim() + ".midi");
 			
 			this._close();
