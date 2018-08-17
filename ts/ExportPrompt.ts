@@ -387,7 +387,7 @@ namespace beepbox {
 								writer.writeMidiFlagAnd7Bits(0, instrumentProgram);
 								
 								let channelVolume: number = (5 - instrument.volume) / 5;
-								if (instrument.type == InstrumentType.fm) channelVolume = 1.0;
+								if (instrument.type == InstrumentType.fm) channelVolume = instrument.operators[0].amplitude / Config.operatorAmplitudeMax;
 								
 								writeEventTime(barStartTime);
 								writer.writeUint8(0xB0 | midiChannel); // control event for channel volume for given channel
@@ -519,6 +519,12 @@ namespace beepbox {
 								}
 							}
 						} else {
+							// Reset channel volume
+							writeEventTime(barStartTime);
+							writer.writeUint8(0xB0 | midiChannel); // control event for channel volume for given channel
+							writer.writeMidiFlagAnd7Bits(0, 0x07); // channel volume controller (most significant bits)
+							writer.writeMidiFlagAnd7Bits(0, Math.round(0x7f)); // volume
+
 							// Reset pitch bend
 							writeEventTime(barStartTime);
 							writer.writeUint8(0xE0 | midiChannel); // pitch bend event

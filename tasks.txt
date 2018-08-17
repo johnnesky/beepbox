@@ -295,19 +295,30 @@
 √ Polyphony, as a new option in a new menu called "chords". Other options: "arpeggio" and "custom interval".
 √ Use a single midi channel per beepbox channel. Stack notes unless using arpeggio. Don't try to apply "chip interval".
 
-MAJOR REMAINING FEATURES:
-- template instruments
-- better drums?
-- "inspire me" random song generator.
-- embedded player
-- audio worklet thread
-- web app for home screen. (is there a requirement for a service worker?)
-- live keyboard/midi performance. (make sure piano can play while song is paused?)
-- playlist editor
+MAJOR REMAINING FEATURES, NEXT RELEASE:
+- MIDI import. 
+- MIDI instrument templates
+- Random instrument templates
+- FFT waves, drums
 - distortion? (how would it affect polyphonic channels?)
+- bar box selection
+
+MAJOR REMAINING FEATURES, MAYBE LATER:
+- audio worklet thread
+- live input when song is paused
+- live keyboard performance. (make sure piano can play while song is paused?)
+- MIDI live input, live output?
+- "inspire me" random song generator.
+- PWA, web app for home screen. (is there a requirement for a service worker?)
+- link shortener
+- Social media cards
+- embedded player
 - remember recent songs
 - export mp3/ogg and audio buffer
+- tutorial + music theory primer
+- playlist editor
 - translation
+
 
 NEXT RELEASE:
 - "strum" chords, polyphonic and staggered in time, each pitch index onset is delayed by say 2 ticks.
