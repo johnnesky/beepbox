@@ -293,6 +293,7 @@
 √ live input tones should track time since note started for delayed vibrato, envelopes, etc, and release active tones if pitch changes.
 √ If held & released tones exceeds 8 tones per channel, the oldest ones should fade out fast. 
 √ Polyphony, as a new option in a new menu called "chords". Other options: "arpeggio" and "custom interval".
+√ Use a single midi channel per beepbox channel. Stack notes unless using arpeggio. Don't try to apply "chip interval".
 
 MAJOR REMAINING FEATURES:
 - template instruments
@@ -309,10 +310,11 @@ MAJOR REMAINING FEATURES:
 - translation
 
 NEXT RELEASE:
-- Use a single midi channel per beepbox channel. Stack notes unless using arpeggio. Don't try to apply "chip interval". Fix broken midi files?
+- "strum" chords, polyphonic and staggered in time, each pitch index onset is delayed by say 2 ticks.
+- combine new, export, and import JSON into a File menu.
 - An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
 - Wait arg it's still possible to make zero length notes by dragging to the far left! (In ÷8?)
-- Getting kinda nervous about how the chorus introduces noise/aliasing from irregular sampling. Also wondering about whether there are less "flanger"-like chorus effects available that I can implement efficiently. Maybe subdivide the post-processing on tick boundary as well, then the chorus doesn't even need to generate sine waves, it can just precompute the delay endpoints like tone vibrato.
+- Getting kinda nervous about how the chorus introduces noise/aliasing from irregular sampling. Also wondering about whether there are less "flanger"-like chorus effects available that I can implement efficiently. Maybe subdivide the post-processing on tick boundary as well, then the chorus doesn't even need to generate sine waves, it can just precompute the delay endpoints like tone vibrato. And hey, if I subdivide the post processing, I can probably pull it into the same loop as the instruments, and the temp buffers for delay effects only have to be long enough for one tick, and I can reset them to zero while doing the post processing. (or just before handling instruments which may be less redundant since I wouldn't also need to reset it at the start of the synth function... probably there's a way to do it in the post processing that isn't redundant?)
 - Consider trying polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency.
 - Hmm, sometimes Firefox won't play any sound... seems like it happens when I load www.beepbox.co, and then click a twitter link to beepbox.co, maybe some kind of security/user experience thing to prevent unwanted sound from cross-domain links?
 - Add a Config flag array for "chip" instruments, for whether or not to linearly interpolate wave samples or use polybleps for the retro/chip waves. that way i can add orchestra hit waves. I guess I also need an octave offset. and maybe even rename chip to wave instruments. sadly I will need a separate synth function for these waves. maybe do the same thing for drums and retroactively apply it to the hollow wave. also if I make another version of drums it probably doesn't need the frequency relative filter!
@@ -324,6 +326,7 @@ NEXT RELEASE:
 - Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth note triplet symbol for rhythm. 
 - Add a "title" attributes or tooltips to all of the options, and/or make all instrument option names clickable with pointer cursor and hover highlight, replacing "?" hint circles.
 - The "new", "import", and "random" options should reset the playhead and selected bar/channel. 
+- on expert scale, subtly shade every other row.
 - switching bars doesn't seem to split transposes into multiple change states?
 - If the page loses and regains focus, re-read preferences and update the interface? In case another tab changed preferences.
 - The JSON export should include the scale flags, not just the name.
@@ -354,7 +357,6 @@ MISC:
 	3. Take the first available number that isn't assigned to any bar in this channel.
 	If no pattern isn't already assigned, prevent editing and dim the background.
 - random song generator!?
-- combine new, export, and import JSON into a File menu. (and random!)
 - remember recent songs in local shared object.
 - add a tutorial + music theory primer. exercise restraint choosing pitches, develop a rhythm first, explore intervals/pitch relationships. It would be cool to have mini beepbox editors with preloaded songs demonstrating concepts, with play, reset, and "open in full editor" options. Mostly it would focus on the pattern editor, but may have one-off additions like a tempo slider to demonstrate tempo.
 - Oh shoot, if I hide the title options in the edit/prefs menus, mac chrome puts a checkmark next to the first displayed option instead, which confuses matters because I use checkmarks to indicate toggling prefs options. :(
