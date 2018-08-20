@@ -25,6 +25,7 @@ SOFTWARE.
 /// <reference path="Prompt.ts" />
 /// <reference path="html.ts" />
 /// <reference path="ArrayBufferWriter.ts" />
+/// <reference path="Midi.ts" />
 
 namespace beepbox {
 	const {button, div, input, text} = html;
@@ -239,6 +240,8 @@ namespace beepbox {
 			const microsecondsPerBeat: number = Math.round(microsecondsPerMinute / beatsPerMinute);
 			const secondsPerMidiTick: number = secondsPerMinute / (midiTicksPerBeat * beatsPerMinute);
 			const midiTicksPerBar: number = midiTicksPerBeat * song.beatsPerBar;
+			const pitchBendRange: number = 24;
+			const defaultNoteVelocity: number = 0x60;
 			
 			const unrolledBars: number[] = [];
 			if (this._enableIntro.checked) {
@@ -265,18 +268,18 @@ namespace beepbox {
 			}
 			
 			const writer: ArrayBufferWriter = new ArrayBufferWriter(1024);
-			writer.writeUint32(0x4D546864); // "MThd": Header chunk type
+			writer.writeUint32(MidiChunkType.header);
 			writer.writeUint32(6); // length of headers is 6 bytes
-			writer.writeUint16(1); // file format is 1, meaning multiple simultaneous tracks
+			writer.writeUint16(MidiFileFormat.simultaneousTracks);
 			writer.writeUint16(tracks.length);
 			writer.writeUint16(midiTicksPerBeat); // number of "ticks" per beat, independent of tempo
 			
 			for (const track of tracks) {
-				writer.writeUint32(0x4D54726B); // "MTrk": Track chunk type
+				writer.writeUint32(MidiChunkType.track);
 				
 				const {isMeta, channel, midiChannel, isDrums} = track;
 				
-				// We're gonna come back here once we know how many bytes this track is.
+				// We're gonna come back here and overwrite this placeholder once we know how many bytes this track is.
 				const trackStartIndex: number = writer.getWriteIndex();
 				writer.writeUint32(0); // placeholder for track size
 				
@@ -288,23 +291,35 @@ namespace beepbox {
 					prevTime = time;
 				}
 				
+				const writeControlEvent = function(message: MidiControlEventMessage, value: number): void {
+					if (!(value >= 0 && value <= 0x7F)) throw new Error("Midi control event value out of range: " + value);
+					writer.writeUint8(MidiEventType.controlChange | midiChannel);
+					writer.writeMidiFlagAnd7Bits(0, message);
+					writer.writeMidiFlagAnd7Bits(0, value | 0);
+				}
+				
 				if (isMeta) {
 					// for first midi track, include tempo, time signature, and key signature information.
 					
 					writeEventTime(0);
-					writer.writeUint16(0xFF01); // text meta event. 
+					writer.writeUint8(MidiEventType.meta);
+					writer.writeMidiFlagAnd7Bits(0, MidiMetaEventMessage.text);
 					writer.writeMidiAscii("Composed with beepbox.co");
 					
 					writeEventTime(0);
-					writer.writeUint24(0xFF5103); // tempo meta event. data is 3 bytes.
+					writer.writeUint8(MidiEventType.meta);
+					writer.writeMidiFlagAnd7Bits(0, MidiMetaEventMessage.tempo);
+					writer.writeMidiFlagAnd7Bits(0, 3); // Tempo message length is 3 bytes.
 					writer.writeUint24(microsecondsPerBeat); // Tempo in microseconds per "quarter" note, commonly known as a "beat"
 					
 					writeEventTime(0);
-					writer.writeUint24(0xFF5804); // time signature meta event. data is 4 bytes.
-					writer.writeUint8(song.beatsPerBar); // numerator.
-					writer.writeUint8(2); // denominator exponent in 2^E. 2^2 = 4, and we will always use "quarter" notes.
-					writer.writeUint8(24); // MIDI Clocks per metronome tick (should match beats), standard is 24
-					writer.writeUint8(8); // number of 1/32 notes per 24 MIDI Clocks, standard is 8, meaning 24 clocks per "quarter" note.
+					writer.writeUint8(MidiEventType.meta);
+					writer.writeMidiFlagAnd7Bits(0, MidiMetaEventMessage.timeSignature);
+					writer.writeMidiFlagAnd7Bits(0, 4); // Time signature message length is 4 bytes.
+					writer.writeMidiFlagAnd7Bits(0, song.beatsPerBar); // numerator.
+					writer.writeMidiFlagAnd7Bits(0, 2); // denominator exponent in 2^E. 2^2 = 4, and we will always use "quarter" notes.
+					writer.writeMidiFlagAnd7Bits(0, 24); // MIDI Clocks per metronome tick (should match beats), standard is 24
+					writer.writeMidiFlagAnd7Bits(0, 8); // number of 1/32 notes per 24 MIDI Clocks, standard is 8, meaning 24 clocks per "quarter" note.
 					
 					const isMinor: boolean = Config.scaleFlags[song.scale][3] && !Config.scaleFlags[song.scale][4];
 					const key: number = 11 - song.key; // convert to scale where C=0, C#=1, counting up to B=11
@@ -314,19 +329,23 @@ namespace beepbox {
 					while (numSharps > 6) numSharps -= 12; // Range is (modulo 12) - 5. Midi supports -7 to +7, but I only have 12 options.
 					
 					writeEventTime(0);
-					writer.writeUint24(0xFF5902); // Time signature meta event. Data is 2 bytes.
-					writer.writeUint8(numSharps); // See above calculation. Assumes scale is diatonic. :/
-					writer.writeUint8(isMinor ? 1 : 0); // 0: major, 1: minor
+					writer.writeUint8(MidiEventType.meta);
+					writer.writeMidiFlagAnd7Bits(0, MidiMetaEventMessage.keySignature);
+					writer.writeMidiFlagAnd7Bits(0, 2); // Key signature message length is 2 bytes.
+					writer.writeMidiFlagAnd7Bits(0, numSharps); // See above calculation. Assumes scale is diatonic. :/
+					writer.writeMidiFlagAnd7Bits(0, isMinor ? 1 : 0); // 0: major, 1: minor
 					
 					if (this._enableIntro.checked) barStartTime += midiTicksPerBar * song.loopStart;
 					writeEventTime(barStartTime);
-					writer.writeUint16(0xFF06); // marker meta event. 
+					writer.writeUint8(MidiEventType.meta);
+					writer.writeMidiFlagAnd7Bits(0, MidiMetaEventMessage.marker);
 					writer.writeMidiAscii("Loop Start");
 					
 					for (let loopIndex: number = 0; loopIndex < parseInt(this._loopDropDown.value); loopIndex++) {
 						barStartTime += midiTicksPerBar * song.loopLength;
 						writeEventTime(barStartTime);
-						writer.writeUint16(0xFF06); // marker meta event. 
+						writer.writeUint8(MidiEventType.meta);
+						writer.writeMidiFlagAnd7Bits(0, MidiMetaEventMessage.marker);
 						writer.writeMidiAscii(loopIndex < Number(this._loopDropDown.value) - 1 ? "Loop Repeat" : "Loop End");
 					}
 					
@@ -340,8 +359,17 @@ namespace beepbox {
 						? Config.midiDrumChannelNames[(channel - song.pitchChannelCount) % Config.midiDrumChannelNames.length]
 						: Config.midiPitchChannelNames[channel % Config.midiPitchChannelNames.length];
 					writeEventTime(0);
-					writer.writeUint16(0xFF03); // track name meta event.
+					writer.writeUint8(MidiEventType.meta);
+					writer.writeMidiFlagAnd7Bits(0, MidiMetaEventMessage.trackName);
 					writer.writeMidiAscii(channelName);
+					
+					// This sets up pitch bend range. First we choose the pitch bend RPN (which has MSB and LSB components), then we set the value for that RPN (which also has MSB and LSB components) and finally reset the current RPN to null, which is considered best practice.
+					writeEventTime(0); writeControlEvent(MidiControlEventMessage.registeredParameterNumberMSB, MidiRegisteredParameterNumberMSB.pitchBendRange);
+					writeEventTime(0); writeControlEvent(MidiControlEventMessage.registeredParameterNumberLSB, MidiRegisteredParameterNumberLSB.pitchBendRange);
+					writeEventTime(0); writeControlEvent(MidiControlEventMessage.setParameterMSB, pitchBendRange); // pitch bend semitone range
+					writeEventTime(0); writeControlEvent(MidiControlEventMessage.setParameterLSB, 0); // pitch bend cent range
+					writeEventTime(0); writeControlEvent(MidiControlEventMessage.registeredParameterNumberMSB, MidiRegisteredParameterNumberMSB.reset);
+					writeEventTime(0); writeControlEvent(MidiControlEventMessage.registeredParameterNumberLSB, MidiRegisteredParameterNumberLSB.reset);
 					
 					let prevInstrumentIndex: number = -1;
 					let prevPitchBend: number = -1;
@@ -363,7 +391,8 @@ namespace beepbox {
 								prevInstrumentIndex = instrumentIndex;
 								
 								writeEventTime(barStartTime);
-								writer.writeUint16(0xFF04); // instrument event.
+								writer.writeUint8(MidiEventType.meta);
+								writer.writeMidiFlagAnd7Bits(0, MidiMetaEventMessage.instrumentName);
 								writer.writeMidiAscii("Instrument " + (instrumentIndex + 1));
 								
 								let instrumentProgram: number = 0x51; // default to sawtooth wave. 
@@ -383,16 +412,14 @@ namespace beepbox {
 								
 								// Program (instrument) change event:
 								writeEventTime(barStartTime);
-								writer.writeUint8(0xC0 | midiChannel); // program change event for given channel
+								writer.writeUint8(MidiEventType.programChange | midiChannel);
 								writer.writeMidiFlagAnd7Bits(0, instrumentProgram);
 								
 								let channelVolume: number = (5 - instrument.volume) / 5;
 								if (instrument.type == InstrumentType.fm) channelVolume = instrument.operators[0].amplitude / Config.operatorAmplitudeMax;
 								
 								writeEventTime(barStartTime);
-								writer.writeUint8(0xB0 | midiChannel); // control event for channel volume for given channel
-								writer.writeMidiFlagAnd7Bits(0, 0x07); // channel volume controller (most significant bits)
-								writer.writeMidiFlagAnd7Bits(0, Math.round(0x7f * channelVolume)); // volume
+								writeControlEvent(MidiControlEventMessage.volumeMSB, Math.round(0x7f * channelVolume));
 							}
 							
 							const effectVibrato: number = Config.vibratoAmplitudes[instrument.vibrato];
@@ -429,6 +456,41 @@ namespace beepbox {
 								const nextPitches: number[] = [-1, -1, -1, -1];
 								const toneCount: number = Math.min(polyphony, note.pitches.length);
 								
+								// The maximum midi pitch bend range is +/- 24 semitones from the base pitch. 
+								// To make the most of this, choose a base pitch that is within 24 semitones from as much of the note as possible.
+								// This may involve offsetting this base pitch from BeepBox's note pitch.
+								let pitchOffset: number = 0;
+								let longestFlatIntervalDuration: number = 0;
+								let maxPitchOffset: number = pitchBendRange;
+								let minPitchOffset: number = -pitchBendRange;
+								for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
+									const interval = note.pins[pinIndex].interval * intervalScale;
+									if (note.pins[pinIndex - 1].interval == note.pins[pinIndex].interval) {
+										const duration: number = note.pins[pinIndex].time - note.pins[pinIndex - 1].time;
+										if (longestFlatIntervalDuration < duration) {
+											longestFlatIntervalDuration = duration;
+											pitchOffset = interval;
+										}
+									}
+									maxPitchOffset = Math.min(maxPitchOffset, interval + pitchBendRange);
+									minPitchOffset = Math.max(minPitchOffset, interval - pitchBendRange);
+								}
+								/*
+								// I'd like to be able to use pitch bend to implement arpeggio, but the "custom inverval" setting in chip instruments combines arpeggio in one tone with another flat tone, and midi can't selectively apply arpeggio to one out of two simultaneous tones. :/
+								if (usesArpeggio && note.pitches.length > polyphony) {
+									let lowestArpeggioOffset: number = 0;
+									let highestArpeggioOffset: number = 0;
+									const basePitch: number = note.pitches[toneCount - 1];
+									for (let pitchIndex: number = toneCount; pitchIndex < note.pitches.length; pitchIndex++) {
+										lowestArpeggioOffset = Math.min(note.pitches[pitchIndex] - basePitch);
+										highestArpeggioOffset = Math.max(note.pitches[pitchIndex] - basePitch);
+									}
+									maxPitchOffset -= lowestArpeggioOffset;
+									minPitchOffset += lowestArpeggioOffset;
+								}
+								*/
+								pitchOffset = Math.min(maxPitchOffset, Math.max(minPitchOffset, pitchOffset));
+								
 								for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
 									const nextPinTime: number = noteStartTime + note.pins[pinIndex].time * midiTicksPerPart;
 									const nextPinVolume: number = note.pins[pinIndex].volume;
@@ -440,24 +502,20 @@ namespace beepbox {
 										const linearVolume: number = lerp(pinVolume, nextPinVolume, midiTick / length);
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, midiTick / length);
 										
-										const interval: number = linearInterval * intervalScale;
-										const wholeInterval: number = Math.round(interval);
-										const fractionalInterval: number = interval - wholeInterval;
-										
-										let pitchOffset: number = fractionalInterval;
+										let interval: number = linearInterval * intervalScale - pitchOffset;
 										
 										const effectCurve: number = Synth.getLFOAmplitude(instrument, (midiTickTime - barStartTime) * secondsPerMidiTick);
 										if (midiTickTime - noteStartTime >= midiTicksPerPart * Config.vibratoDelays[instrument.vibrato]) {
-											pitchOffset += effectVibrato * effectCurve;
+											interval += effectVibrato * effectCurve;
 										}
-										const pitchBend: number = Math.max(0, Math.min(0x3fff, Math.round(0x2000 + 0x1000 * pitchOffset)));
+										const pitchBend: number = Math.max(0, Math.min(0x3fff, Math.round(0x2000 * (1.0 + interval / pitchBendRange))));
 										
 										const volume: number = linearVolume / 3;
 										let expression: number = Math.round(0x7f * volume);
 										
 										if (pitchBend != prevPitchBend) {
 											writeEventTime(midiTickTime);
-											writer.writeUint8(0xE0 | midiChannel); // pitch bend event
+											writer.writeUint8(MidiEventType.pitchBend | midiChannel);
 											writer.writeMidiFlagAnd7Bits(0, pitchBend & 0x7f); // least significant bits
 											writer.writeMidiFlagAnd7Bits(0, (pitchBend >> 7) & 0x7f); // most significant bits
 											prevPitchBend = pitchBend;
@@ -465,9 +523,7 @@ namespace beepbox {
 										
 										if (expression != prevExpression) {
 											writeEventTime(midiTickTime);
-											writer.writeUint8(0xB0 | midiChannel); // control event for expression for given channel
-											writer.writeMidiFlagAnd7Bits(0, 0x0B); // expression controller (most significant bits)
-											writer.writeMidiFlagAnd7Bits(0, expression); // pressure, most significant bits
+											writeControlEvent(MidiControlEventMessage.expressionMSB, expression);
 											prevExpression = expression;
 										}
 										
@@ -481,23 +537,23 @@ namespace beepbox {
 												const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][note.pitches.length - 1 - toneIndex];
 												nextPitch = note.pitches[toneIndex + arpeggioPattern[arpeggio % arpeggioPattern.length]];
 											}
-											nextPitch = channelRoot + nextPitch * intervalScale + wholeInterval;
+											nextPitch = channelRoot + nextPitch * intervalScale + pitchOffset;
 											nextPitches[toneIndex] = nextPitch;
 											
 											if (!noteStarting && prevPitches[toneIndex] != nextPitches[toneIndex]) {
 												writeEventTime(midiTickTime);
-												writer.writeUint8(0x80 | midiChannel); // note off event for given channel
+												writer.writeUint8(MidiEventType.noteOff | midiChannel);
 												writer.writeMidiFlagAnd7Bits(0, prevPitches[toneIndex]); // old pitch
-												writer.writeMidiFlagAnd7Bits(0, 0x60); // pressure
+												writer.writeMidiFlagAnd7Bits(0, defaultNoteVelocity); // velocity
 											}
 										}
 
 										for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
 											if (noteStarting || prevPitches[toneIndex] != nextPitches[toneIndex]) {
 												writeEventTime(midiTickTime);
-												writer.writeUint8(0x90 | midiChannel); // note on event for given channel
+												writer.writeUint8(MidiEventType.noteOn | midiChannel);
 												writer.writeMidiFlagAnd7Bits(0, nextPitches[toneIndex]); // new pitch
-												writer.writeMidiFlagAnd7Bits(0, 0x60); // pressure
+												writer.writeMidiFlagAnd7Bits(0, defaultNoteVelocity); // velocity
 												prevPitches[toneIndex] = nextPitches[toneIndex];
 											}
 										}
@@ -513,29 +569,25 @@ namespace beepbox {
 								// End all tones.
 								for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
 									writeEventTime(noteEndTime);
-									writer.writeUint8(0x80 | midiChannel); // note off event for given channel
+									writer.writeUint8(MidiEventType.noteOff | midiChannel);
 									writer.writeMidiFlagAnd7Bits(0, prevPitches[toneIndex]); // pitch
-									writer.writeMidiFlagAnd7Bits(0, 0x40); // pressure
+									writer.writeMidiFlagAnd7Bits(0, defaultNoteVelocity); // velocity
 								}
 							}
 						} else {
 							// Reset channel volume
 							writeEventTime(barStartTime);
-							writer.writeUint8(0xB0 | midiChannel); // control event for channel volume for given channel
-							writer.writeMidiFlagAnd7Bits(0, 0x07); // channel volume controller (most significant bits)
-							writer.writeMidiFlagAnd7Bits(0, Math.round(0x7f)); // volume
-
-							// Reset pitch bend
-							writeEventTime(barStartTime);
-							writer.writeUint8(0xE0 | midiChannel); // pitch bend event
-							writer.writeMidiFlagAnd7Bits(0, 0x2000 & 0x7f); // least significant bits
-							writer.writeMidiFlagAnd7Bits(0, (0x2000 >> 7) & 0x7f); // most significant bits
+							writeControlEvent(MidiControlEventMessage.volumeMSB, 0x7f);
 							
 							// Reset expression
 							writeEventTime(barStartTime);
-							writer.writeUint8(0xB0 | midiChannel); // control event for expression for given channel
-							writer.writeMidiFlagAnd7Bits(0, 0x0B); // expression controller (most significant bits)
-							writer.writeMidiFlagAnd7Bits(0, 0x7f); // pressure, most significant bits
+							writeControlEvent(MidiControlEventMessage.expressionMSB, 0x7f);
+							
+							// Reset pitch bend
+							writeEventTime(barStartTime);
+							writer.writeUint8(MidiEventType.pitchBend | midiChannel);
+							writer.writeMidiFlagAnd7Bits(0, 0x2000 & 0x7f); // least significant bits
+							writer.writeMidiFlagAnd7Bits(0, (0x2000 >> 7) & 0x7f); // most significant bits
 						}
 						
 						barStartTime += midiTicksPerBar;
