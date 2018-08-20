@@ -66,6 +66,7 @@ namespace beepbox {
 		}
 	}
 	
+	// Note: All methods are big endian.
 	export class ArrayBufferWriter {
 		private _writeIndex: number = 0;
 		private _fileSize: number = 0;
