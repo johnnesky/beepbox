@@ -137,7 +137,7 @@ namespace beepbox {
 		public static readonly delayNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
 		public static readonly volumeRange: number = 6;
 		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
-		public static readonly chordNames: ReadonlyArray<string> = ["normal", "arpeggio", "custom interval"];
+		public static readonly chordNames: ReadonlyArray<string> = ["harmony", "arpeggio", "custom interval"];
 		public static readonly chordHarmonizes: ReadonlyArray<boolean> = [true, false, true];
 		public static readonly chordArpeggiates: ReadonlyArray<boolean> = [false, true, true];
 		public static readonly operatorCount: number = 4;
