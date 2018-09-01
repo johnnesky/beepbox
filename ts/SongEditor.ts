@@ -126,7 +126,7 @@ namespace beepbox {
 			option("transposeUp", "Shift Notes Up (+)"),
 			option("transposeDown", "Shift Notes Down (-)"),
 			option("duration", "Custom song size..."),
-			option("import", "Import JSON..."),
+			option("import", "Import..."),
 		]);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
 			option("", "Preferences", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(

@@ -842,16 +842,172 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeSong extends Change {
+	export class ChangeSong extends ChangeGroup {
 		constructor(doc: SongDocument, newHash: string) {
 			super();
 			doc.song.fromBase64String(newHash);
-			doc.channel = Math.min(doc.channel, doc.song.getChannelCount() - 1);
-			doc.bar = Math.max(0, Math.min(doc.song.barCount - 1, doc.bar));
-			doc.barScrollPos = Math.max(0, Math.min(doc.song.barCount - doc.trackVisibleBars, doc.barScrollPos));
-			doc.barScrollPos = Math.min(doc.bar, Math.max(doc.bar - (doc.trackVisibleBars - 1), doc.barScrollPos));
+			this.append(new ChangeValidateDoc(doc));
 			doc.notifier.changed();
 			this._didSomething();
+		}
+	}
+	
+	export class ChangeValidateDoc extends Change {
+		constructor(doc: SongDocument) {
+			super();
+			const channel: number = Math.min(doc.channel, doc.song.getChannelCount() - 1);
+			const bar: number = Math.max(0, Math.min(doc.song.barCount - 1, doc.bar));
+			const barScrollPos: number = Math.min(doc.bar, Math.max(doc.bar - (doc.trackVisibleBars - 1), Math.max(0, Math.min(doc.song.barCount - doc.trackVisibleBars, doc.barScrollPos))));
+			if (doc.channel != channel || doc.bar != bar || doc.barScrollPos != barScrollPos) {
+				doc.channel = channel;
+				doc.bar = bar;
+				doc.barScrollPos = barScrollPos;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeReplacePatterns extends ChangeGroup {
+		constructor(doc: SongDocument, pitchChannels: Channel[], noiseChannels: Channel[]) {
+			super();
+			
+			const song: Song = doc.song;
+			
+			function removeExtraSparseChannels(channels: Channel[], maxLength: number): void {
+				while (channels.length > maxLength) {
+					let sparsestIndex: number = channels.length - 1;
+					let mostZeroes: number = 0;
+					for (let channelIndex: number = 0; channelIndex < channels.length - 1; channelIndex++) {
+						let zeroes: number = 0;
+						for (const bar of channels[channelIndex].bars) {
+							if (bar == 0) zeroes++;
+						}
+						if (zeroes >= mostZeroes) {
+							sparsestIndex = channelIndex;
+							mostZeroes = zeroes;
+						}
+					}
+					channels.splice(sparsestIndex, 1);
+				}
+			}
+			
+			removeExtraSparseChannels(pitchChannels, Config.pitchChannelCountMax);
+			removeExtraSparseChannels(noiseChannels, Config.drumChannelCountMax);
+			
+			// Set minimum counts.
+			song.barCount = 1;
+			song.instrumentsPerChannel = 1;
+			song.patternsPerChannel = 8;
+			const combinedChannels: Channel[] = pitchChannels.concat(noiseChannels);
+			for (let channelIndex: number = 0; channelIndex < combinedChannels.length; channelIndex++) {
+				const channel: Channel = combinedChannels[channelIndex];
+				song.barCount = Math.max(song.barCount, channel.bars.length);
+				song.patternsPerChannel = Math.max(song.patternsPerChannel, channel.patterns.length);
+				song.instrumentsPerChannel = Math.max(song.instrumentsPerChannel, channel.instruments.length);
+				song.channels[channelIndex] = channel;
+			}
+			song.channels.length = combinedChannels.length;
+			song.pitchChannelCount = pitchChannels.length;
+			song.drumChannelCount = noiseChannels.length;
+			
+			song.barCount = Math.min(Config.barCountMax, song.barCount);
+			song.patternsPerChannel = Math.min(Config.patternsPerChannelMax, song.patternsPerChannel);
+			song.instrumentsPerChannel = Math.min(Config.instrumentsPerChannelMax, song.instrumentsPerChannel);
+			for (const channel of song.channels) {
+				for (let barIndex: number = 0; barIndex < channel.bars.length; barIndex++) {
+					if (channel.bars[barIndex] > song.patternsPerChannel || channel.bars[barIndex] < 0) {
+						channel.bars[barIndex] = 0;
+					}
+				}
+				for (const pattern of channel.patterns) {
+					if (pattern.instrument >= song.instrumentsPerChannel || pattern.instrument < 0) {
+						pattern.instrument = 0;
+					}
+				}
+				while (channel.bars.length < song.barCount) {
+					channel.bars.push(0);
+				}
+				while (channel.patterns.length < song.patternsPerChannel) {
+					channel.patterns.push(new Pattern());
+				}
+				while (channel.instruments.length < song.instrumentsPerChannel) {
+					const instrument: Instrument = new Instrument(); 
+					instrument.setTypeAndReset(InstrumentType.chip);
+					channel.instruments.push(instrument);
+				}
+				channel.bars.length = song.barCount;
+				channel.patterns.length = song.patternsPerChannel;
+				channel.instruments.length = song.instrumentsPerChannel;
+			}
+			
+			song.loopStart = Math.max(0, Math.min(song.barCount - 1, song.loopStart));
+			song.loopLength = Math.min(song.barCount - song.loopStart, song.loopLength);
+			
+			this.append(new ChangeValidateDoc(doc));
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+	
+	export function removeDuplicatePatterns(channels: Channel[]) {
+		for (const channel of channels) {
+			const newPatterns: Pattern[] = [];
+			for (let bar: number = 0; bar < channel.bars.length; bar++) {
+				if (channel.bars[bar] == 0) continue;
+				
+				const oldPattern: Pattern = channel.patterns[channel.bars[bar] - 1];
+				
+				let foundMatchingPattern: boolean = false;
+				for (let newPatternIndex: number = 0; newPatternIndex < newPatterns.length; newPatternIndex++) {
+					const newPattern: Pattern = newPatterns[newPatternIndex];
+					if (newPattern.instrument != oldPattern.instrument || newPattern.notes.length != oldPattern.notes.length) {
+						continue;
+					}
+					
+					let foundConflictingNote: boolean = false;
+					for (let noteIndex: number = 0; noteIndex < oldPattern.notes.length; noteIndex++) {
+						const oldNote: Note = oldPattern.notes[noteIndex];
+						const newNote: Note = newPattern.notes[noteIndex];
+						if (newNote.start != oldNote.start || newNote.end != oldNote.end || newNote.pitches.length != oldNote.pitches.length || newNote.pins.length != oldNote.pins.length) {
+							foundConflictingNote = true;
+							break;
+						}
+						
+						for (let pitchIndex: number = 0; pitchIndex < oldNote.pitches.length; pitchIndex++) {
+							if (newNote.pitches[pitchIndex] != oldNote.pitches[pitchIndex]) {
+								foundConflictingNote = true;
+								break;
+							}
+						}
+						if (foundConflictingNote) break;
+						
+						for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
+							if (newNote.pins[pinIndex].interval != oldNote.pins[pinIndex].interval || newNote.pins[pinIndex].time != oldNote.pins[pinIndex].time || newNote.pins[pinIndex].volume != oldNote.pins[pinIndex].volume) {
+								foundConflictingNote = true;
+								break;
+							}
+						}
+						if (foundConflictingNote) break;
+					}
+					
+					if (!foundConflictingNote) {
+						foundMatchingPattern = true;
+						channel.bars[bar] = newPatternIndex + 1;
+						break;
+					}
+				}
+				
+				if (!foundMatchingPattern) {
+					newPatterns.push(oldPattern);
+					channel.bars[bar] = newPatterns.length;
+				}
+			}
+			
+			for (let patternIndex: number = 0; patternIndex < newPatterns.length; patternIndex++) {
+				channel.patterns[patternIndex] = newPatterns[patternIndex];
+			}
+			channel.patterns.length = newPatterns.length;
 		}
 	}
 	

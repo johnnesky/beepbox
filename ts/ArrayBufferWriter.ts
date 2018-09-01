@@ -124,8 +124,16 @@ namespace beepbox {
 			this._writeIndex = this._fileSize;
 		}
 		
-		public writeMidiFlagAnd7Bits(flag: number, value: number): void {
-			value = ((value >>> 0) & 0x7f) | ((flag & 0x01) << 7);
+		public writeInt8(value: number): void {
+			value = value | 0;
+			this._addBytes(1);
+			this._data.setInt8(this._writeIndex, value);
+			this._writeIndex = this._fileSize;
+		}
+		
+		public writeMidi7Bits(value: number): void {
+			value = value >>> 0;
+			if (value >= 0x80) throw new Error("7 bit value contained 8th bit!");
 			this._addBytes(1);
 			this._data.setUint8(this._writeIndex, value);
 			this._writeIndex = this._fileSize;
@@ -139,7 +147,7 @@ namespace beepbox {
 				const shift: number = 21 - i * 7;
 				const bits: number = (value >>> shift) & 0x7f;
 				if (bits != 0 || i == 3) startWriting = true; // skip leading zero bytes, but always write the last byte even if it's zero. 
-				if (startWriting) this.writeMidiFlagAnd7Bits(i == 3 ? 0 : 1, bits);
+				if (startWriting) this.writeUint8((i == 3 ? 0x00 : 0x80) | bits);
 			}
 		}
 		

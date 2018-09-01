@@ -21,11 +21,6 @@ SOFTWARE.
 */
 
 namespace beepbox {
-	/*
-	export class Midi {
-		//public static readonly headerChunkType: number = 0x4D546864; // "MThd" as bytes, big endian
-	}
-	*/
 	
 	export const enum MidiChunkType {
 		header = 0x4D546864, // "MThd" as bytes, big endian
@@ -40,7 +35,7 @@ namespace beepbox {
 	
 	// Lower 4 bits indicate channel, except for meta and sysex events.
 	export const enum MidiEventType {
-		channelMode = 0x70,
+		//channelMode = 0x70,
 		noteOff = 0x80,
 		noteOn = 0x90,
 		keyPressure = 0xA0,
@@ -56,8 +51,6 @@ namespace beepbox {
 		// sysexEscape = 0xF7,
 	}
 	
-	// gonna have to deal with skipping over sysex messages?
-	
 	export const enum MidiControlEventMessage {
 		
 		setParameterMSB = 0x06,
@@ -68,8 +61,8 @@ namespace beepbox {
 		//volumeLSB = 0x27,
 		//expressionLSB = 0x2B,
 		
-		nonRegisteredParameterNumberLSB = 0x62,
-		nonRegisteredParameterNumberMSB = 0x63,
+		//nonRegisteredParameterNumberLSB = 0x62,
+		//nonRegisteredParameterNumberMSB = 0x63,
 		registeredParameterNumberLSB = 0x64,
 		registeredParameterNumberMSB = 0x65,
 		
@@ -88,19 +81,19 @@ namespace beepbox {
 	
 	export const enum MidiRegisteredParameterNumberMSB {
 		pitchBendRange = 0x00, // semitones
-		//fineTuning = 0x00,
-		//coarseTuning = 0x00,
-		//tuningProgramSelect = 0x00,
-		//tuningBankSelect = 0x00,
+		fineTuning = 0x00,
+		coarseTuning = 0x00,
+		tuningProgramSelect = 0x00,
+		tuningBankSelect = 0x00,
 		reset = 0x7f,
 	}
 	
 	export const enum MidiRegisteredParameterNumberLSB {
 		pitchBendRange = 0x00, // cents
-		//fineTuning = 0x01,
-		//coarseTuning = 0x02,
-		//tuningProgramSelect = 0x03,
-		//tuningBankSelect = 0x04,
+		fineTuning = 0x01,
+		coarseTuning = 0x02,
+		tuningProgramSelect = 0x03,
+		tuningBankSelect = 0x04,
 		reset = 0x7f,
 	}
 	

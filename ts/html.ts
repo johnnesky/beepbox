@@ -33,6 +33,9 @@ namespace beepbox {
 		export function button(attributes?: Record<string, string | number>, children?: Node[]): HTMLButtonElement {
 			return <HTMLButtonElement> element("button", attributes, children);
 		}
+		export function p(attributes?: Record<string, string | number>, children?: Node[]): HTMLParagraphElement {
+			return <HTMLParagraphElement> element("p", attributes, children);
+		}
 		export function div(attributes?: Record<string, string | number>, children?: Node[]): HTMLDivElement {
 			return <HTMLDivElement> element("div", attributes, children);
 		}

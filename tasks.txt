@@ -294,9 +294,9 @@
 √ If held & released tones exceeds 8 tones per channel, the oldest ones should fade out fast. 
 √ Polyphony, as a new option in a new menu called "chords". Other options: "arpeggio" and "custom interval".
 √ Use a single midi channel per beepbox channel. Stack notes unless using arpeggio. Don't try to apply "chip interval".
+√ Import midi files! (except not drums yet)
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
-- MIDI import. 
 - MIDI instrument templates
 - Random instrument templates
 - FFT waves, drums
@@ -321,6 +321,7 @@ MAJOR REMAINING FEATURES, MAYBE LATER:
 
 
 NEXT RELEASE:
+- import midi drums.
 - "strum" chords, polyphonic and staggered in time, each pitch index onset is delayed by say 2 ticks.
 - combine new, export, and import JSON into a File menu.
 - An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
