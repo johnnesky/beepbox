@@ -298,7 +298,7 @@ namespace beepbox {
 										// Then apply the denominator, dividing by two until either
 										// the denominator is satisfied or there's an odd number of
 										// beats. BeepBox doesn't support fractional beats in a bar.
-										while (((beatsPerBar & 1) == 0) && (denominatorExponent > 0) && beatsPerBar >= Config.beatsPerBarMin * 2) {
+										while ((beatsPerBar & 1) == 0 && (denominatorExponent > 0 || beatsPerBar > Config.beatsPerBarMax) && beatsPerBar >= Config.beatsPerBarMin * 2) {
 											beatsPerBar = beatsPerBar >> 1;
 											denominatorExponent = denominatorExponent - 1;
 										}
@@ -380,7 +380,6 @@ namespace beepbox {
 			while (key < 0) key += 12; // Wrap around to a range from 0 to 11.
 			key = key % 12; // Wrap around to a range from 0 to 11.
 			const beepboxKey: number = 11 - key; // Okay the list of BeepBox scales are kinda upside down. :P
-			const basePitch: number = Config.keyTransposes[beepboxKey];
 			
 			// Convert each midi channel into a BeepBox channel.
 			const pitchChannels: Channel[] = [];
@@ -390,29 +389,38 @@ namespace beepbox {
 				
 				const channel: Channel = new Channel();
 				
-				// If using the drumset channel, or the selected program is from the non-melodic group.
-				if (midiChannel == 9 || noteEvents[midiChannel][0].program >= 112) {
-					continue; // BeepBox doesn't import drums yet.
+				const isDrumsetChannel: boolean = (midiChannel == 9);
+				const isNoiseChannel: boolean = isDrumsetChannel || noteEvents[midiChannel][0].program >= 112;
+				const channelBasePitch: number = isNoiseChannel ? 33 : Config.keyTransposes[beepboxKey];
+				const intervalScale: number = isNoiseChannel ? Config.drumInterval : 1;
+				const channelMaxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
+
+				if (isNoiseChannel) {
+					if (isDrumsetChannel) {
+						console.error("Drumsets are not supported yet.");
+						continue;
+					}
+					noiseChannels.push(channel);
 				} else {
 					pitchChannels.push(channel);
 				}
 				
 				// Advance the pitch bend and expression timelines to the given midiTick, 
-				// changing the value of currentInterval or currentVolume.
+				// changing the value of currentMidiInterval or currentMidiVolume.
 				// IMPORTANT: These functions can't rewind!
-				let currentInterval: number = 0.0;
-				let currentVolume: number = 3.0;
+				let currentMidiInterval: number = 0.0;
+				let currentMidiVolume: number = 3.0;
 				let pitchBendEventIndex: number = 0;
 				let expressionEventIndex: number = 0;
-				function updateCurrentInterval(midiTick: number) {
+				function updateCurrentMidiInterval(midiTick: number) {
 					while (pitchBendEventIndex < pitchBendEvents[midiChannel].length && pitchBendEvents[midiChannel][pitchBendEventIndex].midiTick <= midiTick) {
-						currentInterval = pitchBendEvents[midiChannel][pitchBendEventIndex].interval;
+						currentMidiInterval = pitchBendEvents[midiChannel][pitchBendEventIndex].interval;
 						pitchBendEventIndex++;
 					}
 				}
-				function updateCurrentVolume(midiTick: number) {
+				function updateCurrentMidiVolume(midiTick: number) {
 					while (expressionEventIndex < expressionEvents[midiChannel].length && expressionEvents[midiChannel][expressionEventIndex].midiTick <= midiTick) {
-						currentVolume = expressionEvents[midiChannel][expressionEventIndex].volume;
+						currentMidiVolume = expressionEvents[midiChannel][expressionEventIndex].volume;
 						expressionEventIndex++;
 					}
 				}
@@ -466,8 +474,10 @@ namespace beepbox {
 									if (instrumentByProgram[currentProgram] == undefined) {
 										const instrument: Instrument = new Instrument();
 										instrumentByProgram[currentProgram] = instrument;
-										instrument.setTypeAndReset(InstrumentType.chip);
-										instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
+										instrument.setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip);
+										if (!isNoiseChannel) {
+											instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
+										}
 										channel.instruments.push(instrument);
 									}
 									
@@ -479,58 +489,60 @@ namespace beepbox {
 								const note: Note = makeNote(-1, noteStartPart, noteEndPart, 3, false);
 								note.pins.length = 0;
 								
-								updateCurrentInterval(noteStartMidiTick);
-								updateCurrentVolume(noteStartMidiTick);
-								const initialInterval: number = Math.round(currentInterval);
-								let firstPin: NotePin = makeNotePin(0, 0, Math.round(currentVelocity * currentVolume));
+								updateCurrentMidiInterval(noteStartMidiTick);
+								updateCurrentMidiVolume(noteStartMidiTick);
+								const shiftedHeldPitch: number = heldPitches[0] - channelBasePitch;
+								const initialBeepBoxPitch: number = Math.round((shiftedHeldPitch + currentMidiInterval) / intervalScale);
+								const heldPitchOffset: number = Math.round(currentMidiInterval - channelBasePitch);
+								let firstPin: NotePin = makeNotePin(0, 0, Math.round(currentVelocity * currentMidiVolume));
 								note.pins.push(firstPin);
 								
 								interface PotentialPin {
 									part: number;
-									interval: number;
+									pitch: number;
 									volume: number;
-									keyInterval: boolean;
+									keyPitch: boolean;
 									keyVolume: boolean;
 								}
 								const potentialPins: PotentialPin[] = [
-									{part: 0, interval: firstPin.interval, volume: firstPin.volume, keyInterval: false, keyVolume: false}
+									{part: 0, pitch: initialBeepBoxPitch, volume: firstPin.volume, keyPitch: false, keyVolume: false}
 								];
 								let prevPinIndex: number = 0;
 								
-								let prevPartInterval: number = currentInterval - initialInterval;
-								let prevPartVolume: number = currentVolume;
+								let prevPartPitch: number = (shiftedHeldPitch + currentMidiInterval) / intervalScale;
+								let prevPartVolume: number = currentVelocity * currentMidiVolume;
 								for (let part: number = noteStartPart + 1; part <= noteEndPart; part++) {
 									const midiTick: number = Math.max(noteStartMidiTick, Math.min(noteEndMidiTick - 1, Math.round(midiTicksPerPart * (part + barStartPart))));
 									const noteRelativePart: number = part - noteStartPart;
-									const lastPin: boolean = (part == noteEndPart);
+									const lastPart: boolean = (part == noteEndPart);
 									
 									// BeepBox can only add pins at whole number intervals and volumes. Detect places where
 									// the interval or volume are at or cross whole numbers, and add these to the list of
 									// potential places to insert pins.
-									updateCurrentInterval(midiTick);
-									updateCurrentVolume(midiTick);
+									updateCurrentMidiInterval(midiTick);
+									updateCurrentMidiVolume(midiTick);
+									const partPitch: number = (currentMidiInterval + shiftedHeldPitch) / intervalScale;
+									const partVolume: number = currentVelocity * currentMidiVolume;
 									
-									const shiftedInterval: number = currentInterval - initialInterval;
-									const nearestInterval: number = Math.round(shiftedInterval);
-									const intervalIsNearInteger: boolean = Math.abs(shiftedInterval - nearestInterval) < 0.01;
-									const intervalCrossedInteger: boolean = (Math.abs(prevPartInterval - Math.round(prevPartInterval)) < 0.01)
-										? Math.abs(shiftedInterval - prevPartInterval) >= 1.0
-										: Math.floor(shiftedInterval) != Math.floor(prevPartInterval);
-									const keyInterval: boolean = intervalIsNearInteger || intervalCrossedInteger;
+									const nearestPitch: number = Math.round(partPitch);
+									const pitchIsNearInteger: boolean = Math.abs(partPitch - nearestPitch) < 0.01;
+									const pitchCrossedInteger: boolean = (Math.abs(prevPartPitch - Math.round(prevPartPitch)) < 0.01)
+										? Math.abs(partPitch - prevPartPitch) >= 1.0
+										: Math.floor(partPitch) != Math.floor(prevPartPitch);
+									const keyPitch: boolean = pitchIsNearInteger || pitchCrossedInteger;
 									
-									const shiftedVolume: number = currentVelocity * currentVolume;
-									const nearestVolume: number = Math.round(shiftedVolume);
-									const volumeIsNearInteger: boolean = Math.abs(shiftedVolume - nearestVolume) < 0.01;
+									const nearestVolume: number = Math.round(partVolume);
+									const volumeIsNearInteger: boolean = Math.abs(partVolume - nearestVolume) < 0.01;
 									const volumeCrossedInteger: boolean = (Math.abs(prevPartVolume - Math.round(prevPartVolume)))
-										? Math.abs(shiftedVolume - prevPartVolume) >= 1.0
-										: Math.floor(shiftedVolume) != Math.floor(prevPartVolume);
+										? Math.abs(partVolume - prevPartVolume) >= 1.0
+										: Math.floor(partVolume) != Math.floor(prevPartVolume);
 									const keyVolume: boolean = volumeIsNearInteger || volumeCrossedInteger;
 									
-									prevPartInterval = shiftedInterval;
-									prevPartVolume = shiftedVolume;
+									prevPartPitch = partPitch;
+									prevPartVolume = partVolume;
 									
-									if (keyInterval || keyVolume || lastPin) {
-										const currentPin: PotentialPin = {part: noteRelativePart, interval: nearestInterval, volume: nearestVolume, keyInterval: keyInterval || lastPin, keyVolume: keyVolume || lastPin};
+									if (keyPitch || keyVolume || lastPart) {
+										const currentPin: PotentialPin = {part: noteRelativePart, pitch: nearestPitch, volume: nearestVolume, keyPitch: keyPitch || lastPart, keyVolume: keyVolume || lastPart};
 										const prevPin: PotentialPin = potentialPins[prevPinIndex];
 										
 										// At all key points in the list of potential pins, check to see if they
@@ -539,16 +551,16 @@ namespace beepbox {
 										let addPin: boolean = false;
 										let addPinAtIndex: number = Number.MAX_VALUE;
 										
-										if (currentPin.keyInterval) {
-											const slope: number = (currentPin.interval - prevPin.interval) / (currentPin.part - prevPin.part);
+										if (currentPin.keyPitch) {
+											const slope: number = (currentPin.pitch - prevPin.pitch) / (currentPin.part - prevPin.part);
 											let furthestIntervalDistance: number = Math.abs(slope); // minimum distance to make a new pin.
 											let addIntervalPin: boolean = false;
 											let addIntervalPinAtIndex: number = Number.MAX_VALUE;
 											for (let potentialIndex: number = prevPinIndex + 1; potentialIndex < potentialPins.length; potentialIndex++) {
 												const potentialPin: PotentialPin = potentialPins[potentialIndex];
-												if (potentialPin.keyInterval) {
-													const interpolatedInterval: number = prevPin.interval + slope * (potentialPin.part - prevPin.part);
-													const distance: number = Math.abs(interpolatedInterval - potentialPin.interval);
+												if (potentialPin.keyPitch) {
+													const interpolatedInterval: number = prevPin.pitch + slope * (potentialPin.part - prevPin.part);
+													const distance: number = Math.abs(interpolatedInterval - potentialPin.pitch);
 													if (furthestIntervalDistance < distance) {
 														furthestIntervalDistance = distance;
 														addIntervalPin = true;
@@ -587,7 +599,7 @@ namespace beepbox {
 										
 										if (addPin) {
 											const toBePinned: PotentialPin = potentialPins[addPinAtIndex];
-											note.pins.push(makeNotePin(toBePinned.interval, toBePinned.part, toBePinned.volume));
+											note.pins.push(makeNotePin(toBePinned.pitch - initialBeepBoxPitch, toBePinned.part, toBePinned.volume));
 											prevPinIndex = addPinAtIndex;
 										}
 										
@@ -597,20 +609,21 @@ namespace beepbox {
 								
 								// And always add a pin at the end of the note.
 								const lastToBePinned: PotentialPin = potentialPins[potentialPins.length - 1];
-								note.pins.push(makeNotePin(lastToBePinned.interval, lastToBePinned.part, lastToBePinned.volume));
+								note.pins.push(makeNotePin(lastToBePinned.pitch - initialBeepBoxPitch, lastToBePinned.part, lastToBePinned.volume));
 								
 								// Use interval range to constrain min/max pitches so no pin is out of bounds.
-								let maxPitch: number = Config.maxPitch;
+								let maxPitch: number = channelMaxPitch;
 								let minPitch: number = 0;
 								for (const notePin of note.pins) {
-									maxPitch = Math.min(maxPitch, Config.maxPitch - notePin.interval);
+									maxPitch = Math.min(maxPitch, channelMaxPitch - notePin.interval);
 									minPitch = Math.min(minPitch, -notePin.interval);
 								}
 								
-								// Build the note chord out of the current pitches, shifted into BeepBox basePitch relative values.
+								// Build the note chord out of the current pitches, shifted into BeepBox channelBasePitch relative values.
 								note.pitches.length = 0;
 								for (let pitchIndex: number = 0; pitchIndex < Math.min(4, heldPitches.length); pitchIndex++) {
-									const shiftedPitch: number = Math.max(minPitch, Math.min(maxPitch, heldPitches[pitchIndex + Math.max(0, heldPitches.length - 4)] + initialInterval - basePitch));
+									const heldPitch: number = heldPitches[pitchIndex + Math.max(0, heldPitches.length - 4)];
+									const shiftedPitch: number = Math.max(minPitch, Math.min(maxPitch, Math.round((heldPitch + heldPitchOffset) / intervalScale)));
 									if (note.pitches.indexOf(shiftedPitch) == -1) {
 										note.pitches.push(shiftedPitch);
 										pitchSum += shiftedPitch;
@@ -637,7 +650,7 @@ namespace beepbox {
 				}
 				
 				const averagePitch: number = pitchSum / pitchCount;
-				channel.octave = Math.max(0, Math.min(5, Math.round((averagePitch / 12) - 1.5)));
+				channel.octave = isNoiseChannel ? 0 : Math.max(0, Math.min(5, Math.round((averagePitch / 12) - 1.5)));
 			}
 			
 			// For better or for worse, BeepBox has a more limited number of channels than Midi.
