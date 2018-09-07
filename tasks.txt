@@ -295,6 +295,7 @@
 √ Polyphony, as a new option in a new menu called "chords". Other options: "arpeggio" and "custom interval".
 √ Use a single midi channel per beepbox channel. Stack notes unless using arpeggio. Don't try to apply "chip interval".
 √ Import midi files! (except not drums yet)
+√ Import midi non-melodic instruments as noise channels (but still no drumsets).
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - MIDI instrument templates
@@ -321,7 +322,8 @@ MAJOR REMAINING FEATURES, MAYBE LATER:
 
 
 NEXT RELEASE:
-- import midi drums.
+- Use structured Config data. 
+- Import midi drumsets. How should I handle polyphonic drums? I guess I should add an option to drums similar to "chords", with "normal" and "arpeggio".
 - "strum" chords, polyphonic and staggered in time, each pitch index onset is delayed by say 2 ticks.
 - combine new, export, and import JSON into a File menu.
 - An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
@@ -353,7 +355,7 @@ MISC:
 - Get rid of flash code... after porting the embed player?
 - Rename compile scripts to make more sense.
 - built-in link shortener?
-- do audio worker threads work yet? Maybe feature-detect them? "AudioWorkerNode" vs "AudioWorkletNode"???
+- Feature-detect audio worklets, use toString() to get synth code (and FFT, Deque) for worklet, maybe use pooling for Note, Pattern, Channel, Instrument to deal with frequently regenerating song from string when user edits in main thread.
 - make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page. notify me about any questionable tweets? While we're at it, improve the home page twitter feed, maybe a new api or iframe is available now.
 - Live input tones should still play when song is paused.
 - Live input tones should handle slide mode better.
