@@ -331,7 +331,6 @@ namespace beepbox {
 						
 						if (!foundTrackEndEvent && track.reader.hasMore()) {
 							track.nextEventMidiTick = currentMidiTick + track.reader.readMidiVariableLength();
-							anyTrackHasMore = true;
 						} else {
 							track.ended = true;
 							
@@ -349,6 +348,7 @@ namespace beepbox {
 					}
 					
 					if (!track.ended) {
+						anyTrackHasMore = true;
 						nextEventMidiTick = Math.min(nextEventMidiTick, track.nextEventMidiTick);
 					}
 				}
@@ -366,6 +366,7 @@ namespace beepbox {
 			const beatsPerMinute: number = microsecondsPerMinute / microsecondsPerBeat;
 			const midiTicksPerPart: number = midiTicksPerBeat / Config.partsPerBeat;
 			const partsPerBar: number = Config.partsPerBeat * beatsPerBar;
+			const songTotalBars: number = Math.ceil(currentMidiTick / midiTicksPerPart / partsPerBar);
 			
 			function quantizeMidiTickToPart(midiTick: number): number {
 				return Math.round(midiTick / midiTicksPerPart);
@@ -650,6 +651,10 @@ namespace beepbox {
 				
 				const averagePitch: number = pitchSum / pitchCount;
 				channel.octave = isNoiseChannel ? 0 : Math.max(0, Math.min(5, Math.round((averagePitch / 12) - 1.5)));
+
+				while (channel.bars.length < songTotalBars) {
+					channel.bars.push(0);
+				}
 			}
 			
 			// For better or for worse, BeepBox has a more limited number of channels than Midi.
