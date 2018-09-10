@@ -298,6 +298,7 @@
 √ Import midi non-melodic instruments as noise channels (but still no drumsets).
 √ Use interfaces for structured Config data.
 √ Empty bars at the end of a song were discarded in the midi export/import process. Fixed!
+√ Combine new, export, and import JSON into a File menu.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - MIDI instrument templates
@@ -326,7 +327,6 @@ MAJOR REMAINING FEATURES, MAYBE LATER:
 NEXT RELEASE:
 - Import midi drumsets using a map from drum instrument to noise pitch and duration. (and volume?) How should I handle polyphonic drums? I guess I should add an option to drums similar to "chords", with "normal" and "arpeggio". Also if the drum "chords" are a separate property from the pitched chords, drum waves probably should be too, although they can use the same SongTagCode.
 - "strum" chords, polyphonic and staggered in time, each pitch index onset is delayed by say 2 ticks.
-- combine new, export, and import JSON into a File menu.
 - An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
 - Wait arg it's still possible to make zero length notes by dragging to the far left! (In ÷8?)
 - Getting kinda nervous about how the chorus introduces noise/aliasing from irregular, nearest neighbor sampling. Also wondering about whether there are less "flanger"-like chorus effects available that I can implement efficiently. Maybe subdivide the post-processing on tick boundary as well, then the chorus doesn't even need to generate sine waves, it can just precompute the delay endpoints like tone vibrato. And hey, if I subdivide the post processing, I can probably pull it into the same loop as the instruments, and the temp buffers for delay effects only have to be long enough for one tick, and I can reset them to zero while doing the post processing. (or just before handling instruments which may be less redundant since I wouldn't also need to reset it at the start of the synth function... probably there's a way to do it in the post processing that isn't redundant?)
