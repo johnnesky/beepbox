@@ -159,7 +159,7 @@ namespace beepbox {
 		}
 		
 		private _getMaxDivision(): number {
-			const rhythmStepsPerBeat: number = Config.rhythmStepsPerBeat[this._doc.song.rhythm];
+			const rhythmStepsPerBeat: number = Config.rhythms[this._doc.song.rhythm].stepsPerBeat;
 			if (rhythmStepsPerBeat % 4 == 0) {
 				// Beat is divisible by 2 (and 4).
 				return Config.partsPerBeat / 2;
@@ -174,7 +174,7 @@ namespace beepbox {
 		}
 		
 		private _getMinDivision(): number {
-			return Config.partsPerBeat / Config.rhythmStepsPerBeat[this._doc.song.rhythm];
+			return Config.partsPerBeat / Config.rhythms[this._doc.song.rhythm].stepsPerBeat;
 		}
 		
 		private _snapToMinDivision(input: number): number {
@@ -341,7 +341,7 @@ namespace beepbox {
 		private _snapToPitch(guess: number, min: number, max: number): number {
 			if (guess < min) guess = min;
 			if (guess > max) guess = max;
-			const scale: ReadonlyArray<boolean> = Config.scaleFlags[this._doc.song.scale];
+			const scale: ReadonlyArray<boolean> = Config.scales[this._doc.song.scale].flags;
 			if (scale[Math.floor(guess) % 12] || this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				return Math.floor(guess);
 			} else {
@@ -795,7 +795,7 @@ namespace beepbox {
 			this._editorWidth = this._doc.showLetters ? (this._doc.showScrollBar ? 460 : 480) : (this._doc.showScrollBar ? 492 : 512);
 			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * Config.partsPerBeat);
 			this._pitchHeight = this._doc.song.getChannelIsDrum(this._doc.channel) ? this._defaultDrumHeight : this._defaultPitchHeight;
-			this._pitchCount = this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount : Config.pitchCount;
+			this._pitchCount = this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount : Config.windowPitchCount;
 			this._octaveOffset = this._doc.song.channels[this._doc.channel].octave * 12;
 			
 			if (this._renderedRhythm != this._doc.song.rhythm || 
@@ -840,7 +840,7 @@ namespace beepbox {
 			}
 			
 			for (let j: number = 0; j < 12; j++) {
-				this._backgroundPitchRows[j].style.visibility = Config.scaleFlags[this._doc.song.scale][j] ? "visible" : "hidden";
+				this._backgroundPitchRows[j].style.visibility = Config.scales[this._doc.song.scale].flags[j] ? "visible" : "hidden";
 			}
 			
 			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
@@ -895,7 +895,7 @@ namespace beepbox {
 						
 						if (note.pitches.length > 1 && !this._doc.song.getChannelIsDrum(this._doc.channel)) {
 							const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
-							if (Config.chordArpeggiates[instrument.chord]) {
+							if (Config.chords[instrument.chord].arpeggiates) {
 								let oscillatorLabel = <SVGTextElement> svgElement("text");
 								oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
 								oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));

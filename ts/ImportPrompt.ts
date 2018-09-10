@@ -379,7 +379,6 @@ namespace beepbox {
 			if ((key & 1) == 1) key += 6; // If the number of sharps/flats is odd, rotate it halfway around the circle of fifths. The key of C# has little in common with the key of C.
 			while (key < 0) key += 12; // Wrap around to a range from 0 to 11.
 			key = key % 12; // Wrap around to a range from 0 to 11.
-			const beepboxKey: number = 11 - key; // Okay the list of BeepBox scales are kinda upside down. :P
 			
 			// Convert each midi channel into a BeepBox channel.
 			const pitchChannels: Channel[] = [];
@@ -391,7 +390,7 @@ namespace beepbox {
 				
 				const isDrumsetChannel: boolean = (midiChannel == 9);
 				const isNoiseChannel: boolean = isDrumsetChannel || noteEvents[midiChannel][0].program >= 112;
-				const channelBasePitch: number = isNoiseChannel ? 33 : Config.keyTransposes[beepboxKey];
+				const channelBasePitch: number = isNoiseChannel ? 33 : Config.keys[key].basePitch;
 				const intervalScale: number = isNoiseChannel ? Config.drumInterval : 1;
 				const channelMaxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
 
@@ -706,7 +705,7 @@ namespace beepbox {
 					const song: Song = doc.song;
 					song.tempo = Math.max(0, Math.min(Config.tempoSteps - 1, Math.round(4.0 + 9.0 * Math.log(beatsPerMinute / 120) / Math.LN2)));
 					song.beatsPerBar = beatsPerBar;
-					song.key = beepboxKey;
+					song.key = key;
 					song.scale = 11;
 					song.reverb = 1;
 					song.rhythm = 1;

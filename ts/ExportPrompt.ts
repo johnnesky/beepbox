@@ -66,6 +66,36 @@ namespace beepbox {
 		private readonly _exportMidiButton: HTMLButtonElement = button({}, [text("Export to .midi file")]);
 		private readonly _exportJsonButton: HTMLButtonElement = button({}, [text("Export to .json file")]);
 		private readonly _cancelButton: HTMLButtonElement = button({}, [text("Cancel")]);
+		private static readonly midiSustainInstruments: number[] = [
+			0x4A, // rounded -> recorder
+			0x47, // triangle -> clarinet
+			0x50, // square -> square wave
+			0x46, // ¹/₃ pulse -> bassoon
+			0x46, // ¹/₄ pulse -> bassoon
+			0x44, // ¹/₆ pulse -> oboe
+			0x44, // ¹/₈ pulse -> oboe
+			0x51, // ¹/₁₂ pulse -> sawtooth wave
+			0x51, // ¹/₁₆ pulse -> sawtooth wave
+			0x51, // sawtooth -> sawtooth wave
+			0x51, // double saw -> sawtooth wave
+			0x51, // double pulse -> sawtooth wave
+			0x51, // spiky -> sawtooth wave
+		];
+		private static readonly midiDecayInstruments: number[] = [
+			0x21, // rounded -> fingered bass
+			0x2E, // triangle -> harp
+			0x2E, // square -> harp
+			0x06, // ¹/₃ pulse -> harpsichord
+			0x06, // ¹/₄ pulse -> harpsichord
+			0x18, // ¹/₆ pulse -> nylon guitar
+			0x18, // ¹/₈ pulse -> nylon guitar
+			0x19, // ¹/₁₂ pulse -> steel guitar
+			0x19, // ¹/₁₆ pulse -> steel guitar
+			0x19, // sawtooth -> steel guitar
+			0x19, // double saw -> steel guitar
+			0x6A, // double pulse -> shamisen
+			0x6A, // spiky -> shamisen
+		];
 		
 		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 200px;"}, [
 			div({style: "font-size: 2em"}, [text("Export Options")]),
@@ -321,8 +351,8 @@ namespace beepbox {
 					writer.writeUint8(24); // MIDI Clocks per metronome tick (should match beats), standard is 24
 					writer.writeUint8(8); // number of 1/32 notes per 24 MIDI Clocks, standard is 8, meaning 24 clocks per "quarter" note.
 					
-					const isMinor: boolean = Config.scaleFlags[song.scale][3] && !Config.scaleFlags[song.scale][4];
-					const key: number = 11 - song.key; // convert to scale where C=0, C#=1, counting up to B=11
+					const isMinor: boolean = Config.scales[song.scale].flags[3] && !Config.scales[song.scale].flags[4];
+					const key: number = song.key; // C=0, C#=1, counting up to B=11
 					let numSharps: number = key; // For even key values in major scale, number of sharps/flats is same...
 					if ((key & 1) == 1) numSharps += 6; // For odd key values (consider circle of fifths) rotate around the circle... kinda... Look conventional key signatures are just weird, okay?
 					if (isMinor) numSharps += 9; // A minor A scale has zero sharps, shift it appropriately
@@ -356,8 +386,8 @@ namespace beepbox {
 					// For remaining tracks, set up the instruments and write the notes:
 					
 					let channelName: string = song.getChannelIsDrum(channel)
-						? Config.midiDrumChannelNames[(channel - song.pitchChannelCount) % Config.midiDrumChannelNames.length]
-						: Config.midiPitchChannelNames[channel % Config.midiPitchChannelNames.length];
+						? Config.noiseColors[(channel - song.pitchChannelCount) % Config.noiseColors.length].name + " channel"
+						: Config.pitchColors[channel % Config.pitchColors.length].name + " channel";
 					writeEventTime(0);
 					writer.writeUint8(MidiEventType.meta);
 					writer.writeMidi7Bits(MidiMetaEventMessage.trackName);
@@ -375,7 +405,7 @@ namespace beepbox {
 					let prevPitchBend: number = -1;
 					let prevExpression: number = -1;
 					//let prevTremolo: number = -1;
-					const channelRoot: number = isDrums ? 33 : Config.keyTransposes[song.key];
+					const channelRoot: number = isDrums ? 33 : Config.keys[song.key].basePitch;
 					const intervalScale: number = isDrums ? Config.drumInterval : 1;
 					
 					for (const bar of unrolledBars) {
@@ -399,11 +429,13 @@ namespace beepbox {
 								if (instrument.type == InstrumentType.noise) {
 									instrumentProgram = 0x7E; // seashore, applause
 								} else if (instrument.type == InstrumentType.chip) {
-									const envelopeType: EnvelopeType = Config.operatorEnvelopeType[instrument.filterEnvelope];
+									const envelopeType: EnvelopeType = Config.envelopes[instrument.filterEnvelope].type;
 									const filterInstruments: number[] = (envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.pluck)
-										? Config.midiDecayInstruments
-										: Config.midiSustainInstruments;
-									instrumentProgram = filterInstruments[instrument.wave];
+										? ExportPrompt.midiDecayInstruments
+										: ExportPrompt.midiSustainInstruments;
+									if (filterInstruments.length > instrument.wave) {
+										instrumentProgram = filterInstruments[instrument.wave];
+									}
 								} else if (instrument.type == InstrumentType.fm) {
 									// No convenient way to pick an appropriate midi instrument, so just use sawtooth as a default. :/
 								} else {
@@ -422,14 +454,14 @@ namespace beepbox {
 								writeControlEvent(MidiControlEventMessage.volumeMSB, Math.round(0x7f * channelVolume));
 							}
 							
-							const effectVibrato: number = Config.vibratoAmplitudes[instrument.vibrato];
+							//const effectVibrato: number = Config.vibratos[instrument.vibrato].amplitudes;
 							
 							let chordHarmonizes: boolean = false;
 							let usesArpeggio: boolean = true;
 							let polyphony: number = 1;
 							if (!isDrums) {
-								chordHarmonizes = Config.chordHarmonizes[instrument.chord];
-								usesArpeggio = Config.chordArpeggiates[instrument.chord];
+								chordHarmonizes = Config.chords[instrument.chord].harmonizes;
+								usesArpeggio = Config.chords[instrument.chord].arpeggiates;
 								if (usesArpeggio) {
 									if (chordHarmonizes) {
 										if (instrument.type == InstrumentType.chip) {
@@ -536,9 +568,9 @@ namespace beepbox {
 											let nextPitch: number = note.pitches[toneIndex];
 											if (usesArpeggio && note.pitches.length > toneIndex + 1 && toneIndex == toneCount - 1) {
 												const midiTicksSinceBeat = (midiTickTime - barStartTime) % midiTicksPerBeat;
-												const midiTicksPerArpeggio = Config.ticksPerArpeggio[song.rhythm] * midiTicksPerPart / Config.ticksPerPart;
+												const midiTicksPerArpeggio = Config.rhythms[song.rhythm].ticksPerArpeggio * midiTicksPerPart / Config.ticksPerPart;
 												const arpeggio: number = Math.floor(midiTicksSinceBeat / midiTicksPerArpeggio);
-												const arpeggioPattern: ReadonlyArray<number> = Config.arpeggioPatterns[song.rhythm][note.pitches.length - 1 - toneIndex];
+												const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[song.rhythm].arpeggioPatterns[note.pitches.length - 1 - toneIndex];
 												nextPitch = note.pitches[toneIndex + arpeggioPattern[arpeggio % arpeggioPattern.length]];
 											}
 											nextPitch = channelRoot + nextPitch * intervalScale + pitchOffset;

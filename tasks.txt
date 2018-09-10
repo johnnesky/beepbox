@@ -296,6 +296,7 @@
 √ Use a single midi channel per beepbox channel. Stack notes unless using arpeggio. Don't try to apply "chip interval".
 √ Import midi files! (except not drums yet)
 √ Import midi non-melodic instruments as noise channels (but still no drumsets).
+√ Use interfaces for structured Config data.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - MIDI instrument templates
@@ -322,13 +323,13 @@ MAJOR REMAINING FEATURES, MAYBE LATER:
 
 
 NEXT RELEASE:
-- Use structured Config data. 
-- Import midi drumsets. How should I handle polyphonic drums? I guess I should add an option to drums similar to "chords", with "normal" and "arpeggio".
+- Seems like empty bars at the end of a song are discarded in the midi export/import process. Can it not do that?
+- Import midi drumsets using a map from drum instrument to noise pitch and duration. (and volume?) How should I handle polyphonic drums? I guess I should add an option to drums similar to "chords", with "normal" and "arpeggio". Also if the drum "chords" are a separate property from the pitched chords, drum waves probably should be too, although they can use the same SongTagCode.
 - "strum" chords, polyphonic and staggered in time, each pitch index onset is delayed by say 2 ticks.
 - combine new, export, and import JSON into a File menu.
 - An edit option to autodetect scale and key from existing notes. Add up all notes, biased by pitch, downbeats, duration, and maybe even perceived volume, and find the highest root/fifth pair for key.
 - Wait arg it's still possible to make zero length notes by dragging to the far left! (In ÷8?)
-- Getting kinda nervous about how the chorus introduces noise/aliasing from irregular sampling. Also wondering about whether there are less "flanger"-like chorus effects available that I can implement efficiently. Maybe subdivide the post-processing on tick boundary as well, then the chorus doesn't even need to generate sine waves, it can just precompute the delay endpoints like tone vibrato. And hey, if I subdivide the post processing, I can probably pull it into the same loop as the instruments, and the temp buffers for delay effects only have to be long enough for one tick, and I can reset them to zero while doing the post processing. (or just before handling instruments which may be less redundant since I wouldn't also need to reset it at the start of the synth function... probably there's a way to do it in the post processing that isn't redundant?)
+- Getting kinda nervous about how the chorus introduces noise/aliasing from irregular, nearest neighbor sampling. Also wondering about whether there are less "flanger"-like chorus effects available that I can implement efficiently. Maybe subdivide the post-processing on tick boundary as well, then the chorus doesn't even need to generate sine waves, it can just precompute the delay endpoints like tone vibrato. And hey, if I subdivide the post processing, I can probably pull it into the same loop as the instruments, and the temp buffers for delay effects only have to be long enough for one tick, and I can reset them to zero while doing the post processing. (or just before handling instruments which may be less redundant since I wouldn't also need to reset it at the start of the synth function... probably there's a way to do it in the post processing that isn't redundant?)
 - Consider trying polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency.
 - Hmm, sometimes Firefox won't play any sound... seems like it happens when I load www.beepbox.co, and then click a twitter link to beepbox.co, maybe some kind of security/user experience thing to prevent unwanted sound from cross-domain links?
 - Add a Config flag array for "chip" instruments, for whether or not to linearly interpolate wave samples or use polybleps for the retro/chip waves. that way i can add orchestra hit waves. I guess I also need an octave offset. and maybe even rename chip to wave instruments. sadly I will need a separate synth function for these waves. maybe do the same thing for drums and retroactively apply it to the hollow wave. also if I make another version of drums it probably doesn't need the frequency relative filter!
@@ -351,6 +352,7 @@ NEXT RELEASE:
 - Before deploying a new version, deploy the *old* version with a shorter cache expiration, so that the new version can reach people faster. 
 
 MISC:
+- The piano key display accidental naming convention needs work. "C#" is a fine name for a minor scale but misnames F# as Gb, but the same key in major scale should be "Db" and the names of all the black keys should be flats instead of sharps.
 - The purple loop should have arrows at the ends to imply cyclical motion.
 - Get rid of flash code... after porting the embed player?
 - Rename compile scripts to make more sense.
