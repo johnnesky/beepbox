@@ -115,6 +115,12 @@ namespace beepbox {
 		private readonly _prevBarButton: HTMLButtonElement = button({className: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)"});
 		private readonly _nextBarButton: HTMLButtonElement = button({className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
 		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "100", value: "50", step: "1"});
+		private readonly _fileMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
+			option("", "File", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
+			option("new", "+ New Blank Song"),
+			option("import", "↑ Import..."),
+			option("export", "↓ Export..."),
+		]);
 		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
 			option("", "Edit", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option("undo", "Undo (Z)"),
@@ -126,7 +132,6 @@ namespace beepbox {
 			option("transposeUp", "Shift Notes Up (+)"),
 			option("transposeDown", "Shift Notes Down (-)"),
 			option("duration", "Custom song size..."),
-			option("import", "Import..."),
 		]);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
 			option("", "Preferences", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -138,21 +143,6 @@ namespace beepbox {
 			option("showScrollBar", "Octave Scroll Bar"),
 			option("forceScaleChanges", "Force Scale Changes"),
 			option("forceRhythmChanges", "Force Rhythm Changes"),
-		]);
-		private readonly _newSongButton: HTMLButtonElement = button({type: "button"}, [
-			text("New"),
-			span({className: "fullWidthOnly"}, [text(" Song")]),
-			// Page icon:
-			svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"}, [
-				svgElement("path", {d: "M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z", fill: "currentColor"}),
-			]),
-		]);
-		private readonly _exportButton: HTMLButtonElement = button({type: "button"}, [
-			text("Export"),
-			// Download icon:
-			svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"}, [
-				svgElement("path", {d: "M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z", fill: "currentColor"}),
-			]),
 		]);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select({}), Config.scales.map(scale=>scale.name));
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select({}), Config.keys.map(key=>key.name).reverse());
@@ -253,7 +243,13 @@ namespace beepbox {
 					div({className: "editor-settings"}, [
 						div({className: "editor-song-settings"}, [
 							div({className: "editor-menus"}, [
-								this._newSongButton,
+								div({className: "selectContainer menu"}, [
+									this._fileMenu,
+									// Page icon:
+									svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"}, [
+										svgElement("path", {d: "M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z", fill: "currentColor"}),
+									]),
+								]),
 								div({className: "selectContainer menu"}, [
 									this._editMenu,
 									// Edit icon:
@@ -268,7 +264,6 @@ namespace beepbox {
 										svgElement("path", {d: "M 5.78 -1.6 L 7.93 -0.94 L 7.93 0.94 L 5.78 1.6 L 4.85 3.53 L 5.68 5.61 L 4.21 6.78 L 2.36 5.52 L 0.27 5.99 L -0.85 7.94 L -2.68 7.52 L -2.84 5.28 L -4.52 3.95 L -6.73 4.28 L -7.55 2.59 L -5.9 1.07 L -5.9 -1.07 L -7.55 -2.59 L -6.73 -4.28 L -4.52 -3.95 L -2.84 -5.28 L -2.68 -7.52 L -0.85 -7.94 L 0.27 -5.99 L 2.36 -5.52 L 4.21 -6.78 L 5.68 -5.61 L 4.85 -3.53 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z", fill: "currentColor"}),
 									]),
 								]),
-								this._exportButton,
 							]),
 							div({style: "margin: 3px 0; text-align: center; color: #999;"}, [
 								text("Song Settings")
@@ -348,6 +343,7 @@ namespace beepbox {
 				});
 			}
 			
+			this._fileMenu.addEventListener("change", this._fileMenuHandler);
 			this._editMenu.addEventListener("change", this._editMenuHandler);
 			this._optionsMenu.addEventListener("change", this._optionsMenuHandler);
 			this._scaleSelect.addEventListener("change", this._whenSetScale);
@@ -369,8 +365,6 @@ namespace beepbox {
 			this._playButton.addEventListener("click", this._togglePlay);
 			this._prevBarButton.addEventListener("click", this._whenPrevBarPressed);
 			this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
-			this._newSongButton.addEventListener("click", this._whenNewSongPressed);
-			this._exportButton.addEventListener("click", this._openExportPrompt);
 			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
 			this._instrumentTypeHint.addEventListener("click", this._openInstrumentTypePrompt);
 			//this._intervalHint.addEventListener("click", this._openIntervalPrompt);
@@ -746,15 +740,6 @@ namespace beepbox {
 			this._doc.record(this._changeTranspose, canReplaceLastChange);
 		}
 		
-		private _whenNewSongPressed = (): void => {
-			this._doc.record(new ChangeSong(this._doc, ""));
-			this._patternEditor.resetCopiedPins();
-		}
-		
-		private _openExportPrompt = (): void => {
-			this._openPrompt("export");
-		}
-		
 		private _openInstrumentTypePrompt = (): void => {
 			this._openPrompt("instrumentType");
 		}
@@ -829,6 +814,22 @@ namespace beepbox {
 			this._doc.record(new ChangeChord(this._doc, this._chordSelect.selectedIndex));
 		}
 		
+		private _fileMenuHandler = (event:Event): void => {
+			switch (this._fileMenu.value) {
+				case "new":
+					this._doc.record(new ChangeSong(this._doc, ""));
+					this._patternEditor.resetCopiedPins();
+					break;
+				case "export":
+					this._openPrompt("export");
+					break;
+				case "import":
+					this._openPrompt("import");
+					break;
+			}
+			this._fileMenu.selectedIndex = 0;
+		}
+		
 		private _editMenuHandler = (event:Event): void => {
 			switch (this._editMenu.value) {
 				case "undo":
@@ -854,9 +855,6 @@ namespace beepbox {
 					break;
 				case "transposeDown":
 					this._transpose(false);
-					break;
-				case "import":
-					this._openPrompt("import");
 					break;
 				case "duration":
 					this._openPrompt("duration");
