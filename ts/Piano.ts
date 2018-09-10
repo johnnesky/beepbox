@@ -88,7 +88,7 @@ namespace beepbox {
 		}
 		
 		private _updateCursorPitch(): void {
-			const scale: ReadonlyArray<boolean> = Config.scaleFlags[this._doc.song.scale];
+			const scale: ReadonlyArray<boolean> = Config.scales[this._doc.song.scale].flags;
 			const mousePitch: number = Math.max(0, Math.min(this._pitchCount-1, this._pitchCount - (this._mouseY / this._pitchHeight)));
 			if (scale[Math.floor(mousePitch) % 12] || this._doc.song.getChannelIsDrum(this._doc.channel)) {
 				this._cursorPitch = Math.floor(mousePitch);
@@ -193,7 +193,7 @@ namespace beepbox {
 		private _documentChanged = (): void => {
 			const isDrum: boolean = this._doc.song.getChannelIsDrum(this._doc.channel);
 			this._pitchHeight = isDrum ? 40 : 13;
-			this._pitchCount = isDrum ? Config.drumCount : Config.pitchCount;
+			this._pitchCount = isDrum ? Config.drumCount : Config.windowPitchCount;
 			this._updateCursorPitch();
 			this._doc.synth.liveInputPitches[0] = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
 			this._doc.synth.liveInputChannel = this._doc.channel;
@@ -218,7 +218,7 @@ namespace beepbox {
 			
 			let key: HTMLImageElement;
 			for (let j: number = 0; j < this._pitchCount; j++) {
-				const pitchNameIndex: number = (j + Config.keyTransposes[this._doc.song.key]) % 12;
+				const pitchNameIndex: number = (j + Config.keys[this._doc.song.key].basePitch) % 12;
 				if (isDrum) {
 					key = Drum;
 					const scale: number = 1.0 - ( j / this._pitchCount ) * 0.35;
@@ -238,15 +238,17 @@ namespace beepbox {
 						data[i + 2] *= brightness;
 					}
 					this._graphics.putImageData(imageData, x, y);
-				} else if (!Config.scaleFlags[this._doc.song.scale][j%12]) {
-					key = Config.pianoScaleFlags[pitchNameIndex] ? WhiteKeyDisabled : BlackKeyDisabled;
+				} else if (!Config.scales[this._doc.song.scale].flags[j%12]) {
+					key = Config.keys[pitchNameIndex].isWhiteKey ? WhiteKeyDisabled : BlackKeyDisabled;
 				    this._graphics.drawImage(key, 0, this._pitchHeight * (this._pitchCount - j - 1));
 				} else {
-					let text: string | null = Config.pitchNames[pitchNameIndex];
+					let text: string;
 					
-					if (text == null) {
+					if (Config.keys[pitchNameIndex].isWhiteKey) {
+						text = Config.keys[pitchNameIndex].name;
+					} else {
 						const shiftDir: number = Config.blackKeyNameParents[j%12];
-						text = Config.pitchNames[(pitchNameIndex + 12 + shiftDir) % 12]!;
+						text = Config.keys[(pitchNameIndex + 12 + shiftDir) % 12].name;
 						if (shiftDir == 1) {
 							text += "♭";
 						} else if (shiftDir == -1) {
@@ -254,8 +256,8 @@ namespace beepbox {
 						}
 					}
 					
-					const textColor: string = Config.pianoScaleFlags[pitchNameIndex] ? "#000000" : "#ffffff";
-					key = Config.pianoScaleFlags[pitchNameIndex] ? WhiteKey : BlackKey;
+					const textColor: string = Config.keys[pitchNameIndex].isWhiteKey ? "#000000" : "#ffffff";
+					key = Config.keys[pitchNameIndex].isWhiteKey ? WhiteKey : BlackKey;
 				    this._graphics.drawImage(key, 0, this._pitchHeight * (this._pitchCount - j - 1));
 					this._graphics.font = "bold 11px sans-serif";
 				    this._graphics.fillStyle = textColor;

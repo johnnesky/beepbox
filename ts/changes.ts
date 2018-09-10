@@ -26,8 +26,8 @@ SOFTWARE.
 
 namespace beepbox {
 	function generateScaleMap(oldScaleValue: number, newScaleValue: number): number[] {
-		const oldScaleFlags: ReadonlyArray<boolean> = Config.scaleFlags[oldScaleValue];
-		const newScaleFlags: ReadonlyArray<boolean> = Config.scaleFlags[newScaleValue];
+		const oldScaleFlags: ReadonlyArray<boolean> = Config.scales[oldScaleValue].flags;
+		const newScaleFlags: ReadonlyArray<boolean> = Config.scales[newScaleValue].flags;
 		const oldScale: number[] = [];
 		const newScale: number[] = [];
 		for (let i: number = 0; i <  12; i++) {
@@ -602,7 +602,7 @@ namespace beepbox {
 				if (doc.forceRhythmChanges) {
 					for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
 						for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
-							this.append(new ChangeRhythmStepsPerBeat(doc, doc.song.channels[i].patterns[j], Config.rhythmStepsPerBeat[doc.song.rhythm], Config.rhythmStepsPerBeat[newValue]));
+							this.append(new ChangeRhythmStepsPerBeat(doc, doc.song.channels[i].patterns[j], Config.rhythms[doc.song.rhythm].stepsPerBeat, Config.rhythms[newValue].stepsPerBeat));
 						}
 					}
 				}
@@ -619,7 +619,7 @@ namespace beepbox {
 			pattern.notes = notes;
 			
 			if (doc.forceRhythmChanges) {
-				this.append(new ChangeRhythmStepsPerBeat(doc, pattern, oldRhythmStepsPerBeat, Config.rhythmStepsPerBeat[doc.song.rhythm]));
+				this.append(new ChangeRhythmStepsPerBeat(doc, pattern, oldRhythmStepsPerBeat, Config.rhythms[doc.song.rhythm].stepsPerBeat));
 			}
 			
 			if (doc.forceScaleChanges && !doc.song.getChannelIsDrum(doc.channel)) {
@@ -1144,14 +1144,14 @@ namespace beepbox {
 				let pitch: number = this._oldPitches[i];
 				if (upward) {
 					for (let j: number = pitch + 1; j <= maxPitch; j++) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Config.scaleFlags[doc.song.scale][j%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Config.scales[doc.song.scale].flags[j%12]) {
 							pitch = j;
 							break;
 						}
 					}
 				} else {
 					for (let j: number = pitch - 1; j >= 0; j--) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Config.scaleFlags[doc.song.scale][j%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Config.scales[doc.song.scale].flags[j%12]) {
 							pitch = j;
 							break;
 						}
@@ -1184,14 +1184,14 @@ namespace beepbox {
 				if (interval > max) interval = max;
 				if (upward) {
 					for (let i: number = interval + 1; i <= max; i++) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Config.scaleFlags[doc.song.scale][i%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Config.scales[doc.song.scale].flags[i%12]) {
 							interval = i;
 							break;
 						}
 					}
 				} else {
 					for (let i: number = interval - 1; i >= min; i--) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Config.scaleFlags[doc.song.scale][i%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || Config.scales[doc.song.scale].flags[i%12]) {
 							interval = i;
 							break;
 						}
