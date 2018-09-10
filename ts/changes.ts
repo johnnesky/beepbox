@@ -842,6 +842,64 @@ namespace beepbox {
 		}
 	}
 	
+	export class ChangeDetectKey extends ChangeGroup {
+		constructor(doc: SongDocument) {
+			super();
+			const song: Song = doc.song;
+			const basePitch: number = Config.keys[song.key].basePitch;
+			const keyWeights: number[] = [0,0,0,0,0,0,0,0,0,0,0,0];
+			for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
+				for (let barIndex: number = 0; barIndex < song.barCount; barIndex++) {
+					const pattern: Pattern | null = song.getPattern(channelIndex, barIndex);
+					if (pattern != null) {
+						for (const note of pattern.notes) {
+							const prevPin: NotePin = note.pins[0];
+							for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
+								const nextPin: NotePin = note.pins[pinIndex];
+								if (prevPin.interval == nextPin.interval) {
+									let weight: number = nextPin.time - prevPin.time;
+									weight += Math.max(0, Math.min(Config.partsPerBeat, nextPin.time + note.start) - (prevPin.time + note.start));
+									weight *= nextPin.volume + prevPin.volume;
+									for (const pitch of note.pitches) {
+										const key = (basePitch + prevPin.interval + pitch) % 12;
+										keyWeights[key] += weight;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			let bestKey: number = 0;
+			let bestKeyWeight: number = 0;
+			for (let key: number = 0; key < 12; key++) {
+				const keyWeight: number = keyWeights[key] + 0.5 * keyWeights[(key + 7) % 12];
+				if (bestKeyWeight < keyWeight) {
+					bestKeyWeight = keyWeight;
+					bestKey = key;
+				}
+			}
+
+			if (bestKey != song.key) {
+				const diff: number = song.key - bestKey;
+				const absoluteDiff: number = Math.abs(diff);
+
+				for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
+					for (const pattern of song.channels[channelIndex].patterns) {
+						for (let i: number = 0; i < absoluteDiff; i++) {
+							this.append(new ChangeTranspose(doc, pattern, diff > 0, true));
+						}
+					}
+				}
+
+				song.key = bestKey;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
 	export class ChangeSong extends ChangeGroup {
 		constructor(doc: SongDocument, newHash: string) {
 			super();
@@ -1129,7 +1187,7 @@ namespace beepbox {
 		protected _newPins: NotePin[];
 		protected _oldPitches: number[];
 		protected _newPitches: number[];
-		constructor(doc: SongDocument, note: Note, upward: boolean) {
+		constructor(doc: SongDocument, note: Note, upward: boolean, ignoreScale: boolean = false) {
 			super(false);
 			this._doc = doc;
 			this._note = note;
@@ -1144,14 +1202,14 @@ namespace beepbox {
 				let pitch: number = this._oldPitches[i];
 				if (upward) {
 					for (let j: number = pitch + 1; j <= maxPitch; j++) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Config.scales[doc.song.scale].flags[j%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
 							pitch = j;
 							break;
 						}
 					}
 				} else {
 					for (let j: number = pitch - 1; j >= 0; j--) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Config.scales[doc.song.scale].flags[j%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
 							pitch = j;
 							break;
 						}
@@ -1184,14 +1242,14 @@ namespace beepbox {
 				if (interval > max) interval = max;
 				if (upward) {
 					for (let i: number = interval + 1; i <= max; i++) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Config.scales[doc.song.scale].flags[i%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
 							interval = i;
 							break;
 						}
 					}
 				} else {
 					for (let i: number = interval - 1; i >= min; i--) {
-						if (doc.song.getChannelIsDrum(doc.channel) || Config.scales[doc.song.scale].flags[i%12]) {
+						if (doc.song.getChannelIsDrum(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
 							interval = i;
 							break;
 						}
@@ -1233,10 +1291,10 @@ namespace beepbox {
 	}
 	
 	export class ChangeTranspose extends ChangeSequence {
-		constructor(doc: SongDocument, pattern: Pattern, upward: boolean) {
+		constructor(doc: SongDocument, pattern: Pattern, upward: boolean, ignoreScale: boolean = false) {
 			super();
 			for (let i: number = 0; i < pattern.notes.length; i++) {
-				this.append(new ChangeTransposeNote(doc, pattern.notes[i], upward));
+				this.append(new ChangeTransposeNote(doc, pattern.notes[i], upward, ignoreScale));
 			}
 		}
 	}

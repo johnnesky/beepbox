@@ -131,6 +131,7 @@ namespace beepbox {
 			option("pasteInstrument", "Paste Instrument"),
 			option("transposeUp", "Shift Notes Up (+)"),
 			option("transposeDown", "Shift Notes Down (-)"),
+			option("detectKey", "Detect Key"),
 			option("duration", "Custom song size..."),
 		]);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
@@ -855,6 +856,9 @@ namespace beepbox {
 					break;
 				case "transposeDown":
 					this._transpose(false);
+					break;
+				case "detectKey":
+					this._doc.record(new ChangeDetectKey(this._doc));
 					break;
 				case "duration":
 					this._openPrompt("duration");
