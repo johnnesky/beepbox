@@ -30,7 +30,6 @@ namespace beepbox {
 	const {button, div, span, input, br, text} = html;
 	
 	export class SongDurationPrompt implements Prompt {
-		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _barsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
@@ -41,14 +40,6 @@ namespace beepbox {
 		
 		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
 			div({style: "font-size: 2em"}, [text("Custom Song Size")]),
-			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
-				div({style: "text-align: right;"}, [
-					text("Beats per bar:"),
-					br(),
-					span({style: "font-size: smaller; color: #888888;"}, [text("(Multiples of 3 or 4 are recommended)")]),
-				]),
-				this._beatsStepper,
-			]),
 			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
 				div({style: "display: inline-block; text-align: right;"}, [
 					text("Bars per song:"),
@@ -80,10 +71,6 @@ namespace beepbox {
 		]);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
-			this._beatsStepper.value = this._doc.song.beatsPerBar + "";
-			this._beatsStepper.min = Config.beatsPerBarMin + "";
-			this._beatsStepper.max = Config.beatsPerBarMax + "";
-			
 			this._barsStepper.value = this._doc.song.barCount + "";
 			this._barsStepper.min = Config.barCountMin + "";
 			this._barsStepper.max = Config.barCountMax + "";
@@ -106,13 +93,11 @@ namespace beepbox {
 			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);
-			this._beatsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._barsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._patternsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._instrumentsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._pitchChannelStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._drumChannelStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
-			this._beatsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
 			this._barsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
 			this._patternsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
 			this._instrumentsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
@@ -127,13 +112,11 @@ namespace beepbox {
 		public cleanUp = (): void => { 
 			this._okayButton.removeEventListener("click", this._saveChanges);
 			this._cancelButton.removeEventListener("click", this._close);
-			this._beatsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._barsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._patternsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._instrumentsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._pitchChannelStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._drumChannelStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
-			this._beatsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
 			this._barsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
 			this._patternsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
 			this._instrumentsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
@@ -161,7 +144,6 @@ namespace beepbox {
 		
 		private _saveChanges = (): void => {
 			const group: ChangeGroup = new ChangeGroup();
-			group.append(new ChangeBeatsPerBar(this._doc, SongDurationPrompt._validate(this._beatsStepper)));
 			group.append(new ChangeBarCount(this._doc, SongDurationPrompt._validate(this._barsStepper)));
 			group.append(new ChangePatternsPerChannel(this._doc, SongDurationPrompt._validate(this._patternsStepper)));
 			group.append(new ChangeInstrumentsPerChannel(this._doc, SongDurationPrompt._validate(this._instrumentsStepper)));

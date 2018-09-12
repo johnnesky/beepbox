@@ -31,6 +31,7 @@ SOFTWARE.
 /// <reference path="BarScrollBar.ts" />
 /// <reference path="OctaveScrollBar.ts" />
 /// <reference path="Piano.ts" />
+/// <reference path="BeatsPerBarPrompt.ts" />
 /// <reference path="SongDurationPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
@@ -132,7 +133,8 @@ namespace beepbox {
 			option("transposeUp", "Shift Notes Up (+)"),
 			option("transposeDown", "Shift Notes Down (-)"),
 			option("detectKey", "Detect Key"),
-			option("duration", "Custom song size..."),
+			option("beatsPerBar", "Set beats per bar..."),
+			option("limits", "Customize song limits..."),
 		]);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
 			option("", "Preferences", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -400,7 +402,10 @@ namespace beepbox {
 					case "import":
 						this.prompt = new ImportPrompt(this._doc, this);
 						break;
-					case "duration":
+					case "beatsPerBar":
+						this.prompt = new BeatsPerBarPrompt(this._doc, this);
+						break;
+					case "limits":
 						this.prompt = new SongDurationPrompt(this._doc, this);
 						break;
 					case "instrumentType":
@@ -860,8 +865,11 @@ namespace beepbox {
 				case "detectKey":
 					this._doc.record(new ChangeDetectKey(this._doc));
 					break;
-				case "duration":
-					this._openPrompt("duration");
+				case "beatsPerBar":
+					this._openPrompt("beatsPerBar");
+					break;
+				case "limits":
+					this._openPrompt("limits");
 					break;
 			}
 			this._editMenu.selectedIndex = 0;

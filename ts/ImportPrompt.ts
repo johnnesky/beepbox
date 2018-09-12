@@ -371,9 +371,6 @@ namespace beepbox {
 			function quantizeMidiTickToPart(midiTick: number): number {
 				return Math.round(midiTick / midiTicksPerPart);
 			}
-			function quantizePartToBar(part: number): number {
-				return Math.floor(part / partsPerBar);
-			}
 
 			let key: number = numSharps;
 			if (isMinor) key += 3; // Diatonic C Major has the same sharps/flats as A Minor, and these keys are 3 semitones apart.
@@ -444,11 +441,10 @@ namespace beepbox {
 						// If there are any pitches held between the previous event and the next
 						// event, iterate over all bars covered by this time period, ensure they
 						// have a pattern instantiated, and insert notes for these pitches.
-						const startBar: number = quantizePartToBar(prevEventPart);
-						const endBar: number = quantizePartToBar(nextEventPart);
-						for (let bar: number = startBar; bar <= endBar; bar++) {
+						const startBar: number = Math.floor(prevEventPart / partsPerBar);
+						const endBar: number = Math.ceil(nextEventPart / partsPerBar);
+						for (let bar: number = startBar; bar < endBar; bar++) {
 							const barStartPart: number = bar * partsPerBar;
-							const barEndPart: number = (bar + 1) * partsPerBar;
 							const barStartMidiTick: number = bar * beatsPerBar * midiTicksPerBeat;
 							const barEndMidiTick: number = (bar + 1) * beatsPerBar * midiTicksPerBeat;
 							
