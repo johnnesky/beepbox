@@ -333,25 +333,6 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeBeatsPerBar extends Change {
-		constructor(doc: SongDocument, newValue: number) {
-			super();
-			if (doc.song.beatsPerBar != newValue) {
-				if (doc.song.beatsPerBar > newValue) {
-					const sequence: ChangeSequence = new ChangeSequence();
-					for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-						for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
-							sequence.append(new ChangeNoteTruncate(doc, doc.song.channels[i].patterns[j], newValue * Config.partsPerBeat, doc.song.beatsPerBar * Config.partsPerBeat));
-						}
-					}
-				}
-				doc.song.beatsPerBar = newValue;
-				doc.notifier.changed();
-				this._didSomething();
-			}
-		}
-	}
-	
 	export class ChangeChannelBar extends Change {
 		constructor(doc: SongDocument, newChannel: number, newBar: number) {
 			super();
@@ -783,7 +764,7 @@ namespace beepbox {
 	}
 	
 	class ChangeRhythmStepsPerBeat extends ChangeSequence {
-		constructor(doc: SongDocument, bar: Pattern, oldRhythmStepsPerBeat: number, newRhythmStepsPerBeat: number) {
+		constructor(doc: SongDocument, pattern: Pattern, oldRhythmStepsPerBeat: number, newRhythmStepsPerBeat: number) {
 			super();
 			const minDivision: number = Config.partsPerBeat / newRhythmStepsPerBeat;
 			const changeRhythm: (oldTime:number)=>number = function(oldTime: number): number {
@@ -797,10 +778,10 @@ namespace beepbox {
 			};
 			
 			let i: number = 0;
-			while (i < bar.notes.length) {
-				const note: Note = bar.notes[i];
+			while (i < pattern.notes.length) {
+				const note: Note = pattern.notes[i];
 				if (changeRhythm(note.start) >= changeRhythm(note.end)) {
-					this.append(new ChangeNoteAdded(doc, bar, note, i, true));
+					this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
 				} else {
 					this.append(new ChangeRhythmNote(doc, note, changeRhythm));
 					i++;
@@ -818,6 +799,157 @@ namespace beepbox {
 			}
 			
 			this._finishSetup();
+		}
+	}
+	
+	export class ChangeBeatsPerBar extends ChangeGroup {
+		constructor(doc: SongDocument, newValue: number, strategy: string) {
+			super();
+			if (doc.song.beatsPerBar != newValue) {
+				switch (strategy) {
+					case "splice": {
+						if (doc.song.beatsPerBar > newValue) {
+							const sequence: ChangeSequence = new ChangeSequence();
+							for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
+								for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
+									sequence.append(new ChangeNoteTruncate(doc, doc.song.channels[i].patterns[j], newValue * Config.partsPerBeat, doc.song.beatsPerBar * Config.partsPerBeat));
+								}
+							}
+						}
+					} break;
+					case "stretch": {
+						const changeRhythm = function(oldTime: number): number {
+							return Math.round(oldTime * newValue / doc.song.beatsPerBar);
+						};
+						for (let channelIndex: number = 0; channelIndex < doc.song.getChannelCount(); channelIndex++) {
+							for (let patternIndex: number = 0; patternIndex < doc.song.channels[channelIndex].patterns.length; patternIndex++) {
+								const pattern: Pattern = doc.song.channels[channelIndex].patterns[patternIndex]; 
+								let noteIndex: number = 0;
+								while (noteIndex < pattern.notes.length) {
+									const note: Note = pattern.notes[noteIndex];
+									if (changeRhythm(note.start) >= changeRhythm(note.end)) {
+										this.append(new ChangeNoteAdded(doc, pattern, note, noteIndex, true));
+									} else {
+										this.append(new ChangeRhythmNote(doc, note, changeRhythm));
+										noteIndex++;
+									}
+								}
+							}
+						}
+					} break;
+					case "overflow": {
+						const pitchChannels: Channel[] = [];
+						const noiseChannels: Channel[] = [];
+						
+						for (let channelIndex: number = 0; channelIndex < doc.song.getChannelCount(); channelIndex++) {
+							const oldChannel: Channel = doc.song.channels[channelIndex];
+							const newChannel: Channel = new Channel();
+							if (channelIndex < doc.song.pitchChannelCount) {
+								pitchChannels.push(newChannel);
+							} else {
+								noiseChannels.push(newChannel);
+							}
+
+							newChannel.octave = oldChannel.octave;
+							for (const instrument of oldChannel.instruments) {
+								newChannel.instruments.push(instrument);
+							}
+
+							const newPartsPerBar: number = newValue * Config.partsPerBeat;
+							let currentBar: number = -1;
+							let pattern: Pattern | null = null;
+
+							for (let oldBar: number = 0; oldBar < doc.song.barCount; oldBar++) {
+								const oldPattern: Pattern | null = doc.song.getPattern(channelIndex, oldBar);
+								if (oldPattern != null) {
+									const oldBarStart: number = oldBar * doc.song.beatsPerBar * Config.partsPerBeat;
+									for (const oldNote of oldPattern.notes) {
+
+										const absoluteNoteStart: number = oldNote.start + oldBarStart;
+										const absoluteNoteEnd: number = oldNote.end + oldBarStart;
+
+										const startBar: number = Math.floor(absoluteNoteStart / newPartsPerBar);
+										const endBar: number = Math.ceil(absoluteNoteEnd / newPartsPerBar);
+										for (let bar: number = startBar; bar < endBar; bar++) {
+											const barStartPart: number = bar * newPartsPerBar;
+											const noteStartPart: number = Math.max(0, absoluteNoteStart - barStartPart);
+											const noteEndPart: number = Math.min(newPartsPerBar, absoluteNoteEnd - barStartPart);
+											
+											if (noteStartPart < noteEndPart) {
+												// Ensure a pattern exists for the current bar before inserting notes into it.
+												if (currentBar != bar || pattern == null) {
+													currentBar++;
+													while (currentBar < bar) {
+														newChannel.bars[currentBar] = 0;
+														currentBar++;
+													}
+													pattern = new Pattern();
+													newChannel.patterns.push(pattern);
+													newChannel.bars[currentBar] = newChannel.patterns.length;
+													pattern.instrument = oldPattern.instrument;
+												}
+												
+												// Create a new note, and interpret the pitch bend and expression events
+												// to determine where we need to insert pins to control interval and volume.
+												const newNote: Note = makeNote(-1, noteStartPart, noteEndPart, 3, false);
+												pattern.notes.push(newNote);
+												newNote.pins.length = 0;
+												newNote.pitches.length = 0;
+												const timeOffset: number = absoluteNoteStart - barStartPart - noteStartPart;
+												const newNoteLength: number = noteEndPart - noteStartPart;
+
+												for (const pitch of oldNote.pitches) {
+													newNote.pitches.push(pitch);
+												}
+
+												// let lastPin: NotePin = oldNote.pins[0];
+												for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
+													const pin: NotePin = oldNote.pins[pinIndex];
+													const newPinTime: number = pin.time + timeOffset;
+													if (newPinTime < 0) {
+														if (pinIndex + 1 >= oldNote.pins.length) throw new Error("Error converting pins in note overflow.");
+														const nextPin: NotePin = oldNote.pins[pinIndex + 1];
+														const nextPinTime: number = nextPin.time + timeOffset;
+														if (nextPinTime > 0) {
+															// Insert an interpolated pin at the start of the new note.
+															const ratio: number = (-newPinTime) / (nextPinTime - newPinTime);
+															newNote.pins.push(makeNotePin(Math.round(pin.interval + ratio * (nextPin.interval - pin.interval)), 0, Math.round(pin.volume + ratio * (nextPin.volume - pin.volume))));
+														}
+													} else if (newPinTime <= newNoteLength) {
+														newNote.pins.push(makeNotePin(pin.interval, newPinTime, pin.volume));
+													} else {
+														if (pinIndex < 1) throw new Error("Error converting pins in note overflow.");
+														const prevPin: NotePin = oldNote.pins[pinIndex - 1];
+														const prevPinTime: number = prevPin.time + timeOffset;
+														if (prevPinTime < newNoteLength) {
+															// Insert an interpolated pin at the start of the new note.
+															const ratio: number = (newNoteLength - prevPinTime) / (newPinTime - prevPinTime);
+															newNote.pins.push(makeNotePin(Math.round(prevPin.interval + ratio * (pin.interval - prevPin.interval)), newNoteLength, Math.round(prevPin.volume + ratio * (pin.volume - prevPin.volume))));
+														}
+													}
+												}
+											}
+										}
+
+									}
+								}
+							}
+						}
+
+						removeDuplicatePatterns(pitchChannels);
+						removeDuplicatePatterns(noiseChannels);
+						this.append(new ChangeReplacePatterns(doc, pitchChannels, noiseChannels));
+						doc.song.loopStart = 0;
+						doc.song.loopLength = doc.song.barCount;
+
+					} break;
+					default: throw new Error("Unrecognized beats-per-bar conversion strategy.");
+				}
+
+				doc.song.beatsPerBar = newValue;
+				doc.notifier.changed();
+				this._didSomething();
+			}
 		}
 	}
 	
