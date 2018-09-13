@@ -236,30 +236,37 @@ namespace beepbox {
 	}
 	
 	export class ChangeBarCount extends Change {
-		constructor(doc: SongDocument, newValue: number) {
+		constructor(doc: SongDocument, newValue: number, atBeginning: boolean) {
 			super();
 			if (doc.song.barCount != newValue) {
-				for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
-					for (let bar: number = doc.song.barCount; bar < newValue; bar++) {
-						doc.song.channels[channel].bars[bar] = 1;
+				for (const channel of doc.song.channels) {
+					if (atBeginning) {
+						while (channel.bars.length < newValue) {
+							channel.bars.unshift(0);
+						}
+						if (doc.song.barCount > newValue) {
+							channel.bars.splice(0, doc.song.barCount - newValue);
+						}
+					} else {
+						while (channel.bars.length < newValue) {
+							channel.bars.push(0);
+						}
+						channel.bars.length = newValue;
 					}
-					doc.song.channels[channel].bars.length = newValue;
 				}
 				
-				let newBar: number = doc.bar;
-				let newBarScrollPos: number = doc.barScrollPos;
-				let newLoopStart: number = doc.song.loopStart;
-				let newLoopLength: number = doc.song.loopLength;
-				if (doc.song.barCount > newValue) {
-					newBar = Math.min(newBar, newValue - 1);
-					newBarScrollPos = Math.max(0, Math.min(newValue - doc.trackVisibleBars, newBarScrollPos));
-					newLoopLength = Math.min(newValue, newLoopLength);
-					newLoopStart = Math.min(newValue - newLoopLength, newLoopStart);
+				if (atBeginning) {
+					const diff: number = newValue - doc.song.barCount;
+					doc.bar = Math.max(0, doc.bar + diff);
+					if (diff < 0 || doc.barScrollPos > 0) {
+						doc.barScrollPos = Math.max(0, doc.barScrollPos + diff);
+					}
+					doc.song.loopStart = Math.max(0, doc.song.loopStart + diff);
 				}
-				doc.bar = newBar;
-				doc.barScrollPos = newBarScrollPos;
-				doc.song.loopStart = newLoopStart;
-				doc.song.loopLength = newLoopLength;
+				doc.bar = Math.min(doc.bar, newValue - 1);
+				doc.barScrollPos = Math.max(0, Math.min(newValue - doc.trackVisibleBars, doc.barScrollPos));
+				doc.song.loopLength = Math.min(newValue, doc.song.loopLength);
+				doc.song.loopStart = Math.min(newValue - doc.song.loopLength, doc.song.loopStart);
 				doc.song.barCount = newValue;
 				doc.notifier.changed();
 				
