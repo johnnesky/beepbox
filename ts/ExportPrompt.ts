@@ -427,7 +427,7 @@ namespace beepbox {
 								
 								let instrumentProgram: number = 0x51; // default to sawtooth wave. 
 								if (instrument.type == InstrumentType.noise) {
-									instrumentProgram = 0x7E; // seashore, applause
+									instrumentProgram = 0x7E; // applause
 								} else if (instrument.type == InstrumentType.chip) {
 									const envelopeType: EnvelopeType = Config.envelopes[instrument.filterEnvelope].type;
 									const filterInstruments: number[] = (envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.pluck)
