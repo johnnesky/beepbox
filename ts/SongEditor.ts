@@ -483,7 +483,6 @@ namespace beepbox {
 				this._feedbackRow2.style.display = "none";
 				this._waveSelect.style.display = "none";
 				this._intervalSelectRow.style.display = "none";
-				this._chordSelectRow.style.display = "none";
 				this._vibratoSelectRow.style.display = "none";
 			} else if (instrument.type == InstrumentType.chip) {
 				this._instrumentTypeSelectRow.style.display = "";
@@ -493,7 +492,6 @@ namespace beepbox {
 				this._waveSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
 				this._intervalSelectRow.style.display = "";
-				this._chordSelectRow.style.display = "";
 				this._algorithmSelectRow.style.display = "none";
 				this._phaseModGroup.style.display = "none";
 				this._feedbackRow1.style.display = "none";
@@ -509,9 +507,20 @@ namespace beepbox {
 				this._instrumentVolumeSliderRow.style.display = "none";
 				this._waveSelectRow.style.display = "none";
 				this._intervalSelectRow.style.display = "none";
-				this._chordSelectRow.style.display = "";
 			} else {
 				throw new Error("Unrecognized instrument type: " + instrument.type);
+			}
+
+			for (let chordIndex: number = 0; chordIndex < Config.chords.length; chordIndex++) {
+				const hidden: boolean = (instrument.type == InstrumentType.noise) ? !Config.chords[chordIndex].allowedForNoise : false;
+				const option: Element = this._chordSelect.children[chordIndex];
+				if (hidden) {
+					if (!option.hasAttribute("hidden")) {
+						option.setAttribute("hidden", "");
+					}
+				} else {
+					option.removeAttribute("hidden");
+				}
 			}
 			
 			setSelectedIndex(this._instrumentTypeSelect, instrument.type);
