@@ -387,7 +387,7 @@ namespace beepbox {
 				const channel: Channel = new Channel();
 				
 				const isDrumsetChannel: boolean = (midiChannel == 9);
-				const isNoiseChannel: boolean = isDrumsetChannel || noteEvents[midiChannel][0].program >= 112;
+				const isNoiseChannel: boolean = isDrumsetChannel || noteEvents[midiChannel][0].program == 47 || (noteEvents[midiChannel][0].program >= 115 && noteEvents[midiChannel][0].program != 121); // timpani, and woodblock through gunshot have no pitch, except breath noise.
 				const channelBasePitch: number = isNoiseChannel ? 33 : Config.keys[key].basePitch;
 				const intervalScale: number = isNoiseChannel ? Config.drumInterval : 1;
 				const channelMaxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
