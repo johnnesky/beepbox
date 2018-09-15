@@ -459,22 +459,20 @@ namespace beepbox {
 							let chordHarmonizes: boolean = false;
 							let usesArpeggio: boolean = true;
 							let polyphony: number = 1;
-							if (!isDrums) {
-								chordHarmonizes = Config.chords[instrument.chord].harmonizes;
-								usesArpeggio = Config.chords[instrument.chord].arpeggiates;
-								if (usesArpeggio) {
-									if (chordHarmonizes) {
-										if (instrument.type == InstrumentType.chip) {
-											polyphony = 2;
-										} else if (instrument.type == InstrumentType.fm) {
-											polyphony = 4;
-										} else {
-											throw new Error("Unrecognized instrument type.");
-										}
+							chordHarmonizes = Config.chords[instrument.chord].harmonizes;
+							usesArpeggio = Config.chords[instrument.chord].arpeggiates;
+							if (usesArpeggio) {
+								if (chordHarmonizes) {
+									if (instrument.type == InstrumentType.chip) {
+										polyphony = 2;
+									} else if (instrument.type == InstrumentType.fm) {
+										polyphony = 4;
+									} else {
+										console.error("Unrecognized instrument type for harmonizing arpeggio: " + instrument.type);
 									}
-								} else {
-									polyphony = 4;
 								}
+							} else {
+								polyphony = 4;
 							}
 							
 							for (let noteIndex: number = 0; noteIndex < pattern.notes.length; noteIndex++) {

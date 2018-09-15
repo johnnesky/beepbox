@@ -406,7 +406,7 @@ namespace beepbox {
 					
 					const instrument: Instrument = new Instrument();
 					instrument.setTypeAndReset(InstrumentType.noise);
-					//instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
+					instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
 					channel.instruments.push(instrument);
 
 					for (let noteEventIndex: number = 0; noteEventIndex <= noteEvents[midiChannel].length; noteEventIndex++) {
@@ -538,9 +538,7 @@ namespace beepbox {
 											const instrument: Instrument = new Instrument();
 											instrumentByProgram[currentProgram] = instrument;
 											instrument.setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip);
-											if (!isNoiseChannel) {
-												instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
-											}
+											instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
 											channel.instruments.push(instrument);
 										}
 										

@@ -120,6 +120,7 @@ namespace beepbox {
 		readonly name: string;
 		readonly harmonizes: boolean;
 		readonly arpeggiates: boolean;
+		readonly allowedForNoise: boolean;
 	}
 
 	export interface Algorithm {
@@ -268,9 +269,9 @@ namespace beepbox {
 		public static readonly volumeRange: number = 6;
 		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
 		public static readonly chords: ReadonlyArray<Chord> = [
-			{name: "harmony",         harmonizes:  true, arpeggiates: false},
-			{name: "arpeggio",        harmonizes: false, arpeggiates:  true},
-			{name: "custom interval", harmonizes:  true, arpeggiates:  true},
+			{name: "harmony",         harmonizes:  true, arpeggiates: false, allowedForNoise:  true},
+			{name: "arpeggio",        harmonizes: false, arpeggiates:  true, allowedForNoise:  true},
+			{name: "custom interval", harmonizes:  true, arpeggiates:  true, allowedForNoise: false},
 		];
 		public static readonly operatorCount: number = 4;
 		public static readonly algorithms: ReadonlyArray<Algorithm> = [
@@ -917,6 +918,7 @@ namespace beepbox {
 				type: Config.instrumentTypeNames[this.type],
 				transition: Config.transitions[this.transition].name,
 				delay: Config.delayNames[this.delay],
+				chord: Config.chords[this.chord].name,
 				filterCutoffHz: Math.round(Config.filterCutoffMaxHz * Math.pow(2.0, (this.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5)),
 				filterResonance: Math.round(100 * this.filterResonance / (Config.filterResonanceRange - 1)),
 				filterEnvelope: Config.envelopes[this.filterEnvelope].name,
@@ -929,7 +931,6 @@ namespace beepbox {
 				instrumentObject.wave = Config.chipWaves[this.wave].name;
 				instrumentObject.interval = Config.intervals[this.interval].name;
 				instrumentObject.vibrato = Config.vibratos[this.vibrato].name;
-				instrumentObject.chord = Config.chords[this.chord].name;
 			} else if (this.type == InstrumentType.fm) {
 				const operatorArray: Object[] = [];
 				for (const operator of this.operators) {
@@ -940,7 +941,6 @@ namespace beepbox {
 					});
 				}
 				instrumentObject.vibrato = Config.vibratos[this.vibrato].name;
-				instrumentObject.chord = Config.chords[this.chord].name;
 				instrumentObject.algorithm = Config.algorithms[this.algorithm].name;
 				instrumentObject.feedbackType = Config.feedbacks[this.feedbackType].name;
 				instrumentObject.feedbackAmplitude = this.feedbackAmplitude;
@@ -1001,6 +1001,10 @@ namespace beepbox {
 				}
 				this.wave = Config.noiseWaves.findIndex(wave=>wave.name==instrumentObject.wave);
 				if (this.wave == -1) this.wave = 1;
+
+				this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject.chord);
+				if (this.chord == -1) this.chord = 1;
+
 			} else if (this.type == InstrumentType.chip) {
 				if (instrumentObject.volume != undefined) {
 					this.volume = clamp(0, Config.volumeRange, Math.round(5 - (instrumentObject.volume | 0) / 20));
@@ -1231,17 +1235,16 @@ namespace beepbox {
 					buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
 					buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]);
 					buffer.push(SongTagCode.delay, base64IntToCharCode[instrument.delay]);
+					buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 					if (instrument.type == InstrumentType.chip) {
 						// chip
 						buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
-						buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 					} else if (instrument.type == InstrumentType.fm) {
 						// FM
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
-						buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 						buffer.push(SongTagCode.algorithm, base64IntToCharCode[instrument.algorithm]);
 						buffer.push(SongTagCode.feedbackType, base64IntToCharCode[instrument.feedbackType]);
 						buffer.push(SongTagCode.feedbackAmplitude, base64IntToCharCode[instrument.feedbackAmplitude]);
