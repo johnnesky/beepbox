@@ -2275,7 +2275,8 @@ namespace beepbox {
 		public prevNotePitchIndex: number = 0;
 		public nextNotePitchIndex: number = 0;
 		public active: boolean = false;
-		public strumOffsetParts: number = 0;
+		public noteStart: number = 0;
+		public noteEnd: number = 0;
 		public noteLengthTicks: number = 0;
 		public ticksSinceReleased: number = 0;
 		public liveInputSamplesHeld: number = 0;
@@ -2922,7 +2923,6 @@ namespace beepbox {
 			let nextNote: Note | null = null;
 			
 			if (pattern != null) {
-				
 				for (let i: number = 0; i < pattern.notes.length; i++) {
 					if (pattern.notes[i].end <= time) {
 						prevNote = pattern.notes[i];
@@ -2970,6 +2970,8 @@ namespace beepbox {
 				tone.pitchCount = pitches.length;
 				tone.instrument = instrument;
 				tone.note = note;
+				tone.noteStart = note.start;
+				tone.noteEnd = note.end;
 				tone.prevNote = prevNote;
 				tone.nextNote = nextNote;
 				tone.prevNotePitchIndex = 0;
@@ -2978,18 +2980,25 @@ namespace beepbox {
 				for (let i: number = 0; i < pitches.length; i++) {
 
 					const strumOffsetParts: number = i * Config.chords[instrument.chord].strumParts;
-					const noteStart: number = note.start + strumOffsetParts;
 					let prevNoteForThisTone: Note | null = (prevNote && prevNote.pitches.length > i) ? prevNote : null;
 					let noteForThisTone: Note = note;
 					let nextNoteForThisTone: Note | null = (nextNote && nextNote.pitches.length > i) ? nextNote : null;
+					let noteStart: number = noteForThisTone.start + strumOffsetParts;
+
 					if (noteStart > currentPart) {
 						if (toneList.count() > i && Config.transitions[instrument.transition].isSeamless && prevNoteForThisTone != null) {
 							nextNoteForThisTone = noteForThisTone;
 							noteForThisTone = prevNoteForThisTone;
 							prevNoteForThisTone = null;
+							noteStart = noteForThisTone.start + strumOffsetParts;
 						} else {
 							break;
 						}
+					}
+
+					let noteEnd: number = noteForThisTone.end;
+					if (Config.transitions[instrument.transition].isSeamless && nextNoteForThisTone != null) {
+						noteEnd = Math.min(Config.partsPerBeat * this.song!.beatsPerBar, noteEnd + strumOffsetParts);
 					}
 
 					let tone: Tone;
@@ -3005,15 +3014,15 @@ namespace beepbox {
 					tone.pitchCount = 1;
 					tone.instrument = instrument;
 					tone.note = noteForThisTone;
-					tone.strumOffsetParts = strumOffsetParts;
-
+					tone.noteStart = noteStart;
+					tone.noteEnd = noteEnd;
 					tone.prevNote = prevNoteForThisTone;
 					tone.nextNote = nextNoteForThisTone;
 					tone.prevNotePitchIndex = i;
 					tone.nextNotePitchIndex = i;
 				}
 			}
-			for (let i: number = toneCount; i < toneList.count(); i++) {
+			while (toneList.count() > toneCount) {
 				// Automatically free or release seamless tones if there's no new note to take over.
 				if (Config.transitions[toneList.peakBack().instrument.transition].releases) {
 					this.releaseTone(channel, toneList.popBack());
@@ -3100,7 +3109,7 @@ namespace beepbox {
 				tone.volumeStarts[i] = 0.0;
 				tone.volumeDeltas[i] = 0.0;
 			}
-			
+
 			if (released) {
 				const ticksSoFar: number = tone.noteLengthTicks + tone.ticksSinceReleased;
 				const startTicksSinceReleased: number = tone.ticksSinceReleased + startRatio;
@@ -3146,8 +3155,8 @@ namespace beepbox {
 
 				const time: number = synth.part + synth.beat * Config.partsPerBeat;
 				const partsPerBar: number = Config.partsPerBeat * song.beatsPerBar;
-				const noteStart: number = note.start + tone.strumOffsetParts;
-				const noteEnd: number = Math.min(partsPerBar, note.end + (Config.transitions[transition].isSeamless && nextNote != null ? tone.strumOffsetParts : 0));
+				const noteStart: number = tone.noteStart;
+				const noteEnd: number = tone.noteEnd;
 				
 				partsSinceStart = time - noteStart;
 				
