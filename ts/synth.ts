@@ -2823,7 +2823,14 @@ namespace beepbox {
 					}
 				}
 			}
-			
+
+			// Optimization: Avoid persistent reverb values in the float denormal range.
+			const epsilon: number = (1.0e-24);
+			if (-epsilon < reverbFeedback0 && reverbFeedback0 < epsilon) reverbFeedback0 = 0.0;
+			if (-epsilon < reverbFeedback1 && reverbFeedback1 < epsilon) reverbFeedback1 = 0.0;
+			if (-epsilon < reverbFeedback2 && reverbFeedback2 < epsilon) reverbFeedback2 = 0.0;
+			if (-epsilon < reverbFeedback3 && reverbFeedback3 < epsilon) reverbFeedback3 = 0.0;
+
 			this.chorusPhase = chorusPhase;
 			this.chorusDelayPos = chorusDelayPos;
 			this.reverbDelayPos = reverbDelayPos;
