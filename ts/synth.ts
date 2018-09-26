@@ -2595,31 +2595,45 @@ namespace beepbox {
 			
 			const synthStartTime: number = performance.now();
 			
-			// Zero out buffers with a partially unrolled loop before instruments accumulate sample values:
-			for (let i: number = 0; i < bufferLength;) {
-				data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0;
-			}
 			if (this.samplesForChorus == null || this.samplesForChorus.length < bufferLength) {
 				this.samplesForChorus = new Float32Array(bufferLength);
-			}
-			const samplesForChorus: Float32Array = this.samplesForChorus;
-			for (let i: number = 0; i < bufferLength;) {
-				samplesForChorus[i++] = 0.0; samplesForChorus[i++] = 0.0; samplesForChorus[i++] = 0.0; samplesForChorus[i++] = 0.0;
 			}
 			if (this.samplesForChorusReverb == null || this.samplesForChorusReverb.length < bufferLength) {
 				this.samplesForChorusReverb = new Float32Array(bufferLength);
 			}
-			const samplesForChorusReverb: Float32Array = this.samplesForChorusReverb;
-			for (let i: number = 0; i < bufferLength;) {
-				samplesForChorusReverb[i++] = 0.0; samplesForChorusReverb[i++] = 0.0; samplesForChorusReverb[i++] = 0.0; samplesForChorusReverb[i++] = 0.0;
-			}
 			if (this.samplesForReverb == null || this.samplesForReverb.length < bufferLength) {
 				this.samplesForReverb = new Float32Array(bufferLength);
 			}
+			const samplesForChorus: Float32Array = this.samplesForChorus;
+			const samplesForChorusReverb: Float32Array = this.samplesForChorusReverb;
 			const samplesForReverb: Float32Array = this.samplesForReverb;
+
+			// Fill output data with zeroes using a partially unrolled loop before instruments accumulate sample values, since it's not guaranteed to be initialized to zeroes.
 			for (let i: number = 0; i < bufferLength;) {
-				samplesForReverb[i++] = 0.0; samplesForReverb[i++] = 0.0; samplesForReverb[i++] = 0.0; samplesForReverb[i++] = 0.0;
+				data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0;
+				data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0;
 			}
+			
+			// Post processing parameters:
+			const volume: number = +this.volume;
+			const chorusDelayLine: Float32Array = this.chorusDelayLine;
+			const reverbDelayLine: Float32Array = this.reverbDelayLine;
+			const chorusDuration: number = 2.0;
+			const chorusAngle: number = Math.PI * 2.0 / (chorusDuration * this.samplesPerSecond);
+			const chorusRange: number = 150 * this.samplesPerSecond / 44100;
+			const chorusOffset0: number = 0x400 - 1.51 * chorusRange;
+			const chorusOffset1: number = 0x400 - 2.10 * chorusRange;
+			const chorusOffset2: number = 0x400 - 3.35 * chorusRange;
+			let chorusPhase: number = this.chorusPhase % (Math.PI * 2.0);
+			let chorusDelayPos: number = this.chorusDelayPos & 0x3FF;
+			let reverbDelayPos: number = this.reverbDelayPos & 0x3FFF;
+			let reverbFeedback0: number = +this.reverbFeedback0;
+			let reverbFeedback1: number = +this.reverbFeedback1;
+			let reverbFeedback2: number = +this.reverbFeedback2;
+			let reverbFeedback3: number = +this.reverbFeedback3;
+			const reverb: number = Math.pow(this.song.reverb / Config.reverbRange, 0.667) * 0.425;
+			const limitDecay: number = +this.limitDecay;
+			let limit: number = +this.limit;
 			
 			const synthBufferByDelay: Float32Array[] = [data, samplesForReverb, samplesForChorus, samplesForChorusReverb];
 			while (bufferIndex < bufferLength && !ended) {
@@ -2659,6 +2673,82 @@ namespace beepbox {
 							this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
 						}
 					}
+
+					// Post processing:
+					const chorusYMult: number = 2.0 * Math.cos(chorusAngle);
+					let chorusTap0Index: number = chorusDelayPos + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
+					let chorusTap1Index: number = chorusDelayPos + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
+					let chorusTap2Index: number = chorusDelayPos + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
+					chorusPhase += chorusAngle * runLength;
+					const chorusTap0End: number = chorusDelayPos + runLength + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
+					const chorusTap1End: number = chorusDelayPos + runLength + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
+					const chorusTap2End: number = chorusDelayPos + runLength + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
+					const chorusTap0Delta: number = (chorusTap0End - chorusTap0Index) / runLength;
+					const chorusTap1Delta: number = (chorusTap1End - chorusTap1Index) / runLength;
+					const chorusTap2Delta: number = (chorusTap2End - chorusTap2Index) / runLength;
+					const runEnd: number = bufferIndex + runLength;
+					for (let i: number = bufferIndex; i < runEnd; i++) {
+						const sampleForChorus: number = samplesForChorus[i];
+						samplesForChorus[i] = 0.0;
+						const sampleForChorusReverb: number = samplesForChorusReverb[i];
+						samplesForChorusReverb[i] = 0.0;
+						const sampleForReverb: number = samplesForReverb[i];
+						samplesForReverb[i] = 0.0;
+						const combinedChorus: number = sampleForChorus + sampleForChorusReverb;
+						
+						const chorusTap0Ratio: number = chorusTap0Index % 1;
+						const chorusTap1Ratio: number = chorusTap1Index % 1;
+						const chorusTap2Ratio: number = chorusTap2Index % 1;
+						const chorusTap0A: number = chorusDelayLine[(chorusTap0Index) & 0x3FF];
+						const chorusTap0B: number = chorusDelayLine[(chorusTap0Index + 1) & 0x3FF];
+						const chorusTap1A: number = chorusDelayLine[(chorusTap1Index) & 0x3FF];
+						const chorusTap1B: number = chorusDelayLine[(chorusTap1Index + 1) & 0x3FF];
+						const chorusTap2A: number = chorusDelayLine[(chorusTap2Index) & 0x3FF];
+						const chorusTap2B: number = chorusDelayLine[(chorusTap2Index + 1) & 0x3FF];
+						const chorusTap0: number = chorusTap0A + (chorusTap0B - chorusTap0A) * chorusTap0Ratio;
+						const chorusTap1: number = chorusTap1A + (chorusTap1B - chorusTap1A) * chorusTap1Ratio;
+						const chorusTap2: number = chorusTap2A + (chorusTap2B - chorusTap2A) * chorusTap2Ratio;
+						const chorusSample = 0.5 * (combinedChorus - chorusTap0 + chorusTap1 - chorusTap2);
+						chorusDelayLine[chorusDelayPos] = combinedChorus;
+						chorusDelayPos = (chorusDelayPos + 1) & 0x3FF;
+						chorusTap0Index += chorusTap0Delta;
+						chorusTap1Index += chorusTap1Delta;
+						chorusTap2Index += chorusTap2Delta;
+						
+						// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
+						// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
+						// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
+						// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
+						const reverbDelayPos1: number = (reverbDelayPos +  3041) & 0x3FFF;
+						const reverbDelayPos2: number = (reverbDelayPos +  6426) & 0x3FFF;
+						const reverbDelayPos3: number = (reverbDelayPos + 10907) & 0x3FFF;
+						const reverbSample0: number = (reverbDelayLine[reverbDelayPos] + sampleForReverb);
+						const reverbSample1: number = reverbDelayLine[reverbDelayPos1];
+						const reverbSample2: number = reverbDelayLine[reverbDelayPos2];
+						const reverbSample3: number = reverbDelayLine[reverbDelayPos3];
+						const reverbSample0Chorus: number = reverbSample0 + sampleForChorusReverb;
+						const reverbTemp0: number = -reverbSample0Chorus + reverbSample1;
+						const reverbTemp1: number = -reverbSample0Chorus - reverbSample1;
+						const reverbTemp2: number = -reverbSample2 + reverbSample3;
+						const reverbTemp3: number = -reverbSample2 - reverbSample3;
+						reverbFeedback0 += ((reverbTemp0 + reverbTemp2) * reverb - reverbFeedback0) * 0.5;
+						reverbFeedback1 += ((reverbTemp1 + reverbTemp3) * reverb - reverbFeedback1) * 0.5;
+						reverbFeedback2 += ((reverbTemp0 - reverbTemp2) * reverb - reverbFeedback2) * 0.5;
+						reverbFeedback3 += ((reverbTemp1 - reverbTemp3) * reverb - reverbFeedback3) * 0.5;
+						reverbDelayLine[reverbDelayPos1] = reverbFeedback0;
+						reverbDelayLine[reverbDelayPos2] = reverbFeedback1;
+						reverbDelayLine[reverbDelayPos3] = reverbFeedback2;
+						reverbDelayLine[reverbDelayPos ] = reverbFeedback3;
+						reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
+						
+						const sample = data[i] + chorusSample + reverbSample0 + reverbSample1 + reverbSample2 + reverbSample3;
+						
+						const abs: number = sample < 0.0 ? -sample : sample;
+						if (limit < abs) limit = abs;
+						data[i] = (sample / (limit * 0.75 + 0.25)) * volume;
+						limit -= limitDecay;
+					}
+
 					bufferIndex += runLength;
 					
 					this.tickSampleCountdown -= runLength;
@@ -2734,90 +2824,7 @@ namespace beepbox {
 				}
 			}
 			
-			// Post processing:
-			const volume: number = +this.volume;
-			const chorusDelayLine: Float32Array = this.chorusDelayLine;
-			const reverbDelayLine: Float32Array = this.reverbDelayLine;
-			const chorusDuration: number = 2.0;
-			const chorusAngle: number = Math.PI * 2.0 / (chorusDuration * this.samplesPerSecond);
-			const chorusYMult: number = 2.0 * Math.cos(chorusAngle);
-			const chorusRange: number = 150 * this.samplesPerSecond / 44100;
-			const chorusOffset0: number = 0x400 - 1.51 * chorusRange;
-			const chorusOffset1: number = 0x400 - 2.10 * chorusRange;
-			const chorusOffset2: number = 0x400 - 3.35 * chorusRange;
-			let chorusDelayPos: number = 0|this.chorusDelayPos;
-			let reverbDelayPos: number = 0|this.reverbDelayPos;
-			let chorusY0: number = Math.sin(this.chorusPhase + 0);
-			let chorusY1: number = Math.sin(this.chorusPhase + 2.1);
-			let chorusY2: number = Math.sin(this.chorusPhase + 4.2);
-			let chorusPrevY0: number = Math.sin(this.chorusPhase + 0 - chorusAngle);
-			let chorusPrevY1: number = Math.sin(this.chorusPhase + 2.1 - chorusAngle);
-			let chorusPrevY2: number = Math.sin(this.chorusPhase + 4.2 - chorusAngle);
-			let reverbFeedback0: number = +this.reverbFeedback0;
-			let reverbFeedback1: number = +this.reverbFeedback1;
-			let reverbFeedback2: number = +this.reverbFeedback2;
-			let reverbFeedback3: number = +this.reverbFeedback3;
-			const reverb: number = Math.pow(this.song.reverb / Config.reverbRange, 0.667) * 0.425;
-			const limitDecay: number = +this.limitDecay;
-			let limit: number = +this.limit;
-			for (let i: number = 0; i < bufferLength; i++) {
-				const sampleForChorus: number = samplesForChorus[i];
-				const sampleForChorusReverb: number = samplesForChorusReverb[i];
-				const sampleForReverb: number = samplesForReverb[i];
-				const combinedChorus: number = sampleForChorus + sampleForChorusReverb;
-				
-				const chorusSample = 0.5 * (
-					combinedChorus
-					- chorusDelayLine[(chorusDelayPos + chorusOffset0 - chorusY0 * chorusRange) & 0x3FF]
-					+ chorusDelayLine[(chorusDelayPos + chorusOffset1 - chorusY1 * chorusRange) & 0x3FF]
-					- chorusDelayLine[(chorusDelayPos + chorusOffset2 - chorusY2 * chorusRange) & 0x3FF]);
-				chorusDelayLine[chorusDelayPos] = combinedChorus;
-				chorusDelayPos = (chorusDelayPos + 1) & 0x3FF;
-				const chorusY0Temp: number = chorusY0;
-				const chorusY1Temp: number = chorusY1;
-				const chorusY2Temp: number = chorusY2;
-				chorusY0 = chorusYMult * chorusY0 - chorusPrevY0;
-				chorusY1 = chorusYMult * chorusY1 - chorusPrevY1;
-				chorusY2 = chorusYMult * chorusY2 - chorusPrevY2;
-				chorusPrevY0 = chorusY0Temp;
-				chorusPrevY1 = chorusY1Temp;
-				chorusPrevY2 = chorusY2Temp;
-				
-				// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
-				// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
-				// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
-				// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
-				const reverbDelayPos1: number = (reverbDelayPos +  3041) & 0x3FFF;
-				const reverbDelayPos2: number = (reverbDelayPos +  6426) & 0x3FFF;
-				const reverbDelayPos3: number = (reverbDelayPos + 10907) & 0x3FFF;
-				const reverbSample0: number = (reverbDelayLine[reverbDelayPos] + sampleForReverb);
-				const reverbSample1: number = reverbDelayLine[reverbDelayPos1];
-				const reverbSample2: number = reverbDelayLine[reverbDelayPos2];
-				const reverbSample3: number = reverbDelayLine[reverbDelayPos3];
-				const reverbSample0Chorus: number = reverbSample0 + sampleForChorusReverb;
-				const reverbTemp0: number = -reverbSample0Chorus + reverbSample1;
-				const reverbTemp1: number = -reverbSample0Chorus - reverbSample1;
-				const reverbTemp2: number = -reverbSample2 + reverbSample3;
-				const reverbTemp3: number = -reverbSample2 - reverbSample3;
-				reverbFeedback0 += ((reverbTemp0 + reverbTemp2) * reverb - reverbFeedback0) * 0.5;
-				reverbFeedback1 += ((reverbTemp1 + reverbTemp3) * reverb - reverbFeedback1) * 0.5;
-				reverbFeedback2 += ((reverbTemp0 - reverbTemp2) * reverb - reverbFeedback2) * 0.5;
-				reverbFeedback3 += ((reverbTemp1 - reverbTemp3) * reverb - reverbFeedback3) * 0.5;
-				reverbDelayLine[reverbDelayPos1] = reverbFeedback0;
-				reverbDelayLine[reverbDelayPos2] = reverbFeedback1;
-				reverbDelayLine[reverbDelayPos3] = reverbFeedback2;
-				reverbDelayLine[reverbDelayPos ] = reverbFeedback3;
-				reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
-				
-				const sample = data[i] + chorusSample + reverbSample0 + reverbSample1 + reverbSample2 + reverbSample3;
-				
-				const abs: number = sample < 0.0 ? -sample : sample;
-				if (limit < abs) limit = abs;
-				data[i] = (sample / (limit * 0.75 + 0.25)) * volume;
-				limit -= limitDecay;
-			}
-			
-			this.chorusPhase += chorusAngle * bufferLength;
+			this.chorusPhase = chorusPhase;
 			this.chorusDelayPos = chorusDelayPos;
 			this.reverbDelayPos = reverbDelayPos;
 			this.reverbFeedback0 = reverbFeedback0;
@@ -2833,7 +2840,7 @@ namespace beepbox {
 			// Performance measurements:
 			samplesAccumulated += bufferLength;
 			samplePerformance += synthDuration;
-			/*
+			
 			if (samplesAccumulated >= 44100 * 4) {
 				const secondsGenerated = samplesAccumulated / 44100;
 				const secondsRequired = samplePerformance / 1000;
@@ -2842,7 +2849,7 @@ namespace beepbox {
 				samplePerformance = 0;
 				samplesAccumulated = 0;
 			}
-			*/
+			
 		}
 		
 		private freeTone(tone: Tone): void {
