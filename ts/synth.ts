@@ -385,6 +385,7 @@ namespace beepbox {
 			for (let i: number = 0; i < wave.length; i++) sum += wave[i];
 			const average: number = sum / wave.length;
 			for (let i: number = 0; i < wave.length; i++) wave[i] -= average;
+			wave.push(wave[0]); // Copy the first wave sample to the end, to make interpolating between adjacent samples easier.
 			return new Float64Array(wave);
 		}
 		
@@ -2843,7 +2844,7 @@ namespace beepbox {
 			this.playheadInternal = (((this.tick + 1.0 - this.tickSampleCountdown / samplesPerTick) / 2.0 + this.part) / Config.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
 			
 			const synthDuration: number = performance.now() - synthStartTime;
-			
+			/*
 			// Performance measurements:
 			samplesAccumulated += bufferLength;
 			samplePerformance += synthDuration;
@@ -2856,7 +2857,7 @@ namespace beepbox {
 				samplePerformance = 0;
 				samplesAccumulated = 0;
 			}
-			
+			*/
 		}
 		
 		private freeTone(tone: Tone): void {
@@ -3502,7 +3503,7 @@ namespace beepbox {
 		
 		private static chipSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
 			const wave: Float64Array = Config.chipWaves[instrument.wave].samples;
-			const waveLength: number = +wave.length;
+			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
 			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
 			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.harmonyMult;
@@ -3516,7 +3517,20 @@ namespace beepbox {
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 			let sample: number = +tone.sample;
-			
+
+			const avgPhaseDeltaA: number = Math.min(0.5, Math.pow(phaseDeltaScale, runLength * 0.5) * phaseDelta);
+			const avgPhaseDeltaB: number = Math.min(0.5, Math.pow(phaseDeltaScale, runLength * 0.5) * phaseDelta * deltaRatio);
+			const curveDomainMultA: number = 1.0 / avgPhaseDeltaA;
+			const curveDomainMultB: number = 1.0 / avgPhaseDeltaB;
+			const phaseOffsetA: number = waveLength - avgPhaseDeltaA;
+			const phaseOffsetB: number = waveLength - avgPhaseDeltaB;
+			const curveCenterA: number = 1.0 - avgPhaseDeltaA;
+			const curveCenterB: number = 1.0 - avgPhaseDeltaB;
+			const curveStartA: number = curveCenterA - avgPhaseDeltaA;
+			const curveStartB: number = curveCenterB - avgPhaseDeltaB;
+			phaseA += phaseOffsetA;
+			phaseB += phaseOffsetB;
+
 			let filter1: number = +tone.filter;
 			let filter2: number = (instrument.filterResonance == 0) ? 1.0 : filter1;
 			const filterScale1: number = +tone.filterScale;
@@ -3527,9 +3541,30 @@ namespace beepbox {
 			
 			const stopIndex: number = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
-				const waveA: number = wave[(0|phaseA) % waveLength];
-				const waveB: number = wave[(0|phaseB) % waveLength] * intervalSign;
-				const combinedWave: number = (waveA + waveB);
+
+				const phaseAInt: number = phaseA|0;
+				const indexA: number = phaseAInt % waveLength;
+				let waveA: number = wave[indexA];
+				// Round the corners of transitions using the PolyBLEP algorithm to reduce aliasing of high pitched notes.
+				const phaseRatioA: number = phaseA - phaseAInt;
+				if (phaseRatioA > curveStartA) {
+					const curveX: number = (phaseRatioA - curveCenterA) * curveDomainMultA;
+					const lerp: number = ((curveX < 0 ? curveX * 2 + curveX * curveX : curveX * 2 - curveX * curveX) + 1) * 0.5;
+					waveA += (wave[indexA+1] - waveA) * lerp;
+				}
+
+				const phaseBInt: number = phaseB|0;
+				const indexB: number = phaseBInt % waveLength;
+				let waveB: number = wave[indexB];
+				// Round the corners of transitions using the PolyBLEP algorithm to reduce aliasing of high pitched notes.
+				const phaseRatioB: number = phaseB - phaseBInt;
+				if (phaseRatioB > curveStartB) {
+					const curveX: number = (phaseRatioB - curveCenterB) * curveDomainMultB;
+					const lerp: number = ((curveX < 0 ? curveX * 2 + curveX * curveX : curveX * 2 - curveX * curveX) + 1) * 0.5;
+					waveB += (wave[indexB+1] - waveB) * lerp;
+				}
+
+				const combinedWave: number = (waveA + waveB * intervalSign);
 				
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
@@ -3547,6 +3582,8 @@ namespace beepbox {
 				bufferIndex++;
 			}
 			
+			phaseA -= phaseOffsetA;
+			phaseB -= phaseOffsetB;
 			tone.phases[0] = phaseA / waveLength;
 			tone.phases[1] = phaseB / waveLength;
 			tone.sample = sample;
