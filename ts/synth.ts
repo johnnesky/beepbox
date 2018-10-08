@@ -382,11 +382,15 @@ namespace beepbox {
 		
 		private static _centerWave(wave: Array<number>): Float64Array {
 			let sum: number = 0.0;
-			for (let i: number = 0; i < wave.length; i++) sum += wave[i];
+			for (let i: number = 0; i < wave.length; i++) {
+				sum += wave[i];
+			}
 			const average: number = sum / wave.length;
-			for (let i: number = 0; i < wave.length; i++) wave[i] -= average;
-			wave.push(wave[0]); // Copy the first wave sample to the end, to make interpolating between adjacent samples easier.
-			return new Float64Array(wave);
+			const integral: number[] = [0];
+			for (let i: number = 0; i < wave.length; i++) {
+				integral.push(integral[i] + wave[i] - average);
+			}
+			return new Float64Array(integral);
 		}
 		
 		public static getDrumWave(index: number): Float32Array {
@@ -2284,6 +2288,8 @@ namespace beepbox {
 		public lastInterval: number = 0;
 		public lastVolume: number = 0;
 		public sample: number = 0.0;
+		public prevWaveIntegralA: number = 0.0;
+		public prevWaveIntegralB: number = 0.0;
 		public readonly phases: number[] = [];
 		public readonly phaseDeltas: number[] = [];
 		public readonly volumeStarts: number[] = [];
@@ -2312,6 +2318,8 @@ namespace beepbox {
 				this.feedbackOutputs[i] = 0.0;
 			}
 			this.sample = 0.0;
+			this.prevWaveIntegralA = 0.0;
+			this.prevWaveIntegralB = 0.0;
 			this.filterSample0 = 0.0;
 			this.filterSample1 = 0.0;
 			this.liveInputSamplesHeld = 0.0;
@@ -3510,7 +3518,8 @@ namespace beepbox {
 			const intervalSign: number = tone.harmonyVolumeMult * Config.intervals[instrument.interval].sign;
 			if (instrument.interval == 0 && !Config.chords[instrument.chord].harmonizes) tone.phases[1] = tone.phases[0];
 			const deltaRatio: number = intervalB / intervalA;
-			let phaseDelta: number = tone.phaseDeltas[0] * intervalA * waveLength;
+			let phaseDeltaA: number = tone.phaseDeltas[0] * intervalA * waveLength;
+			let phaseDeltaB: number = phaseDeltaA * deltaRatio;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
@@ -3518,18 +3527,8 @@ namespace beepbox {
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 			let sample: number = +tone.sample;
 
-			const avgPhaseDeltaA: number = Math.min(0.5, Math.pow(phaseDeltaScale, runLength * 0.5) * phaseDelta);
-			const avgPhaseDeltaB: number = Math.min(0.5, Math.pow(phaseDeltaScale, runLength * 0.5) * phaseDelta * deltaRatio);
-			const curveDomainMultA: number = 1.0 / avgPhaseDeltaA;
-			const curveDomainMultB: number = 1.0 / avgPhaseDeltaB;
-			const phaseOffsetA: number = waveLength - avgPhaseDeltaA;
-			const phaseOffsetB: number = waveLength - avgPhaseDeltaB;
-			const curveCenterA: number = 1.0 - avgPhaseDeltaA;
-			const curveCenterB: number = 1.0 - avgPhaseDeltaB;
-			const curveStartA: number = curveCenterA - avgPhaseDeltaA;
-			const curveStartB: number = curveCenterB - avgPhaseDeltaB;
-			phaseA += phaseOffsetA;
-			phaseB += phaseOffsetB;
+			let prevWaveIntegralA: number = +tone.prevWaveIntegralA;
+			let prevWaveIntegralB: number = +tone.prevWaveIntegralB;
 
 			let filter1: number = +tone.filter;
 			let filter2: number = (instrument.filterResonance == 0) ? 1.0 : filter1;
@@ -3542,27 +3541,23 @@ namespace beepbox {
 			const stopIndex: number = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
 
+				phaseA += phaseDeltaA;
+				phaseB += phaseDeltaB;
+				
 				const phaseAInt: number = phaseA|0;
-				const indexA: number = phaseAInt % waveLength;
-				let waveA: number = wave[indexA];
-				// Round the corners of transitions using the PolyBLEP algorithm to reduce aliasing of high pitched notes.
-				const phaseRatioA: number = phaseA - phaseAInt;
-				if (phaseRatioA > curveStartA) {
-					const curveX: number = (phaseRatioA - curveCenterA) * curveDomainMultA;
-					const lerp: number = ((curveX < 0 ? curveX * 2 + curveX * curveX : curveX * 2 - curveX * curveX) + 1) * 0.5;
-					waveA += (wave[indexA+1] - waveA) * lerp;
-				}
-
 				const phaseBInt: number = phaseB|0;
+				const indexA: number = phaseAInt % waveLength;
 				const indexB: number = phaseBInt % waveLength;
-				let waveB: number = wave[indexB];
-				// Round the corners of transitions using the PolyBLEP algorithm to reduce aliasing of high pitched notes.
+				let nextWaveIntegralA: number = wave[indexA];
+				let nextWaveIntegralB: number = wave[indexB];
+				const phaseRatioA: number = phaseA - phaseAInt;
 				const phaseRatioB: number = phaseB - phaseBInt;
-				if (phaseRatioB > curveStartB) {
-					const curveX: number = (phaseRatioB - curveCenterB) * curveDomainMultB;
-					const lerp: number = ((curveX < 0 ? curveX * 2 + curveX * curveX : curveX * 2 - curveX * curveX) + 1) * 0.5;
-					waveB += (wave[indexB+1] - waveB) * lerp;
-				}
+				nextWaveIntegralA += (wave[indexA+1] - nextWaveIntegralA) * phaseRatioA;
+				nextWaveIntegralB += (wave[indexB+1] - nextWaveIntegralB) * phaseRatioB;
+				let waveA: number = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
+				let waveB: number = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
+				prevWaveIntegralA = nextWaveIntegralA;
+				prevWaveIntegralB = nextWaveIntegralB;
 
 				const combinedWave: number = (waveA + waveB * intervalSign);
 				
@@ -3572,20 +3567,19 @@ namespace beepbox {
 				sample = filterSample1 * volume;
 				
 				volume += volumeDelta;
-				phaseA += phaseDelta;
-				phaseB += phaseDelta * deltaRatio;
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
-				phaseDelta *= phaseDeltaScale;
+				phaseDeltaA *= phaseDeltaScale;
+				phaseDeltaB *= phaseDeltaScale;
 				
 				data[bufferIndex] += sample;
 				bufferIndex++;
 			}
 			
-			phaseA -= phaseOffsetA;
-			phaseB -= phaseOffsetB;
 			tone.phases[0] = phaseA / waveLength;
 			tone.phases[1] = phaseB / waveLength;
+			tone.prevWaveIntegralA = prevWaveIntegralA;
+			tone.prevWaveIntegralB = prevWaveIntegralB;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
