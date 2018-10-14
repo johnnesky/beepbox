@@ -167,7 +167,7 @@ namespace beepbox {
 		private readonly _drumSelect: HTMLSelectElement = buildOptions(select({}), Config.noiseWaves.map(wave=>wave.name));
 		private readonly _waveSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Wave: ")]), div({className: "selectContainer"}, [this._waveSelect, this._drumSelect])]);
 		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select({}), Config.transitions.map(transition=>transition.name));
-		private readonly _delaySelect: HTMLSelectElement = buildOptions(select({}), Config.delayNames);
+		private readonly _effectsSelect: HTMLSelectElement = buildOptions(select({}), Config.effectsNames);
 		private readonly _filterCutoffSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue));
 		private readonly _filterResonanceSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterResonanceRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterResonance(this._doc, oldValue, newValue));
 		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select({}), Config.envelopes.map(envelope=>envelope.name));
@@ -215,8 +215,8 @@ namespace beepbox {
 			]),
 			this._vibratoSelectRow,
 			div({className: "selectRow"}, [
-				span({}, [text("Delay:")]),
-				div({className: "selectContainer"}, [this._delaySelect]),
+				span({}, [text("Effects:")]),
+				div({className: "selectContainer"}, [this._effectsSelect]),
 			]),
 			this._algorithmSelectRow,
 			this._phaseModGroup,
@@ -362,7 +362,7 @@ namespace beepbox {
 			this._waveSelect.addEventListener("change", this._whenSetWave);
 			this._drumSelect.addEventListener("change", this._whenSetDrum);
 			this._transitionSelect.addEventListener("change", this._whenSetTransition);
-			this._delaySelect.addEventListener("change", this._whenSetDelay);
+			this._effectsSelect.addEventListener("change", this._whenSetEffects);
 			this._filterEnvelopeSelect.addEventListener("change", this._whenSetFilterEnvelope);
 			this._intervalSelect.addEventListener("change", this._whenSetInterval);
 			this._chordSelect.addEventListener("change", this._whenSetChord);
@@ -545,7 +545,7 @@ namespace beepbox {
 			this._filterResonanceSlider.updateValue(instrument.filterResonance);
 			setSelectedIndex(this._filterEnvelopeSelect, instrument.filterEnvelope);
 			setSelectedIndex(this._transitionSelect, instrument.transition);
-			setSelectedIndex(this._delaySelect, instrument.delay);
+			setSelectedIndex(this._effectsSelect, instrument.effects);
 			setSelectedIndex(this._vibratoSelect, instrument.vibrato);
 			setSelectedIndex(this._intervalSelect, instrument.interval);
 			setSelectedIndex(this._chordSelect, instrument.chord);
@@ -818,8 +818,8 @@ namespace beepbox {
 			this._doc.record(new ChangeTransition(this._doc, this._transitionSelect.selectedIndex));
 		}
 		
-		private _whenSetDelay = (): void => {
-			this._doc.record(new ChangeDelay(this._doc, this._delaySelect.selectedIndex));
+		private _whenSetEffects = (): void => {
+			this._doc.record(new ChangeEffects(this._doc, this._effectsSelect.selectedIndex));
 		}
 		
 		private _whenSetVibrato = (): void => {
