@@ -213,13 +213,13 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeDelay extends Change {
+	export class ChangeEffects extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].delay;
+			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].effects;
 			if (oldValue != newValue) {
 				this._didSomething();
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].delay = newValue;
+				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].effects = newValue;
 				doc.notifier.changed();
 			}
 		}

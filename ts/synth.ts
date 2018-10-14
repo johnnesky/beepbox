@@ -266,7 +266,7 @@ namespace beepbox {
 			{name: "octaves",    spread: 6.0,  offset: 6.0, volume: 0.8, sign: 1.0},
 			{name: "bowed",      spread: 0.02, offset: 0.0, volume: 1.0, sign:-1.0},
 		];
-		public static readonly delayNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
+		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
 		public static readonly volumeRange: number = 6;
 		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
 		public static readonly chords: ReadonlyArray<Chord> = [
@@ -597,7 +597,7 @@ namespace beepbox {
 		channelCount = CharCode.n,
 		channelOctave = CharCode.o,
 		patterns = CharCode.p,
-		delay = CharCode.q,
+		effects = CharCode.q,
 		rhythm = CharCode.r,
 		scale = CharCode.s,
 		tempo = CharCode.t,
@@ -838,7 +838,7 @@ namespace beepbox {
 		public transition: number = 1;
 		public vibrato: number = 0;
 		public interval: number = 0;
-		public delay: number = 0;
+		public effects: number = 0;
 		public chord: number = 1;
 		public volume: number = 0;
 		public algorithm: number = 0;
@@ -865,13 +865,13 @@ namespace beepbox {
 					this.vibrato = 0;
 					this.interval = 0;
 					this.volume = 0;
-					this.delay = 1;
+					this.effects = 1;
 					this.chord = 2;
 					break;
 				case InstrumentType.fm:
 					this.transition = 1;
 					this.vibrato = 0;
-					this.delay = 1;
+					this.effects = 1;
 					this.chord = 3;
 					this.filterCutoff = 10;
 					this.filterResonance = 0;
@@ -888,7 +888,7 @@ namespace beepbox {
 					this.wave = 1;
 					this.transition = 1;
 					this.volume = 0;
-					this.delay = 0;
+					this.effects = 0;
 					this.chord = 2;
 					this.filterCutoff = 10;
 					this.filterResonance = 0;
@@ -908,7 +908,7 @@ namespace beepbox {
 			this.transition = other.transition;
 			this.vibrato = other.vibrato;
 			this.interval = other.interval;
-			this.delay = other.delay;
+			this.effects = other.effects;
 			this.chord = other.chord;
 			this.volume = other.volume;
 			this.algorithm = other.algorithm;
@@ -924,7 +924,7 @@ namespace beepbox {
 			const instrumentObject: any = {
 				type: Config.instrumentTypeNames[this.type],
 				transition: Config.transitions[this.transition].name,
-				delay: Config.delayNames[this.delay],
+				effects: Config.effectsNames[this.effects],
 				chord: Config.chords[this.chord].name,
 				filterCutoffHz: Math.round(Config.filterCutoffMaxHz * Math.pow(2.0, (this.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5)),
 				filterResonance: Math.round(100 * this.filterResonance / (Config.filterResonanceRange - 1)),
@@ -971,8 +971,8 @@ namespace beepbox {
 			this.transition = oldTransitionNames[transitionObject] != undefined ? oldTransitionNames[transitionObject] : Config.transitions.findIndex(transition=>transition.name==transitionObject);
 			if (this.transition == -1) this.transition = 1;
 			
-			this.delay = Config.delayNames.indexOf(instrumentObject.delay);
-			if (this.delay == -1) this.delay = isDrum ? 0 : 1;
+			this.effects = Config.effectsNames.indexOf(instrumentObject.effects);
+			if (this.effects == -1) this.effects = isDrum ? 0 : 1;
 			
 			if (instrumentObject.filterCutoffHz != undefined) {
 				this.filterCutoff = clamp(0, Config.filterCutoffRange, Math.round((Config.filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject.filterCutoffHz | 0) / Config.filterCutoffMaxHz) / Math.log(2)));
@@ -1241,7 +1241,7 @@ namespace beepbox {
 					buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
 					buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
 					buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]);
-					buffer.push(SongTagCode.delay, base64IntToCharCode[instrument.delay]);
+					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects]);
 					buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 					if (instrument.type == InstrumentType.chip) {
 						// chip
@@ -1708,8 +1708,8 @@ namespace beepbox {
 					}
 				} else if (command == SongTagCode.chord) {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chord = clamp(0, Config.chords.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-				} else if (command == SongTagCode.delay) {
-					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].delay = clamp(0, Config.delayNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				} else if (command == SongTagCode.effects) {
+					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].effects = clamp(0, Config.effectsNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.volume) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
@@ -2644,7 +2644,7 @@ namespace beepbox {
 			const limitDecay: number = +this.limitDecay;
 			let limit: number = +this.limit;
 			
-			const synthBufferByDelay: Float32Array[] = [data, samplesForReverb, samplesForChorus, samplesForChorusReverb];
+			const synthBufferByEffects: Float32Array[] = [data, samplesForReverb, samplesForChorus, samplesForChorusReverb];
 			while (bufferIndex < bufferLength && !ended) {
 				
 				while (bufferIndex < bufferLength) {
@@ -2660,14 +2660,14 @@ namespace beepbox {
 
 							for (let i: number = 0; i < this.liveInputTones.count(); i++) {
 								const tone: Tone = this.liveInputTones.get(i);
-								this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, false, false);
+								this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, false, false);
 							}
 						}
 
 						this.determineCurrentActiveTones(this.song, channel);
 						for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
 							const tone: Tone = this.activeTones[channel].get(i);
-							this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, false, false);
+							this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, false, false);
 						}
 						for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
 							const tone: Tone = this.releasedTones[channel].get(i);
@@ -2679,7 +2679,7 @@ namespace beepbox {
 
 							const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
 
-							this.playTone(this.song, bufferIndex, synthBufferByDelay, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
+							this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
 						}
 					}
 
@@ -3055,9 +3055,9 @@ namespace beepbox {
 			}
 		}
 
-		private playTone(song: Song, bufferIndex: number, synthBufferByDelay: Float32Array[], channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
+		private playTone(song: Song, bufferIndex: number, synthBufferByEffects: Float32Array[], channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
 			Synth.computeTone(this, song, channel, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
-			const synthBuffer: Float32Array = synthBufferByDelay[tone.instrument.delay];
+			const synthBuffer: Float32Array = synthBufferByEffects[tone.instrument.effects];
 			const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
 			synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
 		}
