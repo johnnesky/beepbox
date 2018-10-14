@@ -262,8 +262,8 @@ namespace beepbox {
 			{name: "hum",        spread: 0.05, offset: 0.0, volume: 1.0, sign: 1.0},
 			{name: "honky tonk", spread: 0.1,  offset: 0.0, volume: 1.0, sign: 1.0},
 			{name: "dissonant",  spread: 0.25, offset: 0.0, volume: 0.9, sign: 1.0},
-			{name: "fifths",     spread: 3.5,  offset: 3.5, volume: 0.9, sign: 1.0},
-			{name: "octaves",    spread: 6.0,  offset: 6.0, volume: 0.8, sign: 1.0},
+			{name: "fifth",      spread: 3.5,  offset: 3.5, volume: 0.9, sign: 1.0},
+			{name: "octave",     spread: 6.0,  offset: 6.0, volume: 0.8, sign: 1.0},
 			{name: "bowed",      spread: 0.02, offset: 0.0, volume: 1.0, sign:-1.0},
 		];
 		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
@@ -1027,7 +1027,8 @@ namespace beepbox {
 					this.interval = Config.intervals.findIndex(interval=>interval.name==instrumentObject.interval);
 					if (this.interval == -1) this.interval = 0;
 				} else if (instrumentObject.chorus != undefined) {
-					this.interval = Config.intervals.findIndex(interval=>interval.name==instrumentObject.chorus);
+					const legacyChorusNames: Dictionary<number> = {"fifths": 5, "octaves": 6};
+					this.interval = legacyChorusNames[instrumentObject.chorus] != undefined ? legacyChorusNames[instrumentObject.chorus] : Config.intervals.findIndex(interval=>interval.name==instrumentObject.chorus);
 					if (this.interval == -1) this.interval = 0;
 				}
 				
