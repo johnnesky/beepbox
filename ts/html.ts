@@ -51,7 +51,7 @@ namespace beepbox {
 			o.selected = selected;
 			o.disabled = disabled;
 			o.hidden = hidden;
-			o.appendChild(text(<string> display));
+			o.textContent = <string> display;
 			return o;
 		}
 		export function canvas(attributes?: Record<string, string | number>): HTMLCanvasElement {

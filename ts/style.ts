@@ -519,6 +519,7 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.beepboxEditor .editor-song-settings, .beepboxEditor .editor-instrument-settings {
 		flex-grow: 1;
+		flex-basis: 0;
 		margin: 0 .1em;
 	}
 	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings .selectContainer:not(.menu) {

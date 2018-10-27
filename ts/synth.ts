@@ -76,6 +76,15 @@ namespace beepbox {
 		readonly arpeggioPatterns: ReadonlyArray<ReadonlyArray<number>>;
 	}
 
+	export interface Preset {
+		readonly name: string;
+		readonly isDrum: boolean;
+		readonly midiProgram?: number;
+		readonly customType?: InstrumentType;
+		//readonly generator?: (i: Instrument)=>void;
+		readonly settings?: any;
+	}
+
 	export interface ChipWave {
 		readonly name: string;
 		readonly volume: number;
@@ -206,16 +215,158 @@ namespace beepbox {
 			{name: "÷6",            stepsPerBeat: 6, ticksPerArpeggio: 4, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]]},
 			{name: "÷8",            stepsPerBeat: 8, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]]},
 		];
+		
+		public static readonly customTypePresets: ReadonlyArray<Preset> = [
+			{name: "custom chip", isDrum: false, customType: InstrumentType.chip},
+			{name: "custom FM", isDrum: false, customType: InstrumentType.fm},
+			{name: "custom noise", isDrum: true, customType: InstrumentType.noise},
+		];
+		public static readonly beepboxPresetStart: number = 1024;
+		public static readonly beepboxPresets: ReadonlyArray<Preset> = [
+			{name: "chiptune square",  midiProgram:  80, isDrum: false, settings: {"type":"chip","transition":"seamless","effects":"none","chord":"arpeggio","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","volume":100,"wave":"square","interval":"union","vibrato":"none"}},
+			{name: "chiptune triangle",midiProgram:  71, isDrum: false, settings: {"type":"chip","transition":"seamless","effects":"none","chord":"arpeggio","filterCutoffHz":2000,"filterResonance":0,"filterEnvelope":"steady","volume":100,"wave":"triangle","interval":"union","vibrato":"none"}},
+		];
+		public static readonly midiPresetStart: number = 2048;
+		public static readonly midiPresets: ReadonlyArray<Preset> = [
+			{name: "grand piano",      midiProgram:   0, isDrum: false, settings: {"type":"chip","transition":"medium fade","effects":"reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":14,"filterEnvelope":"pluck 3","volume":100,"wave":"1/6 pulse","interval":"shimmer","vibrato":"none"}},
+//			{name: "bright piano",     midiProgram:   1, isDrum: false, settings: },
+//			{name: "electric grand",   midiProgram:   2, isDrum: false, settings: },
+//			{name: "honky-tonk piano", midiProgram:   3, isDrum: false, settings: },
+//			{name: "electric piano 1", midiProgram:   4, isDrum: false, settings: },
+//			{name: "electric piano 2", midiProgram:   5, isDrum: false, settings: },
+//			{name: "harpsichord",      midiProgram:   6, isDrum: false, settings: },
+//			{name: "clavi",            midiProgram:   7, isDrum: false, settings: },
+//			{name: "celesta",          midiProgram:   8, isDrum: false, settings: },
+//			{name: "glockenspiel",     midiProgram:   9, isDrum: false, settings: },
+//			{name: "music box",        midiProgram:  10, isDrum: false, settings: },
+//			{name: "vibraphone",       midiProgram:  11, isDrum: false, settings: },
+//			{name: "marimba",          midiProgram:  12, isDrum: false, settings: },
+//			{name: "xylophone",        midiProgram:  13, isDrum: false, settings: },
+//			{name: "tubular bells",    midiProgram:  14, isDrum: false, settings: },
+//			{name: "dulcimer",         midiProgram:  15, isDrum: false, settings: },
+//			{name: "drawbar organ",    midiProgram:  16, isDrum: false, settings: },
+//			{name: "percussive organ", midiProgram:  17, isDrum: false, settings: },
+//			{name: "rock organ",       midiProgram:  18, isDrum: false, settings: },
+			{name: "church organ",     midiProgram:  19, isDrum: false, settings: {"type":"FM","transition":"cross-fade","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"~1×","amplitude":8,"envelope":"custom"},{"frequency":"~2×","amplitude":7,"envelope":"custom"},{"frequency":"4×","amplitude":6,"envelope":"custom"},{"frequency":"8×","amplitude":5,"envelope":"custom"}]}},
+//			{name: "reed organ",       midiProgram:  20, isDrum: false, settings: },
+//			{name: "accordion",        midiProgram:  21, isDrum: false, settings: },
+//			{name: "harmonica",        midiProgram:  22, isDrum: false, settings: },
+//			{name: "tango accordion",  midiProgram:  23, isDrum: false, settings: },
+//			{name: "nylon guitar",     midiProgram:  24, isDrum: false, settings: },
+//			{name: "steel guitar",     midiProgram:  25, isDrum: false, settings: },
+//			{name: "jazz guitar",      midiProgram:  26, isDrum: false, settings: },
+//			{name: "clean guitar",     midiProgram:  27, isDrum: false, settings: },
+//			{name: "muted guitar",     midiProgram:  28, isDrum: false, settings: },
+//			{name: "overdrive guitar", midiProgram:  29, isDrum: false, settings: },
+//			{name: "distortion guitar",midiProgram:  30, isDrum: false, settings: },
+//			{name: "guitar harmonics", midiProgram:  31, isDrum: false, settings: },
+//			{name: "acoustic bass",    midiProgram:  32, isDrum: false, settings: },
+//			{name: "finger bass",      midiProgram:  33, isDrum: false, settings: },
+//			{name: "pick bass",        midiProgram:  34, isDrum: false, settings: },
+//			{name: "fretless bass",    midiProgram:  35, isDrum: false, settings: },
+//			{name: "slap bass 1",      midiProgram:  36, isDrum: false, settings: },
+//			{name: "slap bass 2",      midiProgram:  37, isDrum: false, settings: },
+//			{name: "synth bass 1",     midiProgram:  38, isDrum: false, settings: },
+//			{name: "synth bass 2",     midiProgram:  39, isDrum: false, settings: },
+//			{name: "violin",           midiProgram:  40, isDrum: false, settings: },
+//			{name: "viola",            midiProgram:  41, isDrum: false, settings: },
+//			{name: "cello",            midiProgram:  42, isDrum: false, settings: },
+//			{name: "contrabass",       midiProgram:  43, isDrum: false, settings: },
+//			{name: "tremolo strings",  midiProgram:  44, isDrum: false, settings: },
+//			{name: "pizzicato strings",midiProgram:  45, isDrum: false, settings: },
+			{name: "harp",             midiProgram:  46, isDrum: false, settings: {"type":"chip","transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"pluck 2","volume":100,"wave":"square","interval":"union","vibrato":"none"}},
+//			{name: "timpani",          midiProgram:  47, isDrum:  true, settings: },
+//			{name: "strings 1",        midiProgram:  48, isDrum: false, settings: },
+//			{name: "strings 2",        midiProgram:  49, isDrum: false, settings: },
+//			{name: "synth strings 1",  midiProgram:  50, isDrum: false, settings: },
+//			{name: "synth strings 2",  midiProgram:  51, isDrum: false, settings: },
+			{name: "choir ahh",        midiProgram:  52, isDrum: false, settings: {"type":"FM","transition":"soft","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1000,"filterResonance":57,"filterEnvelope":"steady","vibrato":"shaky","algorithm":"(1 2 3)←4","feedbackType":"4⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":6,"envelope":"custom"},{"frequency":"4×","amplitude":5,"envelope":"custom"},{"frequency":"9×","amplitude":3,"envelope":"custom"},{"frequency":"1×","amplitude":4,"envelope":"steady"}]}},
+			{name: "voice ooh",        midiProgram:  53, isDrum: false, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":707,"filterResonance":71,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2 3)←4","feedbackType":"4⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":7,"envelope":"custom"},{"frequency":"3×","amplitude":4,"envelope":"custom"},{"frequency":"7×","amplitude":2,"envelope":"custom"},{"frequency":"1×","amplitude":3,"envelope":"steady"}]}},
+//			{name: "synth voice",      midiProgram:  54, isDrum: false, settings: },
+//			{name: "orchestra hit",    midiProgram:  55, isDrum: false, settings: },
+//			{name: "trumpet",          midiProgram:  56, isDrum: false, settings: },
+//			{name: "trombone",         midiProgram:  57, isDrum: false, settings: },
+//			{name: "tuba",             midiProgram:  58, isDrum: false, settings: },
+//			{name: "muted trumpet",    midiProgram:  59, isDrum: false, settings: },
+//			{name: "french horn",      midiProgram:  60, isDrum: false, settings: },
+//			{name: "brass section",    midiProgram:  61, isDrum: false, settings: },
+//			{name: "synth brass 1",    midiProgram:  62, isDrum: false, settings: },
+//			{name: "synth brass 2",    midiProgram:  63, isDrum: false, settings: },
+//			{name: "soprano sax",      midiProgram:  64, isDrum: false, settings: },
+//			{name: "alto sax",         midiProgram:  65, isDrum: false, settings: },
+//			{name: "tenor sax",        midiProgram:  66, isDrum: false, settings: },
+//			{name: "baritone sax",     midiProgram:  67, isDrum: false, settings: },
+//			{name: "oboe",             midiProgram:  68, isDrum: false, settings: },
+//			{name: "english horn",     midiProgram:  69, isDrum: false, settings: },
+//			{name: "bassoon",          midiProgram:  70, isDrum: false, settings: },
+//			{name: "clarinet",         midiProgram:  71, isDrum: false, settings: },
+//			{name: "piccolo",          midiProgram:  72, isDrum: false, settings: },
+//			{name: "flute",            midiProgram:  73, isDrum: false, settings: },
+//			{name: "recorder",         midiProgram:  74, isDrum: false, settings: },
+//			{name: "pan flute",        midiProgram:  75, isDrum: false, settings: },
+//			{name: "blown bottle",     midiProgram:  76, isDrum: false, settings: },
+//			{name: "shakuhachi",       midiProgram:  77, isDrum: false, settings: },
+//			{name: "whistle",          midiProgram:  78, isDrum: false, settings: },
+//			{name: "ocarina",          midiProgram:  79, isDrum: false, settings: },
+//			{name: "square",           midiProgram:  80, isDrum: false, settings: },
+//			{name: "sawtooth",         midiProgram:  81, isDrum: false, settings: },
+//			{name: "calliope",         midiProgram:  82, isDrum: false, settings: },
+//			{name: "chiff",            midiProgram:  83, isDrum: false, settings: },
+//			{name: "charang",          midiProgram:  84, isDrum: false, settings: },
+//			{name: "lead voice",       midiProgram:  85, isDrum: false, settings: },
+			{name: "fifths",           midiProgram:  86, isDrum: false, settings: {"type":"chip","transition":"medium fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":57,"filterEnvelope":"swell 1","volume":60,"wave":"sawtooth","interval":"fifth","vibrato":"none"}},
+//			{name: "lead bass",        midiProgram:  87, isDrum: false, settings: },
+//			{name: "new age",          midiProgram:  88, isDrum: false, settings: },
+//			{name: "warm",             midiProgram:  89, isDrum: false, settings: },
+//			{name: "polysynth",        midiProgram:  90, isDrum: false, settings: },
+//			{name: "choir",            midiProgram:  91, isDrum: false, settings: },
+//			{name: "bowed",            midiProgram:  92, isDrum: false, settings: },
+//			{name: "metallic",         midiProgram:  93, isDrum: false, settings: },
+//			{name: "halo",             midiProgram:  94, isDrum: false, settings: },
+//			{name: "sweep",            midiProgram:  95, isDrum: false, settings: },
+//			{name: "rain",             midiProgram:  96, isDrum: false, settings: },
+//			{name: "soundtrack",       midiProgram:  97, isDrum: false, settings: },
+//			{name: "crystal",          midiProgram:  98, isDrum: false, settings: },
+//			{name: "atmosphere",       midiProgram:  99, isDrum: false, settings: },
+//			{name: "brightness",       midiProgram: 100, isDrum: false, settings: },
+//			{name: "goblins",          midiProgram: 101, isDrum: false, settings: },
+//			{name: "echoes",           midiProgram: 102, isDrum: false, settings: },
+//			{name: "sci-fi",           midiProgram: 103, isDrum: false, settings: },
+//			{name: "sitar",            midiProgram: 104, isDrum: false, settings: },
+//			{name: "banjo",            midiProgram: 105, isDrum: false, settings: },
+//			{name: "shamisen",         midiProgram: 106, isDrum: false, settings: },
+//			{name: "koto",             midiProgram: 107, isDrum: false, settings: },
+//			{name: "kalimba",          midiProgram: 108, isDrum: false, settings: },
+//			{name: "bagpipe",          midiProgram: 109, isDrum: false, settings: },
+//			{name: "fiddle",           midiProgram: 110, isDrum: false, settings: },
+//			{name: "shanai",           midiProgram: 111, isDrum: false, settings: },
+//			{name: "tinkle bell",      midiProgram: 112, isDrum: false, settings: },
+//			{name: "agogo",            midiProgram: 113, isDrum: false, settings: },
+			{name: "steel pan",        midiProgram: 114, isDrum: false, settings: {"type":"FM","transition":"fast fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"pluck 3","vibrato":"none","algorithm":"1 2 3←4","feedbackType":"1⟲","feedbackAmplitude":4,"feedbackEnvelope":"flare 1","operators":[{"frequency":"~1×","amplitude":15,"envelope":"pluck 3"},{"frequency":"2×","amplitude":14,"envelope":"pluck 3"},{"frequency":"4×","amplitude":13,"envelope":"flare 1"},{"frequency":"~1×","amplitude":7,"envelope":"flare 2"}]}},
+//			{name: "woodblock",        midiProgram: 115, isDrum:  true, settings: },
+//			{name: "taiko drum",       midiProgram: 116, isDrum:  true, settings: },
+//			{name: "melodic drum",     midiProgram: 117, isDrum:  true, settings: },
+//			{name: "synth drum",       midiProgram: 118, isDrum:  true, settings: },
+//			{name: "reverse cymbal",   midiProgram: 119, isDrum:  true, settings: },
+//			{name: "guitar fret noise",midiProgram: 120, isDrum:  true, settings: },
+//			{name: "breath noise",     midiProgram: 121, isDrum: false, settings: },
+//			{name: "seashore",         midiProgram: 122, isDrum:  true, settings: },
+//			{name: "bird tweet",       midiProgram: 123, isDrum:  true, settings: },
+//			{name: "telephone ring",   midiProgram: 124, isDrum:  true, settings: },
+//			{name: "helicopter",       midiProgram: 125, isDrum:  true, settings: },
+//			{name: "applause",         midiProgram: 126, isDrum:  true, settings: },
+//			{name: "gunshot",          midiProgram: 127, isDrum:  true, settings: },
+		];
 		public static readonly chipWaves: ReadonlyArray<ChipWave> = [
 			{name: "rounded",      volume: 0.94, samples: Config._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
 			{name: "triangle",     volume: 1.0,  samples: Config._centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0])},
 			{name: "square",       volume: 0.5,  samples: Config._centerWave([1.0, -1.0])},
-			{name: "¹/₃ pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0])},
-			{name: "¹/₄ pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0])},
-			{name: "¹/₆ pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "¹/₈ pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "¹/₁₂ pulse",   volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "¹/₁₆ pulse",   volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
+			{name: "1/3 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0])},
+			{name: "1/4 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0])},
+			{name: "1/6 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
+			{name: "1/8 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
+			{name: "1/12 pulse",   volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
+			{name: "1/16 pulse",   volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
 			{name: "sawtooth",     volume: 0.65, samples: Config._centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0])},
 			{name: "double saw",   volume: 0.5,  samples: Config._centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2])},
 			{name: "double pulse", volume: 0.4,  samples: Config._centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0])},
@@ -353,7 +504,6 @@ namespace beepbox {
 			{name: "1→4 2→3",     indices: [ [],  [], [2], [1]]},
 			{name: "1→2→3→4",     indices: [ [], [1], [2], [3]]},
 		];
-		public static readonly pitchChannelTypeNames: ReadonlyArray<string> = ["chip", "FM (expert)"];
 		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise"];
 		public static readonly pitchColors: ReadonlyArray<ChannelColors> = [
 			{name: "cyan",   channelDim: "#0099a1", channelBright: "#25f3ff", noteDim: "#00bdc7", noteBright: "#92f9ff"},
@@ -502,6 +652,31 @@ namespace beepbox {
 			}
 			return wave;
 		}
+		
+		public static midiPresetToValue(preset: Preset): number {
+			return preset.midiProgram + Config.midiPresetStart;
+		}
+		
+		public static valueToPreset(presetValue: number): Preset | null {
+			if (presetValue >= Config.midiPresetStart) {
+				const index: number = Config.midiPresets.findIndex(preset=>preset.midiProgram == presetValue - Config.midiPresetStart);
+				return (index == -1) ? null : Config.midiPresets[index];
+			} else if (presetValue >= Config.beepboxPresetStart) {
+				return Config.beepboxPresets[presetValue - Config.beepboxPresetStart];
+			} else {
+				return Config.customTypePresets[presetValue];
+			}
+		}
+		
+		public static nameToPresetValue(presetName: string): number | null {
+			let index: number = Config.midiPresets.findIndex(preset=>preset.name == presetName);
+			if (index != -1) return Config.midiPresets[index].midiProgram + Config.midiPresetStart;
+			index = Config.beepboxPresets.findIndex(preset=>preset.name == presetName);
+			if (index != -1) return index + Config.beepboxPresetStart;
+			index = Config.customTypePresets.findIndex(preset=>preset.name == presetName);
+			if (index != -1) return index;
+			return null;
+		}
 	}
 	
 	const enum CharCode {
@@ -601,7 +776,7 @@ namespace beepbox {
 		rhythm = CharCode.r,
 		scale = CharCode.s,
 		tempo = CharCode.t,
-		
+		preset = CharCode.u,
 		volume = CharCode.v,
 		wave = CharCode.w,
 		
@@ -831,6 +1006,7 @@ namespace beepbox {
 	
 	export class Instrument {
 		public type: InstrumentType = InstrumentType.chip;
+		public preset: number = 0;
 		public wave: number = 2;
 		public filterCutoff: number = 6;
 		public filterResonance: number = 0;
@@ -855,6 +1031,7 @@ namespace beepbox {
 		
 		public setTypeAndReset(type: InstrumentType): void {
 			this.type = type;
+			this.preset = type;
 			switch (type) {
 				case InstrumentType.chip:
 					this.wave = 2;
@@ -901,6 +1078,7 @@ namespace beepbox {
 		
 		public copy(other: Instrument): void {
 			this.type = other.type;
+			this.preset = other.preset;
 			this.wave = other.wave;
 			this.filterCutoff = other.filterCutoff;
 			this.filterResonance = other.filterResonance;
@@ -930,6 +1108,9 @@ namespace beepbox {
 				filterResonance: Math.round(100 * this.filterResonance / (Config.filterResonanceRange - 1)),
 				filterEnvelope: Config.envelopes[this.filterEnvelope].name,
 			};
+			if (this.preset != this.type) {
+				instrumentObject.preset = Config.valueToPreset(this.preset)!.name;
+			}
 			if (this.type == InstrumentType.noise) {
 				instrumentObject.volume = (5 - this.volume) * 20;
 				instrumentObject.wave = Config.noiseWaves[this.wave].name;
@@ -966,13 +1147,18 @@ namespace beepbox {
 			if (type == -1) type = isDrum ? InstrumentType.noise : InstrumentType.chip;
 			this.setTypeAndReset(type);
 			
+			if (instrumentObject.preset != undefined) {
+				const presetValue: number | null = Config.nameToPresetValue(instrumentObject.preset);
+				if (presetValue != null) this.preset = presetValue;
+			}
+			
 			const oldTransitionNames: Dictionary<number> = {"binary": 0, "sudden": 1, "smooth": 2};
 			const transitionObject = instrumentObject.transition || instrumentObject.envelope; // the transition property used to be called envelope, so try that too.
 			this.transition = oldTransitionNames[transitionObject] != undefined ? oldTransitionNames[transitionObject] : Config.transitions.findIndex(transition=>transition.name==transitionObject);
 			if (this.transition == -1) this.transition = 1;
 			
 			this.effects = Config.effectsNames.indexOf(instrumentObject.effects);
-			if (this.effects == -1) this.effects = isDrum ? 0 : 1;
+			if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
 			
 			if (instrumentObject.filterCutoffHz != undefined) {
 				this.filterCutoff = clamp(0, Config.filterCutoffRange, Math.round((Config.filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject.filterCutoffHz | 0) / Config.filterCutoffMaxHz) / Math.log(2)));
@@ -1238,6 +1424,7 @@ namespace beepbox {
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					const instrument: Instrument = this.channels[channel].instruments[i];
 					buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
+					buffer.push(SongTagCode.preset, base64IntToCharCode[instrument.preset >> 6], base64IntToCharCode[instrument.preset & 63]);
 					buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
 					buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
 					buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
@@ -1554,6 +1741,11 @@ namespace beepbox {
 					}
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 					instrument.setTypeAndReset(clamp(0, InstrumentType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]));
+				} else if (command == SongTagCode.preset) {
+					const presetValue: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					if (Config.valueToPreset(presetValue) != null) {
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].preset = presetValue;
+					}
 				} else if (command == SongTagCode.wave) {
 					if (beforeThree) {
 						const legacyWaves: number[] = [1, 2, 4, 6, 9, 10, 11, 12, 0];
@@ -3544,7 +3736,7 @@ namespace beepbox {
 
 				phaseA += phaseDeltaA;
 				phaseB += phaseDeltaB;
-				
+
 				const phaseAInt: number = phaseA|0;
 				const phaseBInt: number = phaseB|0;
 				const indexA: number = phaseAInt % waveLength;

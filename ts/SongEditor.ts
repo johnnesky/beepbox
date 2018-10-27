@@ -45,14 +45,44 @@ namespace beepbox {
 	const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
 	
 	function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
-		for (const item of items) {
-			menu.appendChild(option(item, item));
-		}
+		for (let index: number = 0; index < items.length; index++) {
+			menu.appendChild(option(index, items[index]));
+		} 
 		return menu;
 	}
 	
-	function setSelectedIndex(menu: HTMLSelectElement, index: number): void {
-		if (menu.selectedIndex != index) menu.selectedIndex = index;
+	function buildPresetOptions(isDrum: boolean): HTMLSelectElement {
+		const menu: HTMLSelectElement = select({});
+		const customTypeGroup: HTMLElement = html.element("optgroup", {label: "Custom"});
+		for (let index: number = 0; index < Config.customTypePresets.length; index++) {
+			const preset: Preset = Config.customTypePresets[index];
+			if (preset.isDrum == isDrum) {
+				customTypeGroup.appendChild(option(index, preset.name));
+			}
+		}
+		menu.appendChild(customTypeGroup);
+		const beepboxGroup: HTMLElement = html.element("optgroup", {label: "BeepBox Presets"});
+		for (let index: number = 0; index < Config.beepboxPresets.length; index++) {
+			const preset: Preset = Config.beepboxPresets[index];
+			if (preset.isDrum == isDrum) {
+				beepboxGroup.appendChild(option(index + Config.beepboxPresetStart, preset.name));
+			}
+		}
+		menu.appendChild(beepboxGroup);
+		const midiGroup: HTMLElement = html.element("optgroup", {label: "Midi Synths"});
+		for (let index: number = 0; index < Config.midiPresets.length; index++) {
+			const preset: Preset = Config.midiPresets[index];
+			if (preset.isDrum == isDrum) {
+				midiGroup.appendChild(option(Config.midiPresetToValue(preset), preset.name));
+			}
+		}
+		menu.appendChild(midiGroup);
+		return menu;
+	}
+	
+	function setSelectedValue(menu: HTMLSelectElement, value: number): void {
+		const stringValue = value.toString();
+		if (menu.value != stringValue) menu.value = stringValue;
 	}
 	
 	interface PatternCopy {
@@ -146,6 +176,7 @@ namespace beepbox {
 			option("showFifth", 'Highlight "Fifth" Notes'),
 			option("showChannels", "Show All Channels"),
 			option("showScrollBar", "Octave Scroll Bar"),
+			option("alwaysShowSettings", "Customize All Instruments"),
 			option("forceScaleChanges", "Force Scale Changes"),
 			option("forceRhythmChanges", "Force Rhythm Changes"),
 		]);
@@ -154,9 +185,9 @@ namespace beepbox {
 		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
 		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
 		private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select({}), Config.rhythms.map(rhythm=>rhythm.name));
-		private readonly _instrumentTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.pitchChannelTypeNames);
-		private readonly _instrumentTypeHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
-		private readonly _instrumentTypeSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Type: ")]), this._instrumentTypeHint, div({className: "selectContainer"}, [this._instrumentTypeSelect])]);
+		private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false);
+		private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true);
+		//private readonly _instrumentTypeHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
 		private readonly _algorithmSelect: HTMLSelectElement = buildOptions(select({}), Config.algorithms.map(algorithm=>algorithm.name));
 		private readonly _algorithmSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Algorithm: ")]), div({className: "selectContainer"}, [this._algorithmSelect])]);
 		private readonly _instrumentSelect: HTMLSelectElement = select({});
@@ -190,9 +221,26 @@ namespace beepbox {
 			this._feedbackAmplitudeSlider.input,
 			div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, [this._feedbackEnvelopeSelect]),
 		]);
-		private readonly _instrumentSettingsGroup: HTMLDivElement = div({}, [
-			this._instrumentSelectRow,
-			this._instrumentTypeSelectRow,
+		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", style: "margin: .1em 0"}, [
+			text("Customize Instrument"),
+			// Dial icon
+			svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"}, [
+				svgElement("g", {transform: "translate(0,1)"}, [
+					svgElement("circle", {cx: "0", cy: "0", r: "6.5", stroke: "currentColor", "stroke-width": "1", fill: "none"}),
+					svgElement("rect", {x: "-1", y: "-5", width: "2", height: "4", fill: "currentColor", transform: "rotate(30)"}),
+					svgElement("circle", {cx: "-7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
+					svgElement("circle", {cx: "-9", cy: "0", r: "0.75", fill: "currentColor"}),
+					svgElement("circle", {cx: "-7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
+					svgElement("circle", {cx: "-4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
+					svgElement("circle", {cx: "0", cy: "-9", r: "0.75", fill: "currentColor"}),
+					svgElement("circle", {cx: "4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
+					svgElement("circle", {cx: "7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
+					svgElement("circle", {cx: "9", cy: "0", r: "0.75", fill: "currentColor"}),
+					svgElement("circle", {cx: "7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
+				]),
+			]),
+		]);
+		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({}, [
 			this._instrumentVolumeSliderRow,
 			this._waveSelectRow,
 			this._intervalSelectRow,
@@ -222,6 +270,16 @@ namespace beepbox {
 			this._phaseModGroup,
 			this._feedbackRow1,
 			this._feedbackRow2,
+		]);
+		private readonly _instrumentSettingsGroup: HTMLDivElement = div({style: "display: flex; flex-direction: column;"}, [
+			this._instrumentSelectRow,
+			div({className: "selectRow"}, [
+				span({}, [text("Type: ")]),
+				//this._instrumentTypeHint,
+				div({className: "selectContainer"}, [this._pitchedPresetSelect, this._drumPresetSelect])
+			]),
+			this._customizeInstrumentButton,
+			this._customInstrumentSettingsGroup,
 		]);
 		private readonly _promptContainer: HTMLDivElement = div({className: "promptContainer", style: "display: none;"});
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"}, [
@@ -354,9 +412,11 @@ namespace beepbox {
 			this._scaleSelect.addEventListener("change", this._whenSetScale);
 			this._keySelect.addEventListener("change", this._whenSetKey);
 			this._rhythmSelect.addEventListener("change", this._whenSetRhythm);
-			this._instrumentTypeSelect.addEventListener("change", this._whenSetInstrumentType);
+			this._pitchedPresetSelect.addEventListener("change", this._whenSetPitchedPreset);
+			this._drumPresetSelect.addEventListener("change", this._whenSetDrumPreset);
 			this._algorithmSelect.addEventListener("change", this._whenSetAlgorithm);
 			this._instrumentSelect.addEventListener("change", this._whenSetInstrument);
+			this._customizeInstrumentButton.addEventListener("click", this._whenCustomizePressed);
 			this._feedbackTypeSelect.addEventListener("change", this._whenSetFeedbackType);
 			this._feedbackEnvelopeSelect.addEventListener("change", this._whenSetFeedbackEnvelope);
 			this._waveSelect.addEventListener("change", this._whenSetWave);
@@ -371,7 +431,7 @@ namespace beepbox {
 			this._prevBarButton.addEventListener("click", this._whenPrevBarPressed);
 			this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
 			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
-			this._instrumentTypeHint.addEventListener("click", this._openInstrumentTypePrompt);
+			//this._instrumentTypeHint.addEventListener("click", this._openInstrumentTypePrompt);
 			//this._intervalHint.addEventListener("click", this._openIntervalPrompt);
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
@@ -451,6 +511,7 @@ namespace beepbox {
 				(this._doc.showFifth ? "✓ " : "") + 'Highlight "Fifth" Notes',
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
+				(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
 				(this._doc.forceScaleChanges ? "✓ " : "") + "Force Scale Changes",
 				(this._doc.forceRhythmChanges ? "✓ " : "") + "Force Rhythm Changes",
 			]
@@ -466,17 +527,30 @@ namespace beepbox {
 			const wasActive: boolean = this.mainLayer.contains(document.activeElement);
 			const activeElement: Element = document.activeElement;
 			
-			setSelectedIndex(this._scaleSelect, this._doc.song.scale);
-			setSelectedIndex(this._keySelect, Config.keys.length - 1 - this._doc.song.key);
+			setSelectedValue(this._scaleSelect, this._doc.song.scale);
+			setSelectedValue(this._keySelect, Config.keys.length - 1 - this._doc.song.key);
 			this._tempoSlider.updateValue(this._doc.song.tempo);
 			this._tempoSlider.input.title = this._doc.song.getBeatsPerMinute() + " beats per minute";
 			this._reverbSlider.updateValue(this._doc.song.reverb);
-			setSelectedIndex(this._rhythmSelect, this._doc.song.rhythm);
-			if (instrument.type == InstrumentType.noise) {
+			setSelectedValue(this._rhythmSelect, this._doc.song.rhythm);
+			
+			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
+				this._pitchedPresetSelect.style.display = "none";
+				this._drumPresetSelect.style.display = "";
+			} else {
+				this._pitchedPresetSelect.style.display = "";
+				this._drumPresetSelect.style.display = "none";
+			}
+			
+			if (!this._doc.alwaysShowSettings && instrument.preset != instrument.type) {
+				this._customizeInstrumentButton.style.display = "";
+				this._customInstrumentSettingsGroup.style.display = "none";
+			} else if (instrument.type == InstrumentType.noise) {
+				this._customizeInstrumentButton.style.display = "none";
+				this._customInstrumentSettingsGroup.style.display = "";
 				this._instrumentVolumeSliderRow.style.display = "";
 				this._drumSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
-				this._instrumentTypeSelectRow.style.display = "none";
 				this._algorithmSelectRow.style.display = "none";
 				this._phaseModGroup.style.display = "none";
 				this._feedbackRow1.style.display = "none";
@@ -485,7 +559,8 @@ namespace beepbox {
 				this._intervalSelectRow.style.display = "none";
 				this._vibratoSelectRow.style.display = "none";
 			} else if (instrument.type == InstrumentType.chip) {
-				this._instrumentTypeSelectRow.style.display = "";
+				this._customizeInstrumentButton.style.display = "none";
+				this._customInstrumentSettingsGroup.style.display = "";
 				this._vibratoSelectRow.style.display = "";
 				this._drumSelect.style.display = "none";
 				this._instrumentVolumeSliderRow.style.display = "";
@@ -497,7 +572,8 @@ namespace beepbox {
 				this._feedbackRow1.style.display = "none";
 				this._feedbackRow2.style.display = "none";
 			} else if (instrument.type == InstrumentType.fm) {
-				this._instrumentTypeSelectRow.style.display = "";
+				this._customizeInstrumentButton.style.display = "none";
+				this._customInstrumentSettingsGroup.style.display = "";
 				this._vibratoSelectRow.style.display = "";
 				this._drumSelect.style.display = "none";
 				this._algorithmSelectRow.style.display = "";
@@ -523,8 +599,6 @@ namespace beepbox {
 				}
 			}
 			
-			setSelectedIndex(this._instrumentTypeSelect, instrument.type);
-			setSelectedIndex(this._algorithmSelect, instrument.algorithm);
 			
 			this._instrumentSelectRow.style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";
 			this._instrumentSelectRow.style.visibility = (pattern == null) ? "hidden" : "";
@@ -539,28 +613,31 @@ namespace beepbox {
 			
 			this._instrumentSettingsGroup.style.color = this._doc.song.getNoteColorBright(this._doc.channel);
 			
-			setSelectedIndex(this._waveSelect, instrument.wave);
-			setSelectedIndex(this._drumSelect, instrument.wave);
+			setSelectedValue(this._pitchedPresetSelect, instrument.preset);
+			setSelectedValue(this._drumPresetSelect, instrument.preset);
+			setSelectedValue(this._algorithmSelect, instrument.algorithm);
+			setSelectedValue(this._waveSelect, instrument.wave);
+			setSelectedValue(this._drumSelect, instrument.wave);
 			this._filterCutoffSlider.updateValue(instrument.filterCutoff);
 			this._filterResonanceSlider.updateValue(instrument.filterResonance);
-			setSelectedIndex(this._filterEnvelopeSelect, instrument.filterEnvelope);
-			setSelectedIndex(this._transitionSelect, instrument.transition);
-			setSelectedIndex(this._effectsSelect, instrument.effects);
-			setSelectedIndex(this._vibratoSelect, instrument.vibrato);
-			setSelectedIndex(this._intervalSelect, instrument.interval);
-			setSelectedIndex(this._chordSelect, instrument.chord);
-			setSelectedIndex(this._feedbackTypeSelect, instrument.feedbackType);
+			setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
+			setSelectedValue(this._transitionSelect, instrument.transition);
+			setSelectedValue(this._effectsSelect, instrument.effects);
+			setSelectedValue(this._vibratoSelect, instrument.vibrato);
+			setSelectedValue(this._intervalSelect, instrument.interval);
+			setSelectedValue(this._chordSelect, instrument.chord);
+			setSelectedValue(this._feedbackTypeSelect, instrument.feedbackType);
 			this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
-			setSelectedIndex(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
+			setSelectedValue(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
 			this._feedbackEnvelopeSelect.parentElement!.style.color = (instrument.feedbackAmplitude > 0) ? "" : "#999";
 			this._instrumentVolumeSlider.updateValue(-instrument.volume);
-			setSelectedIndex(this._instrumentSelect, instrumentIndex);
+			setSelectedValue(this._instrumentSelect, instrumentIndex);
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				const isCarrier: boolean = (i < Config.algorithms[instrument.algorithm].carrierCount);
 				this._operatorRows[i].style.color = isCarrier ? "white" : "";
-				setSelectedIndex(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
+				setSelectedValue(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
 				this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
-				setSelectedIndex(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
+				setSelectedValue(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
 				const operatorName: string = (isCarrier ? "Voice " : "Modulator ") + (i + 1);
 				this._operatorFrequencySelects[i].title = operatorName + " Frequency";
 				this._operatorAmplitudeSliders[i].input.title = operatorName + (isCarrier ? " Volume" : " Amplitude");
@@ -571,7 +648,7 @@ namespace beepbox {
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
 			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
 			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
-			this._instrumentTypeHint.style.display = (instrument.type == InstrumentType.fm) ? "" : "none";
+			//this._instrumentTypeHint.style.display = (instrument.type == InstrumentType.fm) ? "" : "none";
 			//this._intervalHint.style.display = (Config.intervalHarmonizes[instrument.interval]) ? "" : "none";
 			
 			let patternWidth: number = 512;
@@ -646,6 +723,13 @@ namespace beepbox {
 					this._paste();
 					event.preventDefault();
 					break;
+				case 73: // i
+					//this._copy();
+					if (event.shiftKey) {
+						const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+						this._copyTextToClipboard(JSON.stringify(instrument.toJsonObject()));
+					}
+					break;
 				case 219: // left brace
 					this._doc.synth.prevBar();
 					if (this._doc.autoFollow) {
@@ -671,6 +755,16 @@ namespace beepbox {
 					event.preventDefault();
 					break;
 			}
+		}
+		
+		private _copyTextToClipboard(text: string): void {
+			const textField: HTMLTextAreaElement = document.createElement('textarea');
+			textField.innerText = text;
+			document.body.appendChild(textField);
+			textField.select();
+			document.execCommand('copy');
+			textField.remove();
+			this._refocusStage();
 		}
 		
 		private _whenPrevBarPressed = (): void => {
@@ -759,11 +853,11 @@ namespace beepbox {
 			this._changeTranspose = new ChangeTranspose(this._doc, pattern, upward);
 			this._doc.record(this._changeTranspose, canReplaceLastChange);
 		}
-		
+		/*
 		private _openInstrumentTypePrompt = (): void => {
 			this._openPrompt("instrumentType");
 		}
-		/*
+		
 		private _openIntervalPrompt = (): void => {
 			this._openPrompt("interval");
 		}
@@ -780,8 +874,12 @@ namespace beepbox {
 			this._doc.record(new ChangeRhythm(this._doc, this._rhythmSelect.selectedIndex));
 		}
 		
-		private _whenSetInstrumentType = (): void => {
-			this._doc.record(new ChangeInstrumentType(this._doc, this._instrumentTypeSelect.selectedIndex));
+		private _whenSetPitchedPreset = (): void => {
+			this._doc.record(new ChangePreset(this._doc, parseInt(this._pitchedPresetSelect.value)));
+		}
+		
+		private _whenSetDrumPreset = (): void => {
+			this._doc.record(new ChangePreset(this._doc, parseInt(this._drumPresetSelect.value)));
 		}
 		
 		private _whenSetFeedbackType = (): void => {
@@ -800,6 +898,10 @@ namespace beepbox {
 			const pattern : Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
 			this._doc.record(new ChangePatternInstrument(this._doc, this._instrumentSelect.selectedIndex, pattern));
+		}
+		
+		private _whenCustomizePressed = (): void => {
+			this._doc.record(new ChangeCustomizeInstrument(this._doc));
 		}
 		
 		private _whenSetWave = (): void => {
@@ -917,6 +1019,9 @@ namespace beepbox {
 					break;
 				case "forceRhythmChanges":
 					this._doc.forceRhythmChanges = !this._doc.forceRhythmChanges;
+					break;
+				case "alwaysShowSettings":
+					this._doc.alwaysShowSettings = !this._doc.alwaysShowSettings;
 					break;
 			}
 			this._optionsMenu.selectedIndex = 0;

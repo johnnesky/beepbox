@@ -189,12 +189,33 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeInstrumentType extends Change {
+	export class ChangeCustomizeInstrument extends Change {
+ 		constructor(doc: SongDocument) {
+ 			super();
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+ 			if (instrument.preset != instrument.type) {
+				instrument.preset = instrument.type;
+ 				doc.notifier.changed();
+ 				this._didSomething();
+ 			}
+		}
+	}
+	
+	export class ChangePreset extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].type;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.preset;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].type = newValue
+				const preset: Preset | null = Config.valueToPreset(newValue);
+				if (preset != null) {
+					if (preset.customType != undefined) {
+						instrument.type = preset.customType;
+					} else if (preset.settings != undefined) {
+						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsDrum(doc.channel));
+					}
+				}
+				instrument.preset = newValue;
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -204,10 +225,12 @@ namespace beepbox {
 	export class ChangeTransition extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].transition;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.transition;
 			if (oldValue != newValue) {
 				this._didSomething();
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].transition = newValue;
+				instrument.transition = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 			}
 		}
@@ -216,10 +239,12 @@ namespace beepbox {
 	export class ChangeEffects extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].effects;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.effects;
 			if (oldValue != newValue) {
 				this._didSomething();
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].effects = newValue;
+				instrument.effects = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 			}
 		}
@@ -358,10 +383,12 @@ namespace beepbox {
 	export class ChangeInterval extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].interval;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.interval;
 			if (oldValue != newValue) {
 				this._didSomething();
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].interval = newValue;
+				instrument.interval = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 			}
 		}
@@ -370,10 +397,12 @@ namespace beepbox {
 	export class ChangeChord extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].chord;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.chord;
 			if (oldValue != newValue) {
 				this._didSomething();
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].chord = newValue;
+				instrument.chord = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 			}
 		}
@@ -382,28 +411,45 @@ namespace beepbox {
 	export class ChangeVibrato extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].vibrato;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.vibrato;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].vibrato = newValue;
+				instrument.vibrato = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
 			}
 		}
 	}
 	
-	export class ChangeFilterCutoff extends Change {
-		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+	class ChangeInstrumentSlider extends Change {
+		protected _instrument: Instrument;
+		constructor(private _doc: SongDocument) {
 			super();
-			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filterCutoff = newValue;
+			this._instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+		}
+		
+		public commit(): void {
+			if (!this.isNoop()) {
+				this._instrument.preset = this._instrument.type;
+				this._doc.notifier.changed();
+			}
+		}
+	}
+	
+	export class ChangeFilterCutoff extends ChangeInstrumentSlider {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super(doc);
+			this._instrument.filterCutoff = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
 	
-	export class ChangeFilterResonance extends Change {
+	export class ChangeFilterResonance extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
-			super();
-			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filterResonance = newValue;
+			super(doc);
+			this._instrument.filterResonance = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -412,9 +458,11 @@ namespace beepbox {
 	export class ChangeFilterEnvelope extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filterEnvelope;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.filterEnvelope;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].filterEnvelope = newValue;
+				instrument.filterEnvelope = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -424,9 +472,11 @@ namespace beepbox {
 	export class ChangeAlgorithm extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].algorithm;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.algorithm;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].algorithm = newValue;
+				instrument.algorithm = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -436,9 +486,11 @@ namespace beepbox {
 	export class ChangeFeedbackType extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackType;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.feedbackType;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackType = newValue;
+				instrument.feedbackType = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -448,9 +500,11 @@ namespace beepbox {
 	export class ChangeFeedbackEnvelope extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackEnvelope;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.feedbackEnvelope;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackEnvelope = newValue;
+				instrument.feedbackEnvelope = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -460,9 +514,11 @@ namespace beepbox {
 	export class ChangeOperatorEnvelope extends Change {
 		constructor(doc: SongDocument, operatorIndex: number, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].envelope;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.operators[operatorIndex].envelope;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].envelope = newValue;
+				instrument.operators[operatorIndex].envelope = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -472,28 +528,30 @@ namespace beepbox {
 	export class ChangeOperatorFrequency extends Change {
 		constructor(doc: SongDocument, operatorIndex: number, newValue: number) {
 			super();
-			const oldValue: number = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].frequency;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.operators[operatorIndex].frequency;
 			if (oldValue != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].frequency = newValue;
+				instrument.operators[operatorIndex].frequency = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
 			}
 		}
 	}
 	
-	export class ChangeOperatorAmplitude extends Change {
+	export class ChangeOperatorAmplitude extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, operatorIndex: number, oldValue: number, newValue: number) {
-			super();
-			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].operators[operatorIndex].amplitude = newValue;
+			super(doc);
+			this._instrument.operators[operatorIndex].amplitude = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
 	
-	export class ChangeFeedbackAmplitude extends Change {
+	export class ChangeFeedbackAmplitude extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
-			super();
-			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].feedbackAmplitude = newValue;
+			super(doc);
+			this._instrument.feedbackAmplitude = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -1493,10 +1551,10 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeVolume extends Change {
+	export class ChangeVolume extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
-			super();
-			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].volume = newValue;
+			super(doc);
+			this._instrument.volume = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -1561,8 +1619,10 @@ namespace beepbox {
 	export class ChangeWave extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			if (doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].wave != newValue) {
-				doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].wave = newValue;
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			if (instrument.wave != newValue) {
+				instrument.wave = newValue;
+				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
 			}
