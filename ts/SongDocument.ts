@@ -48,6 +48,7 @@ namespace beepbox {
 		public showScrollBar: boolean;
 		public forceScaleChanges: boolean;
 		public forceRhythmChanges: boolean;
+		public alwaysShowSettings: boolean;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
@@ -72,6 +73,8 @@ namespace beepbox {
 			this.showScrollBar = localStorage.getItem("showScrollBar") == "true";
 			this.forceScaleChanges = localStorage.getItem("forceScaleChanges") == "true";
 			this.forceRhythmChanges = localStorage.getItem("forceRhythmChanges") != "false";
+			this.alwaysShowSettings = localStorage.getItem("alwaysShowSettings") == "true";
+			
 			if (localStorage.getItem("volume") != null) this.volume = Number(localStorage.getItem("volume"));
 			
 			this.synth.volume = this._calcVolume();
@@ -166,6 +169,7 @@ namespace beepbox {
 					window.history.back();
 				}
 			} else {
+				change.commit();
 				this._recentChange = change;
 				if (!replaceState) {
 					this._shouldPushState = true;
@@ -215,6 +219,7 @@ namespace beepbox {
 			localStorage.setItem("showScrollBar", this.showScrollBar ? "true" : "false");
 			localStorage.setItem("forceScaleChanges", this.forceScaleChanges ? "true" : "false");
 			localStorage.setItem("forceRhythmChanges", this.forceRhythmChanges ? "true" : "false");
+			localStorage.setItem("alwaysShowSettings", this.alwaysShowSettings ? "true" : "false");
 			localStorage.setItem("volume", String(this.volume));
 		}
 		

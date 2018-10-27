@@ -307,6 +307,7 @@
 √ "strum" chords, polyphonic and tones are staggered in time.
 √ Fixed chorus aliasing with linear interpolation.
 √ Added polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency. Whoops, nevermind, pre-integrating and then differentiating is way more effective at anti-aliasing waves that are higher resolution than the sampling rate.
+√ Instrument preset menu. Hides instrument settings by default, but that can be disabled with preferences.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - MIDI instrument templates
@@ -332,13 +333,13 @@ MAJOR REMAINING FEATURES, MAYBE LATER:
 
 
 NEXT RELEASE:
+- Midi instrument presets. Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument.
+- Add to the presets menu some instruments that are somewhat randomized within constraints in the following styles: chip, fm, lead, harmony, bass, freestyle/any/wildcard. Bias the filter cutoff based on current channel octave scroll? Each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else.
+- "New Blank Song" should choose interesting random instruments with harmony chords enabled.
 - Add a Config flag array for "chip" instruments, for whether or not to linearly interpolate wave samples or use polybleps for the retro/chip waves. that way i can add orchestra hit waves, and maybe retroactively apply it to "rounded". I guess I also need an octave offset per wave in config. and maybe even rename chip to wave instruments. sadly I will need a separate synth function for these waves. maybe do the same thing for drums and retroactively apply it to the hollow wave. also if I make another version of drums it probably doesn't need the frequency relative filter! Ooh, maybe use the integral method to improve aliasing. Should this be a third option, does it need chorus? Can spectrum based drums use the same function?
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, snaps/claps, thunder, rain, fire, wind, randomly spaced (x / (1 + x^2)), maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard, orchestra hit? (can noise instruments be selected on pitch channels? maybe with different available noise waves?)
-- instrument presets... but each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else. Could I imitate most midi instruments? Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument. It may be time to stop using two midi channels for chip chorus. Replace Type with Templates. Custom chip and custom FM are generic options at the top that can't be selected directly. (The data format doesn't indicate which template you're using, except maybe json.) The template menu automatically detects if your instrument matches a template, and selects custom for you otherwise. Selecting a template may randomly select some parameters for variety. If you enable the preference to always show all instrument options, then the "new song" feature will default to "custom chip" but otherwise it'll default to a template instrument.
-- When generating random instruments for user, bias the filter cutoff based on current channel octave scroll.
-- One of the template instruments (after custom chip and custom FM) should just be a random generator!)
 - New preference option: "Always show instrument options". Defaults to on for next release, but maybe off later. When off, template instruments hide the complicated instrument options unnless you select "custom chip/FM instrument" or click a "customize instrument" button under the template list. Eventually the default song on load can use template instruments, so t users won't see the extra options. Hmm: if an instrument was custom, but you change a setting so that it coincidentally matches a template, does it suddenly hide the options on you? Maybe it actually does save whether or not the instrument is a template.
-- Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth note triplet symbol for rhythm. 
+- Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth or sixteenth note triplet symbol for rhythm. 
 - Wait arg it's still possible to make zero length notes by dragging to the far left! (In ÷8?)
 - Hmm, sometimes Firefox won't play any sound... seems like it happens when I load www.beepbox.co, and then click a twitter link to beepbox.co, maybe some kind of security/user experience thing to prevent unwanted sound from cross-domain links?
 - Add a "title" attributes or tooltips to all of the options, and/or make all instrument option names clickable with pointer cursor and hover highlight, replacing "?" hint circles.
@@ -436,6 +437,7 @@ PLAYLIST EDITOR:
 - custom cover art, color schemes in playlists and embed player.
 
 MAYBE:
+- Can I use WebRTC to enable real-time collaboration? (How would I handle parallel edits since I got rid of Change history? Maybe record inputs like a video game somehow and use rewinding?)
 - On expert scale, subtly shade every other row.
 - Social media cards? Sadly only Twitter seems to support embedded javascript in an iframe, and even at that I'd need a server able to handle song links without hashmarks.
 - Make a page with a recording of my voice explaining how sound works, along with some musical samples. Visualize the audio in several different ways, including timespace amplitude, timespace spectrogram, and frequency-synced amplitude to easily follow the shapes of semi-periodic waves. Make a script that checks the progress of the audio track and transitions between the visualizations as appropriate. Make a few non-live slides comparing different sounds and frequencies and showing how the periodic waves are composed out of sums of sine waves. 

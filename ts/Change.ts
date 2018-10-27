@@ -31,6 +31,8 @@ namespace beepbox {
 		public isNoop(): boolean {
 			return this._noop;
 		}
+		
+		public commit(): void {}
 	}
 	
 	export class UndoableChange extends Change {
