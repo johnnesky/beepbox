@@ -1067,21 +1067,22 @@ namespace beepbox {
 					}
 				}
 			}
-
+			
 			let bestKey: number = 0;
 			let bestKeyWeight: number = 0;
 			for (let key: number = 0; key < 12; key++) {
-				const keyWeight: number = keyWeights[key] + 0.5 * keyWeights[(key + 7) % 12];
+				// Look for the root of the most prominent major or minor chord.
+				const keyWeight: number = keyWeights[key] + 0.6 * keyWeights[(key + 7) % 12] + 0.2 * keyWeights[(key + 4) % 12] + 0.2 * keyWeights[(key + 3) % 12];
 				if (bestKeyWeight < keyWeight) {
 					bestKeyWeight = keyWeight;
 					bestKey = key;
 				}
 			}
-
+			
 			if (bestKey != song.key) {
 				const diff: number = song.key - bestKey;
 				const absoluteDiff: number = Math.abs(diff);
-
+				
 				for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
 					for (const pattern of song.channels[channelIndex].patterns) {
 						for (let i: number = 0; i < absoluteDiff; i++) {
@@ -1089,7 +1090,7 @@ namespace beepbox {
 						}
 					}
 				}
-
+				
 				song.key = bestKey;
 				doc.notifier.changed();
 				this._didSomething();
