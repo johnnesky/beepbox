@@ -51,12 +51,12 @@ namespace beepbox {
 		return menu;
 	}
 	
-	function buildPresetOptions(isDrum: boolean): HTMLSelectElement {
+	function buildPresetOptions(isNoise: boolean): HTMLSelectElement {
 		const menu: HTMLSelectElement = select({});
 		const customTypeGroup: HTMLElement = html.element("optgroup", {label: "Custom"});
 		for (let index: number = 0; index < Config.customTypePresets.length; index++) {
 			const preset: Preset = Config.customTypePresets[index];
-			if (preset.isDrum == isDrum) {
+			if (preset.isNoise == isNoise) {
 				customTypeGroup.appendChild(option(index, preset.name));
 			}
 		}
@@ -64,7 +64,7 @@ namespace beepbox {
 		const beepboxGroup: HTMLElement = html.element("optgroup", {label: "BeepBox Presets"});
 		for (let index: number = 0; index < Config.beepboxPresets.length; index++) {
 			const preset: Preset = Config.beepboxPresets[index];
-			if (preset.isDrum == isDrum) {
+			if (preset.isNoise == isNoise) {
 				beepboxGroup.appendChild(option(index + Config.beepboxPresetStart, preset.name));
 			}
 		}
@@ -72,7 +72,7 @@ namespace beepbox {
 		const midiGroup: HTMLElement = html.element("optgroup", {label: "Midi Synths"});
 		for (let index: number = 0; index < Config.midiPresets.length; index++) {
 			const preset: Preset = Config.midiPresets[index];
-			if (preset.isDrum == isDrum) {
+			if (preset.isNoise == isNoise) {
 				midiGroup.appendChild(option(Config.midiPresetToValue(preset), preset.name));
 			}
 		}

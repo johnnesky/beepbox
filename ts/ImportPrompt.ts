@@ -386,8 +386,10 @@ namespace beepbox {
 				
 				const channel: Channel = new Channel();
 				
+				const channelPreset: Preset | null = Config.midiProgramToPreset(noteEvents[midiChannel][0].program);
+				
 				const isDrumsetChannel: boolean = (midiChannel == 9);
-				const isNoiseChannel: boolean = isDrumsetChannel || (noteEvents[midiChannel][0].program >= 115 && noteEvents[midiChannel][0].program != 121 && noteEvents[midiChannel][0].program != 124); // woodblock through gunshot have no pitch, except breath noise and telepone.
+				const isNoiseChannel: boolean = isDrumsetChannel || (channelPreset != null && channelPreset.isNoise);
 				const channelBasePitch: number = isNoiseChannel ? 33 : Config.keys[key].basePitch;
 				const intervalScale: number = isNoiseChannel ? Config.drumInterval : 1;
 				const channelMaxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
@@ -537,8 +539,16 @@ namespace beepbox {
 										if (instrumentByProgram[currentProgram] == undefined) {
 											const instrument: Instrument = new Instrument();
 											instrumentByProgram[currentProgram] = instrument;
-											instrument.setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip);
-											instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
+											
+											const preset: Preset | null = Config.midiProgramToPreset(currentProgram);
+											if (preset != null && preset.isNoise == isNoiseChannel) {
+												instrument.fromJsonObject(preset.settings, false);
+												instrument.preset = Config.midiPresetToValue(preset);
+											} else {
+												instrument.setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip);
+												instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
+											}
+											
 											channel.instruments.push(instrument);
 										}
 										
