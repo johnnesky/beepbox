@@ -2487,8 +2487,6 @@ namespace beepbox {
 		public lastInterval: number = 0;
 		public lastVolume: number = 0;
 		public sample: number = 0.0;
-		public prevWaveIntegralA: number = 0.0;
-		public prevWaveIntegralB: number = 0.0;
 		public readonly phases: number[] = [];
 		public readonly phaseDeltas: number[] = [];
 		public readonly volumeStarts: number[] = [];
@@ -2517,8 +2515,6 @@ namespace beepbox {
 				this.feedbackOutputs[i] = 0.0;
 			}
 			this.sample = 0.0;
-			this.prevWaveIntegralA = 0.0;
-			this.prevWaveIntegralB = 0.0;
 			this.filterSample0 = 0.0;
 			this.filterSample1 = 0.0;
 			this.liveInputSamplesHeld = 0.0;
@@ -3726,9 +3722,6 @@ namespace beepbox {
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 			let sample: number = +tone.sample;
 
-			let prevWaveIntegralA: number = +tone.prevWaveIntegralA;
-			let prevWaveIntegralB: number = +tone.prevWaveIntegralB;
-
 			let filter1: number = +tone.filter;
 			let filter2: number = (instrument.filterResonance == 0) ? 1.0 : filter1;
 			const filterScale1: number = +tone.filterScale;
@@ -3736,6 +3729,17 @@ namespace beepbox {
 			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.filterResonance - 1) / (Config.filterResonanceRange - 2), 0.5);
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
+
+			const phaseAInt: number = phaseA|0;
+			const phaseBInt: number = phaseB|0;
+			const indexA: number = phaseAInt % waveLength;
+			const indexB: number = phaseBInt % waveLength;
+			const phaseRatioA: number = phaseA - phaseAInt;
+			const phaseRatioB: number = phaseB - phaseBInt;
+			let prevWaveIntegralA: number = wave[indexA];
+			let prevWaveIntegralB: number = wave[indexB];
+			prevWaveIntegralA += (wave[indexA+1] - prevWaveIntegralA) * phaseRatioA;
+			prevWaveIntegralB += (wave[indexB+1] - prevWaveIntegralB) * phaseRatioB;
 			
 			const stopIndex: number = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
@@ -3777,8 +3781,6 @@ namespace beepbox {
 			
 			tone.phases[0] = phaseA / waveLength;
 			tone.phases[1] = phaseB / waveLength;
-			tone.prevWaveIntegralA = prevWaveIntegralA;
-			tone.prevWaveIntegralB = prevWaveIntegralB;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
