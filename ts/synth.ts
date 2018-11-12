@@ -3528,7 +3528,7 @@ namespace beepbox {
 					let volumeEnd: number = amplitudeMult;
 					if (i < carrierCount) {
 						// carrier
-						const endPitch: number = (pitch + intervalEnd) * intervalScale;
+						const endPitch: number = (pitch + intervalEnd) * intervalScale + interval;
 						const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
 						const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
 						volumeStart *= pitchVolumeStart;
@@ -3720,7 +3720,6 @@ namespace beepbox {
 			const volumeDelta: number = +tone.volumeDelta;
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
-			let sample: number = +tone.sample;
 
 			let filter1: number = +tone.filter;
 			let filter2: number = (instrument.filterResonance == 0) ? 1.0 : filter1;
@@ -3762,12 +3761,11 @@ namespace beepbox {
 				prevWaveIntegralA = nextWaveIntegralA;
 				prevWaveIntegralB = nextWaveIntegralB;
 
-				const combinedWave: number = (waveA + waveB * intervalSign);
+				const combinedWave: number = (waveA + waveB * intervalSign) * volume;
 				
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
-				sample = filterSample1 * volume;
 				
 				volume += volumeDelta;
 				filter1 *= filterScale1;
@@ -3775,13 +3773,12 @@ namespace beepbox {
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				data[bufferIndex] += sample;
+				data[bufferIndex] += filterSample1;
 				bufferIndex++;
 			}
 			
 			tone.phases[0] = phaseA / waveLength;
 			tone.phases[1] = phaseB / waveLength;
-			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
 			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
@@ -3801,7 +3798,6 @@ namespace beepbox {
 			var operator#Output      = +tone.feedbackOutputs[#];
 			var feedbackMult         = +tone.feedbackMult;
 			var feedbackDelta        = +tone.feedbackDelta;
-			var sample = +tone.sample;
 			var volume = +tone.volumeStart;
 			var volumeDelta = +tone.volumeDelta;
 			
@@ -3816,12 +3812,11 @@ namespace beepbox {
 			var stopIndex = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
 				// INSERT OPERATOR COMPUTATION HERE
-				var fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
+				var fmOutput = (/*operator#Scaled*/) * volume; // CARRIER OUTPUTS
 				
 				var feedback = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (fmOutput - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
-				sample = filterSample1 * volume;
 				
 				volume += volumeDelta;
 				feedbackMult += feedbackDelta;
@@ -3831,13 +3826,12 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				
-				data[bufferIndex] += sample;
+				data[bufferIndex] += filterSample1;
 				bufferIndex++;
 			}
 			
 			tone.phases[#] = operator#Phase / ` + Config.sineWaveLength + `;
 			tone.feedbackOutputs[#] = operator#Output;
-			tone.sample = sample;
 			
 			var epsilon = (1.0e-24);
 			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
@@ -3882,19 +3876,19 @@ namespace beepbox {
 			
 			const stopIndex: number = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
-				const waveSample: number = wave[phase & 0x7fff];
+				const waveSample: number = wave[phase & 0x7fff] * volume;
+				
+				sample += (filterSample1 - sample) * pitchRelativefilter;
 				
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (waveSample - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
 				
-				sample += (filterSample1 - sample) * pitchRelativefilter;
-				
 				phase += phaseDelta;
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += sample * volume;
+				data[bufferIndex] += filterSample1;
 				volume += volumeDelta;
 				bufferIndex++;
 			}
