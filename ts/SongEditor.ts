@@ -241,7 +241,6 @@ namespace beepbox {
 			]),
 		]);
 		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({}, [
-			this._instrumentVolumeSliderRow,
 			this._waveSelectRow,
 			this._intervalSelectRow,
 			this._chordSelectRow,
@@ -278,6 +277,7 @@ namespace beepbox {
 				//this._instrumentTypeHint,
 				div({className: "selectContainer"}, [this._pitchedPresetSelect, this._drumPresetSelect])
 			]),
+			this._instrumentVolumeSliderRow,
 			this._customizeInstrumentButton,
 			this._customInstrumentSettingsGroup,
 		]);
@@ -548,7 +548,6 @@ namespace beepbox {
 			} else if (instrument.type == InstrumentType.noise) {
 				this._customizeInstrumentButton.style.display = "none";
 				this._customInstrumentSettingsGroup.style.display = "";
-				this._instrumentVolumeSliderRow.style.display = "";
 				this._drumSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
 				this._algorithmSelectRow.style.display = "none";
@@ -563,7 +562,6 @@ namespace beepbox {
 				this._customInstrumentSettingsGroup.style.display = "";
 				this._vibratoSelectRow.style.display = "";
 				this._drumSelect.style.display = "none";
-				this._instrumentVolumeSliderRow.style.display = "";
 				this._waveSelect.style.display = "";
 				this._waveSelectRow.style.display = "";
 				this._intervalSelectRow.style.display = "";
@@ -580,7 +578,6 @@ namespace beepbox {
 				this._phaseModGroup.style.display = "";
 				this._feedbackRow1.style.display = "";
 				this._feedbackRow2.style.display = "";
-				this._instrumentVolumeSliderRow.style.display = "none";
 				this._waveSelectRow.style.display = "none";
 				this._intervalSelectRow.style.display = "none";
 			} else {

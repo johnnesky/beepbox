@@ -1552,10 +1552,10 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeVolume extends ChangeInstrumentSlider {
+	export class ChangeVolume extends Change {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
-			super(doc);
-			this._instrument.volume = newValue;
+			super();
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].volume = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
