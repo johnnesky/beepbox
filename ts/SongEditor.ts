@@ -241,13 +241,6 @@ namespace beepbox {
 			]),
 		]);
 		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({}, [
-			this._waveSelectRow,
-			this._intervalSelectRow,
-			this._chordSelectRow,
-			div({className: "selectRow"}, [
-				span({}, [text("Transition:")]),
-				div({className: "selectContainer"}, [this._transitionSelect]),
-			]),
 			div({className: "selectRow", title: "Low-pass Filter Cutoff Frequency"}, [
 				span({}, [text("Filter Cut:")]),
 				this._filterCutoffSlider.input,
@@ -260,11 +253,18 @@ namespace beepbox {
 				span({}, [text("Filter Env:")]),
 				div({className: "selectContainer"}, [this._filterEnvelopeSelect]),
 			]),
-			this._vibratoSelectRow,
+			div({className: "selectRow"}, [
+				span({}, [text("Transition:")]),
+				div({className: "selectContainer"}, [this._transitionSelect]),
+			]),
 			div({className: "selectRow"}, [
 				span({}, [text("Effects:")]),
 				div({className: "selectContainer"}, [this._effectsSelect]),
 			]),
+			this._chordSelectRow,
+			this._vibratoSelectRow,
+			this._waveSelectRow,
+			this._intervalSelectRow,
 			this._algorithmSelectRow,
 			this._phaseModGroup,
 			this._feedbackRow1,
