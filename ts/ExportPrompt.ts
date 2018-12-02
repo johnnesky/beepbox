@@ -426,7 +426,11 @@ namespace beepbox {
 								writer.writeMidiAscii("Instrument " + (instrumentIndex + 1));
 								
 								let instrumentProgram: number = 0x51; // default to sawtooth wave. 
-								if (instrument.type == InstrumentType.noise) {
+								const preset: Preset | null = Config.valueToPreset(instrument.preset);
+								
+								if (preset != null && preset.midiProgram != undefined) {
+									instrumentProgram = preset.midiProgram;
+								} else if (instrument.type == InstrumentType.noise) {
 									instrumentProgram = 0x7E; // applause
 								} else if (instrument.type == InstrumentType.chip) {
 									const envelopeType: EnvelopeType = Config.envelopes[instrument.filterEnvelope].type;
