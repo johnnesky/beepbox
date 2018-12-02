@@ -389,7 +389,7 @@ namespace beepbox {
 				const channelPreset: Preset | null = Config.midiProgramToPreset(noteEvents[midiChannel][0].program);
 				
 				const isDrumsetChannel: boolean = (midiChannel == 9);
-				const isNoiseChannel: boolean = isDrumsetChannel || (channelPreset != null && channelPreset.isNoise);
+				const isNoiseChannel: boolean = isDrumsetChannel || channelPreset == null || channelPreset.isNoise;
 				const channelBasePitch: number = isNoiseChannel ? 33 : Config.keys[key].basePitch;
 				const intervalScale: number = isNoiseChannel ? Config.drumInterval : 1;
 				const channelMaxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
