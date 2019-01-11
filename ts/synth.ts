@@ -3877,10 +3877,10 @@ namespace beepbox {
 			while (bufferIndex < stopIndex) {
 				const waveSample: number = wave[phase & 0x7fff] * volume;
 				
-				sample += (filterSample1 - sample) * pitchRelativefilter;
+				sample += (waveSample - sample) * pitchRelativefilter;
 				
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (waveSample - filterSample0 + feedback * (filterSample0 - filterSample1));
+				filterSample0 += filter1 * (sample - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
 				
 				phase += phaseDelta;
