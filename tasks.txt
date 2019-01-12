@@ -309,6 +309,7 @@
 √ Added polyBLEPs on the basic waves, add an extra sample on the end of waves for interpolation based on frequency. Whoops, nevermind, pre-integrating and then differentiating is way more effective at anti-aliasing waves that are higher resolution than the sampling rate.
 √ Instrument preset menu. Hides instrument settings by default, but that can be disabled with preferences.
 √ Midi instrument presets. Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument.
+√ Renamed pluck to twang.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - MIDI instrument templates

@@ -434,7 +434,7 @@ namespace beepbox {
 									instrumentProgram = 0x7E; // applause
 								} else if (instrument.type == InstrumentType.chip) {
 									const envelopeType: EnvelopeType = Config.envelopes[instrument.filterEnvelope].type;
-									const filterInstruments: number[] = (envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.pluck)
+									const filterInstruments: number[] = (envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.twang)
 										? ExportPrompt.midiDecayInstruments
 										: ExportPrompt.midiSustainInstruments;
 									if (filterInstruments.length > instrument.wave) {
