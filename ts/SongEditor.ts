@@ -56,7 +56,7 @@ namespace beepbox {
 		const customTypeGroup: HTMLElement = html.element("optgroup", {label: "Custom"});
 		for (let index: number = 0; index < Config.customTypePresets.length; index++) {
 			const preset: Preset = Config.customTypePresets[index];
-			if (preset.isNoise == isNoise) {
+			if ((preset.isNoise == true) == isNoise) {
 				customTypeGroup.appendChild(option(index, preset.name));
 			}
 		}
@@ -64,7 +64,7 @@ namespace beepbox {
 		const beepboxGroup: HTMLElement = html.element("optgroup", {label: "BeepBox Presets"});
 		for (let index: number = 0; index < Config.beepboxPresets.length; index++) {
 			const preset: Preset = Config.beepboxPresets[index];
-			if (preset.isNoise == isNoise) {
+			if ((preset.isNoise == true) == isNoise) {
 				beepboxGroup.appendChild(option(index + Config.beepboxPresetStart, preset.name));
 			}
 		}
@@ -72,7 +72,7 @@ namespace beepbox {
 		const midiGroup: HTMLElement = html.element("optgroup", {label: "Midi Synths"});
 		for (let index: number = 0; index < Config.midiPresets.length; index++) {
 			const preset: Preset = Config.midiPresets[index];
-			if (preset.isNoise == isNoise) {
+			if ((preset.isNoise == true) == isNoise) {
 				midiGroup.appendChild(option(Config.midiPresetToValue(preset), preset.name));
 			}
 		}

@@ -30,9 +30,9 @@ namespace beepbox {
 		private readonly _editorWidth: number = 20;
 		private readonly _editorHeight: number = 481;
 		private readonly _notchHeight: number = 4.0;
-		private readonly _octaveCount: number = 7;
+		private readonly _octaveCount: number = Config.pitchOctaves;
 		private readonly _octaveHeight: number = (this._editorHeight - this._notchHeight) / this._octaveCount;
-		private readonly _barHeight: number = (this._octaveHeight * 3 + this._notchHeight);
+		private readonly _barHeight: number = (this._octaveHeight * Config.windowOctaves + this._notchHeight);
 		
 		private readonly _handle = <SVGRectElement> svgElement("rect", {fill: "#444444", x: 2, y: 0, width: this._editorWidth - 4, height: this._barHeight});
 		private readonly _handleHighlight = <SVGRectElement> svgElement("rect", {fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight});
@@ -159,7 +159,7 @@ namespace beepbox {
 				
 				let octave: number = currentOctave;
 				while (this._mouseY - this._dragStart < -this._octaveHeight * 0.5) {
-					if (octave < 4) {
+					if (octave < Config.scrollableOctaves) {
 						octave++;
 						this._dragStart -= this._octaveHeight;
 					} else {
@@ -192,7 +192,7 @@ namespace beepbox {
 					const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
 				
 					if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
-						if (currentOctave < 4) {
+						if (currentOctave < Config.scrollableOctaves) {
 							this._change = new ChangeOctave(this._doc, oldValue, currentOctave + 1);
 							this._doc.record(this._change, canReplaceLastChange);
 						}

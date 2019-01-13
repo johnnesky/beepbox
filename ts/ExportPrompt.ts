@@ -416,6 +416,7 @@ namespace beepbox {
 							const instrumentIndex: number = pattern.instrument;
 							
 							const instrument: Instrument = song.channels[channel].instruments[instrumentIndex];
+							const preset: Preset | null = Config.valueToPreset(instrument.preset);
 							
 							if (prevInstrumentIndex != instrumentIndex) {
 								prevInstrumentIndex = instrumentIndex;
@@ -426,7 +427,6 @@ namespace beepbox {
 								writer.writeMidiAscii("Instrument " + (instrumentIndex + 1));
 								
 								let instrumentProgram: number = 0x51; // default to sawtooth wave. 
-								const preset: Preset | null = Config.valueToPreset(instrument.preset);
 								
 								if (preset != null && preset.midiProgram != undefined) {
 									instrumentProgram = preset.midiProgram;
@@ -576,6 +576,10 @@ namespace beepbox {
 												nextPitch = note.pitches[toneIndex + arpeggioPattern[arpeggio % arpeggioPattern.length]];
 											}
 											nextPitch = channelRoot + nextPitch * intervalScale + pitchOffset;
+											if (preset != null && preset.midiSubharmonicOctaves != undefined) {
+												nextPitch += 12 * preset.midiSubharmonicOctaves;
+											}
+											nextPitch = Math.max(0, Math.min(127, nextPitch));
 											nextPitches[toneIndex] = nextPitch;
 											
 											if (!noteStarting && prevPitches[toneIndex] != nextPitches[toneIndex]) {
@@ -585,7 +589,7 @@ namespace beepbox {
 												writer.writeMidi7Bits(defaultNoteVelocity); // velocity
 											}
 										}
-
+										
 										for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
 											if (noteStarting || prevPitches[toneIndex] != nextPitches[toneIndex]) {
 												writeEventTime(midiTickTime);
