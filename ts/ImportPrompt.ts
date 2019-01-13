@@ -389,7 +389,7 @@ namespace beepbox {
 				const channelPreset: Preset | null = Config.midiProgramToPreset(noteEvents[midiChannel][0].program);
 				
 				const isDrumsetChannel: boolean = (midiChannel == 9);
-				const isNoiseChannel: boolean = isDrumsetChannel || channelPreset == null || channelPreset.isNoise;
+				const isNoiseChannel: boolean = isDrumsetChannel || channelPreset == null || (channelPreset.isNoise == true);
 				const channelBasePitch: number = isNoiseChannel ? 33 : Config.keys[key].basePitch;
 				const intervalScale: number = isNoiseChannel ? Config.drumInterval : 1;
 				const channelMaxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
@@ -523,6 +523,8 @@ namespace beepbox {
 								const noteEndMidiTick: number = Math.min(barEndMidiTick, nextEventMidiTick);
 								
 								if (noteStartPart < noteEndPart) {
+									const preset: Preset | null = Config.midiProgramToPreset(currentProgram);
+									
 									// Ensure a pattern exists for the current bar before inserting notes into it.
 									if (currentBar != bar || pattern == null) {
 										currentBar++;
@@ -540,8 +542,7 @@ namespace beepbox {
 											const instrument: Instrument = new Instrument();
 											instrumentByProgram[currentProgram] = instrument;
 											
-											const preset: Preset | null = Config.midiProgramToPreset(currentProgram);
-											if (preset != null && preset.isNoise == isNoiseChannel) {
+											if (preset != null && (preset.isNoise == true) == isNoiseChannel) {
 												instrument.fromJsonObject(preset.settings, false);
 												instrument.preset = Config.midiPresetToValue(preset);
 											} else {
@@ -693,7 +694,10 @@ namespace beepbox {
 									// Build the note chord out of the current pitches, shifted into BeepBox channelBasePitch relative values.
 									note.pitches.length = 0;
 									for (let pitchIndex: number = 0; pitchIndex < Math.min(4, heldPitches.length); pitchIndex++) {
-										const heldPitch: number = heldPitches[pitchIndex + Math.max(0, heldPitches.length - 4)];
+										let heldPitch: number = heldPitches[pitchIndex + Math.max(0, heldPitches.length - 4)];
+										if (preset != null && preset.midiSubharmonicOctaves != undefined) {
+											heldPitch -= 12 * preset.midiSubharmonicOctaves;
+										}
 										const shiftedPitch: number = Math.max(minPitch, Math.min(maxPitch, Math.round((heldPitch + heldPitchOffset) / intervalScale)));
 										if (note.pitches.indexOf(shiftedPitch) == -1) {
 											note.pitches.push(shiftedPitch);
@@ -721,7 +725,7 @@ namespace beepbox {
 					}
 					
 					const averagePitch: number = pitchSum / pitchCount;
-					channel.octave = isNoiseChannel ? 0 : Math.max(0, Math.min(5, Math.round((averagePitch / 12) - 1.5)));
+					channel.octave = isNoiseChannel ? 0 : Math.max(0, Math.min(Config.scrollableOctaves, Math.round((averagePitch / 12) - 1.5)));
 				}
 					
 				while (channel.bars.length < songTotalBars) {
