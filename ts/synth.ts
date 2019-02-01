@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018 John Nesky
+Copyright (C) 2019 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -55,6 +55,7 @@ namespace beepbox {
 		chip = 0,
 		fm = 1,
 		noise = 2,
+		spectrum = 3,
 		length,
 	}
 
@@ -219,9 +220,10 @@ namespace beepbox {
 		];
 		
 		public static readonly customTypePresets: ReadonlyArray<Preset> = [
-			{name: "custom chip",  customType: InstrumentType.chip},
-			{name: "custom FM",    customType: InstrumentType.fm},
-			{name: "custom noise", isNoise:  true, customType: InstrumentType.noise},
+			{name: "custom chip",     customType: InstrumentType.chip},
+			{name: "custom FM",       customType: InstrumentType.fm},
+			{name: "custom noise",    customType: InstrumentType.noise},
+			{name: "custom spectrum", customType: InstrumentType.spectrum},
 		];
 		public static readonly beepboxPresetStart: number = 1024;
 		public static readonly beepboxPresets: ReadonlyArray<Preset> = [
@@ -232,10 +234,17 @@ namespace beepbox {
 			{name: "yowie",            midiProgram:  81, settings: {"type":"FM","volume":100,"transition":"cross-fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":86,"filterEnvelope":"tremolo5","vibrato":"none","algorithm":"1←2←(3 4)","feedbackType":"1⟲","feedbackAmplitude":12,"feedbackEnvelope":"tremolo3","operators":[{"frequency":"2×","amplitude":10,"envelope":"custom"},{"frequency":"16×","amplitude":5,"envelope":"steady"},{"frequency":"1×","amplitude":5,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "solo ahh",         midiProgram:  81, settings: {"type":"FM","volume":100,"transition":"cross-fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"swell 2","vibrato":"shaky","algorithm":"(1 2 3)←4","feedbackType":"4⟲","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"8×","amplitude":6,"envelope":"custom"},{"frequency":"16×","amplitude":2,"envelope":"custom"},{"frequency":"~1×","amplitude":5,"envelope":"steady"}]}},
 			{name: "FM twang",         midiProgram:  81, settings: {"type":"FM","volume":100,"transition":"hard","effects":"none","chord":"custom interval","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":15,"envelope":"twang 2"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
+			{name: "FM bass",          midiProgram:  81, settings: {"type":"FM","volume":100,"transition":"hard","effects":"reverb","chord":"strum","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":11,"envelope":"steady"},{"frequency":"7×","amplitude":3,"envelope":"steady"},{"frequency":"16×","amplitude":6,"envelope":"twang 1"}]}},
 			{name: "FM bell",          midiProgram:  14, settings: {"type":"FM","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"~2×","amplitude":15,"envelope":"custom"},{"frequency":"7×","amplitude":6,"envelope":"twang 3"},{"frequency":"20×","amplitude":1,"envelope":"twang 1"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "synth flutter",    midiProgram:  81, settings: {"type":"FM","volume":100,"transition":"fast fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":86,"filterEnvelope":"twang 3","vibrato":"delayed","algorithm":"(1 2)←(3 4)","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":9,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":9,"envelope":"custom"},{"frequency":"5×","amplitude":4,"envelope":"custom"},{"frequency":"7×","amplitude":5,"envelope":"tremolo1"},{"frequency":"~1×","amplitude":6,"envelope":"punch"}]}},
 			{name: "alt synthstrings?",midiProgram:  81, settings: {"type":"FM","volume":100,"transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1→2→3→4","feedbackAmplitude":11,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":10,"envelope":"custom"},{"frequency":"~2×","amplitude":11,"envelope":"steady"},{"frequency":"4×","amplitude":10,"envelope":"steady"},{"frequency":"7×","amplitude":8,"envelope":"steady"}]}},
 			{name: "synth scoot",      midiProgram:  81, settings: {"type":"chip","volume":100,"transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":707,"filterResonance":86,"filterEnvelope":"flare 1","wave":"sawtooth","interval":"shimmer","vibrato":"none"}},
+			{name: "spectrum choir",   midiProgram:  81, settings: {"type":"spectrum","volume":100,"transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":43,"filterEnvelope":"swell 2","spectrum":[100,0,0,0,0,0,0,100,0,0,0,100,0,0,71,0,29,0,0,0,0,0,0,14,0,29,14,0,57,14]}},
+			{name: "tom-tom",          midiProgram: 117, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","spectrum":[100,29,14,0,0,86,14,43,29,86,29,14,29,57,29,29,29,29,43,29,29,29,14,43,29,29,29,29,29,29]}},
+			{name: "snare",            midiProgram: 118, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":8000,"filterResonance":14,"filterEnvelope":"twang 2","spectrum":[86,71,57,43,43,43,29,29,29,57,57,29,29,29,57,29,43,43,29,43,57,57,43,43,57,57,57,57,57,71]}},
+			{name: "cymbal",           midiProgram: 119, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":14,"filterEnvelope":"twang 3","spectrum":[43,43,29,29,29,14,29,29,14,29,29,14,14,29,29,14,29,14,57,14,14,14,57,29,29,29,57,43,43,43]}},
+			{name: "tamborine",        midiProgram: 119, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 2","spectrum":[0,0,0,0,0,0,14,14,14,14,14,14,14,14,14,14,14,43,14,14,14,71,14,14,14,14,14,14,0,0]}},
+			{name: "gong",             midiProgram: 119, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"swell 1","spectrum":[100,29,43,29,43,14,14,14,14,29,14,43,29,43,43,43,43,43,43,43,29,29,29,29,29,29,29,29,14,14]}},
 		];
 		public static readonly midiPresetStart: number = 2048;
 		public static readonly midiPresets: ReadonlyArray<Preset> = [
@@ -286,7 +295,7 @@ namespace beepbox {
 			{name: "tremolo strings",  midiProgram:  44, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":707,"filterResonance":0,"filterEnvelope":"tremolo4","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"4⟲","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"4×","amplitude":12,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"steady"},{"frequency":"7×","amplitude":3,"envelope":"steady"}]}},
 			{name: "pizzicato strings",midiProgram:  45, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"medium fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":7,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"6×","amplitude":10,"envelope":"custom"},{"frequency":"~1×","amplitude":10,"envelope":"steady"}]}},
 			{name: "harp",             midiProgram:  46, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"3⟲","feedbackAmplitude":6,"feedbackEnvelope":"twang 2","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"4×","amplitude":6,"envelope":"custom"},{"frequency":"~2×","amplitude":3,"envelope":"steady"},{"frequency":"1×","amplitude":6,"envelope":"steady"}]}},
-			{name: "timpani",          midiProgram:  47, isNoise:  true, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"fast fade","effects":"reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1 2←3←4","feedbackType":"1→2→3→4","feedbackAmplitude":12,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"twang 1"},{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"~1×","amplitude":13,"envelope":"steady"},{"frequency":"~2×","amplitude":7,"envelope":"steady"}]}},
+			{name: "timpani",          midiProgram:  47, generalMidi: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":14,"filterEnvelope":"twang 1","spectrum":[100,0,0,0,100,0,0,57,0,14,43,14,43,43,0,29,43,29,14,14,43,29,43,14,43,43,29,43,29,43]}},
 			{name: "strings",          midiProgram:  48, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"cross-fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"4⟲","feedbackAmplitude":5,"feedbackEnvelope":"twang 3","operators":[{"frequency":"4×","amplitude":12,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"steady"},{"frequency":"7×","amplitude":3,"envelope":"swell 1"}]}},
 			{name: "slow strings",     midiProgram:  49, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":0,"filterEnvelope":"swell 3","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"4⟲","feedbackAmplitude":6,"feedbackEnvelope":"flare 3","operators":[{"frequency":"4×","amplitude":13,"envelope":"custom"},{"frequency":"3×","amplitude":13,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"steady"},{"frequency":"7×","amplitude":3,"envelope":"swell 1"}]}},
 			{name: "synth strings 1",  midiProgram:  50, generalMidi: true, settings: {"type":"chip","volume":60,"transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":43,"filterEnvelope":"steady","wave":"sawtooth","interval":"hum","vibrato":"delayed"}},
@@ -314,15 +323,15 @@ namespace beepbox {
 			{name: "piccolo",          midiProgram:  72, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"4⟲","feedbackAmplitude":15,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":10,"envelope":"custom"},{"frequency":"~2×","amplitude":3,"envelope":"punch"},{"frequency":"~1×","amplitude":5,"envelope":"punch"}]}},
 			{name: "flute",            midiProgram:  73, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":4,"envelope":"steady"},{"frequency":"1×","amplitude":2,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "recorder",         midiProgram:  74, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":1,"envelope":"steady"},{"frequency":"5×","amplitude":1,"envelope":"steady"},{"frequency":"1×","amplitude":5,"envelope":"steady"}]}},
-			{name: "pan flute",        midiProgram:  75, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"soft","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"3→4","feedbackAmplitude":15,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":3,"envelope":"punch"},{"frequency":"~1×","amplitude":3,"envelope":"punch"},{"frequency":"20×","amplitude":15,"envelope":"steady"}]}},
+			{name: "pan flute",        midiProgram:  75, generalMidi: true, settings: {"type":"spectrum","volume":100,"transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","spectrum":[100,0,0,0,0,0,0,14,0,0,0,86,0,0,14,0,71,0,29,14,29,29,14,29,14,29,14,14,29,29]}},
 			{name: "blown bottle",     midiProgram:  76, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"cross-fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":7,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":3,"envelope":"custom"},{"frequency":"6×","amplitude":1,"envelope":"custom"},{"frequency":"11×","amplitude":1,"envelope":"custom"}]}},
 			{name: "shakuhachi",       midiProgram:  77, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"soft","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":57,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3←4)","feedbackType":"3→4","feedbackAmplitude":15,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":3,"envelope":"punch"},{"frequency":"~1×","amplitude":4,"envelope":"twang 1"},{"frequency":"20×","amplitude":15,"envelope":"steady"}]}},
 			{name: "whistle",          midiProgram:  78, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":250,"filterResonance":14,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "ocarina",          midiProgram:  79, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":2,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "square lead",      midiProgram:  80, generalMidi: true, settings: {"type":"chip","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","volume":80,"wave":"square","interval":"hum","vibrato":"none"}},
 			{name: "sawtooth lead",    midiProgram:  81, generalMidi: true, settings: {"type":"chip","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","volume":80,"wave":"sawtooth","interval":"shimmer","vibrato":"none"}},
-			{name: "synth calliope",   midiProgram:  82, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"cross-fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1000,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"3→4","feedbackAmplitude":15,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"~1×","amplitude":3,"envelope":"twang 3"},{"frequency":"1×","amplitude":15,"envelope":"swell 1"}]}},
-			{name: "chiffer lead",     midiProgram:  83, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"hard","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1000,"filterResonance":14,"filterEnvelope":"punch","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"3→4","feedbackAmplitude":15,"feedbackEnvelope":"punch","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"1×","amplitude":9,"envelope":"steady"},{"frequency":"~1×","amplitude":2,"envelope":"twang 3"},{"frequency":"1×","amplitude":15,"envelope":"punch"}]}},
+			{name: "synth calliope",   midiProgram:  82, generalMidi: true, settings: {"type":"spectrum","volume":100,"transition":"cross-fade","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"steady","spectrum":[100,0,0,0,0,0,0,86,0,0,0,71,0,0,57,0,43,0,29,14,14,29,14,14,14,14,14,14,14,14]}},
+			{name: "chiffer lead",     midiProgram:  83, generalMidi: true, settings: {"type":"spectrum","volume":100,"transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"punch","spectrum":[100,0,0,0,0,0,0,86,0,0,0,86,0,0,71,0,57,0,43,14,14,43,14,29,14,29,29,29,29,14]}},
 			{name: "charang lead",     midiProgram:  84, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":0,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1→2→3→4","feedbackAmplitude":11,"feedbackEnvelope":"twang 3","operators":[{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"~1×","amplitude":5,"envelope":"twang 3"},{"frequency":"4×","amplitude":5,"envelope":"steady"},{"frequency":"3×","amplitude":5,"envelope":"steady"}]}},
 			{name: "synth vox lead",   midiProgram:  85, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"cross-fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","vibrato":"light","algorithm":"(1 2 3)←4","feedbackType":"1→2→3→4","feedbackAmplitude":1,"feedbackEnvelope":"punch","operators":[{"frequency":"2×","amplitude":10,"envelope":"custom"},{"frequency":"9×","amplitude":5,"envelope":"custom"},{"frequency":"20×","amplitude":1,"envelope":"custom"},{"frequency":"~1×","amplitude":4,"envelope":"steady"}]}},
 			{name: "fifth saw lead",   midiProgram:  86, generalMidi: true, settings: {"type":"chip","volume":80,"transition":"fast fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":57,"filterEnvelope":"twang 2","wave":"sawtooth","interval":"fifth","vibrato":"none"}},
@@ -354,19 +363,19 @@ namespace beepbox {
 			{name: "tinkle bell",      midiProgram: 112, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"hard","effects":"reverb","chord":"strum","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1→2→3→4","feedbackAmplitude":5,"feedbackEnvelope":"twang 3","operators":[{"frequency":"~2×","amplitude":5,"envelope":"custom"},{"frequency":"5×","amplitude":5,"envelope":"custom"},{"frequency":"7×","amplitude":5,"envelope":"custom"},{"frequency":"16×","amplitude":5,"envelope":"custom"}]}},
 			{name: "agogo",            midiProgram: 113, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"decay 1","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1→4","feedbackAmplitude":15,"feedbackEnvelope":"decay 1","operators":[{"frequency":"2×","amplitude":7,"envelope":"custom"},{"frequency":"5×","amplitude":5,"envelope":"custom"},{"frequency":"8×","amplitude":7,"envelope":"custom"},{"frequency":"13×","amplitude":9,"envelope":"custom"}]}},
 			{name: "steel pan",        midiProgram: 114, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"fast fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":0,"filterEnvelope":"decay 2","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"4⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"~1×","amplitude":11,"envelope":"custom"},{"frequency":"7×","amplitude":3,"envelope":"flare 1"},{"frequency":"3×","amplitude":5,"envelope":"flare 2"},{"frequency":"4×","amplitude":4,"envelope":"swell 2"}]}},
-//			{name: "woodblock",        midiProgram: 115, isNoise:  true, generalMidi: true, settings: },
-//			{name: "taiko drum",       midiProgram: 116, isNoise:  true, generalMidi: true, settings: },
-//			{name: "melodic drum",     midiProgram: 117, isNoise:  true, generalMidi: true, settings: },
-//			{name: "synth drum",       midiProgram: 118, isNoise:  true, generalMidi: true, settings: },
-//			{name: "reverse cymbal",   midiProgram: 119, isNoise:  true, generalMidi: true, settings: },
-//			{name: "guitar fret noise",midiProgram: 120, isNoise:  true, generalMidi: true, settings: },
-			{name: "breath noise",     midiProgram: 121, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"cross-fade","effects":"chorus & reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"3→4","feedbackAmplitude":15,"feedbackEnvelope":"punch","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":4,"envelope":"steady"},{"frequency":"~1×","amplitude":5,"envelope":"flare 1"},{"frequency":"20×","amplitude":15,"envelope":"punch"}]}},
-//			{name: "seashore",         midiProgram: 122, isNoise:  true, generalMidi: true, settings: },
-//			{name: "bird tweet",       midiProgram: 123, isNoise:  true, generalMidi: true, settings: },
+			{name: "woodblock",        midiProgram: 115, generalMidi: true, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":1414,"filterResonance":14,"filterEnvelope":"twang 1","spectrum":[0,0,0,0,0,0,57,71,43,29,29,14,14,29,57,71,14,14,43,29,29,29,29,29,57,71,29,29,29,29]}},
+			{name: "taiko drum",       midiProgram: 116, generalMidi: true, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":1000,"filterResonance":14,"filterEnvelope":"twang 1","spectrum":[100,29,29,43,14,29,29,14,29,29,29,14,29,43,29,29,29,14,29,29,14,29,29,29,43,43,29,29,29,29]}},
+			{name: "melodic drum",     midiProgram: 117, generalMidi: true, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","spectrum":[100,29,29,57,43,43,43,0,0,0,29,43,29,29,29,0,0,0,0,29,43,29,29,29,29,29,29,29,29,29]}},
+			{name: "synth drum",       midiProgram: 118, generalMidi: true, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"decay 2","spectrum":[100,29,14,14,14,14,29,71,29,14,29,57,29,29,57,29,29,29,29,29,29,29,29,29,29,29,29,29,29,43]}},
+			{name: "reverse cymbal",   midiProgram: 119, generalMidi: true, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"hard","effects":"none","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"swell 3","spectrum":[14,14,14,29,29,29,29,29,43,29,29,43,43,43,29,29,71,43,86,86,57,100,86,86,86,86,71,86,71,57]}},
+//			{name: "guitar fret noise",midiProgram: 120, generalMidi: true, isNoise: true, settings: },
+			{name: "breath noise",     midiProgram: 121, generalMidi: true, settings: {"type":"spectrum","volume":100,"transition":"cross-fade","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","spectrum":[57,0,0,0,0,0,0,14,0,0,0,57,0,0,14,0,86,14,14,14,86,14,86,14,14,57,0,14,0,0]}},
+			{name: "seashore",         midiProgram: 122, generalMidi: true, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"slow fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"swell 3","spectrum":[14,14,29,29,43,43,43,57,57,57,57,57,57,71,71,71,71,71,71,71,71,71,71,71,71,71,71,71,71,57]}},
+			{name: "bird tweet",       midiProgram: 123, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"soft","effects":"reverb","chord":"strum","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"decay 1","vibrato":"heavy","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"4×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "telephone ring",   midiProgram: 124, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"hard","effects":"reverb","chord":"arpeggio","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"tremolo4","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":4,"envelope":"tremolo1"},{"frequency":"20×","amplitude":1,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
-//			{name: "helicopter",       midiProgram: 125, isNoise:  true, generalMidi: true, settings: },
-//			{name: "applause",         midiProgram: 126, isNoise:  true, generalMidi: true, settings: },
-//			{name: "gunshot",          midiProgram: 127, isNoise:  true, generalMidi: true, settings: },
+			{name: "helicopter",       midiProgram: 125, generalMidi: true, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"tremolo1","spectrum":[100,57,100,57,57,57,100,100,100,100,43,0,100,100,100,100,100,57,100,100,100,100,100,100,86,86,86,71,71,71]}},
+			{name: "applause",         midiProgram: 126, generalMidi: true, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"slow fade","effects":"reverb","chord":"harmony","filterCutoffHz":707,"filterResonance":0,"filterEnvelope":"swell 3","spectrum":[29,29,29,43,43,29,29,29,43,57,86,86,86,71,71,57,57,57,71,71,86,86,86,86,71,71,57,57,43,29]}},
+			{name: "gunshot",          midiProgram: 127, generalMidi: true, isNoise: true, settings: {"type":"spectrum","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":1414,"filterResonance":29,"filterEnvelope":"twang 1","spectrum":[14,29,29,29,43,43,43,57,57,57,71,71,71,71,71,71,71,71,71,71,71,57,57,57,57,43,43,43,43,29]}},
 		];
 		public static readonly chipWaves: ReadonlyArray<ChipWave> = [
 			{name: "rounded",      volume: 0.94, samples: Config._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
@@ -385,15 +394,12 @@ namespace beepbox {
 		];
 		// Noise waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
 		public static readonly noiseWaves: ReadonlyArray<NoiseWave> = [
-			{name: "retro",   volume: 0.25, basePitch: 69,  pitchFilterMult: 100.0, isSoft: false, samples: null},
-			{name: "white",   volume: 1.0,  basePitch: 69,  pitchFilterMult:   8.0, isSoft: true,  samples: null},
+			{name: "retro",   volume: 0.25, basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
+			{name: "white",   volume: 1.0,  basePitch: 69,  pitchFilterMult:    8.0, isSoft: true,  samples: null},
 			// The "clang" and "buzz" drums are inspired by similar drums in the modded beepbox! :D
-			{name: "clang",   volume: 0.4,  basePitch: 69,  pitchFilterMult: 100.0, isSoft: false, samples: null},
-			{name: "buzz",    volume: 0.3,  basePitch: 69,  pitchFilterMult: 100.0, isSoft: false, samples: null},
-			{name: "hollow",  volume: 1.5,  basePitch: 96,  pitchFilterMult:   1.0, isSoft: true,  samples: null},
-			//{name: "tom-tom", volume: 1.5,  basePitch: 96,  pitchFilterMult:   1.0, isSoft: true,  samples: null},
-			//{name: "cymbal",  volume: 1.5,  basePitch: 90,  pitchFilterMult:   1.0, isSoft: true,  samples: null},
-			//{name: "bass",    volume: 1.5,  basePitch: 126, pitchFilterMult:   1.0, isSoft: true,  samples: null},
+			{name: "clang",   volume: 0.4,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
+			{name: "buzz",    volume: 0.3,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
+			{name: "hollow",  volume: 1.5,  basePitch: 96,  pitchFilterMult:    1.0, isSoft: true,  samples: null},
 		];
 		public static readonly filterCutoffMaxHz: number = 8000; // This is carefully calculated to correspond to no change when filtering at 48000 samples per second.
 		public static readonly filterCutoffMinHz: number = 1;
@@ -515,7 +521,11 @@ namespace beepbox {
 			{name: "1→4 2→3",     indices: [ [],  [], [2], [1]]},
 			{name: "1→2→3→4",     indices: [ [], [1], [2], [3]]},
 		];
-		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise"];
+		public static readonly spectrumControlPoints: number = 30;
+		public static readonly spectrumControlPointsPerOctave: number = 7;
+		public static readonly spectrumControlPointBits: number = 3;
+		public static readonly spectrumMax: number = (1 << Config.spectrumControlPointBits) - 1;
+		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum"];
 		public static readonly pitchColors: ReadonlyArray<ChannelColors> = [
 			{name: "cyan",   channelDim: "#0099a1", channelBright: "#25f3ff", noteDim: "#00bdc7", noteBright: "#92f9ff"},
 			{name: "yellow", channelDim: "#a1a100", channelBright: "#ffff25", noteDim: "#c7c700", noteBright: "#ffff92"},
@@ -560,7 +570,7 @@ namespace beepbox {
 		public static getDrumWave(index: number): Float32Array {
 			let wave: Float32Array | null = Config.noiseWaves[index].samples;
 			if (wave == null) {
-				wave = new Float32Array(32768);
+				wave = new Float32Array(32768 + 1);
 				Config.noiseWaves[index].samples = wave;
 				
 				if (index == 0) {
@@ -604,56 +614,46 @@ namespace beepbox {
 				} else if (index == 4) {
 					// "hollow" drums, designed in frequency space and then converted via FFT:
 					Config.drawNoiseSpectrum(wave, 10, 11, 1, 1, 0);
-					Config.drawNoiseSpectrum(wave, 11, 14, -2, -2, 0);
-					inverseRealFourierTransform(wave);
-					scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
-				/*
-				} else if (index == 5) {
-					// "tom-tom" drums, designed in frequency space and then converted via FFT:
-					Config.drawNoiseSpectrum(wave, 10, 14, 0, -4, 0);
-					inverseRealFourierTransform(wave);
-					scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
-				} else if (index == 6) {
-					// "cymbal" drums, designed in frequency space and then converted via FFT:
-					Config.drawNoiseSpectrum(wave, 9, 9.4, -1, -1, -0.5);
-					Config.drawNoiseSpectrum(wave, 9.7, 10, -1, -1, -0.5);
-					Config.drawNoiseSpectrum(wave, 10.3, 10.6, -1, -1, -0.5);
-					Config.drawNoiseSpectrum(wave, 10.9, 11.1, -1, -1, -0.5);
-					Config.drawNoiseSpectrum(wave, 11.3, 11.4, 0, 0, -0.5);
-					Config.drawNoiseSpectrum(wave, 11.5, 11.7, 1.5, 1.5, -0.5);
-					Config.drawNoiseSpectrum(wave, 11.7, 12, -1, -1, -0.5);
-					Config.drawNoiseSpectrum(wave, 12, 12.1, 2, 2, -0.5);
-					Config.drawNoiseSpectrum(wave, 12.1, 12.6, 0, 2, -0.5);
-					Config.drawNoiseSpectrum(wave, 12.6, 13, 0, 0, -0.5);
-					Config.drawNoiseSpectrum(wave, 13, 14, 1, -3, -0.5);
-					inverseRealFourierTransform(wave);
-					scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
-				} else if (index == 7) {
-					// "bass" drums, designed in frequency space and then converted via FFT:
-					Config.drawNoiseSpectrum(wave, 7, 8, -2, 4, 0);
-					Config.drawNoiseSpectrum(wave, 8, 9, 4, -2, 0);
-					Config.drawNoiseSpectrum(wave, 9, 14, -2, -6, 0);
-					inverseRealFourierTransform(wave);
-					scaleElementsByFactor(wave, 1.0 / Math.sqrt(wave.length));
-				*/
+					Config.drawNoiseSpectrum(wave, 11, 14, .6578, .6578, 0);
+					inverseRealFourierTransform(wave, 32768);
+					scaleElementsByFactor(wave, 1.0 / Math.sqrt(32768));
 				} else {
 					throw new Error("Unrecognized drum index: " + index);
 				}
+				
+				wave[32768] = wave[0];
 			}
 			
 			return wave;
 		}
 		
-		private static drawNoiseSpectrum(wave: Float32Array, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overalSlope: number): void {
+		public static drawNoiseSpectrum(wave: Float32Array, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overallSlope: number): void {
 			const referenceOctave: number = 11;
 			const referenceIndex: number = 1 << referenceOctave;
 			const lowIndex: number = Math.pow(2, lowOctave) | 0;
 			const highIndex: number = Math.pow(2, highOctave) | 0;
 			const log2: number = Math.log(2);
+			const retroWave: Float32Array = Config.getDrumWave(0);
 			for (let i: number = lowIndex; i < highIndex; i++) {
-				let amplitude: number = Math.pow(2, lowPower + (highPower - lowPower) * (Math.log(i) / log2 - lowOctave) / (highOctave - lowOctave));
-				amplitude *= Math.pow(i / referenceIndex, overalSlope);
-				const radians: number = Math.random() * Math.PI * 2.0;
+				
+				
+				let lerped: number = lowPower + (highPower - lowPower) * (Math.log(i) / log2 - lowOctave) / (highOctave - lowOctave);
+				//let amplitude: number = Math.pow(2, lerped);
+				//let amplitude: number = Math.pow((lerped + 5) / 7, 4);
+				let amplitude: number = Math.pow(2, (lerped-1)*Config.spectrumMax + 1) * lerped;
+				
+				amplitude *= Math.pow(i / referenceIndex, overallSlope);
+				
+				// Add two different sources of psuedo-randomness to the noise
+				// (individually they aren't random enough) but in a deterministic
+				// way so that live spectrum editing doesn't result in audible pops.
+				// Multiple all the sine wave amplitudes by 1 or -1 based on the 
+				// LFSR retro wave (effectively random), and also rotate the phase
+				// of each sine wave based on the golden angle to disrupt the symmetry.
+				amplitude *= retroWave[i];
+				const radians: number = 0.61803398875 * i * i * Math.PI * 2.0;
+				
+				
 				wave[i] = Math.cos(radians) * amplitude;
 				wave[32768 - i] = Math.sin(radians) * amplitude;
 			}
@@ -811,6 +811,7 @@ namespace beepbox {
 		operatorAmplitudes = CharCode.P,
 		operatorFrequencies = CharCode.Q,
 		
+		spectrum = CharCode.S,
 		startInstrument = CharCode.T,
 		
 		feedbackEnvelope = CharCode.V,
@@ -1026,7 +1027,8 @@ namespace beepbox {
 	export class Instrument {
 		public type: InstrumentType = InstrumentType.chip;
 		public preset: number = 0;
-		public wave: number = 2;
+		public chipWave: number = 2;
+		public noiseWave: number = 1;
 		public filterCutoff: number = 6;
 		public filterResonance: number = 0;
 		public filterEnvelope: number = 1;
@@ -1041,10 +1043,16 @@ namespace beepbox {
 		public feedbackAmplitude: number = 0;
 		public feedbackEnvelope: number = 1;
 		public readonly operators: Operator[] = [];
+		public readonly spectrum: number[] = [];
+		private _customWave: Float32Array | null = null;
+		private _customWaveIsDirty: boolean = true;
 		
 		constructor() {
-			for (let i = 0; i < Config.operatorCount; i++) {
+			for (let i: number = 0; i < Config.operatorCount; i++) {
 				this.operators.push(new Operator(i));
+			}
+			for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
+				this.spectrum[i] = (i < Config.spectrumControlPointsPerOctave) ? Config.spectrumMax : 0;
 			}
 		}
 		
@@ -1053,7 +1061,7 @@ namespace beepbox {
 			this.preset = type;
 			switch (type) {
 				case InstrumentType.chip:
-					this.wave = 2;
+					this.chipWave = 2;
 					this.filterCutoff = 6;
 					this.filterResonance = 0;
 					this.filterEnvelope = 1;
@@ -1082,7 +1090,7 @@ namespace beepbox {
 					}
 					break;
 				case InstrumentType.noise:
-					this.wave = 1;
+					this.noiseWave = 1;
 					this.transition = 1;
 					this.volume = 0;
 					this.effects = 0;
@@ -1090,6 +1098,18 @@ namespace beepbox {
 					this.filterCutoff = 10;
 					this.filterResonance = 0;
 					this.filterEnvelope = 1;
+					break;
+				case InstrumentType.spectrum:
+					this.transition = 1;
+					this.volume = 0;
+					this.effects = 0;
+					this.chord = 0;
+					this.filterCutoff = 10;
+					this.filterResonance = 0;
+					this.filterEnvelope = 1;
+					for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
+						this.spectrum[i] = (i < Config.spectrumControlPointsPerOctave) ? Config.spectrumMax : 0;
+					}
 					break;
 				default:
 					throw new Error("Unrecognized instrument type: " + type);
@@ -1099,7 +1119,8 @@ namespace beepbox {
 		public copy(other: Instrument): void {
 			this.type = other.type;
 			this.preset = other.preset;
-			this.wave = other.wave;
+			this.chipWave = other.chipWave;
+			this.noiseWave = other.noiseWave;
 			this.filterCutoff = other.filterCutoff;
 			this.filterResonance = other.filterResonance;
 			this.filterEnvelope = other.filterEnvelope;
@@ -1116,6 +1137,10 @@ namespace beepbox {
 			for (let i: number = 0; i < this.operators.length; i++) {
 				this.operators[i].copy(other.operators[i]);
 			}
+			for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
+				this.spectrum[i] = other.spectrum[i];
+			}
+			this._customWaveIsDirty = true;
 		}
 		
 		public toJsonObject(): Object {
@@ -1133,9 +1158,14 @@ namespace beepbox {
 				instrumentObject.preset = Config.valueToPreset(this.preset)!.name;
 			}
 			if (this.type == InstrumentType.noise) {
-				instrumentObject.wave = Config.noiseWaves[this.wave].name;
+				instrumentObject.wave = Config.noiseWaves[this.noiseWave].name;
+			} else if (this.type == InstrumentType.spectrum) {
+				instrumentObject.spectrum = [];
+				for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
+					instrumentObject.spectrum[i] = Math.round(100 * this.spectrum[i] / Config.spectrumMax);
+				}
 			} else if (this.type == InstrumentType.chip) {
-				instrumentObject.wave = Config.chipWaves[this.wave].name;
+				instrumentObject.wave = Config.chipWaves[this.chipWave].name;
 				instrumentObject.interval = Config.intervals[this.interval].name;
 				instrumentObject.vibrato = Config.vibratos[this.vibrato].name;
 			} else if (this.type == InstrumentType.fm) {
@@ -1159,11 +1189,13 @@ namespace beepbox {
 			return instrumentObject;
 		}
 		
-		public fromJsonObject(instrumentObject: any, isDrum: boolean): void {
+		public fromJsonObject(instrumentObject: any, isDrumChannel: boolean): void {
+			this._customWaveIsDirty = true;
+			
 			if (instrumentObject == undefined) instrumentObject = {};
 			
 			let type: InstrumentType = Config.instrumentTypeNames.indexOf(instrumentObject.type);
-			if (type == -1) type = isDrum ? InstrumentType.noise : InstrumentType.chip;
+			if (type == -1) type = isDrumChannel ? InstrumentType.noise : InstrumentType.chip;
 			this.setTypeAndReset(type);
 			
 			if (instrumentObject.preset != undefined) {
@@ -1212,16 +1244,26 @@ namespace beepbox {
 			
 			const legacyEffectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy"];
 			if (this.type == InstrumentType.noise) {
-				this.wave = Config.noiseWaves.findIndex(wave=>wave.name==instrumentObject.wave);
-				if (this.wave == -1) this.wave = 1;
+				this.noiseWave = Config.noiseWaves.findIndex(wave=>wave.name==instrumentObject.wave);
+				if (this.noiseWave == -1) this.noiseWave = 1;
 
 				this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject.chord);
-				if (this.chord == -1) this.chord = 1;
+				if (this.chord == -1) this.chord = 2;
 
+			} else if (this.type == InstrumentType.spectrum) {
+				if (instrumentObject.spectrum != undefined) {
+					for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
+						this.spectrum[i] = Math.max(0, Math.min(Config.spectrumMax, Math.round(Config.spectrumMax * (+instrumentObject.spectrum[i]) / 100)));
+					}
+				}
+				
+				this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject.chord);
+				if (this.chord == -1) this.chord = 0;
+				
 			} else if (this.type == InstrumentType.chip) {
 				const legacyWaveNames: Dictionary<number> = {"triangle": 1, "square": 2, "pulse wide": 4, "pulse narrow": 6, "sawtooth": 9, "double saw": 10, "double pulse": 11, "spiky": 12, "plateau": 0};
-				this.wave = legacyWaveNames[instrumentObject.wave] != undefined ? legacyWaveNames[instrumentObject.wave] : Config.chipWaves.findIndex(wave=>wave.name==instrumentObject.wave);
-				if (this.wave == -1) this.wave = 1;
+				this.chipWave = legacyWaveNames[instrumentObject.wave] != undefined ? legacyWaveNames[instrumentObject.wave] : Config.chipWaves.findIndex(wave=>wave.name==instrumentObject.wave);
+				if (this.chipWave == -1) this.chipWave = 1;
 
 				if (instrumentObject.interval != undefined) {
 					this.interval = Config.intervals.findIndex(interval=>interval.name==instrumentObject.interval);
@@ -1241,7 +1283,7 @@ namespace beepbox {
 				}
 				
 				this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject.chord);
-				if (this.chord == -1) this.chord = 1;
+				if (this.chord == -1) this.chord = 2;
 
 				// The original chorus setting had an option that now maps to two different settings. Override those if necessary.
 				if (instrumentObject.chorus == "custom harmony") {
@@ -1293,6 +1335,79 @@ namespace beepbox {
 			} else {
 				throw new Error("Unrecognized instrument type.");
 			}
+		}
+		
+		public getDrumWave(): Float32Array | null {
+			if (this.type == InstrumentType.noise) {
+				return Config.getDrumWave(this.noiseWave);
+			} else if (this.type == InstrumentType.spectrum) {
+				return this.getCustomWave();
+			} else {
+				return null;
+			}
+		}
+		
+		public markCustomWaveDirty(): void {
+			this._customWaveIsDirty = true;
+		}
+		
+		public getCustomWave(): Float32Array {
+			if (this._customWaveIsDirty || this._customWave == null) {
+				let waveLength: number;
+				if (this.type == InstrumentType.spectrum) {
+					waveLength = 32768;
+				} else {
+					throw new Error("Unrecognized instrument type for custom waves.");
+				}
+				
+				if (this._customWave == null || this._customWave.length != waveLength + 1) {
+					this._customWave = new Float32Array(waveLength + 1);
+				}
+				
+				for (let i: number = 0; i < waveLength; i++) {
+					this._customWave[i] = 0;
+				}
+				
+				const lowestOctave: number = 8;
+				const highestOctave: number = 14;
+				// Nudge the 2/7 and 4/7 control points so that they form harmonic intervals.
+				const pitchTweak: number[] = [0, 1/7, Math.log(5/4)/Math.log(2), 3/7, Math.log(3/2)/Math.log(2), 5/7, 6/7];
+				function controlPointToOctave(point: number): number {
+					return lowestOctave + Math.floor(point / Config.spectrumControlPointsPerOctave) + pitchTweak[(point + Config.spectrumControlPointsPerOctave) % Config.spectrumControlPointsPerOctave];
+				}
+				
+				for (let i: number = 0; i < Config.spectrumControlPoints + 1; i++) {
+					const value1: number = (i <= 0) ? 0 : this.spectrum[i - 1];
+					const value2: number = (i >= Config.spectrumControlPoints) ? this.spectrum[Config.spectrumControlPoints - 1] : this.spectrum[i];
+					const octave1: number = controlPointToOctave(i - 1);
+					const octave2: number = (i >= Config.spectrumControlPoints) ? highestOctave - 1 : controlPointToOctave(i);
+					if (value1 == 0 && value2 == 0) continue;
+					
+					Config.drawNoiseSpectrum(this._customWave, octave1, octave2, value1 / Config.spectrumMax, value2 / Config.spectrumMax, -0.5);
+				}
+				if (this.spectrum[Config.spectrumControlPoints - 1] > 0) {
+					Config.drawNoiseSpectrum(this._customWave, highestOctave - 1, highestOctave, this.spectrum[Config.spectrumControlPoints - 1] / Config.spectrumMax, 0, -0.5);
+				}
+				
+				inverseRealFourierTransform(this._customWave, waveLength);
+				scaleElementsByFactor(this._customWave, 1.0 / Math.sqrt(waveLength));
+				
+				// Limit the maximum wave amplitude.
+				let max: number = 0;
+				for (let i: number = 0; i < waveLength; i++) {
+					const sample: number = this._customWave[i];
+					if (sample > max || -sample > max) max = Math.abs(sample);
+				}
+				const mult: number = 2 / Math.max(1, Math.sqrt(max));
+				for (let i: number = 0; i < waveLength; i++) {
+					this._customWave[i] *= mult;
+				}
+				
+				this._customWave[waveLength] = this._customWave[0];
+				
+				this._customWaveIsDirty = false;
+			}
+			return this._customWave;
 		}
 	}
 	
@@ -1449,12 +1564,10 @@ namespace beepbox {
 					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects]);
 					buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 					if (instrument.type == InstrumentType.chip) {
-						// chip
-						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
+						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipWave]);
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
-					} else if (instrument.type == InstrumentType.fm) {
-						// FM
+					} else if (instrument.type == InstrumentType.fm) {						// FM
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.algorithm, base64IntToCharCode[instrument.algorithm]);
 						buffer.push(SongTagCode.feedbackType, base64IntToCharCode[instrument.feedbackType]);
@@ -1474,8 +1587,14 @@ namespace beepbox {
 							buffer.push(base64IntToCharCode[instrument.operators[o].envelope]);
 						}
 					} else if (instrument.type == InstrumentType.noise) {
-						// noise
-						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.wave]);
+						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.noiseWave]);
+					} else if (instrument.type == InstrumentType.spectrum) {
+						buffer.push(SongTagCode.spectrum);
+						const spectrumBits: BitFieldWriter = new BitFieldWriter();
+						for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
+							spectrumBits.write(Config.spectrumControlPointBits, instrument.spectrum[i]);
+						}
+						spectrumBits.encodeBase64(base64IntToCharCode, buffer);
 					} else {
 						throw new Error("Unknown instrument type.");
 					}
@@ -1496,10 +1615,10 @@ namespace beepbox {
 			let neededInstrumentBits: number = 0;
 			while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
-				const isDrum: boolean = this.getChannelIsDrum(channel);
-				const octaveOffset: number = isDrum ? 0 : this.channels[channel].octave * 12;
-				let lastPitch: number = (isDrum ? 4 : 12) + octaveOffset;
-				const recentPitches: number[] = isDrum ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+				const isDrumChannel: boolean = this.getChannelIsDrum(channel);
+				const octaveOffset: number = isDrumChannel ? 0 : this.channels[channel].octave * 12;
+				let lastPitch: number = (isDrumChannel ? 4 : 12) + octaveOffset;
+				const recentPitches: number[] = isDrumChannel ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
 				const recentShapes: string[] = [];
 				for (let i: number = 0; i < recentPitches.length; i++) {
 					recentPitches[i] += octaveOffset;
@@ -1615,9 +1734,17 @@ namespace beepbox {
 			Array.prototype.push.apply(buffer, digits); // append digits to buffer.
 			bits.encodeBase64(base64IntToCharCode, buffer);
 			
-			// HACK: This breaks for strings longer than 65535. 
-			if (buffer.length >= 65535) throw new Error("Song hash code too long.");
-			return String.fromCharCode.apply(null, buffer);
+			const maxApplyArgs: number = 64000;
+			if (buffer.length < maxApplyArgs) {
+				// Note: Function.apply may break for long argument lists. 
+				return String.fromCharCode.apply(null, buffer);
+			} else {
+				let result: string = "";
+				for (let i: number = 0; i < buffer.length; i += maxApplyArgs) {
+					result += String.fromCharCode.apply(null, buffer.slice(i, i + maxApplyArgs));
+				}
+				return result;
+			}
 		}
 		
 		public fromBase64String(compressed: string): void {
@@ -1649,7 +1776,7 @@ namespace beepbox {
 			if (beforeThree) {
 				// Originally, the only instrument transition was "seamless" and the only drum wave was "retro".
 				for (const channel of this.channels) channel.instruments[0].transition = 0;
-				this.channels[3].instruments[0].wave = 0;
+				this.channels[3].instruments[0].noiseWave = 0;
 			}
 			
 			let instrumentChannelIterator: number = 0;
@@ -1765,30 +1892,30 @@ namespace beepbox {
 					if (beforeThree) {
 						const legacyWaves: number[] = [1, 2, 4, 6, 9, 10, 11, 12, 0];
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channels[channel].instruments[0].wave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
+						this.channels[channel].instruments[0].chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
 					} else if (beforeSix) {
 						const legacyWaves: number[] = [1, 2, 4, 6, 9, 10, 11, 12, 0];
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 								if (channel >= this.pitchChannelCount) {
-									this.channels[channel].instruments[i].wave = clamp(0, Config.noiseWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+									this.channels[channel].instruments[i].noiseWave = clamp(0, Config.noiseWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 								} else {
-									this.channels[channel].instruments[i].wave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
+									this.channels[channel].instruments[i].chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
 								}
 							}
 						}
 					} else if (beforeSeven) {
 						const legacyWaves: number[] = [1, 2, 4, 6, 9, 10, 11, 12, 0];
 						if (instrumentChannelIterator >= this.pitchChannelCount) {
-							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, Config.noiseWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].noiseWave = clamp(0, Config.noiseWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						} else {
-							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
 						}
 					} else {
 						if (instrumentChannelIterator >= this.pitchChannelCount) {
-							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, Config.noiseWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].noiseWave = clamp(0, Config.noiseWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						} else {
-							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].wave = clamp(0, Config.chipWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chipWave = clamp(0, Config.chipWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						}
 					}
 				} else if (command == SongTagCode.filterCutoff) {
@@ -1951,6 +2078,14 @@ namespace beepbox {
 					for (let o: number = 0; o < Config.operatorCount; o++) {
 						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].operators[o].envelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
+				} else if (command == SongTagCode.spectrum) {
+					const byteCount: number = Math.ceil(Config.spectrumControlPoints * Config.spectrumControlPointBits / 6)
+					const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + byteCount);
+					for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].spectrum[i] = bits.read(Config.spectrumControlPointBits);
+					}
+					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].markCustomWaveDirty();
+					charIndex += byteCount;
 				} else if (command == SongTagCode.bars) {
 					let subStringLength: number;
 					if (beforeThree) {
@@ -2010,13 +2145,13 @@ namespace beepbox {
 					let neededInstrumentBits: number = 0;
 					while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
 					while (true) {
-						const isDrum: boolean = this.getChannelIsDrum(channel);
+						const isDrumChannel: boolean = this.getChannelIsDrum(channel);
 						
-						const octaveOffset: number = isDrum ? 0 : this.channels[channel].octave * 12;
+						const octaveOffset: number = isDrumChannel ? 0 : this.channels[channel].octave * 12;
 						let note: Note | null = null;
 						let pin: NotePin | null = null;
-						let lastPitch: number = (isDrum ? 4 : 12) + octaveOffset;
-						const recentPitches: number[] = isDrum ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+						let lastPitch: number = (isDrumChannel ? 4 : 12) + octaveOffset;
+						const recentPitches: number[] = isDrumChannel ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
 						const recentShapes: any[] = [];
 						for (let i: number = 0; i < recentPitches.length; i++) {
 							recentPitches[i] += octaveOffset;
@@ -2150,7 +2285,7 @@ namespace beepbox {
 			const channelArray: Object[] = [];
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 				const instrumentArray: Object[] = [];
-				const isDrum: boolean = this.getChannelIsDrum(channel);
+				const isDrumChannel: boolean = this.getChannelIsDrum(channel);
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					instrumentArray.push(this.channels[channel].instruments[i].toJsonObject());
 				}
@@ -2192,7 +2327,7 @@ namespace beepbox {
 				}
 				
 				channelArray.push({
-					type: isDrum ? "drum" : "pitch",
+					type: isDrumChannel ? "drum" : "pitch",
 					octaveScrollBar: this.channels[channel].octave,
 					instruments: instrumentArray,
 					patterns: patternArray,
@@ -2330,18 +2465,18 @@ namespace beepbox {
 					}
 					this.channels[channel].bars.length = this.barCount;
 					
-					let isDrum: boolean = false;
+					let isDrumChannel: boolean = false;
 					if (channelObject.type) {
-						isDrum = (channelObject.type == "drum");
+						isDrumChannel = (channelObject.type == "drum");
 					} else {
 						// for older files, assume drums are channel 3.
-						isDrum = (channel >= 3);
+						isDrumChannel = (channel >= 3);
 					}
-					if (isDrum) drumChannelCount++; else pitchChannelCount++;
+					if (isDrumChannel) drumChannelCount++; else pitchChannelCount++;
 					
 					for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 						const instrument: Instrument = this.channels[channel].instruments[i];
-						instrument.fromJsonObject(channelObject.instruments[i], isDrum);
+						instrument.fromJsonObject(channelObject.instruments[i], isDrumChannel);
 					}
 					
 					for (let i: number = 0; i < this.patternsPerChannel; i++) {
@@ -2405,7 +2540,7 @@ namespace beepbox {
 							
 								note.end = note.pins[note.pins.length - 1].time + note.start;
 							
-								const maxPitch: number = isDrum ? Config.drumCount - 1 : Config.maxPitch;
+								const maxPitch: number = isDrumChannel ? Config.drumCount - 1 : Config.maxPitch;
 								let lowestPitch: number = maxPitch;
 								let highestPitch: number = 0;
 								for (let k: number = 0; k < note.pitches.length; k++) {
@@ -2536,12 +2671,10 @@ namespace beepbox {
 			// Don't bother to generate the drum waves unless the song actually
 			// uses them, since they may require a lot of computation.
 			if (song != null) {
-				for (let i: number = 0; i < song.instrumentsPerChannel; i++) {
-					for (let j: number = song.pitchChannelCount; j < song.pitchChannelCount + song.drumChannelCount; j++) {
-						Config.getDrumWave(song.channels[j].instruments[i].wave);
-					}
-					for (let j: number = 0; j < song.getChannelCount(); j++) {
+				for (let j: number = 0; j < song.getChannelCount(); j++) {
+					for (let i: number = 0; i < song.instrumentsPerChannel; i++) {
 						Synth.getInstrumentSynthFunction(song.channels[j].instruments[i]);
+						song.channels[j].instruments[i].getDrumWave();
 					}
 				}
 			}
@@ -2956,6 +3089,7 @@ namespace beepbox {
 						
 						const sample = data[i] + chorusSample + reverbSample0 + reverbSample1 + reverbSample2 + reverbSample3;
 						
+						// A basic limiter.
 						const abs: number = sample < 0.0 ? -sample : sample;
 						if (limit < abs) limit = abs;
 						data[i] = (sample / (limit * 0.75 + 0.25)) * volume;
@@ -3055,8 +3189,8 @@ namespace beepbox {
 			
 			this.playheadInternal = (((this.tick + 1.0 - this.tickSampleCountdown / samplesPerTick) / 2.0 + this.part) / Config.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
 			
-			const synthDuration: number = performance.now() - synthStartTime;
 			/*
+			const synthDuration: number = performance.now() - synthStartTime;
 			// Performance measurements:
 			samplesAccumulated += bufferLength;
 			samplePerformance += synthDuration;
@@ -3296,10 +3430,8 @@ namespace beepbox {
 		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
 			const instrument: Instrument = tone.instrument;
 			const transition: number = instrument.transition;
-			const isDrum: boolean = song.getChannelIsDrum(channel);
-			const basePitch: number = isDrum ? Config.noiseWaves[instrument.wave].basePitch : Config.keys[song.key].basePitch;
-			const intervalScale: number = isDrum ? Config.drumInterval : 1;
-			const pitchDamping: number = isDrum ? (Config.noiseWaves[instrument.wave].isSoft ? 24.0 : 60.0) : 48.0;
+			const isDrumChannel: boolean = song.getChannelIsDrum(channel);
+			const intervalScale: number = isDrumChannel ? Config.drumInterval : 1;
 			const secondsPerPart: number = Config.ticksPerPart * samplesPerTick / synth.samplesPerSecond;
 			const beatsPerPart: number = 1.0 / Config.partsPerBeat;
 			const toneWasActive: boolean = tone.active;
@@ -3330,6 +3462,39 @@ namespace beepbox {
 			let customVolumeEnd: number = 0.0;
 			let decayTimeStart: number = 0.0;
 			let decayTimeEnd:   number = 0.0;
+			
+			let volumeReferencePitch: number;
+			let basePitch: number;
+			let baseVolume: number;
+			let pitchDamping: number;
+			if (instrument.type == InstrumentType.spectrum) {
+				if (isDrumChannel) {
+					basePitch = 108;
+					baseVolume = 2; // Note: spectrum is louder for drum channels than pitch channels!
+				} else {
+					basePitch = 84 + Config.keys[song.key].basePitch;
+					baseVolume = 1;
+				}
+				volumeReferencePitch = 108;
+				pitchDamping = 36;
+			} else if (instrument.type == InstrumentType.noise) {
+				basePitch = Config.noiseWaves[instrument.noiseWave].basePitch;
+				baseVolume = 0.95;
+				volumeReferencePitch = basePitch;
+				pitchDamping = Config.noiseWaves[instrument.noiseWave].isSoft ? 24.0 : 60.0;
+			} else if (instrument.type == InstrumentType.fm) {
+				basePitch = Config.keys[song.key].basePitch;
+				baseVolume = 0.15;
+				volumeReferencePitch = 16;
+				pitchDamping = 48;
+			} else if (instrument.type == InstrumentType.chip) {
+				basePitch = Config.keys[song.key].basePitch;
+				baseVolume = 0.135; // looks low compared to drums, but it's doubled for chorus and drums tend to be loud anyway.
+				volumeReferencePitch = 16;
+				pitchDamping = 48;
+			} else {
+				throw new Error("Unknown instrument type in computeTone.");
+			}
 			
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				tone.phaseDeltas[i] = 0.0;
@@ -3527,8 +3692,8 @@ namespace beepbox {
 					const pitch: number = tone.pitches[!Config.chords[instrument.chord].harmonizes ? 0 : ((i < tone.pitchCount) ? i : ((associatedCarrierIndex < tone.pitchCount) ? associatedCarrierIndex : 0))];
 					const freqMult = Config.operatorFrequencies[instrument.operators[i].frequency].mult;
 					const interval = Config.operatorCarrierInterval[associatedCarrierIndex] + arpeggioInterval;
-					const startPitch: number = (pitch + intervalStart) * intervalScale + interval;
-					const startFreq: number = freqMult * (synth.frequencyFromPitch(basePitch + startPitch)) + Config.operatorFrequencies[instrument.operators[i].frequency].hzOffset;
+					const startPitch: number = basePitch + (pitch + intervalStart) * intervalScale + interval;
+					const startFreq: number = freqMult * (synth.frequencyFromPitch(startPitch)) + Config.operatorFrequencies[instrument.operators[i].frequency].hzOffset;
 					
 					tone.phaseDeltas[i] = startFreq * sampleTime * Config.sineWaveLength;
 					
@@ -3538,9 +3703,9 @@ namespace beepbox {
 					let volumeEnd: number = amplitudeMult;
 					if (i < carrierCount) {
 						// carrier
-						const endPitch: number = (pitch + intervalEnd) * intervalScale + interval;
-						const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
-						const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
+						const endPitch: number = basePitch + (pitch + intervalEnd) * intervalScale + interval;
+						const pitchVolumeStart: number = Math.pow(2.0, -(startPitch - volumeReferencePitch) / pitchDamping);
+						const pitchVolumeEnd: number   = Math.pow(2.0,   -(endPitch - volumeReferencePitch) / pitchDamping);
 						volumeStart *= pitchVolumeStart;
 						volumeEnd *= pitchVolumeEnd;
 						
@@ -3567,7 +3732,7 @@ namespace beepbox {
 				tone.feedbackMult = feedbackStart;
 				tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 				
-				const volumeMult: number = 0.15 * Config.chipWaves[instrument.wave].volume * instrumentVolumeMult;
+				const volumeMult: number = baseVolume * instrumentVolumeMult;
 				tone.volumeStart = filterVolume * volumeMult * transitionVolumeStart;
 				tone.volumeDelta = filterVolume * volumeMult * (transitionVolumeEnd - transitionVolumeStart) / runLength;
 				
@@ -3591,16 +3756,18 @@ namespace beepbox {
 					}
 				}
 				
-				const startPitch: number = (pitch + intervalStart) * intervalScale;
-				const endPitch: number = (pitch + intervalEnd) * intervalScale;
-				const startFreq: number = synth.frequencyFromPitch(basePitch + startPitch);
-				const pitchVolumeStart: number = Math.pow(2.0, -startPitch / pitchDamping);
-				const pitchVolumeEnd: number   = Math.pow(2.0,   -endPitch / pitchDamping);
-				let settingsVolumeMult: number;
-				if (!isDrum) {
-					settingsVolumeMult = 0.27 * 0.5 * Config.chipWaves[instrument.wave].volume * filterVolume * Config.intervals[instrument.interval].volume;
+				const startPitch: number = basePitch + (pitch + intervalStart) * intervalScale;
+				const endPitch: number = basePitch + (pitch + intervalEnd) * intervalScale;
+				const startFreq: number = synth.frequencyFromPitch(startPitch);
+				const pitchVolumeStart: number = Math.pow(2.0, -(startPitch - volumeReferencePitch) / pitchDamping);
+				const pitchVolumeEnd: number   = Math.pow(2.0,   -(endPitch - volumeReferencePitch) / pitchDamping);
+				let settingsVolumeMult: number = baseVolume;
+				if (instrument.type == InstrumentType.spectrum) {
+					settingsVolumeMult *= filterVolume;
+				} else if (instrument.type == InstrumentType.noise) {
+					settingsVolumeMult *= Config.noiseWaves[instrument.noiseWave].volume * filterVolume;
 				} else {
-					settingsVolumeMult = 0.19 * 5.0 * Config.noiseWaves[instrument.wave].volume * filterVolume;
+					settingsVolumeMult *= Config.chipWaves[instrument.chipWave].volume * filterVolume * Config.intervals[instrument.interval].volume;
 				}
 				
 				tone.phaseDeltas[0] = startFreq * sampleTime;
@@ -3645,7 +3812,7 @@ namespace beepbox {
 			
 			let filterVolume: number = Math.max(0.2, -0.1 * (instrument.filterCutoff - (Config.filterCutoffRange - 1)));
 			const envelopeType: EnvelopeType = Config.envelopes[instrument.filterEnvelope].type;
-			if (envelopeType == EnvelopeType.decay) filterVolume += 0.2;
+			if (instrument.type == InstrumentType.chip && envelopeType == EnvelopeType.decay) filterVolume += 0.2;
 			return filterVolume;
 		}
 		
@@ -3708,13 +3875,15 @@ namespace beepbox {
 				return Synth.chipSynth;
 			} else if (instrument.type == InstrumentType.noise) {
 				return Synth.noiseSynth; 
+			} else if (instrument.type == InstrumentType.spectrum) {
+				return Synth.noiseSynth; 
 			} else {
 				throw new Error("Unrecognized instrument type: " + instrument.type);
 			}
 		}
 		
 		private static chipSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
-			const wave: Float64Array = Config.chipWaves[instrument.wave].samples;
+			const wave: Float64Array = Config.chipWaves[instrument.chipWave].samples;
 			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
 			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
@@ -3859,15 +4028,38 @@ namespace beepbox {
 		`).split("\n");
 		
 		private static noiseSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
-			const wave: Float32Array = Config.getDrumWave(instrument.wave);
+			const wave: Float32Array = instrument.getDrumWave()!;
 			let phaseDelta: number = +tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
 			let phase: number = (tone.phases[0] % 1) * 32768.0;
 			if (tone.phases[0] == 0) {
-				// Zero phase means the tone was reset, just give noise a random start phase instead:
+				// Zero phase means the tone was reset, just give noise a random start phase instead.
 				phase = Math.random() * 32768.0;
+				if (instrument.type == InstrumentType.spectrum) {
+					// Spectrum drums sounds best when they start at a zero crossing. Try to find one.
+					let indexPrev: number = phase & 0x7fff;
+					let wavePrev: number = wave[indexPrev];
+					const stride: number = 2; // to save time, skip every other sample.
+					for (let attemptsRemaining: number = 128; attemptsRemaining > 0; attemptsRemaining--) {
+						const indexNext: number = (indexPrev + stride) & 0x7fff;
+						const waveNext: number = wave[indexNext];
+						if (wavePrev * waveNext <= 0.0) {
+							// Found a zero crossing!
+							const slope: number = (waveNext - wavePrev) / stride;
+							phase = indexPrev;
+							if (Math.abs(slope) > 0.00000001) {
+								phase += -wavePrev / slope;
+							}
+							phase = Math.max(0, phase + phaseDelta) % 32768.0;
+							break;
+						} else {
+							indexPrev = indexNext;
+							wavePrev = waveNext;
+						}
+					}
+				}
 			}
 			let sample: number = +tone.sample;
 			
@@ -3879,27 +4071,55 @@ namespace beepbox {
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 			
-			const pitchRelativefilter: number = Config.noiseWaves[instrument.wave].isSoft
-				? Math.min(1.0, tone.phaseDeltas[0] * Config.noiseWaves[instrument.wave].pitchFilterMult)
-				: 1.0;
+			const pitchRelativefilter: number = instrument.type == InstrumentType.noise
+				? Math.min(1.0, tone.phaseDeltas[0] * Config.noiseWaves[instrument.noiseWave].pitchFilterMult)
+				: Math.min(1.0, tone.phaseDeltas[0]);
 			
 			const stopIndex: number = bufferIndex + runLength;
-			while (bufferIndex < stopIndex) {
-				const waveSample: number = wave[phase & 0x7fff] * volume;
+			
+			if (instrument.type == InstrumentType.noise) {
+				while (bufferIndex < stopIndex) {
+					const waveSample: number = wave[phase & 0x7fff] * volume;
+					
+					sample += (waveSample - sample) * pitchRelativefilter;
 				
-				sample += (waveSample - sample) * pitchRelativefilter;
+					const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
+					filterSample0 += filter1 * (sample - filterSample0 + feedback * (filterSample0 - filterSample1));
+					filterSample1 += filter2 * (filterSample0 - filterSample1);
 				
-				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (sample - filterSample0 + feedback * (filterSample0 - filterSample1));
-				filterSample1 += filter2 * (filterSample0 - filterSample1);
+					phase += phaseDelta;
+					filter1 *= filterScale1;
+					filter2 *= filterScale2;
+					phaseDelta *= phaseDeltaScale;
+					data[bufferIndex] += filterSample1;
+					volume += volumeDelta;
+					bufferIndex++;
+				}
+			} else if (instrument.type == InstrumentType.spectrum) {
+				while (bufferIndex < stopIndex) {
+					const phaseInt: number = phase|0;
+					const index: number = phaseInt & 0x7fff;
+					let waveSample: number = wave[index];
+					const phaseRatio: number = phase - phaseInt;
+					waveSample += (wave[index + 1] - waveSample) * phaseRatio;
+					waveSample *= volume;
+					
+					sample += (waveSample - sample) * pitchRelativefilter;
+					
+					const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
+					filterSample0 += filter1 * (sample - filterSample0 + feedback * (filterSample0 - filterSample1));
+					filterSample1 += filter2 * (filterSample0 - filterSample1);
 				
-				phase += phaseDelta;
-				filter1 *= filterScale1;
-				filter2 *= filterScale2;
-				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1;
-				volume += volumeDelta;
-				bufferIndex++;
+					phase += phaseDelta;
+					filter1 *= filterScale1;
+					filter2 *= filterScale2;
+					phaseDelta *= phaseDeltaScale;
+					data[bufferIndex] += filterSample1;
+					volume += volumeDelta;
+					bufferIndex++;
+				}
+			} else {
+				throw new Error("Unrecognized instrument type in noiseSynth.");
 			}
 			
 			tone.phases[0] = phase / 32768.0;

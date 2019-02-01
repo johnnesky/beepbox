@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018 John Nesky
+Copyright (C) 2019 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -138,6 +138,9 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor .menu select {
 	text-align: center;
 	text-align-last: center;
+}
+.beepboxEditor .editor-settings select {
+	width: 100%;
 }
 
 /* This makes it look better in firefox on my computer... What about others?
@@ -467,7 +470,7 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .editor-widgets {
 		flex-grow: 1;
 	}
-	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings select {
+	.beepboxEditor .selectRow > :nth-child(2) {
 		width: 8.6em;
 	}
 }
@@ -522,11 +525,8 @@ styleSheet.appendChild(document.createTextNode(`
 		flex-basis: 0;
 		margin: 0 .1em;
 	}
-	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings .selectContainer:not(.menu) {
+	.beepboxEditor .selectRow > :nth-child(2) {
 		width: 60%;
-	}
-	.beepboxEditor .editor-settings select {
-		width: 100%;
 	}
 	.fullWidthOnly {
 		display: none;

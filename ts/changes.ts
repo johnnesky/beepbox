@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018 John Nesky
+Copyright (C) 2019 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -419,6 +419,16 @@ namespace beepbox {
 				doc.notifier.changed();
 				this._didSomething();
 			}
+		}
+	}
+	
+	export class ChangeSpectrum extends Change {
+		constructor(doc: SongDocument, instrument: Instrument) {
+			super();
+			instrument.markCustomWaveDirty();
+			instrument.preset = instrument.type;
+			doc.notifier.changed();
+			this._didSomething();
 		}
 	}
 	
@@ -1170,7 +1180,8 @@ namespace beepbox {
 			song.barCount = Math.min(Config.barCountMax, song.barCount);
 			song.patternsPerChannel = Math.min(Config.patternsPerChannelMax, song.patternsPerChannel);
 			song.instrumentsPerChannel = Math.min(Config.instrumentsPerChannelMax, song.instrumentsPerChannel);
-			for (const channel of song.channels) {
+			for (let channelIndex: number = 0; channelIndex < song.channels.length; channelIndex++) {
+				const channel: Channel = song.channels[channelIndex];
 				for (let barIndex: number = 0; barIndex < channel.bars.length; barIndex++) {
 					if (channel.bars[barIndex] > song.patternsPerChannel || channel.bars[barIndex] < 0) {
 						channel.bars[barIndex] = 0;
@@ -1189,7 +1200,7 @@ namespace beepbox {
 				}
 				while (channel.instruments.length < song.instrumentsPerChannel) {
 					const instrument: Instrument = new Instrument(); 
-					instrument.setTypeAndReset(InstrumentType.chip);
+					instrument.setTypeAndReset(song.getChannelIsDrum(channelIndex) ? InstrumentType.noise : InstrumentType.chip);
 					channel.instruments.push(instrument);
 				}
 				channel.bars.length = song.barCount;
@@ -1617,12 +1628,25 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeWave extends Change {
+	export class ChangeChipWave extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
-			if (instrument.wave != newValue) {
-				instrument.wave = newValue;
+			if (instrument.chipWave != newValue) {
+				instrument.chipWave = newValue;
+				instrument.preset = instrument.type;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeNoiseWave extends Change {
+		constructor(doc: SongDocument, newValue: number) {
+			super();
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			if (instrument.noiseWave != newValue) {
+				instrument.noiseWave = newValue;
 				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();

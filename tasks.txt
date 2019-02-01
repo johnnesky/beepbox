@@ -311,6 +311,7 @@
 √ Midi instrument presets. Then I could plausibly import midi files! And maybe during export I could figure out which preset matches the instrument most closely and choose the corresponding midi instrument.
 √ Renamed pluck to twang.
 √ Added midi subharmonic octaves to some presets for better import/export.
+√ Spectrum instruments! :D
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - MIDI instrument templates
@@ -361,7 +362,9 @@ NEXT RELEASE:
 - Before deploying a new version, deploy the *old* version with a shorter cache expiration, so that the new version can reach people faster. 
 
 MISC:
+- Add some kind of warning if an error is thrown, it may prevent saving progress.
 - I don't like how BeepBox jumps into the loop if it was previously in a loop but the loop was moved to a later time and the left square bracket hasn't been pressed. at the very least, loading a new song should inhibit that behavior. Manually moving to a bar before the loop should inhibit it too, either with arrow keys or clicking (unlike square brackets which actually do what I want). maybe only trigger it if the loop was explicitly clicked to a later bar. (but not if undoing moved the loop?)
+- Make all colors controlled by CSS. Come up with themes.
 - Is there space between the instrument volume slider and label for a toggleable speaker/mute icon?
 - New file command: export channels as wavs. (Maybe this should just be a checkbox in the export dialog?)
 - If I paste a pattern with the wrong number of beats, (or too many beats?) just stretch it?

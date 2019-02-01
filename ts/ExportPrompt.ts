@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018 John Nesky
+Copyright (C) 2019 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -437,8 +437,8 @@ namespace beepbox {
 									const filterInstruments: number[] = (envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.twang)
 										? ExportPrompt.midiDecayInstruments
 										: ExportPrompt.midiSustainInstruments;
-									if (filterInstruments.length > instrument.wave) {
-										instrumentProgram = filterInstruments[instrument.wave];
+									if (filterInstruments.length > instrument.chipWave) {
+										instrumentProgram = filterInstruments[instrument.chipWave];
 									}
 								} else if (instrument.type == InstrumentType.fm) {
 									// No convenient way to pick an appropriate midi instrument, so just use sawtooth as a default. :/
