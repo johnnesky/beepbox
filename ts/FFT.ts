@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018 John Nesky
+Copyright (C) 2019 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -49,8 +49,7 @@ namespace beepbox {
 	// Rearranges the elements of the array, swapping the element at an index
 	// with an element at an index that is the bitwise reverse of the first
 	// index in base 2. Useful for computing the FFT.
-	function reverseIndexBits(array: NumberArray): void {
-		const fullArrayLength: number = array.length;
+	function reverseIndexBits(array: NumberArray, fullArrayLength: number): void {
 		const bitCount: number = countBits(fullArrayLength);
 		if (bitCount > 16) throw new Error("FFT array length must not be greater than 2^16.");
 		const finalShift: number = 16 - bitCount;
@@ -279,8 +278,7 @@ namespace beepbox {
 	// ascending frequency, and elements N/2+1 through N-1 correspond to the
 	// imaginary values, representing sine wave amplitudes in descending frequency.
 	// Generates real-valued time-domain samples. Overwrites the input array.
-	export function inverseRealFourierTransform(array: NumberArray): void {
-		const fullArrayLength: number = array.length;
+	export function inverseRealFourierTransform(array: NumberArray, fullArrayLength: number): void {
 		const totalPasses: number = countBits(fullArrayLength);
 		if (fullArrayLength < 4) throw new Error("FFT array length must be at least 4.");
 	
@@ -384,6 +382,6 @@ namespace beepbox {
 			array[index3] = tempB - imag3;
 		}
 		
-		reverseIndexBits(array);
+		reverseIndexBits(array, fullArrayLength);
 	}
 }

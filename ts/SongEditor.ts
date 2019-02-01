@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018 John Nesky
+Copyright (C) 2019 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -28,6 +28,7 @@ SOFTWARE.
 /// <reference path="PatternEditor.ts" />
 /// <reference path="TrackEditor.ts" />
 /// <reference path="LoopEditor.ts" />
+/// <reference path="SpectrumEditor.ts" />
 /// <reference path="BarScrollBar.ts" />
 /// <reference path="OctaveScrollBar.ts" />
 /// <reference path="Piano.ts" />
@@ -54,12 +55,17 @@ namespace beepbox {
 	function buildPresetOptions(isNoise: boolean): HTMLSelectElement {
 		const menu: HTMLSelectElement = select({});
 		const customTypeGroup: HTMLElement = html.element("optgroup", {label: "Custom"});
-		for (let index: number = 0; index < Config.customTypePresets.length; index++) {
-			const preset: Preset = Config.customTypePresets[index];
-			if ((preset.isNoise == true) == isNoise) {
-				customTypeGroup.appendChild(option(index, preset.name));
-			}
+		
+		// Show the "spectrum" custom type in both pitched and noise channels.
+		if (isNoise) {
+			customTypeGroup.appendChild(option(InstrumentType.noise, Config.customTypePresets[InstrumentType.noise].name));
+			customTypeGroup.appendChild(option(InstrumentType.spectrum, Config.customTypePresets[InstrumentType.spectrum].name));
+		} else {
+			customTypeGroup.appendChild(option(InstrumentType.chip, Config.customTypePresets[InstrumentType.chip].name));
+			customTypeGroup.appendChild(option(InstrumentType.spectrum, Config.customTypePresets[InstrumentType.spectrum].name));
+			customTypeGroup.appendChild(option(InstrumentType.fm, Config.customTypePresets[InstrumentType.fm].name));
 		}
+		
 		menu.appendChild(customTypeGroup);
 		const beepboxGroup: HTMLElement = html.element("optgroup", {label: "BeepBox Presets"});
 		for (let index: number = 0; index < Config.beepboxPresets.length; index++) {
@@ -157,8 +163,8 @@ namespace beepbox {
 			option("", "Edit", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option("undo", "Undo (Z)"),
 			option("redo", "Redo (Y)"),
-			option("copy", "Copy Pattern (C)"),
-			option("paste", "Paste Pattern (V)"),
+			option("copy", "Copy Pattern Notes (C)"),
+			option("paste", "Paste Pattern Notes (V)"),
 			option("copyInstrument", "Copy Instrument"),
 			option("pasteInstrument", "Paste Instrument"),
 			option("transposeUp", "Shift Notes Up (+)"),
@@ -212,6 +218,8 @@ namespace beepbox {
 		private readonly _phaseModGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"}, []);
 		private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.feedbacks.map(feedback=>feedback.name));
 		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Feedback:")]), div({className: "selectContainer"}, [this._feedbackTypeSelect])]);
+		private readonly _spectrumEditor: SpectrumEditor = new SpectrumEditor(this._doc);
+		private readonly _spectrumRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Spectrum:")]), this._spectrumEditor.container]);
 		
 		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
 		private readonly _feedbackEnvelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Feedback Envelope"}), Config.envelopes.map(envelope=>envelope.name));
@@ -269,6 +277,7 @@ namespace beepbox {
 			this._phaseModGroup,
 			this._feedbackRow1,
 			this._feedbackRow2,
+			this._spectrumRow,
 		]);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({style: "display: flex; flex-direction: column;"}, [
 			this._instrumentSelectRow,
@@ -285,7 +294,7 @@ namespace beepbox {
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"}, [
 			this._editorBox,
 			div({className: "editor-widget-column"}, [
-				div({style: "text-align: center; color: #999;"}, [text("BeepBox 2.3")]),
+				div({style: "text-align: center; color: #999;"}, [text("BeepBox 3.0")]),
 				div({className: "editor-widgets"}, [
 					div({className: "editor-controls"}, [
 						div({className: "playback-controls"}, [
@@ -435,6 +444,7 @@ namespace beepbox {
 			//this._intervalHint.addEventListener("click", this._openIntervalPrompt);
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
+			this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
 			
 			if (isMobile) (<HTMLOptionElement> this._optionsMenu.children[1]).disabled = true;
@@ -557,6 +567,20 @@ namespace beepbox {
 				this._waveSelect.style.display = "none";
 				this._intervalSelectRow.style.display = "none";
 				this._vibratoSelectRow.style.display = "none";
+				this._spectrumRow.style.display = "none";
+			} else if (instrument.type == InstrumentType.spectrum) {
+				this._customizeInstrumentButton.style.display = "none";
+				this._customInstrumentSettingsGroup.style.display = "";
+				this._spectrumRow.style.display = "";
+				this._spectrumEditor.render();
+				this._waveSelectRow.style.display = "none";
+				this._algorithmSelectRow.style.display = "none";
+				this._phaseModGroup.style.display = "none";
+				this._feedbackRow1.style.display = "none";
+				this._feedbackRow2.style.display = "none";
+				this._waveSelect.style.display = "none";
+				this._intervalSelectRow.style.display = "none";
+				this._vibratoSelectRow.style.display = "none";
 			} else if (instrument.type == InstrumentType.chip) {
 				this._customizeInstrumentButton.style.display = "none";
 				this._customInstrumentSettingsGroup.style.display = "";
@@ -569,6 +593,7 @@ namespace beepbox {
 				this._phaseModGroup.style.display = "none";
 				this._feedbackRow1.style.display = "none";
 				this._feedbackRow2.style.display = "none";
+				this._spectrumRow.style.display = "none";
 			} else if (instrument.type == InstrumentType.fm) {
 				this._customizeInstrumentButton.style.display = "none";
 				this._customInstrumentSettingsGroup.style.display = "";
@@ -580,6 +605,7 @@ namespace beepbox {
 				this._feedbackRow2.style.display = "";
 				this._waveSelectRow.style.display = "none";
 				this._intervalSelectRow.style.display = "none";
+				this._spectrumRow.style.display = "none";
 			} else {
 				throw new Error("Unrecognized instrument type: " + instrument.type);
 			}
@@ -613,8 +639,8 @@ namespace beepbox {
 			setSelectedValue(this._pitchedPresetSelect, instrument.preset);
 			setSelectedValue(this._drumPresetSelect, instrument.preset);
 			setSelectedValue(this._algorithmSelect, instrument.algorithm);
-			setSelectedValue(this._waveSelect, instrument.wave);
-			setSelectedValue(this._drumSelect, instrument.wave);
+			setSelectedValue(this._waveSelect, instrument.chipWave);
+			setSelectedValue(this._drumSelect, instrument.noiseWave);
 			this._filterCutoffSlider.updateValue(instrument.filterCutoff);
 			this._filterResonanceSlider.updateValue(instrument.filterResonance);
 			setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
@@ -902,11 +928,11 @@ namespace beepbox {
 		}
 		
 		private _whenSetWave = (): void => {
-			this._doc.record(new ChangeWave(this._doc, this._waveSelect.selectedIndex));
+			this._doc.record(new ChangeChipWave(this._doc, this._waveSelect.selectedIndex));
 		}
 		
 		private _whenSetDrum = (): void => {
-			this._doc.record(new ChangeWave(this._doc, this._drumSelect.selectedIndex));
+			this._doc.record(new ChangeNoiseWave(this._doc, this._drumSelect.selectedIndex));
 		}
 		
 		private _whenSetFilterEnvelope = (): void => {
