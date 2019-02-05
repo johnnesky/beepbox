@@ -2687,7 +2687,6 @@ namespace beepbox {
 		private static readonly negativePhaseGuard: number = 1000;
 		
 		public samplesPerSecond: number = 44100;
-		private limitDecay: number = 1.0 / (2.0 * this.samplesPerSecond);
 		
 		public song: Song | null = null;
 		public liveInputPressed: boolean = false;
@@ -2711,6 +2710,8 @@ namespace beepbox {
 		private readonly releasedTones: Array<Deque<Tone>> = [];
 		private readonly liveInputTones: Deque<Tone> = new Deque<Tone>();
 		
+		//private highpassInput: number = 0.0;
+		//private highpassOutput: number = 0.0;
 		private limit: number = 0.0;
 		
 		private samplesForChorus: Float32Array | null = null;
@@ -2809,7 +2810,6 @@ namespace beepbox {
 			this.scriptNode.connect(this.audioCtx.destination);
 			
 			this.samplesPerSecond = this.audioCtx.sampleRate;
-			this.limitDecay = 1.0 / (2.0 * this.samplesPerSecond);
 		}
 		
 		public pause(): void {
@@ -2841,6 +2841,8 @@ namespace beepbox {
 			this.reverbFeedback1 = 0.0;
 			this.reverbFeedback2 = 0.0;
 			this.reverbFeedback3 = 0.0;
+			//this.highpassInput = 0.0;
+			//this.highpassOutput = 0.0;
 			this.freeAllTones();
 			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
 			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
@@ -2978,7 +2980,11 @@ namespace beepbox {
 			let reverbFeedback2: number = +this.reverbFeedback2;
 			let reverbFeedback3: number = +this.reverbFeedback3;
 			const reverb: number = Math.pow(this.song.reverb / Config.reverbRange, 0.667) * 0.425;
-			const limitDecay: number = +this.limitDecay;
+			//const highpassFilter: number = Math.pow(0.5, 400 / this.samplesPerSecond);
+			const limitDecay: number = 1.0 - Math.pow(0.5, 4.0 / this.samplesPerSecond);
+			const limitRise: number = 1.0 - Math.pow(0.5, 4000.0 / this.samplesPerSecond);
+			//let highpassInput: number = +this.highpassInput;
+			//let highpassOutput: number = +this.highpassOutput;
 			let limit: number = +this.limit;
 			
 			const synthBufferByEffects: Float32Array[] = [data, samplesForReverb, samplesForChorus, samplesForChorusReverb];
@@ -3089,11 +3095,16 @@ namespace beepbox {
 						
 						const sample = data[i] + chorusSample + reverbSample0 + reverbSample1 + reverbSample2 + reverbSample3;
 						
-						// A basic limiter.
+						/*
+						highpassOutput = highpassOutput * highpassFilter + sample - highpassInput;
+						highpassInput = sample;
+						// use highpassOutput instead of sample below?
+						*/
+						
+						// A compressor/limiter.
 						const abs: number = sample < 0.0 ? -sample : sample;
-						if (limit < abs) limit = abs;
-						data[i] = (sample / (limit * 0.75 + 0.25)) * volume;
-						limit -= limitDecay;
+						limit += (abs - limit) * (limit < abs ? limitRise : limitDecay);
+						data[i] = (sample / (limit >= 1 ? limit * 1.05 : limit * 0.8 + 0.25)) * volume;
 					}
 
 					bufferIndex += runLength;
@@ -3177,6 +3188,10 @@ namespace beepbox {
 			if (-epsilon < reverbFeedback1 && reverbFeedback1 < epsilon) reverbFeedback1 = 0.0;
 			if (-epsilon < reverbFeedback2 && reverbFeedback2 < epsilon) reverbFeedback2 = 0.0;
 			if (-epsilon < reverbFeedback3 && reverbFeedback3 < epsilon) reverbFeedback3 = 0.0;
+			//if (-epsilon < highpassInput && highpassInput < epsilon) highpassInput = 0.0;
+			//if (-epsilon < highpassOutput && highpassOutput < epsilon) highpassOutput = 0.0;
+			if (-epsilon < limit && limit < epsilon) limit = 0.0;
+			
 
 			this.chorusPhase = chorusPhase;
 			this.chorusDelayPos = chorusDelayPos;
@@ -3185,6 +3200,8 @@ namespace beepbox {
 			this.reverbFeedback1 = reverbFeedback1;
 			this.reverbFeedback2 = reverbFeedback2;
 			this.reverbFeedback3 = reverbFeedback3;
+			//this.highpassInput = highpassInput;
+			//this.highpassOutput = highpassOutput;
 			this.limit = limit;
 			
 			this.playheadInternal = (((this.tick + 1.0 - this.tickSampleCountdown / samplesPerTick) / 2.0 + this.part) / Config.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
