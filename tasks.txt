@@ -312,6 +312,7 @@
 √ Renamed pluck to twang.
 √ Added midi subharmonic octaves to some presets for better import/export.
 √ Spectrum instruments! :D
+√ Better compressor/limiter.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - MIDI instrument templates
@@ -337,6 +338,7 @@ MAJOR REMAINING FEATURES, MAYBE LATER:
 
 
 NEXT RELEASE:
+- Harmonics instruments.
 - Balance preset volumes.
 - Add to the presets menu some instruments that are somewhat randomized within constraints in the following styles: chip, fm, lead, harmony, bass, freestyle/any/wildcard, random midi instrument... Or maybe having too many random instrument options defeats the purpose, maybe have the same options but randomly select one automatically before generating. Bias the filter cutoff based on current channel octave scroll? Each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else.
 - Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
