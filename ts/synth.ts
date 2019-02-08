@@ -342,7 +342,7 @@ namespace beepbox {
 			{name: "space voice pad",  midiProgram:  91, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"medium fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":5,"feedbackEnvelope":"swell 3","operators":[{"frequency":"1×","amplitude":10,"envelope":"custom"},{"frequency":"2×","amplitude":8,"envelope":"custom"},{"frequency":"3×","amplitude":6,"envelope":"custom"},{"frequency":"16×","amplitude":2,"envelope":"twang 3"}]}},
 			{name: "bowed glass pad",  midiProgram:  92, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"slow fade","effects":"reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":6,"envelope":"custom"},{"frequency":"2×","amplitude":8,"envelope":"custom"},{"frequency":"3×","amplitude":7,"envelope":"twang 3"},{"frequency":"7×","amplitude":4,"envelope":"flare 3"}]}},
 			{name: "metallic pad",     midiProgram:  93, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"slow fade","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"1⟲ 2⟲","feedbackAmplitude":13,"feedbackEnvelope":"twang 3","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"~1×","amplitude":7,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"swell 2"},{"frequency":"11×","amplitude":7,"envelope":"steady"}]}},
-			{name: "halo pad",         midiProgram:  94, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":43,"filterEnvelope":"swell 3","vibrato":"shaky","algorithm":"(1 2 3)←4","feedbackType":"4⟲","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":13,"envelope":"custom"},{"frequency":"8×","amplitude":5,"envelope":"custom"},{"frequency":"16×","amplitude":2,"envelope":"custom"},{"frequency":"~1×","amplitude":5,"envelope":"steady"}]}},
+			{name: "halo pad",         midiProgram:  94, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":43,"filterEnvelope":"swell 2","vibrato":"shaky","algorithm":"(1 2 3)←4","feedbackType":"4⟲","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":13,"envelope":"custom"},{"frequency":"8×","amplitude":5,"envelope":"custom"},{"frequency":"16×","amplitude":2,"envelope":"custom"},{"frequency":"~1×","amplitude":5,"envelope":"steady"}]}},
 			{name: "sweep pad",        midiProgram:  95, generalMidi: true, settings: {"type":"chip","volume":100,"transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":86,"filterEnvelope":"flare 3","wave":"sawtooth","interval":"hum","vibrato":"none"}},
 			{name: "rain drop",        midiProgram:  96, generalMidi: true, settings: {"type":"FM","volume":100,"transition":"fast fade","effects":"reverb","chord":"strum","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"1⟲ 2⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"6×","amplitude":5,"envelope":"custom"},{"frequency":"20×","amplitude":3,"envelope":"twang 1"},{"frequency":"1×","amplitude":6,"envelope":"tremolo1"}]}},
 			{name: "soundtrack",       midiProgram:  97, generalMidi: true, settings: {"type":"chip","transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":43,"filterEnvelope":"flare 3","volume":100,"wave":"sawtooth","interval":"fifth","vibrato":"none"}},
@@ -3487,26 +3487,26 @@ namespace beepbox {
 			if (instrument.type == InstrumentType.spectrum) {
 				if (isDrumChannel) {
 					basePitch = 108;
-					baseVolume = 2; // Note: spectrum is louder for drum channels than pitch channels!
+					baseVolume = 0.4; // Note: spectrum is louder for drum channels than pitch channels!
 				} else {
 					basePitch = 84 + Config.keys[song.key].basePitch;
-					baseVolume = 1;
+					baseVolume = 0.2;
 				}
 				volumeReferencePitch = 108;
 				pitchDamping = 36;
 			} else if (instrument.type == InstrumentType.noise) {
 				basePitch = Config.noiseWaves[instrument.noiseWave].basePitch;
-				baseVolume = 0.95;
+				baseVolume = 0.19;
 				volumeReferencePitch = basePitch;
 				pitchDamping = Config.noiseWaves[instrument.noiseWave].isSoft ? 24.0 : 60.0;
 			} else if (instrument.type == InstrumentType.fm) {
 				basePitch = Config.keys[song.key].basePitch;
-				baseVolume = 0.15;
+				baseVolume = 0.03;
 				volumeReferencePitch = 16;
 				pitchDamping = 48;
 			} else if (instrument.type == InstrumentType.chip) {
 				basePitch = Config.keys[song.key].basePitch;
-				baseVolume = 0.135; // looks low compared to drums, but it's doubled for chorus and drums tend to be loud anyway.
+				baseVolume = 0.03375; // looks low compared to drums, but it's doubled for chorus and drums tend to be loud anyway.
 				volumeReferencePitch = 16;
 				pitchDamping = 48;
 			} else {
@@ -3818,7 +3818,8 @@ namespace beepbox {
 		}
 		
 		private static setUpResonantFilter(synth: Synth, instrument: Instrument, tone: Tone, runLength: number, secondsPerPart: number, beatsPerPart: number, decayTimeStart: number, decayTimeEnd: number, partTimeStart: number, partTimeEnd: number, customVolumeStart: number, customVolumeEnd: number): number {
-			const filterCutoffHz: number = Config.filterCutoffMaxHz * Math.pow(2.0, (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5);
+			const cutoffOctaves: number = (instrument.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5;
+			const filterCutoffHz: number = Config.filterCutoffMaxHz * Math.pow(2.0, cutoffOctaves);
 			const filterBase: number = 2.0 * Math.sin(Math.PI * filterCutoffHz / synth.samplesPerSecond);
 			const filterMin: number = 2.0 * Math.sin(Math.PI * Config.filterCutoffMinHz / synth.samplesPerSecond);
 			tone.filter = filterBase * Synth.computeOperatorEnvelope(instrument.filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
@@ -3827,9 +3828,14 @@ namespace beepbox {
 			endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
 			tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
 			
-			let filterVolume: number = Math.max(0.2, -0.1 * (instrument.filterCutoff - (Config.filterCutoffRange - 1)));
-			const envelopeType: EnvelopeType = Config.envelopes[instrument.filterEnvelope].type;
-			if (instrument.type == InstrumentType.chip && envelopeType == EnvelopeType.decay) filterVolume += 0.2;
+			let filterVolume: number = Math.pow(0.5, cutoffOctaves * 0.4);
+			const envelope: Envelope = Config.envelopes[instrument.filterEnvelope];
+			if (envelope.type == EnvelopeType.decay) {
+				filterVolume *= (1.25 + .025 * envelope.speed);
+			} else if (envelope.type == EnvelopeType.twang) {
+				filterVolume *= (1 + .02 * envelope.speed);
+			}
+			
 			return filterVolume;
 		}
 		
