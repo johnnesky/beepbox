@@ -227,8 +227,8 @@ namespace beepbox {
 		];
 		public static readonly beepboxPresetStart: number = 1024;
 		public static readonly beepboxPresets: ReadonlyArray<Preset> = [
-			{name: "square chiptune",  midiProgram:  80, settings: {"type":"chip","transition":"seamless","effects":"none","chord":"arpeggio","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","volume":100,"wave":"square","interval":"union","vibrato":"none"}},
-			{name: "triangle chiptune",midiProgram:  71, settings: {"type":"chip","transition":"seamless","effects":"none","chord":"arpeggio","filterCutoffHz":2000,"filterResonance":0,"filterEnvelope":"steady","volume":100,"wave":"triangle","interval":"union","vibrato":"none"}},
+			{name: "square chiptune",  midiProgram:  80, settings: {"type":"chip","volume":100,"transition":"seamless","effects":"none","chord":"arpeggio","filterCutoffHz":4000,"filterResonance":0,"filterEnvelope":"steady","wave":"square","interval":"union","vibrato":"none"}},
+			{name: "triangle chiptune",midiProgram:  71, settings: {"type":"chip","volume":100,"transition":"seamless","effects":"none","chord":"arpeggio","filterCutoffHz":4000,"filterResonance":0,"filterEnvelope":"steady","wave":"triangle","interval":"union","vibrato":"none"}},
 			{name: "buzz saw",         midiProgram:  81, settings: {"type":"FM","volume":100,"transition":"soft","effects":"reverb","chord":"custom interval","filterCutoffHz":2000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←2←3←4","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"5×","amplitude":9,"envelope":"custom"},{"frequency":"1×","amplitude":10,"envelope":"steady"},{"frequency":"~1×","amplitude":6,"envelope":"steady"},{"frequency":"11×","amplitude":12,"envelope":"steady"}]}},
 			{name: "tiny robot",       midiProgram:  81, settings: {"type":"FM","volume":100,"transition":"slide","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"twang 3","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"punch"},{"frequency":"~1×","amplitude":7,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "yowie",            midiProgram:  81, settings: {"type":"FM","volume":100,"transition":"cross-fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":86,"filterEnvelope":"tremolo5","vibrato":"none","algorithm":"1←2←(3 4)","feedbackType":"1⟲","feedbackAmplitude":12,"feedbackEnvelope":"tremolo3","operators":[{"frequency":"2×","amplitude":10,"envelope":"custom"},{"frequency":"16×","amplitude":5,"envelope":"steady"},{"frequency":"1×","amplitude":5,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
@@ -3800,12 +3800,6 @@ namespace beepbox {
 				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
 			}
 			
-			if (instrument.filterResonance > 0) {
-				const resonanceVolume: number = 1.5 - 0.1 * (instrument.filterResonance - 1);
-				tone.volumeStart *= resonanceVolume;
-				tone.volumeDelta *= resonanceVolume;
-			}
-			
 			tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
 		}
 		
@@ -3829,6 +3823,11 @@ namespace beepbox {
 			tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
 			
 			let filterVolume: number = Math.pow(0.5, cutoffOctaves * 0.4);
+			
+			if (instrument.filterResonance > 0) {
+				filterVolume *= filterVolume * Math.pow(0.5, 0.125 * (instrument.filterResonance - 1));
+			}
+			
 			const envelope: Envelope = Config.envelopes[instrument.filterEnvelope];
 			if (envelope.type == EnvelopeType.decay) {
 				filterVolume *= (1.25 + .025 * envelope.speed);
