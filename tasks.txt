@@ -314,6 +314,7 @@
 √ Spectrum instruments! :D
 √ Better compressor/limiter.
 √ Better filter volume.
+√ Fixed zero length note bug.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - Random instrument templates
@@ -347,7 +348,6 @@ NEXT RELEASE:
 - any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, snaps/claps, thunder, rain, fire, wind, randomly spaced (x / (1 + x^2)), maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard, orchestra hit? (can noise instruments be selected on pitch channels? maybe with different available noise waves?)
 - The default song on load (and new blank song) should use template instruments, so new users won't see the extra options. 
 - Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth or sixteenth note triplet symbol for rhythm. 
-- Wait arg it's still possible to make zero length notes by dragging to the far left! (In ÷8?)
 - Hmm, sometimes Firefox won't play any sound... seems like it happens when I load www.beepbox.co, and then click a twitter link to beepbox.co, maybe some kind of security/user experience thing to prevent unwanted sound from cross-domain links?
 - Add a "title" attributes or tooltips to all of the options, and/or make all instrument option names clickable with pointer cursor and hover highlight, replacing "?" hint circles.
 - The "new", "import", and "random" options should reset the playhead, copied note shapes, selected bar/channel, and track scroll bar. 

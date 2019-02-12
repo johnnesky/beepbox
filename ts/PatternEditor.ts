@@ -583,19 +583,21 @@ namespace beepbox {
 						if (start < 0) start = 0;
 						if (end > this._doc.song.beatsPerBar * Config.partsPerBeat) end = this._doc.song.beatsPerBar * Config.partsPerBeat;
 						
-						sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, start, end));
-						let i: number;
-						for (i = 0; i < this._pattern.notes.length; i++) {
-							if (this._pattern.notes[i].start >= end) break;
-						}
-						const theNote: Note = makeNote(this._cursor.pitch, start, end, 3, this._doc.song.getChannelIsDrum(this._doc.channel));
-						sequence.append(new ChangeNoteAdded(this._doc, this._pattern, theNote, i));
-						this._copyPins(theNote);
+						if (start < end) {
+							sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, start, end));
+							let i: number;
+							for (i = 0; i < this._pattern.notes.length; i++) {
+								if (this._pattern.notes[i].start >= end) break;
+							}
+							const theNote: Note = makeNote(this._cursor.pitch, start, end, 3, this._doc.song.getChannelIsDrum(this._doc.channel));
+							sequence.append(new ChangeNoteAdded(this._doc, this._pattern, theNote, i));
+							this._copyPins(theNote);
 						
-						this._dragTime = backwards ? start : end;
-						this._dragPitch = this._cursor.pitch;
-						this._dragVolume = theNote.pins[backwards ? 0 : 1].volume;
-						this._dragVisible = true;
+							this._dragTime = backwards ? start : end;
+							this._dragPitch = this._cursor.pitch;
+							this._dragVolume = theNote.pins[backwards ? 0 : 1].volume;
+							this._dragVisible = true;
+						}
 					} else if (this._mouseHorizontal) {
 						const shift: number = (this._mouseX - this._mouseXStart) / this._partWidth;
 						
