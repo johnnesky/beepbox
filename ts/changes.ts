@@ -212,7 +212,9 @@ namespace beepbox {
 					if (preset.customType != undefined) {
 						instrument.type = preset.customType;
 					} else if (preset.settings != undefined) {
+						const tempVolume: number = instrument.volume;
 						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsDrum(doc.channel));
+						instrument.volume = tempVolume;
 					}
 				}
 				instrument.preset = newValue;

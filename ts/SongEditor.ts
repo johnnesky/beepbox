@@ -34,7 +34,7 @@ SOFTWARE.
 /// <reference path="Piano.ts" />
 /// <reference path="BeatsPerBarPrompt.ts" />
 /// <reference path="SongDurationPrompt.ts" />
-/// <reference path="CustomLimitsPrompt.ts" />
+/// <reference path="AdvancedSongSettingsPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
 /// <reference path="InstrumentTypePrompt.ts" />
@@ -172,7 +172,7 @@ namespace beepbox {
 			option("detectKey", "Detect Key"),
 			option("barCount", "Change Song Length..."),
 			option("beatsPerBar", "Set Beats Per Bar..."),
-			option("limits", "Custom Limits..."),
+			option("advanced", "Advanced Song Settings..."),
 		]);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
 			option("", "Preferences", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -480,8 +480,8 @@ namespace beepbox {
 					case "beatsPerBar":
 						this.prompt = new BeatsPerBarPrompt(this._doc, this);
 						break;
-					case "limits":
-						this.prompt = new CustomLimitsPrompt(this._doc, this);
+					case "advanced":
+						this.prompt = new AdvancedSongSettingsPrompt(this._doc, this);
 						break;
 					case "instrumentType":
 						this.prompt = new InstrumentTypePrompt(this._doc, this);
@@ -750,7 +750,9 @@ namespace beepbox {
 					//this._copy();
 					if (event.shiftKey) {
 						const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
-						this._copyTextToClipboard(JSON.stringify(instrument.toJsonObject()));
+						const instrumentObject: any = instrument.toJsonObject();
+						delete instrumentObject.volume;
+						this._copyTextToClipboard(JSON.stringify(instrumentObject));
 					}
 					break;
 				case 219: // left brace
@@ -1010,8 +1012,8 @@ namespace beepbox {
 				case "beatsPerBar":
 					this._openPrompt("beatsPerBar");
 					break;
-				case "limits":
-					this._openPrompt("limits");
+				case "advanced":
+					this._openPrompt("advanced");
 					break;
 			}
 			this._editMenu.selectedIndex = 0;
