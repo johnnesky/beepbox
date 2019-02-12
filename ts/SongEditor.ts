@@ -34,7 +34,7 @@ SOFTWARE.
 /// <reference path="Piano.ts" />
 /// <reference path="BeatsPerBarPrompt.ts" />
 /// <reference path="SongDurationPrompt.ts" />
-/// <reference path="AdvancedSongSettingsPrompt.ts" />
+/// <reference path="ChannelSettingsPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
 /// <reference path="InstrumentTypePrompt.ts" />
@@ -172,7 +172,7 @@ namespace beepbox {
 			option("detectKey", "Detect Key"),
 			option("barCount", "Change Song Length..."),
 			option("beatsPerBar", "Set Beats Per Bar..."),
-			option("advanced", "Advanced Song Settings..."),
+			option("channelSettings", "Channel Settings..."),
 		]);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
 			option("", "Preferences", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -480,8 +480,8 @@ namespace beepbox {
 					case "beatsPerBar":
 						this.prompt = new BeatsPerBarPrompt(this._doc, this);
 						break;
-					case "advanced":
-						this.prompt = new AdvancedSongSettingsPrompt(this._doc, this);
+					case "channelSettings":
+						this.prompt = new ChannelSettingsPrompt(this._doc, this);
 						break;
 					case "instrumentType":
 						this.prompt = new InstrumentTypePrompt(this._doc, this);
@@ -1012,8 +1012,8 @@ namespace beepbox {
 				case "beatsPerBar":
 					this._openPrompt("beatsPerBar");
 					break;
-				case "advanced":
-					this._openPrompt("advanced");
+				case "channelSettings":
+					this._openPrompt("channelSettings");
 					break;
 			}
 			this._editMenu.selectedIndex = 0;

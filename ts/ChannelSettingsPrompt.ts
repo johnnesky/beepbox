@@ -29,7 +29,7 @@ SOFTWARE.
 namespace beepbox {
 	const {button, div, span, input, br, text} = html;
 	
-	export class AdvancedSongSettingsPrompt implements Prompt {
+	export class ChannelSettingsPrompt implements Prompt {
 		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _pitchChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
@@ -38,7 +38,7 @@ namespace beepbox {
 		private readonly _cancelButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Cancel")]);
 		
 		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
-			div({style: "font-size: 1.7em"}, [text("Advanced Song Settings")]),
+			div({style: "font-size: 2em"}, [text("Channel Settings")]),
 			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
 				text("Pitch channels:"),
 				this._pitchChannelStepper,
@@ -80,14 +80,14 @@ namespace beepbox {
 			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);
-			this._patternsStepper.addEventListener("keypress", AdvancedSongSettingsPrompt._validateKey);
-			this._instrumentsStepper.addEventListener("keypress", AdvancedSongSettingsPrompt._validateKey);
-			this._pitchChannelStepper.addEventListener("keypress", AdvancedSongSettingsPrompt._validateKey);
-			this._drumChannelStepper.addEventListener("keypress", AdvancedSongSettingsPrompt._validateKey);
-			this._patternsStepper.addEventListener("blur", AdvancedSongSettingsPrompt._validateNumber);
-			this._instrumentsStepper.addEventListener("blur", AdvancedSongSettingsPrompt._validateNumber);
-			this._pitchChannelStepper.addEventListener("blur", AdvancedSongSettingsPrompt._validateNumber);
-			this._drumChannelStepper.addEventListener("blur", AdvancedSongSettingsPrompt._validateNumber);
+			this._patternsStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._instrumentsStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._pitchChannelStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._drumChannelStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._patternsStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this._instrumentsStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this._pitchChannelStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this._drumChannelStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
 		}
 		
 		private _close = (): void => { 
@@ -97,14 +97,14 @@ namespace beepbox {
 		public cleanUp = (): void => { 
 			this._okayButton.removeEventListener("click", this._saveChanges);
 			this._cancelButton.removeEventListener("click", this._close);
-			this._patternsStepper.removeEventListener("keypress", AdvancedSongSettingsPrompt._validateKey);
-			this._instrumentsStepper.removeEventListener("keypress", AdvancedSongSettingsPrompt._validateKey);
-			this._pitchChannelStepper.removeEventListener("keypress", AdvancedSongSettingsPrompt._validateKey);
-			this._drumChannelStepper.removeEventListener("keypress", AdvancedSongSettingsPrompt._validateKey);
-			this._patternsStepper.removeEventListener("blur", AdvancedSongSettingsPrompt._validateNumber);
-			this._instrumentsStepper.removeEventListener("blur", AdvancedSongSettingsPrompt._validateNumber);
-			this._pitchChannelStepper.removeEventListener("blur", AdvancedSongSettingsPrompt._validateNumber);
-			this._drumChannelStepper.removeEventListener("blur", AdvancedSongSettingsPrompt._validateNumber);
+			this._patternsStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._instrumentsStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._pitchChannelStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._drumChannelStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._patternsStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this._instrumentsStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this._pitchChannelStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this._drumChannelStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
 		}
 		
 		private static _validateKey(event: KeyboardEvent): boolean {
@@ -127,9 +127,9 @@ namespace beepbox {
 		
 		private _saveChanges = (): void => {
 			const group: ChangeGroup = new ChangeGroup();
-			group.append(new ChangePatternsPerChannel(this._doc, AdvancedSongSettingsPrompt._validate(this._patternsStepper)));
-			group.append(new ChangeInstrumentsPerChannel(this._doc, AdvancedSongSettingsPrompt._validate(this._instrumentsStepper)));
-			group.append(new ChangeChannelCount(this._doc, AdvancedSongSettingsPrompt._validate(this._pitchChannelStepper), AdvancedSongSettingsPrompt._validate(this._drumChannelStepper)));
+			group.append(new ChangePatternsPerChannel(this._doc, ChannelSettingsPrompt._validate(this._patternsStepper)));
+			group.append(new ChangeInstrumentsPerChannel(this._doc, ChannelSettingsPrompt._validate(this._instrumentsStepper)));
+			group.append(new ChangeChannelCount(this._doc, ChannelSettingsPrompt._validate(this._pitchChannelStepper), ChannelSettingsPrompt._validate(this._drumChannelStepper)));
 			this._doc.prompt = null;
 			this._doc.record(group, true);
 		}
