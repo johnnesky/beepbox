@@ -300,7 +300,7 @@ namespace beepbox {
 			{name: "slow strings",     midiProgram:  49, generalMidi: true, settings: {"type":"FM","transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":0,"filterEnvelope":"swell 3","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"4⟲","feedbackAmplitude":6,"feedbackEnvelope":"flare 3","operators":[{"frequency":"4×","amplitude":13,"envelope":"custom"},{"frequency":"3×","amplitude":13,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"steady"},{"frequency":"7×","amplitude":3,"envelope":"swell 1"}]}},
 			{name: "synth strings 1",  midiProgram:  50, generalMidi: true, settings: {"type":"chip","volume":60,"transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":43,"filterEnvelope":"steady","wave":"sawtooth","interval":"hum","vibrato":"delayed"}},
 			{name: "synth strings 2",  midiProgram:  51, generalMidi: true, settings: {"type":"FM","transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1000,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"1⟲ 2⟲","feedbackAmplitude":11,"feedbackEnvelope":"flare 2","operators":[{"frequency":"1×","amplitude":14,"envelope":"custom"},{"frequency":"4×","amplitude":12,"envelope":"custom"},{"frequency":"1×","amplitude":11,"envelope":"steady"},{"frequency":"6×","amplitude":4,"envelope":"steady"}]}},
-			{name: "choir ahh",        midiProgram:  52, generalMidi: true, settings: {"type":"FM","transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":71,"filterEnvelope":"steady","vibrato":"shaky","algorithm":"(1 2 3)←4","feedbackType":"3⟲","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"13×","amplitude":2,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"steady"}]}},
+			{name: "choir ahh",        midiProgram:  52, generalMidi: true, settings: {"type":"FM","transition":"slow fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":86,"filterEnvelope":"steady","vibrato":"shaky","algorithm":"(1 2 3)←4","feedbackType":"4⟲","feedbackAmplitude":1,"feedbackEnvelope":"steady","operators":[{"frequency":"3×","amplitude":6,"envelope":"custom"},{"frequency":"13×","amplitude":2,"envelope":"custom"},{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"steady"}]}},
 			{name: "voice ooh",        midiProgram:  53, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":1000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":3,"envelope":"steady"},{"frequency":"1×","amplitude":1,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "synth voice",      midiProgram:  54, generalMidi: true, settings: {"type":"chip","transition":"medium fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":57,"filterEnvelope":"steady","wave":"rounded","interval":"union","vibrato":"light"}},
 			{name: "orchestra hit",    midiProgram:  55, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"medium fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"decay 1","vibrato":"delayed","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":15,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"4×","amplitude":15,"envelope":"custom"}]}},
@@ -436,7 +436,7 @@ namespace beepbox {
 		];
 		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
 		public static readonly volumeRange: number = 6;
-		public static readonly volumeValues: ReadonlyArray<number> = [0.0, 0.5, 1.0, 1.5, 2.0, -1.0];
+		public static readonly volumeLogScale: number = -0.5;
 		public static readonly chords: ReadonlyArray<Chord> = [
 			{name: "harmony",         harmonizes:  true, arpeggiates: false, allowedForNoise:  true, strumParts: 0},
 			{name: "strum",           harmonizes:  true, arpeggiates: false, allowedForNoise:  true, strumParts: 1},
@@ -632,12 +632,11 @@ namespace beepbox {
 			const referenceIndex: number = 1 << referenceOctave;
 			const lowIndex: number = Math.pow(2, lowOctave) | 0;
 			const highIndex: number = Math.pow(2, highOctave) | 0;
-			const log2: number = Math.log(2);
 			const retroWave: Float32Array = Config.getDrumWave(0);
 			for (let i: number = lowIndex; i < highIndex; i++) {
 				
 				
-				let lerped: number = lowPower + (highPower - lowPower) * (Math.log(i) / log2 - lowOctave) / (highOctave - lowOctave);
+				let lerped: number = lowPower + (highPower - lowPower) * (Math.log(i) / Math.LN2 - lowOctave) / (highOctave - lowOctave);
 				//let amplitude: number = Math.pow(2, lerped);
 				//let amplitude: number = Math.pow((lerped + 5) / 7, 4);
 				let amplitude: number = Math.pow(2, (lerped-1)*Config.spectrumMax + 1) * lerped;
@@ -1215,7 +1214,7 @@ namespace beepbox {
 			if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
 			
 			if (instrumentObject.filterCutoffHz != undefined) {
-				this.filterCutoff = clamp(0, Config.filterCutoffRange, Math.round((Config.filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject.filterCutoffHz | 0) / Config.filterCutoffMaxHz) / Math.log(2)));
+				this.filterCutoff = clamp(0, Config.filterCutoffRange, Math.round((Config.filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject.filterCutoffHz | 0) / Config.filterCutoffMaxHz) / Math.LN2));
 			} else {
 				this.filterCutoff = (this.type == InstrumentType.chip) ? 6 : 10;
 			}
@@ -1368,7 +1367,7 @@ namespace beepbox {
 				const lowestOctave: number = 8;
 				const highestOctave: number = 14;
 				// Nudge the 2/7 and 4/7 control points so that they form harmonic intervals.
-				const pitchTweak: number[] = [0, 1/7, Math.log(5/4)/Math.log(2), 3/7, Math.log(3/2)/Math.log(2), 5/7, 6/7];
+				const pitchTweak: number[] = [0, 1/7, Math.log(5/4)/Math.LN2, 3/7, Math.log(3/2)/Math.LN2, 5/7, 6/7];
 				function controlPointToOctave(point: number): number {
 					return lowestOctave + Math.floor(point / Config.spectrumControlPointsPerOctave) + pitchTweak[(point + Config.spectrumControlPointsPerOctave) % Config.spectrumControlPointsPerOctave];
 				}
@@ -3526,10 +3525,10 @@ namespace beepbox {
 				partsSinceStart = Math.floor(ticksSoFar / Config.ticksPerPart);
 				intervalStart = tone.lastInterval;
 				intervalEnd   = tone.lastInterval;
-				customVolumeStart = synth.volumeConversion(tone.lastVolume);
-				customVolumeEnd   = synth.volumeConversion(tone.lastVolume);
-				transitionVolumeStart = synth.volumeConversion((1.0 - startTicksSinceReleased / Config.transitions[tone.instrument.transition].releaseTicks) * 3.0);
-				transitionVolumeEnd   = synth.volumeConversion((1.0 - endTicksSinceReleased / Config.transitions[tone.instrument.transition].releaseTicks) * 3.0);
+				customVolumeStart = Synth.expressionToVolumeMult(tone.lastVolume);
+				customVolumeEnd   = Synth.expressionToVolumeMult(tone.lastVolume);
+				transitionVolumeStart = Synth.expressionToVolumeMult((1.0 - startTicksSinceReleased / Config.transitions[tone.instrument.transition].releaseTicks) * 3.0);
+				transitionVolumeEnd   = Synth.expressionToVolumeMult((1.0 - endTicksSinceReleased / Config.transitions[tone.instrument.transition].releaseTicks) * 3.0);
 				decayTimeStart = startTick / Config.ticksPerPart;
 				decayTimeEnd   = endTick / Config.ticksPerPart;
 
@@ -3651,8 +3650,8 @@ namespace beepbox {
 				
 				intervalStart = intervalTickStart + (intervalTickEnd - intervalTickStart) * startRatio;
 				intervalEnd   = intervalTickStart + (intervalTickEnd - intervalTickStart) * endRatio;
-				customVolumeStart = synth.volumeConversion(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio);
-				customVolumeEnd   = synth.volumeConversion(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
+				customVolumeStart = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio);
+				customVolumeEnd   = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
 				transitionVolumeStart = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * startRatio;
 				transitionVolumeEnd   = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * endRatio;
 				decayTimeStart = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * startRatio;
@@ -3679,8 +3678,8 @@ namespace beepbox {
 					transitionVolumeEnd   *= Math.min(1.0, secondsPerPart * decayTimeEnd / attackSeconds);
 				}
 			}
-
-			const instrumentVolumeMult: number = (instrument.volume == 5) ? 0.0 : Math.pow(2, -Config.volumeValues[instrument.volume]);
+			
+			const instrumentVolumeMult: number = Synth.instrumentVolumeToVolumeMult(instrument.volume);
 			const filterVolume: number = Synth.setUpResonantFilter(synth, instrument, tone, runLength, secondsPerPart, beatsPerPart, decayTimeStart, decayTimeEnd, partTimeStart, partTimeEnd, customVolumeStart, customVolumeEnd);
 			
 			if (resetPhases) {
@@ -4155,8 +4154,17 @@ namespace beepbox {
 			return 440.0 * Math.pow(2.0, (pitch - 69.0) / 12.0);
 		}
 		
-		private volumeConversion(noteVolume: number): number {
-			return Math.pow(Math.max(0.0, noteVolume) / 3.0, 1.5);
+		public static instrumentVolumeToVolumeMult(instrumentVolume: number): number {
+			return (instrumentVolume == Config.volumeRange - 1) ? 0.0 : Math.pow(2, Config.volumeLogScale * instrumentVolume);
+		}
+		public static volumeMultToInstrumentVolume(volumeMult: number): number {
+			return (volumeMult <= 0.0) ? Config.volumeRange - 1 : Math.min(Config.volumeRange - 2, (Math.log(volumeMult) / Math.LN2) / Config.volumeLogScale);
+		}
+		public static expressionToVolumeMult(expression: number): number {
+			return Math.pow(Math.max(0.0, expression) / 3.0, 1.5);
+		}
+		public static volumeMultToExpression(volumeMult: number): number {
+			return Math.pow(Math.max(0.0, volumeMult), 1/1.5) * 3.0;
 		}
 		
 		private getSamplesPerTick(): number {

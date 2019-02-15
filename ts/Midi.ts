@@ -170,4 +170,18 @@ namespace beepbox {
 		80: { frequency:  7, duration: 1, volume: 2 }, // Mute Triangle
 		81: { frequency:  7, duration: 4, volume: 2 }, // Open Triangle
 	};
+	
+	export function midiVolumeToVolumeMult(volume: number): number {
+		// default midi volume is 100, pow(100/127,4)≈0.384 so I'm considering that the baseline volume.
+		return Math.pow(volume / 127, 4.0) / 0.3844015376046128;
+	}
+	export function volumeMultToMidiVolume(volumeMult: number): number {
+		return Math.pow(volumeMult * 0.3844015376046128, 0.25) * 127;
+	}
+	export function midiExpressionToVolumeMult(expression: number): number {
+		return Math.pow(expression / 127, 4.0);
+	}
+	export function volumeMultToMidiExpression(volumeMult: number): number {
+		return Math.pow(volumeMult, 0.25) * 127;
+	}
 }
