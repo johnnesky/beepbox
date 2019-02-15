@@ -451,11 +451,10 @@ namespace beepbox {
 								writer.writeUint8(MidiEventType.programChange | midiChannel);
 								writer.writeMidi7Bits(instrumentProgram);
 								
-								let channelVolume: number = (5 - instrument.volume) / 5;
-								if (instrument.type == InstrumentType.fm) channelVolume = instrument.operators[0].amplitude / Config.operatorAmplitudeMax;
-								
+								// Channel volume:
 								writeEventTime(barStartTime);
-								writeControlEvent(MidiControlEventMessage.volumeMSB, Math.round(0x7f * channelVolume));
+								let channelVolume: number = volumeMultToMidiVolume(Synth.instrumentVolumeToVolumeMult(instrument.volume));
+								writeControlEvent(MidiControlEventMessage.volumeMSB, Math.min(0x7f, Math.round(channelVolume)));
 							}
 							
 							//const effectVibrato: number = Config.vibratos[instrument.vibrato].amplitudes;
@@ -536,7 +535,7 @@ namespace beepbox {
 										const linearVolume: number = lerp(pinVolume, nextPinVolume, midiTick / length);
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, midiTick / length);
 										
-										let interval: number = linearInterval * intervalScale - pitchOffset;
+										const interval: number = linearInterval * intervalScale - pitchOffset;
 										
 										/*
 										// Vibrato. Currently disabled on export.
@@ -548,8 +547,7 @@ namespace beepbox {
 										
 										const pitchBend: number = Math.max(0, Math.min(0x3fff, Math.round(0x2000 * (1.0 + interval / pitchBendRange))));
 										
-										const volume: number = linearVolume / 3;
-										let expression: number = Math.round(0x7f * volume);
+										const expression: number = Math.min(0x7f, Math.round(volumeMultToMidiExpression(Synth.expressionToVolumeMult(linearVolume))));
 										
 										if (pitchBend != prevPitchBend) {
 											writeEventTime(midiTickTime);
@@ -619,7 +617,7 @@ namespace beepbox {
 						} else {
 							// Reset channel volume
 							writeEventTime(barStartTime);
-							writeControlEvent(MidiControlEventMessage.volumeMSB, 0x7f);
+							writeControlEvent(MidiControlEventMessage.volumeMSB, 100);
 							
 							// Reset expression
 							writeEventTime(barStartTime);
