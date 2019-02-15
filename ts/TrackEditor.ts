@@ -325,7 +325,7 @@ namespace beepbox {
 			this._select.style.top = (this._channelHeight * this._doc.channel) + "px";
 			this._select.style.height = this._channelHeight + "px";
 			
-			const patternCount: number = this._doc.song.patternsPerChannel;
+			const patternCount: number = this._doc.song.patternsPerChannel + 1;
 			for (let i: number = this._renderedPatternCount; i < patternCount; i++) {
 				this._select.appendChild(html.option(i, i, false, false));
 			}
