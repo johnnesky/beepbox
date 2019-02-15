@@ -315,6 +315,7 @@
 √ Better compressor/limiter.
 √ Better filter volume.
 √ Fixed zero length note bug.
+√ Fixed mobile-layout pattern number select off-by-one bug.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - Random instrument templates
