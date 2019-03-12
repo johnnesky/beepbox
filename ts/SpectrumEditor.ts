@@ -31,10 +31,12 @@ namespace beepbox {
 		private readonly _fill = <SVGPathElement> svgElement("path", {fill: "#444444", "pointer-events": "none"});
 		private readonly _octaves = <SVGSVGElement> svgElement("svg", {"pointer-events": "none"});
 		private readonly _curve = <SVGPathElement> svgElement("path", {fill: "none", stroke: "currentColor", "stroke-width": 2, "pointer-events": "none"});
+		private readonly _arrow = <SVGPathElement> svgElement("path", {fill: "currentColor", "pointer-events": "none"});
 		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; cursor: crosshair;", width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"}, [
 			this._fill,
 			this._octaves,
 			this._curve,
+			this._arrow,
 		]);
 		
 		public readonly container: HTMLElement = html.div({className: "spectrum", style: "height: 2em;"}, [this._svg]);
@@ -47,7 +49,7 @@ namespace beepbox {
 		private _change: ChangeSpectrum | null = null;
 		private _renderedPath: String = "";
 		
-		constructor(private _doc: SongDocument) {
+		constructor(private _doc: SongDocument, private _spectrumIndex: number | null) {
 			for (let i: number = 0; i < Config.spectrumControlPoints; i += Config.spectrumControlPointsPerOctave) {
 				this._octaves.appendChild(svgElement("rect", {fill: "#886644", x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
 			}
@@ -124,6 +126,7 @@ namespace beepbox {
 				const amp: number = this._yToAmp(this._mouseY);
 			
 				const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+				const spectrumWave: SpectrumWave = (this._spectrumIndex == null) ? instrument.spectrumWave : instrument.drumsetSpectrumWaves[this._spectrumIndex];
 				
 				if (freq != this._freqPrev) {
 					const slope: number = (amp - this._ampPrev) / (freq - this._freqPrev);
@@ -132,16 +135,16 @@ namespace beepbox {
 					const upperFreq: number = Math.floor(Math.max(this._freqPrev, freq));
 					for (let i: number = lowerFreq; i <= upperFreq; i++) {
 						if (i < 0 || i >= Config.spectrumControlPoints) continue;
-						instrument.spectrum[i] = Math.max(0, Math.min(Config.spectrumMax, Math.round(i * slope + offset)));
+						spectrumWave.spectrum[i] = Math.max(0, Math.min(Config.spectrumMax, Math.round(i * slope + offset)));
 					}
 				}
 				
-				instrument.spectrum[Math.max(0, Math.min(Config.spectrumControlPoints - 1, Math.round(freq)))] = Math.max(0, Math.min(Config.spectrumMax, Math.round(amp)));
+				spectrumWave.spectrum[Math.max(0, Math.min(Config.spectrumControlPoints - 1, Math.round(freq)))] = Math.max(0, Math.min(Config.spectrumMax, Math.round(amp)));
 				
 				this._freqPrev = freq;
 				this._ampPrev = amp;
 				
-				this._change = new ChangeSpectrum(this._doc, instrument);
+				this._change = new ChangeSpectrum(this._doc, instrument, spectrumWave);
 				this._doc.setProspectiveChange(this._change);
 			}
 		}
@@ -156,19 +159,26 @@ namespace beepbox {
 		
 		public render(): void {
 			const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+			const spectrumWave: SpectrumWave = (this._spectrumIndex == null) ? instrument.spectrumWave : instrument.drumsetSpectrumWaves[this._spectrumIndex];
+			const controlPointToHeight = (point: number): number => {
+				return (1 - (point / Config.spectrumMax)) * (this._editorHeight - 2) + 1;
+			}
 			
-			if (instrument.type == InstrumentType.spectrum) {
-				let path = "M 0 " + (this._editorHeight - 1) + " ";
-				for (let i = 0; i < Config.spectrumControlPoints; i++) {
-					path += "L " + ((i + 1) * this._editorWidth / (Config.spectrumControlPoints + 2)) + " " + ((1 - (instrument.spectrum[i] / Config.spectrumMax)) * (this._editorHeight - 2) + 1) + " ";
-				}
-				path += "L " + this._editorWidth + " " + ((1 - (instrument.spectrum[Config.spectrumControlPoints - 1] / Config.spectrumMax)) * (this._editorHeight - 2) + 1) + " ";
+			let path = "M 0 " + prettyNumber(this._editorHeight - 1) + " ";
+			for (let i = 0; i < Config.spectrumControlPoints; i++) {
+				path += "L " + prettyNumber((i + 1) * this._editorWidth / (Config.spectrumControlPoints + 2)) + " " + prettyNumber(controlPointToHeight(spectrumWave.spectrum[i])) + " ";
+			}
+			
+			const lastHeight: number = controlPointToHeight(spectrumWave.spectrum[Config.spectrumControlPoints - 1]);
+			
+			path += "L " + (this._editorWidth - 1) + " " + prettyNumber(lastHeight) + " ";
+			
+			if (this._renderedPath != path) {
+				this._renderedPath = path;
+				this._curve.setAttribute("d", path);
+				this._fill.setAttribute("d", path + "L " + this._editorWidth + " " + prettyNumber(lastHeight) + " L " + this._editorWidth + " " + prettyNumber(this._editorHeight) + " L 0 " + prettyNumber(this._editorHeight) + " z ");
 				
-				if (this._renderedPath != path) {
-					this._renderedPath = path;
-					this._curve.setAttribute("d", path);
-					this._fill.setAttribute("d", path + " L " + this._editorWidth + " " + this._editorHeight + " L 0 " + this._editorHeight + " z ");
-				}
+				this._arrow.setAttribute("d", "M " + this._editorWidth + " " + prettyNumber(lastHeight) + " L " + (this._editorWidth - 4) + " " + prettyNumber(lastHeight - 4) + " L " + (this._editorWidth - 4) + " " + prettyNumber(lastHeight + 4) + " z");
 			}
 		}
 	}

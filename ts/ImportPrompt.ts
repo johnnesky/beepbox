@@ -221,7 +221,7 @@ namespace beepbox {
 									noteEvents[eventChannel].push({midiTick: currentMidiTick, pitch: pitch, velocity: 0.0, program: -1, instrumentVolume: -1, on: false});
 								} else {
 									const volume: number = Math.max(0, Math.min(Config.volumeRange - 1, Math.round(Synth.volumeMultToInstrumentVolume(midiVolumeToVolumeMult(currentInstrumentVolumes[eventChannel])))));
-									noteEvents[eventChannel].push({midiTick: currentMidiTick, pitch: pitch, velocity: Math.max(0.0, Math.min(1.0, velocity / 90.0 + 1.0/6.0)), program: currentInstrumentProgram[eventChannel], instrumentVolume: volume, on: true});
+									noteEvents[eventChannel].push({midiTick: currentMidiTick, pitch: pitch, velocity: Math.max(0.0, Math.min(1.0, (velocity + 14) / 90.0)), program: currentInstrumentProgram[eventChannel], instrumentVolume: volume, on: true});
 								}
 							} break;
 							case MidiEventType.keyPressure: {
@@ -393,12 +393,16 @@ namespace beepbox {
 				
 				const isDrumsetChannel: boolean = (midiChannel == 9);
 				const isNoiseChannel: boolean = isDrumsetChannel || (channelPreset != null && channelPreset.isNoise == true);
-				const channelBasePitch: number = isNoiseChannel ? 33 : Config.keys[key].basePitch;
-				const intervalScale: number = isNoiseChannel ? Config.drumInterval : 1;
+				const channelBasePitch: number = isNoiseChannel ? Config.spectrumBasePitch : Config.keys[key].basePitch;
+				const intervalScale: number = isNoiseChannel ? Config.noiseInterval : 1;
 				const channelMaxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
 				
 				if (isNoiseChannel) {
-					noiseChannels.push(channel);
+					if (isDrumsetChannel) {
+						noiseChannels.unshift(channel);
+					} else {
+						noiseChannels.push(channel);
+					}
 				} else {
 					pitchChannels.push(channel);
 				}
@@ -414,9 +418,10 @@ namespace beepbox {
 					let prevEventPart: number = 0;
 					let setInstrumentVolume: boolean = false;
 					
+					const preset: Preset = Config.beepboxPresets.dictionary["standard drumset"];
 					const instrument: Instrument = new Instrument();
-					instrument.setTypeAndReset(InstrumentType.noise);
-					instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
+					instrument.fromJsonObject(preset.settings, false);
+					instrument.preset = Config.nameToPresetValue(preset.name)!;
 					channel.instruments.push(instrument);
 
 					for (let noteEventIndex: number = 0; noteEventIndex <= noteEvents[midiChannel].length; noteEventIndex++) {
@@ -465,7 +470,7 @@ namespace beepbox {
 							const noteStartPart: number = prevEventPart - barStartPart;
 							const noteEndPart: number = Math.min(partsPerBar, Math.min(nextEventPart - barStartPart, noteStartPart + duration * 6));
 							
-							const note: Note = makeNote(-1, noteStartPart, noteEndPart, expression, true);
+							const note: Note = new Note(-1, noteStartPart, noteEndPart, expression, true);
 							
 							note.pitches.length = 0;
 							for (let pitchIndex: number = 0; pitchIndex < Math.min(4, drumFreqs.length); pitchIndex++) {
@@ -585,7 +590,7 @@ namespace beepbox {
 									
 									// Create a new note, and interpret the pitch bend and expression events
 									// to determine where we need to insert pins to control interval and expression.
-									const note: Note = makeNote(-1, noteStartPart, noteEndPart, 3, false);
+									const note: Note = new Note(-1, noteStartPart, noteEndPart, 3, false);
 									note.pins.length = 0;
 									
 									updateCurrentMidiInterval(noteStartMidiTick);
@@ -728,8 +733,9 @@ namespace beepbox {
 										const shiftedPitch: number = Math.max(minPitch, Math.min(maxPitch, Math.round((heldPitch + heldPitchOffset) / intervalScale)));
 										if (note.pitches.indexOf(shiftedPitch) == -1) {
 											note.pitches.push(shiftedPitch);
-											pitchSum += shiftedPitch;
-											pitchCount++;
+											const weight: number = note.end - note.start;
+											pitchSum += shiftedPitch * weight;
+											pitchCount += weight;
 										}
 									}
 									pattern.notes.push(note);
@@ -806,7 +812,7 @@ namespace beepbox {
 			}
 			
 			compactChannels(pitchChannels, Config.pitchChannelCountMax);
-			compactChannels(noiseChannels, Config.drumChannelCountMax);
+			compactChannels(noiseChannels, Config.noiseChannelCountMax);
 			
 			class ChangeImportMidi extends ChangeGroup {
 				constructor(doc: SongDocument) {

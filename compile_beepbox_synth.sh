@@ -2,7 +2,7 @@
 
 # Compile ts/synth.ts into beepbox_synth.js
 tsc \
-	--target ES5 \
+	--target ES6 \
 	--strictNullChecks \
 	--noImplicitAny \
 	--noImplicitReturns \
@@ -15,8 +15,6 @@ tsc \
 uglifyjs \
 	--compress \
 	--mangle \
-	--mangle-props \
-	--mangle-regex="/^_.+/" \
-	--screw-ie8 \
+	--mangle-props regex="/^_.+/" \
 	beepbox-synth/beepbox_synth.js \
 	-o beepbox-synth/beepbox_synth.min.js

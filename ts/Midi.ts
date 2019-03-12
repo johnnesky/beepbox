@@ -122,53 +122,53 @@ namespace beepbox {
 		volume: number;
 	}
 	export const analogousDrumMap: { [K: number]: AnalogousDrum } = {
-		35: { frequency:  0, duration: 1, volume: 3 }, // Acoustic Bass Drum
-		36: { frequency:  0, duration: 1, volume: 3 }, // Bass Drum 1
-		37: { frequency:  6, duration: 2, volume: 2 }, // Side Stick
-		38: { frequency:  5, duration: 2, volume: 3 }, // Acoustic Snare
-		39: { frequency:  7, duration: 2, volume: 3 }, // Hand Clap
-		40: { frequency:  6, duration: 2, volume: 3 }, // Electric Snare
-		41: { frequency:  0, duration: 2, volume: 2 }, // Low Floor Tom
-		42: { frequency:  7, duration: 1, volume: 2 }, // Closed Hi Hat
-		43: { frequency:  1, duration: 2, volume: 2 }, // High Floor Tom
-		44: { frequency:  6, duration: 1, volume: 2 }, // Pedal Hi-Hat
-		45: { frequency:  2, duration: 2, volume: 2 }, // Low Tom
-		46: { frequency:  7, duration: 4, volume: 2 }, // Open Hi-Hat
-		47: { frequency:  3, duration: 2, volume: 2 }, // Low-Mid Tom
-		48: { frequency:  4, duration: 2, volume: 2 }, // Hi-Mid Tom
-		49: { frequency:  8, duration: 4, volume: 3 }, // Crash Cymbal 1
-		50: { frequency:  5, duration: 2, volume: 2 }, // High Tom
-		51: { frequency:  7, duration: 4, volume: 1 }, // Ride Cymbal 1
-		52: { frequency:  9, duration: 2, volume: 3 }, // Chinese Cymbal
-		53: { frequency:  8, duration: 2, volume: 2 }, // Ride Bell
-		54: { frequency: 11, duration: 1, volume: 2 }, // Tambourine
-		55: { frequency:  9, duration: 2, volume: 3 }, // Splash Cymbal
-		56: { frequency:  7, duration: 1, volume: 3 }, // Cowbell
-		57: { frequency:  8, duration: 4, volume: 3 }, // Crash Cymbal 2
-		58: { frequency:  7, duration: 4, volume: 2 }, // Vibraslap
-		59: { frequency:  8, duration: 4, volume: 2 }, // Ride Cymbal 2
-		60: { frequency:  7, duration: 1, volume: 3 }, // Hi Bongo
-		61: { frequency:  5, duration: 1, volume: 3 }, // Low Bongo
-		62: { frequency:  6, duration: 1, volume: 3 }, // Mute Hi Conga
-		63: { frequency:  5, duration: 1, volume: 3 }, // Open Hi Conga
-		64: { frequency:  4, duration: 1, volume: 3 }, // Low Conga
-		65: { frequency:  6, duration: 2, volume: 3 }, // High Timbale
-		66: { frequency:  4, duration: 2, volume: 3 }, // Low Timbale
-		67: { frequency: 10, duration: 1, volume: 2 }, // High Agogo
-		68: { frequency:  9, duration: 1, volume: 2 }, // Low Agogo
-		69: { frequency:  7, duration: 1, volume: 1 }, // Cabasa
-		70: { frequency: 10, duration: 1, volume: 2 }, // Maracas
-		71: { frequency: 10, duration: 2, volume: 3 }, // Short Whistle
-		72: { frequency:  9, duration: 2, volume: 3 }, // Long Whistle
-		73: { frequency:  6, duration: 1, volume: 1 }, // Short Guiro
-		74: { frequency:  6, duration: 2, volume: 2 }, // Long Guiro
-		75: { frequency: 10, duration: 1, volume: 2 }, // Claves
-		76: { frequency:  6, duration: 1, volume: 2 }, // Hi Wood Block
-		77: { frequency:  5, duration: 1, volume: 2 }, // Low Wood Block
-		78: { frequency:  6, duration: 2, volume: 3 }, // Mute Cuica
-		79: { frequency:  4, duration: 2, volume: 3 }, // Open Cuica
-		80: { frequency:  7, duration: 1, volume: 2 }, // Mute Triangle
-		81: { frequency:  7, duration: 4, volume: 2 }, // Open Triangle
+		35: { frequency:  0, duration: 2, volume: 3 }, // Acoustic Bass Drum
+		36: { frequency:  0, duration: 2, volume: 3 }, // Bass Drum 1
+		37: { frequency:  5, duration: 1, volume: 3 }, // Side Stick
+		38: { frequency:  4, duration: 2, volume: 3 }, // Acoustic Snare
+		39: { frequency:  5, duration: 2, volume: 3 }, // Hand Clap
+		40: { frequency:  4, duration: 2, volume: 3 }, // Electric Snare
+		41: { frequency:  1, duration: 2, volume: 3 }, // Low Floor Tom
+		42: { frequency:  8, duration: 1, volume: 3 }, // Closed Hi Hat
+		43: { frequency:  1, duration: 2, volume: 3 }, // High Floor Tom
+		44: { frequency:  8, duration: 1, volume: 2 }, // Pedal Hi-Hat
+		45: { frequency:  2, duration: 2, volume: 3 }, // Low Tom
+		46: { frequency:  8, duration: 4, volume: 3 }, // Open Hi-Hat
+		47: { frequency:  2, duration: 2, volume: 3 }, // Low-Mid Tom
+		48: { frequency:  3, duration: 2, volume: 3 }, // Hi-Mid Tom
+		49: { frequency:  7, duration: 4, volume: 3 }, // Crash Cymbal 1
+		50: { frequency:  3, duration: 2, volume: 3 }, // High Tom
+		51: { frequency:  6, duration: 4, volume: 2 }, // Ride Cymbal 1
+		52: { frequency:  7, duration: 4, volume: 3 }, // Chinese Cymbal
+		53: { frequency:  6, duration: 2, volume: 3 }, // Ride Bell
+		54: { frequency: 11, duration: 2, volume: 3 }, // Tambourine
+		55: { frequency:  9, duration: 4, volume: 3 }, // Splash Cymbal
+		56: { frequency:  7, duration: 1, volume: 2 }, // Cowbell
+		57: { frequency:  7, duration: 4, volume: 3 }, // Crash Cymbal 2
+		58: { frequency: 10, duration: 2, volume: 2 }, // Vibraslap
+		59: { frequency:  6, duration: 4, volume: 3 }, // Ride Cymbal 2
+		//60: { frequency:  7, duration: 1, volume: 3 }, // Hi Bongo
+		//61: { frequency:  5, duration: 1, volume: 3 }, // Low Bongo
+		//62: { frequency:  6, duration: 1, volume: 3 }, // Mute Hi Conga
+		//63: { frequency:  5, duration: 1, volume: 3 }, // Open Hi Conga
+		//64: { frequency:  4, duration: 1, volume: 3 }, // Low Conga
+		//65: { frequency:  6, duration: 2, volume: 3 }, // High Timbale
+		//66: { frequency:  4, duration: 2, volume: 3 }, // Low Timbale
+		//67: { frequency: 10, duration: 1, volume: 2 }, // High Agogo
+		//68: { frequency:  9, duration: 1, volume: 2 }, // Low Agogo
+		69: { frequency: 10, duration: 2, volume: 3 }, // Cabasa
+		70: { frequency: 10, duration: 2, volume: 3 }, // Maracas
+		//71: { frequency: 10, duration: 2, volume: 3 }, // Short Whistle
+		//72: { frequency:  9, duration: 2, volume: 3 }, // Long Whistle
+		73: { frequency: 10, duration: 1, volume: 2 }, // Short Guiro
+		74: { frequency: 10, duration: 2, volume: 2 }, // Long Guiro
+		//75: { frequency: 10, duration: 1, volume: 2 }, // Claves
+		//76: { frequency:  6, duration: 1, volume: 2 }, // Hi Wood Block
+		//77: { frequency:  5, duration: 1, volume: 2 }, // Low Wood Block
+		//78: { frequency:  6, duration: 2, volume: 3 }, // Mute Cuica
+		//79: { frequency:  4, duration: 2, volume: 3 }, // Open Cuica
+		//80: { frequency:  7, duration: 1, volume: 2 }, // Mute Triangle
+		//81: { frequency:  7, duration: 4, volume: 2 }, // Open Triangle
 	};
 	
 	export function midiVolumeToVolumeMult(volume: number): number {

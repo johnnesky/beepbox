@@ -213,7 +213,7 @@ namespace beepbox {
 						instrument.type = preset.customType;
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
-						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsDrum(doc.channel));
+						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel));
 						instrument.volume = tempVolume;
 					}
 				}
@@ -303,9 +303,9 @@ namespace beepbox {
 	}
 	
 	export class ChangeChannelCount extends Change {
-		constructor(doc: SongDocument, newPitchChannelCount: number, newDrumChannelCount: number) {
+		constructor(doc: SongDocument, newPitchChannelCount: number, newNoiseChannelCount: number) {
 			super();
-			if (doc.song.pitchChannelCount != newPitchChannelCount || doc.song.drumChannelCount != newDrumChannelCount) {
+			if (doc.song.pitchChannelCount != newPitchChannelCount || doc.song.noiseChannelCount != newNoiseChannelCount) {
 				const newChannels: Channel[] = [];
 				
 				for (let i: number = 0; i < newPitchChannelCount; i++) {
@@ -330,10 +330,10 @@ namespace beepbox {
 					}
 				}
 
-				for (let i: number = 0; i < newDrumChannelCount; i++) {
+				for (let i: number = 0; i < newNoiseChannelCount; i++) {
 					const channel = i + newPitchChannelCount;
 					const oldChannel = i + doc.song.pitchChannelCount;
-					if (i < doc.song.drumChannelCount) {
+					if (i < doc.song.noiseChannelCount) {
 						newChannels[channel] = doc.song.channels[oldChannel]
 					} else {
 						newChannels[channel] = new Channel();
@@ -353,13 +353,13 @@ namespace beepbox {
 				}
 				
 				doc.song.pitchChannelCount = newPitchChannelCount;
-				doc.song.drumChannelCount = newDrumChannelCount;
+				doc.song.noiseChannelCount = newNoiseChannelCount;
 				for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
 					doc.song.channels[channel] = newChannels[channel];
 				}
 				doc.song.channels.length = doc.song.getChannelCount();
 				
-				doc.channel = Math.min(doc.channel, newPitchChannelCount + newDrumChannelCount - 1);
+				doc.channel = Math.min(doc.channel, newPitchChannelCount + newNoiseChannelCount - 1);
 				doc.notifier.changed();
 				
 				this._didSomething();
@@ -425,12 +425,26 @@ namespace beepbox {
 	}
 	
 	export class ChangeSpectrum extends Change {
-		constructor(doc: SongDocument, instrument: Instrument) {
+		constructor(doc: SongDocument, instrument: Instrument, spectrumWave: SpectrumWave) {
 			super();
-			instrument.markCustomWaveDirty();
+			spectrumWave.markCustomWaveDirty();
 			instrument.preset = instrument.type;
 			doc.notifier.changed();
 			this._didSomething();
+		}
+	}
+	
+	export class ChangeDrumsetEnvelope extends Change {
+		constructor(doc: SongDocument, drumIndex: number, newValue: number) {
+			super();
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.drumsetEnvelopes[drumIndex];
+			if (oldValue != newValue) {
+				instrument.drumsetEnvelopes[drumIndex] = newValue;
+				instrument.preset = instrument.type;
+				doc.notifier.changed();
+				this._didSomething();
+			}
 		}
 	}
 	
@@ -575,9 +589,15 @@ namespace beepbox {
 			if (doc.song.instrumentsPerChannel != newInstrumentsPerChannel) {
 				for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
 					const sampleInstrument: Instrument = doc.song.channels[channel].instruments[doc.song.instrumentsPerChannel - 1];
+					const sampleInstrumentJson: any = sampleInstrument.toJsonObject();
 					for (let j: number = doc.song.instrumentsPerChannel; j < newInstrumentsPerChannel; j++) {
 						const newInstrument: Instrument = new Instrument();
-						newInstrument.copy(sampleInstrument);
+						if (sampleInstrument.type == InstrumentType.drumset) {
+							// Drumsets are kinda expensive in terms of url length, so don't just copy them willy-nilly.
+							newInstrument.setTypeAndReset(InstrumentType.spectrum);
+						} else {
+							newInstrument.fromJsonObject(sampleInstrumentJson, doc.song.getChannelIsNoise(channel));
+						}
 						doc.song.channels[channel].instruments[j] = newInstrument;
 					}
 					doc.song.channels[channel].instruments.length = newInstrumentsPerChannel;
@@ -672,15 +692,28 @@ namespace beepbox {
 	}
 	
 	export class ChangePaste extends ChangeGroup {
-		constructor(doc: SongDocument, pattern: Pattern, notes: Note[], oldBeatsPerBar: number, oldRhythmStepsPerBeat: number, oldScale: number) {
+		constructor(doc: SongDocument, pattern: Pattern, notes: any[], oldBeatsPerBar: number, oldRhythmStepsPerBeat: number, oldScale: number) {
 			super();
-			pattern.notes = notes;
+			
+			pattern.notes.length = 0;
+			for (const noteObject of notes) {
+				const note: Note = new Note(noteObject.pitches[0], noteObject.start, noteObject.end, noteObject.pins[0].volume, false);
+				note.pitches.length = 0;
+				for (const pitch of noteObject.pitches) {
+					note.pitches.push(pitch);
+				}
+				note.pins.length = 0;
+				for (const pin of noteObject.pins) {
+					note.pins.push(makeNotePin(pin.interval, pin.time, pin.volume));
+				}
+				pattern.notes.push(note);
+			}
 			
 			if (doc.forceRhythmChanges) {
 				this.append(new ChangeRhythmStepsPerBeat(doc, pattern, oldRhythmStepsPerBeat, Config.rhythms[doc.song.rhythm].stepsPerBeat));
 			}
 			
-			if (doc.forceScaleChanges && !doc.song.getChannelIsDrum(doc.channel)) {
+			if (doc.forceScaleChanges && !doc.song.getChannelIsNoise(doc.channel)) {
 				const scaleMap: number[] = generateScaleMap(oldScale, doc.song.scale);
 				this.append(new ChangePatternScale(doc, pattern, scaleMap));
 			}
@@ -968,7 +1001,7 @@ namespace beepbox {
 												
 												// Create a new note, and interpret the pitch bend and expression events
 												// to determine where we need to insert pins to control interval and volume.
-												const newNote: Note = makeNote(-1, noteStartPart, noteEndPart, 3, false);
+												const newNote: Note = new Note(-1, noteStartPart, noteEndPart, 3, false);
 												pattern.notes.push(newNote);
 												newNote.pins.length = 0;
 												newNote.pitches.length = 0;
@@ -1161,7 +1194,7 @@ namespace beepbox {
 			}
 			
 			removeExtraSparseChannels(pitchChannels, Config.pitchChannelCountMax);
-			removeExtraSparseChannels(noiseChannels, Config.drumChannelCountMax);
+			removeExtraSparseChannels(noiseChannels, Config.noiseChannelCountMax);
 			
 			// Set minimum counts.
 			song.barCount = 1;
@@ -1177,7 +1210,7 @@ namespace beepbox {
 			}
 			song.channels.length = combinedChannels.length;
 			song.pitchChannelCount = pitchChannels.length;
-			song.drumChannelCount = noiseChannels.length;
+			song.noiseChannelCount = noiseChannels.length;
 			
 			song.barCount = Math.min(Config.barCountMax, song.barCount);
 			song.patternsPerChannel = Math.min(Config.patternsPerChannelMax, song.patternsPerChannel);
@@ -1202,7 +1235,7 @@ namespace beepbox {
 				}
 				while (channel.instruments.length < song.instrumentsPerChannel) {
 					const instrument: Instrument = new Instrument(); 
-					instrument.setTypeAndReset(song.getChannelIsDrum(channelIndex) ? InstrumentType.noise : InstrumentType.chip);
+					instrument.setTypeAndReset(song.getChannelIsNoise(channelIndex) ? InstrumentType.noise : InstrumentType.chip);
 					channel.instruments.push(instrument);
 				}
 				channel.bars.length = song.barCount;
@@ -1407,20 +1440,20 @@ namespace beepbox {
 			this._oldPitches = note.pitches;
 			this._newPitches = [];
 			
-			const maxPitch: number = (doc.song.getChannelIsDrum(doc.channel) ? Config.drumCount - 1 : Config.maxPitch);
+			const maxPitch: number = (doc.song.getChannelIsNoise(doc.channel) ? Config.drumCount - 1 : Config.maxPitch);
 			
 			for (let i: number = 0; i < this._oldPitches.length; i++) {
 				let pitch: number = this._oldPitches[i];
 				if (upward) {
 					for (let j: number = pitch + 1; j <= maxPitch; j++) {
-						if (doc.song.getChannelIsDrum(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
+						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
 							pitch = j;
 							break;
 						}
 					}
 				} else {
 					for (let j: number = pitch - 1; j >= 0; j--) {
-						if (doc.song.getChannelIsDrum(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
+						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
 							pitch = j;
 							break;
 						}
@@ -1453,14 +1486,14 @@ namespace beepbox {
 				if (interval > max) interval = max;
 				if (upward) {
 					for (let i: number = interval + 1; i <= max; i++) {
-						if (doc.song.getChannelIsDrum(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
+						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
 							interval = i;
 							break;
 						}
 					}
 				} else {
 					for (let i: number = interval - 1; i >= min; i--) {
-						if (doc.song.getChannelIsDrum(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
+						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
 							interval = i;
 							break;
 						}

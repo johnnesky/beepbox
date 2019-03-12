@@ -271,7 +271,7 @@ namespace beepbox {
 			const secondsPerMidiTick: number = secondsPerMinute / (midiTicksPerBeat * beatsPerMinute);
 			const midiTicksPerBar: number = midiTicksPerBeat * song.beatsPerBar;
 			const pitchBendRange: number = 24;
-			const defaultNoteVelocity: number = 0x60;
+			const defaultNoteVelocity: number = 90;
 			
 			const unrolledBars: number[] = [];
 			if (this._enableIntro.checked) {
@@ -290,11 +290,17 @@ namespace beepbox {
 				}
 			}
 			
-			const tracks = [{isMeta:  true, channel: -1, midiChannel: -1, isInterval: false, isDrums: false}];
-			let midiChannelCounter = 0;
+			const tracks = [{isMeta:  true, channel: -1, midiChannel: -1, isNoise: false, isDrumset: false}];
+			let midiChannelCounter: number = 0;
+			let foundADrumset: boolean = false;
 			for (let channel: number = 0; channel < this._doc.song.getChannelCount(); channel++) {
-				tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isInterval: false, isDrums: this._doc.song.getChannelIsDrum(channel)});
-				if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
+				if (!foundADrumset && this._doc.song.channels[channel].instruments[0].type == InstrumentType.drumset) {
+					tracks.push({isMeta: false, channel: channel, midiChannel: 9, isNoise: true, isDrumset: true});
+					foundADrumset = true; // There can only be one drumset channel, and it's always channel 9 (seen as 10 in most UIs). :/
+				} else {
+					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isNoise: this._doc.song.getChannelIsNoise(channel), isDrumset: false});
+					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
+				}
 			}
 			
 			const writer: ArrayBufferWriter = new ArrayBufferWriter(1024);
@@ -307,7 +313,7 @@ namespace beepbox {
 			for (const track of tracks) {
 				writer.writeUint32(MidiChunkType.track);
 				
-				const {isMeta, channel, midiChannel, isDrums} = track;
+				const {isMeta, channel, midiChannel, isNoise, isDrumset} = track;
 				
 				// We're gonna come back here and overwrite this placeholder once we know how many bytes this track is.
 				const trackStartIndex: number = writer.getWriteIndex();
@@ -385,7 +391,7 @@ namespace beepbox {
 				} else {
 					// For remaining tracks, set up the instruments and write the notes:
 					
-					let channelName: string = song.getChannelIsDrum(channel)
+					let channelName: string = isNoise
 						? Config.noiseColors[(channel - song.pitchChannelCount) % Config.noiseColors.length].name + " channel"
 						: Config.pitchColors[channel % Config.pitchColors.length].name + " channel";
 					writeEventTime(0);
@@ -405,8 +411,8 @@ namespace beepbox {
 					let prevPitchBend: number = -1;
 					let prevExpression: number = -1;
 					//let prevTremolo: number = -1;
-					const channelRoot: number = isDrums ? 33 : Config.keys[song.key].basePitch;
-					const intervalScale: number = isDrums ? Config.drumInterval : 1;
+					const channelRoot: number = isNoise ? Config.spectrumBasePitch : Config.keys[song.key].basePitch;
+					const intervalScale: number = isNoise ? Config.noiseInterval : 1;
 					
 					for (const bar of unrolledBars) {
 						const pattern: Pattern | null = song.getPattern(channel, bar);
@@ -426,30 +432,42 @@ namespace beepbox {
 								writer.writeMidi7Bits(MidiMetaEventMessage.instrumentName);
 								writer.writeMidiAscii("Instrument " + (instrumentIndex + 1));
 								
-								let instrumentProgram: number = 0x51; // default to sawtooth wave. 
+								if (!isDrumset) {
+									let instrumentProgram: number = 81; // default to sawtooth wave. 
 								
-								if (preset != null && preset.midiProgram != undefined) {
-									instrumentProgram = preset.midiProgram;
-								} else if (instrument.type == InstrumentType.noise) {
-									instrumentProgram = 0x7E; // applause
-								} else if (instrument.type == InstrumentType.chip) {
-									const envelopeType: EnvelopeType = Config.envelopes[instrument.filterEnvelope].type;
-									const filterInstruments: number[] = (envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.twang)
-										? ExportPrompt.midiDecayInstruments
-										: ExportPrompt.midiSustainInstruments;
-									if (filterInstruments.length > instrument.chipWave) {
-										instrumentProgram = filterInstruments[instrument.chipWave];
+									if (preset != null && preset.midiProgram != undefined) {
+										instrumentProgram = preset.midiProgram;
+									} else if (instrument.type == InstrumentType.drumset) {
+										// The first BeepBox drumset channel is handled as a Midi drumset channel and doesn't need a program, but any subsequent drumsets will just be set to taiko.
+										instrumentProgram = 116; // taiko
+									} else {
+										const envelopeType: EnvelopeType = instrument.getFilterEnvelope().type;
+										const instrumentDecays: boolean = envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.twang;
+										if (instrument.type == InstrumentType.noise || instrument.type == InstrumentType.spectrum) {
+											if (isNoise) {
+												instrumentProgram = instrumentDecays ? 116 : 126; // taiko : applause
+											} else {
+												instrumentProgram = instrumentDecays ? 47 : 75; // timpani : pan flute
+											}
+										} else if (instrument.type == InstrumentType.chip) {
+											const filterInstruments: number[] = instrumentDecays
+												? ExportPrompt.midiDecayInstruments
+												: ExportPrompt.midiSustainInstruments;
+											if (filterInstruments.length > instrument.chipWave) {
+												instrumentProgram = filterInstruments[instrument.chipWave];
+											}
+										} else if (instrument.type == InstrumentType.fm) {
+											instrumentProgram = instrumentDecays ? 2 : 81; // electric grand : sawtooth
+										} else {
+											throw new Error("Unrecognized instrument type.");
+										}
 									}
-								} else if (instrument.type == InstrumentType.fm) {
-									// No convenient way to pick an appropriate midi instrument, so just use sawtooth as a default. :/
-								} else {
-									throw new Error("Unrecognized instrument type.");
-								}
 								
-								// Program (instrument) change event:
-								writeEventTime(barStartTime);
-								writer.writeUint8(MidiEventType.programChange | midiChannel);
-								writer.writeMidi7Bits(instrumentProgram);
+									// Program (instrument) change event:
+									writeEventTime(barStartTime);
+									writer.writeUint8(MidiEventType.programChange | midiChannel);
+									writer.writeMidi7Bits(instrumentProgram);
+								}
 								
 								// Channel volume:
 								writeEventTime(barStartTime);
@@ -462,8 +480,8 @@ namespace beepbox {
 							let chordHarmonizes: boolean = false;
 							let usesArpeggio: boolean = true;
 							let polyphony: number = 1;
-							chordHarmonizes = Config.chords[instrument.chord].harmonizes;
-							usesArpeggio = Config.chords[instrument.chord].arpeggiates;
+							chordHarmonizes = instrument.getChord().harmonizes;
+							usesArpeggio = instrument.getChord().arpeggiates;
 							if (usesArpeggio) {
 								if (chordHarmonizes) {
 									if (instrument.type == InstrumentType.chip) {
@@ -488,41 +506,37 @@ namespace beepbox {
 								const prevPitches: number[] = [-1, -1, -1, -1];
 								const nextPitches: number[] = [-1, -1, -1, -1];
 								const toneCount: number = Math.min(polyphony, note.pitches.length);
+								const velocity: number = isDrumset ? Math.max(1, Math.round(defaultNoteVelocity * note.pins[0].volume / 3)) : defaultNoteVelocity;
 								
 								// The maximum midi pitch bend range is +/- 24 semitones from the base pitch. 
 								// To make the most of this, choose a base pitch that is within 24 semitones from as much of the note as possible.
 								// This may involve offsetting this base pitch from BeepBox's note pitch.
-								let pitchOffset: number = 0;
-								let longestFlatIntervalDuration: number = 0;
-								let maxPitchOffset: number = pitchBendRange;
-								let minPitchOffset: number = -pitchBendRange;
-								for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
-									const interval = note.pins[pinIndex].interval * intervalScale;
-									if (note.pins[pinIndex - 1].interval == note.pins[pinIndex].interval) {
-										const duration: number = note.pins[pinIndex].time - note.pins[pinIndex - 1].time;
-										if (longestFlatIntervalDuration < duration) {
-											longestFlatIntervalDuration = duration;
-											pitchOffset = interval;
+								let mainInterval: number = note.pickMainInterval();
+								let pitchOffset: number = mainInterval * intervalScale;
+								if (!isDrumset) {
+									let maxPitchOffset: number = pitchBendRange;
+									let minPitchOffset: number = -pitchBendRange;
+									for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
+										const interval = note.pins[pinIndex].interval * intervalScale;
+										maxPitchOffset = Math.min(maxPitchOffset, interval + pitchBendRange);
+										minPitchOffset = Math.max(minPitchOffset, interval - pitchBendRange);
+									}
+									/*
+									// I'd like to be able to use pitch bend to implement arpeggio, but the "custom inverval" setting in chip instruments combines arpeggio in one tone with another flat tone, and midi can't selectively apply arpeggio to one out of two simultaneous tones. Also it would be hard to reimport. :/
+									if (usesArpeggio && note.pitches.length > polyphony) {
+										let lowestArpeggioOffset: number = 0;
+										let highestArpeggioOffset: number = 0;
+										const basePitch: number = note.pitches[toneCount - 1];
+										for (let pitchIndex: number = toneCount; pitchIndex < note.pitches.length; pitchIndex++) {
+											lowestArpeggioOffset = Math.min(note.pitches[pitchIndex] - basePitch);
+											highestArpeggioOffset = Math.max(note.pitches[pitchIndex] - basePitch);
 										}
+										maxPitchOffset -= lowestArpeggioOffset;
+										minPitchOffset += lowestArpeggioOffset;
 									}
-									maxPitchOffset = Math.min(maxPitchOffset, interval + pitchBendRange);
-									minPitchOffset = Math.max(minPitchOffset, interval - pitchBendRange);
+									*/
+									pitchOffset = Math.min(maxPitchOffset, Math.max(minPitchOffset, pitchOffset));
 								}
-								/*
-								// I'd like to be able to use pitch bend to implement arpeggio, but the "custom inverval" setting in chip instruments combines arpeggio in one tone with another flat tone, and midi can't selectively apply arpeggio to one out of two simultaneous tones. :/
-								if (usesArpeggio && note.pitches.length > polyphony) {
-									let lowestArpeggioOffset: number = 0;
-									let highestArpeggioOffset: number = 0;
-									const basePitch: number = note.pitches[toneCount - 1];
-									for (let pitchIndex: number = toneCount; pitchIndex < note.pitches.length; pitchIndex++) {
-										lowestArpeggioOffset = Math.min(note.pitches[pitchIndex] - basePitch);
-										highestArpeggioOffset = Math.max(note.pitches[pitchIndex] - basePitch);
-									}
-									maxPitchOffset -= lowestArpeggioOffset;
-									minPitchOffset += lowestArpeggioOffset;
-								}
-								*/
-								pitchOffset = Math.min(maxPitchOffset, Math.max(minPitchOffset, pitchOffset));
 								
 								for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
 									const nextPinTime: number = noteStartTime + note.pins[pinIndex].time * midiTicksPerPart;
@@ -557,7 +571,7 @@ namespace beepbox {
 											prevPitchBend = pitchBend;
 										}
 										
-										if (expression != prevExpression) {
+										if (expression != prevExpression && !isDrumset) {
 											writeEventTime(midiTickTime);
 											writeControlEvent(MidiControlEventMessage.expressionMSB, expression);
 											prevExpression = expression;
@@ -566,16 +580,36 @@ namespace beepbox {
 										const noteStarting: boolean = midiTickTime == noteStartTime;
 										for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
 											let nextPitch: number = note.pitches[toneIndex];
-											if (usesArpeggio && note.pitches.length > toneIndex + 1 && toneIndex == toneCount - 1) {
-												const midiTicksSinceBeat = (midiTickTime - barStartTime) % midiTicksPerBeat;
-												const midiTicksPerArpeggio = Config.rhythms[song.rhythm].ticksPerArpeggio * midiTicksPerPart / Config.ticksPerPart;
-												const arpeggio: number = Math.floor(midiTicksSinceBeat / midiTicksPerArpeggio);
-												const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[song.rhythm].arpeggioPatterns[note.pitches.length - 1 - toneIndex];
-												nextPitch = note.pitches[toneIndex + arpeggioPattern[arpeggio % arpeggioPattern.length]];
-											}
-											nextPitch = channelRoot + nextPitch * intervalScale + pitchOffset;
-											if (preset != null && preset.midiSubharmonicOctaves != undefined) {
-												nextPitch += 12 * preset.midiSubharmonicOctaves;
+											if (isDrumset) {
+												nextPitch += pitchOffset;
+												const drumsetMap: number[] = [
+													36, // Bass Drum 1
+													41, // Low Floor Tom
+													45, // Low Tom
+													48, // Hi-Mid Tom
+													40, // Electric Snare
+													39, // Hand Clap
+													59, // Ride Cymbal 2
+													49, // Crash Cymbal 1
+													46, // Open Hi-Hat
+													55, // Splash Cymbal
+													69, // Cabasa
+													54, // Tambourine
+												];
+												if (nextPitch < 0 || nextPitch >= drumsetMap.length) throw new Error("Could not find corresponding drumset pitch. " + nextPitch);
+												nextPitch = drumsetMap[nextPitch];
+											} else {
+												if (usesArpeggio && note.pitches.length > toneIndex + 1 && toneIndex == toneCount - 1) {
+													const midiTicksSinceBeat = (midiTickTime - barStartTime) % midiTicksPerBeat;
+													const midiTicksPerArpeggio = Config.rhythms[song.rhythm].ticksPerArpeggio * midiTicksPerPart / Config.ticksPerPart;
+													const arpeggio: number = Math.floor(midiTicksSinceBeat / midiTicksPerArpeggio);
+													const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[song.rhythm].arpeggioPatterns[note.pitches.length - 1 - toneIndex];
+													nextPitch = note.pitches[toneIndex + arpeggioPattern[arpeggio % arpeggioPattern.length]];
+												}
+												nextPitch = channelRoot + nextPitch * intervalScale + pitchOffset;
+												if (preset != null && preset.midiSubharmonicOctaves != undefined) {
+													nextPitch += 12 * preset.midiSubharmonicOctaves;
+												}
 											}
 											nextPitch = Math.max(0, Math.min(127, nextPitch));
 											nextPitches[toneIndex] = nextPitch;
@@ -584,7 +618,7 @@ namespace beepbox {
 												writeEventTime(midiTickTime);
 												writer.writeUint8(MidiEventType.noteOff | midiChannel);
 												writer.writeMidi7Bits(prevPitches[toneIndex]); // old pitch
-												writer.writeMidi7Bits(defaultNoteVelocity); // velocity
+												writer.writeMidi7Bits(velocity); // velocity
 											}
 										}
 										
@@ -593,7 +627,7 @@ namespace beepbox {
 												writeEventTime(midiTickTime);
 												writer.writeUint8(MidiEventType.noteOn | midiChannel);
 												writer.writeMidi7Bits(nextPitches[toneIndex]); // new pitch
-												writer.writeMidi7Bits(defaultNoteVelocity); // velocity
+												writer.writeMidi7Bits(velocity); // velocity
 												prevPitches[toneIndex] = nextPitches[toneIndex];
 											}
 										}
@@ -611,7 +645,7 @@ namespace beepbox {
 									writeEventTime(noteEndTime);
 									writer.writeUint8(MidiEventType.noteOff | midiChannel);
 									writer.writeMidi7Bits(prevPitches[toneIndex]); // pitch
-									writer.writeMidi7Bits(defaultNoteVelocity); // velocity
+									writer.writeMidi7Bits(velocity); // velocity
 								}
 							}
 						} else {
