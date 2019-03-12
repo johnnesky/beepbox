@@ -74,9 +74,9 @@ namespace beepbox {
 			this._pitchChannelStepper.min = Config.pitchChannelCountMin + "";
 			this._pitchChannelStepper.max = Config.pitchChannelCountMax + "";
 			
-			this._drumChannelStepper.value = this._doc.song.drumChannelCount + "";
-			this._drumChannelStepper.min = Config.drumChannelCountMin + "";
-			this._drumChannelStepper.max = Config.drumChannelCountMax + "";
+			this._drumChannelStepper.value = this._doc.song.noiseChannelCount + "";
+			this._drumChannelStepper.min = Config.noiseChannelCountMin + "";
+			this._drumChannelStepper.max = Config.noiseChannelCountMax + "";
 			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);

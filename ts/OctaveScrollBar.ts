@@ -105,7 +105,7 @@ namespace beepbox {
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
-			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
+			if (this._doc.song.getChannelIsNoise(this._doc.channel)) return;
 			this._updatePreview();
 			
 			if (this._mouseY >= this._barBottom - this._barHeight && this._mouseY <= this._barBottom) {
@@ -122,7 +122,7 @@ namespace beepbox {
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
-			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
+			if (this._doc.song.getChannelIsNoise(this._doc.channel)) return;
 			this._updatePreview();
 			
 			if (this._mouseY >= this._barBottom - this._barHeight && this._mouseY <= this._barBottom) {
@@ -151,7 +151,7 @@ namespace beepbox {
 		}
 		
 		private _whenCursorMoved(): void {
-			if (this._doc.song.getChannelIsDrum(this._doc.channel)) return;
+			if (this._doc.song.getChannelIsNoise(this._doc.channel)) return;
 			if (this._dragging) {
 				const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
 				const continuingProspectiveChange: boolean = this._doc.lastChangeWas(this._change);
@@ -183,7 +183,7 @@ namespace beepbox {
 		}
 		
 		private _whenCursorReleased = (event: Event): void => {
-			if (!this._doc.song.getChannelIsDrum(this._doc.channel) && this._mouseDown) {
+			if (!this._doc.song.getChannelIsNoise(this._doc.channel) && this._mouseDown) {
 				if (this._dragging) {
 					if (this._change != null) this._doc.record(this._change);
 				} else {
@@ -236,7 +236,7 @@ namespace beepbox {
 		}
 		
 		private _render(): void {
-			this._svg.style.visibility = (this._doc.song.getChannelIsDrum(this._doc.channel)) ? "hidden" : "visible";
+			this._svg.style.visibility = (this._doc.song.getChannelIsNoise(this._doc.channel)) ? "hidden" : "visible";
 			if (this._renderedBarBottom != this._barBottom) {
 				this._renderedBarBottom = this._barBottom;
 				this._handle.setAttribute("y", "" + (this._barBottom - this._barHeight));

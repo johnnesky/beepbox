@@ -27,10 +27,6 @@ SOFTWARE.
 /// <reference path="changes.ts" />
 
 namespace beepbox {
-	function prettyNumber(value: number): string {
-		return value.toFixed(2).replace(/\.?0*$/, "");
-	}
-	
 	function makeEmptyReplacementElement(node: Node): Node {
 		const clone: Node = node.cloneNode(false);
 		node.parentNode!.replaceChild(clone, node);
@@ -118,7 +114,7 @@ namespace beepbox {
 		private _renderedDrums: boolean = false;
 		private _renderedRhythm: number = -1;
 		private _renderedPitchChannelCount: number = -1;
-		private _renderedDrumChannelCount: number = -1;
+		private _renderedNoiseChannelCount: number = -1;
 		private _followPlayheadBar: number = -1;
 		
 		constructor(private _doc: SongDocument) {
@@ -250,10 +246,10 @@ namespace beepbox {
 				}
 				
 				mousePitch -= interval;
-				this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount - 1 : Config.maxPitch) - maxInterval);
+				this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount - 1 : Config.maxPitch) - maxInterval);
 				
 				// Snap to nearby existing note if present.
-				if (!this._doc.song.getChannelIsDrum(this._doc.channel)) {
+				if (!this._doc.song.getChannelIsNoise(this._doc.channel)) {
 					let nearest: number = error;
 					for (let i: number = 0; i < this._cursor.curNote.pitches.length; i++) {
 						const distance: number = Math.abs(this._cursor.curNote.pitches[i] - mousePitch + 0.5);
@@ -342,7 +338,7 @@ namespace beepbox {
 			if (guess < min) guess = min;
 			if (guess > max) guess = max;
 			const scale: ReadonlyArray<boolean> = Config.scales[this._doc.song.scale].flags;
-			if (scale[Math.floor(guess) % 12] || this._doc.song.getChannelIsDrum(this._doc.channel)) {
+			if (scale[Math.floor(guess) % 12] || this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				return Math.floor(guess);
 			} else {
 				let topPitch: number = Math.floor(guess) + 1;
@@ -589,7 +585,7 @@ namespace beepbox {
 							for (i = 0; i < this._pattern.notes.length; i++) {
 								if (this._pattern.notes[i].start >= end) break;
 							}
-							const theNote: Note = makeNote(this._cursor.pitch, start, end, 3, this._doc.song.getChannelIsDrum(this._doc.channel));
+							const theNote: Note = new Note(this._cursor.pitch, start, end, 3, this._doc.song.getChannelIsNoise(this._doc.channel));
 							sequence.append(new ChangeNoteAdded(this._doc, this._pattern, theNote, i));
 							this._copyPins(theNote);
 						
@@ -686,7 +682,7 @@ namespace beepbox {
 						}
 						minPitch -= this._cursor.curNote.pitches[this._cursor.pitchIndex];
 						maxPitch -= this._cursor.curNote.pitches[this._cursor.pitchIndex];
-						const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, (this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount-1 : Config.maxPitch) - maxPitch);
+						const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, (this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount-1 : Config.maxPitch) - maxPitch);
 						sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
 						this._copyPins(this._cursor.curNote);
 						
@@ -714,7 +710,7 @@ namespace beepbox {
 				}
 			} else if (this._mouseDown && continuousState) {
 				if (this._cursor.curNote == null) {
-					const note: Note = makeNote(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.song.getChannelIsDrum(this._doc.channel));
+					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.song.getChannelIsNoise(this._doc.channel));
 					note.pins = [];
 					for (const oldPin of this._cursor.pins) {
 						note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
@@ -796,17 +792,17 @@ namespace beepbox {
 			
 			this._editorWidth = this._doc.showLetters ? (this._doc.showScrollBar ? 460 : 480) : (this._doc.showScrollBar ? 492 : 512);
 			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * Config.partsPerBeat);
-			this._pitchHeight = this._doc.song.getChannelIsDrum(this._doc.channel) ? this._defaultDrumHeight : this._defaultPitchHeight;
-			this._pitchCount = this._doc.song.getChannelIsDrum(this._doc.channel) ? Config.drumCount : Config.windowPitchCount;
+			this._pitchHeight = this._doc.song.getChannelIsNoise(this._doc.channel) ? this._defaultDrumHeight : this._defaultPitchHeight;
+			this._pitchCount = this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount : Config.windowPitchCount;
 			this._octaveOffset = this._doc.song.channels[this._doc.channel].octave * 12;
 			
 			if (this._renderedRhythm != this._doc.song.rhythm || 
 				this._renderedPitchChannelCount != this._doc.song.pitchChannelCount || 
-				this._renderedDrumChannelCount != this._doc.song.drumChannelCount)
+				this._renderedNoiseChannelCount != this._doc.song.noiseChannelCount)
 			{
 				this._renderedRhythm = this._doc.song.rhythm;
 				this._renderedPitchChannelCount = this._doc.song.pitchChannelCount;
-				this._renderedDrumChannelCount = this._doc.song.drumChannelCount;
+				this._renderedNoiseChannelCount = this._doc.song.noiseChannelCount;
 				this.resetCopiedPins();
 			}
 			
@@ -845,7 +841,7 @@ namespace beepbox {
 				this._backgroundPitchRows[j].style.visibility = Config.scales[this._doc.song.scale].flags[j] ? "visible" : "hidden";
 			}
 			
-			if (this._doc.song.getChannelIsDrum(this._doc.channel)) {
+			if (this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				if (!this._renderedDrums) {
 					this._renderedDrums = true;
 					this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
@@ -864,7 +860,7 @@ namespace beepbox {
 			if (this._doc.showChannels) {
 				for (let channel: number = this._doc.song.getChannelCount() - 1; channel >= 0; channel--) {
 					if (channel == this._doc.channel) continue;
-					if (this._doc.song.getChannelIsDrum(channel) != this._doc.song.getChannelIsDrum(this._doc.channel)) continue;
+					if (this._doc.song.getChannelIsNoise(channel) != this._doc.song.getChannelIsNoise(this._doc.channel)) continue;
 					
 					const pattern2: Pattern | null = this._doc.song.getPattern(channel, this._doc.bar);
 					if (pattern2 == null) continue;
@@ -897,7 +893,8 @@ namespace beepbox {
 						
 						if (note.pitches.length > 1) {
 							const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
-							if (instrument.chord != 0) {
+							const chord: Chord = instrument.getChord();
+							if (!chord.harmonizes || chord.arpeggiates || chord.strumParts > 0) {
 								let oscillatorLabel = <SVGTextElement> svgElement("text");
 								oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
 								oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));

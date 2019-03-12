@@ -90,7 +90,7 @@ namespace beepbox {
 		private _updateCursorPitch(): void {
 			const scale: ReadonlyArray<boolean> = Config.scales[this._doc.song.scale].flags;
 			const mousePitch: number = Math.max(0, Math.min(this._pitchCount-1, this._pitchCount - (this._mouseY / this._pitchHeight)));
-			if (scale[Math.floor(mousePitch) % 12] || this._doc.song.getChannelIsDrum(this._doc.channel)) {
+			if (scale[Math.floor(mousePitch) % 12] || this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				this._cursorPitch = Math.floor(mousePitch);
 			} else {
 				let topPitch: number = Math.floor(mousePitch) + 1;
@@ -191,7 +191,7 @@ namespace beepbox {
 		}
 		
 		private _documentChanged = (): void => {
-			const isDrum: boolean = this._doc.song.getChannelIsDrum(this._doc.channel);
+			const isDrum: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
 			this._pitchHeight = isDrum ? 40 : 13;
 			this._pitchCount = isDrum ? Config.drumCount : Config.windowPitchCount;
 			this._updateCursorPitch();
@@ -208,7 +208,7 @@ namespace beepbox {
 			
 			if (!this._doc.showLetters) return;
 			
-			const isDrum = this._doc.song.getChannelIsDrum(this._doc.channel);
+			const isDrum = this._doc.song.getChannelIsNoise(this._doc.channel);
 			if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key && this._renderedDrums == isDrum) return;
 			this._renderedScale = this._doc.song.scale;
 			this._renderedKey = this._doc.song.key;

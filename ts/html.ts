@@ -75,4 +75,8 @@ namespace beepbox {
 		if (children) for (const child of children) elem.appendChild(child);
 		return elem;
 	}
+	
+	export function prettyNumber(value: number): string {
+		return value.toFixed(2).replace(/\.?0*$/, "");
+	}
 }
