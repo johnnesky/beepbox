@@ -35,8 +35,8 @@ namespace beepbox {
 			option("end",       "Apply change at end of song."),
 			option("beginning", "Apply change at beginning of song."),
 		]);
-		private readonly _okayButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Okay")]);
-		private readonly _cancelButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Cancel")]);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, [text("Cancel")]);
+		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, [text("Okay")]);
 		
 		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
 			div({style: "font-size: 2em"}, [text("Song Length")]),
@@ -52,8 +52,8 @@ namespace beepbox {
 				div({className: "selectContainer", style: "width: 100%;"}, [this._positionSelect]),
 			]),
 			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
-				this._okayButton,
 				this._cancelButton,
+				this._okayButton,
 			]),
 		]);
 		
@@ -62,10 +62,19 @@ namespace beepbox {
 			this._barsStepper.min = Config.barCountMin + "";
 			this._barsStepper.max = Config.barCountMax + "";
 			
+			const lastPosition: string | null = window.localStorage.getItem("barCountPosition");
+			if (lastPosition != null) {
+				this._positionSelect.value = lastPosition;
+			}
+			
+			this._barsStepper.select();
+			setTimeout(()=>this._barsStepper.focus());
+			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);
 			this._barsStepper.addEventListener("keypress", SongDurationPrompt._validateKey);
 			this._barsStepper.addEventListener("blur", SongDurationPrompt._validateNumber);
+			this.container.addEventListener("keydown", this._whenKeyPressed);
 		}
 		
 		private _close = (): void => { 
@@ -77,6 +86,13 @@ namespace beepbox {
 			this._cancelButton.removeEventListener("click", this._close);
 			this._barsStepper.removeEventListener("keypress", SongDurationPrompt._validateKey);
 			this._barsStepper.removeEventListener("blur", SongDurationPrompt._validateNumber);
+			this.container.removeEventListener("keydown", this._whenKeyPressed);
+		}
+		
+		private _whenKeyPressed = (event: KeyboardEvent): void => {
+			if ((<Element> event.target).tagName != "BUTTON" && event.keyCode == 13) { // Enter key
+				this._saveChanges();
+			}
 		}
 		
 		private static _validateKey(event: KeyboardEvent): boolean {
@@ -98,6 +114,7 @@ namespace beepbox {
 		}
 		
 		private _saveChanges = (): void => {
+			window.localStorage.setItem("barCountPosition", this._positionSelect.value);
 			const group: ChangeGroup = new ChangeGroup();
 			group.append(new ChangeBarCount(this._doc, SongDurationPrompt._validate(this._barsStepper), this._positionSelect.value == "beginning"));
 			this._doc.prompt = null;

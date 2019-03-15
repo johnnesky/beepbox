@@ -317,6 +317,7 @@
 √ Fixed zero length note bug.
 √ Fixed mobile-layout pattern number select off-by-one bug.
 √ Drumsets! :D
+√ Prompts: remembers last choice, enter key confirms choice, added icons to buttons, focuses input on open.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - Random instrument templates

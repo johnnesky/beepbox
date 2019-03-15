@@ -36,8 +36,8 @@ namespace beepbox {
 			option("stretch", "Stretch notes to fit in bars."),
 			option("overflow", "Overflow notes across bars."),
 		]);
-		private readonly _okayButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Okay")]);
-		private readonly _cancelButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Cancel")]);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, [text("Cancel")]);
+		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, [text("Okay")]);
 		
 		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
 			div({style: "font-size: 2em"}, [text("Beats Per Bar")]),
@@ -53,8 +53,8 @@ namespace beepbox {
 				div({className: "selectContainer", style: "width: 100%;"}, [this._conversionStrategySelect]),
 			]),
 			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
-				this._okayButton,
 				this._cancelButton,
+				this._okayButton,
 			]),
 		]);
 		
@@ -63,10 +63,19 @@ namespace beepbox {
 			this._beatsStepper.min = Config.beatsPerBarMin + "";
 			this._beatsStepper.max = Config.beatsPerBarMax + "";
 			
+			const lastStrategy: string | null = window.localStorage.getItem("beatCountStrategy");
+			if (lastStrategy != null) {
+				this._conversionStrategySelect.value = lastStrategy;
+			}
+			
+			this._beatsStepper.select();
+			setTimeout(()=>this._beatsStepper.focus());
+			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);
 			this._beatsStepper.addEventListener("keypress", BeatsPerBarPrompt._validateKey);
 			this._beatsStepper.addEventListener("blur", BeatsPerBarPrompt._validateNumber);
+			this.container.addEventListener("keydown", this._whenKeyPressed);
 		}
 		
 		private _close = (): void => { 
@@ -78,6 +87,13 @@ namespace beepbox {
 			this._cancelButton.removeEventListener("click", this._close);
 			this._beatsStepper.removeEventListener("keypress", BeatsPerBarPrompt._validateKey);
 			this._beatsStepper.removeEventListener("blur", BeatsPerBarPrompt._validateNumber);
+			this.container.removeEventListener("keydown", this._whenKeyPressed);
+		}
+		
+		private _whenKeyPressed = (event: KeyboardEvent): void => {
+			if ((<Element> event.target).tagName != "BUTTON" && event.keyCode == 13) { // Enter key
+				this._saveChanges();
+			}
 		}
 		
 		private static _validateKey(event: KeyboardEvent): boolean {
@@ -99,6 +115,7 @@ namespace beepbox {
 		}
 		
 		private _saveChanges = (): void => {
+			window.localStorage.setItem("beatCountStrategy", this._conversionStrategySelect.value);
 			this._doc.prompt = null;
 			this._doc.record(new ChangeBeatsPerBar(this._doc, BeatsPerBarPrompt._validate(this._beatsStepper), this._conversionStrategySelect.value), true);
 		}

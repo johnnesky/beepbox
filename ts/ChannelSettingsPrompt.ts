@@ -34,8 +34,8 @@ namespace beepbox {
 		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _pitchChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _drumChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
-		private readonly _okayButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Okay")]);
-		private readonly _cancelButton: HTMLButtonElement = button({style: "width:45%;"}, [text("Cancel")]);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, [text("Cancel")]);
+		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, [text("Okay")]);
 		
 		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
 			div({style: "font-size: 2em"}, [text("Channel Settings")]),
@@ -56,8 +56,8 @@ namespace beepbox {
 				this._instrumentsStepper,
 			]),
 			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
-				this._okayButton,
 				this._cancelButton,
+				this._okayButton,
 			]),
 		]);
 		
@@ -78,6 +78,9 @@ namespace beepbox {
 			this._drumChannelStepper.min = Config.noiseChannelCountMin + "";
 			this._drumChannelStepper.max = Config.noiseChannelCountMax + "";
 			
+			this._pitchChannelStepper.select();
+			setTimeout(()=>this._pitchChannelStepper.focus());
+			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);
 			this._patternsStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
@@ -88,6 +91,7 @@ namespace beepbox {
 			this._instrumentsStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._pitchChannelStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._drumChannelStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this.container.addEventListener("keydown", this._whenKeyPressed);
 		}
 		
 		private _close = (): void => { 
@@ -105,6 +109,13 @@ namespace beepbox {
 			this._instrumentsStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._pitchChannelStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._drumChannelStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this.container.removeEventListener("keydown", this._whenKeyPressed);
+		}
+		
+		private _whenKeyPressed = (event: KeyboardEvent): void => {
+			if ((<Element> event.target).tagName != "BUTTON" && event.keyCode == 13) { // Enter key
+				this._saveChanges();
+			}
 		}
 		
 		private static _validateKey(event: KeyboardEvent): boolean {

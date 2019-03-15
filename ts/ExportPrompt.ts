@@ -28,7 +28,7 @@ SOFTWARE.
 /// <reference path="Midi.ts" />
 
 namespace beepbox {
-	const {button, div, input, text} = html;
+	const {button, div, input, text, select, option} = html;
 	
 	function lerp(low: number, high: number, t: number): number {
 		return low + t * (high - low);
@@ -58,14 +58,17 @@ namespace beepbox {
 	}
 	
 	export class ExportPrompt implements Prompt {
-		private readonly _fileName: HTMLInputElement = input({type: "text", style: "width: 10em;", value: "BeepBox-Song", maxlength: 250});
+		private readonly _fileName: HTMLInputElement = input({type: "text", style: "width: 10em;", value: "BeepBox-Song", maxlength: 250, "autofocus": "autofocus"});
 		private readonly _enableIntro: HTMLInputElement = input({type: "checkbox"});
 		private readonly _loopDropDown: HTMLInputElement = input({style:"width: 2em;", type: "number", min: "1", max: "4", step: "1"});
 		private readonly _enableOutro: HTMLInputElement = input({type: "checkbox"});
-		private readonly _exportWavButton: HTMLButtonElement = button({}, [text("Export to .wav file")]);
-		private readonly _exportMidiButton: HTMLButtonElement = button({}, [text("Export to .midi file")]);
-		private readonly _exportJsonButton: HTMLButtonElement = button({}, [text("Export to .json file")]);
-		private readonly _cancelButton: HTMLButtonElement = button({}, [text("Cancel")]);
+		private readonly _formatSelect: HTMLSelectElement = select({style: "width: 100%;"}, [
+			option("wav", "Export to .wav file."),
+			option("midi", "Export to .midi file."),
+			option("json", "Export to .json file."),
+		]);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, [text("Cancel")]);
+		private readonly _exportButton: HTMLButtonElement = button({className: "exportButton", style: "width:45%;"}, [text("Export")]);
 		private static readonly midiSustainInstruments: number[] = [
 			0x4A, // rounded -> recorder
 			0x47, // triangle -> clarinet
@@ -115,10 +118,11 @@ namespace beepbox {
 					div({style: "display: table-cell; vertical-align: middle;"}, [this._enableOutro]),
 				]),
 			]),
-			this._exportWavButton,
-			this._exportMidiButton,
-			this._exportJsonButton,
-			this._cancelButton,
+			div({className: "selectContainer", style: "width: 100%;"}, [this._formatSelect]),
+			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
+				this._cancelButton,
+				this._exportButton,
+			]),
 		]);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
@@ -139,12 +143,19 @@ namespace beepbox {
 				this._enableOutro.disabled = false;
 			}
 			
+			const lastExportFormat: string | null = window.localStorage.getItem("exportFormat");
+			if (lastExportFormat != null) {
+				this._formatSelect.value = lastExportFormat;
+			}
+			
+			this._fileName.select();
+			setTimeout(()=>this._fileName.focus());
+			
 			this._fileName.addEventListener("input", ExportPrompt._validateFileName);
 			this._loopDropDown.addEventListener("blur", ExportPrompt._validateNumber);
-			this._exportWavButton.addEventListener("click", this._whenExportToWav);
-			this._exportMidiButton.addEventListener("click", this._whenExportToMidi);
-			this._exportJsonButton.addEventListener("click", this._whenExportToJson);
+			this._exportButton.addEventListener("click", this._export);
 			this._cancelButton.addEventListener("click", this._close);
+			this.container.addEventListener("keydown", this._whenKeyPressed);
 		}
 		
 		private _close = (): void => { 
@@ -154,10 +165,15 @@ namespace beepbox {
 		public cleanUp = (): void => { 
 			this._fileName.removeEventListener("input", ExportPrompt._validateFileName);
 			this._loopDropDown.removeEventListener("blur", ExportPrompt._validateNumber);
-			this._exportWavButton.removeEventListener("click", this._whenExportToWav);
-			this._exportMidiButton.removeEventListener("click", this._whenExportToMidi);
-			this._exportJsonButton.removeEventListener("click", this._whenExportToJson);
+			this._exportButton.removeEventListener("click", this._export);
 			this._cancelButton.removeEventListener("click", this._close);
+			this.container.removeEventListener("keydown", this._whenKeyPressed);
+		}
+		
+		private _whenKeyPressed = (event: KeyboardEvent): void => {
+			if ((<Element> event.target).tagName != "BUTTON" && event.keyCode == 13) { // Enter key
+				this._export();
+			}
 		}
 		
 		private static _validateFileName(event: Event): void {
@@ -176,7 +192,24 @@ namespace beepbox {
 			input.value = Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value)))) + "";
 		}
 		
-		private _whenExportToWav = (): void => {
+		private _export = (): void => {
+			window.localStorage.setItem("exportFormat", this._formatSelect.value);
+			switch(this._formatSelect.value) {
+				case "wav":
+					this._exportToWav();
+					break;
+				case "midi":
+					this._exportToMidi();
+					break;
+				case "json":
+					this._exportToJson();
+					break;
+				default:
+					throw new Error("Unhandled file export type.");
+			}
+		}
+		
+		private _exportToWav(): void {
 			
 			const synth: Synth = new Synth(this._doc.song)
 			synth.enableIntro = this._enableIntro.checked;
@@ -259,7 +292,7 @@ namespace beepbox {
 			this._close();
 		}
 		
-		private _whenExportToMidi = (): void => {
+		private _exportToMidi(): void {
 			const song: Song = this._doc.song;
 			const midiTicksPerBeepBoxTick: number = 2;
 			const midiTicksPerBeat: number = midiTicksPerBeepBoxTick * Config.ticksPerPart * Config.partsPerBeat;
@@ -683,7 +716,7 @@ namespace beepbox {
 			this._close();
 		}
 		
-		private _whenExportToJson = (): void => {
+		private _exportToJson(): void {
 			const jsonObject: Object = this._doc.song.toJsonObject(this._enableIntro.checked, Number(this._loopDropDown.value), this._enableOutro.checked);
 			const jsonString: string = JSON.stringify(jsonObject, null, '\t');
 			const blob = new Blob([jsonString], {type: "application/json"});
