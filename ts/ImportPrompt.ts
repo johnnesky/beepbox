@@ -33,7 +33,7 @@ namespace beepbox {
 
 	export class ImportPrompt implements Prompt {
 		private readonly _fileInput: HTMLInputElement = input({type: "file", accept: ".json,application/json,.mid,.midi,audio/midi,audio/x-midi"});
-		private readonly _cancelButton: HTMLButtonElement = button({}, [text("Cancel")]);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"}, [text("Cancel")]);
 		
 		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 300px;"}, [
 			div({style: "font-size: 2em"}, [text("Import")]),

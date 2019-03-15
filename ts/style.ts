@@ -164,7 +164,7 @@ styleSheet.appendChild(document.createTextNode(`
 	background: #777;
 	outline: none;
 }
-.beepboxEditor button.playButton, .beepboxEditor button.pauseButton {
+.beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.cancelButton, .beepboxEditor button.okayButton, .beepboxEditor button.exportButton {
 	padding-left: 2em;
 }
 .beepboxEditor button.playButton::before {
@@ -249,6 +249,42 @@ styleSheet.appendChild(document.createTextNode(`
 	height: 1em;
 	background: currentColor;
 	pointer-events: none;
+}
+
+.beepboxEditor button.cancelButton::before {
+	content: "";
+	position: absolute;
+	width: 2em;
+	height: 2em;
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="white" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"></path></svg>');
+	background-repeat: no-repeat;
+}
+
+.beepboxEditor button.okayButton::before {
+	content: "";
+	position: absolute;
+	width: 2em;
+	height: 2em;
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="white" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"></path></svg>');
+	background-repeat: no-repeat;
+}
+
+.beepboxEditor button.exportButton::before {
+	content: "";
+	position: absolute;
+	width: 2em;
+	height: 2em;
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="white" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"></path></svg>');
+	background-repeat: no-repeat;
 }
 
 .beepboxEditor canvas {
@@ -338,6 +374,12 @@ styleSheet.appendChild(document.createTextNode(`
 	font-size: inherit;
 	background: transparent;
 	border: 1px solid #777;
+	color: white;
+}
+
+.beepboxEditor input[type=text]::selection, .beepboxEditor input[type=number]::selection {
+	/*background: #7744ff; ugh browsers override the alpha. */
+	background-color: rgba(119,68,255,0.99);
 	color: white;
 }
 
