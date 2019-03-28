@@ -29,6 +29,7 @@ SOFTWARE.
 /// <reference path="TrackEditor.ts" />
 /// <reference path="LoopEditor.ts" />
 /// <reference path="SpectrumEditor.ts" />
+/// <reference path="HarmonicsEditor.ts" />
 /// <reference path="BarScrollBar.ts" />
 /// <reference path="OctaveScrollBar.ts" />
 /// <reference path="Piano.ts" />
@@ -63,6 +64,7 @@ namespace beepbox {
 			customTypeGroup.appendChild(option(InstrumentType.drumset, Config.customTypePresets[InstrumentType.drumset].name));
 		} else {
 			customTypeGroup.appendChild(option(InstrumentType.chip, Config.customTypePresets[InstrumentType.chip].name));
+			customTypeGroup.appendChild(option(InstrumentType.harmonics, Config.customTypePresets[InstrumentType.harmonics].name));
 			customTypeGroup.appendChild(option(InstrumentType.spectrum, Config.customTypePresets[InstrumentType.spectrum].name));
 			customTypeGroup.appendChild(option(InstrumentType.fm, Config.customTypePresets[InstrumentType.fm].name));
 		}
@@ -201,9 +203,9 @@ namespace beepbox {
 		private readonly _instrumentSelectRow: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, [span({}, [text("Instrument: ")]), div({className: "selectContainer"}, [this._instrumentSelect])]);
 		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "-5", max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
 		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Volume: ")]), this._instrumentVolumeSlider.input]);
-		private readonly _waveSelect: HTMLSelectElement = buildOptions(select({}), Config.chipWaves.map(wave=>wave.name));
-		private readonly _drumSelect: HTMLSelectElement = buildOptions(select({}), Config.noiseWaves.map(wave=>wave.name));
-		private readonly _waveSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Wave: ")]), div({className: "selectContainer"}, [this._waveSelect, this._drumSelect])]);
+		private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select({}), Config.chipWaves.map(wave=>wave.name));
+		private readonly _noiseWaveSelect: HTMLSelectElement = buildOptions(select({}), Config.noiseWaves.map(wave=>wave.name));
+		private readonly _waveSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Wave: ")]), div({className: "selectContainer"}, [this._chipWaveSelect, this._noiseWaveSelect])]);
 		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select({}), Config.transitions.map(transition=>transition.name));
 		private readonly _transitionRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Transition:")]), div({className: "selectContainer"}, [this._transitionSelect])]);
 		private readonly _effectsSelect: HTMLSelectElement = buildOptions(select({}), Config.effectsNames);
@@ -225,6 +227,8 @@ namespace beepbox {
 		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Feedback:")]), div({className: "selectContainer"}, [this._feedbackTypeSelect])]);
 		private readonly _spectrumEditor: SpectrumEditor = new SpectrumEditor(this._doc, null);
 		private readonly _spectrumRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Spectrum:")]), this._spectrumEditor.container]);
+		private readonly _harmonicsEditor: HarmonicsEditor = new HarmonicsEditor(this._doc, null);
+		private readonly _harmonicsRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Harmonics:")]), this._harmonicsEditor.container]);
 		private readonly _drumsetGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"}, []);
 		
 		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
@@ -265,13 +269,14 @@ namespace beepbox {
 			]),
 			this._chordSelectRow,
 			this._vibratoSelectRow,
-			this._waveSelectRow,
 			this._intervalSelectRow,
+			this._waveSelectRow,
 			this._algorithmSelectRow,
 			this._phaseModGroup,
 			this._feedbackRow1,
 			this._feedbackRow2,
 			this._spectrumRow,
+			this._harmonicsRow,
 			this._drumsetGroup,
 		]);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({style: "display: flex; flex-direction: column;"}, [
@@ -444,8 +449,8 @@ namespace beepbox {
 			this._customizeInstrumentButton.addEventListener("click", this._whenCustomizePressed);
 			this._feedbackTypeSelect.addEventListener("change", this._whenSetFeedbackType);
 			this._feedbackEnvelopeSelect.addEventListener("change", this._whenSetFeedbackEnvelope);
-			this._waveSelect.addEventListener("change", this._whenSetWave);
-			this._drumSelect.addEventListener("change", this._whenSetDrum);
+			this._chipWaveSelect.addEventListener("change", this._whenSetChipWave);
+			this._noiseWaveSelect.addEventListener("change", this._whenSetNoiseWave);
 			this._transitionSelect.addEventListener("change", this._whenSetTransition);
 			this._effectsSelect.addEventListener("change", this._whenSetEffects);
 			this._filterEnvelopeSelect.addEventListener("change", this._whenSetFilterEnvelope);
@@ -461,6 +466,7 @@ namespace beepbox {
 			
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
 			this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
+			this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
 			
 			if (isMobile) (<HTMLOptionElement> this._optionsMenu.children[1]).disabled = true;
@@ -576,15 +582,21 @@ namespace beepbox {
 				this._customInstrumentSettingsGroup.style.display = "";
 				
 				if (instrument.type == InstrumentType.noise) {
-					this._drumSelect.style.display = "";
+					this._noiseWaveSelect.style.display = "";
 				} else {
-					this._drumSelect.style.display = "none";
+					this._noiseWaveSelect.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.spectrum) {
 					this._spectrumRow.style.display = "";
 					this._spectrumEditor.render();
 				} else {
 					this._spectrumRow.style.display = "none";
+				}
+				if (instrument.type == InstrumentType.harmonics) {
+					this._harmonicsRow.style.display = "";
+					this._harmonicsEditor.render();
+				} else {
+					this._harmonicsRow.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.drumset) {
 					this._drumsetGroup.style.display = "";
@@ -596,9 +608,9 @@ namespace beepbox {
 					this._drumsetGroup.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.chip) {
-					this._waveSelect.style.display = "";
+					this._chipWaveSelect.style.display = "";
 				} else {
-					this._waveSelect.style.display = "none";
+					this._chipWaveSelect.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.fm) {
 					this._algorithmSelectRow.style.display = "";
@@ -657,6 +669,15 @@ namespace beepbox {
 					this._filterCutoffRow.style.display = "";
 					this._filterResonanceRow.style.display = "";
 					this._filterEnvelopeRow.style.display = "";
+				} else if (instrument.type == InstrumentType.harmonics) {
+					this._vibratoSelectRow.style.display = "";
+					this._intervalSelectRow.style.display = "";
+					this._waveSelectRow.style.display = "none";
+					this._transitionRow.style.display = "";
+					this._chordSelectRow.style.display = "";
+					this._filterCutoffRow.style.display = "";
+					this._filterResonanceRow.style.display = "";
+					this._filterEnvelopeRow.style.display = "";
 				} else {
 					throw new Error("Unrecognized instrument type: " + instrument.type);
 				}
@@ -691,8 +712,8 @@ namespace beepbox {
 			setSelectedValue(this._pitchedPresetSelect, instrument.preset);
 			setSelectedValue(this._drumPresetSelect, instrument.preset);
 			setSelectedValue(this._algorithmSelect, instrument.algorithm);
-			setSelectedValue(this._waveSelect, instrument.chipWave);
-			setSelectedValue(this._drumSelect, instrument.noiseWave);
+			setSelectedValue(this._chipWaveSelect, instrument.chipWave);
+			setSelectedValue(this._noiseWaveSelect, instrument.noiseWave);
 			this._filterCutoffSlider.updateValue(instrument.filterCutoff);
 			this._filterResonanceSlider.updateValue(instrument.filterResonance);
 			setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
@@ -982,12 +1003,12 @@ namespace beepbox {
 			this._doc.record(new ChangeCustomizeInstrument(this._doc));
 		}
 		
-		private _whenSetWave = (): void => {
-			this._doc.record(new ChangeChipWave(this._doc, this._waveSelect.selectedIndex));
+		private _whenSetChipWave = (): void => {
+			this._doc.record(new ChangeChipWave(this._doc, this._chipWaveSelect.selectedIndex));
 		}
 		
-		private _whenSetDrum = (): void => {
-			this._doc.record(new ChangeNoiseWave(this._doc, this._drumSelect.selectedIndex));
+		private _whenSetNoiseWave = (): void => {
+			this._doc.record(new ChangeNoiseWave(this._doc, this._noiseWaveSelect.selectedIndex));
 		}
 		
 		private _whenSetFilterEnvelope = (): void => {

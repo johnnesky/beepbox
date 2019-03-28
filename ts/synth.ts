@@ -61,6 +61,7 @@ namespace beepbox {
 		noise = 2,
 		spectrum = 3,
 		drumset = 4,
+		harmonics = 5,
 		length,
 	}
 	
@@ -131,6 +132,7 @@ namespace beepbox {
 
 	export interface Chord extends BeepBoxOption {
 		readonly harmonizes: boolean;
+		readonly customInterval: boolean;
 		readonly arpeggiates: boolean;
 		readonly allowedForNoise: boolean;
 		readonly strumParts: number;
@@ -214,13 +216,14 @@ namespace beepbox {
 			{name: "÷8",            stepsPerBeat: 8, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]]},
 		]);
 		
-		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset"];
+		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics"];
 		public static readonly customTypePresets: DictionaryArray<Preset> = toNameMap([
 			{name: "custom chip",     customType: InstrumentType.chip},
 			{name: "custom FM",       customType: InstrumentType.fm},
 			{name: "custom noise",    customType: InstrumentType.noise},
 			{name: "custom spectrum", customType: InstrumentType.spectrum},
 			{name: "custom drumset",  customType: InstrumentType.drumset},
+			{name: "custom harmonics",customType: InstrumentType.harmonics},
 		]);
 		public static readonly beepboxPresetStart: number = 1024;
 		public static readonly beepboxPresets: DictionaryArray<Preset> = toNameMap([
@@ -229,7 +232,7 @@ namespace beepbox {
 			{name: "buzz saw",         midiProgram:  81, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"custom interval","filterCutoffHz":2000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←2←3←4","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"5×","amplitude":9,"envelope":"custom"},{"frequency":"1×","amplitude":10,"envelope":"steady"},{"frequency":"~1×","amplitude":6,"envelope":"steady"},{"frequency":"11×","amplitude":12,"envelope":"steady"}]}},
 			{name: "tiny robot",       midiProgram:  81, settings: {"type":"FM","transition":"slide","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"twang 3","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"punch"},{"frequency":"~1×","amplitude":7,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "yowie",            midiProgram:  81, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":86,"filterEnvelope":"tremolo5","vibrato":"none","algorithm":"1←2←(3 4)","feedbackType":"1⟲","feedbackAmplitude":12,"feedbackEnvelope":"tremolo3","operators":[{"frequency":"2×","amplitude":10,"envelope":"custom"},{"frequency":"16×","amplitude":5,"envelope":"steady"},{"frequency":"1×","amplitude":5,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
-			{name: "solo ahh",         midiProgram:  81, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"swell 2","vibrato":"shaky","algorithm":"(1 2 3)←4","feedbackType":"4⟲","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"8×","amplitude":6,"envelope":"custom"},{"frequency":"16×","amplitude":2,"envelope":"custom"},{"frequency":"~1×","amplitude":5,"envelope":"steady"}]}},
+			{name: "solo ahh",         midiProgram:  81, settings: {"type":"harmonics","effects":"reverb","transition":"cross fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"swell 1","interval":"union","vibrato":"shaky","harmonics":[86,100,86,43,14,14,57,71,57,14,14,14,14,14,43,57,43,14,14,14,14,14,14,14,0,0,0,0]}},
 			{name: "FM twang",         midiProgram:  81, settings: {"type":"FM","transition":"hard","effects":"none","chord":"custom interval","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":15,"envelope":"twang 2"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "FM bass",          midiProgram:  81, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"strum","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":11,"envelope":"steady"},{"frequency":"7×","amplitude":3,"envelope":"steady"},{"frequency":"16×","amplitude":6,"envelope":"twang 1"}]}},
 			{name: "FM bell",          midiProgram:  14, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"~2×","amplitude":15,"envelope":"custom"},{"frequency":"7×","amplitude":6,"envelope":"twang 3"},{"frequency":"20×","amplitude":1,"envelope":"twang 1"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
@@ -241,54 +244,59 @@ namespace beepbox {
 			{name: "tom-tom",          midiProgram: 117, isNoise: true, settings: {"type":"spectrum","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","spectrum":[100,29,14,0,0,86,14,43,29,86,29,14,29,57,43,43,43,43,57,43,43,43,29,57,43,43,43,43,43,43]}},
 			{name: "gong",             midiProgram: 119, isNoise: true, settings: {"type":"spectrum","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"swell 1","spectrum":[100,29,43,29,43,14,14,14,14,29,14,43,29,43,43,43,43,43,43,43,29,29,29,29,29,29,29,29,14,14]}},
 			{name: "retro drum",       midiProgram: 119, isNoise: true, settings: {"type":"noise","transition":"hard","effects":"none","chord":"arpeggio","filterCutoffHz":4000,"filterResonance":0,"filterEnvelope":"steady","wave":"retro"}},
+			{name: "pipe organ2",      midiProgram:  19, midiSubharmonicOctaves: 1, settings: {"type":"harmonics","effects":"reverb","transition":"cross fade","chord":"harmony","filterCutoffHz":4000,"filterResonance":29,"filterEnvelope":"steady","interval":"hum","vibrato":"none","harmonics":[86,100,71,100,57,71,57,100,43,57,43,86,43,57,43,100,29,57,29,86,29,57,29,86,29,43,29,43]}},
+			{name: "soprano sax2",     midiProgram:  64, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"punch","interval":"union","vibrato":"none","harmonics":[100,86,86,43,86,86,71,43,57,57,57,57,43,29,43,43,43,43,29,29,29,29,29,29,29,14,14,14]}},
+			{name: "alto sax2",        midiProgram:  65, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"punch","interval":"union","vibrato":"none","harmonics":[86,86,71,86,71,57,57,71,57,57,57,57,57,57,57,57,57,43,43,43,43,43,43,29,29,29,29,14]}},
+			{name: "tenor sax2",       midiProgram:  66, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":1414,"filterResonance":0,"filterEnvelope":"punch","interval":"union","vibrato":"none","harmonics":[71,71,71,71,86,71,57,57,71,71,71,71,71,57,57,71,71,71,71,71,71,57,57,57,43,43,43,29]}},
+			{name: "baritone sax2",    midiProgram:  67, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"punch","interval":"union","vibrato":"none","harmonics":[57,86,71,57,71,71,86,86,71,43,71,71,86,71,57,57,57,71,71,71,57,43,57,57,57,57,43,43]}},
 		]);
 		public static readonly midiPresetStart: number = 2048;
 		public static readonly midiPresets: DictionaryArray<Preset> = toNameMap([
-			{name: "grand piano",      midiProgram:   0, generalMidi: true, settings: {"type":"chip","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":29,"filterEnvelope":"twang 3","wave":"1/6 pulse","interval":"shimmer","vibrato":"none"}},
-			{name: "bright piano",     midiProgram:   1, generalMidi: true, settings: {"type":"chip","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"twang 3","wave":"1/8 pulse","interval":"shimmer","vibrato":"none"}},
-			{name: "electric grand",   midiProgram:   2, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"1⟲ 2⟲","feedbackAmplitude":3,"feedbackEnvelope":"twang 3","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":10,"envelope":"steady"},{"frequency":"1×","amplitude":9,"envelope":"steady"}]}},
-			{name: "honky-tonk piano", midiProgram:   3, generalMidi: true, settings: {"type":"chip","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"twang 3","wave":"1/6 pulse","interval":"honky tonk","vibrato":"none"}},
-			{name: "electric piano 1", midiProgram:   4, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":3,"feedbackEnvelope":"decay 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":2,"envelope":"steady"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"~1×","amplitude":2,"envelope":"steady"}]}},
+			{name: "grand piano",      midiProgram:   0, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"twang 3","interval":"shimmer","vibrato":"none","harmonics":[86,100,86,86,86,71,71,57,0,57,29,43,57,57,57,43,43,0,29,43,43,43,43,43,43,29,0,29]}},
+			{name: "bright piano",     midiProgram:   1, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"twang 3","interval":"shimmer","vibrato":"none","harmonics":[86,100,100,100,86,71,0,86,86,71,71,71,57,0,57,71,57,43,43,43,0,43,43,43,43,43,43,43]}},
+			{name: "electric grand",   midiProgram:   2, generalMidi: true, settings: {"type":"chip","effects":"reverb","transition":"hard fade","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 3","wave":"1/8 pulse","interval":"shimmer","vibrato":"none"}},
+			{name: "honky-tonk piano", midiProgram:   3, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"harmony","filterCutoffHz":5657,"filterResonance":29,"filterEnvelope":"twang 2","interval":"honky tonk","vibrato":"none","harmonics":[100,100,86,71,86,71,43,71,43,43,57,57,57,29,57,43,43,43,43,43,29,43,43,43,29,29,29,29]}},
+			{name: "electric piano 1", midiProgram:   4, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 2","interval":"union","vibrato":"none","harmonics":[86,100,100,71,71,57,57,43,43,43,29,29,29,14,14,14,0,0,0,0,0,57,0,0,0,0,0,0]}},
 			{name: "electric piano 2", midiProgram:   5, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"1⟲ 2⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"1×","amplitude":9,"envelope":"steady"},{"frequency":"16×","amplitude":4,"envelope":"steady"}]}},
 			{name: "harpsichord",      midiProgram:   6, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"3⟲","feedbackAmplitude":5,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"steady"},{"frequency":"5×","amplitude":5,"envelope":"steady"},{"frequency":"1×","amplitude":14,"envelope":"steady"}]}},
 			{name: "clavinet",         midiProgram:   7, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":0,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"3⟲","feedbackAmplitude":6,"feedbackEnvelope":"twang 2","operators":[{"frequency":"3×","amplitude":15,"envelope":"custom"},{"frequency":"~1×","amplitude":6,"envelope":"steady"},{"frequency":"8×","amplitude":4,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "celesta",          midiProgram:   8, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"1⟲ 2⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"~1×","amplitude":15,"envelope":"custom"},{"frequency":"8×","amplitude":7,"envelope":"custom"},{"frequency":"20×","amplitude":3,"envelope":"twang 1"},{"frequency":"3×","amplitude":1,"envelope":"twang 2"}]}},
 			{name: "glockenspiel",     midiProgram:   9, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":2,"feedbackEnvelope":"decay 1","operators":[{"frequency":"1×","amplitude":9,"envelope":"custom"},{"frequency":"5×","amplitude":14,"envelope":"custom"},{"frequency":"8×","amplitude":9,"envelope":"custom"},{"frequency":"20×","amplitude":2,"envelope":"twang 1"}]}},
-			{name: "music box",        midiProgram:  10, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":13,"envelope":"custom"},{"frequency":"4×","amplitude":13,"envelope":"custom"},{"frequency":"11×","amplitude":11,"envelope":"custom"},{"frequency":"20×","amplitude":7,"envelope":"custom"}]}},
+			{name: "music box",        midiProgram:  10, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 2","interval":"union","vibrato":"none","harmonics":[100,0,0,100,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,86,0,0,0,0,0,0,71,0]}},
 			{name: "vibraphone",       midiProgram:  11, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"4⟲","feedbackAmplitude":3,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"~1×","amplitude":15,"envelope":"custom"},{"frequency":"9×","amplitude":6,"envelope":"custom"},{"frequency":"4×","amplitude":15,"envelope":"custom"}]}},
 			{name: "marimba",          midiProgram:  12, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"decay 1","vibrato":"none","algorithm":"1 2←(3 4)","feedbackType":"3⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"4×","amplitude":10,"envelope":"custom"},{"frequency":"13×","amplitude":6,"envelope":"twang 1"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "xylophone",        midiProgram:  13, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"6×","amplitude":15,"envelope":"custom"},{"frequency":"11×","amplitude":15,"envelope":"custom"},{"frequency":"20×","amplitude":6,"envelope":"twang 1"}]}},
-			{name: "tubular bell",     midiProgram:  14, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1 2 3←4","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":2,"feedbackEnvelope":"punch","operators":[{"frequency":"3×","amplitude":10,"envelope":"custom"},{"frequency":"11×","amplitude":10,"envelope":"custom"},{"frequency":"6×","amplitude":15,"envelope":"custom"},{"frequency":"~2×","amplitude":5,"envelope":"steady"}]}},
-			{name: "dulcimer",         midiProgram:  15, generalMidi: true, settings: {"type":"chip","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 2","wave":"double saw","interval":"shimmer","vibrato":"none"}},
-			{name: "drawbar organ",    midiProgram:  16, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":7,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"custom"},{"frequency":"4×","amplitude":7,"envelope":"custom"},{"frequency":"8×","amplitude":7,"envelope":"custom"}]}},
+			{name: "tubular bell",     midiProgram:  14, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 3","interval":"hum","vibrato":"none","harmonics":[57,57,0,100,0,100,0,86,0,71,0,0,57,0,0,43,0,0,0,29,0,0,0,14,0,0,0,0]}},
+			{name: "dulcimer",         midiProgram:  15, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 2","interval":"shimmer","vibrato":"none","harmonics":[86,86,86,71,86,71,43,86,86,71,100,71,100,71,86,57,43,57,57,86,71,57,71,71,86,71,71,71]}},
+			{name: "drawbar organ",    midiProgram:  16, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","interval":"union","vibrato":"none","harmonics":[100,100,0,100,0,0,0,100,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,0,0,0,0]}},
 			{name: "percussive organ", midiProgram:  17, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"punch","vibrato":"light","algorithm":"1 2 3 4","feedbackType":"1→3 2→4","feedbackAmplitude":7,"feedbackEnvelope":"decay 1","operators":[{"frequency":"1×","amplitude":7,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"custom"},{"frequency":"3×","amplitude":8,"envelope":"custom"},{"frequency":"4×","amplitude":8,"envelope":"custom"}]}},
 			{name: "rock organ",       midiProgram:  18, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"punch","vibrato":"delayed","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":2,"feedbackEnvelope":"flare 1","operators":[{"frequency":"1×","amplitude":11,"envelope":"custom"},{"frequency":"4×","amplitude":11,"envelope":"custom"},{"frequency":"6×","amplitude":11,"envelope":"custom"},{"frequency":"2×","amplitude":5,"envelope":"steady"}]}},
 			{name: "pipe organ",       midiProgram:  19, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":5,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":8,"envelope":"custom"},{"frequency":"2×","amplitude":9,"envelope":"custom"},{"frequency":"4×","amplitude":9,"envelope":"custom"},{"frequency":"8×","amplitude":8,"envelope":"custom"}]}},
-			{name: "reed organ",       midiProgram:  20, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":57,"filterEnvelope":"steady","vibrato":"none","algorithm":"(1 2)←3←4","feedbackType":"1⟲ 2⟲","feedbackAmplitude":5,"feedbackEnvelope":"steady","operators":[{"frequency":"4×","amplitude":7,"envelope":"custom"},{"frequency":"4×","amplitude":13,"envelope":"custom"},{"frequency":"1×","amplitude":8,"envelope":"steady"},{"frequency":"9×","amplitude":2,"envelope":"steady"}]}},
+			{name: "reed organ",       midiProgram:  20, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"steady","interval":"union","vibrato":"none","harmonics":[71,86,100,86,71,100,57,71,71,71,43,43,43,71,43,71,57,57,57,57,57,57,57,29,43,29,29,14]}},
 			{name: "accordion",        midiProgram:  21, generalMidi: true, settings: {"type":"chip","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":29,"filterEnvelope":"swell 1","wave":"double saw","interval":"honky tonk","vibrato":"none"}},
 			{name: "harmonica",        midiProgram:  22, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":29,"filterEnvelope":"swell 1","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":9,"feedbackEnvelope":"tremolo5","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":15,"envelope":"steady"},{"frequency":"~2×","amplitude":2,"envelope":"twang 3"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
-			{name: "bandoneon",        midiProgram:  23, generalMidi: true, settings: {"type":"chip","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":29,"filterEnvelope":"swell 1","wave":"1/12 pulse","interval":"hum","vibrato":"none"}},
-			{name: "nylon guitar",     midiProgram:  24, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":8000,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"1←2←3←4","feedbackType":"3⟲","feedbackAmplitude":5,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"5×","amplitude":2,"envelope":"steady"},{"frequency":"7×","amplitude":4,"envelope":"steady"}]}},
-			{name: "steel guitar",     midiProgram:  25, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1←2←3←4","feedbackType":"3⟲","feedbackAmplitude":5,"feedbackEnvelope":"twang 2","operators":[{"frequency":"3×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":9,"envelope":"steady"},{"frequency":"11×","amplitude":2,"envelope":"steady"},{"frequency":"4×","amplitude":5,"envelope":"steady"}]}},
-			{name: "jazz guitar",      midiProgram:  26, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"3⟲","feedbackAmplitude":3,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"8×","amplitude":1,"envelope":"steady"},{"frequency":"1×","amplitude":7,"envelope":"steady"}]}},
-			{name: "clean guitar",     midiProgram:  27, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":8,"feedbackEnvelope":"twang 3","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"steady"},{"frequency":"5×","amplitude":5,"envelope":"steady"},{"frequency":"16×","amplitude":2,"envelope":"steady"}]}},
+			{name: "bandoneon",        midiProgram:  23, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":4000,"filterResonance":29,"filterEnvelope":"swell 1","interval":"hum","vibrato":"none","harmonics":[86,86,86,57,71,86,57,71,71,71,57,43,57,43,71,43,71,57,57,43,43,43,57,43,43,29,29,29]}},
+			{name: "nylon guitar",     midiProgram:  24, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"1←2←3←4","feedbackType":"3⟲","feedbackAmplitude":6,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"5×","amplitude":2,"envelope":"steady"},{"frequency":"7×","amplitude":4,"envelope":"steady"}]}},
+			{name: "steel guitar",     midiProgram:  25, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 2","interval":"union","vibrato":"none","harmonics":[100,100,86,71,71,71,86,86,71,57,43,43,43,57,57,57,57,57,43,43,43,43,43,43,43,43,43,43]}},
+			{name: "jazz guitar",      midiProgram:  26, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 2","interval":"union","vibrato":"none","harmonics":[100,100,86,71,57,71,71,43,57,71,57,43,29,29,29,29,29,29,29,29,14,14,14,14,14,14,14,0]}},
+			{name: "clean guitar",     midiProgram:  27, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard","chord":"strum","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 2","interval":"union","vibrato":"none","harmonics":[86,100,100,100,86,57,86,100,100,100,71,57,43,71,86,71,57,57,71,71,71,71,57,57,57,57,57,43]}},
 			{name: "muted guitar",     midiProgram:  28, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":7,"feedbackEnvelope":"twang 2","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":4,"envelope":"twang 3"},{"frequency":"4×","amplitude":4,"envelope":"twang 2"},{"frequency":"16×","amplitude":4,"envelope":"twang 1"}]}},
-			{name: "overdrive guitar", midiProgram:  29, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1→3","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"~1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":9,"envelope":"steady"},{"frequency":"1×","amplitude":8,"envelope":"steady"},{"frequency":"1×","amplitude":4,"envelope":"swell 3"}]}},
-			{name: "distortion guitar",midiProgram:  30, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1→2","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"~1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":11,"envelope":"steady"},{"frequency":"1×","amplitude":8,"envelope":"swell 1"},{"frequency":"~2×","amplitude":5,"envelope":"swell 3"}]}},
+			{name: "overdrive guitar", midiProgram:  29, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"hard","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1→2","feedbackAmplitude":2,"feedbackEnvelope":"steady","operators":[{"frequency":"~1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":12,"envelope":"steady"},{"frequency":"1×","amplitude":7,"envelope":"twang 3"},{"frequency":"1×","amplitude":4,"envelope":"swell 3"}]}},
+			{name: "distortion guitar",midiProgram:  30, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"hard","chord":"harmony","filterCutoffHz":2828,"filterResonance":57,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1→2","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"~1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":11,"envelope":"steady"},{"frequency":"1×","amplitude":9,"envelope":"swell 1"},{"frequency":"~2×","amplitude":5,"envelope":"swell 3"}]}},
 			{name: "guitar harmonics", midiProgram:  31, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3)←4","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"steady","operators":[{"frequency":"4×","amplitude":11,"envelope":"custom"},{"frequency":"16×","amplitude":5,"envelope":"swell 1"},{"frequency":"1×","amplitude":2,"envelope":"punch"},{"frequency":"~1×","amplitude":12,"envelope":"twang 1"}]}},
-			{name: "acoustic bass",    midiProgram:  32, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"twang 2","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"11×","amplitude":1,"envelope":"twang 3"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"4×","amplitude":3,"envelope":"swell 1"}]}},
-			{name: "fingered bass",    midiProgram:  33, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":1414,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":4,"envelope":"steady"},{"frequency":"5×","amplitude":1,"envelope":"twang 3"},{"frequency":"4×","amplitude":4,"envelope":"twang 3"}]}},
-			{name: "picked bass",      midiProgram:  34, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":707,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"3⟲","feedbackAmplitude":9,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":5,"envelope":"steady"},{"frequency":"11×","amplitude":1,"envelope":"twang 3"},{"frequency":"1×","amplitude":10,"envelope":"steady"}]}},
-			{name: "fretless bass",    midiProgram:  35, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":1414,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"2⟲","feedbackAmplitude":0,"feedbackEnvelope":"twang 2","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"steady"},{"frequency":"8×","amplitude":1,"envelope":"swell 1"},{"frequency":"7×","amplitude":4,"envelope":"twang 3"}]}},
-			{name: "slap bass 1",      midiProgram:  36, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"steady"},{"frequency":"8×","amplitude":2,"envelope":"twang 3"},{"frequency":"11×","amplitude":10,"envelope":"steady"}]}},
-			{name: "slap bass 2",      midiProgram:  37, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"3×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":4,"envelope":"steady"},{"frequency":"5×","amplitude":2,"envelope":"twang 2"},{"frequency":"9×","amplitude":12,"envelope":"steady"}]}},
-			{name: "synth bass 1",     midiProgram:  38, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":1000,"filterResonance":14,"filterEnvelope":"punch","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"2⟲","feedbackAmplitude":8,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":12,"envelope":"twang 1"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
-			{name: "synth bass 2",     midiProgram:  39, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":1000,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"2⟲","feedbackAmplitude":6,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":8,"envelope":"twang 2"},{"frequency":"3×","amplitude":3,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
-			{name: "violin",           midiProgram:  40, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2)←(3 4)","feedbackType":"1⟲ 2⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"7×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":8,"envelope":"steady"},{"frequency":"16×","amplitude":2,"envelope":"steady"}]}},
-			{name: "viola",            midiProgram:  41, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2)←3←4","feedbackType":"1⟲ 2⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"8×","amplitude":11,"envelope":"custom"},{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":8,"envelope":"steady"},{"frequency":"16×","amplitude":2,"envelope":"swell 2"}]}},
-			{name: "cello",            midiProgram:  42, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2)←(3 4)","feedbackType":"1⟲ 2⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"6×","amplitude":10,"envelope":"custom"},{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":8,"envelope":"steady"},{"frequency":"13×","amplitude":2,"envelope":"swell 2"}]}},
+			{name: "acoustic bass",    midiProgram:  32, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 1","interval":"union","vibrato":"none","harmonics":[100,86,71,71,71,71,57,57,57,57,43,43,43,43,43,29,29,29,29,29,29,14,14,14,14,14,14,14]}},
+			{name: "fingered bass",    midiProgram:  33, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 1","interval":"union","vibrato":"none","harmonics":[100,86,71,57,71,43,57,29,29,29,29,29,29,14,14,14,14,14,14,14,14,14,14,14,14,14,14,0]}},
+			{name: "picked bass",      midiProgram:  34, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"3⟲","feedbackAmplitude":4,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":5,"envelope":"steady"},{"frequency":"11×","amplitude":1,"envelope":"twang 3"},{"frequency":"1×","amplitude":9,"envelope":"steady"}]}},
+			{name: "fretless bass",    midiProgram:  35, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard","chord":"strum","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"flare 2","interval":"union","vibrato":"none","harmonics":[100,100,86,71,71,57,57,71,71,71,57,57,57,57,57,57,57,43,43,43,43,43,43,43,43,29,29,14]}},
+			{name: "slap bass 1",      midiProgram:  36, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard","chord":"strum","filterCutoffHz":5657,"filterResonance":0,"filterEnvelope":"twang 1","interval":"union","vibrato":"none","harmonics":[86,100,100,100,86,71,57,43,43,43,43,57,57,43,29,29,43,43,43,43,43,43,43,57,71,71,71,57]}},
+			{name: "slap bass 2",      midiProgram:  37, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"hard","chord":"strum","filterCutoffHz":5657,"filterResonance":0,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"steady"},{"frequency":"13×","amplitude":4,"envelope":"steady"},{"frequency":"11×","amplitude":10,"envelope":"steady"}]}},
+			{name: "synth bass 1",     midiProgram:  38, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"hard","chord":"strum","filterCutoffHz":4000,"filterResonance":43,"filterEnvelope":"twang 2","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"3⟲ 4⟲","feedbackAmplitude":9,"feedbackEnvelope":"twang 2","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":10,"envelope":"custom"},{"frequency":"1×","amplitude":14,"envelope":"twang 1"},{"frequency":"~1×","amplitude":13,"envelope":"twang 2"}]}},
+			{name: "synth bass 2",     midiProgram:  39, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":1000,"filterResonance":57,"filterEnvelope":"punch","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1→2","feedbackAmplitude":4,"feedbackEnvelope":"twang 3","operators":[{"frequency":"1×","amplitude":11,"envelope":"custom"},{"frequency":"1×","amplitude":9,"envelope":"steady"},{"frequency":"3×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
+			{name: "violin",           midiProgram:  40, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"cross fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":6,"feedbackEnvelope":"swell 1","operators":[{"frequency":"2×","amplitude":13,"envelope":"custom"},{"frequency":"6×","amplitude":10,"envelope":"custom"},{"frequency":"11×","amplitude":6,"envelope":"steady"},{"frequency":"1×","amplitude":6,"envelope":"steady"}]}},
+			{name: "viola",            midiProgram:  41, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"cross fade","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":8,"feedbackEnvelope":"swell 1","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"7×","amplitude":10,"envelope":"custom"},{"frequency":"13×","amplitude":6,"envelope":"steady"},{"frequency":"1×","amplitude":5,"envelope":"steady"}]}},
+			{name: "cello",            midiProgram:  42, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"cross fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":9,"feedbackEnvelope":"swell 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"8×","amplitude":8,"envelope":"steady"},{"frequency":"1×","amplitude":4,"envelope":"steady"}]}},
 			{name: "contrabass",       midiProgram:  43, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2)←3←4","feedbackType":"1⟲ 2⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"16×","amplitude":7,"envelope":"custom"},{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":10,"envelope":"steady"},{"frequency":"6×","amplitude":3,"envelope":"swell 1"}]}},
-			{name: "tremolo strings",  midiProgram:  44, generalMidi: true, settings: {"type":"FM","transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":707,"filterResonance":0,"filterEnvelope":"tremolo4","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"4⟲","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"4×","amplitude":12,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"steady"},{"frequency":"7×","amplitude":3,"envelope":"steady"}]}},
+			{name: "tremolo strings",  midiProgram:  44, generalMidi: true, settings: {"type":"FM","effects":"chorus & reverb","transition":"medium fade","chord":"harmony","filterCutoffHz":2000,"filterResonance":0,"filterEnvelope":"tremolo4","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"4⟲","feedbackAmplitude":7,"feedbackEnvelope":"steady","operators":[{"frequency":"4×","amplitude":12,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"steady"},{"frequency":"7×","amplitude":3,"envelope":"steady"}]}},
 			{name: "pizzicato strings",midiProgram:  45, generalMidi: true, settings: {"type":"FM","transition":"medium fade","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":7,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"6×","amplitude":10,"envelope":"custom"},{"frequency":"~1×","amplitude":10,"envelope":"steady"}]}},
 			{name: "harp",             midiProgram:  46, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"3⟲","feedbackAmplitude":6,"feedbackEnvelope":"twang 2","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"4×","amplitude":6,"envelope":"custom"},{"frequency":"~2×","amplitude":3,"envelope":"steady"},{"frequency":"1×","amplitude":6,"envelope":"steady"}]}},
 			{name: "timpani",          midiProgram:  47, generalMidi: true, settings: {"type":"spectrum","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":14,"filterEnvelope":"twang 1","spectrum":[100,0,0,0,86,0,0,57,0,14,43,14,43,43,0,29,43,29,14,14,43,29,43,14,43,43,29,43,29,43]}},
@@ -296,10 +304,10 @@ namespace beepbox {
 			{name: "slow strings",     midiProgram:  49, generalMidi: true, settings: {"type":"FM","transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":0,"filterEnvelope":"swell 3","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"4⟲","feedbackAmplitude":6,"feedbackEnvelope":"flare 3","operators":[{"frequency":"4×","amplitude":13,"envelope":"custom"},{"frequency":"3×","amplitude":13,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"steady"},{"frequency":"7×","amplitude":3,"envelope":"swell 1"}]}},
 			{name: "synth strings 1",  midiProgram:  50, generalMidi: true, settings: {"type":"chip","volume":60,"transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":43,"filterEnvelope":"steady","wave":"sawtooth","interval":"hum","vibrato":"delayed"}},
 			{name: "synth strings 2",  midiProgram:  51, generalMidi: true, settings: {"type":"FM","transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1000,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"1⟲ 2⟲","feedbackAmplitude":11,"feedbackEnvelope":"flare 2","operators":[{"frequency":"1×","amplitude":14,"envelope":"custom"},{"frequency":"4×","amplitude":12,"envelope":"custom"},{"frequency":"1×","amplitude":11,"envelope":"steady"},{"frequency":"6×","amplitude":4,"envelope":"steady"}]}},
-			{name: "choir ahh",        midiProgram:  52, generalMidi: true, settings: {"type":"FM","transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":86,"filterEnvelope":"steady","vibrato":"shaky","algorithm":"(1 2 3)←4","feedbackType":"4⟲","feedbackAmplitude":1,"feedbackEnvelope":"steady","operators":[{"frequency":"3×","amplitude":6,"envelope":"custom"},{"frequency":"13×","amplitude":2,"envelope":"custom"},{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"steady"}]}},
-			{name: "voice ooh",        midiProgram:  53, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":1000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":3,"envelope":"steady"},{"frequency":"1×","amplitude":1,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
+			{name: "choir ahh",        midiProgram:  52, generalMidi: true, settings: {"type":"harmonics","effects":"chorus & reverb","transition":"soft fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":86,"filterEnvelope":"steady","interval":"union","vibrato":"shaky","harmonics":[86,100,100,86,71,57,29,14,14,14,29,43,43,43,29,14,14,14,0,0,0,0,0,0,0,0,0,0]}},
+			{name: "voice ooh",        midiProgram:  53, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":1414,"filterResonance":57,"filterEnvelope":"steady","interval":"union","vibrato":"shaky","harmonics":[100,57,43,43,14,14,0,0,0,14,29,29,14,0,14,29,29,14,0,0,0,0,0,0,0,0,0,0]}},
 			{name: "synth voice",      midiProgram:  54, generalMidi: true, settings: {"type":"chip","transition":"medium fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":57,"filterEnvelope":"steady","wave":"rounded","interval":"union","vibrato":"light"}},
-			{name: "orchestra hit",    midiProgram:  55, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"medium fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"decay 1","vibrato":"delayed","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":15,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"4×","amplitude":15,"envelope":"custom"}]}},
+			{name: "orchestra hit",    midiProgram:  55, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","effects":"chorus & reverb","transition":"medium fade","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"decay 1","vibrato":"delayed","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":14,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"4×","amplitude":15,"envelope":"custom"}]}},
 			{name: "trumpet",          midiProgram:  56, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":9,"feedbackEnvelope":"swell 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":8,"envelope":"steady"},{"frequency":"1×","amplitude":5,"envelope":"flare 2"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "trombone",         midiProgram:  57, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"2⟲","feedbackAmplitude":7,"feedbackEnvelope":"swell 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":8,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "tuba",             midiProgram:  58, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"2⟲","feedbackAmplitude":8,"feedbackEnvelope":"swell 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
@@ -311,40 +319,40 @@ namespace beepbox {
 			{name: "soprano sax",      midiProgram:  64, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←2←3←4","feedbackType":"4⟲","feedbackAmplitude":5,"feedbackEnvelope":"swell 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"4×","amplitude":4,"envelope":"swell 1"},{"frequency":"1×","amplitude":7,"envelope":"steady"},{"frequency":"5×","amplitude":4,"envelope":"punch"}]}},
 			{name: "alto sax",         midiProgram:  65, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":4,"feedbackEnvelope":"punch","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"4×","amplitude":6,"envelope":"swell 1"},{"frequency":"1×","amplitude":12,"envelope":"steady"}]}},
 			{name: "tenor sax",        midiProgram:  66, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←2←3←4","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"swell 1","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":7,"envelope":"steady"},{"frequency":"1×","amplitude":3,"envelope":"steady"},{"frequency":"8×","amplitude":2,"envelope":"steady"}]}},
-			{name: "baritone sax",     midiProgram:  67, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"swell 2","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"8×","amplitude":4,"envelope":"steady"},{"frequency":"4×","amplitude":5,"envelope":"steady"},{"frequency":"1×","amplitude":4,"envelope":"punch"}]}},
-			{name: "oboe",             midiProgram:  68, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"swell 1","vibrato":"none","algorithm":"1 2←(3 4)","feedbackType":"2⟲","feedbackAmplitude":3,"feedbackEnvelope":"tremolo5","operators":[{"frequency":"1×","amplitude":9,"envelope":"custom"},{"frequency":"4×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"6×","amplitude":2,"envelope":"steady"}]}},
-			{name: "english horn",     midiProgram:  69, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2←(3 4)","feedbackType":"2⟲","feedbackAmplitude":1,"feedbackEnvelope":"steady","operators":[{"frequency":"4×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":12,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"swell 1"},{"frequency":"8×","amplitude":1,"envelope":"steady"}]}},
+			{name: "baritone sax",     midiProgram:  67, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"swell 2","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"8×","amplitude":4,"envelope":"steady"},{"frequency":"4×","amplitude":5,"envelope":"steady"},{"frequency":"1×","amplitude":4,"envelope":"punch"}]}},
+			{name: "oboe",             midiProgram:  68, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"cross fade","chord":"harmony","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"swell 1","vibrato":"none","algorithm":"1 2←(3 4)","feedbackType":"2⟲","feedbackAmplitude":2,"feedbackEnvelope":"tremolo5","operators":[{"frequency":"1×","amplitude":9,"envelope":"custom"},{"frequency":"4×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"6×","amplitude":2,"envelope":"steady"}]}},
+			{name: "english horn",     midiProgram:  69, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"cross fade","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2←(3 4)","feedbackType":"2⟲","feedbackAmplitude":2,"feedbackEnvelope":"steady","operators":[{"frequency":"4×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":12,"envelope":"custom"},{"frequency":"1×","amplitude":8,"envelope":"punch"},{"frequency":"8×","amplitude":4,"envelope":"steady"}]}},
 			{name: "bassoon",          midiProgram:  70, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":707,"filterResonance":57,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"steady"},{"frequency":"6×","amplitude":6,"envelope":"swell 1"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
-			{name: "clarinet",         midiProgram:  71, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"2⟲","feedbackAmplitude":2,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"4×","amplitude":6,"envelope":"steady"},{"frequency":"9×","amplitude":1,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
+			{name: "clarinet",         midiProgram:  71, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":1414,"filterResonance":14,"filterEnvelope":"steady","interval":"union","vibrato":"none","harmonics":[100,43,86,57,86,71,86,71,71,71,71,71,71,43,71,71,57,57,57,57,57,57,43,43,43,29,14,0]}},
 			{name: "piccolo",          midiProgram:  72, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"4⟲","feedbackAmplitude":15,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":10,"envelope":"custom"},{"frequency":"~2×","amplitude":3,"envelope":"punch"},{"frequency":"~1×","amplitude":5,"envelope":"punch"}]}},
-			{name: "flute",            midiProgram:  73, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":4,"envelope":"steady"},{"frequency":"1×","amplitude":2,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
-			{name: "recorder",         midiProgram:  74, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":1,"envelope":"steady"},{"frequency":"5×","amplitude":1,"envelope":"steady"},{"frequency":"1×","amplitude":5,"envelope":"steady"}]}},
+			{name: "flute",            midiProgram:  73, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"4⟲","feedbackAmplitude":7,"feedbackEnvelope":"decay 2","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":4,"envelope":"steady"},{"frequency":"1×","amplitude":3,"envelope":"steady"},{"frequency":"~1×","amplitude":1,"envelope":"punch"}]}},
+			{name: "recorder",         midiProgram:  74, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":2000,"filterResonance":0,"filterEnvelope":"swell 2","interval":"union","vibrato":"none","harmonics":[100,43,57,43,57,43,43,43,29,29,14,14,14,14,14,14,14,14,14,0,0,0,0,0,0,0,0,0]}},
 			{name: "pan flute",        midiProgram:  75, generalMidi: true, settings: {"type":"spectrum","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","spectrum":[100,0,0,0,0,0,0,14,0,0,0,86,0,0,14,0,71,0,29,14,29,29,14,29,14,29,14,14,29,29]}},
 			{name: "blown bottle",     midiProgram:  76, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":7,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":3,"envelope":"custom"},{"frequency":"6×","amplitude":1,"envelope":"custom"},{"frequency":"11×","amplitude":1,"envelope":"custom"}]}},
-			{name: "shakuhachi",       midiProgram:  77, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":57,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3←4)","feedbackType":"3→4","feedbackAmplitude":15,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":3,"envelope":"punch"},{"frequency":"~1×","amplitude":4,"envelope":"twang 1"},{"frequency":"20×","amplitude":15,"envelope":"steady"}]}},
-			{name: "whistle",          midiProgram:  78, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":250,"filterResonance":14,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
-			{name: "ocarina",          midiProgram:  79, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"2×","amplitude":2,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
+			{name: "shakuhachi",       midiProgram:  77, generalMidi: true, settings: {"type":"FM","effects":"chorus & reverb","transition":"soft","chord":"harmony","filterCutoffHz":2828,"filterResonance":57,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3←4)","feedbackType":"3→4","feedbackAmplitude":15,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":3,"envelope":"punch"},{"frequency":"~1×","amplitude":4,"envelope":"twang 1"},{"frequency":"20×","amplitude":15,"envelope":"steady"}]}},
+			{name: "whistle",          midiProgram:  78, generalMidi: true, settings: {"type":"harmonics","effects":"chorus & reverb","transition":"soft","chord":"harmony","filterCutoffHz":250,"filterResonance":14,"filterEnvelope":"steady","interval":"union","vibrato":"delayed","harmonics":[100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},
+			{name: "ocarina",          midiProgram:  79, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","interval":"union","vibrato":"none","harmonics":[100,14,43,14,14,14,14,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},
 			{name: "square lead",      midiProgram:  80, generalMidi: true, settings: {"type":"chip","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","wave":"square","interval":"hum","vibrato":"none"}},
 			{name: "sawtooth lead",    midiProgram:  81, generalMidi: true, settings: {"type":"chip","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","wave":"sawtooth","interval":"shimmer","vibrato":"none"}},
 			{name: "synth calliope",   midiProgram:  82, generalMidi: true, settings: {"type":"spectrum","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"steady","spectrum":[100,0,0,0,0,0,0,86,0,0,0,71,0,0,57,0,43,0,29,14,14,29,14,14,14,14,14,14,14,14]}},
 			{name: "chiffer lead",     midiProgram:  83, generalMidi: true, settings: {"type":"spectrum","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"punch","spectrum":[100,0,0,0,0,0,0,86,0,0,0,86,0,0,71,0,57,0,43,14,14,43,14,29,14,29,29,29,29,14]}},
-			{name: "charang lead",     midiProgram:  84, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":0,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1→2→3→4","feedbackAmplitude":11,"feedbackEnvelope":"twang 3","operators":[{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"~1×","amplitude":5,"envelope":"twang 3"},{"frequency":"4×","amplitude":5,"envelope":"steady"},{"frequency":"3×","amplitude":5,"envelope":"steady"}]}},
-			{name: "synth vox lead",   midiProgram:  85, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","vibrato":"light","algorithm":"(1 2 3)←4","feedbackType":"1→2→3→4","feedbackAmplitude":1,"feedbackEnvelope":"punch","operators":[{"frequency":"2×","amplitude":10,"envelope":"custom"},{"frequency":"9×","amplitude":5,"envelope":"custom"},{"frequency":"20×","amplitude":1,"envelope":"custom"},{"frequency":"~1×","amplitude":4,"envelope":"steady"}]}},
-			{name: "fifth saw lead",   midiProgram:  86, generalMidi: true, settings: {"type":"chip","transition":"hard fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":57,"filterEnvelope":"twang 2","wave":"sawtooth","interval":"fifth","vibrato":"none"}},
+			{name: "charang lead",     midiProgram:  84, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"hard","chord":"harmony","filterCutoffHz":5657,"filterResonance":0,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1→2→3→4","feedbackAmplitude":8,"feedbackEnvelope":"twang 3","operators":[{"frequency":"3×","amplitude":12,"envelope":"custom"},{"frequency":"~1×","amplitude":5,"envelope":"steady"},{"frequency":"4×","amplitude":6,"envelope":"steady"},{"frequency":"3×","amplitude":7,"envelope":"steady"}]}},
+			{name: "synth vox lead",   midiProgram:  85, generalMidi: true, settings: {"type":"FM","effects":"chorus & reverb","transition":"cross fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","vibrato":"light","algorithm":"(1 2 3)←4","feedbackType":"1→2→3→4","feedbackAmplitude":2,"feedbackEnvelope":"punch","operators":[{"frequency":"2×","amplitude":10,"envelope":"custom"},{"frequency":"9×","amplitude":5,"envelope":"custom"},{"frequency":"20×","amplitude":1,"envelope":"custom"},{"frequency":"~1×","amplitude":4,"envelope":"steady"}]}},
+			{name: "fifth saw lead",   midiProgram:  86, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"chip","effects":"chorus & reverb","transition":"hard fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":57,"filterEnvelope":"twang 3","wave":"sawtooth","interval":"fifth","vibrato":"none"}},
 			{name: "bass & lead",      midiProgram:  87, generalMidi: true, settings: {"type":"chip","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":86,"filterEnvelope":"twang 2","wave":"sawtooth","interval":"shimmer","vibrato":"none"}},
-			{name: "new age pad",      midiProgram:  88, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲ 2⟲","feedbackAmplitude":4,"feedbackEnvelope":"swell 3","operators":[{"frequency":"2×","amplitude":13,"envelope":"custom"},{"frequency":"~1×","amplitude":4,"envelope":"swell 2"},{"frequency":"6×","amplitude":3,"envelope":"twang 3"},{"frequency":"11×","amplitude":3,"envelope":"steady"}]}},
-			{name: "warm pad",         midiProgram:  89, generalMidi: true, settings: {"type":"FM","transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"swell 3","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":7,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"swell 1"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
+			{name: "new age pad",      midiProgram:  88, generalMidi: true, settings: {"type":"FM","effects":"chorus & reverb","transition":"hard fade","chord":"harmony","filterCutoffHz":8000,"filterResonance":43,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲ 2⟲","feedbackAmplitude":3,"feedbackEnvelope":"swell 3","operators":[{"frequency":"2×","amplitude":13,"envelope":"custom"},{"frequency":"~1×","amplitude":4,"envelope":"swell 2"},{"frequency":"6×","amplitude":3,"envelope":"twang 3"},{"frequency":"13×","amplitude":3,"envelope":"steady"}]}},
+			{name: "warm pad",         midiProgram:  89, generalMidi: true, settings: {"type":"FM","effects":"chorus & reverb","transition":"soft fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":29,"filterEnvelope":"swell 3","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":7,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":6,"envelope":"swell 1"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "polysynth pad",    midiProgram:  90, generalMidi: true, settings: {"type":"chip","transition":"hard fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":43,"filterEnvelope":"twang 3","wave":"sawtooth","interval":"hum","vibrato":"delayed"}},
-			{name: "space voice pad",  midiProgram:  91, generalMidi: true, settings: {"type":"FM","transition":"medium fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":5,"feedbackEnvelope":"swell 3","operators":[{"frequency":"1×","amplitude":10,"envelope":"custom"},{"frequency":"2×","amplitude":8,"envelope":"custom"},{"frequency":"3×","amplitude":6,"envelope":"custom"},{"frequency":"16×","amplitude":2,"envelope":"twang 3"}]}},
-			{name: "bowed glass pad",  midiProgram:  92, generalMidi: true, settings: {"type":"FM","transition":"soft fade","effects":"reverb","chord":"harmony","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":6,"envelope":"custom"},{"frequency":"2×","amplitude":8,"envelope":"custom"},{"frequency":"3×","amplitude":7,"envelope":"twang 3"},{"frequency":"7×","amplitude":4,"envelope":"flare 3"}]}},
-			{name: "metallic pad",     midiProgram:  93, generalMidi: true, settings: {"type":"FM","transition":"soft fade","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"1⟲ 2⟲","feedbackAmplitude":13,"feedbackEnvelope":"twang 3","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"~1×","amplitude":7,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"swell 2"},{"frequency":"11×","amplitude":7,"envelope":"steady"}]}},
-			{name: "halo pad",         midiProgram:  94, generalMidi: true, settings: {"type":"FM","transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":43,"filterEnvelope":"swell 2","vibrato":"shaky","algorithm":"(1 2 3)←4","feedbackType":"4⟲","feedbackAmplitude":4,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":13,"envelope":"custom"},{"frequency":"8×","amplitude":5,"envelope":"custom"},{"frequency":"16×","amplitude":2,"envelope":"custom"},{"frequency":"~1×","amplitude":5,"envelope":"steady"}]}},
-			{name: "sweep pad",        midiProgram:  95, generalMidi: true, settings: {"type":"chip","transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":86,"filterEnvelope":"flare 3","wave":"sawtooth","interval":"hum","vibrato":"none"}},
+			{name: "space voice pad",  midiProgram:  91, generalMidi: true, settings: {"type":"FM","effects":"chorus & reverb","transition":"medium fade","chord":"harmony","filterCutoffHz":4000,"filterResonance":71,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":5,"feedbackEnvelope":"swell 2","operators":[{"frequency":"1×","amplitude":10,"envelope":"custom"},{"frequency":"2×","amplitude":8,"envelope":"custom"},{"frequency":"3×","amplitude":6,"envelope":"custom"},{"frequency":"16×","amplitude":2,"envelope":"twang 3"}]}},
+			{name: "bowed glass pad",  midiProgram:  92, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"soft fade","chord":"harmony","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":9,"envelope":"custom"},{"frequency":"2×","amplitude":12,"envelope":"custom"},{"frequency":"3×","amplitude":7,"envelope":"twang 3"},{"frequency":"7×","amplitude":4,"envelope":"flare 3"}]}},
+			{name: "metallic pad",     midiProgram:  93, generalMidi: true, settings: {"type":"FM","effects":"reverb","transition":"medium fade","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←3 2←4","feedbackType":"1⟲ 2⟲","feedbackAmplitude":13,"feedbackEnvelope":"twang 3","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"~1×","amplitude":7,"envelope":"custom"},{"frequency":"1×","amplitude":7,"envelope":"swell 2"},{"frequency":"11×","amplitude":7,"envelope":"steady"}]}},
+			{name: "halo pad",         midiProgram:  94, generalMidi: true, settings: {"type":"harmonics","effects":"chorus & reverb","transition":"soft fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":43,"filterEnvelope":"swell 2","interval":"union","vibrato":"shaky","harmonics":[86,100,86,43,14,14,57,71,57,14,14,14,14,14,43,57,43,14,14,14,14,14,14,14,0,0,0,0]}},
+			{name: "sweep pad",        midiProgram:  95, generalMidi: true, settings: {"type":"chip","effects":"chorus & reverb","transition":"soft fade","chord":"harmony","filterCutoffHz":4000,"filterResonance":86,"filterEnvelope":"flare 3","wave":"sawtooth","interval":"hum","vibrato":"none"}},
 			{name: "rain drop",        midiProgram:  96, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"strum","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"(1 2)←(3 4)","feedbackType":"1⟲ 2⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"6×","amplitude":5,"envelope":"custom"},{"frequency":"20×","amplitude":3,"envelope":"twang 1"},{"frequency":"1×","amplitude":6,"envelope":"tremolo1"}]}},
-			{name: "soundtrack",       midiProgram:  97, generalMidi: true, settings: {"type":"chip","transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":43,"filterEnvelope":"flare 3","wave":"sawtooth","interval":"fifth","vibrato":"none"}},
+			{name: "soundtrack",       midiProgram:  97, generalMidi: true, settings: {"type":"chip","effects":"chorus & reverb","transition":"soft fade","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"flare 3","wave":"sawtooth","interval":"fifth","vibrato":"none"}},
 			{name: "crystal",          midiProgram:  98, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 2","vibrato":"delayed","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":4,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":8,"envelope":"custom"},{"frequency":"3×","amplitude":6,"envelope":"custom"},{"frequency":"6×","amplitude":3,"envelope":"custom"},{"frequency":"13×","amplitude":3,"envelope":"custom"}]}},
-			{name: "atmosphere",       midiProgram:  99, generalMidi: true, settings: {"type":"FM","transition":"hard fade","effects":"chorus & reverb","chord":"strum","filterCutoffHz":4000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"3⟲ 4⟲","feedbackAmplitude":5,"feedbackEnvelope":"twang 2","operators":[{"frequency":"1×","amplitude":13,"envelope":"custom"},{"frequency":"1×","amplitude":10,"envelope":"swell 3"},{"frequency":"3×","amplitude":5,"envelope":"twang 2"},{"frequency":"1×","amplitude":6,"envelope":"twang 3"}]}},
-			{name: "brightness",       midiProgram: 100, generalMidi: true, settings: {"type":"FM","transition":"medium fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"1←(2 3)←4","feedbackType":"4⟲","feedbackAmplitude":7,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":8,"envelope":"custom"},{"frequency":"~1×","amplitude":6,"envelope":"steady"},{"frequency":"6×","amplitude":2,"envelope":"steady"},{"frequency":"11×","amplitude":6,"envelope":"steady"}]}},
+			{name: "atmosphere",       midiProgram:  99, generalMidi: true, settings: {"type":"FM","effects":"chorus & reverb","transition":"hard fade","chord":"strum","filterCutoffHz":4000,"filterResonance":29,"filterEnvelope":"steady","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"3⟲ 4⟲","feedbackAmplitude":3,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":13,"envelope":"custom"},{"frequency":"1×","amplitude":10,"envelope":"swell 3"},{"frequency":"3×","amplitude":7,"envelope":"twang 2"},{"frequency":"1×","amplitude":7,"envelope":"twang 3"}]}},
+			{name: "brightness",       midiProgram: 100, generalMidi: true, settings: {"type":"harmonics","effects":"chorus & reverb","transition":"medium fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"twang 3","interval":"octave","vibrato":"none","harmonics":[100,86,86,86,43,57,43,71,43,43,43,57,43,43,57,71,57,43,29,43,57,57,43,29,29,29,29,14]}},
 			{name: "goblins",          midiProgram: 101, generalMidi: true, settings: {"type":"FM","transition":"soft fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":1414,"filterResonance":14,"filterEnvelope":"swell 3","vibrato":"none","algorithm":"1←2←3←4","feedbackType":"1⟲","feedbackAmplitude":10,"feedbackEnvelope":"flare 3","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"4×","amplitude":3,"envelope":"swell 3"},{"frequency":"1×","amplitude":10,"envelope":"tremolo1"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "echo drop",        midiProgram: 102, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"punch","vibrato":"none","algorithm":"1←(2 3←4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"steady","operators":[{"frequency":"~2×","amplitude":10,"envelope":"custom"},{"frequency":"~1×","amplitude":5,"envelope":"steady"},{"frequency":"11×","amplitude":2,"envelope":"steady"},{"frequency":"16×","amplitude":5,"envelope":"swell 3"}]}},
 			{name: "sci-fi",           midiProgram: 103, generalMidi: true, settings: {"type":"FM","transition":"medium fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 3","vibrato":"none","algorithm":"(1 2)←3←4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":8,"feedbackEnvelope":"twang 3","operators":[{"frequency":"~1×","amplitude":10,"envelope":"custom"},{"frequency":"2×","amplitude":8,"envelope":"custom"},{"frequency":"5×","amplitude":5,"envelope":"twang 3"},{"frequency":"11×","amplitude":8,"envelope":"tremolo5"}]}},
@@ -367,7 +375,7 @@ namespace beepbox {
 			{name: "guitar fret noise",midiProgram: 120, generalMidi: true, isNoise: true, settings: {"type":"spectrum","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":86,"filterEnvelope":"flare 1","spectrum":[0,0,0,0,0,0,0,0,0,0,0,0,0,14,0,0,0,29,14,0,43,0,0,43,0,43,71,0,57,0]}},
 			{name: "breath noise",     midiProgram: 121, generalMidi: true, settings: {"type":"spectrum","effects":"reverb","transition":"cross fade","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","spectrum":[71,0,0,0,0,0,0,29,0,0,0,71,0,0,29,0,100,29,14,29,100,29,100,14,14,71,0,29,0,0]}},
 			{name: "seashore",         midiProgram: 122, generalMidi: true, isNoise: true, settings: {"type":"spectrum","transition":"soft fade","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"swell 3","spectrum":[14,14,29,29,43,43,43,57,57,57,57,57,57,71,71,71,71,71,71,71,71,71,71,71,71,71,71,71,71,57]}},
-			{name: "bird tweet",       midiProgram: 123, generalMidi: true, settings: {"type":"FM","transition":"soft","effects":"reverb","chord":"strum","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"decay 1","vibrato":"heavy","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"4×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
+			{name: "bird tweet",       midiProgram: 123, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"strum","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"decay 1","interval":"hum","vibrato":"heavy","harmonics":[0,0,14,100,14,0,0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},
 			{name: "telephone ring",   midiProgram: 124, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"arpeggio","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"tremolo4","vibrato":"none","algorithm":"1←(2 3 4)","feedbackType":"1⟲","feedbackAmplitude":2,"feedbackEnvelope":"steady","operators":[{"frequency":"2×","amplitude":15,"envelope":"custom"},{"frequency":"1×","amplitude":4,"envelope":"tremolo1"},{"frequency":"20×","amplitude":1,"envelope":"steady"},{"frequency":"1×","amplitude":0,"envelope":"steady"}]}},
 			{name: "helicopter",       midiProgram: 125, generalMidi: true, isNoise: true, settings: {"type":"spectrum","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"tremolo1","spectrum":[100,57,100,57,57,57,100,100,100,100,43,0,100,100,100,100,100,57,100,100,100,100,100,100,86,86,86,71,71,71]}},
 			{name: "applause",         midiProgram: 126, generalMidi: true, isNoise: true, settings: {"type":"spectrum","transition":"soft fade","effects":"reverb","chord":"harmony","filterCutoffHz":707,"filterResonance":0,"filterEnvelope":"swell 3","spectrum":[29,29,29,43,43,29,29,29,43,57,86,86,86,71,71,57,57,57,71,71,86,86,86,86,71,71,71,57,57,43]}},
@@ -418,7 +426,7 @@ namespace beepbox {
 			{name: "light",   amplitude: 0.15, periodsSeconds: [0.14], delayParts: 0},
 			{name: "delayed", amplitude: 0.3,  periodsSeconds: [0.14], delayParts: 18},
 			{name: "heavy",   amplitude: 0.45, periodsSeconds: [0.14], delayParts: 0},
-			{name: "shaky",   amplitude: 0.11, periodsSeconds: [0.1, 0.1618, 0.3], delayParts: 0},
+			{name: "shaky",   amplitude: 0.1,  periodsSeconds: [0.11, 1.618*0.11, 3*0.11], delayParts: 0},
 		]);
 		public static readonly intervals: DictionaryArray<Interval> = toNameMap([
 			{name: "union",      spread: 0.0,  offset: 0.0, volume: 0.7, sign: 1.0},
@@ -434,10 +442,10 @@ namespace beepbox {
 		public static readonly volumeRange: number = 6;
 		public static readonly volumeLogScale: number = -0.5;
 		public static readonly chords: DictionaryArray<Chord> = toNameMap([
-			{name: "harmony",         harmonizes:  true, arpeggiates: false, allowedForNoise:  true, strumParts: 0},
-			{name: "strum",           harmonizes:  true, arpeggiates: false, allowedForNoise:  true, strumParts: 1},
-			{name: "arpeggio",        harmonizes: false, arpeggiates:  true, allowedForNoise:  true, strumParts: 0},
-			{name: "custom interval", harmonizes:  true, arpeggiates:  true, allowedForNoise: false, strumParts: 0},
+			{name: "harmony",         harmonizes:  true, customInterval: false, arpeggiates: false, allowedForNoise:  true, strumParts: 0},
+			{name: "strum",           harmonizes:  true, customInterval: false, arpeggiates: false, allowedForNoise:  true, strumParts: 1},
+			{name: "arpeggio",        harmonizes: false, customInterval: false, arpeggiates:  true, allowedForNoise:  true, strumParts: 0},
+			{name: "custom interval", harmonizes:  true, customInterval:  true, arpeggiates:  true, allowedForNoise: false, strumParts: 0},
 		]);
 		public static readonly operatorCount: number = 4;
 		public static readonly algorithms: DictionaryArray<Algorithm> = toNameMap([
@@ -517,11 +525,17 @@ namespace beepbox {
 			{name: "1→4 2→3",     indices: [ [],  [], [2], [1]]},
 			{name: "1→2→3→4",     indices: [ [], [1], [2], [3]]},
 		]);
+		public static readonly noiseWavelength: number = 1 << 15; // 32768
 		public static readonly spectrumBasePitch: number = 24;
 		public static readonly spectrumControlPoints: number = 30;
 		public static readonly spectrumControlPointsPerOctave: number = 7;
 		public static readonly spectrumControlPointBits: number = 3;
 		public static readonly spectrumMax: number = (1 << Config.spectrumControlPointBits) - 1;
+		public static readonly harmonicsControlPoints: number = 28;
+		public static readonly harmonicsRendered: number = 64;
+		public static readonly harmonicsControlPointBits: number = 3;
+		public static readonly harmonicsMax: number = 7;
+		public static readonly harmonicsWavelength: number = 1 << 11; // 2048
 		public static readonly pitchColors: DictionaryArray<ChannelColors> = toNameMap([
 			{name: "cyan",   channelDim: "#0099a1", channelBright: "#25f3ff", noteDim: "#00bdc7", noteBright: "#92f9ff"},
 			{name: "yellow", channelDim: "#a1a100", channelBright: "#ffff25", noteDim: "#c7c700", noteBright: "#ffff92"},
@@ -557,23 +571,30 @@ namespace beepbox {
 				sum += wave[i];
 			}
 			const average: number = sum / wave.length;
-			const integral: number[] = [0];
+			
+			// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+			let cumulative: number = 0;
+			let wavePrev: number = 0;
 			for (let i: number = 0; i < wave.length; i++) {
-				integral.push(integral[i] + wave[i] - average);
+				cumulative += wavePrev;
+				wavePrev = wave[i] - average;
+				wave[i] = cumulative;
 			}
-			return new Float64Array(integral);
+			// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
+			wave.push(0);
+			return new Float64Array(wave);
 		}
 		
 		public static getDrumWave(index: number): Float32Array {
 			let wave: Float32Array | null = Config.noiseWaves[index].samples;
 			if (wave == null) {
-				wave = new Float32Array(32768 + 1);
+				wave = new Float32Array(Config.noiseWavelength + 1);
 				Config.noiseWaves[index].samples = wave;
 				
 				if (index == 0) {
 					// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
 					let drumBuffer: number = 1;
-					for (let i: number = 0; i < 32768; i++) {
+					for (let i: number = 0; i < Config.noiseWavelength; i++) {
 						wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
 						let newBuffer: number = drumBuffer >> 1;
 						if (((drumBuffer + newBuffer) & 1) == 1) {
@@ -583,13 +604,13 @@ namespace beepbox {
 					}
 				} else if (index == 1) {
 					// White noise is just random values for each sample.
-					for (let i: number = 0; i < 32768; i++) {
+					for (let i: number = 0; i < Config.noiseWavelength; i++) {
 						wave[i] = Math.random() * 2.0 - 1.0;
 					}
 				} else if (index == 2) {
 					// The "clang" drums are inspired by similar drums in the modded beepbox! :D
                     let drumBuffer: number = 1;
-					for (let i: number = 0; i < 32768; i++) {
+					for (let i: number = 0; i < Config.noiseWavelength; i++) {
                         wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
 						let newBuffer: number = drumBuffer >> 1;
                         if (((drumBuffer + newBuffer) & 1) == 1) {
@@ -600,7 +621,7 @@ namespace beepbox {
                 } else if (index == 3) {
 					// The "buzz" drums are inspired by similar drums in the modded beepbox! :D
                     let drumBuffer: number = 1;
-					for (let i: number = 0; i < 32768; i++) {
+					for (let i: number = 0; i < Config.noiseWavelength; i++) {
                         wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
 						let newBuffer: number = drumBuffer >> 1;
                         if (((drumBuffer + newBuffer) & 1) == 1) {
@@ -612,13 +633,13 @@ namespace beepbox {
 					// "hollow" drums, designed in frequency space and then converted via FFT:
 					Config.drawNoiseSpectrum(wave, 10, 11, 1, 1, 0);
 					Config.drawNoiseSpectrum(wave, 11, 14, .6578, .6578, 0);
-					inverseRealFourierTransform(wave, 32768);
-					scaleElementsByFactor(wave, 1.0 / Math.sqrt(32768));
+					inverseRealFourierTransform(wave, Config.noiseWavelength);
+					scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.noiseWavelength));
 				} else {
 					throw new Error("Unrecognized drum index: " + index);
 				}
 				
-				wave[32768] = wave[0];
+				wave[Config.noiseWavelength] = wave[0];
 			}
 			
 			return wave;
@@ -628,7 +649,7 @@ namespace beepbox {
 			const referenceOctave: number = 11;
 			const referenceIndex: number = 1 << referenceOctave;
 			const lowIndex: number = Math.pow(2, lowOctave) | 0;
-			const highIndex: number = Math.min(32768 >> 1, Math.pow(2, highOctave) | 0);
+			const highIndex: number = Math.min(Config.noiseWavelength >> 1, Math.pow(2, highOctave) | 0);
 			const retroWave: Float32Array = Config.getDrumWave(0);
 			for (let i: number = lowIndex; i < highIndex; i++) {
 				
@@ -651,7 +672,7 @@ namespace beepbox {
 				
 				
 				wave[i] = Math.cos(radians) * amplitude;
-				wave[32768 - i] = Math.sin(radians) * amplitude;
+				wave[Config.noiseWavelength - i] = Math.sin(radians) * amplitude;
 			}
 		}
 		
@@ -803,6 +824,8 @@ namespace beepbox {
 		
 		operatorEnvelopes = CharCode.E,
 		feedbackType = CharCode.F,
+		
+		harmonics = CharCode.H,
 		
 		operatorAmplitudes = CharCode.P,
 		operatorFrequencies = CharCode.Q,
@@ -1061,7 +1084,7 @@ namespace beepbox {
 		
 		public getCustomWave(lowestOctave: number): Float32Array {
 			if (!this._waveIsReady || this._wave == null) {
-				let waveLength: number = 32768;
+				let waveLength: number = Config.noiseWavelength;
 				
 				if (this._wave == null || this._wave.length != waveLength + 1) {
 					this._wave = new Float32Array(waveLength + 1);
@@ -1102,12 +1125,98 @@ namespace beepbox {
 					const sample: number = this._wave[i];
 					if (sample > max || -sample > max) max = Math.abs(sample);
 				}
-				const mult: number = 2 / Math.max(1, Math.sqrt(max));
+				const mult: number = 1 / Math.max(1, Math.sqrt(max));
 				for (let i: number = 0; i < waveLength; i++) {
 					this._wave[i] *= mult;
 				}
 				
+				// Duplicate the first sample at the end for easier wrap-around interpolation.
 				this._wave[waveLength] = this._wave[0];
+				
+				this._waveIsReady = true;
+			}
+			return this._wave;
+		}
+	}
+	
+	export class HarmonicsWave {
+		public harmonics: number[] = [];
+		private _wave: Float32Array | null = null;
+		private _waveIsReady: boolean = false;
+		
+		constructor() {
+			this.reset();
+		}
+		
+		public reset(): void {
+			for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
+				this.harmonics[i] = 0;
+			}
+			this.harmonics[0] = Config.harmonicsMax;
+			this.harmonics[3] = Config.harmonicsMax;
+			this.harmonics[6] = Config.harmonicsMax;
+			this._waveIsReady = false;
+		}
+		
+		public markCustomWaveDirty(): void {
+			this._waveIsReady = false;
+		}
+		
+		public getCustomWave(): Float32Array {
+			if (!this._waveIsReady || this._wave == null) {
+				let waveLength: number = Config.harmonicsWavelength;
+				const retroWave: Float32Array = Config.getDrumWave(0);
+				
+				if (this._wave == null || this._wave.length != waveLength + 1) {
+					this._wave = new Float32Array(waveLength + 1);
+				}
+				const wave: Float32Array = this._wave;
+				
+				for (let i: number = 0; i < waveLength; i++) {
+					wave[i] = 0;
+				}
+				
+				const overallSlope: number = -0.25;
+				
+				for (let harmonicIndex: number = 0; harmonicIndex < Config.harmonicsRendered; harmonicIndex++) {
+					const harmonicFreq: number = harmonicIndex + 1;
+					let controlValue: number = harmonicIndex < Config.harmonicsControlPoints ? this.harmonics[harmonicIndex] : this.harmonics[Config.harmonicsControlPoints - 1];
+					if (harmonicIndex >= Config.harmonicsControlPoints) {
+						controlValue *= 1 - (harmonicIndex - Config.harmonicsControlPoints) / (Config.harmonicsRendered - Config.harmonicsControlPoints);
+					}
+					const normalizedValue: number = controlValue / Config.harmonicsMax;
+					let amplitude: number = Math.pow(2, controlValue - Config.harmonicsMax + 1) * Math.sqrt(normalizedValue);
+					amplitude *= Math.pow(harmonicFreq, overallSlope);
+					
+					// Multiple all the sine wave amplitudes by 1 or -1 based on the LFSR
+					// retro wave (effectively random) to avoid egregiously tall spikes.
+					amplitude *= retroWave[harmonicIndex + 589];
+					
+					wave[waveLength - harmonicFreq] = amplitude;
+				}
+				
+				inverseRealFourierTransform(wave, waveLength);
+				scaleElementsByFactor(wave, 1.0 / Math.sqrt(waveLength));
+				
+				// Limit the maximum wave amplitude.
+				let max: number = 0;
+				for (let i: number = 0; i < waveLength; i++) {
+					const sample: number = this._wave[i];
+					if (sample > max || -sample > max) max = Math.abs(sample);
+				}
+				const mult: number = 1 / Math.max(1, Math.sqrt(max));
+				//console.log(max, mult); // TODO: ensure that the volume scaling actually works!
+				
+				// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+				let cumulative: number = 0;
+				let wavePrev: number = 0;
+				for (let i: number = 0; i < wave.length; i++) {
+					cumulative += wavePrev;
+					wavePrev = wave[i] * mult;
+					wave[i] = cumulative;
+				}
+				// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
+				wave[waveLength] = wave[0];
 				
 				this._waveIsReady = true;
 			}
@@ -1135,6 +1244,7 @@ namespace beepbox {
 		public feedbackEnvelope: number = 1;
 		public readonly operators: Operator[] = [];
 		public readonly spectrumWave: SpectrumWave = new SpectrumWave();
+		public readonly harmonicsWave: HarmonicsWave = new HarmonicsWave();
 		public readonly drumsetEnvelopes: number[] = [];
 		public readonly drumsetSpectrumWaves: SpectrumWave[] = [];
 		
@@ -1191,7 +1301,7 @@ namespace beepbox {
 					break;
 				case InstrumentType.spectrum:
 					this.transition = 1;
-					this.effects = 0;
+					this.effects = 1;
 					this.chord = 0;
 					this.filterCutoff = 10;
 					this.filterResonance = 0;
@@ -1204,6 +1314,17 @@ namespace beepbox {
 						this.drumsetEnvelopes[i] = Config.envelopes.dictionary["twang 2"].index;
 						this.drumsetSpectrumWaves[i].reset();
 					}
+					break;
+				case InstrumentType.harmonics:
+					this.filterCutoff = 10;
+					this.filterResonance = 0;
+					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
+					this.transition = 1;
+					this.vibrato = 0;
+					this.interval = 0;
+					this.effects = 1;
+					this.chord = 0;
+					this.harmonicsWave.reset();
 					break;
 				default:
 					throw new Error("Unrecognized instrument type: " + type);
@@ -1249,6 +1370,13 @@ namespace beepbox {
 				instrumentObject.wave = Config.chipWaves[this.chipWave].name;
 				instrumentObject.interval = Config.intervals[this.interval].name;
 				instrumentObject.vibrato = Config.vibratos[this.vibrato].name;
+			} else if (this.type == InstrumentType.harmonics) {
+				instrumentObject.interval = Config.intervals[this.interval].name;
+				instrumentObject.vibrato = Config.vibratos[this.vibrato].name;
+				instrumentObject.harmonics = [];
+				for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
+					instrumentObject.harmonics[i] = Math.round(100 * this.harmonicsWave.harmonics[i] / Config.harmonicsMax);
+				}
 			} else if (this.type == InstrumentType.fm) {
 				const operatorArray: Object[] = [];
 				for (const operator of this.operators) {
@@ -1356,6 +1484,25 @@ namespace beepbox {
 						}
 					}
 				}
+			} else if (this.type == InstrumentType.harmonics) {
+				if (instrumentObject.harmonics != undefined) {
+					for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
+						this.harmonicsWave.harmonics[i] = Math.max(0, Math.min(Config.harmonicsMax, Math.round(Config.harmonicsMax * (+instrumentObject.harmonics[i]) / 100)));
+					}
+				}
+				
+				if (instrumentObject.interval != undefined) {
+					this.interval = Config.intervals.findIndex(interval=>interval.name==instrumentObject.interval);
+					if (this.interval == -1) this.interval = 0;
+				}
+				
+				if (instrumentObject.vibrato != undefined) {
+					this.vibrato = Config.vibratos.findIndex(vibrato=>vibrato.name==instrumentObject.vibrato);
+					if (this.vibrato == -1) this.vibrato = 0;
+				}
+				
+				this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject.chord);
+				if (this.chord == -1) this.chord = 0;
 			} else if (this.type == InstrumentType.chip) {
 				const legacyWaveNames: Dictionary<number> = {"triangle": 1, "square": 2, "pulse wide": 4, "pulse narrow": 6, "sawtooth": 9, "double saw": 10, "double pulse": 11, "spiky": 12, "plateau": 0};
 				this.chipWave = legacyWaveNames[instrumentObject.wave] != undefined ? legacyWaveNames[instrumentObject.wave] : Config.chipWaves.findIndex(wave=>wave.name==instrumentObject.wave);
@@ -1448,6 +1595,8 @@ namespace beepbox {
 		public warmUp(): void {
 			if (this.type == InstrumentType.noise) {
 				Config.getDrumWave(this.noiseWave);
+			} else if (this.type == InstrumentType.harmonics) {
+				this.harmonicsWave.getCustomWave();
 			} else if (this.type == InstrumentType.spectrum) {
 				this.spectrumWave.getCustomWave(8);
 			} else if (this.type == InstrumentType.drumset) {
@@ -1702,6 +1851,16 @@ namespace beepbox {
 							}
 						}
 						spectrumBits.encodeBase64(base64IntToCharCode, buffer);
+					} else if (instrument.type == InstrumentType.harmonics) {
+						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
+						buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
+						
+						buffer.push(SongTagCode.harmonics);
+						const harmonicsBits: BitFieldWriter = new BitFieldWriter();
+						for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
+							harmonicsBits.write(Config.harmonicsControlPointBits, instrument.harmonicsWave.harmonics[i]);
+						}
+						harmonicsBits.encodeBase64(base64IntToCharCode, buffer);
 					} else {
 						throw new Error("Unknown instrument type.");
 					}
@@ -2215,6 +2374,15 @@ namespace beepbox {
 					} else {
 						throw new Error("Unhandled instrument type for spectrum song tag code.");
 					}
+				} else if (command == SongTagCode.harmonics) {
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					const byteCount: number = Math.ceil(Config.harmonicsControlPoints * Config.harmonicsControlPointBits / 6)
+					const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + byteCount);
+					for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
+						instrument.harmonicsWave.harmonics[i] = bits.read(Config.harmonicsControlPointBits);
+					}
+					instrument.harmonicsWave.markCustomWaveDirty();
+					charIndex += byteCount;
 				} else if (command == SongTagCode.bars) {
 					let subStringLength: number;
 					if (beforeThree) {
@@ -3620,16 +3788,16 @@ namespace beepbox {
 			if (instrument.type == InstrumentType.spectrum) {
 				if (isDrumChannel) {
 					basePitch = Config.spectrumBasePitch;
-					baseVolume = 0.4; // Note: spectrum is louder for drum channels than pitch channels!
+					baseVolume = 0.8; // Note: spectrum is louder for drum channels than pitch channels!
 				} else {
 					basePitch = Config.keys[song.key].basePitch;
-					baseVolume = 0.2;
+					baseVolume = 0.6;
 				}
 				volumeReferencePitch = Config.spectrumBasePitch;
 				pitchDamping = 36;
 			} else if (instrument.type == InstrumentType.drumset) {
 				basePitch = Config.spectrumBasePitch;
-				baseVolume = 0.5;
+				baseVolume = 0.3;
 				volumeReferencePitch = basePitch;
 				pitchDamping = 24;
 			} else if (instrument.type == InstrumentType.noise) {
@@ -3645,6 +3813,11 @@ namespace beepbox {
 			} else if (instrument.type == InstrumentType.chip) {
 				basePitch = Config.keys[song.key].basePitch;
 				baseVolume = 0.03375; // looks low compared to drums, but it's doubled for chorus and drums tend to be loud anyway.
+				volumeReferencePitch = 16;
+				pitchDamping = 48;
+			} else if (instrument.type == InstrumentType.harmonics) {
+				basePitch = Config.keys[song.key].basePitch;
+				baseVolume = 0.4;
 				volumeReferencePitch = 16;
 				pitchDamping = 48;
 			} else {
@@ -3804,7 +3977,7 @@ namespace beepbox {
 			const sampleTime: number = 1.0 / synth.samplesPerSecond;
 			tone.active = true;
 			
-			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm) {
+			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics) {
 				const lfoEffectStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeStart);
 				const lfoEffectEnd:   number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeEnd);
 				const vibratoScale: number = (partsSinceStart < Config.vibratos[instrument.vibrato].delayParts) ? 0.0 : Config.vibratos[instrument.vibrato].amplitude;
@@ -3949,8 +4122,12 @@ namespace beepbox {
 				let settingsVolumeMult: number = baseVolume * filterVolume;
 				if (instrument.type == InstrumentType.noise) {
 					settingsVolumeMult *= Config.noiseWaves[instrument.noiseWave].volume;
-				} else {
-					settingsVolumeMult *= Config.chipWaves[instrument.chipWave].volume * Config.intervals[instrument.interval].volume;
+				}
+				if (instrument.type == InstrumentType.chip) {
+					settingsVolumeMult *= Config.chipWaves[instrument.chipWave].volume;
+				}
+				if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics) {
+					settingsVolumeMult *= Config.intervals[instrument.interval].volume;
 				}
 				
 				tone.phaseDeltas[0] = startFreq * sampleTime;
@@ -4032,6 +4209,8 @@ namespace beepbox {
 				return Synth.fmSynthFunctionCache[fingerprint];
 			} else if (instrument.type == InstrumentType.chip) {
 				return Synth.chipSynth;
+			} else if (instrument.type == InstrumentType.harmonics) {
+				return Synth.harmonicsSynth;
 			} else if (instrument.type == InstrumentType.noise) {
 				return Synth.noiseSynth;
 			} else if (instrument.type == InstrumentType.spectrum) {
@@ -4043,14 +4222,14 @@ namespace beepbox {
 			}
 		}
 		
-		private static chipSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
+		private static chipSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			const wave: Float64Array = Config.chipWaves[instrument.chipWave].samples;
 			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
 			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
 			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.harmonyMult;
 			const intervalSign: number = tone.harmonyVolumeMult * Config.intervals[instrument.interval].sign;
-			if (instrument.interval == 0 && !instrument.getChord().harmonizes) tone.phases[1] = tone.phases[0];
+			if (instrument.interval == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
 			const deltaRatio: number = intervalB / intervalA;
 			let phaseDeltaA: number = tone.phaseDeltas[0] * intervalA * waveLength;
 			let phaseDeltaB: number = phaseDeltaA * deltaRatio;
@@ -4097,6 +4276,90 @@ namespace beepbox {
 				nextWaveIntegralB += (wave[indexB+1] - nextWaveIntegralB) * phaseRatioB;
 				let waveA: number = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
 				let waveB: number = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
+				prevWaveIntegralA = nextWaveIntegralA;
+				prevWaveIntegralB = nextWaveIntegralB;
+
+				const combinedWave: number = (waveA + waveB * intervalSign) * volume;
+				
+				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
+				filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
+				filterSample1 += filter2 * (filterSample0 - filterSample1);
+				
+				volume += volumeDelta;
+				filter1 *= filterScale1;
+				filter2 *= filterScale2;
+				phaseDeltaA *= phaseDeltaScale;
+				phaseDeltaB *= phaseDeltaScale;
+				
+				data[bufferIndex] += filterSample1;
+				bufferIndex++;
+			}
+			
+			tone.phases[0] = phaseA / waveLength;
+			tone.phases[1] = phaseB / waveLength;
+			
+			const epsilon: number = (1.0e-24);
+			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
+			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
+			tone.filterSample0 = filterSample0;
+			tone.filterSample1 = filterSample1;
+		}
+		
+		private static harmonicsSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+			const wave: Float32Array = instrument.harmonicsWave.getCustomWave();
+			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
+			
+			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
+			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.harmonyMult;
+			const intervalSign: number = tone.harmonyVolumeMult * Config.intervals[instrument.interval].sign;
+			if (instrument.interval == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
+			const deltaRatio: number = intervalB / intervalA;
+			let phaseDeltaA: number = tone.phaseDeltas[0] * intervalA * waveLength;
+			let phaseDeltaB: number = phaseDeltaA * deltaRatio;
+			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			let volume: number = +tone.volumeStart;
+			const volumeDelta: number = +tone.volumeDelta;
+			let phaseA: number = (tone.phases[0] % 1) * waveLength;
+			let phaseB: number = (tone.phases[1] % 1) * waveLength;
+
+			let filter1: number = +tone.filter;
+			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+			const filterScale1: number = +tone.filterScale;
+			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
+			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
+			let filterSample0: number = +tone.filterSample0;
+			let filterSample1: number = +tone.filterSample1;
+
+			const phaseAInt: number = phaseA|0;
+			const phaseBInt: number = phaseB|0;
+			const indexA: number = phaseAInt % waveLength;
+			const indexB: number = phaseBInt % waveLength;
+			const phaseRatioA: number = phaseA - phaseAInt;
+			const phaseRatioB: number = phaseB - phaseBInt;
+			let prevWaveIntegralA: number = wave[indexA];
+			let prevWaveIntegralB: number = wave[indexB];
+			prevWaveIntegralA += (wave[indexA+1] - prevWaveIntegralA) * phaseRatioA;
+			prevWaveIntegralB += (wave[indexB+1] - prevWaveIntegralB) * phaseRatioB;
+			
+			const stopIndex: number = bufferIndex + runLength;
+			while (bufferIndex < stopIndex) {
+
+				phaseA += phaseDeltaA;
+				phaseB += phaseDeltaB;
+
+				const phaseAInt: number = phaseA|0;
+				const phaseBInt: number = phaseB|0;
+				const indexA: number = phaseAInt % waveLength;
+				const indexB: number = phaseBInt % waveLength;
+				let nextWaveIntegralA: number = wave[indexA];
+				let nextWaveIntegralB: number = wave[indexB];
+				const phaseRatioA: number = phaseA - phaseAInt;
+				const phaseRatioB: number = phaseB - phaseBInt;
+				nextWaveIntegralA += (wave[indexA+1] - nextWaveIntegralA) * phaseRatioA;
+				nextWaveIntegralB += (wave[indexB+1] - nextWaveIntegralB) * phaseRatioB;
+				let waveA: number = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
+				let waveB: number = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
+				
 				prevWaveIntegralA = nextWaveIntegralA;
 				prevWaveIntegralB = nextWaveIntegralB;
 
@@ -4188,16 +4451,16 @@ namespace beepbox {
 				var operator#Scaled   = operator#OutputMult * operator#Output;
 		`).split("\n");
 		
-		private static noiseSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
+		private static noiseSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = +tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
-			let phase: number = (tone.phases[0] % 1) * 32768.0;
+			let phase: number = (tone.phases[0] % 1) * Config.noiseWavelength;
 			if (tone.phases[0] == 0) {
 				// Zero phase means the tone was reset, just give noise a random start phase instead.
-				phase = Math.random() * 32768.0;
+				phase = Math.random() * Config.noiseWavelength;
 			}
 			let sample: number = +tone.sample;
 			
@@ -4231,7 +4494,7 @@ namespace beepbox {
 				bufferIndex++;
 			}
 			
-			tone.phases[0] = phase / 32768.0;
+			tone.phases[0] = phase / Config.noiseWavelength;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
@@ -4241,7 +4504,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static spectrumSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
+		private static spectrumSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = tone.phaseDeltas[0] * (1 << 7);
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
@@ -4256,7 +4519,7 @@ namespace beepbox {
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 			
-			let phase: number = (tone.phases[0] % 1) * 32768.0;
+			let phase: number = (tone.phases[0] % 1) * Config.noiseWavelength;
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
 			if (tone.phases[0] == 0) phase = Synth.findRandomZeroCrossing(wave) + phaseDelta;
 			
@@ -4286,7 +4549,7 @@ namespace beepbox {
 				bufferIndex++;
 			}
 			
-			tone.phases[0] = phase / 32768.0;
+			tone.phases[0] = phase / Config.noiseWavelength;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
@@ -4296,7 +4559,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static drumsetSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument) {
+		private static drumsetSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let wave: Float32Array = instrument.getDrumsetWave(tone.drumsetPitch);
 			let phaseDelta: number = tone.phaseDeltas[0] / Instrument.drumsetIndexReferenceDelta(tone.drumsetPitch);;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
@@ -4311,7 +4574,7 @@ namespace beepbox {
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 			
-			let phase: number = (tone.phases[0] % 1) * 32768.0;
+			let phase: number = (tone.phases[0] % 1) * Config.noiseWavelength;
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
 			if (tone.phases[0] == 0) phase = Synth.findRandomZeroCrossing(wave) + phaseDelta;
 			
@@ -4337,7 +4600,7 @@ namespace beepbox {
 				bufferIndex++;
 			}
 			
-			tone.phases[0] = phase / 32768.0;
+			tone.phases[0] = phase / Config.noiseWavelength;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
@@ -4348,7 +4611,7 @@ namespace beepbox {
 		}
 		
 		private static findRandomZeroCrossing(wave: Float32Array): number {
-			let phase: number = Math.random() * 32768.0;
+			let phase: number = Math.random() * Config.noiseWavelength;
 			
 			// Spectrum and drumset waves sounds best when they start at a zero crossing,
 			// otherwise they pop. Try to find a zero crossing.
@@ -4370,7 +4633,7 @@ namespace beepbox {
 							if (Math.abs(slope) > 0.00000001) {
 								phase += -wavePrev / slope;
 							}
-							phase = Math.max(0, phase) % 32768.0;
+							phase = Math.max(0, phase) % Config.noiseWavelength;
 							break;
 						} else {
 							indexPrev = innerIndexNext;

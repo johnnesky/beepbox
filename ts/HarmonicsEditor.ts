@@ -25,33 +25,37 @@ SOFTWARE.
 /// <reference path="html.ts" />
 
 namespace beepbox {
-	export class SpectrumEditor {
+	export class HarmonicsEditor {
 		private readonly _editorWidth: number = 112;
 		private readonly _editorHeight: number = 26;
-		private readonly _fill = <SVGPathElement> svgElement("path", {fill: "#444444", "pointer-events": "none"});
 		private readonly _octaves = <SVGSVGElement> svgElement("svg", {"pointer-events": "none"});
 		private readonly _curve = <SVGPathElement> svgElement("path", {fill: "none", stroke: "currentColor", "stroke-width": 2, "pointer-events": "none"});
-		private readonly _arrow = <SVGPathElement> svgElement("path", {fill: "currentColor", "pointer-events": "none"});
+		private readonly _lastControlPoints: SVGRectElement[] = [];
+		private readonly _lastControlPointContainer = <SVGSVGElement> svgElement("svg", {"pointer-events": "none"});
 		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; cursor: crosshair;", width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"}, [
-			this._fill,
 			this._octaves,
 			this._curve,
-			this._arrow,
+			this._lastControlPointContainer,
 		]);
 		
-		public readonly container: HTMLElement = html.div({className: "spectrum", style: "height: 2em;"}, [this._svg]);
+		public readonly container: HTMLElement = html.div({className: "harmonics", style: "height: 2em;"}, [this._svg]);
 		
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
 		private _freqPrev: number = 0;
 		private _ampPrev: number = 0;
 		private _mouseDown: boolean = false;
-		private _change: ChangeSpectrum | null = null;
+		private _change: ChangeHarmonics | null = null;
 		private _renderedPath: String = "";
 		
-		constructor(private _doc: SongDocument, private _spectrumIndex: number | null) {
-			for (let i: number = 0; i < Config.spectrumControlPoints; i += Config.spectrumControlPointsPerOctave) {
-				this._octaves.appendChild(svgElement("rect", {fill: "#886644", x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
+		constructor(private _doc: SongDocument, private _harmonicsIndex: number | null) {
+			for (let i: number = 1; i <= Config.harmonicsControlPoints; i = i * 2) {
+				this._octaves.appendChild(svgElement("rect", {fill: "#886644", x: (i-0.5) * (this._editorWidth - 8) / (Config.harmonicsControlPoints - 1) - 1, y: 0, width: 2, height: this._editorHeight}));
+			}
+			for (let i: number = 0; i < 4; i++) {
+				const rect = <SVGRectElement> svgElement("rect", {fill: "currentColor", x: (this._editorWidth - i * 2 - 1), y: 0, width: 1, height: this._editorHeight});
+				this._lastControlPoints.push(rect);
+				this._lastControlPointContainer.appendChild(rect);
 			}
 			
 			this.container.addEventListener("mousedown", this._whenMousePressed);
@@ -65,11 +69,11 @@ namespace beepbox {
 		}
 		
 		private _xToFreq(x: number): number {
-			return (Config.spectrumControlPoints + 2) * x / this._editorWidth - 1;
+			return (Config.harmonicsControlPoints - 1) * x / (this._editorWidth - 8) - 0.5;
 		}
 		
 		private _yToAmp(y: number): number {
-			return Config.spectrumMax * (1 - (y - 1) / (this._editorHeight - 2));
+			return Config.harmonicsMax * (1 - y / this._editorHeight);
 		}
 		
 		private _whenMousePressed = (event: MouseEvent): void => {
@@ -126,7 +130,7 @@ namespace beepbox {
 				const amp: number = this._yToAmp(this._mouseY);
 			
 				const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
-				const spectrumWave: SpectrumWave = (this._spectrumIndex == null) ? instrument.spectrumWave : instrument.drumsetSpectrumWaves[this._spectrumIndex];
+				const harmonicsWave: HarmonicsWave = instrument.harmonicsWave; //(this._harmonicsIndex == null) ? instrument.harmonicsWave : instrument.drumsetSpectrumWaves[this._harmonicsIndex];
 				
 				if (freq != this._freqPrev) {
 					const slope: number = (amp - this._ampPrev) / (freq - this._freqPrev);
@@ -134,17 +138,17 @@ namespace beepbox {
 					const lowerFreq: number = Math.ceil(Math.min(this._freqPrev, freq));
 					const upperFreq: number = Math.floor(Math.max(this._freqPrev, freq));
 					for (let i: number = lowerFreq; i <= upperFreq; i++) {
-						if (i < 0 || i >= Config.spectrumControlPoints) continue;
-						spectrumWave.spectrum[i] = Math.max(0, Math.min(Config.spectrumMax, Math.round(i * slope + offset)));
+						if (i < 0 || i >= Config.harmonicsControlPoints) continue;
+						harmonicsWave.harmonics[i] = Math.max(0, Math.min(Config.harmonicsMax, Math.round(i * slope + offset)));
 					}
 				}
 				
-				spectrumWave.spectrum[Math.max(0, Math.min(Config.spectrumControlPoints - 1, Math.round(freq)))] = Math.max(0, Math.min(Config.spectrumMax, Math.round(amp)));
+				harmonicsWave.harmonics[Math.max(0, Math.min(Config.harmonicsControlPoints - 1, Math.round(freq)))] = Math.max(0, Math.min(Config.harmonicsMax, Math.round(amp)));
 				
 				this._freqPrev = freq;
 				this._ampPrev = amp;
 				
-				this._change = new ChangeSpectrum(this._doc, instrument, spectrumWave);
+				this._change = new ChangeHarmonics(this._doc, instrument, harmonicsWave);
 				this._doc.setProspectiveChange(this._change);
 			}
 		}
@@ -159,26 +163,30 @@ namespace beepbox {
 		
 		public render(): void {
 			const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
-			const spectrumWave: SpectrumWave = (this._spectrumIndex == null) ? instrument.spectrumWave : instrument.drumsetSpectrumWaves[this._spectrumIndex];
+			const harmonicsWave: HarmonicsWave = instrument.harmonicsWave; //(this._harmonicsIndex == null) ? instrument.harmonicsWave : instrument.drumsetSpectrumWaves[this._harmonicsIndex];
 			const controlPointToHeight = (point: number): number => {
-				return (1 - (point / Config.spectrumMax)) * (this._editorHeight - 2) + 1;
+				return (1 - (point / Config.harmonicsMax)) * this._editorHeight;
 			}
 			
-			let path: string = "M 0 " + prettyNumber(this._editorHeight - 1) + " ";
-			for (let i = 0; i < Config.spectrumControlPoints; i++) {
-				path += "L " + prettyNumber((i + 1) * this._editorWidth / (Config.spectrumControlPoints + 2)) + " " + prettyNumber(controlPointToHeight(spectrumWave.spectrum[i])) + " ";
+			let bottom: string = prettyNumber(this._editorHeight);
+			let path: string = "";
+			for (let i = 0; i < Config.harmonicsControlPoints - 1; i++) {
+				if (harmonicsWave.harmonics[i] == 0) continue;
+				let xPos: string = prettyNumber((i + 0.5) * (this._editorWidth - 8) / (Config.harmonicsControlPoints - 1));
+				path += "M " + xPos + " " + bottom + " ";
+				path += "L " + xPos + " " + prettyNumber(controlPointToHeight(harmonicsWave.harmonics[i])) + " ";
 			}
 			
-			const lastHeight: number = controlPointToHeight(spectrumWave.spectrum[Config.spectrumControlPoints - 1]);
-			
-			path += "L " + (this._editorWidth - 1) + " " + prettyNumber(lastHeight) + " ";
+			const lastHeight: number = controlPointToHeight(harmonicsWave.harmonics[Config.harmonicsControlPoints - 1]);
+			for (let i: number = 0; i < 4; i++) {
+				const rect: SVGRectElement = this._lastControlPoints[i];
+				rect.setAttribute("y", prettyNumber(lastHeight));
+				rect.setAttribute("height", prettyNumber(this._editorHeight - lastHeight));
+			}
 			
 			if (this._renderedPath != path) {
 				this._renderedPath = path;
 				this._curve.setAttribute("d", path);
-				this._fill.setAttribute("d", path + "L " + this._editorWidth + " " + prettyNumber(lastHeight) + " L " + this._editorWidth + " " + prettyNumber(this._editorHeight) + " L 0 " + prettyNumber(this._editorHeight) + " z ");
-				
-				this._arrow.setAttribute("d", "M " + this._editorWidth + " " + prettyNumber(lastHeight) + " L " + (this._editorWidth - 4) + " " + prettyNumber(lastHeight - 4) + " L " + (this._editorWidth - 4) + " " + prettyNumber(lastHeight + 4) + " z");
 			}
 		}
 	}

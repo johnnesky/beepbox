@@ -318,6 +318,7 @@
 √ Fixed mobile-layout pattern number select off-by-one bug.
 √ Drumsets! :D
 √ Prompts: remembers last choice, enter key confirms choice, added icons to buttons, focuses input on open.
+√ Harmonics instruments!
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - Random instrument templates
@@ -341,15 +342,14 @@ MAJOR REMAINING FEATURES, MAYBE LATER:
 
 
 NEXT RELEASE:
-- Harmonics instruments.
+- Adjust spectrum and harmonics volume based on input amplitudes, weighting higher frequencies more, instead of based on the maximum FFT output volume.
 - Balance preset volumes.
 - Add to the presets menu some instruments that are somewhat randomized within constraints in the following styles: chip, fm, lead, harmony, bass, freestyle/any/wildcard, random midi instrument... Or maybe having too many random instrument options defeats the purpose, maybe have the same options but randomly select one automatically before generating. Bias the filter cutoff based on current channel octave scroll? Each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else.
 - Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
 - Pitch background rows should alternate between slightly darker rows, like openscores. the root pitches should be slightly less saturated maybe?
-- "New Blank Song" should choose interesting random instruments with harmony chords enabled.
+- The default song on load (and new blank song) should use preset instruments, so new users won't see the extra options. "New Blank Song" should choose interesting random instruments with harmony chords enabled.
 - New pref: in paused mode, when editing a note, play it out loud.
-- any more spectrum-based drums? floor tom, rack tom, ride cymbal, crash cymbal, snare, taiko, snaps/claps, thunder, rain, fire, wind, randomly spaced (x / (1 + x^2)), maybe something that is just composed of a few inharmonic sine waves? bass (narrow band), shepard, orchestra hit? (can noise instruments be selected on pitch channels? maybe with different available noise waves?)
-- The default song on load (and new blank song) should use template instruments, so new users won't see the extra options. 
+- any more spectrum-based drums? thunder, rain, fire, wind, randomly spaced (x / (1 + x^2)), maybe something that is just composed of a few inharmonic sine waves? shepard, orchestra hit?
 - Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth or sixteenth note triplet symbol for rhythm. 
 - Hmm, sometimes Firefox won't play any sound... seems like it happens when I load www.beepbox.co, and then click a twitter link to beepbox.co, maybe some kind of security/user experience thing to prevent unwanted sound from cross-domain links?
 - Add a "title" attributes or tooltips to all of the options, and/or make all instrument option names clickable with pointer cursor and hover highlight, replacing "?" hint circles.
