@@ -434,6 +434,16 @@ namespace beepbox {
 		}
 	}
 	
+	export class ChangeHarmonics extends Change {
+		constructor(doc: SongDocument, instrument: Instrument, harmonicsWave: HarmonicsWave) {
+			super();
+			harmonicsWave.markCustomWaveDirty();
+			instrument.preset = instrument.type;
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+	
 	export class ChangeDrumsetEnvelope extends Change {
 		constructor(doc: SongDocument, drumIndex: number, newValue: number) {
 			super();
