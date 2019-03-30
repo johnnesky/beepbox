@@ -319,6 +319,7 @@
 √ Drumsets! :D
 √ Prompts: remembers last choice, enter key confirms choice, added icons to buttons, focuses input on open.
 √ Harmonics instruments!
+√ Midi import: include partial channels when possible.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - Random instrument templates
