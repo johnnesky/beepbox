@@ -48,6 +48,9 @@ namespace beepbox {
 		]);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
+			this._fileInput.select();
+			setTimeout(()=>this._fileInput.focus());
+			
 			this._fileInput.addEventListener("change", this._whenFileSelected);
 			this._cancelButton.addEventListener("click", this._close);
 		}
@@ -770,44 +773,52 @@ namespace beepbox {
 			// For better or for worse, BeepBox has a more limited number of channels than Midi.
 			// To compensate, try to merge non-overlapping channels.
 			function compactChannels(channels: Channel[], maxLength: number): void {
-				for (let channelIndex: number = 0; channelIndex < channels.length - 1; channelIndex++) {
-					for (let possibleMergeIndex: number = channelIndex + 1; possibleMergeIndex < channels.length; possibleMergeIndex++) {
-						
-						if (channels.length <= maxLength) {
-							return;
-						}
-						
-						let canMerge: boolean = true;
-						
-						const channelA: Channel = channels[channelIndex];
-						const channelB: Channel = channels[possibleMergeIndex];
-						for (let barIndex: number = 0; barIndex < channelA.bars.length && barIndex < channelB.bars.length; barIndex++) {
-							if (channelA.bars[barIndex] != 0 && channelB.bars[barIndex] != 0) {
-								canMerge = false;
-								break;
-							}
-						}
-						
-						if (canMerge) {
-							const channelAInstrumentCount: number = channelA.instruments.length;
-							const channelAPatternCount: number = channelA.patterns.length;
-							for (const instrument of channelB.instruments) {
-								channelA.instruments.push(instrument);
-							}
-							for (const pattern of channelB.patterns) {
-								pattern.instrument += channelAInstrumentCount;
-								channelA.patterns.push(pattern);
-							}
+				while (channels.length > maxLength) {
+					let bestChannelIndexA: number = channels.length - 2;
+					let bestChannelIndexB: number = channels.length - 1;
+					let fewestConflicts: number = Number.MAX_VALUE;
+					let fewestGaps: number = Number.MAX_VALUE;
+					for (let channelIndexA: number = 0; channelIndexA < channels.length - 1; channelIndexA++) {
+						for (let channelIndexB: number = channelIndexA + 1; channelIndexB < channels.length; channelIndexB++) {
+							const channelA: Channel = channels[channelIndexA];
+							const channelB: Channel = channels[channelIndexB];
+							let conflicts: number = 0;
+							let gaps: number = 0;
 							for (let barIndex: number = 0; barIndex < channelA.bars.length && barIndex < channelB.bars.length; barIndex++) {
-								if (channelB.bars[barIndex] != 0) {
-									channelA.bars[barIndex] = channelB.bars[barIndex] + channelAPatternCount;
+								if (channelA.bars[barIndex] != 0 && channelB.bars[barIndex] != 0) conflicts++;
+								if (channelA.bars[barIndex] == 0 && channelB.bars[barIndex] == 0) gaps++;
+							}
+							if (conflicts <= fewestConflicts) {
+								if (conflicts < fewestConflicts || gaps < fewestGaps) {
+									bestChannelIndexA = channelIndexA;
+									bestChannelIndexB = channelIndexB;
+									fewestConflicts = conflicts;
+									fewestGaps = gaps;
 								}
 							}
-							
-							channels.splice(possibleMergeIndex, 1);
-							possibleMergeIndex--;
 						}
 					}
+					
+					// Merge channelB's patterns, instruments, and bars into channelA.
+					const channelA: Channel = channels[bestChannelIndexA];
+					const channelB: Channel = channels[bestChannelIndexB];
+					const channelAInstrumentCount: number = channelA.instruments.length;
+					const channelAPatternCount: number = channelA.patterns.length;
+					for (const instrument of channelB.instruments) {
+						channelA.instruments.push(instrument);
+					}
+					for (const pattern of channelB.patterns) {
+						pattern.instrument += channelAInstrumentCount;
+						channelA.patterns.push(pattern);
+					}
+					for (let barIndex: number = 0; barIndex < channelA.bars.length && barIndex < channelB.bars.length; barIndex++) {
+						if (channelA.bars[barIndex] == 0 && channelB.bars[barIndex] != 0) {
+							channelA.bars[barIndex] = channelB.bars[barIndex] + channelAPatternCount;
+						}
+					}
+					
+					// Remove channelB.
+					channels.splice(bestChannelIndexB, 1);
 				}
 			}
 			
