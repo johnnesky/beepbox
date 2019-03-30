@@ -4279,19 +4279,19 @@ namespace beepbox {
 				prevWaveIntegralA = nextWaveIntegralA;
 				prevWaveIntegralB = nextWaveIntegralB;
 
-				const combinedWave: number = (waveA + waveB * intervalSign) * volume;
+				const combinedWave: number = (waveA + waveB * intervalSign);
 				
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
 				
-				volume += volumeDelta;
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				data[bufferIndex] += filterSample1;
+				data[bufferIndex] += filterSample1 * volume;
+				volume += volumeDelta;
 				bufferIndex++;
 			}
 			
@@ -4363,19 +4363,19 @@ namespace beepbox {
 				prevWaveIntegralA = nextWaveIntegralA;
 				prevWaveIntegralB = nextWaveIntegralB;
 
-				const combinedWave: number = (waveA + waveB * intervalSign) * volume;
+				const combinedWave: number = (waveA + waveB * intervalSign);
 				
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
 				
-				volume += volumeDelta;
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				data[bufferIndex] += filterSample1;
+				data[bufferIndex] += filterSample1 * volume;
+				volume += volumeDelta;
 				bufferIndex++;
 			}
 			
@@ -4414,13 +4414,12 @@ namespace beepbox {
 			var stopIndex = bufferIndex + runLength;
 			while (bufferIndex < stopIndex) {
 				// INSERT OPERATOR COMPUTATION HERE
-				var fmOutput = (/*operator#Scaled*/) * volume; // CARRIER OUTPUTS
+				var fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
 				
 				var feedback = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (fmOutput - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
 				
-				volume += volumeDelta;
 				feedbackMult += feedbackDelta;
 				operator#OutputMult += operator#OutputDelta;
 				operator#Phase += operator#PhaseDelta;
@@ -4428,7 +4427,8 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				
-				data[bufferIndex] += filterSample1;
+				data[bufferIndex] += filterSample1 * volume;
+				volume += volumeDelta;
 				bufferIndex++;
 			}
 			
@@ -4477,7 +4477,7 @@ namespace beepbox {
 			const stopIndex: number = bufferIndex + runLength;
 			
 			while (bufferIndex < stopIndex) {
-				const waveSample: number = wave[phase & 0x7fff] * volume;
+				const waveSample: number = wave[phase & 0x7fff];
 				
 				sample += (waveSample - sample) * pitchRelativefilter;
 			
@@ -4489,7 +4489,7 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1;
+				data[bufferIndex] += filterSample1 * volume;
 				volume += volumeDelta;
 				bufferIndex++;
 			}
@@ -4532,7 +4532,6 @@ namespace beepbox {
 				let waveSample: number = wave[index];
 				const phaseRatio: number = phase - phaseInt;
 				waveSample += (wave[index + 1] - waveSample) * phaseRatio;
-				waveSample *= volume;
 				
 				sample += (waveSample - sample) * pitchRelativefilter;
 				
@@ -4544,7 +4543,7 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1;
+				data[bufferIndex] += filterSample1 * volume;
 				volume += volumeDelta;
 				bufferIndex++;
 			}
@@ -4585,7 +4584,6 @@ namespace beepbox {
 				sample = wave[index];
 				const phaseRatio: number = phase - phaseInt;
 				sample += (wave[index + 1] - sample) * phaseRatio;
-				sample *= volume;
 				
 				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (sample - filterSample0 + feedback * (filterSample0 - filterSample1));
@@ -4595,7 +4593,7 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1;
+				data[bufferIndex] += filterSample1 * volume;
 				volume += volumeDelta;
 				bufferIndex++;
 			}
