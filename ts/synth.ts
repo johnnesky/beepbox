@@ -268,7 +268,7 @@ namespace beepbox {
 			{name: "xylophone",        midiProgram:  13, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 1","vibrato":"none","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":0,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"6×","amplitude":15,"envelope":"custom"},{"frequency":"11×","amplitude":15,"envelope":"custom"},{"frequency":"20×","amplitude":6,"envelope":"twang 1"}]}},
 			{name: "tubular bell",     midiProgram:  14, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"twang 3","interval":"hum","vibrato":"none","harmonics":[57,57,0,100,0,100,0,86,0,71,0,0,57,0,0,43,0,0,0,29,0,0,0,14,0,0,0,0]}},
 			{name: "dulcimer",         midiProgram:  15, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard fade","chord":"strum","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"twang 2","interval":"shimmer","vibrato":"none","harmonics":[86,86,86,71,86,71,43,86,86,71,100,71,100,71,86,57,43,57,57,86,71,57,71,71,86,71,71,71]}},
-			{name: "drawbar organ",    midiProgram:  16, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","interval":"union","vibrato":"none","harmonics":[100,100,0,100,0,0,0,100,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,0,0,0,0]}},
+			{name: "drawbar organ",    midiProgram:  16, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"hard","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","interval":"union","vibrato":"none","harmonics":[86,86,0,86,0,0,0,86,0,0,0,0,0,0,0,86,0,0,0,0,0,0,0,0,0,0,0,0]}},
 			{name: "percussive organ", midiProgram:  17, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"punch","vibrato":"light","algorithm":"1 2 3 4","feedbackType":"1→3 2→4","feedbackAmplitude":7,"feedbackEnvelope":"decay 1","operators":[{"frequency":"1×","amplitude":7,"envelope":"custom"},{"frequency":"2×","amplitude":7,"envelope":"custom"},{"frequency":"3×","amplitude":8,"envelope":"custom"},{"frequency":"4×","amplitude":8,"envelope":"custom"}]}},
 			{name: "rock organ",       midiProgram:  18, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"hard","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"punch","vibrato":"delayed","algorithm":"(1 2 3)←4","feedbackType":"1⟲ 2⟲ 3⟲","feedbackAmplitude":2,"feedbackEnvelope":"flare 1","operators":[{"frequency":"1×","amplitude":11,"envelope":"custom"},{"frequency":"4×","amplitude":11,"envelope":"custom"},{"frequency":"6×","amplitude":11,"envelope":"custom"},{"frequency":"2×","amplitude":5,"envelope":"steady"}]}},
 			{name: "pipe organ",       midiProgram:  19, midiSubharmonicOctaves: 1, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":43,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":5,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":8,"envelope":"custom"},{"frequency":"2×","amplitude":9,"envelope":"custom"},{"frequency":"4×","amplitude":9,"envelope":"custom"},{"frequency":"8×","amplitude":8,"envelope":"custom"}]}},
@@ -330,8 +330,8 @@ namespace beepbox {
 			{name: "pan flute",        midiProgram:  75, generalMidi: true, settings: {"type":"spectrum","transition":"soft","effects":"reverb","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","spectrum":[100,0,0,0,0,0,0,14,0,0,0,86,0,0,14,0,71,0,29,14,29,29,14,29,14,29,14,14,29,29]}},
 			{name: "blown bottle",     midiProgram:  76, generalMidi: true, settings: {"type":"FM","transition":"cross fade","effects":"chorus & reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":0,"filterEnvelope":"steady","vibrato":"none","algorithm":"1 2 3 4","feedbackType":"1⟲ 2⟲ 3⟲ 4⟲","feedbackAmplitude":7,"feedbackEnvelope":"twang 1","operators":[{"frequency":"1×","amplitude":15,"envelope":"custom"},{"frequency":"3×","amplitude":3,"envelope":"custom"},{"frequency":"6×","amplitude":1,"envelope":"custom"},{"frequency":"11×","amplitude":1,"envelope":"custom"}]}},
 			{name: "shakuhachi",       midiProgram:  77, generalMidi: true, settings: {"type":"FM","effects":"chorus & reverb","transition":"soft","chord":"harmony","filterCutoffHz":2828,"filterResonance":57,"filterEnvelope":"steady","vibrato":"delayed","algorithm":"1←(2 3←4)","feedbackType":"3→4","feedbackAmplitude":15,"feedbackEnvelope":"steady","operators":[{"frequency":"1×","amplitude":12,"envelope":"custom"},{"frequency":"2×","amplitude":3,"envelope":"punch"},{"frequency":"~1×","amplitude":4,"envelope":"twang 1"},{"frequency":"20×","amplitude":15,"envelope":"steady"}]}},
-			{name: "whistle",          midiProgram:  78, generalMidi: true, settings: {"type":"harmonics","effects":"chorus & reverb","transition":"soft","chord":"harmony","filterCutoffHz":250,"filterResonance":14,"filterEnvelope":"steady","interval":"union","vibrato":"delayed","harmonics":[100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},
-			{name: "ocarina",          midiProgram:  79, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":8000,"filterResonance":0,"filterEnvelope":"steady","interval":"union","vibrato":"none","harmonics":[100,14,43,14,14,14,14,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},
+			{name: "whistle",          midiProgram:  78, generalMidi: true, settings: {"type":"harmonics","effects":"chorus & reverb","transition":"soft","chord":"harmony","filterCutoffHz":1414,"filterResonance":0,"filterEnvelope":"steady","interval":"union","vibrato":"delayed","harmonics":[100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},
+			{name: "ocarina",          midiProgram:  79, generalMidi: true, settings: {"type":"harmonics","effects":"reverb","transition":"soft","chord":"harmony","filterCutoffHz":1414,"filterResonance":0,"filterEnvelope":"steady","interval":"union","vibrato":"none","harmonics":[100,14,43,14,14,14,14,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},
 			{name: "square lead",      midiProgram:  80, generalMidi: true, settings: {"type":"chip","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","wave":"square","interval":"hum","vibrato":"none"}},
 			{name: "sawtooth lead",    midiProgram:  81, generalMidi: true, settings: {"type":"chip","transition":"hard","effects":"reverb","chord":"harmony","filterCutoffHz":2828,"filterResonance":14,"filterEnvelope":"steady","wave":"sawtooth","interval":"shimmer","vibrato":"none"}},
 			{name: "synth calliope",   midiProgram:  82, generalMidi: true, settings: {"type":"spectrum","transition":"cross fade","effects":"reverb","chord":"harmony","filterCutoffHz":5657,"filterResonance":14,"filterEnvelope":"steady","spectrum":[100,0,0,0,0,0,0,86,0,0,0,71,0,0,57,0,43,0,29,14,14,29,14,14,14,14,14,14,14,14]}},
@@ -1177,6 +1177,7 @@ namespace beepbox {
 				}
 				
 				const overallSlope: number = -0.25;
+				let combinedControlPointAmplitude: number = 1;
 				
 				for (let harmonicIndex: number = 0; harmonicIndex < Config.harmonicsRendered; harmonicIndex++) {
 					const harmonicFreq: number = harmonicIndex + 1;
@@ -1186,6 +1187,9 @@ namespace beepbox {
 					}
 					const normalizedValue: number = controlValue / Config.harmonicsMax;
 					let amplitude: number = Math.pow(2, controlValue - Config.harmonicsMax + 1) * Math.sqrt(normalizedValue);
+					if (harmonicIndex < Config.harmonicsControlPoints) {
+						combinedControlPointAmplitude += amplitude;
+					}
 					amplitude *= Math.pow(harmonicFreq, overallSlope);
 					
 					// Multiple all the sine wave amplitudes by 1 or -1 based on the LFSR
@@ -1196,16 +1200,9 @@ namespace beepbox {
 				}
 				
 				inverseRealFourierTransform(wave, waveLength);
-				scaleElementsByFactor(wave, 1.0 / Math.sqrt(waveLength));
 				
 				// Limit the maximum wave amplitude.
-				let max: number = 0;
-				for (let i: number = 0; i < waveLength; i++) {
-					const sample: number = this._wave[i];
-					if (sample > max || -sample > max) max = Math.abs(sample);
-				}
-				const mult: number = 1 / Math.max(1, Math.sqrt(max));
-				//console.log(max, mult); // TODO: ensure that the volume scaling actually works!
+				const mult: number = 1 / Math.pow(combinedControlPointAmplitude, 0.75);
 				
 				// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
 				let cumulative: number = 0;
@@ -3817,7 +3814,7 @@ namespace beepbox {
 				pitchDamping = 48;
 			} else if (instrument.type == InstrumentType.harmonics) {
 				basePitch = Config.keys[song.key].basePitch;
-				baseVolume = 0.4;
+				baseVolume = 0.025;
 				volumeReferencePitch = 16;
 				pitchDamping = 48;
 			} else {
