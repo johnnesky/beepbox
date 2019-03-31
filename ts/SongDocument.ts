@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
+/// <reference path="EditorConfig.ts" />
 /// <reference path="ChangeNotifier.ts" />
 
 namespace beepbox {
@@ -240,6 +241,27 @@ namespace beepbox {
 		public getCurrentInstrument(): number {
 			const pattern: Pattern | null = this.getCurrentPattern();
 			return pattern == null ? 0 : pattern.instrument;
+		}
+		
+		public getChannelColorDim(channel: number): string {
+			return channel < this.song.pitchChannelCount
+				? EditorConfig.pitchColors[channel % EditorConfig.pitchColors.length].channelDim
+				: EditorConfig.noiseColors[(channel - this.song.pitchChannelCount) % EditorConfig.noiseColors.length].channelDim;
+		}
+		public getChannelColorBright(channel: number): string {
+			return channel < this.song.pitchChannelCount
+				? EditorConfig.pitchColors[channel % EditorConfig.pitchColors.length].channelBright
+				: EditorConfig.noiseColors[(channel - this.song.pitchChannelCount) % EditorConfig.noiseColors.length].channelBright;
+		}
+		public getNoteColorDim(channel: number): string {
+			return channel < this.song.pitchChannelCount
+				? EditorConfig.pitchColors[channel % EditorConfig.pitchColors.length].noteDim
+				: EditorConfig.noiseColors[(channel - this.song.pitchChannelCount) % EditorConfig.noiseColors.length].noteDim;
+		}
+		public getNoteColorBright(channel: number): string {
+			return channel < this.song.pitchChannelCount
+				? EditorConfig.pitchColors[channel % EditorConfig.pitchColors.length].noteBright
+				: EditorConfig.noiseColors[(channel - this.song.pitchChannelCount) % EditorConfig.noiseColors.length].noteBright;
 		}
 	}
 }

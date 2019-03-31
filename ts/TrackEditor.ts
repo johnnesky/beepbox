@@ -348,7 +348,7 @@ namespace beepbox {
 				for (let y: number = this._renderedChannelCount; y < this._doc.song.getChannelCount(); y++) {
 					this._grid[y] = [];
 					for (let x: number = 0; x < this._renderedBarCount; x++) {
-						const box: Box = new Box(y, x, y, this._doc.song.getChannelColorDim(y));
+						const box: Box = new Box(y, x, y, this._doc.getChannelColorDim(y));
 						box.setSquashed(squashed, y);
 						this._boxContainer.appendChild(box.container);
 						this._grid[y][x] = box;
@@ -367,7 +367,7 @@ namespace beepbox {
 			if (this._renderedBarCount != this._doc.song.barCount) {
 				for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
 					for (let x: number = this._renderedBarCount; x < this._doc.song.barCount; x++) {
-						const box: Box = new Box(y, x, y, this._doc.song.getChannelColorDim(y));
+						const box: Box = new Box(y, x, y, this._doc.getChannelColorDim(y));
 						box.setSquashed(squashed, y);
 						this._boxContainer.appendChild(box.container);
 						this._grid[y][x] = box;
@@ -409,7 +409,7 @@ namespace beepbox {
 					
 					const box: Box = this._grid[j][i];
 					if (i < this._doc.song.barCount) {
-						box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, j, dim && !selected ? this._doc.song.getChannelColorDim(j) : this._doc.song.getChannelColorBright(j));
+						box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, j, dim && !selected ? this._doc.getChannelColorDim(j) : this._doc.getChannelColorBright(j));
 						box.container.style.visibility = "visible";
 					} else {
 						box.container.style.visibility = "hidden";

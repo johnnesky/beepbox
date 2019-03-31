@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
+/// <reference path="EditorConfig.ts" />
 /// <reference path="SongDocument.ts" />
 /// <reference path="SongEditor.ts" />
 /// <reference path="Prompt.ts" />
@@ -392,7 +393,8 @@ namespace beepbox {
 				
 				const channel: Channel = new Channel();
 				
-				const channelPreset: Preset | null = Config.midiProgramToPreset(noteEvents[midiChannel][0].program);
+				const channelPresetValue: number | null = EditorConfig.midiProgramToPresetValue(noteEvents[midiChannel][0].program);
+				const channelPreset: Preset | null = (channelPresetValue == null) ? null : EditorConfig.valueToPreset(channelPresetValue);
 				
 				const isDrumsetChannel: boolean = (midiChannel == 9);
 				const isNoiseChannel: boolean = isDrumsetChannel || (channelPreset != null && channelPreset.isNoise == true);
@@ -421,10 +423,11 @@ namespace beepbox {
 					let prevEventPart: number = 0;
 					let setInstrumentVolume: boolean = false;
 					
-					const preset: Preset = Config.beepboxPresets.dictionary["standard drumset"];
+					const presetValue: number = EditorConfig.nameToPresetValue("standard drumset")!;
+					const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
 					const instrument: Instrument = new Instrument();
 					instrument.fromJsonObject(preset.settings, false);
-					instrument.preset = Config.nameToPresetValue(preset.name)!;
+					instrument.preset = presetValue;
 					channel.instruments.push(instrument);
 
 					for (let noteEventIndex: number = 0; noteEventIndex <= noteEvents[midiChannel].length; noteEventIndex++) {
@@ -548,7 +551,8 @@ namespace beepbox {
 								const noteEndMidiTick: number = Math.min(barEndMidiTick, nextEventMidiTick);
 								
 								if (noteStartPart < noteEndPart) {
-									const preset: Preset | null = Config.midiProgramToPreset(currentProgram);
+									const presetValue: number | null = EditorConfig.midiProgramToPresetValue(currentProgram);
+									const preset: Preset | null = (presetValue == null) ? null : EditorConfig.valueToPreset(presetValue);
 									
 									// Ensure a pattern exists for the current bar before inserting notes into it.
 									if (currentBar != bar || pattern == null) {
@@ -567,9 +571,9 @@ namespace beepbox {
 											const instrument: Instrument = new Instrument();
 											instrumentByProgram[currentProgram] = instrument;
 											
-											if (preset != null && (preset.isNoise == true) == isNoiseChannel) {
+											if (presetValue != null && preset != null && (preset.isNoise == true) == isNoiseChannel) {
 												instrument.fromJsonObject(preset.settings, false);
-												instrument.preset = Config.midiPresetToValue(preset);
+												instrument.preset = presetValue;
 											} else {
 												instrument.setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip);
 												instrument.chord = 0; // Midi instruments use polyphonic harmony by default.

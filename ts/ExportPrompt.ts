@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
+/// <reference path="EditorConfig.ts" />
 /// <reference path="SongDocument.ts" />
 /// <reference path="Prompt.ts" />
 /// <reference path="html.ts" />
@@ -425,8 +426,8 @@ namespace beepbox {
 					// For remaining tracks, set up the instruments and write the notes:
 					
 					let channelName: string = isNoise
-						? Config.noiseColors[(channel - song.pitchChannelCount) % Config.noiseColors.length].name + " channel"
-						: Config.pitchColors[channel % Config.pitchColors.length].name + " channel";
+						? EditorConfig.noiseColors[(channel - song.pitchChannelCount) % EditorConfig.noiseColors.length].name + " channel"
+						: EditorConfig.pitchColors[channel % EditorConfig.pitchColors.length].name + " channel";
 					writeEventTime(0);
 					writer.writeUint8(MidiEventType.meta);
 					writer.writeMidi7Bits(MidiMetaEventMessage.trackName);
@@ -441,8 +442,69 @@ namespace beepbox {
 					writeEventTime(0); writeControlEvent(MidiControlEventMessage.registeredParameterNumberLSB, MidiRegisteredParameterNumberLSB.reset);
 					
 					let prevInstrumentIndex: number = -1;
-					let prevPitchBend: number = -1;
-					let prevExpression: number = -1;
+					function writeInstrumentSettings(instrumentIndex: number): void {
+						const instrument: Instrument = song.channels[channel].instruments[instrumentIndex];
+						const preset: Preset | null = EditorConfig.valueToPreset(instrument.preset);
+						
+						if (prevInstrumentIndex != instrumentIndex) {
+							prevInstrumentIndex = instrumentIndex;
+							writeEventTime(barStartTime);
+							writer.writeUint8(MidiEventType.meta);
+							writer.writeMidi7Bits(MidiMetaEventMessage.instrumentName);
+							writer.writeMidiAscii("Instrument " + (instrumentIndex + 1));
+						
+							if (!isDrumset) {
+								let instrumentProgram: number = 81; // default to sawtooth wave. 
+						
+								if (preset != null && preset.midiProgram != undefined) {
+									instrumentProgram = preset.midiProgram;
+								} else if (instrument.type == InstrumentType.drumset) {
+									// The first BeepBox drumset channel is handled as a Midi drumset channel and doesn't need a program, but any subsequent drumsets will just be set to taiko.
+									instrumentProgram = 116; // taiko
+								} else {
+									const envelopeType: EnvelopeType = instrument.getFilterEnvelope().type;
+									const instrumentDecays: boolean = envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.twang;
+									if (instrument.type == InstrumentType.noise || instrument.type == InstrumentType.spectrum) {
+										if (isNoise) {
+											instrumentProgram = instrumentDecays ? 116 : 126; // taiko : applause
+										} else {
+											instrumentProgram = instrumentDecays ? 47 : 75; // timpani : pan flute
+										}
+									} else if (instrument.type == InstrumentType.chip) {
+										const filterInstruments: number[] = instrumentDecays
+											? ExportPrompt.midiDecayInstruments
+											: ExportPrompt.midiSustainInstruments;
+										if (filterInstruments.length > instrument.chipWave) {
+											instrumentProgram = filterInstruments[instrument.chipWave];
+										}
+									} else if (instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics) {
+										instrumentProgram = instrumentDecays ? 2 : 81; // electric grand : sawtooth
+									} else {
+										throw new Error("Unrecognized instrument type.");
+									}
+								}
+						
+								// Program (instrument) change event:
+								writeEventTime(barStartTime);
+								writer.writeUint8(MidiEventType.programChange | midiChannel);
+								writer.writeMidi7Bits(instrumentProgram);
+							}
+						
+							// Channel volume:
+							writeEventTime(barStartTime);
+							let channelVolume: number = volumeMultToMidiVolume(Synth.instrumentVolumeToVolumeMult(instrument.volume));
+							writeControlEvent(MidiControlEventMessage.volumeMSB, Math.min(0x7f, Math.round(channelVolume)));
+						}
+					}
+					if (song.getPattern(channel, 0) == null) {
+						// Go ahead and apply the instrument settings at the beginning of the channel
+						// even if a bar doesn't kick in until later.
+						writeInstrumentSettings(0);
+					}
+					
+					let prevPitchBend: number = defaultMidiPitchBend;
+					let prevExpression: number = defaultMidiExpression;
+					let shouldResetExpressionAndPitchBend: boolean = false;
 					//let prevTremolo: number = -1;
 					const channelRoot: number = isNoise ? Config.spectrumBasePitch : Config.keys[song.key].basePitch;
 					const intervalScale: number = isNoise ? Config.noiseInterval : 1;
@@ -453,62 +515,9 @@ namespace beepbox {
 						if (pattern != null) {
 							
 							const instrumentIndex: number = pattern.instrument;
-							
 							const instrument: Instrument = song.channels[channel].instruments[instrumentIndex];
-							const preset: Preset | null = Config.valueToPreset(instrument.preset);
-							
-							if (prevInstrumentIndex != instrumentIndex) {
-								prevInstrumentIndex = instrumentIndex;
-								
-								writeEventTime(barStartTime);
-								writer.writeUint8(MidiEventType.meta);
-								writer.writeMidi7Bits(MidiMetaEventMessage.instrumentName);
-								writer.writeMidiAscii("Instrument " + (instrumentIndex + 1));
-								
-								if (!isDrumset) {
-									let instrumentProgram: number = 81; // default to sawtooth wave. 
-								
-									if (preset != null && preset.midiProgram != undefined) {
-										instrumentProgram = preset.midiProgram;
-									} else if (instrument.type == InstrumentType.drumset) {
-										// The first BeepBox drumset channel is handled as a Midi drumset channel and doesn't need a program, but any subsequent drumsets will just be set to taiko.
-										instrumentProgram = 116; // taiko
-									} else {
-										const envelopeType: EnvelopeType = instrument.getFilterEnvelope().type;
-										const instrumentDecays: boolean = envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.twang;
-										if (instrument.type == InstrumentType.noise || instrument.type == InstrumentType.spectrum) {
-											if (isNoise) {
-												instrumentProgram = instrumentDecays ? 116 : 126; // taiko : applause
-											} else {
-												instrumentProgram = instrumentDecays ? 47 : 75; // timpani : pan flute
-											}
-										} else if (instrument.type == InstrumentType.chip) {
-											const filterInstruments: number[] = instrumentDecays
-												? ExportPrompt.midiDecayInstruments
-												: ExportPrompt.midiSustainInstruments;
-											if (filterInstruments.length > instrument.chipWave) {
-												instrumentProgram = filterInstruments[instrument.chipWave];
-											}
-										} else if (instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics) {
-											instrumentProgram = instrumentDecays ? 2 : 81; // electric grand : sawtooth
-										} else {
-											throw new Error("Unrecognized instrument type.");
-										}
-									}
-								
-									// Program (instrument) change event:
-									writeEventTime(barStartTime);
-									writer.writeUint8(MidiEventType.programChange | midiChannel);
-									writer.writeMidi7Bits(instrumentProgram);
-								}
-								
-								// Channel volume:
-								writeEventTime(barStartTime);
-								let channelVolume: number = volumeMultToMidiVolume(Synth.instrumentVolumeToVolumeMult(instrument.volume));
-								writeControlEvent(MidiControlEventMessage.volumeMSB, Math.min(0x7f, Math.round(channelVolume)));
-							}
-							
-							//const effectVibrato: number = Config.vibratos[instrument.vibrato].amplitudes;
+							const preset: Preset | null = EditorConfig.valueToPreset(instrument.preset);
+							writeInstrumentSettings(instrumentIndex);
 							
 							let chordHarmonizes: boolean = false;
 							let usesArpeggio: boolean = true;
@@ -680,21 +689,29 @@ namespace beepbox {
 									writer.writeMidi7Bits(prevPitches[toneIndex]); // pitch
 									writer.writeMidi7Bits(velocity); // velocity
 								}
+								
+								shouldResetExpressionAndPitchBend = true;
 							}
 						} else {
-							// Reset channel volume
-							writeEventTime(barStartTime);
-							writeControlEvent(MidiControlEventMessage.volumeMSB, 100);
+							if (shouldResetExpressionAndPitchBend) {
+								shouldResetExpressionAndPitchBend = false;
+								
+								if (prevExpression != defaultMidiExpression) {
+									prevExpression = defaultMidiExpression;
+									// Reset expression
+									writeEventTime(barStartTime);
+									writeControlEvent(MidiControlEventMessage.expressionMSB, prevExpression);
+								}
 							
-							// Reset expression
-							writeEventTime(barStartTime);
-							writeControlEvent(MidiControlEventMessage.expressionMSB, 0x7f);
-							
-							// Reset pitch bend
-							writeEventTime(barStartTime);
-							writer.writeUint8(MidiEventType.pitchBend | midiChannel);
-							writer.writeMidi7Bits(0x2000 & 0x7f); // least significant bits
-							writer.writeMidi7Bits((0x2000 >> 7) & 0x7f); // most significant bits
+								if (prevPitchBend != defaultMidiPitchBend) {
+									// Reset pitch bend
+									prevPitchBend = defaultMidiPitchBend;
+									writeEventTime(barStartTime);
+									writer.writeUint8(MidiEventType.pitchBend | midiChannel);
+									writer.writeMidi7Bits(prevPitchBend & 0x7f); // least significant bits
+									writer.writeMidi7Bits((prevPitchBend >> 7) & 0x7f); // most significant bits
+								}
+							}
 						}
 						
 						barStartTime += midiTicksPerBar;

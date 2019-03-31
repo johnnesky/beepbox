@@ -320,6 +320,7 @@
 √ Prompts: remembers last choice, enter key confirms choice, added icons to buttons, focuses input on open.
 √ Harmonics instruments!
 √ Midi import: include partial channels when possible.
+√ Grouped presets by type.
 
 MAJOR REMAINING FEATURES, NEXT RELEASE:
 - Random instrument templates
@@ -343,7 +344,7 @@ MAJOR REMAINING FEATURES, MAYBE LATER:
 
 
 NEXT RELEASE:
-- Adjust spectrum and harmonics volume based on input amplitudes, weighting higher frequencies more, instead of based on the maximum FFT output volume.
+- Adjust spectrum based on input amplitudes, weighting higher frequencies more, instead of based on the maximum FFT output volume.
 - Balance preset volumes.
 - Add to the presets menu some instruments that are somewhat randomized within constraints in the following styles: chip, fm, lead, harmony, bass, freestyle/any/wildcard, random midi instrument... Or maybe having too many random instrument options defeats the purpose, maybe have the same options but randomly select one automatically before generating. Bias the filter cutoff based on current channel octave scroll? Each preset is a range of possibilities, so you get a slightly random instrument each time you select a preset. That way you can quickly try out many kinds of instruments without getting lost tweaking parameters, but you don't get stuck using the same instruments as someone else.
 - Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
