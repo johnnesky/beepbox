@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
+/// <reference path="EditorConfig.ts" />
 /// <reference path="SongDocument.ts" />
 /// <reference path="html.ts" />
 /// <reference path="style.ts" />
@@ -59,33 +60,30 @@ namespace beepbox {
 		
 		// Show the "spectrum" custom type in both pitched and noise channels.
 		if (isNoise) {
-			customTypeGroup.appendChild(option(InstrumentType.noise, Config.customTypePresets[InstrumentType.noise].name));
-			customTypeGroup.appendChild(option(InstrumentType.spectrum, Config.customTypePresets[InstrumentType.spectrum].name));
-			customTypeGroup.appendChild(option(InstrumentType.drumset, Config.customTypePresets[InstrumentType.drumset].name));
+			customTypeGroup.appendChild(option(InstrumentType.noise, EditorConfig.valueToPreset(InstrumentType.noise)!.name));
+			customTypeGroup.appendChild(option(InstrumentType.spectrum, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
+			customTypeGroup.appendChild(option(InstrumentType.drumset, EditorConfig.valueToPreset(InstrumentType.drumset)!.name));
 		} else {
-			customTypeGroup.appendChild(option(InstrumentType.chip, Config.customTypePresets[InstrumentType.chip].name));
-			customTypeGroup.appendChild(option(InstrumentType.harmonics, Config.customTypePresets[InstrumentType.harmonics].name));
-			customTypeGroup.appendChild(option(InstrumentType.spectrum, Config.customTypePresets[InstrumentType.spectrum].name));
-			customTypeGroup.appendChild(option(InstrumentType.fm, Config.customTypePresets[InstrumentType.fm].name));
+			customTypeGroup.appendChild(option(InstrumentType.chip, EditorConfig.valueToPreset(InstrumentType.chip)!.name));
+			customTypeGroup.appendChild(option(InstrumentType.harmonics, EditorConfig.valueToPreset(InstrumentType.harmonics)!.name));
+			customTypeGroup.appendChild(option(InstrumentType.spectrum, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
+			customTypeGroup.appendChild(option(InstrumentType.fm, EditorConfig.valueToPreset(InstrumentType.fm)!.name));
 		}
-		
 		menu.appendChild(customTypeGroup);
-		const beepboxGroup: HTMLElement = html.element("optgroup", {label: "BeepBox Presets"});
-		for (let index: number = 0; index < Config.beepboxPresets.length; index++) {
-			const preset: Preset = Config.beepboxPresets[index];
-			if ((preset.isNoise == true) == isNoise) {
-				beepboxGroup.appendChild(option(index + Config.beepboxPresetStart, preset.name));
+		
+		for (let categoryIndex: number = 1; categoryIndex < EditorConfig.presetCategories.length; categoryIndex++) {
+			const category: PresetCategory = EditorConfig.presetCategories[categoryIndex];
+			const group: HTMLElement = html.element("optgroup", {label: category.name});
+			let foundAny: boolean = false;
+			for (let presetIndex: number = 0; presetIndex < category.presets.length; presetIndex++) {
+				const preset: Preset = category.presets[presetIndex];
+				if ((preset.isNoise == true) == isNoise) {
+					group.appendChild(option((categoryIndex << 6) + presetIndex, preset.name));
+					foundAny = true;
+				}
 			}
+			if (foundAny) menu.appendChild(group);
 		}
-		menu.appendChild(beepboxGroup);
-		const midiGroup: HTMLElement = html.element("optgroup", {label: "Midi Synths"});
-		for (let index: number = 0; index < Config.midiPresets.length; index++) {
-			const preset: Preset = Config.midiPresets[index];
-			if ((preset.isNoise == true) == isNoise) {
-				midiGroup.appendChild(option(Config.midiPresetToValue(preset), preset.name));
-			}
-		}
-		menu.appendChild(midiGroup);
 		return menu;
 	}
 	
@@ -707,7 +705,7 @@ namespace beepbox {
 				buildOptions(this._instrumentSelect, instrumentList);
 			}
 			
-			this._instrumentSettingsGroup.style.color = this._doc.song.getNoteColorBright(this._doc.channel);
+			this._instrumentSettingsGroup.style.color = this._doc.getNoteColorBright(this._doc.channel);
 			
 			setSelectedValue(this._pitchedPresetSelect, instrument.preset);
 			setSelectedValue(this._drumPresetSelect, instrument.preset);

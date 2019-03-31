@@ -21,6 +21,8 @@ SOFTWARE.
 */
 
 namespace beepbox {
+	export const defaultMidiExpression: number = 0x7F;
+	export const defaultMidiPitchBend: number = 0x2000;
 	
 	export const enum MidiChunkType {
 		header = 0x4D546864, // "MThd" as bytes, big endian

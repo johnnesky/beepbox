@@ -867,7 +867,7 @@ namespace beepbox {
 					for (const note of pattern2.notes) {
 						for (const pitch of note.pitches) {
 							const notePath: SVGPathElement = <SVGPathElement> svgElement("path");
-							notePath.setAttribute("fill", this._doc.song.getNoteColorDim(channel));
+							notePath.setAttribute("fill", this._doc.getNoteColorDim(channel));
 							notePath.setAttribute("pointer-events", "none");
 							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channels[channel].octave * 12);
 							this._svgNoteContainer.appendChild(notePath);
@@ -881,12 +881,12 @@ namespace beepbox {
 					for (let i: number = 0; i < note.pitches.length; i++) {
 						const pitch: number = note.pitches[i];
 						let notePath = <SVGPathElement> svgElement("path");
-						notePath.setAttribute("fill", this._doc.song.getNoteColorDim(this._doc.channel));
+						notePath.setAttribute("fill", this._doc.getNoteColorDim(this._doc.channel));
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
 						notePath = <SVGPathElement> svgElement("path");
-						notePath.setAttribute("fill", this._doc.song.getNoteColorBright(this._doc.channel));
+						notePath.setAttribute("fill", this._doc.getNoteColorBright(this._doc.channel));
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);

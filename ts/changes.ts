@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
+/// <reference path="EditorConfig.ts" />
 /// <reference path="Change.ts" />
 /// <reference path="SongDocument.ts" />
 
@@ -207,7 +208,7 @@ namespace beepbox {
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
 			const oldValue: number = instrument.preset;
 			if (oldValue != newValue) {
-				const preset: Preset | null = Config.valueToPreset(newValue);
+				const preset: Preset | null = EditorConfig.valueToPreset(newValue);
 				if (preset != null) {
 					if (preset.customType != undefined) {
 						instrument.type = preset.customType;
