@@ -322,27 +322,6 @@
 √ Midi import: include partial channels when possible.
 √ Grouped presets by type.
 
-MAJOR REMAINING FEATURES, NEXT RELEASE:
-- Random instrument templates
-- distortion? (how would it affect polyphonic channels?)
-- bar box selection
-
-MAJOR REMAINING FEATURES, MAYBE LATER:
-- PWA, web app for home screen. (is there a requirement for a service worker?)
-- audio worklet thread
-- live input when song is paused
-- live keyboard performance. (make sure piano can play while song is paused?)
-- MIDI live input, live output?
-- "inspire me" random song generator.
-- link shortener
-- embedded player
-- remember recent songs
-- export mp3/ogg and audio buffer
-- tutorial + music theory primer
-- playlist editor
-- translation
-
-
 NEXT RELEASE:
 - Adjust spectrum based on input amplitudes, weighting higher frequencies more, instead of based on the maximum FFT output volume.
 - Balance preset volumes.
@@ -364,6 +343,25 @@ NEXT RELEASE:
 - Maybe support older versions by detecting if the incoming link is version #6 and adding /2.3/ to the url via history.setState(), and otherwise adding /3.0/ via setState. If the loaded page is not the most recent version, there'll be a notice and button at the top to upgrade to the latest version. If I want to improve a branched version 2.3 I can call it 2.3.1 while preserving the URL.
 - Why do prompts sometimes not go away until you move the mouse after importing a song? hmm maybe the problem is the delay between the user action and the navigation action crosses some safety threshold...
 - Before deploying a new version, temporarily deploy the *old* version with a shorter cache expiration, so that the new version can reach people faster. 
+
+MAJOR REMAINING FEATURES:
+- Random instrument templates
+- distortion? (how would it affect polyphonic channels?)
+- bar box selection
+- PWA, web app for home screen. (is there a requirement for a service worker?)
+- audio worklet thread
+- live input when song is paused
+- live keyboard performance. (make sure piano can play while song is paused?)
+- MIDI live input, live output?
+- "inspire me" random song generator.
+- link shortener
+- embedded player
+- remember recent songs
+- export mp3/ogg and audio buffer
+- tutorial + music theory primer
+- playlist editor
+- translation
+
 
 MISC:
 - Add some kind of warning if an error is thrown, it may prevent saving progress.
