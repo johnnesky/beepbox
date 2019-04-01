@@ -2343,7 +2343,7 @@ namespace beepbox {
 						const pointArray: Object[] = [];
 						for (const pin of note.pins) {
 							pointArray.push({
-								tick: pin.time + note.start,
+								tick: (pin.time + note.start) * Config.rhythms[this.rhythm].stepsPerBeat / Config.partsPerBeat,
 								pitchBend: pin.interval,
 								volume: Math.round(pin.volume * 100 / 3),
 							});
@@ -2389,8 +2389,7 @@ namespace beepbox {
 				introBars: this.loopStart,
 				loopBars: this.loopLength,
 				beatsPerBar: this.beatsPerBar,
-				rhythm: Config.rhythms[this.rhythm].stepsPerBeat,
-				ticksPerBeat: Config.partsPerBeat,
+				ticksPerBeat: Config.rhythms[this.rhythm].stepsPerBeat,
 				beatsPerMinute: this.getBeatsPerMinute(), // represents tempo
 				reverb: this.reverb,
 				//outroBars: this.barCount - this.loopStart - this.loopLength; // derive this from bar arrays?
@@ -2447,16 +2446,10 @@ namespace beepbox {
 				this.beatsPerBar = Math.max(Config.beatsPerBarMin, Math.min(Config.beatsPerBarMax, jsonObject.beatsPerBar | 0));
 			}
 			
-			let importedPartsPerBeat: number = Config.partsPerBeat;
+			let importedPartsPerBeat: number = 4;
 			if (jsonObject.ticksPerBeat != undefined) {
-				importedPartsPerBeat = (jsonObject.ticksPerBeat | 0) || Config.partsPerBeat;
+				importedPartsPerBeat = (jsonObject.ticksPerBeat | 0) || 4;
 				this.rhythm = Config.rhythms.findIndex(rhythm=>rhythm.stepsPerBeat==importedPartsPerBeat);
-				if (this.rhythm == -1) {
-					this.rhythm = 1;
-				}
-			}
-			if (jsonObject.rhythm != undefined) {
-				this.rhythm = Config.rhythms.findIndex(rhythm=>rhythm.stepsPerBeat==jsonObject.rhythm);
 				if (this.rhythm == -1) {
 					this.rhythm = 1;
 				}
@@ -2566,7 +2559,7 @@ namespace beepbox {
 									if (pointObject == undefined || pointObject.tick == undefined) continue;
 									const interval: number = (pointObject.pitchBend == undefined) ? 0 : (pointObject.pitchBend | 0);
 									
-									const time: number = Math.round((pointObject.tick | 0) * Config.partsPerBeat / importedPartsPerBeat);
+									const time: number = Math.round((+pointObject.tick) * Config.partsPerBeat / importedPartsPerBeat);
 									
 									const volume: number = (pointObject.volume == undefined) ? 3 : Math.max(0, Math.min(3, Math.round((pointObject.volume | 0) * 3 / 100)));
 								
