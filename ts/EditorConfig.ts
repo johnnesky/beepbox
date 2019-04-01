@@ -259,7 +259,7 @@ namespace beepbox {
 				const category: PresetCategory = EditorConfig.presetCategories[categoryIndex];
 				for (let presetIndex: number = 0; presetIndex < category.presets.length; presetIndex++) {
 					const preset: Preset = category.presets[presetIndex];
-					if (preset.midiProgram == program) return (categoryIndex << 6) + presetIndex;
+					if (preset.generalMidi && preset.midiProgram == program) return (categoryIndex << 6) + presetIndex;
 				}
 			}
 			return null;
