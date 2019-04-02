@@ -843,13 +843,18 @@ namespace beepbox {
 		private _wave: Float32Array | null = null;
 		private _waveIsReady: boolean = false;
 		
-		constructor() {
-			this.reset();
+		constructor(isNoiseChannel: boolean) {
+			this.reset(isNoiseChannel);
 		}
 		
-		public reset(): void {
+		public reset(isNoiseChannel: boolean): void {
 			for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
-				this.spectrum[i] = (i < Config.spectrumControlPointsPerOctave) ? Config.spectrumMax : 0;
+				if (isNoiseChannel) {
+					this.spectrum[i] = Math.round(Config.spectrumMax * (1 / Math.sqrt(1 + i / 3)));
+				} else {
+					const isHarmonic: boolean = i==0 || i==7 || i==11 || i==14 || i==16 || i==18 || i==21 || i==23 || i>=25;
+					this.spectrum[i] = isHarmonic ? Math.max(0, Math.round(Config.spectrumMax * (1 - i / 30))) : 0;
+				}
 			}
 			this._waveIsReady = false;
 		}
@@ -1016,22 +1021,23 @@ namespace beepbox {
 		public feedbackAmplitude: number = 0;
 		public feedbackEnvelope: number = 1;
 		public readonly operators: Operator[] = [];
-		public readonly spectrumWave: SpectrumWave = new SpectrumWave();
+		public readonly spectrumWave: SpectrumWave;
 		public readonly harmonicsWave: HarmonicsWave = new HarmonicsWave();
 		public readonly drumsetEnvelopes: number[] = [];
 		public readonly drumsetSpectrumWaves: SpectrumWave[] = [];
 		
-		constructor() {
+		constructor(isNoiseChannel: boolean) {
+			this.spectrumWave = new SpectrumWave(isNoiseChannel);
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				this.operators[i] = new Operator(i);
 			}
 			for (let i: number = 0; i < Config.drumCount; i++) {
 				this.drumsetEnvelopes[i] = Config.envelopes.dictionary["twang 2"].index;
-				this.drumsetSpectrumWaves[i] = new SpectrumWave();
+				this.drumsetSpectrumWaves[i] = new SpectrumWave(isNoiseChannel);
 			}
 		}
 		
-		public setTypeAndReset(type: InstrumentType): void {
+		public setTypeAndReset(type: InstrumentType, isNoiseChannel: boolean): void {
 			this.type = type;
 			this.preset = type;
 			this.volume = 0;
@@ -1079,13 +1085,13 @@ namespace beepbox {
 					this.filterCutoff = 10;
 					this.filterResonance = 0;
 					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
-					this.spectrumWave.reset();
+					this.spectrumWave.reset(isNoiseChannel);
 					break;
 				case InstrumentType.drumset:
 					this.effects = 0;
 					for (let i: number = 0; i < Config.drumCount; i++) {
 						this.drumsetEnvelopes[i] = Config.envelopes.dictionary["twang 2"].index;
-						this.drumsetSpectrumWaves[i].reset();
+						this.drumsetSpectrumWaves[i].reset(isNoiseChannel);
 					}
 					break;
 				case InstrumentType.harmonics:
@@ -1171,12 +1177,12 @@ namespace beepbox {
 			return instrumentObject;
 		}
 		
-		public fromJsonObject(instrumentObject: any, isDrumChannel: boolean): void {
+		public fromJsonObject(instrumentObject: any, isNoiseChannel: boolean): void {
 			if (instrumentObject == undefined) instrumentObject = {};
 			
 			let type: InstrumentType = Config.instrumentTypeNames.indexOf(instrumentObject.type);
-			if (type == -1) type = isDrumChannel ? InstrumentType.noise : InstrumentType.chip;
-			this.setTypeAndReset(type);
+			if (type == -1) type = isNoiseChannel ? InstrumentType.noise : InstrumentType.chip;
+			this.setTypeAndReset(type, isNoiseChannel);
 			
 			if (instrumentObject.preset != undefined) {
 				this.preset = instrumentObject.preset >>> 0;
@@ -1498,11 +1504,12 @@ namespace beepbox {
 					}
 					channel.patterns.length = this.patternsPerChannel;
 				
+					const isNoiseChannel: boolean = channelIndex >= this.pitchChannelCount;
 					for (let instrument = 0; instrument < this.instrumentsPerChannel; instrument++) {
 						if (channel.instruments.length <= instrument) {
-							channel.instruments[instrument] = new Instrument();
+							channel.instruments[instrument] = new Instrument(isNoiseChannel);
 						}
-						channel.instruments[instrument].setTypeAndReset(channelIndex < this.pitchChannelCount ? InstrumentType.chip : InstrumentType.noise);
+						channel.instruments[instrument].setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel);
 					}
 					channel.instruments.length = this.instrumentsPerChannel;
 				
@@ -1632,10 +1639,10 @@ namespace beepbox {
 			let neededInstrumentBits: number = 0;
 			while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
-				const isDrumChannel: boolean = this.getChannelIsNoise(channel);
-				const octaveOffset: number = isDrumChannel ? 0 : this.channels[channel].octave * 12;
-				let lastPitch: number = (isDrumChannel ? 4 : 12) + octaveOffset;
-				const recentPitches: number[] = isDrumChannel ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+				const isNoiseChannel: boolean = this.getChannelIsNoise(channel);
+				const octaveOffset: number = isNoiseChannel ? 0 : this.channels[channel].octave * 12;
+				let lastPitch: number = (isNoiseChannel ? 4 : 12) + octaveOffset;
+				const recentPitches: number[] = isNoiseChannel ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
 				const recentShapes: string[] = [];
 				for (let i: number = 0; i < recentPitches.length; i++) {
 					recentPitches[i] += octaveOffset;
@@ -1871,13 +1878,14 @@ namespace beepbox {
 					this.instrumentsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					this.instrumentsPerChannel = Math.max(Config.instrumentsPerChannelMin, Math.min(Config.instrumentsPerChannelMax, this.instrumentsPerChannel));
 					for (let channel = 0; channel < this.getChannelCount(); channel++) {
+						const isNoiseChannel: boolean = channel >= this.pitchChannelCount;
 						for (let instrumentIndex = this.channels[channel].instruments.length; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
-							this.channels[channel].instruments[instrumentIndex] = new Instrument();
+							this.channels[channel].instruments[instrumentIndex] = new Instrument(isNoiseChannel);
 						}
 						this.channels[channel].instruments.length = this.instrumentsPerChannel;
 						if (beforeSix) {
 							for (let instrumentIndex = 0; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
-								this.channels[channel].instruments[instrumentIndex].setTypeAndReset(channel < this.pitchChannelCount ? InstrumentType.chip : InstrumentType.noise);
+								this.channels[channel].instruments[instrumentIndex].setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel);
 							}
 						}
 					}
@@ -1899,7 +1907,8 @@ namespace beepbox {
 						instrumentIndexIterator = 0;
 					}
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					instrument.setTypeAndReset(clamp(0, InstrumentType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]));
+					const instrumentType: number = clamp(0, InstrumentType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					instrument.setTypeAndReset(instrumentType, instrumentChannelIterator >= this.pitchChannelCount);
 				} else if (command == SongTagCode.preset) {
 					const presetValue: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].preset = presetValue;
@@ -2191,13 +2200,13 @@ namespace beepbox {
 					let neededInstrumentBits: number = 0;
 					while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
 					while (true) {
-						const isDrumChannel: boolean = this.getChannelIsNoise(channel);
+						const isNoiseChannel: boolean = this.getChannelIsNoise(channel);
 						
-						const octaveOffset: number = isDrumChannel ? 0 : this.channels[channel].octave * 12;
+						const octaveOffset: number = isNoiseChannel ? 0 : this.channels[channel].octave * 12;
 						let note: Note | null = null;
 						let pin: NotePin | null = null;
-						let lastPitch: number = (isDrumChannel ? 4 : 12) + octaveOffset;
-						const recentPitches: number[] = isDrumChannel ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+						let lastPitch: number = (isNoiseChannel ? 4 : 12) + octaveOffset;
+						const recentPitches: number[] = isNoiseChannel ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
 						const recentShapes: any[] = [];
 						for (let i: number = 0; i < recentPitches.length; i++) {
 							recentPitches[i] += octaveOffset;
@@ -2331,7 +2340,7 @@ namespace beepbox {
 			const channelArray: Object[] = [];
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 				const instrumentArray: Object[] = [];
-				const isDrumChannel: boolean = this.getChannelIsNoise(channel);
+				const isNoiseChannel: boolean = this.getChannelIsNoise(channel);
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					instrumentArray.push(this.channels[channel].instruments[i].toJsonObject());
 				}
@@ -2373,7 +2382,7 @@ namespace beepbox {
 				}
 				
 				channelArray.push({
-					type: isDrumChannel ? "drum" : "pitch",
+					type: isNoiseChannel ? "drum" : "pitch",
 					octaveScrollBar: this.channels[channel].octave,
 					instruments: instrumentArray,
 					patterns: patternArray,
@@ -2485,12 +2494,21 @@ namespace beepbox {
 					
 					if (this.channels.length <= channel) this.channels[channel] = new Channel();
 					
+					let isNoiseChannel: boolean = false;
+					if (channelObject.type) {
+						isNoiseChannel = (channelObject.type == "drum");
+					} else {
+						// for older files, assume drums are channel 3.
+						isNoiseChannel = (channel >= 3);
+					}
+					if (isNoiseChannel) noiseChannelCount++; else pitchChannelCount++;
+					
 					if (channelObject.octaveScrollBar != undefined) {
 						this.channels[channel].octave = clamp(0, Config.scrollableOctaves + 1, channelObject.octaveScrollBar | 0);
 					}
 					
 					for (let i: number = this.channels[channel].instruments.length; i < this.instrumentsPerChannel; i++) {
-						this.channels[channel].instruments[i] = new Instrument();
+						this.channels[channel].instruments[i] = new Instrument(isNoiseChannel);
 					}
 					this.channels[channel].instruments.length = this.instrumentsPerChannel;
 					
@@ -2504,18 +2522,9 @@ namespace beepbox {
 					}
 					this.channels[channel].bars.length = this.barCount;
 					
-					let isDrumChannel: boolean = false;
-					if (channelObject.type) {
-						isDrumChannel = (channelObject.type == "drum");
-					} else {
-						// for older files, assume drums are channel 3.
-						isDrumChannel = (channel >= 3);
-					}
-					if (isDrumChannel) noiseChannelCount++; else pitchChannelCount++;
-					
 					for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 						const instrument: Instrument = this.channels[channel].instruments[i];
-						instrument.fromJsonObject(channelObject.instruments[i], isDrumChannel);
+						instrument.fromJsonObject(channelObject.instruments[i], isNoiseChannel);
 					}
 					
 					for (let i: number = 0; i < this.patternsPerChannel; i++) {
@@ -2579,7 +2588,7 @@ namespace beepbox {
 							
 								note.end = note.pins[note.pins.length - 1].time + note.start;
 							
-								const maxPitch: number = isDrumChannel ? Config.drumCount - 1 : Config.maxPitch;
+								const maxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
 								let lowestPitch: number = maxPitch;
 								let highestPitch: number = 0;
 								for (let k: number = 0; k < note.pitches.length; k++) {
@@ -3490,8 +3499,8 @@ namespace beepbox {
 			const instrument: Instrument = tone.instrument;
 			const transition: Transition = instrument.getTransition();
 			const chord: Chord = instrument.getChord();
-			const isDrumChannel: boolean = song.getChannelIsNoise(channel);
-			const intervalScale: number = isDrumChannel ? Config.noiseInterval : 1;
+			const isNoiseChannel: boolean = song.getChannelIsNoise(channel);
+			const intervalScale: number = isNoiseChannel ? Config.noiseInterval : 1;
 			const secondsPerPart: number = Config.ticksPerPart * samplesPerTick / synth.samplesPerSecond;
 			const beatsPerPart: number = 1.0 / Config.partsPerBeat;
 			const toneWasActive: boolean = tone.active;
@@ -3528,7 +3537,7 @@ namespace beepbox {
 			let baseVolume: number;
 			let pitchDamping: number;
 			if (instrument.type == InstrumentType.spectrum) {
-				if (isDrumChannel) {
+				if (isNoiseChannel) {
 					basePitch = Config.spectrumBasePitch;
 					baseVolume = 0.8; // Note: spectrum is louder for drum channels than pitch channels!
 				} else {
