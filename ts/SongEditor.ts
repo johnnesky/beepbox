@@ -56,9 +56,14 @@ namespace beepbox {
 	
 	function buildPresetOptions(isNoise: boolean): HTMLSelectElement {
 		const menu: HTMLSelectElement = select({});
-		const customTypeGroup: HTMLElement = html.element("optgroup", {label: "Custom"});
+		
+		menu.appendChild(html.element("optgroup", {label: "Edit"}, [
+			option("copyInstrument", "Copy Instrument"),
+			option("pasteInstrument", "Paste Instrument"),
+		]));
 		
 		// Show the "spectrum" custom type in both pitched and noise channels.
+		const customTypeGroup: HTMLElement = html.element("optgroup", {label: "Custom"});
 		if (isNoise) {
 			customTypeGroup.appendChild(option(InstrumentType.noise, EditorConfig.valueToPreset(InstrumentType.noise)!.name));
 			customTypeGroup.appendChild(option(InstrumentType.spectrum, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
@@ -166,8 +171,6 @@ namespace beepbox {
 			option("redo", "Redo (Y)"),
 			option("copy", "Copy Pattern Notes (C)"),
 			option("paste", "Paste Pattern Notes (V)"),
-			option("copyInstrument", "Copy Instrument"),
-			option("pasteInstrument", "Paste Instrument"),
 			option("transposeUp", "Shift Notes Up (+)"),
 			option("transposeDown", "Shift Notes Down (-)"),
 			option("detectKey", "Detect Key"),
@@ -972,11 +975,27 @@ namespace beepbox {
 		}
 		
 		private _whenSetPitchedPreset = (): void => {
-			this._doc.record(new ChangePreset(this._doc, parseInt(this._pitchedPresetSelect.value)));
+			this._setPreset(this._pitchedPresetSelect.value);
 		}
 		
 		private _whenSetDrumPreset = (): void => {
-			this._doc.record(new ChangePreset(this._doc, parseInt(this._drumPresetSelect.value)));
+			this._setPreset(this._drumPresetSelect.value);
+		}
+		
+		private _setPreset(preset: string): void {
+			if (isNaN(<number> <unknown> preset)) {
+				switch (preset) {
+					case "copyInstrument":
+						this._copyInstrument();
+						break;
+					case "pasteInstrument":
+						this._pasteInstrument();
+						break;
+				}
+				this._doc.notifier.changed();
+			} else {
+				this._doc.record(new ChangePreset(this._doc, parseInt(preset)));
+			}
 		}
 		
 		private _whenSetFeedbackType = (): void => {
@@ -1062,12 +1081,6 @@ namespace beepbox {
 					break;
 				case "paste":
 					this._paste();
-					break;
-				case "copyInstrument":
-					this._copyInstrument();
-					break;
-				case "pasteInstrument":
-					this._pasteInstrument();
 					break;
 				case "transposeUp":
 					this._transpose(true);

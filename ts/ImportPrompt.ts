@@ -425,7 +425,7 @@ namespace beepbox {
 					
 					const presetValue: number = EditorConfig.nameToPresetValue("standard drumset")!;
 					const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
-					const instrument: Instrument = new Instrument();
+					const instrument: Instrument = new Instrument(false);
 					instrument.fromJsonObject(preset.settings, false);
 					instrument.preset = presetValue;
 					channel.instruments.push(instrument);
@@ -568,14 +568,14 @@ namespace beepbox {
 										// If this is the first time a note is trying to use a specific instrument
 										// program in this channel, create a new BeepBox instrument for it.
 										if (instrumentByProgram[currentProgram] == undefined) {
-											const instrument: Instrument = new Instrument();
+											const instrument: Instrument = new Instrument(isNoiseChannel);
 											instrumentByProgram[currentProgram] = instrument;
 											
 											if (presetValue != null && preset != null && (preset.isNoise == true) == isNoiseChannel) {
-												instrument.fromJsonObject(preset.settings, false);
+												instrument.fromJsonObject(preset.settings, isNoiseChannel);
 												instrument.preset = presetValue;
 											} else {
-												instrument.setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip);
+												instrument.setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel);
 												instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
 											}
 											

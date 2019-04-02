@@ -318,8 +318,8 @@ namespace beepbox {
 						newChannels[channel] = new Channel();
 						newChannels[channel].octave = 2;
 						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) {
-							const instrument: Instrument = new Instrument();
-							instrument.setTypeAndReset(InstrumentType.chip);
+							const instrument: Instrument = new Instrument(false);
+							instrument.setTypeAndReset(InstrumentType.chip, false);
 							newChannels[channel].instruments[j] = instrument;
 						}
 						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
@@ -340,8 +340,8 @@ namespace beepbox {
 						newChannels[channel] = new Channel();
 						newChannels[channel].octave = 0;
 						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) {
-							const instrument: Instrument = new Instrument();
-							instrument.setTypeAndReset(InstrumentType.noise);
+							const instrument: Instrument = new Instrument(true);
+							instrument.setTypeAndReset(InstrumentType.noise, true);
 							newChannels[channel].instruments[j] = instrument;
 						}
 						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
@@ -602,10 +602,10 @@ namespace beepbox {
 					const sampleInstrument: Instrument = doc.song.channels[channel].instruments[doc.song.instrumentsPerChannel - 1];
 					const sampleInstrumentJson: any = sampleInstrument.toJsonObject();
 					for (let j: number = doc.song.instrumentsPerChannel; j < newInstrumentsPerChannel; j++) {
-						const newInstrument: Instrument = new Instrument();
+						const newInstrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channel));
 						if (sampleInstrument.type == InstrumentType.drumset) {
 							// Drumsets are kinda expensive in terms of url length, so don't just copy them willy-nilly.
-							newInstrument.setTypeAndReset(InstrumentType.spectrum);
+							newInstrument.setTypeAndReset(InstrumentType.spectrum, true);
 						} else {
 							newInstrument.fromJsonObject(sampleInstrumentJson, doc.song.getChannelIsNoise(channel));
 						}
@@ -1245,8 +1245,12 @@ namespace beepbox {
 					channel.patterns.push(new Pattern());
 				}
 				while (channel.instruments.length < song.instrumentsPerChannel) {
-					const instrument: Instrument = new Instrument(); 
-					instrument.setTypeAndReset(song.getChannelIsNoise(channelIndex) ? InstrumentType.noise : InstrumentType.chip);
+					const instrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channelIndex)); 
+					if (song.getChannelIsNoise(channelIndex)) {
+						instrument.setTypeAndReset(InstrumentType.noise, true);
+					} else {
+						instrument.setTypeAndReset(InstrumentType.chip, false);
+					}
 					channel.instruments.push(instrument);
 				}
 				channel.bars.length = song.barCount;
