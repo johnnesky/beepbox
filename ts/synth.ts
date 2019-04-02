@@ -3539,7 +3539,7 @@ namespace beepbox {
 				pitchDamping = 36;
 			} else if (instrument.type == InstrumentType.drumset) {
 				basePitch = Config.spectrumBasePitch;
-				baseVolume = 0.3;
+				baseVolume = 0.45;
 				volumeReferencePitch = basePitch;
 				pitchDamping = 24;
 			} else if (instrument.type == InstrumentType.noise) {
