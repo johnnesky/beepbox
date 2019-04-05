@@ -1695,8 +1695,8 @@ namespace beepbox {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
-			if (instrument.noiseWave != newValue) {
-				instrument.noiseWave = newValue;
+			if (instrument.chipNoise != newValue) {
+				instrument.chipNoise = newValue;
 				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
