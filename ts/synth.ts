@@ -90,7 +90,7 @@ namespace beepbox {
 		readonly samples: Float64Array;
 	}
 
-	export interface NoiseWave extends BeepBoxOption {
+	export interface ChipNoise extends BeepBoxOption {
 		readonly volume: number;
 		readonly basePitch: number;
 		readonly pitchFilterMult: number;
@@ -216,7 +216,7 @@ namespace beepbox {
 			{name: "spiky",        volume: 0.4,  samples: Config._centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0])},
 		]);
 		// Noise waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
-		public static readonly noiseWaves: DictionaryArray<NoiseWave> = toNameMap([
+		public static readonly chipNoises: DictionaryArray<ChipNoise> = toNameMap([
 			{name: "retro",   volume: 0.25, basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
 			{name: "white",   volume: 1.0,  basePitch: 69,  pitchFilterMult:    8.0, isSoft: true,  samples: null},
 			// The "clang" and "buzz" noises are based on similar noises in the modded beepbox! :D
@@ -249,9 +249,9 @@ namespace beepbox {
 		]);
 		public static readonly intervals: DictionaryArray<Interval> = toNameMap([
 			{name: "union",      spread: 0.0,  offset: 0.0, volume: 0.7, sign: 1.0},
-			{name: "shimmer",    spread: 0.02, offset: 0.0, volume: 0.8, sign: 1.0},
-			{name: "hum",        spread: 0.05, offset: 0.0, volume: 1.0, sign: 1.0},
-			{name: "honky tonk", spread: 0.1,  offset: 0.0, volume: 1.0, sign: 1.0},
+			{name: "shimmer",    spread: 0.016,offset: 0.0, volume: 0.8, sign: 1.0},
+			{name: "hum",        spread: 0.045,offset: 0.0, volume: 1.0, sign: 1.0},
+			{name: "honky tonk", spread: 0.09, offset: 0.0, volume: 1.0, sign: 1.0},
 			{name: "dissonant",  spread: 0.25, offset: 0.0, volume: 0.9, sign: 1.0},
 			{name: "fifth",      spread: 3.5,  offset: 3.5, volume: 0.9, sign: 1.0},
 			{name: "octave",     spread: 6.0,  offset: 6.0, volume: 0.8, sign: 1.0},
@@ -344,7 +344,7 @@ namespace beepbox {
 			{name: "1→4 2→3",     indices: [ [],  [], [2], [1]]},
 			{name: "1→2→3→4",     indices: [ [], [1], [2], [3]]},
 		]);
-		public static readonly noiseWavelength: number = 1 << 15; // 32768
+		public static readonly chipNoiseLength: number = 1 << 15; // 32768
 		public static readonly spectrumBasePitch: number = 24;
 		public static readonly spectrumControlPoints: number = 30;
 		public static readonly spectrumControlPointsPerOctave: number = 7;
@@ -392,15 +392,15 @@ namespace beepbox {
 		}
 		
 		public static getDrumWave(index: number): Float32Array {
-			let wave: Float32Array | null = Config.noiseWaves[index].samples;
+			let wave: Float32Array | null = Config.chipNoises[index].samples;
 			if (wave == null) {
-				wave = new Float32Array(Config.noiseWavelength + 1);
-				Config.noiseWaves[index].samples = wave;
+				wave = new Float32Array(Config.chipNoiseLength + 1);
+				Config.chipNoises[index].samples = wave;
 				
 				if (index == 0) {
 					// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
 					let drumBuffer: number = 1;
-					for (let i: number = 0; i < Config.noiseWavelength; i++) {
+					for (let i: number = 0; i < Config.chipNoiseLength; i++) {
 						wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
 						let newBuffer: number = drumBuffer >> 1;
 						if (((drumBuffer + newBuffer) & 1) == 1) {
@@ -410,13 +410,13 @@ namespace beepbox {
 					}
 				} else if (index == 1) {
 					// White noise is just random values for each sample.
-					for (let i: number = 0; i < Config.noiseWavelength; i++) {
+					for (let i: number = 0; i < Config.chipNoiseLength; i++) {
 						wave[i] = Math.random() * 2.0 - 1.0;
 					}
 				} else if (index == 2) {
 					// The "clang" drums are inspired by similar drums in the modded beepbox! :D
                     let drumBuffer: number = 1;
-					for (let i: number = 0; i < Config.noiseWavelength; i++) {
+					for (let i: number = 0; i < Config.chipNoiseLength; i++) {
                         wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
 						let newBuffer: number = drumBuffer >> 1;
                         if (((drumBuffer + newBuffer) & 1) == 1) {
@@ -427,7 +427,7 @@ namespace beepbox {
                 } else if (index == 3) {
 					// The "buzz" drums are inspired by similar drums in the modded beepbox! :D
                     let drumBuffer: number = 1;
-					for (let i: number = 0; i < Config.noiseWavelength; i++) {
+					for (let i: number = 0; i < Config.chipNoiseLength; i++) {
                         wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
 						let newBuffer: number = drumBuffer >> 1;
                         if (((drumBuffer + newBuffer) & 1) == 1) {
@@ -439,13 +439,13 @@ namespace beepbox {
 					// "hollow" drums, designed in frequency space and then converted via FFT:
 					Config.drawNoiseSpectrum(wave, 10, 11, 1, 1, 0);
 					Config.drawNoiseSpectrum(wave, 11, 14, .6578, .6578, 0);
-					inverseRealFourierTransform(wave, Config.noiseWavelength);
-					scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.noiseWavelength));
+					inverseRealFourierTransform(wave, Config.chipNoiseLength);
+					scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
 				} else {
 					throw new Error("Unrecognized drum index: " + index);
 				}
 				
-				wave[Config.noiseWavelength] = wave[0];
+				wave[Config.chipNoiseLength] = wave[0];
 			}
 			
 			return wave;
@@ -455,7 +455,7 @@ namespace beepbox {
 			const referenceOctave: number = 11;
 			const referenceIndex: number = 1 << referenceOctave;
 			const lowIndex: number = Math.pow(2, lowOctave) | 0;
-			const highIndex: number = Math.min(Config.noiseWavelength >> 1, Math.pow(2, highOctave) | 0);
+			const highIndex: number = Math.min(Config.chipNoiseLength >> 1, Math.pow(2, highOctave) | 0);
 			const retroWave: Float32Array = Config.getDrumWave(0);
 			for (let i: number = lowIndex; i < highIndex; i++) {
 				
@@ -478,7 +478,7 @@ namespace beepbox {
 				
 				
 				wave[i] = Math.cos(radians) * amplitude;
-				wave[Config.noiseWavelength - i] = Math.sin(radians) * amplitude;
+				wave[Config.chipNoiseLength - i] = Math.sin(radians) * amplitude;
 			}
 		}
 		
@@ -865,7 +865,7 @@ namespace beepbox {
 		
 		public getCustomWave(lowestOctave: number): Float32Array {
 			if (!this._waveIsReady || this._wave == null) {
-				let waveLength: number = Config.noiseWavelength;
+				let waveLength: number = Config.chipNoiseLength;
 				
 				if (this._wave == null || this._wave.length != waveLength + 1) {
 					this._wave = new Float32Array(waveLength + 1);
@@ -1006,7 +1006,7 @@ namespace beepbox {
 		public type: InstrumentType = InstrumentType.chip;
 		public preset: number = 0;
 		public chipWave: number = 2;
-		public noiseWave: number = 1;
+		public chipNoise: number = 1;
 		public filterCutoff: number = 6;
 		public filterResonance: number = 0;
 		public filterEnvelope: number = 1;
@@ -1070,7 +1070,7 @@ namespace beepbox {
 					}
 					break;
 				case InstrumentType.noise:
-					this.noiseWave = 1;
+					this.chipNoise = 1;
 					this.transition = 1;
 					this.effects = 0;
 					this.chord = 2;
@@ -1130,7 +1130,7 @@ namespace beepbox {
 			}
 			
 			if (this.type == InstrumentType.noise) {
-				instrumentObject.wave = Config.noiseWaves[this.noiseWave].name;
+				instrumentObject.wave = Config.chipNoises[this.chipNoise].name;
 			} else if (this.type == InstrumentType.spectrum) {
 				instrumentObject.spectrum = [];
 				for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
@@ -1229,8 +1229,8 @@ namespace beepbox {
 			
 			const legacyEffectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy"];
 			if (this.type == InstrumentType.noise) {
-				this.noiseWave = Config.noiseWaves.findIndex(wave=>wave.name==instrumentObject.wave);
-				if (this.noiseWave == -1) this.noiseWave = 1;
+				this.chipNoise = Config.chipNoises.findIndex(wave=>wave.name==instrumentObject.wave);
+				if (this.chipNoise == -1) this.chipNoise = 1;
 
 				this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject.chord);
 				if (this.chord == -1) this.chord = 2;
@@ -1372,7 +1372,7 @@ namespace beepbox {
 		
 		public warmUp(): void {
 			if (this.type == InstrumentType.noise) {
-				Config.getDrumWave(this.noiseWave);
+				Config.getDrumWave(this.chipNoise);
 			} else if (this.type == InstrumentType.harmonics) {
 				this.harmonicsWave.getCustomWave();
 			} else if (this.type == InstrumentType.spectrum) {
@@ -1386,7 +1386,7 @@ namespace beepbox {
 		
 		public getDrumWave(): Float32Array {
 			if (this.type == InstrumentType.noise) {
-				return Config.getDrumWave(this.noiseWave);
+				return Config.getDrumWave(this.chipNoise);
 			} else if (this.type == InstrumentType.spectrum) {
 				return this.spectrumWave.getCustomWave(8);
 			} else {
@@ -1587,7 +1587,7 @@ namespace beepbox {
 							buffer.push(base64IntToCharCode[instrument.operators[o].envelope]);
 						}
 					} else if (instrument.type == InstrumentType.noise) {
-						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.noiseWave]);
+						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipNoise]);
 					} else if (instrument.type == InstrumentType.spectrum) {
 						buffer.push(SongTagCode.spectrum);
 						const spectrumBits: BitFieldWriter = new BitFieldWriter();
@@ -1800,7 +1800,7 @@ namespace beepbox {
 			if (beforeThree) {
 				// Originally, the only instrument transition was "seamless" and the only drum wave was "retro".
 				for (const channel of this.channels) channel.instruments[0].transition = 0;
-				this.channels[3].instruments[0].noiseWave = 0;
+				this.channels[3].instruments[0].chipNoise = 0;
 			}
 			
 			let instrumentChannelIterator: number = 0;
@@ -1922,7 +1922,7 @@ namespace beepbox {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 								if (channel >= this.pitchChannelCount) {
-									this.channels[channel].instruments[i].noiseWave = clamp(0, Config.noiseWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+									this.channels[channel].instruments[i].chipNoise = clamp(0, Config.chipNoises.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 								} else {
 									this.channels[channel].instruments[i].chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
 								}
@@ -1931,13 +1931,13 @@ namespace beepbox {
 					} else if (beforeSeven) {
 						const legacyWaves: number[] = [1, 2, 4, 6, 9, 10, 11, 12, 0];
 						if (instrumentChannelIterator >= this.pitchChannelCount) {
-							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].noiseWave = clamp(0, Config.noiseWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chipNoise = clamp(0, Config.chipNoises.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						} else {
 							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
 						}
 					} else {
 						if (instrumentChannelIterator >= this.pitchChannelCount) {
-							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].noiseWave = clamp(0, Config.noiseWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chipNoise = clamp(0, Config.chipNoises.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						} else {
 							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chipWave = clamp(0, Config.chipWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						}
@@ -3552,10 +3552,10 @@ namespace beepbox {
 				volumeReferencePitch = basePitch;
 				pitchDamping = 24;
 			} else if (instrument.type == InstrumentType.noise) {
-				basePitch = Config.noiseWaves[instrument.noiseWave].basePitch;
+				basePitch = Config.chipNoises[instrument.chipNoise].basePitch;
 				baseVolume = 0.19;
 				volumeReferencePitch = basePitch;
-				pitchDamping = Config.noiseWaves[instrument.noiseWave].isSoft ? 24.0 : 60.0;
+				pitchDamping = Config.chipNoises[instrument.chipNoise].isSoft ? 24.0 : 60.0;
 			} else if (instrument.type == InstrumentType.fm) {
 				basePitch = Config.keys[song.key].basePitch;
 				baseVolume = 0.03;
@@ -3872,7 +3872,7 @@ namespace beepbox {
 				const pitchVolumeEnd: number   = Math.pow(2.0,   -(endPitch - volumeReferencePitch) / pitchDamping);
 				let settingsVolumeMult: number = baseVolume * filterVolume;
 				if (instrument.type == InstrumentType.noise) {
-					settingsVolumeMult *= Config.noiseWaves[instrument.noiseWave].volume;
+					settingsVolumeMult *= Config.chipNoises[instrument.chipNoise].volume;
 				}
 				if (instrument.type == InstrumentType.chip) {
 					settingsVolumeMult *= Config.chipWaves[instrument.chipWave].volume;
@@ -4208,10 +4208,10 @@ namespace beepbox {
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
-			let phase: number = (tone.phases[0] % 1) * Config.noiseWavelength;
+			let phase: number = (tone.phases[0] % 1) * Config.chipNoiseLength;
 			if (tone.phases[0] == 0) {
 				// Zero phase means the tone was reset, just give noise a random start phase instead.
-				phase = Math.random() * Config.noiseWavelength;
+				phase = Math.random() * Config.chipNoiseLength;
 			}
 			let sample: number = +tone.sample;
 			
@@ -4223,7 +4223,7 @@ namespace beepbox {
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 			
-			const pitchRelativefilter: number = Math.min(1.0, tone.phaseDeltas[0] * Config.noiseWaves[instrument.noiseWave].pitchFilterMult);
+			const pitchRelativefilter: number = Math.min(1.0, tone.phaseDeltas[0] * Config.chipNoises[instrument.chipNoise].pitchFilterMult);
 			
 			const stopIndex: number = bufferIndex + runLength;
 			
@@ -4245,7 +4245,7 @@ namespace beepbox {
 				bufferIndex++;
 			}
 			
-			tone.phases[0] = phase / Config.noiseWavelength;
+			tone.phases[0] = phase / Config.chipNoiseLength;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
@@ -4270,7 +4270,7 @@ namespace beepbox {
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 			
-			let phase: number = (tone.phases[0] % 1) * Config.noiseWavelength;
+			let phase: number = (tone.phases[0] % 1) * Config.chipNoiseLength;
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
 			if (tone.phases[0] == 0) phase = Synth.findRandomZeroCrossing(wave) + phaseDelta;
 			
@@ -4299,7 +4299,7 @@ namespace beepbox {
 				bufferIndex++;
 			}
 			
-			tone.phases[0] = phase / Config.noiseWavelength;
+			tone.phases[0] = phase / Config.chipNoiseLength;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
@@ -4324,7 +4324,7 @@ namespace beepbox {
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 			
-			let phase: number = (tone.phases[0] % 1) * Config.noiseWavelength;
+			let phase: number = (tone.phases[0] % 1) * Config.chipNoiseLength;
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
 			if (tone.phases[0] == 0) phase = Synth.findRandomZeroCrossing(wave) + phaseDelta;
 			
@@ -4349,7 +4349,7 @@ namespace beepbox {
 				bufferIndex++;
 			}
 			
-			tone.phases[0] = phase / Config.noiseWavelength;
+			tone.phases[0] = phase / Config.chipNoiseLength;
 			tone.sample = sample;
 			
 			const epsilon: number = (1.0e-24);
@@ -4360,7 +4360,7 @@ namespace beepbox {
 		}
 		
 		private static findRandomZeroCrossing(wave: Float32Array): number {
-			let phase: number = Math.random() * Config.noiseWavelength;
+			let phase: number = Math.random() * Config.chipNoiseLength;
 			
 			// Spectrum and drumset waves sounds best when they start at a zero crossing,
 			// otherwise they pop. Try to find a zero crossing.
@@ -4382,7 +4382,7 @@ namespace beepbox {
 							if (Math.abs(slope) > 0.00000001) {
 								phase += -wavePrev / slope;
 							}
-							phase = Math.max(0, phase) % Config.noiseWavelength;
+							phase = Math.max(0, phase) % Config.chipNoiseLength;
 							break;
 						} else {
 							indexPrev = innerIndexNext;
