@@ -416,9 +416,10 @@ namespace beepbox {
 				if (this._wave == null || this._wave.length != waveLength + 1) {
 					this._wave = new Float32Array(waveLength + 1);
 				}
+				const wave: Float32Array = this._wave;
 				
 				for (let i: number = 0; i < waveLength; i++) {
-					this._wave[i] = 0;
+					wave[i] = 0;
 				}
 				
 				const highestOctave: number = 14;
@@ -429,6 +430,7 @@ namespace beepbox {
 					return lowestOctave + Math.floor(point / Config.spectrumControlPointsPerOctave) + pitchTweak[(point + Config.spectrumControlPointsPerOctave) % Config.spectrumControlPointsPerOctave];
 				}
 				
+				let combinedAmplitude: number = 1;
 				for (let i: number = 0; i < Config.spectrumControlPoints + 1; i++) {
 					const value1: number = (i <= 0) ? 0 : this.spectrum[i - 1];
 					const value2: number = (i >= Config.spectrumControlPoints) ? this.spectrum[Config.spectrumControlPoints - 1] : this.spectrum[i];
@@ -437,28 +439,17 @@ namespace beepbox {
 					if (i >= Config.spectrumControlPoints) octave2 = highestOctave + (octave2 - highestOctave) * falloffRatio;
 					if (value1 == 0 && value2 == 0) continue;
 					
-					Config.drawNoiseSpectrum(this._wave, octave1, octave2, value1 / Config.spectrumMax, value2 / Config.spectrumMax, -0.5);
+					combinedAmplitude += 0.02 * Config.drawNoiseSpectrum(wave, octave1, octave2, value1 / Config.spectrumMax, value2 / Config.spectrumMax, -0.5);
 				}
 				if (this.spectrum[Config.spectrumControlPoints - 1] > 0) {
-					Config.drawNoiseSpectrum(this._wave, highestOctave + (controlPointToOctave(Config.spectrumControlPoints) - highestOctave) * falloffRatio, highestOctave, this.spectrum[Config.spectrumControlPoints - 1] / Config.spectrumMax, 0, -0.5);
+					combinedAmplitude += 0.02 * Config.drawNoiseSpectrum(wave, highestOctave + (controlPointToOctave(Config.spectrumControlPoints) - highestOctave) * falloffRatio, highestOctave, this.spectrum[Config.spectrumControlPoints - 1] / Config.spectrumMax, 0, -0.5);
 				}
 				
-				inverseRealFourierTransform(this._wave, waveLength);
-				scaleElementsByFactor(this._wave, 1.0 / Math.sqrt(waveLength));
-				
-				// Limit the maximum wave amplitude.
-				let max: number = 0;
-				for (let i: number = 0; i < waveLength; i++) {
-					const sample: number = this._wave[i];
-					if (sample > max || -sample > max) max = Math.abs(sample);
-				}
-				const mult: number = 1 / Math.max(1, Math.sqrt(max));
-				for (let i: number = 0; i < waveLength; i++) {
-					this._wave[i] *= mult;
-				}
+				inverseRealFourierTransform(wave, waveLength);
+				scaleElementsByFactor(wave, 5.0 / (Math.sqrt(waveLength) * Math.pow(combinedAmplitude, 0.75)));
 				
 				// Duplicate the first sample at the end for easier wrap-around interpolation.
-				this._wave[waveLength] = this._wave[0];
+				wave[waveLength] = wave[0];
 				
 				this._waveIsReady = true;
 			}
@@ -529,7 +520,7 @@ namespace beepbox {
 				inverseRealFourierTransform(wave, waveLength);
 				
 				// Limit the maximum wave amplitude.
-				const mult: number = 1 / Math.pow(combinedControlPointAmplitude, 0.75);
+				const mult: number = 1 / Math.pow(combinedControlPointAmplitude, 0.7);
 				
 				// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
 				let cumulative: number = 0;
@@ -3085,18 +3076,18 @@ namespace beepbox {
 			if (instrument.type == InstrumentType.spectrum) {
 				if (isNoiseChannel) {
 					basePitch = Config.spectrumBasePitch;
-					baseVolume = 0.8; // Note: spectrum is louder for drum channels than pitch channels!
+					baseVolume = 0.5; // Note: spectrum is louder for drum channels than pitch channels!
 				} else {
 					basePitch = Config.keys[song.key].basePitch;
-					baseVolume = 0.6;
+					baseVolume = 0.2;
 				}
 				volumeReferencePitch = Config.spectrumBasePitch;
 				pitchDamping = 36;
 			} else if (instrument.type == InstrumentType.drumset) {
 				basePitch = Config.spectrumBasePitch;
-				baseVolume = 0.45;
+				baseVolume = 0.5;
 				volumeReferencePitch = basePitch;
-				pitchDamping = 24;
+				pitchDamping = 36;
 			} else if (instrument.type == InstrumentType.noise) {
 				basePitch = Config.chipNoises[instrument.chipNoise].basePitch;
 				baseVolume = 0.19;

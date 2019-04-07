@@ -24,6 +24,9 @@ namespace beepbox {
 	// These will be defined in FFT.ts, but I want SynthConfig.ts to be the first import so I won't directly depend on FFT here. synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
 	declare function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
 	declare function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
+}
+
+namespace beepbox {
 	
 	export interface Dictionary<T> {
 		[K: string]: T;
@@ -440,14 +443,14 @@ namespace beepbox {
 			return wave;
 		}
 		
-		public static drawNoiseSpectrum(wave: Float32Array, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overallSlope: number): void {
+		public static drawNoiseSpectrum(wave: Float32Array, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overallSlope: number): number {
 			const referenceOctave: number = 11;
 			const referenceIndex: number = 1 << referenceOctave;
 			const lowIndex: number = Math.pow(2, lowOctave) | 0;
 			const highIndex: number = Math.min(Config.chipNoiseLength >> 1, Math.pow(2, highOctave) | 0);
 			const retroWave: Float32Array = Config.getDrumWave(0);
+			let combinedAmplitude: number = 0.0;
 			for (let i: number = lowIndex; i < highIndex; i++) {
-				
 				
 				let lerped: number = lowPower + (highPower - lowPower) * (Math.log(i) / Math.LN2 - lowOctave) / (highOctave - lowOctave);
 				//let amplitude: number = Math.pow(2, lerped);
@@ -455,6 +458,8 @@ namespace beepbox {
 				let amplitude: number = Math.pow(2, (lerped-1)*Config.spectrumMax + 1) * lerped;
 				
 				amplitude *= Math.pow(i / referenceIndex, overallSlope);
+				
+				combinedAmplitude += amplitude;
 				
 				// Add two different sources of psuedo-randomness to the noise
 				// (individually they aren't random enough) but in a deterministic
@@ -465,10 +470,11 @@ namespace beepbox {
 				amplitude *= retroWave[i];
 				const radians: number = 0.61803398875 * i * i * Math.PI * 2.0;
 				
-				
 				wave[i] = Math.cos(radians) * amplitude;
 				wave[Config.chipNoiseLength - i] = Math.sin(radians) * amplitude;
 			}
+			
+			return combinedAmplitude;
 		}
 		
 		private static generateSineWave(): Float64Array {
