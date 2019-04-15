@@ -21,7 +21,9 @@ SOFTWARE.
 */
 
 namespace beepbox {
-	// These will be defined in FFT.ts, but I want SynthConfig.ts to be the first import so I won't directly depend on FFT here. synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
+	// These will be defined in FFT.ts, but I want SynthConfig.ts to be at the
+	// of the compiled JS so I won't directly depend on FFT here.
+	// synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
 	declare function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
 	declare function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
 }
@@ -54,6 +56,7 @@ namespace beepbox {
 		spectrum = 3,
 		drumset = 4,
 		harmonics = 5,
+		pwm = 6,
 		length,
 	}
 	
@@ -116,7 +119,7 @@ namespace beepbox {
 		readonly harmonizes: boolean;
 		readonly customInterval: boolean;
 		readonly arpeggiates: boolean;
-		readonly allowedForNoise: boolean;
+		readonly isCustomInterval: boolean;
 		readonly strumParts: number;
 	}
 
@@ -191,17 +194,14 @@ namespace beepbox {
 			{name: "÷8",            stepsPerBeat: 8, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]]},
 		]);
 		
-		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics"];
+		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM"];
+		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false];
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
 			{name: "rounded",      volume: 0.94, samples: Config._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
 			{name: "triangle",     volume: 1.0,  samples: Config._centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0])},
 			{name: "square",       volume: 0.5,  samples: Config._centerWave([1.0, -1.0])},
-			{name: "1/3 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0])},
 			{name: "1/4 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0])},
-			{name: "1/6 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
 			{name: "1/8 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "1/12 pulse",   volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "1/16 pulse",   volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
 			{name: "sawtooth",     volume: 0.65, samples: Config._centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0])},
 			{name: "double saw",   volume: 0.5,  samples: Config._centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2])},
 			{name: "double pulse", volume: 0.4,  samples: Config._centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0])},
@@ -253,10 +253,10 @@ namespace beepbox {
 		public static readonly volumeRange: number = 6;
 		public static readonly volumeLogScale: number = -0.5;
 		public static readonly chords: DictionaryArray<Chord> = toNameMap([
-			{name: "harmony",         harmonizes:  true, customInterval: false, arpeggiates: false, allowedForNoise:  true, strumParts: 0},
-			{name: "strum",           harmonizes:  true, customInterval: false, arpeggiates: false, allowedForNoise:  true, strumParts: 1},
-			{name: "arpeggio",        harmonizes: false, customInterval: false, arpeggiates:  true, allowedForNoise:  true, strumParts: 0},
-			{name: "custom interval", harmonizes:  true, customInterval:  true, arpeggiates:  true, allowedForNoise: false, strumParts: 0},
+			{name: "harmony",         harmonizes:  true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 0},
+			{name: "strum",           harmonizes:  true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 1},
+			{name: "arpeggio",        harmonizes: false, customInterval: false, arpeggiates:  true, isCustomInterval: false, strumParts: 0},
+			{name: "custom interval", harmonizes:  true, customInterval:  true, arpeggiates:  true, isCustomInterval:  true, strumParts: 0},
 		]);
 		public static readonly operatorCount: number = 4;
 		public static readonly algorithms: DictionaryArray<Algorithm> = toNameMap([
@@ -347,6 +347,7 @@ namespace beepbox {
 		public static readonly harmonicsControlPointBits: number = 3;
 		public static readonly harmonicsMax: number = 7;
 		public static readonly harmonicsWavelength: number = 1 << 11; // 2048
+		public static readonly pulseWidthRange: number = 8;
 		public static readonly pitchChannelCountMin: number = 1;
 		public static readonly pitchChannelCountMax: number = 6;
 		public static readonly noiseChannelCountMin: number = 0;

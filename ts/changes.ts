@@ -212,6 +212,9 @@ namespace beepbox {
 				if (preset != null) {
 					if (preset.customType != undefined) {
 						instrument.type = preset.customType;
+						if (!Config.instrumentTypeHasSpecialInterval[instrument.type] && Config.chords[instrument.chord].isCustomInterval) {
+							instrument.chord = 0;
+						}
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
 						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel));
@@ -474,6 +477,29 @@ namespace beepbox {
 		}
 	}
 	
+	export class ChangePulseWidth extends ChangeInstrumentSlider {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super(doc);
+			this._instrument.pulseWidth = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangePulseEnvelope extends Change {
+		constructor(doc: SongDocument, newValue: number) {
+			super();
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.pulseEnvelope;
+			if (oldValue != newValue) {
+				instrument.pulseEnvelope = newValue;
+				instrument.preset = instrument.type;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
 	export class ChangeFilterCutoff extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
@@ -708,13 +734,13 @@ namespace beepbox {
 			
 			pattern.notes.length = 0;
 			for (const noteObject of notes) {
-				const note: Note = new Note(noteObject.pitches[0], noteObject.start, noteObject.end, noteObject.pins[0].volume, false);
+				const note: Note = new Note(noteObject["pitches"][0], noteObject["start"], noteObject["end"], noteObject["pins"][0]["volume"], false);
 				note.pitches.length = 0;
-				for (const pitch of noteObject.pitches) {
+				for (const pitch of noteObject["pitches"]) {
 					note.pitches.push(pitch);
 				}
 				note.pins.length = 0;
-				for (const pin of noteObject.pins) {
+				for (const pin of noteObject["pins"]) {
 					note.pins.push(makeNotePin(pin.interval, pin.time, pin.volume));
 				}
 				pattern.notes.push(note);
@@ -741,7 +767,7 @@ namespace beepbox {
 	export class ChangePasteInstrument extends ChangeGroup {
 		constructor(doc: SongDocument, instrument: Instrument, instrumentCopy: any) {
 			super();
-			instrument.fromJsonObject(instrumentCopy, instrumentCopy.isDrum);
+			instrument.fromJsonObject(instrumentCopy, instrumentCopy["isDrum"]);
 			doc.notifier.changed();
 			this._didSomething();
 		}
