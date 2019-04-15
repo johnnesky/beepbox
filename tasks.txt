@@ -321,6 +321,7 @@
 √ Harmonics instruments!
 √ Midi import: include partial channels when possible.
 √ Grouped presets by type.
+√ Pulse width modulation! :D
 
 NEXT RELEASE:
 - Adjust spectrum based on input amplitudes, weighting higher frequencies more, instead of based on the maximum FFT output volume.

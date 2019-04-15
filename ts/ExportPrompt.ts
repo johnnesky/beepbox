@@ -477,6 +477,8 @@ namespace beepbox {
 										if (filterInstruments.length > instrument.chipWave) {
 											instrumentProgram = filterInstruments[instrument.chipWave];
 										}
+									} else if (instrument.type == InstrumentType.pwm) {
+										instrumentProgram = instrumentDecays ? 0x19 : 81; // steel guitar : sawtooth
 									} else if (instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics) {
 										instrumentProgram = instrumentDecays ? 2 : 81; // electric grand : sawtooth
 									} else {
