@@ -1664,15 +1664,27 @@ namespace beepbox {
 				} else if (command == SongTagCode.volume) {
 					if (beforeThree) {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channels[channel].instruments[0].volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						const instrument: Instrument = this.channels[channel].instruments[0];
+						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						// legacy mute value:
+						if (instrument.volume == 5) instrument.volume = Config.volumeRange;
 					} else if (beforeSix) {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								this.channels[channel].instruments[i].volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								const instrument: Instrument = this.channels[channel].instruments[i];
+								instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								// legacy mute value:
+								if (instrument.volume == 5) instrument.volume = Config.volumeRange;
 							}
 						}
+					} else if (beforeSeven) {
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						// legacy mute value:
+						if (instrument.volume == 5) instrument.volume = Config.volumeRange;
 					} else {
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				} else if (command == SongTagCode.algorithm) {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].algorithm = clamp(0, Config.algorithms.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -2250,6 +2262,7 @@ namespace beepbox {
 		public instrument: Instrument;
 		public readonly pitches: number[] = [0, 0, 0, 0];
 		public pitchCount: number = 0;
+		public chordSize: number = 0;
 		public drumsetPitch: number = 0;
 		public note: Note | null = null;
 		public prevNote: Note | null = null;
@@ -2279,8 +2292,8 @@ namespace beepbox {
 		public filterSample0: number = 0.0;
 		public filterSample1: number = 0.0;
 		public vibratoScale: number = 0.0;
-		public harmonyMult: number = 0.0;
-		public harmonyVolumeMult: number = 1.0;
+		public intervalMult: number = 0.0;
+		public intervalVolumeMult: number = 1.0;
 		public feedbackOutputs: number[] = [];
 		public feedbackMult: number = 0.0;
 		public feedbackDelta: number = 0.0;
@@ -2901,6 +2914,7 @@ namespace beepbox {
 
 		private determineLiveInputTones(song: Song): void {
 			if (this.liveInputPressed) {
+				// TODO: Support multiple live pitches correctly. Distinguish between arpeggio and harmony behavior like with song notes.
 				const instrument: Instrument = song.channels[this.liveInputChannel].instruments[song.getPatternInstrument(this.liveInputChannel, this.bar)];
 				
 				let tone: Tone;
@@ -2920,6 +2934,7 @@ namespace beepbox {
 					tone.pitches[i] = this.liveInputPitches[i];
 				}
 				tone.pitchCount = this.liveInputPitches.length;
+				tone.chordSize = 1;
 				tone.instrument = instrument;
 				tone.note = tone.prevNote = tone.nextNote = null;
 			} else {
@@ -2983,6 +2998,7 @@ namespace beepbox {
 					tone.pitches[i] = pitches[i];
 				}
 				tone.pitchCount = pitches.length;
+				tone.chordSize = 1;
 				tone.instrument = instrument;
 				tone.note = note;
 				tone.noteStart = note.start;
@@ -3028,6 +3044,7 @@ namespace beepbox {
 
 					tone.pitches[0] = noteForThisTone.pitches[i];
 					tone.pitchCount = 1;
+					tone.chordSize = noteForThisTone.pitches.length;
 					tone.instrument = instrument;
 					tone.note = noteForThisTone;
 					tone.noteStart = noteStart;
@@ -3060,12 +3077,9 @@ namespace beepbox {
 				case EnvelopeType.custom: return customVolume;
 				case EnvelopeType.steady: return 1.0;
 				case EnvelopeType.twang:
-					let curve: number = 1.0 / (1.0 + time * envelope.speed);
-					if (envelope.inverted) {
-						return 1.0 - curve;
-					} else {
-						return curve;
-					}
+					return 1.0 / (1.0 + time * envelope.speed);
+				case EnvelopeType.swell:
+					return 1.0 - 1.0 / (1.0 + time * envelope.speed);
 				case EnvelopeType.tremolo: 
 					return 0.5 - Math.cos(beats * 2.0 * Math.PI * envelope.speed) * 0.5;
 				case EnvelopeType.tremolo2: 
@@ -3082,10 +3096,15 @@ namespace beepbox {
 			}
 		}
 		
+		private static computeChordVolume(chordSize: number): number {
+			return 1.0 / ((chordSize - 1) * 0.25 + 1.0);
+		}
+		
 		private static computeTone(synth: Synth, song: Song, channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
 			const instrument: Instrument = tone.instrument;
 			const transition: Transition = instrument.getTransition();
 			const chord: Chord = instrument.getChord();
+			const chordVolume: number = chord.arpeggiates ? 1 : Synth.computeChordVolume(tone.chordSize);
 			const isNoiseChannel: boolean = song.getChannelIsNoise(channel);
 			const intervalScale: number = isNoiseChannel ? Config.noiseInterval : 1;
 			const secondsPerPart: number = Config.ticksPerPart * samplesPerTick / synth.samplesPerSecond;
@@ -3104,8 +3123,8 @@ namespace beepbox {
 			tone.filter = 1.0;
 			tone.filterScale = 1.0;
 			tone.vibratoScale = 0.0;
-			tone.harmonyMult = 1.0;
-			tone.harmonyVolumeMult = 1.0;
+			tone.intervalMult = 1.0;
+			tone.intervalVolumeMult = 1.0;
 			tone.active = false;
 			
 			let resetPhases: boolean = true;
@@ -3114,6 +3133,8 @@ namespace beepbox {
 			let intervalEnd: number = 0.0;
 			let transitionVolumeStart: number = 1.0;
 			let transitionVolumeEnd: number = 1.0;
+			let chordVolumeStart: number = chordVolume;
+			let chordVolumeEnd:   number = chordVolume;
 			let customVolumeStart: number = 0.0;
 			let customVolumeEnd: number = 0.0;
 			let decayTimeStart: number = 0.0;
@@ -3126,18 +3147,18 @@ namespace beepbox {
 			if (instrument.type == InstrumentType.spectrum) {
 				if (isNoiseChannel) {
 					basePitch = Config.spectrumBasePitch;
-					baseVolume = 0.5; // Note: spectrum is louder for drum channels than pitch channels!
+					baseVolume = 0.6; // Note: spectrum is louder for drum channels than pitch channels!
 				} else {
 					basePitch = Config.keys[song.key].basePitch;
-					baseVolume = 0.2;
+					baseVolume = 0.3;
 				}
 				volumeReferencePitch = Config.spectrumBasePitch;
-				pitchDamping = 36;
+				pitchDamping = 28;
 			} else if (instrument.type == InstrumentType.drumset) {
 				basePitch = Config.spectrumBasePitch;
-				baseVolume = 0.5;
+				baseVolume = 0.45;
 				volumeReferencePitch = basePitch;
-				pitchDamping = 36;
+				pitchDamping = 48;
 			} else if (instrument.type == InstrumentType.noise) {
 				basePitch = Config.chipNoises[instrument.chipNoise].basePitch;
 				baseVolume = 0.19;
@@ -3182,10 +3203,8 @@ namespace beepbox {
 				const toneTransition: Transition = tone.instrument.getTransition();
 				resetPhases = false;
 				partsSinceStart = Math.floor(ticksSoFar / Config.ticksPerPart);
-				intervalStart = tone.lastInterval;
-				intervalEnd   = tone.lastInterval;
-				customVolumeStart = Synth.expressionToVolumeMult(tone.lastVolume);
-				customVolumeEnd   = Synth.expressionToVolumeMult(tone.lastVolume);
+				intervalStart = intervalEnd = tone.lastInterval;
+				customVolumeStart = customVolumeEnd = Synth.expressionToVolumeMult(tone.lastVolume);
 				transitionVolumeStart = Synth.expressionToVolumeMult((1.0 - startTicksSinceReleased / toneTransition.releaseTicks) * 3.0);
 				transitionVolumeEnd   = Synth.expressionToVolumeMult((1.0 - endTicksSinceReleased / toneTransition.releaseTicks) * 3.0);
 				decayTimeStart = startTick / Config.ticksPerPart;
@@ -3202,7 +3221,7 @@ namespace beepbox {
 				tone.lastVolume = 3;
 				tone.ticksSinceReleased = 0;
 				resetPhases = false;
-
+				
 				const heldTicksStart: number = tone.liveInputSamplesHeld / samplesPerTick;
 				tone.liveInputSamplesHeld += runLength;
 				const heldTicksEnd: number = tone.liveInputSamplesHeld / samplesPerTick;
@@ -3251,6 +3270,8 @@ namespace beepbox {
 				let customVolumeTickEnd:   number = startPin.volume + (endPin.volume - startPin.volume) * pinRatioEnd;
 				let transitionVolumeTickStart: number = 1.0;
 				let transitionVolumeTickEnd:   number = 1.0;
+				let chordVolumeTickStart: number = chordVolume;
+				let chordVolumeTickEnd:   number = chordVolume;
 				let intervalTickStart: number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioStart;
 				let intervalTickEnd:   number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioEnd;
 				let decayTimeTickStart: number = partTimeTickStart - noteStart;
@@ -3280,6 +3301,12 @@ namespace beepbox {
 						customVolumeTickEnd += slideRatioEndTick * volumeDiff;
 						decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
 						decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
+						
+						if (!chord.arpeggiates) {
+							const chordSizeDiff: number = (prevNote.pitches.length - tone.chordSize) * 0.5;
+							chordVolumeTickStart = Synth.computeChordVolume(tone.chordSize + slideRatioStartTick * chordSizeDiff);
+							chordVolumeTickEnd = Synth.computeChordVolume(tone.chordSize + slideRatioEndTick * chordSizeDiff);
+						}
 					}
 				}
 				if (transition.isSeamless && !transition.slides && note.end == partsPerBar) {
@@ -3298,6 +3325,12 @@ namespace beepbox {
 						customVolumeTickEnd += slideRatioEndTick * volumeDiff;
 						decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
 						decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
+						
+						if (!chord.arpeggiates) {
+							const chordSizeDiff: number = (nextNote.pitches.length - tone.chordSize) * 0.5;
+							chordVolumeTickStart = Synth.computeChordVolume(tone.chordSize + slideRatioStartTick * chordSizeDiff);
+							chordVolumeTickEnd = Synth.computeChordVolume(tone.chordSize + slideRatioEndTick * chordSizeDiff);
+						}
 					}
 				} else if (!transition.releases) {
 					const releaseTicks: number = transition.releaseTicks;
@@ -3313,6 +3346,8 @@ namespace beepbox {
 				customVolumeEnd   = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
 				transitionVolumeStart = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * startRatio;
 				transitionVolumeEnd   = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * endRatio;
+				chordVolumeStart = chordVolumeTickStart + (chordVolumeTickEnd - chordVolumeTickStart) * startRatio;
+				chordVolumeEnd = chordVolumeTickStart + (chordVolumeTickEnd - chordVolumeTickStart) * endRatio;
 				decayTimeStart = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * startRatio;
 				decayTimeEnd   = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * endRatio;
 			}
@@ -3359,9 +3394,9 @@ namespace beepbox {
 			tone.filter = Math.min(Config.filterMax, Math.max(filterMin, tone.filter));
 			endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
 			tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
-			let filterVolume: number = Math.pow(0.5, cutoffOctaves * 0.4);
+			let filterVolume: number = Math.pow(0.5, cutoffOctaves * 0.35);
 			if (instrument.filterResonance > 0) {
-				filterVolume *= filterVolume * Math.pow(0.5, 0.125 * (instrument.filterResonance - 1));
+				filterVolume = Math.pow(filterVolume, 1.7) * Math.pow(0.5, 0.125 * (instrument.filterResonance - 1));
 			}
 			if (filterEnvelope.type == EnvelopeType.decay) {
 				filterVolume *= (1.25 + .025 * filterEnvelope.speed);
@@ -3434,8 +3469,9 @@ namespace beepbox {
 				tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 				
 				const volumeMult: number = baseVolume * instrumentVolumeMult;
-				tone.volumeStart = filterVolume * volumeMult * transitionVolumeStart;
-				tone.volumeDelta = filterVolume * volumeMult * (transitionVolumeEnd - transitionVolumeStart) / runLength;
+				tone.volumeStart = filterVolume * volumeMult * transitionVolumeStart * chordVolumeStart;
+				const volumeEnd: number = filterVolume * volumeMult * transitionVolumeEnd * chordVolumeEnd;
+				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
 				
 				sineVolumeBoost *= (Math.pow(2.0, (2.0 - 1.4 * instrument.feedbackAmplitude / 15.0)) - 1.0) / 3.0;
 				sineVolumeBoost *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolume - 1) / 2.0);
@@ -3448,9 +3484,9 @@ namespace beepbox {
 					const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.rhythms[song.rhythm].ticksPerArpeggio);
 					if (chord.harmonizes) {
 						const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[song.rhythm].arpeggioPatterns[tone.pitchCount - 2];
-						const harmonyOffset: number = tone.pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]] - tone.pitches[0];
-						tone.harmonyMult = Math.pow(2.0, harmonyOffset / 12.0);
-						tone.harmonyVolumeMult = Math.pow(2.0, -harmonyOffset / pitchDamping);
+						const intervalOffset: number = tone.pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]] - tone.pitches[0];
+						tone.intervalMult = Math.pow(2.0, intervalOffset / 12.0);
+						tone.intervalVolumeMult = Math.pow(2.0, -intervalOffset / pitchDamping);
 					} else {
 						const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[song.rhythm].arpeggioPatterns[tone.pitchCount - 1];
 						pitch = tone.pitches[arpeggioPattern[arpeggio % arpeggioPattern.length]];
@@ -3484,8 +3520,8 @@ namespace beepbox {
 				
 				tone.phaseDeltas[0] = startFreq * sampleTime;
 				
-				tone.volumeStart = transitionVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
-				let volumeEnd: number = transitionVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
+				tone.volumeStart = transitionVolumeStart * chordVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
+				let volumeEnd: number = transitionVolumeEnd * chordVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
 				
 				if (filterEnvelope.type != EnvelopeType.custom && (instrument.type != InstrumentType.pwm || Config.envelopes[instrument.pulseEnvelope].type != EnvelopeType.custom)) {
 					tone.volumeStart *= customVolumeStart;
@@ -3581,8 +3617,8 @@ namespace beepbox {
 			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
 			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
-			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.harmonyMult;
-			const intervalSign: number = tone.harmonyVolumeMult * Config.intervals[instrument.interval].sign;
+			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.intervalMult;
+			const intervalSign: number = tone.intervalVolumeMult * Config.intervals[instrument.interval].sign;
 			if (instrument.interval == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
 			const deltaRatio: number = intervalB / intervalA;
 			let phaseDeltaA: number = tone.phaseDeltas[0] * intervalA * waveLength;
@@ -3664,8 +3700,8 @@ namespace beepbox {
 			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
 			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
-			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.harmonyMult;
-			const intervalSign: number = tone.harmonyVolumeMult * Config.intervals[instrument.interval].sign;
+			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.intervalMult;
+			const intervalSign: number = tone.intervalVolumeMult * Config.intervals[instrument.interval].sign;
 			if (instrument.interval == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
 			const deltaRatio: number = intervalB / intervalA;
 			let phaseDeltaA: number = tone.phaseDeltas[0] * intervalA * waveLength;

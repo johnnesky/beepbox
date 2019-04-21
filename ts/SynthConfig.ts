@@ -44,6 +44,7 @@ namespace beepbox {
 		punch,
 		flare,
 		twang,
+		swell,
 		tremolo,
 		tremolo2,
 		decay,
@@ -138,7 +139,6 @@ namespace beepbox {
 	export interface Envelope extends BeepBoxOption {
 		readonly type: EnvelopeType;
 		readonly speed: number;
-		readonly inverted: boolean;
 	}
 
 	export interface Feedback extends BeepBoxOption {
@@ -250,7 +250,7 @@ namespace beepbox {
 			{name: "bowed",      spread: 0.02, offset: 0.0, volume: 1.0, sign:-1.0},
 		]);
 		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
-		public static readonly volumeRange: number = 6;
+		public static readonly volumeRange: number = 8;
 		public static readonly volumeLogScale: number = -0.5;
 		public static readonly chords: DictionaryArray<Chord> = toNameMap([
 			{name: "harmony",         harmonizes:  true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 0},
@@ -294,27 +294,27 @@ namespace beepbox {
 			{name: "20×", mult: 20.0, hzOffset: 0.0, amplitudeSign: 1.0},
 		]);
 		public static readonly envelopes: DictionaryArray<Envelope> = toNameMap([
-			{name: "custom",   type: EnvelopeType.custom,   speed:  0.0, inverted: false},
-			{name: "steady",   type: EnvelopeType.steady,   speed:  0.0, inverted: false},
-			{name: "punch",    type: EnvelopeType.punch,    speed:  0.0, inverted: false},
-			{name: "flare 1",  type: EnvelopeType.flare,    speed: 32.0, inverted: false},
-			{name: "flare 2",  type: EnvelopeType.flare,    speed:  8.0, inverted: false},
-			{name: "flare 3",  type: EnvelopeType.flare,    speed:  2.0, inverted: false},
-			{name: "twang 1",  type: EnvelopeType.twang,    speed: 32.0, inverted: false},
-			{name: "twang 2",  type: EnvelopeType.twang,    speed:  8.0, inverted: false},
-			{name: "twang 3",  type: EnvelopeType.twang,    speed:  2.0, inverted: false},
-			{name: "swell 1",  type: EnvelopeType.twang,    speed: 32.0, inverted:  true},
-			{name: "swell 2",  type: EnvelopeType.twang,    speed:  8.0, inverted:  true},
-			{name: "swell 3",  type: EnvelopeType.twang,    speed:  2.0, inverted:  true},
-			{name: "tremolo1", type: EnvelopeType.tremolo,  speed:  4.0, inverted: false},
-			{name: "tremolo2", type: EnvelopeType.tremolo,  speed:  2.0, inverted: false},
-			{name: "tremolo3", type: EnvelopeType.tremolo,  speed:  1.0, inverted: false},
-			{name: "tremolo4", type: EnvelopeType.tremolo2, speed:  4.0, inverted: false},
-			{name: "tremolo5", type: EnvelopeType.tremolo2, speed:  2.0, inverted: false},
-			{name: "tremolo6", type: EnvelopeType.tremolo2, speed:  1.0, inverted: false},
-			{name: "decay 1",  type: EnvelopeType.decay,    speed: 10.0, inverted: false},
-			{name: "decay 2",  type: EnvelopeType.decay,    speed:  7.0, inverted: false},
-			{name: "decay 3",  type: EnvelopeType.decay,    speed:  4.0, inverted: false},
+			{name: "custom",   type: EnvelopeType.custom,   speed:  0.0},
+			{name: "steady",   type: EnvelopeType.steady,   speed:  0.0},
+			{name: "punch",    type: EnvelopeType.punch,    speed:  0.0},
+			{name: "flare 1",  type: EnvelopeType.flare,    speed: 32.0},
+			{name: "flare 2",  type: EnvelopeType.flare,    speed:  8.0},
+			{name: "flare 3",  type: EnvelopeType.flare,    speed:  2.0},
+			{name: "twang 1",  type: EnvelopeType.twang,    speed: 32.0},
+			{name: "twang 2",  type: EnvelopeType.twang,    speed:  8.0},
+			{name: "twang 3",  type: EnvelopeType.twang,    speed:  2.0},
+			{name: "swell 1",  type: EnvelopeType.swell,    speed: 32.0},
+			{name: "swell 2",  type: EnvelopeType.swell,    speed:  8.0},
+			{name: "swell 3",  type: EnvelopeType.swell,    speed:  2.0},
+			{name: "tremolo1", type: EnvelopeType.tremolo,  speed:  4.0},
+			{name: "tremolo2", type: EnvelopeType.tremolo,  speed:  2.0},
+			{name: "tremolo3", type: EnvelopeType.tremolo,  speed:  1.0},
+			{name: "tremolo4", type: EnvelopeType.tremolo2, speed:  4.0},
+			{name: "tremolo5", type: EnvelopeType.tremolo2, speed:  2.0},
+			{name: "tremolo6", type: EnvelopeType.tremolo2, speed:  1.0},
+			{name: "decay 1",  type: EnvelopeType.decay,    speed: 10.0},
+			{name: "decay 2",  type: EnvelopeType.decay,    speed:  7.0},
+			{name: "decay 3",  type: EnvelopeType.decay,    speed:  4.0},
 		]);
 		public static readonly feedbacks: DictionaryArray<Feedback> = toNameMap([
 			{name: "1⟲",          indices: [[1],  [],  [],  []]},

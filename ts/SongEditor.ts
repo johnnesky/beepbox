@@ -64,7 +64,7 @@ namespace beepbox {
 		]));
 		
 		// Show the "spectrum" custom type in both pitched and noise channels.
-		const customTypeGroup: HTMLElement = html.element("optgroup", {label: "Custom"});
+		const customTypeGroup: HTMLElement = html.element("optgroup", {label: EditorConfig.presetCategories[0].name});
 		if (isNoise) {
 			customTypeGroup.appendChild(option(InstrumentType.noise, EditorConfig.valueToPreset(InstrumentType.noise)!.name));
 			customTypeGroup.appendChild(option(InstrumentType.spectrum, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
@@ -204,7 +204,7 @@ namespace beepbox {
 		private readonly _algorithmSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Algorithm: ")]), div({className: "selectContainer"}, [this._algorithmSelect])]);
 		private readonly _instrumentSelect: HTMLSelectElement = select({});
 		private readonly _instrumentSelectRow: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, [span({}, [text("Instrument: ")]), div({className: "selectContainer"}, [this._instrumentSelect])]);
-		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "-5", max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
+		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: -(Config.volumeRange - 1), max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
 		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Volume: ")]), this._instrumentVolumeSlider.input]);
 		private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select({}), Config.chipWaves.map(wave=>wave.name));
 		private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select({}), Config.chipNoises.map(wave=>wave.name));
@@ -292,12 +292,12 @@ namespace beepbox {
 		]);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({style: "display: flex; flex-direction: column;"}, [
 			this._instrumentSelectRow,
+			this._instrumentVolumeSliderRow,
 			div({className: "selectRow"}, [
 				span({}, [text("Type: ")]),
 				//this._instrumentTypeHint,
 				div({className: "selectContainer"}, [this._pitchedPresetSelect, this._drumPresetSelect])
 			]),
-			this._instrumentVolumeSliderRow,
 			this._customizeInstrumentButton,
 			this._customInstrumentSettingsGroup,
 		]);
