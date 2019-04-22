@@ -345,7 +345,7 @@ namespace beepbox {
 		public static readonly harmonicsControlPoints: number = 28;
 		public static readonly harmonicsRendered: number = 64;
 		public static readonly harmonicsControlPointBits: number = 3;
-		public static readonly harmonicsMax: number = 7;
+		public static readonly harmonicsMax: number = (1 << Config.harmonicsControlPointBits) - 1;;
 		public static readonly harmonicsWavelength: number = 1 << 11; // 2048
 		public static readonly pulseWidthRange: number = 8;
 		public static readonly pitchChannelCountMin: number = 1;

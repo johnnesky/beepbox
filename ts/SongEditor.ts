@@ -61,6 +61,8 @@ namespace beepbox {
 		menu.appendChild(html.element("optgroup", {label: "Edit"}, [
 			option("copyInstrument", "Copy Instrument"),
 			option("pasteInstrument", "Paste Instrument"),
+			option("randomPreset", "Random Preset"),
+			option("randomGenerated", "Random Generated"),
 		]));
 		
 		// Show the "spectrum" custom type in both pitched and noise channels.
@@ -943,6 +945,28 @@ namespace beepbox {
 			}
 		}
 		
+		private _randomPreset(): void {
+			const channel: Channel = this._doc.song.channels[this._doc.channel];
+			const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
+			const isNoise: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
+			const eligiblePresetValues: number[] = [];
+			for (let categoryIndex: number = 1; categoryIndex < EditorConfig.presetCategories.length; categoryIndex++) {
+				const category: PresetCategory = EditorConfig.presetCategories[categoryIndex];
+				if (category.name == "Novelty Presets") continue;
+				for (let presetIndex: number = 0; presetIndex < category.presets.length; presetIndex++) {
+					const preset: Preset = category.presets[presetIndex];
+					if ((preset.isNoise == true) == isNoise) {
+						eligiblePresetValues.push((categoryIndex << 6) + presetIndex);
+					}
+				}
+			}
+			this._doc.record(new ChangePreset(this._doc, eligiblePresetValues[(Math.random() * eligiblePresetValues.length)|0]));
+		}
+		
+		private _randomGenerated(): void {
+			this._doc.record(new ChangeRandomGeneratedInstrument(this._doc));
+		}
+		
 		private _transpose(upward: boolean): void {
 			const pattern: Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
@@ -988,6 +1012,12 @@ namespace beepbox {
 						break;
 					case "pasteInstrument":
 						this._pasteInstrument();
+						break;
+					case "randomPreset":
+						this._randomPreset();
+						break;
+					case "randomGenerated":
+						this._randomGenerated();
 						break;
 				}
 				this._doc.notifier.changed();
