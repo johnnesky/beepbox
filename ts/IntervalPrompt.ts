@@ -28,20 +28,20 @@ SOFTWARE.
 /// <reference path="changes.ts" />
 
 namespace beepbox {
-	const {button, p, div, text} = html;
+	const {button, p, div} = HTML;
 
 	export class IntervalPrompt implements Prompt {
-		private readonly _cancelButton: HTMLButtonElement = button({}, [text("Close")]);
+		private readonly _cancelButton: HTMLButtonElement = button("Close");
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
-			div({style: "font-size: 2em"}, [text("Custom Harmony")]),
-			p({style: "text-align: left; margin: 0.5em 0;"}, [text(
+		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"},
+			div({style: "font-size: 2em"}, "Custom Harmony"),
+			p({style: "text-align: left; margin: 0.5em 0;"},
 				'BeepBox "chip" instruments play two waves at once, each with their own pitch. ' +
 				'The "Interval" setting usually determines how far apart these pitches are, but in "custom harmony" mode, you can control these pitches individually by making two simultaneous notes, one above the other. ' +
 				'This replaces the "arpeggio/trill" effect, and gives you greater control over your harmony. '
-			)]),
+			),
 			this._cancelButton,
-		]);
+		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._cancelButton.addEventListener("click", this._close);

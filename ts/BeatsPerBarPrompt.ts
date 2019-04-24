@@ -27,36 +27,36 @@ SOFTWARE.
 /// <reference path="changes.ts" />
 
 namespace beepbox {
-	const {button, div, span, input, br, text, select, option} = html;
+	const {button, div, span, input, br, select, option} = HTML;
 	
 	export class BeatsPerBarPrompt implements Prompt {
 		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
-		private readonly _conversionStrategySelect: HTMLSelectElement = select({style: "width: 100%;"}, [
-			option("splice", "Splice beats at end of bars."),
-			option("stretch", "Stretch notes to fit in bars."),
-			option("overflow", "Overflow notes across bars."),
-		]);
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, [text("Cancel")]);
-		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, [text("Okay")]);
+		private readonly _conversionStrategySelect: HTMLSelectElement = select({style: "width: 100%;"},
+			option({value: "stretch"}, "Splice beats at end of bars."),
+			option({value: "stretch"}, "Stretch notes to fit in bars."),
+			option({value: "overflow"}, "Overflow notes across bars."),
+		);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, "Cancel");
+		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, "Okay");
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
-			div({style: "font-size: 2em"}, [text("Beats Per Bar")]),
-			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
-				div({style: "text-align: right;"}, [
-					text("Beats per bar:"),
+		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"},
+			div({style: "font-size: 2em"}, "Beats Per Bar"),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				div({style: "text-align: right;"},
+					"Beats per bar:",
 					br(),
-					span({style: "font-size: smaller; color: #888888;"}, [text("(Multiples of 3 or 4 are recommended)")]),
-				]),
+					span({style: "font-size: smaller; color: #888888;"}, "(Multiples of 3 or 4 are recommended)"),
+				),
 				this._beatsStepper,
-			]),
-			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
-				div({className: "selectContainer", style: "width: 100%;"}, [this._conversionStrategySelect]),
-			]),
-			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
+			),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				div({className: "selectContainer", style: "width: 100%;"}, this._conversionStrategySelect),
+			),
+			div({style: "display: flex; flex-direction: row; justify-content: space-between;"},
 				this._cancelButton,
 				this._okayButton,
-			]),
-		]);
+			),
+		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._beatsStepper.value = this._doc.song.beatsPerBar + "";

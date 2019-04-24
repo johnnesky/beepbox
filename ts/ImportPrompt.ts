@@ -30,23 +30,23 @@ SOFTWARE.
 /// <reference path="ArrayBufferReader.ts" />
 
 namespace beepbox {
-	const {button, p, div, input, text} = html;
+	const {button, p, div, input} = HTML;
 
 	export class ImportPrompt implements Prompt {
 		private readonly _fileInput: HTMLInputElement = input({type: "file", accept: ".json,application/json,.mid,.midi,audio/midi,audio/x-midi"});
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"}, [text("Cancel")]);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"}, "Cancel");
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 300px;"}, [
-			div({style: "font-size: 2em"}, [text("Import")]),
-			p({style: "text-align: left; margin: 0.5em 0;"}, [
-				text("BeepBox songs can be exported and re-imported as .json files. You could also use other means to make .json files for BeepBox as long as they follow the same structure."),
-			]),
-			p({style: "text-align: left; margin: 0.5em 0;"}, [
-				text("BeepBox can also (crudely) import .midi files. There are many tools available for creating .midi files, and you can find collections of .midi files on the internet. Shorter and simpler songs are more likely to work well."),
-			]),
+		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 300px;"},
+			div({style: "font-size: 2em"}, "Import"),
+			p({style: "text-align: left; margin: 0.5em 0;"},
+				"BeepBox songs can be exported and re-imported as .json files. You could also use other means to make .json files for BeepBox as long as they follow the same structure.",
+			),
+			p({style: "text-align: left; margin: 0.5em 0;"},
+				"BeepBox can also (crudely) import .midi files. There are many tools available for creating .midi files, and you can find collections of .midi files on the internet. Shorter and simpler songs are more likely to work well.",
+			),
 			this._fileInput,
 			this._cancelButton,
-		]);
+		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._fileInput.select();

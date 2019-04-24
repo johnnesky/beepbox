@@ -27,10 +27,10 @@ SOFTWARE.
 
 namespace beepbox {
 	class Box {
-		private readonly _text: Text = html.text("1");
-		private readonly _label = <SVGTextElement> svgElement("text", {x: 16, y: 23, "font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red"}, [this._text]);
-		private readonly _rect = <SVGRectElement> svgElement("rect", {width: 30, height: 30, x: 1, y: 1});
-		public readonly container = <SVGSVGElement> svgElement("svg", undefined, [this._rect, this._label]);
+		private readonly _text: Text = document.createTextNode("1");
+		private readonly _label: SVGTextElement = SVG.text({x: 16, y: 23, "font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red"}, this._text);
+		private readonly _rect: SVGRectElement = SVG.rect({width: 30, height: 30, x: 1, y: 1});
+		public readonly container: SVGSVGElement = SVG.svg(this._rect, this._label);
 		private _renderedIndex: number = 1;
 		private _renderedDim: boolean = true;
 		private _renderedSelected: boolean = false;
@@ -90,15 +90,15 @@ namespace beepbox {
 	
 	export class TrackEditor {
 		private readonly _barWidth: number = 32;
-		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; position: absolute;", height: 128});
-		private readonly _select: HTMLSelectElement = html.select({className: "trackSelectBox", style: "width: 32px; height: 32px; background: none; border: none; appearance: none; color: transparent; position: absolute;"});
-		public readonly container: HTMLElement = html.div({style: "height: 128px; position: relative; overflow:hidden;"}, [this._svg, this._select]);
+		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; position: absolute;", height: 128});
+		private readonly _select: HTMLSelectElement = HTML.select({className: "trackSelectBox", style: "width: 32px; height: 32px; background: none; border: none; appearance: none; color: transparent; position: absolute;"});
+		public readonly container: HTMLElement = HTML.div({style: "height: 128px; position: relative; overflow:hidden;"}, this._svg, this._select);
 		
-		private readonly _boxContainer = <SVGGElement> svgElement("g");
-		private readonly _playhead = <SVGRectElement> svgElement("rect", {fill: "white", x: 0, y: 0, width: 4, height: 128});
-		private readonly _boxHighlight = <SVGRectElement> svgElement("rect", {fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
-		private readonly _upHighlight = <SVGPathElement> svgElement("path", {fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
-		private readonly _downHighlight = <SVGPathElement> svgElement("path", {fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
+		private readonly _boxContainer: SVGGElement = SVG.g();
+		private readonly _playhead: SVGRectElement = SVG.rect({fill: "white", x: 0, y: 0, width: 4, height: 128});
+		private readonly _boxHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
+		private readonly _upHighlight: SVGPathElement = SVG.path({fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
+		private readonly _downHighlight: SVGPathElement = SVG.path({fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
 		
 		private readonly _grid: Box[][] = [];
 		private _mouseX: number = 0;
@@ -327,7 +327,7 @@ namespace beepbox {
 			
 			const patternCount: number = this._doc.song.patternsPerChannel + 1;
 			for (let i: number = this._renderedPatternCount; i < patternCount; i++) {
-				this._select.appendChild(html.option(i, i, false, false));
+				this._select.appendChild(HTML.option({value: i}, i));
 			}
 			for (let i: number = patternCount; i < this._renderedPatternCount; i++) {
 				this._select.removeChild(<Node> this._select.lastChild);

@@ -44,50 +44,50 @@ SOFTWARE.
 /// <reference path="IntervalPrompt.ts" />
 
 namespace beepbox {
-	const {button, div, span, select, option, input, text} = html;
+	const {button, div, span, select, option, optgroup, input} = HTML;
 	
 	const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
 	
 	function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
 		for (let index: number = 0; index < items.length; index++) {
-			menu.appendChild(option(index, items[index]));
+			menu.appendChild(option({value: index}, items[index]));
 		} 
 		return menu;
 	}
 	
 	function buildPresetOptions(isNoise: boolean): HTMLSelectElement {
-		const menu: HTMLSelectElement = select({});
+		const menu: HTMLSelectElement = select();
 		
-		menu.appendChild(html.element("optgroup", {label: "Edit"}, [
-			option("copyInstrument", "Copy Instrument"),
-			option("pasteInstrument", "Paste Instrument"),
-			option("randomPreset", "Random Preset"),
-			option("randomGenerated", "Random Generated"),
-		]));
+		menu.appendChild(optgroup({label: "Edit"},
+			option({value: "copyInstrument"}, "Copy Instrument"),
+			option({value: "pasteInstrument"}, "Paste Instrument"),
+			option({value: "randomPreset"}, "Random Preset"),
+			option({value: "randomGenerated"}, "Random Generated"),
+		));
 		
 		// Show the "spectrum" custom type in both pitched and noise channels.
-		const customTypeGroup: HTMLElement = html.element("optgroup", {label: EditorConfig.presetCategories[0].name});
+		const customTypeGroup: HTMLElement = optgroup({label: EditorConfig.presetCategories[0].name});
 		if (isNoise) {
-			customTypeGroup.appendChild(option(InstrumentType.noise, EditorConfig.valueToPreset(InstrumentType.noise)!.name));
-			customTypeGroup.appendChild(option(InstrumentType.spectrum, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
-			customTypeGroup.appendChild(option(InstrumentType.drumset, EditorConfig.valueToPreset(InstrumentType.drumset)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.noise}, EditorConfig.valueToPreset(InstrumentType.noise)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.drumset}, EditorConfig.valueToPreset(InstrumentType.drumset)!.name));
 		} else {
-			customTypeGroup.appendChild(option(InstrumentType.chip, EditorConfig.valueToPreset(InstrumentType.chip)!.name));
-			customTypeGroup.appendChild(option(InstrumentType.pwm, EditorConfig.valueToPreset(InstrumentType.pwm)!.name));
-			customTypeGroup.appendChild(option(InstrumentType.harmonics, EditorConfig.valueToPreset(InstrumentType.harmonics)!.name));
-			customTypeGroup.appendChild(option(InstrumentType.spectrum, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
-			customTypeGroup.appendChild(option(InstrumentType.fm, EditorConfig.valueToPreset(InstrumentType.fm)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.chip}, EditorConfig.valueToPreset(InstrumentType.chip)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.pwm}, EditorConfig.valueToPreset(InstrumentType.pwm)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.harmonics}, EditorConfig.valueToPreset(InstrumentType.harmonics)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.fm}, EditorConfig.valueToPreset(InstrumentType.fm)!.name));
 		}
 		menu.appendChild(customTypeGroup);
 		
 		for (let categoryIndex: number = 1; categoryIndex < EditorConfig.presetCategories.length; categoryIndex++) {
 			const category: PresetCategory = EditorConfig.presetCategories[categoryIndex];
-			const group: HTMLElement = html.element("optgroup", {label: category.name});
+			const group: HTMLElement = optgroup({label: category.name});
 			let foundAny: boolean = false;
 			for (let presetIndex: number = 0; presetIndex < category.presets.length; presetIndex++) {
 				const preset: Preset = category.presets[presetIndex];
 				if ((preset.isNoise == true) == isNoise) {
-					group.appendChild(option((categoryIndex << 6) + presetIndex, preset.name));
+					group.appendChild(option({value: (categoryIndex << 6) + presetIndex}, preset.name));
 					foundAny = true;
 				}
 			}
@@ -143,140 +143,140 @@ namespace beepbox {
 		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
 		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
 		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
-		private readonly _trackContainer: HTMLDivElement = div({className: "trackContainer"}, [
+		private readonly _trackContainer: HTMLDivElement = div({className: "trackContainer"},
 			this._trackEditor.container,
 			this._loopEditor.container,
-		]);
+		);
 		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackContainer);
 		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
 		private readonly _piano: Piano = new Piano(this._doc);
-		private readonly _editorBox: HTMLDivElement = div({}, [
-			div({className: "editorBox", style: "height: 481px; display: flex; flex-direction: row; margin-bottom: 6px;"}, [
+		private readonly _editorBox: HTMLDivElement = div(
+			div({className: "editorBox", style: "height: 481px; display: flex; flex-direction: row; margin-bottom: 6px;"},
 				this._piano.container,
 				this._patternEditor.container,
 				this._octaveScrollBar.container,
-			]),
+			),
 			this._trackContainer,
 			this._barScrollBar.container,
-		]);
+		);
 		private readonly _playButton: HTMLButtonElement = button({style: "width: 80px;", type: "button"});
 		private readonly _prevBarButton: HTMLButtonElement = button({className: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)"});
 		private readonly _nextBarButton: HTMLButtonElement = button({className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
 		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "100", value: "50", step: "1"});
-		private readonly _fileMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
-			option("", "File", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
-			option("new", "+ New Blank Song"),
-			option("import", "↑ Import..."),
-			option("export", "↓ Export..."),
-		]);
-		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
-			option("", "Edit", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
-			option("undo", "Undo (Z)"),
-			option("redo", "Redo (Y)"),
-			option("copy", "Copy Pattern Notes (C)"),
-			option("paste", "Paste Pattern Notes (V)"),
-			option("transposeUp", "Shift Notes Up (+)"),
-			option("transposeDown", "Shift Notes Down (-)"),
-			option("detectKey", "Detect Key"),
-			option("barCount", "Change Song Length..."),
-			option("beatsPerBar", "Set Beats Per Bar..."),
-			option("channelSettings", "Channel Settings..."),
-		]);
-		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"}, [
-			option("", "Preferences", true, true, false), // todo: last parameter "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
-			option("autoPlay", "Auto Play On Load"),
-			option("autoFollow", "Auto Follow Track"),
-			option("showLetters", "Show Piano Keys"),
-			option("showFifth", 'Highlight "Fifth" Notes'),
-			option("showChannels", "Show All Channels"),
-			option("showScrollBar", "Octave Scroll Bar"),
-			option("alwaysShowSettings", "Customize All Instruments"),
-			option("forceScaleChanges", "Force Scale Changes"),
-			option("forceRhythmChanges", "Force Rhythm Changes"),
-		]);
-		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select({}), Config.scales.map(scale=>scale.name));
-		private readonly _keySelect: HTMLSelectElement = buildOptions(select({}), Config.keys.map(key=>key.name).reverse());
+		private readonly _fileMenu: HTMLSelectElement = select({style: "width: 100%;"},
+			option({selected: true, disabled: true, hidden: false}, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
+			option({value: "new"}, "+ New Blank Song"),
+			option({value: "import"}, "↑ Import..."),
+			option({value: "export"}, "↓ Export..."),
+		);
+		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"},
+			option({selected: true, disabled: true, hidden: false}, "Edit"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
+			option({value: "undo"}, "Undo (Z)"),
+			option({value: "redo"}, "Redo (Y)"),
+			option({value: "copy"}, "Copy Pattern Notes (C)"),
+			option({value: "paste"}, "Paste Pattern Notes (V)"),
+			option({value: "transposeUp"}, "Shift Notes Up (+)"),
+			option({value: "transposeDown"}, "Shift Notes Down (-)"),
+			option({value: "detectKey"}, "Detect Key"),
+			option({value: "barCount"}, "Change Song Length..."),
+			option({value: "beatsPerBar"}, "Set Beats Per Bar..."),
+			option({value: "channelSettings"}, "Channel Settings..."),
+		);
+		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"},
+			option({selected: true, disabled: true, hidden: false}, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
+			option({value: "autoPlay"}, "Auto Play On Load"),
+			option({value: "autoFollow"}, "Auto Follow Track"),
+			option({value: "showLetters"}, "Show Piano Keys"),
+			option({value: "showFifth"}, 'Highlight "Fifth" Notes'),
+			option({value: "showChannels"}, "Show All Channels"),
+			option({value: "showScrollBar"}, "Octave Scroll Bar"),
+			option({value: "alwaysShowSettings"}, "Customize All Instruments"),
+			option({value: "forceScaleChanges"}, "Force Scale Changes"),
+			option({value: "forceRhythmChanges"}, "Force Rhythm Changes"),
+		);
+		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale=>scale.name));
+		private readonly _keySelect: HTMLSelectElement = buildOptions(select(), Config.keys.map(key=>key.name).reverse());
 		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
 		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
-		private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select({}), Config.rhythms.map(rhythm=>rhythm.name));
+		private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select(), Config.rhythms.map(rhythm=>rhythm.name));
 		private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false);
 		private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true);
-		//private readonly _instrumentTypeHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
-		private readonly _algorithmSelect: HTMLSelectElement = buildOptions(select({}), Config.algorithms.map(algorithm=>algorithm.name));
-		private readonly _algorithmSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Algorithm: ")]), div({className: "selectContainer"}, [this._algorithmSelect])]);
-		private readonly _instrumentSelect: HTMLSelectElement = select({});
-		private readonly _instrumentSelectRow: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, [span({}, [text("Instrument: ")]), div({className: "selectContainer"}, [this._instrumentSelect])]);
+		//private readonly _instrumentTypeHint: HTMLAnchorElement = HTML.a({className: "hintButton"}, "?");
+		private readonly _algorithmSelect: HTMLSelectElement = buildOptions(select(), Config.algorithms.map(algorithm=>algorithm.name));
+		private readonly _algorithmSelectRow: HTMLDivElement = div({className: "selectRow"}, span("Algorithm: "), div({className: "selectContainer"}, this._algorithmSelect));
+		private readonly _instrumentSelect: HTMLSelectElement = select();
+		private readonly _instrumentSelectRow: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, span("Instrument: "), div({className: "selectContainer"}, this._instrumentSelect));
 		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: -(Config.volumeRange - 1), max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
-		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Volume: ")]), this._instrumentVolumeSlider.input]);
-		private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select({}), Config.chipWaves.map(wave=>wave.name));
-		private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select({}), Config.chipNoises.map(wave=>wave.name));
-		private readonly _chipWaveSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Wave: ")]), div({className: "selectContainer"}, [this._chipWaveSelect])]);
-		private readonly _chipNoiseSelectRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Noise: ")]), div({className: "selectContainer"}, [this._chipNoiseSelect])]);
-		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select({}), Config.transitions.map(transition=>transition.name));
-		private readonly _transitionRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Transition:")]), div({className: "selectContainer"}, [this._transitionSelect])]);
-		private readonly _effectsSelect: HTMLSelectElement = buildOptions(select({}), Config.effectsNames);
+		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({className: "selectRow"}, span("Volume: "), this._instrumentVolumeSlider.input);
+		private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select(), Config.chipWaves.map(wave=>wave.name));
+		private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select(), Config.chipNoises.map(wave=>wave.name));
+		private readonly _chipWaveSelectRow: HTMLDivElement = div({className: "selectRow"}, span("Wave: "), div({className: "selectContainer"}, this._chipWaveSelect));
+		private readonly _chipNoiseSelectRow: HTMLDivElement = div({className: "selectRow"}, span("Noise: "), div({className: "selectContainer"}, this._chipNoiseSelect));
+		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select(), Config.transitions.map(transition=>transition.name));
+		private readonly _transitionRow: HTMLDivElement = div({className: "selectRow"}, span("Transition:"), div({className: "selectContainer"}, this._transitionSelect));
+		private readonly _effectsSelect: HTMLSelectElement = buildOptions(select(), Config.effectsNames);
 		private readonly _filterCutoffSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue));
-		private _filterCutoffRow: HTMLDivElement = div({className: "selectRow", title: "Low-pass Filter Cutoff Frequency"}, [span({}, [text("Filter Cut:")]), this._filterCutoffSlider.input]);
+		private _filterCutoffRow: HTMLDivElement = div({className: "selectRow", title: "Low-pass Filter Cutoff Frequency"}, span("Filter Cut:"), this._filterCutoffSlider.input);
 		private readonly _filterResonanceSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterResonanceRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterResonance(this._doc, oldValue, newValue));
-		private _filterResonanceRow: HTMLDivElement = div({className: "selectRow", title: "Low-pass Filter Peak Resonance"}, [span({}, [text("Filter Peak:")]), this._filterResonanceSlider.input]);
-		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select({}), Config.envelopes.map(envelope=>envelope.name));
-		private _filterEnvelopeRow: HTMLDivElement = div({className: "selectRow", title: "Low-pass Filter Envelope"}, [span({}, [text("Filter Env:")]), div({className: "selectContainer"}, [this._filterEnvelopeSelect])]);
-		private readonly _pulseEnvelopeSelect: HTMLSelectElement = buildOptions(select({}), Config.envelopes.map(envelope=>envelope.name));
-		private _pulseEnvelopeRow: HTMLDivElement = div({className: "selectRow", title: "Pulse Width Modulator Envelope"}, [span({}, [text("Pulse Env:")]), div({className: "selectContainer"}, [this._pulseEnvelopeSelect])]);
+		private _filterResonanceRow: HTMLDivElement = div({className: "selectRow", title: "Low-pass Filter Peak Resonance"}, span("Filter Peak:"), this._filterResonanceSlider.input);
+		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
+		private _filterEnvelopeRow: HTMLDivElement = div({className: "selectRow", title: "Low-pass Filter Envelope"}, span("Filter Env:"), div({className: "selectContainer"}, this._filterEnvelopeSelect));
+		private readonly _pulseEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
+		private _pulseEnvelopeRow: HTMLDivElement = div({className: "selectRow", title: "Pulse Width Modulator Envelope"}, span("Pulse Env:"), div({className: "selectContainer"}, this._pulseEnvelopeSelect));
 		private readonly _pulseWidthSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.pulseWidthRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangePulseWidth(this._doc, oldValue, newValue));
-		private _pulseWidthRow: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Pulse Width:")]), this._pulseWidthSlider.input]);
-		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select({}), Config.intervals.map(interval=>interval.name));
-		//private readonly _intervalHint = <HTMLAnchorElement> html.element("a", {className: "hintButton"}, [text("?")]);
-		private readonly _intervalSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Interval:")]), /*this._intervalHint, */div({className: "selectContainer"}, [this._intervalSelect])]);
-		private readonly _chordSelect: HTMLSelectElement = buildOptions(select({}), Config.chords.map(chord=>chord.name));
-		private readonly _chordSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Chords:")]), div({className: "selectContainer"}, [this._chordSelect])]);
-		private readonly _vibratoSelect: HTMLSelectElement = buildOptions(select({}), Config.vibratos.map(vibrato=>vibrato.name));
-		private readonly _vibratoSelectRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Vibrato:")]), div({className: "selectContainer"}, [this._vibratoSelect])]);
-		private readonly _phaseModGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"}, []);
-		private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select({}), Config.feedbacks.map(feedback=>feedback.name));
-		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, [span({}, [text("Feedback:")]), div({className: "selectContainer"}, [this._feedbackTypeSelect])]);
+		private _pulseWidthRow: HTMLDivElement = div({className: "selectRow"}, span("Pulse Width:"), this._pulseWidthSlider.input);
+		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select(), Config.intervals.map(interval=>interval.name));
+		//private readonly _intervalHint: HTMLAnchorElement = HTML.a({className: "hintButton"}, "?");
+		private readonly _intervalSelectRow: HTMLElement = div({className: "selectRow"}, span("Interval:"), /*this._intervalHint, */div({className: "selectContainer"}, this._intervalSelect));
+		private readonly _chordSelect: HTMLSelectElement = buildOptions(select(), Config.chords.map(chord=>chord.name));
+		private readonly _chordSelectRow: HTMLElement = div({className: "selectRow"}, span("Chords:"), div({className: "selectContainer"}, this._chordSelect));
+		private readonly _vibratoSelect: HTMLSelectElement = buildOptions(select(), Config.vibratos.map(vibrato=>vibrato.name));
+		private readonly _vibratoSelectRow: HTMLElement = div({className: "selectRow"}, span("Vibrato:"), div({className: "selectContainer"}, this._vibratoSelect));
+		private readonly _phaseModGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"});
+		private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select(), Config.feedbacks.map(feedback=>feedback.name));
+		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, span("Feedback:"), div({className: "selectContainer"}, this._feedbackTypeSelect));
 		private readonly _spectrumEditor: SpectrumEditor = new SpectrumEditor(this._doc, null);
-		private readonly _spectrumRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Spectrum:")]), this._spectrumEditor.container]);
+		private readonly _spectrumRow: HTMLElement = div({className: "selectRow"}, span("Spectrum:"), this._spectrumEditor.container);
 		private readonly _harmonicsEditor: HarmonicsEditor = new HarmonicsEditor(this._doc, null);
-		private readonly _harmonicsRow: HTMLElement = div({className: "selectRow"}, [span({}, [text("Harmonics:")]), this._harmonicsEditor.container]);
-		private readonly _drumsetGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"}, []);
+		private readonly _harmonicsRow: HTMLElement = div({className: "selectRow"}, span("Harmonics:"), this._harmonicsEditor.container);
+		private readonly _drumsetGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"});
 		
 		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
 		private readonly _feedbackEnvelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Feedback Envelope"}), Config.envelopes.map(envelope=>envelope.name));
-		private readonly _feedbackRow2: HTMLDivElement = div({className: "operatorRow"}, [
-			div({style: "margin-right: .1em; visibility: hidden;"}, [text(1 + ".")]),
+		private readonly _feedbackRow2: HTMLDivElement = div({className: "operatorRow"},
+			div({style: "margin-right: .1em; visibility: hidden;"}, 1 + "."),
 			div({style: "width: 3em; margin-right: .3em;"}),
 			this._feedbackAmplitudeSlider.input,
-			div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, [this._feedbackEnvelopeSelect]),
-		]);
-		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", style: "margin: .1em 0"}, [
-			text("Customize Instrument"),
+			div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, this._feedbackEnvelopeSelect),
+		);
+		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", style: "margin: .1em 0"},
+			"Customize Instrument",
 			// Dial icon
-			svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"}, [
-				svgElement("g", {transform: "translate(0,1)"}, [
-					svgElement("circle", {cx: "0", cy: "0", r: "6.5", stroke: "currentColor", "stroke-width": "1", fill: "none"}),
-					svgElement("rect", {x: "-1", y: "-5", width: "2", height: "4", fill: "currentColor", transform: "rotate(30)"}),
-					svgElement("circle", {cx: "-7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
-					svgElement("circle", {cx: "-9", cy: "0", r: "0.75", fill: "currentColor"}),
-					svgElement("circle", {cx: "-7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
-					svgElement("circle", {cx: "-4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
-					svgElement("circle", {cx: "0", cy: "-9", r: "0.75", fill: "currentColor"}),
-					svgElement("circle", {cx: "4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
-					svgElement("circle", {cx: "7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
-					svgElement("circle", {cx: "9", cy: "0", r: "0.75", fill: "currentColor"}),
-					svgElement("circle", {cx: "7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
-				]),
-			]),
-		]);
-		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({}, [
+			SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"},
+				SVG.g({transform: "translate(0,1)"},
+					SVG.circle({cx: "0", cy: "0", r: "6.5", stroke: "currentColor", "stroke-width": "1", fill: "none"}),
+					SVG.rect({x: "-1", y: "-5", width: "2", height: "4", fill: "currentColor", transform: "rotate(30)"}),
+					SVG.circle({cx: "-7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
+					SVG.circle({cx: "-9", cy: "0", r: "0.75", fill: "currentColor"}),
+					SVG.circle({cx: "-7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
+					SVG.circle({cx: "-4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
+					SVG.circle({cx: "0", cy: "-9", r: "0.75", fill: "currentColor"}),
+					SVG.circle({cx: "4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
+					SVG.circle({cx: "7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
+					SVG.circle({cx: "9", cy: "0", r: "0.75", fill: "currentColor"}),
+					SVG.circle({cx: "7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
+				),
+			),
+		);
+		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div(
 			this._filterCutoffRow,
 			this._filterResonanceRow,
 			this._filterEnvelopeRow,
 			this._transitionRow,
-			div({className: "selectRow"}, [
-				span({}, [text("Effects:")]),
-				div({className: "selectContainer"}, [this._effectsSelect]),
-			]),
+			div({className: "selectRow"},
+				span("Effects:"),
+				div({className: "selectContainer"}, this._effectsSelect),
+			),
 			this._chordSelectRow,
 			this._vibratoSelectRow,
 			this._intervalSelectRow,
@@ -291,100 +291,100 @@ namespace beepbox {
 			this._drumsetGroup,
 			this._pulseEnvelopeRow,
 			this._pulseWidthRow,
-		]);
-		private readonly _instrumentSettingsGroup: HTMLDivElement = div({style: "display: flex; flex-direction: column;"}, [
+		);
+		private readonly _instrumentSettingsGroup: HTMLDivElement = div({style: "display: flex; flex-direction: column;"},
 			this._instrumentSelectRow,
 			this._instrumentVolumeSliderRow,
-			div({className: "selectRow"}, [
-				span({}, [text("Type: ")]),
+			div({className: "selectRow"},
+				span("Type: "),
 				//this._instrumentTypeHint,
-				div({className: "selectContainer"}, [this._pitchedPresetSelect, this._drumPresetSelect])
-			]),
+				div({className: "selectContainer"}, this._pitchedPresetSelect, this._drumPresetSelect),
+			),
 			this._customizeInstrumentButton,
 			this._customInstrumentSettingsGroup,
-		]);
+		);
 		private readonly _promptContainer: HTMLDivElement = div({className: "promptContainer", style: "display: none;"});
-		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"}, [
+		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"},
 			this._editorBox,
-			div({className: "editor-widget-column"}, [
-				div({style: "text-align: center; color: #999;"}, [text("BeepBox 3.0")]),
-				div({className: "editor-widgets"}, [
-					div({className: "editor-controls"}, [
-						div({className: "playback-controls"}, [
-							div({className: "playback-bar-controls"}, [
+			div({className: "editor-widget-column"},
+				div({style: "text-align: center; color: #999;"}, "BeepBox 3.0"),
+				div({className: "editor-widgets"},
+					div({className: "editor-controls"},
+						div({className: "playback-controls"},
+							div({className: "playback-bar-controls"},
 								this._playButton,
 								this._prevBarButton,
 								this._nextBarButton,
-							]),
-							div({className: "playback-volume-controls"}, [
+							),
+							div({className: "playback-volume-controls"},
 								// Volume speaker icon:
-								svgElement("svg", {style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26"}, [
-									svgElement("path", {d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777"}),
-								]),
+								SVG.svg({style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26"},
+									SVG.path({d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777"}),
+								),
 								this._volumeSlider,
-							]),
-						]),
-					]),
-					div({className: "editor-settings"}, [
-						div({className: "editor-song-settings"}, [
-							div({className: "editor-menus"}, [
-								div({className: "selectContainer menu"}, [
+							),
+						),
+					),
+					div({className: "editor-settings"},
+						div({className: "editor-song-settings"},
+							div({className: "editor-menus"},
+								div({className: "selectContainer menu"},
 									this._fileMenu,
 									// Page icon:
-									svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"}, [
-										svgElement("path", {d: "M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z", fill: "currentColor"}),
-									]),
-								]),
-								div({className: "selectContainer menu"}, [
+									SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"},
+										SVG.path({d: "M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z", fill: "currentColor"}),
+									),
+								),
+								div({className: "selectContainer menu"},
 									this._editMenu,
 									// Edit icon:
-									svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"}, [
-										svgElement("path", {d: "M 0 0 L 1 -4 L 4 -1 z M 2 -5 L 10 -13 L 13 -10 L 5 -2 zM 11 -14 L 13 -16 L 14 -16 L 16 -14 L 16 -13 L 14 -11 z", fill: "currentColor"}),
-									]),
-								]),
-								div({className: "selectContainer menu"}, [
+									SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"},
+										SVG.path({d: "M 0 0 L 1 -4 L 4 -1 z M 2 -5 L 10 -13 L 13 -10 L 5 -2 zM 11 -14 L 13 -16 L 14 -16 L 16 -14 L 16 -13 L 14 -11 z", fill: "currentColor"}),
+									),
+								),
+								div({className: "selectContainer menu"},
 									this._optionsMenu,
 									// Gear icon:
-									svgElement("svg", {style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"}, [
-										svgElement("path", {d: "M 5.78 -1.6 L 7.93 -0.94 L 7.93 0.94 L 5.78 1.6 L 4.85 3.53 L 5.68 5.61 L 4.21 6.78 L 2.36 5.52 L 0.27 5.99 L -0.85 7.94 L -2.68 7.52 L -2.84 5.28 L -4.52 3.95 L -6.73 4.28 L -7.55 2.59 L -5.9 1.07 L -5.9 -1.07 L -7.55 -2.59 L -6.73 -4.28 L -4.52 -3.95 L -2.84 -5.28 L -2.68 -7.52 L -0.85 -7.94 L 0.27 -5.99 L 2.36 -5.52 L 4.21 -6.78 L 5.68 -5.61 L 4.85 -3.53 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z", fill: "currentColor"}),
-									]),
-								]),
-							]),
-							div({style: "margin: 3px 0; text-align: center; color: #999;"}, [
-								text("Song Settings")
-							]),
-							div({className: "selectRow"}, [
-								span({}, [text("Scale: ")]),
-								div({className: "selectContainer"}, [this._scaleSelect]),
-							]),
-							div({className: "selectRow"}, [
-								span({}, [text("Key: ")]),
-								div({className: "selectContainer"}, [this._keySelect]),
-							]),
-							div({className: "selectRow"}, [
-								span({}, [text("Tempo: ")]),
+									SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"},
+										SVG.path({d: "M 5.78 -1.6 L 7.93 -0.94 L 7.93 0.94 L 5.78 1.6 L 4.85 3.53 L 5.68 5.61 L 4.21 6.78 L 2.36 5.52 L 0.27 5.99 L -0.85 7.94 L -2.68 7.52 L -2.84 5.28 L -4.52 3.95 L -6.73 4.28 L -7.55 2.59 L -5.9 1.07 L -5.9 -1.07 L -7.55 -2.59 L -6.73 -4.28 L -4.52 -3.95 L -2.84 -5.28 L -2.68 -7.52 L -0.85 -7.94 L 0.27 -5.99 L 2.36 -5.52 L 4.21 -6.78 L 5.68 -5.61 L 4.85 -3.53 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z", fill: "currentColor"}),
+									),
+								),
+							),
+							div({style: "margin: 3px 0; text-align: center; color: #999;"},
+								"Song Settings"
+							),
+							div({className: "selectRow"},
+								span("Scale: "),
+								div({className: "selectContainer"}, this._scaleSelect),
+							),
+							div({className: "selectRow"},
+								span("Key: "),
+								div({className: "selectContainer"}, this._keySelect),
+							),
+							div({className: "selectRow"},
+								span("Tempo: "),
 								this._tempoSlider.input,
-							]),
-							div({className: "selectRow"}, [
-								span({}, [text("Reverb: ")]),
+							),
+							div({className: "selectRow"},
+								span("Reverb: "),
 								this._reverbSlider.input,
-							]),
-							div({className: "selectRow"}, [
-								span({}, [text("Rhythm: ")]),
-								div({className: "selectContainer"}, [this._rhythmSelect]),
-							]),
-						]),
-						div({className: "editor-instrument-settings"}, [
-							div({style: "margin: 3px 0; text-align: center; color: #999;"}, [
-								text("Instrument Settings")
-							]),
+							),
+							div({className: "selectRow"},
+								span("Rhythm: "),
+								div({className: "selectContainer"}, this._rhythmSelect),
+							),
+						),
+						div({className: "editor-instrument-settings"},
+							div({style: "margin: 3px 0; text-align: center; color: #999;"},
+								"Instrument Settings"
+							),
 							this._instrumentSettingsGroup,
-						]),
-					]),
-				]),
-			]),
+						),
+					),
+				),
+			),
 			this._promptContainer,
-		]);
+		);
 		
 		private _wasPlaying: boolean;
 		private _changeTranspose: ChangeTranspose | null = null;
@@ -398,24 +398,24 @@ namespace beepbox {
 		constructor(private _doc: SongDocument) {
 			this._doc.notifier.watch(this.whenUpdated);
 			
-			this._phaseModGroup.appendChild(div({className: "operatorRow", style: "color: #999; height: 1em; margin-top: 0.5em;"}, [
-				div({style: "margin-right: .1em; visibility: hidden;"}, [text(1 + ".")]),
-				div({style: "width: 3em; margin-right: .3em;"}, [text("Freq:")]),
-				div({style: "width: 4em; margin: 0;"}, [text("Volume:")]),
-				div({style: "width: 5em; margin-left: .3em;"}, [text("Envelope:")]),
-			]));
+			this._phaseModGroup.appendChild(div({className: "operatorRow", style: "color: #999; height: 1em; margin-top: 0.5em;"},
+				div({style: "margin-right: .1em; visibility: hidden;"}, 1 + "."),
+				div({style: "width: 3em; margin-right: .3em;"}, "Freq:"),
+				div({style: "width: 4em; margin: 0;"}, "Volume:"),
+				div({style: "width: 5em; margin-left: .3em;"}, "Envelope:"),
+			));
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				const operatorIndex: number = i;
-				const operatorNumber: HTMLDivElement = div({style: "margin-right: .1em; color: #999;"}, [text(i + 1 + ".")]);
+				const operatorNumber: HTMLDivElement = div({style: "margin-right: .1em; color: #999;"}, i + 1 + ".");
 				const frequencySelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Frequency"}), Config.operatorFrequencies.map(freq=>freq.name));
 				const amplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Volume"}), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue));
 				const envelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Envelope"}), Config.envelopes.map(envelope=>envelope.name));
-				const row: HTMLDivElement = div({className: "operatorRow"}, [
+				const row: HTMLDivElement = div({className: "operatorRow"},
 					operatorNumber,
-					div({className: "selectContainer", style: "width: 3em; margin-right: .3em;"}, [frequencySelect]),
+					div({className: "selectContainer", style: "width: 3em; margin-right: .3em;"}, frequencySelect),
 					amplitudeSlider.input,
-					div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, [envelopeSelect]),
-				]);
+					div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, envelopeSelect),
+				);
 				this._phaseModGroup.appendChild(row);
 				this._operatorRows[i] = row;
 				this._operatorAmplitudeSliders[i] = amplitudeSlider;
@@ -442,10 +442,10 @@ namespace beepbox {
 					this._doc.record(new ChangeDrumsetEnvelope(this._doc, drumIndex, envelopeSelect.selectedIndex));
 				});
 				
-				const row: HTMLDivElement = div({className: "selectRow"}, [
-					div({className: "selectContainer", style: "width: 5em; margin-right: .3em;"}, [envelopeSelect]),
+				const row: HTMLDivElement = div({className: "selectRow"},
+					div({className: "selectContainer", style: "width: 5em; margin-right: .3em;"}, envelopeSelect),
 					this._drumsetSpectrumEditors[i].container,
-				]);
+				);
 				this._drumsetGroup.appendChild(row);
 			}
 			

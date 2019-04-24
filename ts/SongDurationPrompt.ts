@@ -27,35 +27,35 @@ SOFTWARE.
 /// <reference path="changes.ts" />
 
 namespace beepbox {
-	const {button, div, span, input, br, text, select, option} = html;
+	const {button, div, span, input, br, select, option} = HTML;
 	
 	export class SongDurationPrompt implements Prompt {
 		private readonly _barsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
-		private readonly _positionSelect: HTMLSelectElement = select({style: "width: 100%;"}, [
-			option("end",       "Apply change at end of song."),
-			option("beginning", "Apply change at beginning of song."),
-		]);
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, [text("Cancel")]);
-		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, [text("Okay")]);
+		private readonly _positionSelect: HTMLSelectElement = select({style: "width: 100%;"},
+			option({value: "end"},       "Apply change at end of song."),
+			option({value: "beginning"}, "Apply change at beginning of song."),
+		);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, "Cancel");
+		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, "Okay");
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
-			div({style: "font-size: 2em"}, [text("Song Length")]),
-			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
-				div({style: "display: inline-block; text-align: right;"}, [
-					text("Bars per song:"),
+		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"},
+			div({style: "font-size: 2em"}, "Song Length"),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				div({style: "display: inline-block; text-align: right;"},
+					"Bars per song:",
 					br(),
-					span({style: "font-size: smaller; color: #888888;"}, [text("(Multiples of 4 are recommended)")]),
-				]),
+					span({style: "font-size: smaller; color: #888888;"}, "(Multiples of 4 are recommended)"),
+				),
 				this._barsStepper,
-			]),
-			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
-				div({className: "selectContainer", style: "width: 100%;"}, [this._positionSelect]),
-			]),
-			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
+			),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				div({className: "selectContainer", style: "width: 100%;"}, this._positionSelect),
+			),
+			div({style: "display: flex; flex-direction: row; justify-content: space-between;"},
 				this._cancelButton,
 				this._okayButton,
-			]),
-		]);
+			),
+		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._barsStepper.value = this._doc.song.barCount + "";
