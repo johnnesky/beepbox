@@ -28,18 +28,18 @@ namespace beepbox {
 	export class SpectrumEditor {
 		private readonly _editorWidth: number = 112;
 		private readonly _editorHeight: number = 26;
-		private readonly _fill = <SVGPathElement> svgElement("path", {fill: "#444444", "pointer-events": "none"});
-		private readonly _octaves = <SVGSVGElement> svgElement("svg", {"pointer-events": "none"});
-		private readonly _curve = <SVGPathElement> svgElement("path", {fill: "none", stroke: "currentColor", "stroke-width": 2, "pointer-events": "none"});
-		private readonly _arrow = <SVGPathElement> svgElement("path", {fill: "currentColor", "pointer-events": "none"});
-		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; cursor: crosshair;", width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"}, [
+		private readonly _fill: SVGPathElement = SVG.path({fill: "#444444", "pointer-events": "none"});
+		private readonly _octaves: SVGSVGElement = SVG.svg({"pointer-events": "none"});
+		private readonly _curve: SVGPathElement = SVG.path({fill: "none", stroke: "currentColor", "stroke-width": 2, "pointer-events": "none"});
+		private readonly _arrow: SVGPathElement = SVG.path({fill: "currentColor", "pointer-events": "none"});
+		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: none; cursor: crosshair;", width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"},
 			this._fill,
 			this._octaves,
 			this._curve,
 			this._arrow,
-		]);
+		);
 		
-		public readonly container: HTMLElement = html.div({className: "spectrum", style: "height: 2em;"}, [this._svg]);
+		public readonly container: HTMLElement = HTML.div({className: "spectrum", style: "height: 2em;"}, this._svg);
 		
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
@@ -51,7 +51,7 @@ namespace beepbox {
 		
 		constructor(private _doc: SongDocument, private _spectrumIndex: number | null) {
 			for (let i: number = 0; i < Config.spectrumControlPoints; i += Config.spectrumControlPointsPerOctave) {
-				this._octaves.appendChild(svgElement("rect", {fill: "#886644", x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
+				this._octaves.appendChild(SVG.rect({fill: "#886644", x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
 			}
 			
 			this.container.addEventListener("mousedown", this._whenMousePressed);

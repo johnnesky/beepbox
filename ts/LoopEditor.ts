@@ -43,15 +43,15 @@ namespace beepbox {
 		private readonly _endMode:     number = 1;
 		private readonly _bothMode:    number = 2;
 		
-		private readonly _loop = <SVGPathElement> svgElement("path", {fill: "none", stroke: "#7744ff", "stroke-width": 4});
-		private readonly _highlight = <SVGPathElement> svgElement("path", {fill: "white", "pointer-events": "none"});
+		private readonly _loop: SVGPathElement = SVG.path({fill: "none", stroke: "#7744ff", "stroke-width": 4});
+		private readonly _highlight: SVGPathElement = SVG.path({fill: "white", "pointer-events": "none"});
 		
-		private readonly _svg = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: pan-y; position: absolute;", height: this._editorHeight}, [
+		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: pan-y; position: absolute;", height: this._editorHeight},
 			this._loop,
 			this._highlight,
-		]);
+		);
 		
-		public readonly container: HTMLElement = html.div({style: "height: 20px; position: relative; margin: 5px 0;"}, [this._svg]);
+		public readonly container: HTMLElement = HTML.div({style: "height: 20px; position: relative; margin: 5px 0;"}, this._svg);
 		
 		private _change: ChangeLoop | null = null;
 		private _cursor: Cursor = {startBar: -1, mode: -1};

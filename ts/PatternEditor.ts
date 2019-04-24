@@ -27,8 +27,8 @@ SOFTWARE.
 /// <reference path="changes.ts" />
 
 namespace beepbox {
-	function makeEmptyReplacementElement(node: Node): Node {
-		const clone: Node = node.cloneNode(false);
+	function makeEmptyReplacementElement<T extends Node>(node: T): T {
+		const clone: T = <T> node.cloneNode(false);
 		node.parentNode!.replaceChild(clone, node);
 		return clone;
 	}
@@ -50,28 +50,28 @@ namespace beepbox {
 	}
 	
 	export class PatternEditor {
-		private readonly _svgNoteBackground: SVGPatternElement = <SVGPatternElement> svgElement("pattern", {id: "patternEditorNoteBackground", x: "0", y: "0", width: "64", height: "156", patternUnits: "userSpaceOnUse"});
-		private readonly _svgDrumBackground: SVGPatternElement = <SVGPatternElement> svgElement("pattern", {id: "patternEditorDrumBackground", x: "0", y: "0", width: "64", height: "40", patternUnits: "userSpaceOnUse"});
-		private readonly _svgBackground: SVGRectElement = <SVGRectElement> svgElement("rect", {x: "0", y: "0", width: "512", height: "481", "pointer-events": "none", fill: "url(#patternEditorNoteBackground)"});
-		private _svgNoteContainer: SVGSVGElement = <SVGSVGElement> svgElement("svg");
-		private readonly _svgPlayhead: SVGRectElement = <SVGRectElement> svgElement("rect", {id: "", x: "0", y: "0", width: "4", height: "481", fill: "white", "pointer-events": "none"});
-		private readonly _svgPreview: SVGPathElement = <SVGPathElement> svgElement("path", {fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none"});
-		private readonly _svg: SVGSVGElement = <SVGSVGElement> svgElement("svg", {style: "background-color: #000000; touch-action: none; position: absolute;", width: "100%", height: "100%", viewBox: "0 0 512 481", preserveAspectRatio: "none"}, [
-			svgElement("defs", undefined, [
+		private readonly _svgNoteBackground: SVGPatternElement = SVG.pattern({id: "patternEditorNoteBackground", x: "0", y: "0", width: "64", height: "156", patternUnits: "userSpaceOnUse"});
+		private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({id: "patternEditorDrumBackground", x: "0", y: "0", width: "64", height: "40", patternUnits: "userSpaceOnUse"});
+		private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", width: "512", height: "481", "pointer-events": "none", fill: "url(#patternEditorNoteBackground)"});
+		private _svgNoteContainer: SVGSVGElement = SVG.svg();
+		private readonly _svgPlayhead: SVGRectElement = SVG.rect({id: "", x: "0", y: "0", width: "4", height: "481", fill: "white", "pointer-events": "none"});
+		private readonly _svgPreview: SVGPathElement = SVG.path({fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none"});
+		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: none; position: absolute;", width: "100%", height: "100%", viewBox: "0 0 512 481", preserveAspectRatio: "none"},
+			SVG.defs(
 				this._svgNoteBackground,
 				this._svgDrumBackground,
-			]),
+			),
 			this._svgBackground,
 			this._svgNoteContainer,
 			this._svgPreview,
 			this._svgPlayhead,
-		]);
-		public readonly container: HTMLDivElement = html.div({style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1;"}, [this._svg]);
+		);
+		public readonly container: HTMLDivElement = HTML.div({style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1;"}, this._svg);
 		
 		private readonly _defaultPitchHeight: number = 13;
 		private readonly _defaultDrumHeight: number = 40;
 		private readonly _backgroundPitchRows: SVGRectElement[] = [];
-		private readonly _backgroundDrumRow: SVGRectElement = <SVGRectElement> svgElement("rect");
+		private readonly _backgroundDrumRow: SVGRectElement = SVG.rect();
 		private readonly _defaultPinChannels: NotePin[][] = [
 			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 3)],
 			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 3)],
@@ -120,7 +120,7 @@ namespace beepbox {
 		constructor(private _doc: SongDocument) {
 			for (let i: number = 0; i < 12; i++) {
 				const y: number = (12 - i) % 12;
-				const rectangle: SVGRectElement = <SVGRectElement> svgElement("rect");
+				const rectangle: SVGRectElement = SVG.rect();
 				rectangle.setAttribute("x", "1");
 				rectangle.setAttribute("y", "" + (y * this._defaultPitchHeight + 1));
 				rectangle.setAttribute("height", "" + (this._defaultPitchHeight - 2));
@@ -828,7 +828,7 @@ namespace beepbox {
 			
 			if (!this._mouseDown) this._updateCursorStatus();
 			
-			this._svgNoteContainer = <SVGSVGElement> makeEmptyReplacementElement(this._svgNoteContainer);
+			this._svgNoteContainer = makeEmptyReplacementElement(this._svgNoteContainer);
 			
 			this._updatePreview();
 			
@@ -866,7 +866,7 @@ namespace beepbox {
 					if (pattern2 == null) continue;
 					for (const note of pattern2.notes) {
 						for (const pitch of note.pitches) {
-							const notePath: SVGPathElement = <SVGPathElement> svgElement("path");
+							const notePath: SVGPathElement = SVG.path();
 							notePath.setAttribute("fill", this._doc.getNoteColorDim(channel));
 							notePath.setAttribute("pointer-events", "none");
 							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channels[channel].octave * 12);
@@ -880,12 +880,12 @@ namespace beepbox {
 				for (const note of this._pattern.notes) {
 					for (let i: number = 0; i < note.pitches.length; i++) {
 						const pitch: number = note.pitches[i];
-						let notePath = <SVGPathElement> svgElement("path");
+						let notePath: SVGPathElement = SVG.path();
 						notePath.setAttribute("fill", this._doc.getNoteColorDim(this._doc.channel));
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
-						notePath = <SVGPathElement> svgElement("path");
+						notePath = SVG.path();
 						notePath.setAttribute("fill", this._doc.getNoteColorBright(this._doc.channel));
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
@@ -895,7 +895,7 @@ namespace beepbox {
 							const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 							const chord: Chord = instrument.getChord();
 							if (!chord.harmonizes || chord.arpeggiates || chord.strumParts > 0) {
-								let oscillatorLabel = <SVGTextElement> svgElement("text");
+								let oscillatorLabel: SVGTextElement = SVG.text();
 								oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
 								oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));
 								oscillatorLabel.setAttribute("width", "30");

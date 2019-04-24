@@ -28,35 +28,35 @@ SOFTWARE.
 /// <reference path="changes.ts" />
 
 namespace beepbox {
-	const {button, p, div, text} = html;
+	const {button, p, div} = HTML;
 
 	export class InstrumentTypePrompt implements Prompt {
-		private readonly _cancelButton: HTMLButtonElement = button({}, [text("Close")]);
+		private readonly _cancelButton: HTMLButtonElement = button("Close");
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 300px;"}, [
-			div({style: "font-size: 2em"}, [text("FM Synthesis")]),
-			p({style: "text-align: left; margin: 0.5em 0;"}, [
-				text('FM Synthesis is a mysterious but powerful technique for crafting sounds popularized by Yamaha keyboards and the Sega Genesis/Mega Drive. It may seem confusing, but just play around with the options until you get a feel for it, or check out some examples in '),
-				html.element("a", {target:"_blank", href: "#6n10s0kbl00e07t5m0a7g07j7i7r1o2T1d2c0A0F1B0V1Q0200Pff00E0411T1d1c0A0F0B0V1Q2800Pf700E0711T1d2c0A0F1B4VaQ0200Pfb00E0911T1d1c2A0F9B3V1Q1000Pfbc0E0191T1d2c0AcF8B5V1Q0259PffffE0000T1d3c1AcF4B5V4Q2600Pff00E0011T1d1c0AbF0B0V1Q2580PfffaE2226T1d1c0A1F0B0V1Q520dPff4dEd41eb4zhmu0p21h5dfxd7ij7XrjfiAjPudUTtUSRsTzudTudJvdUTztTzrpPudUTtUSSYTzudTudJTdUTztTzrvPudUTtUSQ"}, [text("this demo")]),
-				text('!'),
-			]),
-			p({style: "text-align: left; margin: 0.5em 0;"}, [text(
+		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 300px;"},
+			div({style: "font-size: 2em"}, "FM Synthesis"),
+			p({style: "text-align: left; margin: 0.5em 0;"},
+				'FM Synthesis is a mysterious but powerful technique for crafting sounds popularized by Yamaha keyboards and the Sega Genesis/Mega Drive. It may seem confusing, but just play around with the options until you get a feel for it, or check out some examples in ',
+				HTML.element("a", {target:"_blank", href: "#6n10s0kbl00e07t5m0a7g07j7i7r1o2T1d2c0A0F1B0V1Q0200Pff00E0411T1d1c0A0F0B0V1Q2800Pf700E0711T1d2c0A0F1B4VaQ0200Pfb00E0911T1d1c2A0F9B3V1Q1000Pfbc0E0191T1d2c0AcF8B5V1Q0259PffffE0000T1d3c1AcF4B5V4Q2600Pff00E0011T1d1c0AbF0B0V1Q2580PfffaE2226T1d1c0A1F0B0V1Q520dPff4dEd41eb4zhmu0p21h5dfxd7ij7XrjfiAjPudUTtUSRsTzudTudJvdUTztTzrpPudUTtUSSYTzudTudJTdUTztTzrvPudUTtUSQ"}, "this demo"),
+				'!',
+			),
+			p({style: "text-align: left; margin: 0.5em 0;"},
 				'This FM instrument uses up to four waves, numbered 1, 2, 3, and 4. ' +
 				'Each wave may have its own frequency, volume, and volume envelope to control its effect over time. '
-			)]),
-			p({style: "text-align: left; margin: 0.5em 0;"}, [text(
+			),
+			p({style: "text-align: left; margin: 0.5em 0;"},
 				'There are two kinds of waves: "carrier" waves play a tone out loud, but "modulator" waves distort other waves instead. ' +
 				'Wave 1 is always a carrier and plays a tone, but other waves may distort it. ' +
 				'The "Algorithm" setting determines which waves are modulators, and which other waves those modulators distort. '
-			)]),
-			p({style: "text-align: left; margin: 0.5em 0;"}, [text(
+			),
+			p({style: "text-align: left; margin: 0.5em 0;"},
 				'Modulators distort in one direction (like 1←2), but you can also use "Feedback" to make any wave distort in the opposite direction (1→2), or even itself (1⟲). '
-			)]),
-			p({style: "text-align: left; margin: 0.5em 0;"}, [text(
+			),
+			p({style: "text-align: left; margin: 0.5em 0;"},
 				'You can set the pitch of each wave independently by adding simultaneous notes, one above another. This often sounds harsh or dissonant, but can make cool sound effects! '
-			)]),
+			),
 			this._cancelButton,
-		]);
+		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._cancelButton.addEventListener("click", this._close);

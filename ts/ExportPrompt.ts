@@ -29,7 +29,7 @@ SOFTWARE.
 /// <reference path="Midi.ts" />
 
 namespace beepbox {
-	const {button, div, input, text, select, option} = html;
+	const {button, div, input, select, option} = HTML;
 	
 	function lerp(low: number, high: number, t: number): number {
 		return low + t * (high - low);
@@ -63,13 +63,13 @@ namespace beepbox {
 		private readonly _enableIntro: HTMLInputElement = input({type: "checkbox"});
 		private readonly _loopDropDown: HTMLInputElement = input({style:"width: 2em;", type: "number", min: "1", max: "4", step: "1"});
 		private readonly _enableOutro: HTMLInputElement = input({type: "checkbox"});
-		private readonly _formatSelect: HTMLSelectElement = select({style: "width: 100%;"}, [
-			option("wav", "Export to .wav file."),
-			option("midi", "Export to .midi file."),
-			option("json", "Export to .json file."),
-		]);
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, [text("Cancel")]);
-		private readonly _exportButton: HTMLButtonElement = button({className: "exportButton", style: "width:45%;"}, [text("Export")]);
+		private readonly _formatSelect: HTMLSelectElement = select({style: "width: 100%;"},
+			option({value: "wav"}, "Export to .wav file."),
+			option({value: "midi"}, "Export to .midi file."),
+			option({value: "json"}, "Export to .json file."),
+		);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, "Cancel");
+		private readonly _exportButton: HTMLButtonElement = button({className: "exportButton", style: "width:45%;"}, "Export");
 		private static readonly midiSustainInstruments: number[] = [
 			0x4A, // rounded -> recorder
 			0x47, // triangle -> clarinet
@@ -101,30 +101,30 @@ namespace beepbox {
 			0x6A, // spiky -> shamisen
 		];
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 200px;"}, [
-			div({style: "font-size: 2em"}, [text("Export Options")]),
-			div({style: "display: flex; flex-direction: row; align-items: center; justify-content: space-between;"}, [
-				text("File name:"),
+		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 200px;"},
+			div({style: "font-size: 2em"}, "Export Options"),
+			div({style: "display: flex; flex-direction: row; align-items: center; justify-content: space-between;"},
+				"File name:",
 				this._fileName,
-			]),
-			div({style: "display: table; width: 100%;"}, [
-				div({style: "display: table-row;"}, [
-					div({style: "display: table-cell;"}, [text("Intro:")]),
-					div({style: "display: table-cell;"}, [text("Loop Count:")]),
-					div({style: "display: table-cell;"}, [text("Outro:")]),
-				]),
-				div({style: "display: table-row;"}, [
-					div({style: "display: table-cell; vertical-align: middle;"}, [this._enableIntro]),
-					div({style: "display: table-cell; vertical-align: middle;"}, [this._loopDropDown]),
-					div({style: "display: table-cell; vertical-align: middle;"}, [this._enableOutro]),
-				]),
-			]),
-			div({className: "selectContainer", style: "width: 100%;"}, [this._formatSelect]),
-			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
+			),
+			div({style: "display: table; width: 100%;"},
+				div({style: "display: table-row;"},
+					div({style: "display: table-cell;"}, "Intro:"),
+					div({style: "display: table-cell;"}, "Loop Count:"),
+					div({style: "display: table-cell;"}, "Outro:"),
+				),
+				div({style: "display: table-row;"},
+					div({style: "display: table-cell; vertical-align: middle;"}, this._enableIntro),
+					div({style: "display: table-cell; vertical-align: middle;"}, this._loopDropDown),
+					div({style: "display: table-cell; vertical-align: middle;"}, this._enableOutro),
+				),
+			),
+			div({className: "selectContainer", style: "width: 100%;"}, this._formatSelect),
+			div({style: "display: flex; flex-direction: row; justify-content: space-between;"},
 				this._cancelButton,
 				this._exportButton,
-			]),
-		]);
+			),
+		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._loopDropDown.value = "1";

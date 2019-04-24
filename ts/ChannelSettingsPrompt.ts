@@ -27,39 +27,39 @@ SOFTWARE.
 /// <reference path="changes.ts" />
 
 namespace beepbox {
-	const {button, div, span, input, br, text} = html;
+	const {button, div, span, input, br} = HTML;
 	
 	export class ChannelSettingsPrompt implements Prompt {
 		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _pitchChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _drumChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, [text("Cancel")]);
-		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, [text("Okay")]);
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, "Cancel");
+		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, "Okay");
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"}, [
-			div({style: "font-size: 2em"}, [text("Channel Settings")]),
-			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
-				text("Pitch channels:"),
+		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"},
+			div({style: "font-size: 2em"}, "Channel Settings"),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Pitch channels:",
 				this._pitchChannelStepper,
-			]),
-			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
-				text("Drum channels:"),
+			),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Drum channels:",
 				this._drumChannelStepper,
-			]),
-			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
-				text("Patterns per channel:"),
+			),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Patterns per channel:",
 				this._patternsStepper,
-			]),
-			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"}, [
-				text("Instruments per channel:"),
+			),
+			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Instruments per channel:",
 				this._instrumentsStepper,
-			]),
-			div({style: "display: flex; flex-direction: row; justify-content: space-between;"}, [
+			),
+			div({style: "display: flex; flex-direction: row; justify-content: space-between;"},
 				this._cancelButton,
 				this._okayButton,
-			]),
-		]);
+			),
+		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			this._patternsStepper.value = this._doc.song.patternsPerChannel + "";
