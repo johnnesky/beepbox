@@ -30,14 +30,14 @@ SOFTWARE.
 /// <reference path="ArrayBufferReader.ts" />
 
 namespace beepbox {
-	const {button, p, div, input} = HTML;
+	const {button, p, div, h2, input} = HTML;
 
 	export class ImportPrompt implements Prompt {
 		private readonly _fileInput: HTMLInputElement = input({type: "file", accept: ".json,application/json,.mid,.midi,audio/midi,audio/x-midi"});
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"}, "Cancel");
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 300px;"},
-			div({style: "font-size: 2em"}, "Import"),
+		public readonly container: HTMLDivElement = div({className: "prompt noSelection", style: "width: 300px;"},
+			h2("Import"),
 			p({style: "text-align: left; margin: 0.5em 0;"},
 				"BeepBox songs can be exported and re-imported as .json files. You could also use other means to make .json files for BeepBox as long as they follow the same structure.",
 			),
