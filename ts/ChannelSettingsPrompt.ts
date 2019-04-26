@@ -27,18 +27,18 @@ SOFTWARE.
 /// <reference path="changes.ts" />
 
 namespace beepbox {
-	const {button, div, span, input, br} = HTML;
+	const {button, div, span, h2, input, br} = HTML;
 	
 	export class ChannelSettingsPrompt implements Prompt {
 		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _pitchChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _drumChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, "Cancel");
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
 		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, "Okay");
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 250px;"},
-			div({style: "font-size: 2em"}, "Channel Settings"),
+		public readonly container: HTMLDivElement = div({className: "prompt noSelection", style: "width: 250px;"},
+			h2("Channel Settings"),
 			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 				"Pitch channels:",
 				this._pitchChannelStepper,
@@ -55,10 +55,10 @@ namespace beepbox {
 				"Instruments per channel:",
 				this._instrumentsStepper,
 			),
-			div({style: "display: flex; flex-direction: row; justify-content: space-between;"},
-				this._cancelButton,
+			div({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
 				this._okayButton,
 			),
+			this._cancelButton,
 		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {

@@ -28,12 +28,6 @@ styleSheet.appendChild(document.createTextNode(`
 
 .beepboxEditor {
 	display: flex;
-	-webkit-touch-callout: none;
-	-webkit-user-select: none;
-	-khtml-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
 	position: relative;
 	touch-action: manipulation;
 	cursor: default;
@@ -41,9 +35,29 @@ styleSheet.appendChild(document.createTextNode(`
 	overflow: hidden;
 }
 
+.beepboxEditor .noSelection {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
 .beepboxEditor div {
 	margin: 0;
 	padding: 0;
+}
+
+.beepboxEditor .tip {
+	cursor: help;
+}
+
+.beepboxEditor .tip:hover {
+	color: #98f;
+	text-decoration: underline;
+}
+.beepboxEditor .tip:active {
+	color: white;
 }
 
 .beepboxEditor .promptContainer {
@@ -68,10 +82,22 @@ styleSheet.appendChild(document.createTextNode(`
 	padding: 20px;
 	display: flex;
 	flex-direction: column;
+	position: relative;
 }
 
-.beepboxEditor .prompt > *:not(:first-child) {
+.beepboxEditor .prompt > *:not(:first-child):not(.cancelButton) {
 	margin-top: 1.5em;
+}
+
+.beepboxEditor .prompt h2 {
+	font-size: 2em;
+	margin: 0 16px;
+	font-weight: normal;
+}
+
+.beepboxEditor .prompt p {
+	text-align: left;
+	margin: 1em 0;
 }
 
 /* Use psuedo-elements to add cross-browser up & down arrows to select elements: */
@@ -164,7 +190,16 @@ styleSheet.appendChild(document.createTextNode(`
 	background: #777;
 	outline: none;
 }
-.beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.cancelButton, .beepboxEditor button.okayButton, .beepboxEditor button.exportButton {
+
+.beepboxEditor button.cancelButton {
+	float: right;
+	width: 2em;
+	position: absolute;
+	top: 8px;
+	right: 8px;
+}
+
+.beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.okayButton, .beepboxEditor button.exportButton {
 	padding-left: 2em;
 }
 .beepboxEditor button.playButton::before {

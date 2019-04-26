@@ -29,7 +29,7 @@ SOFTWARE.
 /// <reference path="Midi.ts" />
 
 namespace beepbox {
-	const {button, div, input, select, option} = HTML;
+	const {button, div, h2, input, select, option} = HTML;
 	
 	function lerp(low: number, high: number, t: number): number {
 		return low + t * (high - low);
@@ -68,7 +68,7 @@ namespace beepbox {
 			option({value: "midi"}, "Export to .midi file."),
 			option({value: "json"}, "Export to .json file."),
 		);
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton", style: "width:45%;"}, "Cancel");
+		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
 		private readonly _exportButton: HTMLButtonElement = button({className: "exportButton", style: "width:45%;"}, "Export");
 		private static readonly midiSustainInstruments: number[] = [
 			0x4A, // rounded -> recorder
@@ -101,8 +101,8 @@ namespace beepbox {
 			0x6A, // spiky -> shamisen
 		];
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 200px;"},
-			div({style: "font-size: 2em"}, "Export Options"),
+		public readonly container: HTMLDivElement = div({className: "prompt noSelection", style: "width: 200px;"},
+			h2("Export Options"),
 			div({style: "display: flex; flex-direction: row; align-items: center; justify-content: space-between;"},
 				"File name:",
 				this._fileName,
@@ -120,10 +120,10 @@ namespace beepbox {
 				),
 			),
 			div({className: "selectContainer", style: "width: 100%;"}, this._formatSelect),
-			div({style: "display: flex; flex-direction: row; justify-content: space-between;"},
-				this._cancelButton,
+			div({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
 				this._exportButton,
 			),
+			this._cancelButton,
 		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {

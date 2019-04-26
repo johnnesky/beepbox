@@ -324,6 +324,7 @@
 √ Pulse width modulation! :D
 √ Random instrument generator! :D
 √ Cleaned up html/svg generating code slightly.
+√ Added descriptions for each of the instrument settings.
 
 NEXT RELEASE:
 - Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
@@ -333,7 +334,6 @@ NEXT RELEASE:
 - any more spectrum-based drums? thunder, rain, fire, wind, randomly spaced (x / (1 + x^2)), maybe something that is just composed of a few inharmonic sine waves? shepard, orchestra hit?
 - Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth or sixteenth note triplet symbol for rhythm. 
 - Hmm, sometimes Firefox won't play any sound... seems like it happens when I load www.beepbox.co, and then click a twitter link to beepbox.co, maybe some kind of security/user experience thing to prevent unwanted sound from cross-domain links?
-- Add a "title" attributes or tooltips to all of the options, and/or make all instrument option names clickable with pointer cursor and hover highlight, replacing "?" hint circles.
 - The "new", "import", and "random" options should reset the playhead, copied note shapes, selected bar/channel, and track scroll bar. 
 - switching bars doesn't seem to split transposes into multiple change states?
 - If the page loses and regains focus, re-read preferences and update the interface? In case another tab changed preferences.

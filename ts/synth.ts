@@ -573,7 +573,7 @@ namespace beepbox {
 			}
 			for (let i: number = 0; i < Config.drumCount; i++) {
 				this.drumsetEnvelopes[i] = Config.envelopes.dictionary["twang 2"].index;
-				this.drumsetSpectrumWaves[i] = new SpectrumWave(isNoiseChannel);
+				this.drumsetSpectrumWaves[i] = new SpectrumWave(true);
 			}
 		}
 		
