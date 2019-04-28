@@ -29,23 +29,22 @@ SOFTWARE.
 namespace beepbox {
 	const {button, div, span, h2, input, br, select, option} = HTML;
 	
-	export class BeatsPerBarPrompt implements Prompt {
-		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
+	export class MoveNotesSidewaysPrompt implements Prompt {
+		private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "0.01", value: "0"});
 		private readonly _conversionStrategySelect: HTMLSelectElement = select({style: "width: 100%;"},
-			option({value: "splice"}, "Splice beats at end of bars."),
-			option({value: "stretch"}, "Stretch notes to fit in bars."),
 			option({value: "overflow"}, "Overflow notes across bars."),
+			option({value: "wrapAround"}, "Wrap notes around within bars."),
 		);
 		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
 		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, "Okay");
 		
 		public readonly container: HTMLDivElement = div({className: "prompt noSelection", style: "width: 250px;"},
-			h2("Beats Per Bar"),
+			h2("Move Notes Sideways"),
 			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 				div({style: "text-align: right;"},
-					"Beats per bar:",
+					"Beats to move:",
 					br(),
-					span({style: "font-size: smaller; color: #888888;"}, "(Multiples of 3 or 4 are recommended)"),
+					span({style: "font-size: smaller; color: #888888;"}, "(Negative is left, positive is right)"),
 				),
 				this._beatsStepper,
 			),
@@ -59,11 +58,10 @@ namespace beepbox {
 		);
 		
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
-			this._beatsStepper.value = this._doc.song.beatsPerBar + "";
-			this._beatsStepper.min = Config.beatsPerBarMin + "";
-			this._beatsStepper.max = Config.beatsPerBarMax + "";
+			this._beatsStepper.min = (-this._doc.song.beatsPerBar) + "";
+			this._beatsStepper.max = this._doc.song.beatsPerBar + "";
 			
-			const lastStrategy: string | null = window.localStorage.getItem("beatCountStrategy");
+			const lastStrategy: string | null = window.localStorage.getItem("moveNotesSidewaysStrategy");
 			if (lastStrategy != null) {
 				this._conversionStrategySelect.value = lastStrategy;
 			}
@@ -73,8 +71,7 @@ namespace beepbox {
 			
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);
-			this._beatsStepper.addEventListener("keypress", BeatsPerBarPrompt._validateKey);
-			this._beatsStepper.addEventListener("blur", BeatsPerBarPrompt._validateNumber);
+			this._beatsStepper.addEventListener("blur", MoveNotesSidewaysPrompt._validateNumber);
 			this.container.addEventListener("keydown", this._whenKeyPressed);
 		}
 		
@@ -85,8 +82,7 @@ namespace beepbox {
 		public cleanUp = (): void => { 
 			this._okayButton.removeEventListener("click", this._saveChanges);
 			this._cancelButton.removeEventListener("click", this._close);
-			this._beatsStepper.removeEventListener("keypress", BeatsPerBarPrompt._validateKey);
-			this._beatsStepper.removeEventListener("blur", BeatsPerBarPrompt._validateNumber);
+			this._beatsStepper.removeEventListener("blur", MoveNotesSidewaysPrompt._validateNumber);
 			this.container.removeEventListener("keydown", this._whenKeyPressed);
 		}
 		
@@ -96,28 +92,18 @@ namespace beepbox {
 			}
 		}
 		
-		private static _validateKey(event: KeyboardEvent): boolean {
-			const charCode = (event.which) ? event.which : event.keyCode;
-			if (charCode != 46 && charCode > 31 && (charCode < 48 || charCode > 57)) {
-				event.preventDefault();
-				return true;
-			}
-			return false;
-		}
-		
 		private static _validateNumber(event: Event): void {
 			const input: HTMLInputElement = <HTMLInputElement>event.target;
-			input.value = Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value)))) + "";
-		}
-		
-		private static _validate(input: HTMLInputElement): number {
-			return Math.floor(Number(input.value));
+			let value: number = +input.value;
+			value = Math.round(value * Config.partsPerBeat) / Config.partsPerBeat;
+			value = Math.round(value * 100) / 100;
+			input.value = Math.max(+input.min, Math.min(+input.max, value)) + "";
 		}
 		
 		private _saveChanges = (): void => {
-			window.localStorage.setItem("beatCountStrategy", this._conversionStrategySelect.value);
+			window.localStorage.setItem("moveNotesSidewaysStrategy", this._conversionStrategySelect.value);
 			this._doc.prompt = null;
-			this._doc.record(new ChangeBeatsPerBar(this._doc, BeatsPerBarPrompt._validate(this._beatsStepper), this._conversionStrategySelect.value), true);
+			this._doc.record(new ChangeMoveNotesSideways(this._doc, +this._beatsStepper.value, this._conversionStrategySelect.value), true);
 		}
 	}
 }

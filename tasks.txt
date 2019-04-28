@@ -325,6 +325,7 @@
 √ Random instrument generator! :D
 √ Cleaned up html/svg generating code slightly.
 √ Added descriptions for each of the instrument settings.
+√ Added edit option to move all notes sideways.
 
 NEXT RELEASE:
 - Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
