@@ -37,6 +37,7 @@ SOFTWARE.
 /// <reference path="OctaveScrollBar.ts" />
 /// <reference path="Piano.ts" />
 /// <reference path="BeatsPerBarPrompt.ts" />
+/// <reference path="MoveNotesSidewaysPrompt.ts" />
 /// <reference path="SongDurationPrompt.ts" />
 /// <reference path="ChannelSettingsPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
@@ -178,7 +179,8 @@ namespace beepbox {
 			option({value: "transposeDown"}, "Shift Notes Down (-)"),
 			option({value: "detectKey"}, "Detect Key"),
 			option({value: "barCount"}, "Change Song Length..."),
-			option({value: "beatsPerBar"}, "Set Beats Per Bar..."),
+			option({value: "beatsPerBar"}, "Change Beats Per Bar..."),
+			option({value: "moveNotesSideways"}, "Move Notes Sideways..."),
 			option({value: "channelSettings"}, "Channel Settings..."),
 		);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"},
@@ -521,6 +523,9 @@ namespace beepbox {
 						break;
 					case "beatsPerBar":
 						this.prompt = new BeatsPerBarPrompt(this._doc, this);
+						break;
+					case "moveNotesSideways":
+						this.prompt = new MoveNotesSidewaysPrompt(this._doc, this);
 						break;
 					case "channelSettings":
 						this.prompt = new ChannelSettingsPrompt(this._doc, this);
@@ -1125,6 +1130,9 @@ namespace beepbox {
 					break;
 				case "beatsPerBar":
 					this._openPrompt("beatsPerBar");
+					break;
+				case "moveNotesSideways":
+					this._openPrompt("moveNotesSideways");
 					break;
 				case "channelSettings":
 					this._openPrompt("channelSettings");
