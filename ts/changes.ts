@@ -26,8 +26,29 @@ SOFTWARE.
 /// <reference path="SongDocument.ts" />
 
 namespace beepbox {
-	function generateScaleMap(oldScaleValue: number, newScaleValue: number): number[] {
-		const oldScaleFlags: ReadonlyArray<boolean> = Config.scales[oldScaleValue].flags;
+	function determineScaleFromNotes(song: Song): ReadonlyArray<boolean> {
+		const flags: boolean[] = [true, false, false, false, false, false, false, false, false, false, false, false];
+		let noteCount: number = 1;
+		for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
+			const channel: Channel = song.channels[channelIndex];
+			for (const pattern of channel.patterns) {
+				for (const note of pattern.notes) {
+					for (const pitch of note.pitches) {
+						for (const pin of note.pins) {
+							const key: number = (pitch + pin.interval) % 12;
+							if (!flags[key]) {
+								flags[key] = true;
+								noteCount++;
+							}
+						}
+					}
+				}
+			}
+		}
+		return flags;
+	}
+	
+	function generateScaleMap(oldScaleFlags: ReadonlyArray<boolean>, newScaleValue: number): number[] {
 		const newScaleFlags: ReadonlyArray<boolean> = Config.scales[newScaleValue].flags;
 		const oldScale: number[] = [];
 		const newScale: number[] = [];
@@ -161,7 +182,7 @@ namespace beepbox {
 			
 			const pitchChannels: Channel[] = [];
 			const noiseChannels: Channel[] = [];
-		
+			
 			for (let channelIndex: number = 0; channelIndex < doc.song.getChannelCount(); channelIndex++) {
 				const oldChannel: Channel = doc.song.channels[channelIndex];
 				const newChannel: Channel = new Channel();
@@ -170,33 +191,33 @@ namespace beepbox {
 				} else {
 					noiseChannels.push(newChannel);
 				}
-			
+				
 				newChannel.octave = oldChannel.octave;
 				for (const instrument of oldChannel.instruments) {
 					newChannel.instruments.push(instrument);
 				}
-			
+				
 				const oldPartsPerBar: number = Config.partsPerBeat * doc.song.beatsPerBar;
 				const newPartsPerBar: number = Config.partsPerBeat * newBeatsPerBar;
 				let currentBar: number = -1;
 				let pattern: Pattern | null = null;
-			
+				
 				for (let oldBar: number = 0; oldBar < doc.song.barCount; oldBar++) {
 					const oldPattern: Pattern | null = doc.song.getPattern(channelIndex, oldBar);
 					if (oldPattern != null) {
 						const oldBarStart: number = oldBar * oldPartsPerBar;
 						for (const oldNote of oldPattern.notes) {
-						
+							
 							const absoluteNoteStart: number = oldNote.start + oldBarStart + partsToMove;
 							const absoluteNoteEnd: number = oldNote.end + oldBarStart + partsToMove;
-						
+							
 							const startBar: number = Math.floor(absoluteNoteStart / newPartsPerBar);
 							const endBar: number = Math.ceil(absoluteNoteEnd / newPartsPerBar);
 							for (let bar: number = startBar; bar < endBar; bar++) {
 								const barStartPart: number = bar * newPartsPerBar;
 								const noteStartPart: number = Math.max(0, absoluteNoteStart - barStartPart);
 								const noteEndPart: number = Math.min(newPartsPerBar, absoluteNoteEnd - barStartPart);
-							
+								
 								if (noteStartPart < noteEndPart) {
 									// Ensure a pattern exists for the current bar before inserting notes into it.
 									if (currentBar != bar || pattern == null) {
@@ -1189,13 +1210,6 @@ namespace beepbox {
 			super();
 			
 			if (doc.song.rhythm != newValue) {
-				if (doc.forceRhythmChanges) {
-					for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
-						for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
-							this.append(new ChangeRhythmStepsPerBeat(doc, doc.song.channels[i].patterns[j], Config.rhythms[doc.song.rhythm].stepsPerBeat, Config.rhythms[newValue].stepsPerBeat));
-						}
-					}
-				}
 				doc.song.rhythm = newValue;
 				doc.notifier.changed();
 				this._didSomething();
@@ -1204,7 +1218,7 @@ namespace beepbox {
 	}
 	
 	export class ChangePaste extends ChangeGroup {
-		constructor(doc: SongDocument, pattern: Pattern, notes: any[], oldBeatsPerBar: number, oldRhythmStepsPerBeat: number, oldScale: number) {
+		constructor(doc: SongDocument, pattern: Pattern, notes: any[], oldBeatsPerBar: number) {
 			super();
 			
 			pattern.notes.length = 0;
@@ -1219,15 +1233,6 @@ namespace beepbox {
 					note.pins.push(makeNotePin(pin.interval, pin.time, pin.volume));
 				}
 				pattern.notes.push(note);
-			}
-			
-			if (doc.forceRhythmChanges) {
-				this.append(new ChangeRhythmStepsPerBeat(doc, pattern, oldRhythmStepsPerBeat, Config.rhythms[doc.song.rhythm].stepsPerBeat));
-			}
-			
-			if (doc.forceScaleChanges && !doc.song.getChannelIsNoise(doc.channel)) {
-				const scaleMap: number[] = generateScaleMap(oldScale, doc.song.scale);
-				this.append(new ChangePatternScale(doc, pattern, scaleMap));
 			}
 			
 			if (doc.song.beatsPerBar < oldBeatsPerBar) {
@@ -1385,28 +1390,42 @@ namespace beepbox {
 		}
 	}
 	
-	class ChangeRhythmStepsPerBeat extends ChangeSequence {
-		constructor(doc: SongDocument, pattern: Pattern, oldRhythmStepsPerBeat: number, newRhythmStepsPerBeat: number) {
+	export class ChangeForceRhythm extends ChangeSequence {
+		constructor(doc: SongDocument) {
 			super();
-			const minDivision: number = Config.partsPerBeat / newRhythmStepsPerBeat;
+			const minDivision: number = Config.partsPerBeat / Config.rhythms[doc.song.rhythm].stepsPerBeat;
+			
 			const changeRhythm: (oldTime:number)=>number = function(oldTime: number): number {
-				if (oldRhythmStepsPerBeat > newRhythmStepsPerBeat) {
-					return Math.ceil(oldTime / minDivision) * minDivision;
-				} else if (oldRhythmStepsPerBeat < newRhythmStepsPerBeat) {
-					return Math.floor(oldTime / minDivision) * minDivision;
+				let thresholds: number[] | null = Config.rhythms[doc.song.rhythm].roundUpThresholds;
+				if (thresholds != null) {
+					const beatStart: number = Math.floor(oldTime / Config.partsPerBeat) * Config.partsPerBeat;
+					const remainder: number = oldTime - beatStart;
+					let newTime: number = beatStart;
+					for (const threshold of thresholds) {
+						if (remainder >= threshold) {
+							newTime += minDivision;
+						} else {
+							break;
+						}
+					}
+					return newTime;
 				} else {
 					return Math.round(oldTime / minDivision) * minDivision;
 				}
 			};
 			
-			let i: number = 0;
-			while (i < pattern.notes.length) {
-				const note: Note = pattern.notes[i];
-				if (changeRhythm(note.start) >= changeRhythm(note.end)) {
-					this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
-				} else {
-					this.append(new ChangeRhythmNote(doc, note, changeRhythm));
-					i++;
+			for (const channel of doc.song.channels) {
+				for (const pattern of channel.patterns) {
+					let i: number = 0;
+					while (i < pattern.notes.length) {
+						const note: Note = pattern.notes[i];
+						if (changeRhythm(note.start) >= changeRhythm(note.end)) {
+							this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
+						} else {
+							this.append(new ChangeRhythmNote(doc, note, changeRhythm));
+							i++;
+						}
+					}
 				}
 			}
 		}
@@ -1551,20 +1570,27 @@ namespace beepbox {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
 			if (doc.song.scale != newValue) {
-				
-				if (doc.forceScaleChanges) {
-					const scaleMap: number[] = generateScaleMap(doc.song.scale, newValue);
-					for (let i: number = 0; i < doc.song.pitchChannelCount; i++) {
-						for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
-							this.append(new ChangePatternScale(doc, doc.song.channels[i].patterns[j], scaleMap));
-						}
-					}
-				}
-				
 				doc.song.scale = newValue;
 				doc.notifier.changed();
 				this._didSomething();
 			}
+		}
+	}
+	
+	export class ChangeForceScale extends ChangeGroup {
+		constructor(doc: SongDocument) {
+			super();
+				
+			const scaleFlags: ReadonlyArray<boolean> = determineScaleFromNotes(doc.song);
+			const scaleMap: number[] = generateScaleMap(scaleFlags, doc.song.scale);
+			for (let i: number = 0; i < doc.song.pitchChannelCount; i++) {
+				for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
+					this.append(new ChangePatternScale(doc, doc.song.channels[i].patterns[j], scaleMap));
+				}
+			}
+			
+			doc.notifier.changed();
+			this._didSomething();
 		}
 	}
 	
