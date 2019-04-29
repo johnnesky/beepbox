@@ -104,8 +104,6 @@ namespace beepbox {
 	interface PatternCopy {
 		notes: any[];
 		beatsPerBar: number;
-		rhythmStepsPerBeat: number;
-		scale: number;
 		drums: boolean;
 	}
 	
@@ -175,13 +173,15 @@ namespace beepbox {
 			option({value: "redo"}, "Redo (Y)"),
 			option({value: "copy"}, "Copy Pattern Notes (C)"),
 			option({value: "paste"}, "Paste Pattern Notes (V)"),
-			option({value: "transposeUp"}, "Shift Notes Up (+)"),
-			option({value: "transposeDown"}, "Shift Notes Down (-)"),
-			option({value: "detectKey"}, "Detect Key"),
-			option({value: "barCount"}, "Change Song Length..."),
+			option({value: "transposeUp"}, "Move Pattern Notes Up (+)"),
+			option({value: "transposeDown"}, "Move Pattern Notes Down (-)"),
+			option({value: "forceScale"}, "Force All Notes To Scale"),
+			option({value: "forceRhythm"}, "Force All Notes To Rhythm"),
+			option({value: "moveNotesSideways"}, "Move All Notes Sideways..."),
 			option({value: "beatsPerBar"}, "Change Beats Per Bar..."),
-			option({value: "moveNotesSideways"}, "Move Notes Sideways..."),
+			option({value: "barCount"}, "Change Song Length..."),
 			option({value: "channelSettings"}, "Channel Settings..."),
+			option({value: "detectKey"}, "Detect Key"),
 		);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"},
 			option({selected: true, disabled: true, hidden: false}, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -192,8 +192,6 @@ namespace beepbox {
 			option({value: "showChannels"}, "Show All Channels"),
 			option({value: "showScrollBar"}, "Octave Scroll Bar"),
 			option({value: "alwaysShowSettings"}, "Customize All Instruments"),
-			option({value: "forceScaleChanges"}, "Force Scale Changes"),
-			option({value: "forceRhythmChanges"}, "Force Rhythm Changes"),
 		);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale=>scale.name));
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select(), Config.keys.map(key=>key.name).reverse());
@@ -562,8 +560,6 @@ namespace beepbox {
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
 				(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
-				(this._doc.forceScaleChanges ? "✓ " : "") + "Force Scale Changes",
-				(this._doc.forceRhythmChanges ? "✓ " : "") + "Force Rhythm Changes",
 			]
 			for (let i: number = 0; i < optionCommands.length; i++) {
 				const option: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.children[i + 1];
@@ -911,8 +907,6 @@ namespace beepbox {
 			const patternCopy: PatternCopy = {
 				notes: pattern.notes,
 				beatsPerBar: this._doc.song.beatsPerBar,
-				rhythmStepsPerBeat: Config.rhythms[this._doc.song.rhythm].stepsPerBeat,
-				scale: this._doc.song.scale,
 				drums: this._doc.song.getChannelIsNoise(this._doc.channel),
 			};
 			
@@ -926,7 +920,7 @@ namespace beepbox {
 			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
 			
 			if (patternCopy != null && patternCopy["drums"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
-				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy["notes"], patternCopy["beatsPerBar"], patternCopy["rhythmStepsPerBeat"], patternCopy["scale"]));
+				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy["notes"], patternCopy["beatsPerBar"]));
 			}
 		}
 		
@@ -1125,6 +1119,12 @@ namespace beepbox {
 				case "detectKey":
 					this._doc.record(new ChangeDetectKey(this._doc));
 					break;
+				case "forceScale":
+					this._doc.record(new ChangeForceScale(this._doc));
+					break;
+				case "forceRhythm":
+					this._doc.record(new ChangeForceRhythm(this._doc));
+					break;
 				case "barCount":
 					this._openPrompt("barCount");
 					break;
@@ -1160,12 +1160,6 @@ namespace beepbox {
 					break;
 				case "showScrollBar":
 					this._doc.showScrollBar = !this._doc.showScrollBar;
-					break;
-				case "forceScaleChanges":
-					this._doc.forceScaleChanges = !this._doc.forceScaleChanges;
-					break;
-				case "forceRhythmChanges":
-					this._doc.forceRhythmChanges = !this._doc.forceRhythmChanges;
 					break;
 				case "alwaysShowSettings":
 					this._doc.alwaysShowSettings = !this._doc.alwaysShowSettings;
