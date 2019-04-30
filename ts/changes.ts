@@ -396,7 +396,7 @@ namespace beepbox {
 					{item: InstrumentType.spectrum, weight: 3},
 				]);
 				instrument.preset = instrument.type = type;
-				instrument.filterCutoff = selectCurvedDistribution(0, Config.filterCutoffRange - 1, Config.filterCutoffRange - 2, 3);
+				instrument.filterCutoff = selectCurvedDistribution(4, Config.filterCutoffRange - 1, Config.filterCutoffRange - 2, 2);
 				instrument.filterResonance = selectCurvedDistribution(0, Config.filterResonanceRange - 1, 1, 2);
 				instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
 					{item: "steady"  , weight: 2},
@@ -409,7 +409,7 @@ namespace beepbox {
 					{item: "twang 3" , weight: 8},
 					{item: "swell 1" , weight: 2},
 					{item: "swell 2" , weight: 2},
-					{item: "swell 3" , weight: 2},
+					{item: "swell 3" , weight: 1},
 					{item: "tremolo1", weight: 1},
 					{item: "tremolo2", weight: 1},
 					{item: "tremolo3", weight: 1},
@@ -465,7 +465,7 @@ namespace beepbox {
 								let current: number = 1.0;
 								const spectrum: number[] = [current];
 								for (let i = 1; i < Config.spectrumControlPoints; i++) {
-									current *= Math.pow(2, Math.random() - 0.51);
+									current *= Math.pow(2, Math.random() - 0.52);
 									spectrum[i] = current;
 								}
 								return spectrum;
@@ -474,7 +474,7 @@ namespace beepbox {
 								let current: number = 1.0;
 								const spectrum: number[] = [current];
 								for (let i = 1; i < Config.spectrumControlPoints; i++) {
-									current *= Math.pow(2, Math.random() - 0.51);
+									current *= Math.pow(2, Math.random() - 0.52);
 									spectrum[i] = current * Math.random();
 								}
 								return spectrum;
@@ -492,14 +492,14 @@ namespace beepbox {
 				}
 			} else {
 				const type: InstrumentType = selectWeightedRandom([
-					{item: InstrumentType.chip,      weight: 2},
-					{item: InstrumentType.pwm,       weight: 2},
-					{item: InstrumentType.harmonics, weight: 3},
+					{item: InstrumentType.chip,      weight: 4},
+					{item: InstrumentType.pwm,       weight: 4},
+					{item: InstrumentType.harmonics, weight: 6},
 					{item: InstrumentType.spectrum,  weight: 1},
-					{item: InstrumentType.fm,        weight: 2},
+					{item: InstrumentType.fm,        weight: 4},
 				]);
 				instrument.preset = instrument.type = type;
-				instrument.filterCutoff = selectCurvedDistribution(0, Config.filterCutoffRange - 1, 6, 1.5);
+				instrument.filterCutoff = selectCurvedDistribution(2, Config.filterCutoffRange - 1, 7, 1.5);
 				instrument.filterResonance = selectCurvedDistribution(0, Config.filterResonanceRange - 1, 1, 2);
 				instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
 					{item: "steady"  , weight: 10},
@@ -507,19 +507,19 @@ namespace beepbox {
 					{item: "flare 1" , weight: 2},
 					{item: "flare 2" , weight: 4},
 					{item: "flare 3" , weight: 2},
-					{item: "twang 1" , weight: 4},
+					{item: "twang 1" , weight: 2},
 					{item: "twang 2" , weight: 4},
 					{item: "twang 3" , weight: 4},
 					{item: "swell 1" , weight: 4},
-					{item: "swell 2" , weight: 4},
-					{item: "swell 3" , weight: 2},
+					{item: "swell 2" , weight: 2},
+					{item: "swell 3" , weight: 1},
 					{item: "tremolo1", weight: 1},
 					{item: "tremolo2", weight: 1},
 					{item: "tremolo3", weight: 1},
 					{item: "tremolo4", weight: 1},
 					{item: "tremolo5", weight: 1},
 					{item: "tremolo6", weight: 1},
-					{item: "decay 1" , weight: 2},
+					{item: "decay 1" , weight: 1},
 					{item: "decay 2" , weight: 2},
 					{item: "decay 3" , weight: 2},
 				])].index;
@@ -601,7 +601,7 @@ namespace beepbox {
 							{item: "decay 2" , weight: 2},
 							{item: "decay 3" , weight: 2},
 						])].index;
-						instrument.pulseWidth = (Math.random() * Config.pulseWidthRange)|0;
+						instrument.pulseWidth = selectCurvedDistribution(0, Config.pulseWidthRange - 1, Config.pulseWidthRange - 1, 2);
 					} break;
 					case InstrumentType.harmonics: {
 						const harmonicGenerators: Function[] = [
@@ -617,7 +617,7 @@ namespace beepbox {
 								let current: number = 1.0;
 								const harmonics: number[] = [current];
 								for (let i = 1; i < Config.harmonicsControlPoints; i++) {
-									current *= Math.pow(2, Math.random() - 0.51);
+									current *= Math.pow(2, Math.random() - 0.55);
 									harmonics[i] = current;
 								}
 								return harmonics;
@@ -626,7 +626,7 @@ namespace beepbox {
 								let current: number = 1.0;
 								const harmonics: number[] = [current];
 								for (let i = 1; i < Config.harmonicsControlPoints; i++) {
-									current *= Math.pow(2, Math.random() - 0.51);
+									current *= Math.pow(2, Math.random() - 0.55);
 									harmonics[i] = current * Math.random();
 								}
 								return harmonics;
