@@ -536,13 +536,29 @@ namespace beepbox {
 						
 						let defaultLength: number = minDivision;
 						for (let i: number = minDivision; i <= this._doc.song.beatsPerBar * Config.partsPerBeat; i += minDivision) {
-							if (i >= 5 * minDivision &&
-							    i % Config.partsPerBeat != 0 &&
-							    i != Config.partsPerBeat * 3.0 / 2.0 &&
-							    i != Config.partsPerBeat * 4.0 / 3.0 &&
-							    i != Config.partsPerBeat * 5.0 / 3.0)
-							{
-								continue;
+							if (minDivision == 1) {
+								if (i < 5) {
+									// Allow small lengths.
+								} else if (i <= Config.partsPerBeat / 2.0) {
+									if (i % 3 != 0 && i % 4 != 0) {
+										continue;
+									}
+								} else if (i <= Config.partsPerBeat * 1.5) {
+									if (i % 6 != 0 && i % 8 != 0) {
+										continue;
+									}
+								} else if (i % Config.partsPerBeat != 0) {
+									continue;
+								}
+							} else {
+								if (i >= 5 * minDivision &&
+									i % Config.partsPerBeat != 0 &&
+									i != Config.partsPerBeat * 3.0 / 4.0 &&
+									i != Config.partsPerBeat * 3.0 / 2.0 &&
+									i != Config.partsPerBeat * 4.0 / 3.0)
+								{
+									continue;
+								}
 							}
 							
 							const blessedLength: number = i;
