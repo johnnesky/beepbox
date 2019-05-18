@@ -400,6 +400,7 @@ namespace beepbox {
 				const isNoiseChannel: boolean = isDrumsetChannel || (channelPreset != null && channelPreset.isNoise == true);
 				const channelBasePitch: number = isNoiseChannel ? Config.spectrumBasePitch : Config.keys[key].basePitch;
 				const intervalScale: number = isNoiseChannel ? Config.noiseInterval : 1;
+				const midiIntervalScale: number = isNoiseChannel ? 0.5 : 1;
 				const channelMaxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
 				
 				if (isNoiseChannel) {
@@ -602,7 +603,7 @@ namespace beepbox {
 									
 									updateCurrentMidiInterval(noteStartMidiTick);
 									updateCurrentMidiExpression(noteStartMidiTick);
-									const shiftedHeldPitch: number = heldPitches[0] - channelBasePitch;
+									const shiftedHeldPitch: number = heldPitches[0] * midiIntervalScale - channelBasePitch;
 									const initialBeepBoxPitch: number = Math.round((shiftedHeldPitch + currentMidiInterval) / intervalScale);
 									const heldPitchOffset: number = Math.round(currentMidiInterval - channelBasePitch);
 									let firstPin: NotePin = makeNotePin(0, 0, Math.round(currentVelocity * currentMidiExpression));
@@ -733,7 +734,7 @@ namespace beepbox {
 									// Build the note chord out of the current pitches, shifted into BeepBox channelBasePitch relative values.
 									note.pitches.length = 0;
 									for (let pitchIndex: number = 0; pitchIndex < Math.min(4, heldPitches.length); pitchIndex++) {
-										let heldPitch: number = heldPitches[pitchIndex + Math.max(0, heldPitches.length - 4)];
+										let heldPitch: number = heldPitches[pitchIndex + Math.max(0, heldPitches.length - 4)] * midiIntervalScale;
 										if (preset != null && preset.midiSubharmonicOctaves != undefined) {
 											heldPitch -= 12 * preset.midiSubharmonicOctaves;
 										}
