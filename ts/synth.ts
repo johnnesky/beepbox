@@ -440,10 +440,10 @@ namespace beepbox {
 					if (i >= Config.spectrumControlPoints) octave2 = highestOctave + (octave2 - highestOctave) * falloffRatio;
 					if (value1 == 0 && value2 == 0) continue;
 					
-					combinedAmplitude += 0.02 * Config.drawNoiseSpectrum(wave, octave1, octave2, value1 / Config.spectrumMax, value2 / Config.spectrumMax, -0.5);
+					combinedAmplitude += 0.02 * drawNoiseSpectrum(wave, octave1, octave2, value1 / Config.spectrumMax, value2 / Config.spectrumMax, -0.5);
 				}
 				if (this.spectrum[Config.spectrumControlPoints - 1] > 0) {
-					combinedAmplitude += 0.02 * Config.drawNoiseSpectrum(wave, highestOctave + (controlPointToOctave(Config.spectrumControlPoints) - highestOctave) * falloffRatio, highestOctave, this.spectrum[Config.spectrumControlPoints - 1] / Config.spectrumMax, 0, -0.5);
+					combinedAmplitude += 0.02 * drawNoiseSpectrum(wave, highestOctave + (controlPointToOctave(Config.spectrumControlPoints) - highestOctave) * falloffRatio, highestOctave, this.spectrum[Config.spectrumControlPoints - 1] / Config.spectrumMax, 0, -0.5);
 				}
 				
 				inverseRealFourierTransform(wave, waveLength);
@@ -484,7 +484,7 @@ namespace beepbox {
 		public getCustomWave(): Float32Array {
 			if (!this._waveIsReady || this._wave == null) {
 				let waveLength: number = Config.harmonicsWavelength;
-				const retroWave: Float32Array = Config.getDrumWave(0);
+				const retroWave: Float32Array = getDrumWave(0);
 				
 				if (this._wave == null || this._wave.length != waveLength + 1) {
 					this._wave = new Float32Array(waveLength + 1);
@@ -950,7 +950,7 @@ namespace beepbox {
 		
 		public warmUp(): void {
 			if (this.type == InstrumentType.noise) {
-				Config.getDrumWave(this.chipNoise);
+				getDrumWave(this.chipNoise);
 			} else if (this.type == InstrumentType.harmonics) {
 				this.harmonicsWave.getCustomWave();
 			} else if (this.type == InstrumentType.spectrum) {
@@ -964,7 +964,7 @@ namespace beepbox {
 		
 		public getDrumWave(): Float32Array {
 			if (this.type == InstrumentType.noise) {
-				return Config.getDrumWave(this.chipNoise);
+				return getDrumWave(this.chipNoise);
 			} else if (this.type == InstrumentType.spectrum) {
 				return this.spectrumWave.getCustomWave(8);
 			} else {
