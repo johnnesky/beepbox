@@ -21,6 +21,7 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
+/// <reference path="changes.ts" />
 /// <reference path="EditorConfig.ts" />
 /// <reference path="ChangeNotifier.ts" />
 
@@ -62,6 +63,7 @@ namespace beepbox {
 		
 		constructor(string?: string) {
 			this.song = new Song(string);
+			if (string == "" || string == undefined) setDefaultInstruments(this.song);
 			this.synth = new Synth(this.song);
 			
 			this.autoPlay = localStorage.getItem("autoPlay") == "true";
@@ -205,6 +207,14 @@ namespace beepbox {
 		
 		public lastChangeWas(change: Change | null): boolean {
 			return change != null && change == this._recentChange;
+		}
+		
+		public goBackToStart(): void {
+			this.channel = 0;
+			this.bar = 0;
+			this.barScrollPos = 0;
+			this.notifier.changed();
+			this.synth.snapToStart();
 		}
 		
 		public savePreferences(): void {

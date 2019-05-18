@@ -945,18 +945,7 @@ namespace beepbox {
 			const channel: Channel = this._doc.song.channels[this._doc.channel];
 			const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
 			const isNoise: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
-			const eligiblePresetValues: number[] = [];
-			for (let categoryIndex: number = 1; categoryIndex < EditorConfig.presetCategories.length; categoryIndex++) {
-				const category: PresetCategory = EditorConfig.presetCategories[categoryIndex];
-				if (category.name == "Novelty Presets") continue;
-				for (let presetIndex: number = 0; presetIndex < category.presets.length; presetIndex++) {
-					const preset: Preset = category.presets[presetIndex];
-					if ((preset.isNoise == true) == isNoise) {
-						eligiblePresetValues.push((categoryIndex << 6) + presetIndex);
-					}
-				}
-			}
-			this._doc.record(new ChangePreset(this._doc, eligiblePresetValues[(Math.random() * eligiblePresetValues.length)|0]));
+			this._doc.record(new ChangePreset(this._doc, pickRandomPresetValue(isNoise)));
 		}
 		
 		private _randomGenerated(): void {
@@ -1084,7 +1073,6 @@ namespace beepbox {
 			switch (this._fileMenu.value) {
 				case "new":
 					this._doc.record(new ChangeSong(this._doc, ""));
-					this._patternEditor.resetCopiedPins();
 					break;
 				case "export":
 					this._openPrompt("export");
@@ -1170,7 +1158,6 @@ namespace beepbox {
 			this._doc.savePreferences();
 		}
 	}
-	
 	
 	const doc: SongDocument = new SongDocument(location.hash);
 	const editor: SongEditor = new SongEditor(doc);

@@ -851,6 +851,7 @@ namespace beepbox {
 					doc.notifier.changed();
 				}
 			}
+			this._doc.goBackToStart();
 			this._doc.prompt = null;
 			this._doc.record(new ChangeImportMidi(this._doc), true);
 		}

@@ -808,49 +808,35 @@ namespace beepbox {
 			if (doc.song.pitchChannelCount != newPitchChannelCount || doc.song.noiseChannelCount != newNoiseChannelCount) {
 				const newChannels: Channel[] = [];
 				
-				for (let i: number = 0; i < newPitchChannelCount; i++) {
-					const channel = i;
-					const oldChannel = i;
-					if (i < doc.song.pitchChannelCount) {
-						newChannels[channel] = doc.song.channels[oldChannel]
-					} else {
-						newChannels[channel] = new Channel();
-						newChannels[channel].octave = 2;
-						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) {
-							const instrument: Instrument = new Instrument(false);
-							instrument.setTypeAndReset(InstrumentType.chip, false);
-							newChannels[channel].instruments[j] = instrument;
-						}
-						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
-							newChannels[channel].patterns[j] = new Pattern();
-						}
-						for (let j: number = 0; j < doc.song.barCount; j++) {
-							newChannels[channel].bars[j] = 1;
-						}
-					}
-				}
-
-				for (let i: number = 0; i < newNoiseChannelCount; i++) {
-					const channel = i + newPitchChannelCount;
-					const oldChannel = i + doc.song.pitchChannelCount;
-					if (i < doc.song.noiseChannelCount) {
-						newChannels[channel] = doc.song.channels[oldChannel]
-					} else {
-						newChannels[channel] = new Channel();
-						newChannels[channel].octave = 0;
-						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) {
-							const instrument: Instrument = new Instrument(true);
-							instrument.setTypeAndReset(InstrumentType.noise, true);
-							newChannels[channel].instruments[j] = instrument;
-						}
-						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
-							newChannels[channel].patterns[j] = new Pattern();
-						}
-						for (let j: number = 0; j < doc.song.barCount; j++) {
-							newChannels[channel].bars[j] = 1;
+				function changeGroup(newCount: number, oldCount: number, newStart: number, oldStart: number, octave: number, isNoise: boolean): void {
+					for (let i: number = 0; i < newCount; i++) {
+						const channel = i + newStart;
+						const oldChannel = i + oldStart;
+						if (i < oldCount) {
+							newChannels[channel] = doc.song.channels[oldChannel]
+						} else {
+							newChannels[channel] = new Channel();
+							newChannels[channel].octave = octave;
+							for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) {
+								const instrument: Instrument = new Instrument(isNoise);
+								const presetValue: number = pickRandomPresetValue(isNoise);
+								const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
+								instrument.fromJsonObject(preset.settings, isNoise);
+								instrument.preset = presetValue;
+								newChannels[channel].instruments[j] = instrument;
+							}
+							for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
+								newChannels[channel].patterns[j] = new Pattern();
+							}
+							for (let j: number = 0; j < doc.song.barCount; j++) {
+								newChannels[channel].bars[j] = 1;
+							}
 						}
 					}
 				}
+				
+				changeGroup(newPitchChannelCount, doc.song.pitchChannelCount, 0, 0, 2, false);
+				changeGroup(newNoiseChannelCount, doc.song.noiseChannelCount, newPitchChannelCount, doc.song.pitchChannelCount, 0, true);
 				
 				doc.song.pitchChannelCount = newPitchChannelCount;
 				doc.song.noiseChannelCount = newNoiseChannelCount;
@@ -1653,12 +1639,47 @@ namespace beepbox {
 		}
 	}
 	
+	export function pickRandomPresetValue(isNoise: boolean): number {
+		const eligiblePresetValues: number[] = [];
+		for (let categoryIndex: number = 0; categoryIndex < EditorConfig.presetCategories.length; categoryIndex++) {
+			const category: PresetCategory = EditorConfig.presetCategories[categoryIndex];
+			if (category.name == "Novelty Presets") continue;
+			for (let presetIndex: number = 0; presetIndex < category.presets.length; presetIndex++) {
+				const preset: Preset = category.presets[presetIndex];
+				if (preset.settings != undefined && (preset.isNoise == true) == isNoise) {
+					eligiblePresetValues.push((categoryIndex << 6) + presetIndex);
+				}
+			}
+		}
+		return eligiblePresetValues[(Math.random() * eligiblePresetValues.length)|0];
+	}
+	
+	export function setDefaultInstruments(song: Song): void {
+		for (let channelIndex: number = 0; channelIndex < song.channels.length; channelIndex++) {
+			for (const instrument of song.channels[channelIndex].instruments) {
+				const isNoise: boolean = song.getChannelIsNoise(channelIndex);
+				if (channelIndex == 0 || channelIndex == song.pitchChannelCount) {
+					const category: PresetCategory = EditorConfig.presetCategories.dictionary["Chiptune Presets"];
+					const preset: Preset = category.presets.dictionary[isNoise ? "chip noise" : "square wave"];
+					instrument.fromJsonObject(preset.settings, isNoise);
+					instrument.preset = (category.index << 6) + preset.index;
+				} else {
+					const presetValue: number = pickRandomPresetValue(isNoise);
+					const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
+					instrument.fromJsonObject(preset.settings, isNoise);
+					instrument.preset = presetValue;
+				}
+			}
+		}
+	}
+	
 	export class ChangeSong extends ChangeGroup {
 		constructor(doc: SongDocument, newHash: string) {
 			super();
 			doc.song.fromBase64String(newHash);
 			this.append(new ChangeValidateDoc(doc));
-			doc.notifier.changed();
+			if (newHash == "") setDefaultInstruments(doc.song);
+			doc.goBackToStart();
 			this._didSomething();
 		}
 	}
