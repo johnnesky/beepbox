@@ -466,7 +466,7 @@ namespace beepbox {
 									const instrumentDecays: boolean = envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.twang;
 									if (instrument.type == InstrumentType.noise || instrument.type == InstrumentType.spectrum) {
 										if (isNoise) {
-											instrumentProgram = instrumentDecays ? 116 : 126; // taiko : applause
+											instrumentProgram = 116; // taiko
 										} else {
 											instrumentProgram = instrumentDecays ? 47 : 75; // timpani : pan flute
 										}
@@ -653,7 +653,11 @@ namespace beepbox {
 												nextPitch = channelRoot + nextPitch * intervalScale + pitchOffset;
 												if (preset != null && preset.midiSubharmonicOctaves != undefined) {
 													nextPitch += 12 * preset.midiSubharmonicOctaves;
+												} else if (isNoise) {
+													nextPitch += 12 * (+EditorConfig.presetCategories.dictionary["Drum Presets"].presets.dictionary["taiko drum"].midiSubharmonicOctaves!);
 												}
+												
+												if (isNoise) nextPitch *= 2;
 											}
 											nextPitch = Math.max(0, Math.min(127, nextPitch));
 											nextPitches[toneIndex] = nextPitch;
