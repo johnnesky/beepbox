@@ -328,6 +328,7 @@
 √ Added edit option to move all notes sideways.
 √ Added edit options to force/quantize notes to scale and rhythm.
 √ Freehand rhythm.
+√ New songs get random instruments and reset playhead to start.
 
 NEXT RELEASE:
 - Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
