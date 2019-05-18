@@ -26,9 +26,6 @@ namespace beepbox {
 	// synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
 	declare function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
 	declare function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
-}
-
-namespace beepbox {
 	
 	export interface Dictionary<T> {
 		[K: string]: T;
@@ -199,15 +196,15 @@ namespace beepbox {
 		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM"];
 		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false];
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
-			{name: "rounded",      volume: 0.94, samples: Config._centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
-			{name: "triangle",     volume: 1.0,  samples: Config._centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0])},
-			{name: "square",       volume: 0.5,  samples: Config._centerWave([1.0, -1.0])},
-			{name: "1/4 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0])},
-			{name: "1/8 pulse",    volume: 0.5,  samples: Config._centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "sawtooth",     volume: 0.65, samples: Config._centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0])},
-			{name: "double saw",   volume: 0.5,  samples: Config._centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2])},
-			{name: "double pulse", volume: 0.4,  samples: Config._centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "spiky",        volume: 0.4,  samples: Config._centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0])},
+			{name: "rounded",      volume: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
+			{name: "triangle",     volume: 1.0,  samples: centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0])},
+			{name: "square",       volume: 0.5,  samples: centerWave([1.0, -1.0])},
+			{name: "1/4 pulse",    volume: 0.5,  samples: centerWave([1.0, -1.0, -1.0, -1.0])},
+			{name: "1/8 pulse",    volume: 0.5,  samples: centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
+			{name: "sawtooth",     volume: 0.65, samples: centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0])},
+			{name: "double saw",   volume: 0.5,  samples: centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2])},
+			{name: "double pulse", volume: 0.4,  samples: centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0])},
+			{name: "spiky",        volume: 0.4,  samples: centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0])},
 		]);
 		// Noise waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
 		public static readonly chipNoises: DictionaryArray<ChipNoise> = toNameMap([
@@ -347,7 +344,7 @@ namespace beepbox {
 		public static readonly harmonicsControlPoints: number = 28;
 		public static readonly harmonicsRendered: number = 64;
 		public static readonly harmonicsControlPointBits: number = 3;
-		public static readonly harmonicsMax: number = (1 << Config.harmonicsControlPointBits) - 1;;
+		public static readonly harmonicsMax: number = (1 << Config.harmonicsControlPointBits) - 1;
 		public static readonly harmonicsWavelength: number = 1 << 11; // 2048
 		public static readonly pulseWidthRange: number = 8;
 		public static readonly pitchChannelCountMin: number = 1;
@@ -364,129 +361,129 @@ namespace beepbox {
 		public static readonly maximumTonesPerChannel: number = 8;
 		public static readonly sineWaveLength: number = 1 << 8; // 256
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
-		public static readonly sineWave: Float64Array = Config.generateSineWave();
-		
-		private static _centerWave(wave: Array<number>): Float64Array {
-			let sum: number = 0.0;
-			for (let i: number = 0; i < wave.length; i++) {
-				sum += wave[i];
-			}
-			const average: number = sum / wave.length;
-			
-			// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
-			let cumulative: number = 0;
-			let wavePrev: number = 0;
-			for (let i: number = 0; i < wave.length; i++) {
-				cumulative += wavePrev;
-				wavePrev = wave[i] - average;
-				wave[i] = cumulative;
-			}
-			// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
-			wave.push(0);
-			return new Float64Array(wave);
+		public static readonly sineWave: Float64Array = generateSineWave();
+	}
+	
+	function centerWave(wave: Array<number>): Float64Array {
+		let sum: number = 0.0;
+		for (let i: number = 0; i < wave.length; i++) {
+			sum += wave[i];
 		}
+		const average: number = sum / wave.length;
 		
-		public static getDrumWave(index: number): Float32Array {
-			let wave: Float32Array | null = Config.chipNoises[index].samples;
-			if (wave == null) {
-				wave = new Float32Array(Config.chipNoiseLength + 1);
-				Config.chipNoises[index].samples = wave;
-				
-				if (index == 0) {
-					// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
-					let drumBuffer: number = 1;
-					for (let i: number = 0; i < Config.chipNoiseLength; i++) {
-						wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
-						let newBuffer: number = drumBuffer >> 1;
-						if (((drumBuffer + newBuffer) & 1) == 1) {
-							newBuffer += 1 << 14;
-						}
-						drumBuffer = newBuffer;
+		// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+		let cumulative: number = 0;
+		let wavePrev: number = 0;
+		for (let i: number = 0; i < wave.length; i++) {
+			cumulative += wavePrev;
+			wavePrev = wave[i] - average;
+			wave[i] = cumulative;
+		}
+		// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
+		wave.push(0);
+		return new Float64Array(wave);
+	}
+	
+	export function getDrumWave(index: number): Float32Array {
+		let wave: Float32Array | null = Config.chipNoises[index].samples;
+		if (wave == null) {
+			wave = new Float32Array(Config.chipNoiseLength + 1);
+			Config.chipNoises[index].samples = wave;
+			
+			if (index == 0) {
+				// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
+				let drumBuffer: number = 1;
+				for (let i: number = 0; i < Config.chipNoiseLength; i++) {
+					wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+					let newBuffer: number = drumBuffer >> 1;
+					if (((drumBuffer + newBuffer) & 1) == 1) {
+						newBuffer += 1 << 14;
 					}
-				} else if (index == 1) {
-					// White noise is just random values for each sample.
-					for (let i: number = 0; i < Config.chipNoiseLength; i++) {
-						wave[i] = Math.random() * 2.0 - 1.0;
-					}
-				} else if (index == 2) {
-					// The "clang" drums are inspired by similar drums in the modded beepbox! :D
-                    let drumBuffer: number = 1;
-					for (let i: number = 0; i < Config.chipNoiseLength; i++) {
-                        wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
-						let newBuffer: number = drumBuffer >> 1;
-                        if (((drumBuffer + newBuffer) & 1) == 1) {
-                            newBuffer += 2 << 14;
-                        }
-                        drumBuffer = newBuffer;
-                    }
-                } else if (index == 3) {
-					// The "buzz" drums are inspired by similar drums in the modded beepbox! :D
-                    let drumBuffer: number = 1;
-					for (let i: number = 0; i < Config.chipNoiseLength; i++) {
-                        wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
-						let newBuffer: number = drumBuffer >> 1;
-                        if (((drumBuffer + newBuffer) & 1) == 1) {
-                            newBuffer += 10 << 2;
-                        }
-                        drumBuffer = newBuffer;
-                    }
-				} else if (index == 4) {
-					// "hollow" drums, designed in frequency space and then converted via FFT:
-					Config.drawNoiseSpectrum(wave, 10, 11, 1, 1, 0);
-					Config.drawNoiseSpectrum(wave, 11, 14, .6578, .6578, 0);
-					inverseRealFourierTransform(wave, Config.chipNoiseLength);
-					scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
-				} else {
-					throw new Error("Unrecognized drum index: " + index);
+					drumBuffer = newBuffer;
 				}
-				
-				wave[Config.chipNoiseLength] = wave[0];
+			} else if (index == 1) {
+				// White noise is just random values for each sample.
+				for (let i: number = 0; i < Config.chipNoiseLength; i++) {
+					wave[i] = Math.random() * 2.0 - 1.0;
+				}
+			} else if (index == 2) {
+				// The "clang" drums are inspired by similar drums in the modded beepbox! :D
+				let drumBuffer: number = 1;
+				for (let i: number = 0; i < Config.chipNoiseLength; i++) {
+					wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+					let newBuffer: number = drumBuffer >> 1;
+					if (((drumBuffer + newBuffer) & 1) == 1) {
+						newBuffer += 2 << 14;
+					}
+					drumBuffer = newBuffer;
+				}
+			} else if (index == 3) {
+				// The "buzz" drums are inspired by similar drums in the modded beepbox! :D
+				let drumBuffer: number = 1;
+				for (let i: number = 0; i < Config.chipNoiseLength; i++) {
+					wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+					let newBuffer: number = drumBuffer >> 1;
+					if (((drumBuffer + newBuffer) & 1) == 1) {
+						newBuffer += 10 << 2;
+					}
+					drumBuffer = newBuffer;
+				}
+			} else if (index == 4) {
+				// "hollow" drums, designed in frequency space and then converted via FFT:
+				drawNoiseSpectrum(wave, 10, 11, 1, 1, 0);
+				drawNoiseSpectrum(wave, 11, 14, .6578, .6578, 0);
+				inverseRealFourierTransform(wave, Config.chipNoiseLength);
+				scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
+			} else {
+				throw new Error("Unrecognized drum index: " + index);
 			}
 			
-			return wave;
+			wave[Config.chipNoiseLength] = wave[0];
 		}
 		
-		public static drawNoiseSpectrum(wave: Float32Array, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overallSlope: number): number {
-			const referenceOctave: number = 11;
-			const referenceIndex: number = 1 << referenceOctave;
-			const lowIndex: number = Math.pow(2, lowOctave) | 0;
-			const highIndex: number = Math.min(Config.chipNoiseLength >> 1, Math.pow(2, highOctave) | 0);
-			const retroWave: Float32Array = Config.getDrumWave(0);
-			let combinedAmplitude: number = 0.0;
-			for (let i: number = lowIndex; i < highIndex; i++) {
-				
-				let lerped: number = lowPower + (highPower - lowPower) * (Math.log(i) / Math.LN2 - lowOctave) / (highOctave - lowOctave);
-				//let amplitude: number = Math.pow(2, lerped);
-				//let amplitude: number = Math.pow((lerped + 5) / 7, 4);
-				let amplitude: number = Math.pow(2, (lerped-1)*Config.spectrumMax + 1) * lerped;
-				
-				amplitude *= Math.pow(i / referenceIndex, overallSlope);
-				
-				combinedAmplitude += amplitude;
-				
-				// Add two different sources of psuedo-randomness to the noise
-				// (individually they aren't random enough) but in a deterministic
-				// way so that live spectrum editing doesn't result in audible pops.
-				// Multiple all the sine wave amplitudes by 1 or -1 based on the 
-				// LFSR retro wave (effectively random), and also rotate the phase
-				// of each sine wave based on the golden angle to disrupt the symmetry.
-				amplitude *= retroWave[i];
-				const radians: number = 0.61803398875 * i * i * Math.PI * 2.0;
-				
-				wave[i] = Math.cos(radians) * amplitude;
-				wave[Config.chipNoiseLength - i] = Math.sin(radians) * amplitude;
-			}
+		return wave;
+	}
+	
+	export function drawNoiseSpectrum(wave: Float32Array, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overallSlope: number): number {
+		const referenceOctave: number = 11;
+		const referenceIndex: number = 1 << referenceOctave;
+		const lowIndex: number = Math.pow(2, lowOctave) | 0;
+		const highIndex: number = Math.min(Config.chipNoiseLength >> 1, Math.pow(2, highOctave) | 0);
+		const retroWave: Float32Array = getDrumWave(0);
+		let combinedAmplitude: number = 0.0;
+		for (let i: number = lowIndex; i < highIndex; i++) {
 			
-			return combinedAmplitude;
+			let lerped: number = lowPower + (highPower - lowPower) * (Math.log(i) / Math.LN2 - lowOctave) / (highOctave - lowOctave);
+			//let amplitude: number = Math.pow(2, lerped);
+			//let amplitude: number = Math.pow((lerped + 5) / 7, 4);
+			let amplitude: number = Math.pow(2, (lerped-1)*Config.spectrumMax + 1) * lerped;
+			
+			amplitude *= Math.pow(i / referenceIndex, overallSlope);
+			
+			combinedAmplitude += amplitude;
+			
+			// Add two different sources of psuedo-randomness to the noise
+			// (individually they aren't random enough) but in a deterministic
+			// way so that live spectrum editing doesn't result in audible pops.
+			// Multiple all the sine wave amplitudes by 1 or -1 based on the 
+			// LFSR retro wave (effectively random), and also rotate the phase
+			// of each sine wave based on the golden angle to disrupt the symmetry.
+			amplitude *= retroWave[i];
+			const radians: number = 0.61803398875 * i * i * Math.PI * 2.0;
+			
+			wave[i] = Math.cos(radians) * amplitude;
+			wave[Config.chipNoiseLength - i] = Math.sin(radians) * amplitude;
 		}
 		
-		private static generateSineWave(): Float64Array {
-			const wave: Float64Array = new Float64Array(Config.sineWaveLength + 1);
-			for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
-				wave[i] = Math.sin(i * Math.PI * 2.0 / Config.sineWaveLength);
-			}
-			return wave;
+		return combinedAmplitude;
+	}
+	
+	function generateSineWave(): Float64Array {
+		const wave: Float64Array = new Float64Array(Config.sineWaveLength + 1);
+		for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
+			wave[i] = Math.sin(i * Math.PI * 2.0 / Config.sineWaveLength);
 		}
+		return wave;
 	}
 	
 	// Pardon the messy type casting. This allows accessing array members by numerical index or string name.
