@@ -19,14 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 SOFTWARE.
 `
-
-namespace beepbox {
-	// These will be defined in FFT.ts, but I want SynthConfig.ts to be at the
-	// of the compiled JS so I won't directly depend on FFT here.
-	// synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
-	declare function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
-	declare function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
 	
+namespace beepbox {
 	export interface Dictionary<T> {
 		[K: string]: T;
 	}
@@ -196,6 +190,7 @@ namespace beepbox {
 		
 		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM"];
 		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false];
+		public static readonly instrumentTypeHasChorus: ReadonlyArray<boolean> = [true, true, true, false, false, true, true];
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
 			{name: "rounded",      volume: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
 			{name: "triangle",     volume: 1.0,  samples: centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0])},
@@ -499,4 +494,12 @@ namespace beepbox {
 		result.dictionary = dictionary;
 		return result;
 	}
+}
+
+namespace beepbox {
+	// These will be defined in FFT.ts, but I want SynthConfig.ts to be at the
+	// of the compiled JS so I won't directly depend on FFT here.
+	// synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
+	declare function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
+	declare function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
 }

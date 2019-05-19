@@ -712,7 +712,7 @@ namespace beepbox {
 					throw new Error("Unrecognized instrument type: " + instrument.type);
 				}
 			}
-
+			
 			for (let chordIndex: number = 0; chordIndex < Config.chords.length; chordIndex++) {
 				const hidden: boolean = !Config.instrumentTypeHasSpecialInterval[instrument.type] ? Config.chords[chordIndex].isCustomInterval : false;
 				const option: Element = this._chordSelect.children[chordIndex];
@@ -725,6 +725,17 @@ namespace beepbox {
 				}
 			}
 			
+			for (let effectsIndex: number = 0; effectsIndex < Config.effectsNames.length; effectsIndex++) {
+				const hidden: boolean = !Config.instrumentTypeHasChorus[instrument.type] ? Config.effectsNames[effectsIndex].indexOf("chorus") != -1 : false;
+				const option: Element = this._effectsSelect.children[effectsIndex];
+				if (hidden) {
+					if (!option.hasAttribute("hidden")) {
+						option.setAttribute("hidden", "");
+					}
+				} else {
+					option.removeAttribute("hidden");
+				}
+			}
 			
 			this._instrumentSelectRow.style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";
 			this._instrumentSelectRow.style.visibility = (pattern == null) ? "hidden" : "";
