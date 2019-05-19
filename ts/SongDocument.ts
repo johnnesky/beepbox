@@ -21,7 +21,6 @@ SOFTWARE.
 */
 
 /// <reference path="synth.ts" />
-/// <reference path="changes.ts" />
 /// <reference path="EditorConfig.ts" />
 /// <reference path="ChangeNotifier.ts" />
 
@@ -215,6 +214,7 @@ namespace beepbox {
 			this.barScrollPos = 0;
 			this.notifier.changed();
 			this.synth.snapToStart();
+			this.notifier.changed();
 		}
 		
 		public savePreferences(): void {

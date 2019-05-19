@@ -30,11 +30,13 @@ namespace beepbox {
 		private readonly _editorHeight: number = 26;
 		private readonly _fill: SVGPathElement = SVG.path({fill: "#444444", "pointer-events": "none"});
 		private readonly _octaves: SVGSVGElement = SVG.svg({"pointer-events": "none"});
+		private readonly _fifths: SVGSVGElement = SVG.svg({"pointer-events": "none"});
 		private readonly _curve: SVGPathElement = SVG.path({fill: "none", stroke: "currentColor", "stroke-width": 2, "pointer-events": "none"});
 		private readonly _arrow: SVGPathElement = SVG.path({fill: "currentColor", "pointer-events": "none"});
 		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: none; cursor: crosshair;", width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"},
 			this._fill,
 			this._octaves,
+			this._fifths,
 			this._curve,
 			this._arrow,
 		);
@@ -48,10 +50,14 @@ namespace beepbox {
 		private _mouseDown: boolean = false;
 		private _change: ChangeSpectrum | null = null;
 		private _renderedPath: String = "";
+		private _renderedFifths: boolean = true;
 		
 		constructor(private _doc: SongDocument, private _spectrumIndex: number | null) {
 			for (let i: number = 0; i < Config.spectrumControlPoints; i += Config.spectrumControlPointsPerOctave) {
 				this._octaves.appendChild(SVG.rect({fill: "#886644", x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
+			}
+			for (let i: number = 4; i <= Config.spectrumControlPoints; i += Config.spectrumControlPointsPerOctave) {
+				this._fifths.appendChild(SVG.rect({fill: "#446688", x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
 			}
 			
 			this.container.addEventListener("mousedown", this._whenMousePressed);
@@ -161,17 +167,26 @@ namespace beepbox {
 			const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 			const spectrumWave: SpectrumWave = (this._spectrumIndex == null) ? instrument.spectrumWave : instrument.drumsetSpectrumWaves[this._spectrumIndex];
 			const controlPointToHeight = (point: number): number => {
-				return (1 - (point / Config.spectrumMax)) * (this._editorHeight - 2) + 1;
+				return (1 - (point / Config.spectrumMax)) * (this._editorHeight - 1) + 1;
 			}
 			
-			let path: string = "M 0 " + prettyNumber(this._editorHeight - 1) + " ";
+			let lastValue: number = 0;
+			let path: string = "M 0 " + prettyNumber(this._editorHeight) + " ";
 			for (let i = 0; i < Config.spectrumControlPoints; i++) {
-				path += "L " + prettyNumber((i + 1) * this._editorWidth / (Config.spectrumControlPoints + 2)) + " " + prettyNumber(controlPointToHeight(spectrumWave.spectrum[i])) + " ";
+				let nextValue: number = spectrumWave.spectrum[i];
+				if (lastValue != 0 || nextValue != 0) {
+					path += "L ";
+				} else {
+					path += "M ";
+				}
+				path += prettyNumber((i + 1) * this._editorWidth / (Config.spectrumControlPoints + 2)) + " " + prettyNumber(controlPointToHeight(nextValue)) + " ";
+				lastValue = nextValue;
 			}
 			
-			const lastHeight: number = controlPointToHeight(spectrumWave.spectrum[Config.spectrumControlPoints - 1]);
-			
-			path += "L " + (this._editorWidth - 1) + " " + prettyNumber(lastHeight) + " ";
+			const lastHeight: number = controlPointToHeight(lastValue);
+			if (lastValue > 0) {
+				path += "L " + (this._editorWidth - 1) + " " + prettyNumber(lastHeight) + " ";
+			}
 			
 			if (this._renderedPath != path) {
 				this._renderedPath = path;
@@ -179,6 +194,11 @@ namespace beepbox {
 				this._fill.setAttribute("d", path + "L " + this._editorWidth + " " + prettyNumber(lastHeight) + " L " + this._editorWidth + " " + prettyNumber(this._editorHeight) + " L 0 " + prettyNumber(this._editorHeight) + " z ");
 				
 				this._arrow.setAttribute("d", "M " + this._editorWidth + " " + prettyNumber(lastHeight) + " L " + (this._editorWidth - 4) + " " + prettyNumber(lastHeight - 4) + " L " + (this._editorWidth - 4) + " " + prettyNumber(lastHeight + 4) + " z");
+				this._arrow.style.display = (lastValue > 0) ? "" : "none";
+			}
+			if (this._renderedFifths != this._doc.showFifth) {
+				this._renderedFifths = this._doc.showFifth;
+				this._fifths.style.display = this._doc.showFifth ? "" : "none";
 			}
 		}
 	}
