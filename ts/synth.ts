@@ -27,9 +27,6 @@ SOFTWARE.
 interface Window {
 	AudioContext: any;
 	webkitAudioContext: any;
-	mozAudioContext: any;
-	oAudioContext: any;
-	msAudioContext: any;
 }
 
 namespace beepbox {
@@ -2450,7 +2447,7 @@ namespace beepbox {
 			
 			Synth.warmUpSynthesizer(this.song);
 			
-			const contextClass = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
+			const contextClass = (window.AudioContext || window.webkitAudioContext);
 			this.audioCtx = this.audioCtx || new contextClass();
 			this.scriptNode = this.audioCtx.createScriptProcessor ? this.audioCtx.createScriptProcessor(2048, 0, 1) : this.audioCtx.createJavaScriptNode(2048, 0, 1); // 2048, 0 input channels, 1 output
 			this.scriptNode.onaudioprocess = this.audioProcessCallback;

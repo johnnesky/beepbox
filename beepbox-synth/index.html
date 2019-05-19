@@ -177,15 +177,31 @@
 			document.getElementById("bar-editing").innerHTML = "Tap the other boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
 		}
 		
-		var hasAudioContext = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
-		if (hasAudioContext) {
+		function browserHasRequiredFeatures() {
+			"use strict";
+			if (window.AudioContext == undefined && window.webkitAudioContext == undefined) {
+				return false;
+			}
+			
+			try {
+				eval("class T {}");
+				eval("const a = () => 0");
+				eval("for (const a of []);");
+			} catch (error) {
+				return false;
+			}
+			
+			return true;
+		}
+		
+		if (browserHasRequiredFeatures()) {
 			// Go ahead and load js beepbox editor interface:
 			var fileref = document.createElement("script");
 			fileref.setAttribute("type", "text/javascript");
 			fileref.setAttribute("src", "beepbox_editor.min.js");
 			document.head.appendChild(fileref);
 		} else {
-			document.getElementById("beepboxEditorContainer").innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, or Opera.";
+			document.getElementById("beepboxEditorContainer").innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, Edge, Safari, or Opera.";
 		}
 		
 	</script>
