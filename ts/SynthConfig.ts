@@ -144,6 +144,7 @@ namespace beepbox {
 	}
 
 	export class Config {
+		public static readonly versionDisplayName: string = "BeepBox 3.0";
 		public static readonly scales: DictionaryArray<Scale> = toNameMap([
 			{name: "easy :)",         flags: [ true, false,  true, false,  true, false, false,  true, false,  true, false, false]},
 			{name: "easy :(",         flags: [ true, false, false,  true, false,  true, false,  true, false, false,  true, false]},

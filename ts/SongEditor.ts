@@ -229,14 +229,14 @@ namespace beepbox {
 		private readonly _chordSelectRow: HTMLElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chords")}, "Chords:"), div({className: "selectContainer"}, this._chordSelect));
 		private readonly _vibratoSelect: HTMLSelectElement = buildOptions(select(), Config.vibratos.map(vibrato=>vibrato.name));
 		private readonly _vibratoSelectRow: HTMLElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("vibrato")}, "Vibrato:"), div({className: "selectContainer"}, this._vibratoSelect));
-		private readonly _phaseModGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"});
+		private readonly _phaseModGroup: HTMLElement = div({className: "editor-controls"});
 		private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select(), Config.feedbacks.map(feedback=>feedback.name));
 		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("feedbackType")}, "Feedback:"), div({className: "selectContainer"}, this._feedbackTypeSelect));
 		private readonly _spectrumEditor: SpectrumEditor = new SpectrumEditor(this._doc, null);
 		private readonly _spectrumRow: HTMLElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("spectrum")}, "Spectrum:"), this._spectrumEditor.container);
 		private readonly _harmonicsEditor: HarmonicsEditor = new HarmonicsEditor(this._doc, null);
 		private readonly _harmonicsRow: HTMLElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("harmonics")}, "Harmonics:"), this._harmonicsEditor.container);
-		private readonly _drumsetGroup: HTMLElement = div({style: "display: flex; flex-direction: column; display: none;"});
+		private readonly _drumsetGroup: HTMLElement = div({className: "editor-controls"});
 		
 		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
 		private readonly _feedbackEnvelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Feedback Envelope"}), Config.envelopes.map(envelope=>envelope.name));
@@ -246,7 +246,7 @@ namespace beepbox {
 			this._feedbackAmplitudeSlider.input,
 			div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, this._feedbackEnvelopeSelect),
 		);
-		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", style: "margin: .1em 0"},
+		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", style: "margin: 2px 0"},
 			"Customize Instrument",
 			// Dial icon
 			SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"},
@@ -265,7 +265,7 @@ namespace beepbox {
 				),
 			),
 		);
-		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div(
+		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({className: "editor-controls"},
 			this._filterCutoffRow,
 			this._filterResonanceRow,
 			this._filterEnvelopeRow,
@@ -289,7 +289,7 @@ namespace beepbox {
 			this._pulseEnvelopeRow,
 			this._pulseWidthRow,
 		);
-		private readonly _instrumentSettingsGroup: HTMLDivElement = div({style: "display: flex; flex-direction: column;"},
+		private readonly _instrumentSettingsGroup: HTMLDivElement = div({className: "editor-controls"},
 			this._instrumentSelectRow,
 			this._instrumentVolumeSliderRow,
 			div({className: "selectRow"},
@@ -303,7 +303,7 @@ namespace beepbox {
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"},
 			this._editorBox,
 			div({className: "editor-widget-column noSelection"},
-				div({style: "text-align: center; color: #999;"}, "BeepBox 3.0"),
+				div({style: "text-align: center; color: #999;"}, Config.versionDisplayName),
 				div({className: "editor-widgets"},
 					div({className: "editor-controls"},
 						div({className: "playback-controls"},
@@ -382,7 +382,8 @@ namespace beepbox {
 			this._promptContainer,
 		);
 		
-		private _wasPlaying: boolean;
+		private _wasPlaying: boolean = false;
+		private _currentPromptName: string | null = null;
 		private _changeTranspose: ChangeTranspose | null = null;
 		private readonly _operatorRows: HTMLDivElement[] = []
 		private readonly _operatorAmplitudeSliders: Slider[] = []
@@ -498,8 +499,13 @@ namespace beepbox {
 		}
 		
 		private _setPrompt(promptName: string | null): void {
+			if (this._currentPromptName == promptName) return;
+			this._currentPromptName = promptName;
+			
 			if (this.prompt) {
-				if (this._wasPlaying) this._play();
+				if (this._wasPlaying && !(this.prompt instanceof TipPrompt)) {
+					this._play();
+				}
 				this._wasPlaying = false;
 				this._promptContainer.style.display = "none";
 				this._promptContainer.removeChild(this.prompt.container);
@@ -534,8 +540,10 @@ namespace beepbox {
 				}
 				
 				if (this.prompt) {
-					this._wasPlaying = this._doc.synth.playing;
-					this._pause();
+					if (!(this.prompt instanceof TipPrompt)) {
+						this._wasPlaying = this._doc.synth.playing;
+						this._pause();
+					}
 					this._promptContainer.style.display = null;
 					this._promptContainer.appendChild(this.prompt.container);
 				}
@@ -936,6 +944,7 @@ namespace beepbox {
 			const channel: Channel = this._doc.song.channels[this._doc.channel];
 			const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
 			const instrumentCopy: any = JSON.parse(String(window.localStorage.getItem("instrumentCopy")));
+			delete instrumentCopy["volume"];
 			if (instrumentCopy != null && instrumentCopy["isDrum"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				this._doc.record(new ChangePasteInstrument(this._doc, instrument, instrumentCopy));
 			}
@@ -1072,6 +1081,7 @@ namespace beepbox {
 		private _fileMenuHandler = (event:Event): void => {
 			switch (this._fileMenu.value) {
 				case "new":
+					this._doc.goBackToStart();
 					this._doc.record(new ChangeSong(this._doc, ""));
 					break;
 				case "export":

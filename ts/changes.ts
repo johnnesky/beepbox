@@ -1679,7 +1679,7 @@ namespace beepbox {
 			doc.song.fromBase64String(newHash);
 			this.append(new ChangeValidateDoc(doc));
 			if (newHash == "") setDefaultInstruments(doc.song);
-			doc.goBackToStart();
+			doc.notifier.changed();
 			this._didSomething();
 		}
 	}
@@ -1726,6 +1726,9 @@ namespace beepbox {
 			
 			removeExtraSparseChannels(pitchChannels, Config.pitchChannelCountMax);
 			removeExtraSparseChannels(noiseChannels, Config.noiseChannelCountMax);
+			
+			while (pitchChannels.length < Config.pitchChannelCountMin) pitchChannels.push(new Channel());
+			while (noiseChannels.length < Config.noiseChannelCountMin) noiseChannels.push(new Channel());
 			
 			// Set minimum counts.
 			song.barCount = 1;

@@ -74,6 +74,7 @@ namespace beepbox {
 				const reader: FileReader = new FileReader();
 				reader.addEventListener("load", (event: Event): void => {
 					this._doc.prompt = null;
+					this._doc.goBackToStart();
 					this._doc.record(new ChangeSong(this._doc, <string>reader.result), true);
 				});
 				reader.readAsText(file);
@@ -81,7 +82,7 @@ namespace beepbox {
 				const reader: FileReader = new FileReader();
 				reader.addEventListener("load", (event: Event): void => {
 					this._doc.prompt = null;
-					//this._doc.record(new ChangeSong(this._doc, <string>reader.result), true);
+					this._doc.goBackToStart();
 					this._parseMidiFile(<ArrayBuffer>reader.result);
 				});
 				reader.readAsArrayBuffer(file);
