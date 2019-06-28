@@ -1664,21 +1664,21 @@ namespace beepbox {
 						const instrument: Instrument = this.channels[channel].instruments[0];
 						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						// legacy mute value:
-						if (instrument.volume == 5) instrument.volume = Config.volumeRange;
+						if (instrument.volume == 5) instrument.volume = Config.volumeRange - 1;
 					} else if (beforeSix) {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 								const instrument: Instrument = this.channels[channel].instruments[i];
 								instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 								// legacy mute value:
-								if (instrument.volume == 5) instrument.volume = Config.volumeRange;
+								if (instrument.volume == 5) instrument.volume = Config.volumeRange - 1;
 							}
 						}
 					} else if (beforeSeven) {
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						// legacy mute value:
-						if (instrument.volume == 5) instrument.volume = Config.volumeRange;
+						if (instrument.volume == 5) instrument.volume = Config.volumeRange - 1;
 					} else {
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
