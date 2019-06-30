@@ -1662,7 +1662,7 @@ namespace beepbox {
 			for (const instrument of song.channels[channelIndex].instruments) {
 				const isNoise: boolean = song.getChannelIsNoise(channelIndex);
 				if (channelIndex == 0 || channelIndex == song.pitchChannelCount) {
-					const category: PresetCategory = EditorConfig.presetCategories.dictionary["Chiptune Presets"];
+					const category: PresetCategory = EditorConfig.presetCategories.dictionary["Retro Presets"];
 					const preset: Preset = category.presets.dictionary[isNoise ? "chip noise" : "square wave"];
 					instrument.fromJsonObject(preset.settings, isNoise);
 					instrument.preset = (category.index << 6) + preset.index;

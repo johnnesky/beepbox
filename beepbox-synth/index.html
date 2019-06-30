@@ -31,6 +31,22 @@
 		a {
 			color: #98f;
 		}
+		.donation {
+			display: inline;
+		}
+		.donation input[type="submit"] {
+			-webkit-appearance: none;
+			appearance: none;
+			background: none;
+			border: none;
+			font-family: inherit;
+			font-size: inherit;
+			color: #98f;
+			text-decoration: none;
+			cursor: pointer;
+			padding: 0;
+			margin: 0;
+		}
 		#beepboxEditorContainer {
 			min-height: 645px;
 		}
@@ -80,6 +96,16 @@
 		When you make changes to the song, the URL is updated to reflect your changes. 
 		When you are satisfied with your song, just copy and paste the URL to save and share your song! 
 	</p>
+    <div>
+		BeepBox is a passion project, and will always be free to use. If you find it valuable and have the means, any gratuity via
+		<form class="donation" action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
+			<input type="hidden" name="cmd" value="_donations" />
+			<input type="hidden" name="business" value="QZJTX9GRYEV9N" />
+			<input type="hidden" name="currency_code" value="USD" />
+			<input type="submit" name="submit" value="Paypal"/>
+		</form>
+		would be appreciated!
+    </div>
 	
 	<div class="column-container">
 		<div class="instructions-column">
@@ -122,8 +148,8 @@
 				</ul>
 			</div>
 			<p>
-				In the pattern editor, you can click and drag horizontally on a note to adjust its duration.
-				You can also click above or below an existing note to enable a rapid arpeggio/trill effect, oscillating between two or more simultaneous notes. 
+				In the note pattern editor, you can click and drag horizontally on a note to adjust its duration.
+				You can also click above or below an existing note to add more notes to be played simultaneously, which is called a chord. 
 			</p>
 			<p>
 				ADVANCED: Drag vertically from an existing note to bend its pitch, or drag vertically from above or below the note to adjust its volume.
@@ -135,7 +161,7 @@
 			<p>
 				<a href="https://twitter.com/beepboxco">Check out some of these songs that other people have posted on Twitter!</a>
 				If you find something you like, you should let the creator know!
-				And if you see any beginners asking for advice, maybe you can give them a hand!
+				And if you see any beginners asking for advice, maybe you can help them!
 			</p>
 			<h1>
 				About
