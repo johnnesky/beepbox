@@ -835,7 +835,7 @@ namespace beepbox {
 				constructor(doc: SongDocument) {
 					super();
 					const song: Song = doc.song;
-					song.tempo = Math.max(0, Math.min(Config.tempoSteps - 1, Math.round(4.0 + 9.0 * Math.log(beatsPerMinute / 120) / Math.LN2)));
+					song.tempo = Math.max(Config.tempoMin, Math.min(Config.tempoMax, beatsPerMinute));
 					song.beatsPerBar = beatsPerBar;
 					song.key = key;
 					song.scale = 11;

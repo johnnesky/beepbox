@@ -1052,7 +1052,7 @@ namespace beepbox {
 			this.key = 0;
 			this.loopStart = 0;
 			this.loopLength = 4;
-			this.tempo = 7;
+			this.tempo = 150;
 			this.reverb = 0;
 			this.beatsPerBar = 8;
 			this.barCount = 16;
@@ -1109,7 +1109,7 @@ namespace beepbox {
 			buffer.push(SongTagCode.key, base64IntToCharCode[this.key]);
 			buffer.push(SongTagCode.loopStart, base64IntToCharCode[this.loopStart >> 6], base64IntToCharCode[this.loopStart & 0x3f]);
 			buffer.push(SongTagCode.loopEnd, base64IntToCharCode[(this.loopLength - 1) >> 6], base64IntToCharCode[(this.loopLength - 1) & 0x3f]);
-			buffer.push(SongTagCode.tempo, base64IntToCharCode[this.tempo]);
+			buffer.push(SongTagCode.tempo, base64IntToCharCode[this.tempo >> 6], base64IntToCharCode[this.tempo & 63]);
 			buffer.push(SongTagCode.reverb, base64IntToCharCode[this.reverb]);
 			buffer.push(SongTagCode.beatCount, base64IntToCharCode[this.beatsPerBar - 1]);
 			buffer.push(SongTagCode.barCount, base64IntToCharCode[(this.barCount - 1) >> 6], base64IntToCharCode[(this.barCount - 1) & 0x3f]);
@@ -1419,11 +1419,13 @@ namespace beepbox {
 					}
 				} else if (command == SongTagCode.tempo) {
 					if (beforeFour) {
-						this.tempo = [1, 4, 7, 10][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
+						this.tempo = [95, 120, 151, 190][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
+					} else if (beforeSeven) {
+						this.tempo = [88, 95, 103, 111, 120, 130, 140, 151, 163, 176, 190, 206, 222, 240, 259][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
 					} else {
-						this.tempo = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						this.tempo = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
-					this.tempo = clamp(0, Config.tempoSteps, this.tempo);
+					this.tempo = clamp(Config.tempoMin, Config.tempoMax + 1, this.tempo);
 				} else if (command == SongTagCode.reverb) {
 					this.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.reverb = clamp(0, Config.reverbRange, this.reverb);
@@ -1993,7 +1995,7 @@ namespace beepbox {
 				"loopBars": this.loopLength,
 				"beatsPerBar": this.beatsPerBar,
 				"ticksPerBeat": Config.rhythms[this.rhythm].stepsPerBeat,
-				"beatsPerMinute": this.getBeatsPerMinute(), // represents tempo
+				"beatsPerMinute": this.tempo,
 				"reverb": this.reverb,
 				//"outroBars": this.barCount - this.loopStart - this.loopLength; // derive this from bar arrays?
 				//"patternCount": this.patternsPerChannel, // derive this from pattern arrays?
@@ -2036,9 +2038,7 @@ namespace beepbox {
 			}
 			
 			if (jsonObject["beatsPerMinute"] != undefined) {
-				const bpm: number = jsonObject["beatsPerMinute"] | 0;
-				this.tempo = Math.round(4.0 + 9.0 * Math.log(bpm / 120) / Math.LN2);
-				this.tempo = clamp(0, Config.tempoSteps, this.tempo);
+				this.tempo = clamp(Config.tempoMin, Config.tempoMax + 1, jsonObject["beatsPerMinute"] | 0);
 			}
 			
 			if (jsonObject["reverb"] != undefined) {
@@ -2229,16 +2229,6 @@ namespace beepbox {
 			this.channels.length = this.getChannelCount();
 		}
 		
-		private static _clip(min: number, max: number, val: number): number {
-			max = max - 1;
-			if (val <= max) {
-				if (val >= min) return val;
-				else return min;
-			} else {
-				return max;
-			}
-		}
-		
 		public getPattern(channel: number, bar: number): Pattern | null {
 			const patternIndex: number = this.channels[channel].bars[bar];
 			if (patternIndex == 0) return null;
@@ -2251,7 +2241,7 @@ namespace beepbox {
 		}
 		
 		public getBeatsPerMinute(): number {
-			return Math.round(120.0 * Math.pow(2.0, (-4.0 + this.tempo) / 9.0));
+			return this.tempo;
 		}
 	}
 	

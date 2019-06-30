@@ -1857,7 +1857,7 @@ namespace beepbox {
 	export class ChangeTempo extends Change {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
-			doc.song.tempo = newValue;
+			doc.song.tempo = Math.max(Config.tempoMin, Math.min(Config.tempoMax, newValue));
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}

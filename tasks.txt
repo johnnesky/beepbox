@@ -331,6 +331,7 @@
 √ New songs get random instruments and reset playhead to start.
 √ The display name of the editor should be inside Config, so that it's easy to mod without having to dive into the pseudo html.
 √ The "new", "import", and "random" options should reset the playhead, selected bar/channel, and track scroll bar. 
+√ Added fine tempo control.
 
 NEXT RELEASE:
 - Why do prompts sometimes not go away until you move the mouse after importing a song? hmm maybe the problem is the delay between the user action and the navigation action crosses some safety threshold...
