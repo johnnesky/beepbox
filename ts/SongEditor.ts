@@ -195,7 +195,8 @@ namespace beepbox {
 		);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale=>scale.name));
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select(), Config.keys.map(key=>key.name).reverse());
-		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.tempoSteps - 1, value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
+		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0; width: 4em; flex-grow: 1; vertical-align: middle;", type: "range", min: "0", max: "14", value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, Math.round(120.0 * Math.pow(2.0, (-4.0 + newValue) / 9.0))));
+		private readonly _tempoStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 0.4em; vertical-align: middle;", type: "number", step: "1"});
 		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
 		private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select(), Config.rhythms.map(rhythm=>rhythm.name));
 		private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false);
@@ -359,7 +360,10 @@ namespace beepbox {
 							),
 							div({className: "selectRow"},
 								span({class: "tip", onclick: ()=>this._openPrompt("tempo")}, "Tempo: "),
-								this._tempoSlider.input,
+								span({style: "display: flex;"},
+									this._tempoSlider.input,
+									this._tempoStepper,
+								),
 							),
 							div({className: "selectRow"},
 								span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb: "),
@@ -455,6 +459,7 @@ namespace beepbox {
 			this._fileMenu.addEventListener("change", this._fileMenuHandler);
 			this._editMenu.addEventListener("change", this._editMenuHandler);
 			this._optionsMenu.addEventListener("change", this._optionsMenuHandler);
+			this._tempoStepper.addEventListener("change", this._whenSetTempo);
 			this._scaleSelect.addEventListener("change", this._whenSetScale);
 			this._keySelect.addEventListener("change", this._whenSetKey);
 			this._rhythmSelect.addEventListener("change", this._whenSetRhythm);
@@ -482,6 +487,7 @@ namespace beepbox {
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
 			this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
+			this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
 			
 			this._promptContainer.addEventListener("click", (event) => {
@@ -583,8 +589,8 @@ namespace beepbox {
 			
 			setSelectedValue(this._scaleSelect, this._doc.song.scale);
 			setSelectedValue(this._keySelect, Config.keys.length - 1 - this._doc.song.key);
-			this._tempoSlider.updateValue(this._doc.song.tempo);
-			this._tempoSlider.input.title = this._doc.song.getBeatsPerMinute() + " beats per minute";
+			this._tempoSlider.updateValue(Math.max(0, Math.min(28, Math.round(4.0 + 9.0 * Math.log(this._doc.song.tempo / 120.0) / Math.LN2))));
+			this._tempoStepper.value = this._doc.song.tempo.toString();
 			this._reverbSlider.updateValue(this._doc.song.reverb);
 			setSelectedValue(this._rhythmSelect, this._doc.song.rhythm);
 			
@@ -799,6 +805,26 @@ namespace beepbox {
 			}
 		}
 		
+		private _tempoStepperCaptureNumberKeys = (event: KeyboardEvent): void => {
+			switch (event.keyCode) {
+				case 38: // up
+				case 40: // down
+				case 37: // left
+				case 39: // right
+				case 48: // 0
+				case 49: // 1
+				case 50: // 2
+				case 51: // 3
+				case 52: // 4
+				case 53: // 5
+				case 54: // 6
+				case 55: // 7
+				case 56: // 8
+				case 57: // 9
+					event.stopPropagation();
+			}
+		}
+		
 		private _whenKeyPressed = (event: KeyboardEvent): void => {
 			if (this.prompt) {
 				if (event.keyCode == 27) { // ESC key
@@ -989,6 +1015,10 @@ namespace beepbox {
 			this._openPrompt("interval");
 		}
 		*/
+		private _whenSetTempo = (): void => {
+			this._doc.record(new ChangeTempo(this._doc, -1, parseInt(this._tempoStepper.value) | 0));
+		}
+		
 		private _whenSetScale = (): void => {
 			this._doc.record(new ChangeScale(this._doc, this._scaleSelect.selectedIndex));
 		}

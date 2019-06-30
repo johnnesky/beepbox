@@ -168,7 +168,8 @@ namespace beepbox {
 			{name: "B",  isWhiteKey:  true, basePitch: 23},
 		]);
 		public static readonly blackKeyNameParents: ReadonlyArray<number> = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
-		public static readonly tempoSteps: number = 15;
+		public static readonly tempoMin: number = 30;
+		public static readonly tempoMax: number = 300;
 		public static readonly reverbRange: number = 4;
 		public static readonly beatsPerBarMin: number = 3;
 		public static readonly beatsPerBarMax: number = 16;
