@@ -341,7 +341,7 @@ styleSheet.appendChild(document.createTextNode(`
 	justify-content: space-between;
 }
 
-.beepboxEditor .selectRow > span {
+.beepboxEditor .selectRow > span:first-child {
 	color: #999;
 }
 
@@ -607,9 +607,6 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.fullWidthOnly {
 		display: none;
-	}
-	p {
-		margin: 1em 0.5em;
 	}
 }
 
