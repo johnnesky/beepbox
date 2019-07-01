@@ -55,3 +55,35 @@ handlers:
   http_headers:
     Content-Type: text/html
     Content-Disposition: "attachment; filename=beepbox_offline.html"
+
+
+- url: /2_3/beepbox_editor\.js
+  static_files: 2_3/beepbox_editor.js
+  upload: 2_3/beepbox_editor\.js
+
+- url: /2_3/beepbox_editor\.min\.js
+  static_files: 2_3/beepbox_editor.min.js
+  upload: 2_3/beepbox_editor\.min\.js
+
+- url: /2_3/beepbox_synth\.js
+  static_files: 2_3/beepbox_synth.js
+  upload: 2_3/beepbox_synth\.js
+
+- url: /2_3/beepbox_synth\.min\.js
+  static_files: 2_3/beepbox_synth.min.js
+  upload: 2_3/beepbox_synth\.min\.js
+
+- url: /2_3/
+  static_files: 2_3/index.html
+  upload: 2_3/index\.html
+
+- url: /2_3/synth_example\.html
+  static_files: 2_3/synth_example.html
+  upload: 2_3/synth_example\.html
+
+- url: /2_3/beepbox_offline\.html
+  static_files: 2_3/beepbox_offline.html
+  upload: 2_3/beepbox_offline\.html
+  http_headers:
+    Content-Type: text/html
+    Content-Disposition: "attachment; filename=beepbox_offline.html"
