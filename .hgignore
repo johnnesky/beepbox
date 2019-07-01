@@ -2,6 +2,6 @@ syntax: regexp
 
 ^\.dropbox
 \.DS_Store$
-^beepbox-synth/.*\.swf$
-^beepbox-synth/.*\.js$
+^beepbox-synth/[^/]*\.swf$
+^beepbox-synth/[^/]*\.js$
 

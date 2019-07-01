@@ -3,14 +3,14 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>BeepBox</title>
+	<title>BeepBox 2.3</title>
 	<meta name="description" content="BeepBox is an online tool for sketching and sharing chiptune melodies." />
 	<meta name="keywords" content="chiptune, music, melody, composition, tool, square wave, NES, NSF, BeepBox, beepbox" />
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 	<meta name="mobile-web-app-capable" content="yes" />
 	<meta name="format-detection" content="telephone=no" />
-	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" rel="stylesheet" media="none" onload="if (this.media != 'all') this.media='all';" /> <!-- this is a trick to load CSS asynchronously. -->
+	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
 	<!-- <link rel="manifest" href="/manifest.webmanifest" /> -->
 	<style type="text/css">
 		body {
@@ -30,22 +30,6 @@
 		}
 		a {
 			color: #98f;
-		}
-		.donation {
-			display: inline;
-		}
-		.donation input[type="submit"] {
-			-webkit-appearance: none;
-			appearance: none;
-			background: none;
-			border: none;
-			font-family: inherit;
-			font-size: inherit;
-			color: #98f;
-			text-decoration: none;
-			cursor: pointer;
-			padding: 0;
-			margin: 0;
 		}
 		#beepboxEditorContainer {
 			min-height: 645px;
@@ -86,26 +70,19 @@
 	<div id="beepboxEditorContainer"></div>
 	
 	<h1>
-		BeepBox
+		BeepBox 2.3
 	</h1>
 	<p id="introduction">
-		BeepBox is an online tool for sketching and sharing instrumental melodies. 
+		BeepBox is an online tool for sketching and sharing chiptune melodies. 
 	</p>
 	<p>
 		All song data is packaged into the URL at the top of your browser. 
 		When you make changes to the song, the URL is updated to reflect your changes. 
 		When you are satisfied with your song, just copy and paste the URL to save and share your song! 
 	</p>
-    <div>
-		BeepBox is a passion project, and will always be free to use. If you find it valuable and have the means, any gratuity via
-		<form class="donation" action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
-			<input type="hidden" name="cmd" value="_donations" />
-			<input type="hidden" name="business" value="QZJTX9GRYEV9N" />
-			<input type="hidden" name="currency_code" value="USD" />
-			<input type="submit" name="submit" value="Paypal"/>
-		</form>
-		would be appreciated!
-    </div>
+	<p>
+		The latest version of BeepBox is <a href="/" target="_blank">here</a>.
+	</p>
 	
 	<div class="column-container">
 		<div class="instructions-column">
@@ -148,8 +125,8 @@
 				</ul>
 			</div>
 			<p>
-				In the note pattern editor, you can click and drag horizontally on a note to adjust its duration.
-				You can also click above or below an existing note to add more notes to be played simultaneously, which is called a chord. 
+				In the pattern editor, you can click and drag horizontally on a note to adjust its duration.
+				You can also click above or below an existing note to enable a rapid arpeggio/trill effect, oscillating between two or more simultaneous notes. 
 			</p>
 			<p>
 				ADVANCED: Drag vertically from an existing note to bend its pitch, or drag vertically from above or below the note to adjust its volume.
@@ -161,7 +138,7 @@
 			<p>
 				<a href="https://twitter.com/beepboxco">Check out some of these songs that other people have posted on Twitter!</a>
 				If you find something you like, you should let the creator know!
-				And if you see any beginners asking for advice, maybe you can help them!
+				And if you see any beginners asking for advice, maybe you can give them a hand!
 			</p>
 			<h1>
 				About
@@ -181,16 +158,12 @@
 			<p>
 				You can download and use <a href="https://bitbucket.org/shaktool/beepbox">the source code</a> under the MIT license. In particular, you can use the synth code <a href="synth_example.html">as demonstrated here</a> to play BeepBox songs in your own JavaScript projects! 
 			</p>
-			<p>
-				Those who yearn for simpler times can find the old version of BeepBox <a href="2_3/" target="_blank">here</a>.
-			</p>
 		</div>
 		<div class="twitter-column">
 			<h1>
 				Shared on Twitter:
 			</h1>
-			<a class="twitter-timeline" data-width="300" data-tweet-limit="12" data-link-color="#9988ff" data-chrome="noheader nofooter transparent" data-dnt="true" data-theme="dark" href="https://twitter.com/beepboxco?ref_src=twsrc%5Etfw">Songs retweeted by @beepboxco</a>
-			<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+			<a class="twitter-timeline" data-width="300" data-height="2000" data-dnt="true" data-theme="dark" data-link-color="#9266CC" href="https://twitter.com/beepboxco?ref_src=twsrc%5Etfw">Tweets by beepboxco</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 		</div>
 	</div>
 	
@@ -206,31 +179,15 @@
 			document.getElementById("bar-editing").innerHTML = "Tap the other boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
 		}
 		
-		function browserHasRequiredFeatures() {
-			"use strict";
-			if (window.AudioContext == undefined && window.webkitAudioContext == undefined) {
-				return false;
-			}
-			
-			try {
-				eval("class T {}");
-				eval("const a = () => 0");
-				eval("for (const a of []);");
-			} catch (error) {
-				return false;
-			}
-			
-			return true;
-		}
-		
-		if (browserHasRequiredFeatures()) {
+		var hasAudioContext = (window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.oAudioContext || window.msAudioContext);
+		if (hasAudioContext) {
 			// Go ahead and load js beepbox editor interface:
 			var fileref = document.createElement("script");
 			fileref.setAttribute("type", "text/javascript");
 			fileref.setAttribute("src", "beepbox_editor.min.js");
 			document.head.appendChild(fileref);
 		} else {
-			document.getElementById("beepboxEditorContainer").innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, Edge, Safari, or Opera.";
+			document.getElementById("beepboxEditorContainer").innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, or Opera.";
 		}
 		
 	</script>
