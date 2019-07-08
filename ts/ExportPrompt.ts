@@ -65,7 +65,7 @@ namespace beepbox {
 		private readonly _enableOutro: HTMLInputElement = input({type: "checkbox"});
 		private readonly _formatSelect: HTMLSelectElement = select({style: "width: 100%;"},
 			option({value: "wav"}, "Export to .wav file."),
-			option({value: "midi"}, "Export to .midi file."),
+			option({value: "midi"}, "Export to .mid file."),
 			option({value: "json"}, "Export to .json file."),
 		);
 		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
@@ -734,7 +734,7 @@ namespace beepbox {
 			}
 			
 			const blob = new Blob([writer.toCompactArrayBuffer()], {type: "audio/midi"});
-			save(blob, this._fileName.value.trim() + ".midi");
+			save(blob, this._fileName.value.trim() + ".mid");
 			
 			this._close();
 		}
