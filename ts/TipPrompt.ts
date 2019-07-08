@@ -51,7 +51,7 @@ namespace beepbox {
 				case "tempo": {
 					message = div(
 						h2("Song Tempo"),
-						p("This setting controls the speed of your song. (You can hover the mouse over the slider to see the beats per minute.)"),
+						p("This setting controls the speed of your song, measured in beats-per-minute."),
 					);
 				} break;
 				case "reverb": {
