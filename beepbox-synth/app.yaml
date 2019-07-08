@@ -76,6 +76,8 @@ handlers:
 - url: /2_3/
   static_files: 2_3/index.html
   upload: 2_3/index\.html
+  secure: always
+  redirect_http_response_code: 301
 
 - url: /2_3/synth_example\.html
   static_files: 2_3/synth_example.html
@@ -87,3 +89,14 @@ handlers:
   http_headers:
     Content-Type: text/html
     Content-Disposition: "attachment; filename=beepbox_offline.html"
+
+
+- url: /competition/beepbox_obfuscated\.js
+  static_files: competition/beepbox_obfuscated.js
+  upload: competition/beepbox_obfuscated\.js
+
+- url: /competition/
+  static_files: competition/index.html
+  upload: competition/index\.html
+  secure: always
+  redirect_http_response_code: 301
