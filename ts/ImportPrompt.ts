@@ -42,7 +42,7 @@ namespace beepbox {
 				"BeepBox songs can be exported and re-imported as .json files. You could also use other means to make .json files for BeepBox as long as they follow the same structure.",
 			),
 			p({style: "text-align: left; margin: 0.5em 0;"},
-				"BeepBox can also (crudely) import .midi files. There are many tools available for creating .midi files, and you can find collections of .midi files on the internet. Shorter and simpler songs are more likely to work well.",
+				"BeepBox can also (crudely) import .mid files. There are many tools available for creating .mid files. Shorter and simpler songs are more likely to work well.",
 			),
 			this._fileInput,
 			this._cancelButton,
