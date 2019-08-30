@@ -988,8 +988,6 @@ namespace beepbox {
 		}
 		
 		private _randomPreset(): void {
-			const channel: Channel = this._doc.song.channels[this._doc.channel];
-			const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
 			const isNoise: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
 			this._doc.record(new ChangePreset(this._doc, pickRandomPresetValue(isNoise)));
 		}
