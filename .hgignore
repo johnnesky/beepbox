@@ -1,7 +1,0 @@
-syntax: regexp
-
-^\.dropbox
-\.DS_Store$
-^beepbox-synth/[^/]*\.swf$
-^beepbox-synth/[^/]*\.js$
-
