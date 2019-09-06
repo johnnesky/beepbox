@@ -1,0 +1,21 @@
+{
+	"files": [ "ts/synth.ts" ],
+	"compilerOptions": {
+		"outFile": "beepbox-synth/beepbox_synth.js",
+		
+		"target": "es6",
+		"sourceMap": true,
+		"removeComments": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strictBindCallApply": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUnusedLocals": true,
+		
+		"strict": false,
+		"strictPropertyInitialization": false
+	}
+}

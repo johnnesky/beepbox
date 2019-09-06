@@ -48,7 +48,7 @@ namespace beepbox {
 			this._cancelButton,
 		);
 		
-		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
+		constructor(private _doc: SongDocument) {
 			this._fileInput.select();
 			setTimeout(()=>this._fileInput.focus());
 			
@@ -135,7 +135,7 @@ namespace beepbox {
 				return;
 			}
 			const fileFormat: number = headerReader.readUint16();
-			const trackCount: number = headerReader.readUint16();
+			/*const trackCount: number =*/ headerReader.readUint16();
 			const midiTicksPerBeat: number = headerReader.readUint16();
 			
 			// Midi tracks are generally intended to be played in parallel, but in the format
@@ -216,7 +216,7 @@ namespace beepbox {
 						switch (eventType) {
 							case MidiEventType.noteOff: {
 								const pitch: number = track.reader.readMidi7Bits();
-								const velocity: number = track.reader.readMidi7Bits();
+								/*const velocity: number =*/ track.reader.readMidi7Bits();
 								noteEvents[eventChannel].push({midiTick: currentMidiTick, pitch: pitch, velocity: 0.0, program: -1, instrumentVolume: -1, on: false});
 							} break;
 							case MidiEventType.noteOn: {
@@ -230,8 +230,8 @@ namespace beepbox {
 								}
 							} break;
 							case MidiEventType.keyPressure: {
-								const pitch: number = track.reader.readMidi7Bits();
-								const pressure: number = track.reader.readMidi7Bits();
+								/*const pitch: number =*/ track.reader.readMidi7Bits();
+								/*const pressure: number =*/ track.reader.readMidi7Bits();
 							} break;
 							case MidiEventType.controlChange: {
 								const message: number = track.reader.readMidi7Bits();
@@ -268,7 +268,7 @@ namespace beepbox {
 								currentInstrumentProgram[eventChannel] = program;
 							} break;
 							case MidiEventType.channelPressure: {
-								const pressure: number = track.reader.readMidi7Bits();
+								/*const pressure: number =*/ track.reader.readMidi7Bits();
 							} break;
 							case MidiEventType.pitchBend: {
 								const lsb: number = track.reader.readMidi7Bits();
@@ -295,8 +295,8 @@ namespace beepbox {
 									} else if (message == MidiMetaEventMessage.timeSignature) {
 										const numerator: number = track.reader.readUint8();
 										let denominatorExponent: number = track.reader.readUint8();
-										const midiClocksPerMetronome: number = track.reader.readUint8();
-										const thirtySecondNotesPer24MidiClocks: number = track.reader.readUint8();
+										/*const midiClocksPerMetronome: number =*/ track.reader.readUint8();
+										/*const thirtySecondNotesPer24MidiClocks: number =*/ track.reader.readUint8();
 										track.reader.skipBytes(length - 4);
 										
 										// A beat is a quarter note. 

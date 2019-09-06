@@ -24,7 +24,7 @@ SOFTWARE.
 /// <reference path="Prompt.ts" />
 
 namespace beepbox {
-	const {button, div, p, h2, span} = HTML;
+	const {button, div, p, h2} = HTML;
 	
 	export class TipPrompt implements Prompt {
 		private readonly _closeButton: HTMLButtonElement = button({className: "cancelButton"});

@@ -495,9 +495,7 @@ namespace beepbox {
 		result.dictionary = dictionary;
 		return result;
 	}
-}
-
-namespace beepbox {
+	
 	// These will be defined in FFT.ts, but I want SynthConfig.ts to be at the
 	// of the compiled JS so I won't directly depend on FFT here.
 	// synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯

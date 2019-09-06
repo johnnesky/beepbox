@@ -46,7 +46,7 @@ namespace beepbox {
 		public readonly container: HTMLElement = HTML.div({className: "barScrollBar", style: "width: 512px; height: 20px; overflow: hidden; position: relative;"}, this._svg);
 		
 		private _mouseX: number = 0;
-		private _mouseY: number = 0;
+		//private _mouseY: number = 0;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _dragging: boolean = false;
@@ -100,7 +100,7 @@ namespace beepbox {
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    //this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updatePreview();
 			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._barWidth) {
 				this._dragging = true;
@@ -113,7 +113,7 @@ namespace beepbox {
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
-			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			//this._mouseY = event.touches[0].clientY - boundingRect.top;
 			this._updatePreview();
 			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._barWidth) {
 				this._dragging = true;
@@ -124,7 +124,7 @@ namespace beepbox {
 		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    //this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 		    this._whenCursorMoved();
 		}
 		
@@ -133,7 +133,7 @@ namespace beepbox {
 			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
-			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			//this._mouseY = event.touches[0].clientY - boundingRect.top;
 		    this._whenCursorMoved();
 		}
 		

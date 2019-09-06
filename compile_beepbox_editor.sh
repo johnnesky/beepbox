@@ -1,21 +1,13 @@
 #!/bin/bash
 
 # Compile ts/SongEditor.ts into beepbox_editor.js
-tsc \
-	--target ES6 \
-	--strictNullChecks \
-	--noImplicitAny \
-	--noImplicitReturns \
-	--noFallthroughCasesInSwitch \
-	--removeComments \
-	ts/SongEditor.ts \
-	--out beepbox-synth/beepbox_editor.js
+tsc
 
 # Minify beepbox_editor.js into beepbox_editor.min.js
 uglifyjs \
 	--compress \
 	--mangle \
-	--mangle-props regex="/^_.+/" \
+	--mangle-props regex="/^_.+/g;" \
 	beepbox-synth/beepbox_editor.js \
 	-o beepbox-synth/beepbox_editor.min.js
 

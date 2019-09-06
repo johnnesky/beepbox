@@ -27,7 +27,7 @@ SOFTWARE.
 /// <reference path="changes.ts" />
 
 namespace beepbox {
-	const {button, div, span, h2, input, br} = HTML;
+	const {button, div, h2, input} = HTML;
 	
 	export class ChannelSettingsPrompt implements Prompt {
 		private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
@@ -61,7 +61,7 @@ namespace beepbox {
 			this._cancelButton,
 		);
 		
-		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
+		constructor(private _doc: SongDocument) {
 			this._patternsStepper.value = this._doc.song.patternsPerChannel + "";
 			this._patternsStepper.min = Config.patternsPerChannelMin + "";
 			this._patternsStepper.max = Config.patternsPerChannelMax + "";

@@ -72,12 +72,6 @@ namespace beepbox {
 		private readonly _defaultDrumHeight: number = 40;
 		private readonly _backgroundPitchRows: SVGRectElement[] = [];
 		private readonly _backgroundDrumRow: SVGRectElement = SVG.rect();
-		private readonly _defaultPinChannels: NotePin[][] = [
-			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 3)],
-			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 3)],
-			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 3)],
-			[makeNotePin(0, 0, 3), makeNotePin(0, 2, 0)],
-		];
 		
 		private _editorWidth: number;
 		private _editorHeight: number = 481;
@@ -95,14 +89,10 @@ namespace beepbox {
 		private _copiedPins: NotePin[];
 		private _mouseXStart: number = 0;
 		private _mouseYStart: number = 0;
-		private _mouseXPrev: number = 0;
-		private _mouseYPrev: number = 0;
 		private _dragTime: number = 0;
 		private _dragPitch: number = 0;
 		private _dragVolume: number = 0;
 		private _dragVisible: boolean = false;
-		//private _precise: boolean = false;
-		//private _precisionX: number = 0;
 		private _dragChange: UndoableChange | null = null;
 		private _cursor: PatternCursor = new PatternCursor();
 		private _pattern: Pattern | null = null;
@@ -460,8 +450,6 @@ namespace beepbox {
 			this._mouseDown = true;
 			this._mouseXStart = this._mouseX;
 			this._mouseYStart = this._mouseY;
-			this._mouseXPrev = this._mouseX;
-			this._mouseYPrev = this._mouseY;
 			this._updateCursorStatus();
 			this._updatePreview();
 			this._dragChange = new ChangeSequence();
@@ -707,8 +695,6 @@ namespace beepbox {
 						this._dragVisible = true;
 					}
 				}
-				this._mouseXPrev = this._mouseX;
-				this._mouseYPrev = this._mouseY;
 			} else {
 				this._updateCursorStatus();
 				this._updatePreview();

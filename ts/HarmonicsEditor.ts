@@ -51,7 +51,7 @@ namespace beepbox {
 		private _renderedPath: String = "";
 		private _renderedFifths: boolean = true;
 		
-		constructor(private _doc: SongDocument, private _harmonicsIndex: number | null) {
+		constructor(private _doc: SongDocument) {
 			for (let i: number = 1; i <= Config.harmonicsControlPoints; i = i * 2) {
 				this._octaves.appendChild(SVG.rect({fill: "#886644", x: (i-0.5) * (this._editorWidth - 8) / (Config.harmonicsControlPoints - 1) - 1, y: 0, width: 2, height: this._editorHeight}));
 			}

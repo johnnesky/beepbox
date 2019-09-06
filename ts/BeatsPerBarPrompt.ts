@@ -58,7 +58,7 @@ namespace beepbox {
 			this._cancelButton,
 		);
 		
-		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
+		constructor(private _doc: SongDocument) {
 			this._beatsStepper.value = this._doc.song.beatsPerBar + "";
 			this._beatsStepper.min = Config.beatsPerBarMin + "";
 			this._beatsStepper.max = Config.beatsPerBarMax + "";

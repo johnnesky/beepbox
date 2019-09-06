@@ -1,4 +1,6 @@
 .dropbox
 .DS_Store
 /beepbox-synth/*.swf
-/beepbox-synth/*.js
+/beepbox-synth/**/*.js
+/beepbox-synth/**/*.js.map
+beepbox-synth/beepbox_offline.html

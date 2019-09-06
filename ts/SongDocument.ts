@@ -34,8 +34,6 @@ namespace beepbox {
 	}
 	
 	export class SongDocument {
-		private static _latestVersion: number = 2;
-		
 		public song: Song;
 		public synth: Synth;
 		public notifier: ChangeNotifier = new ChangeNotifier();

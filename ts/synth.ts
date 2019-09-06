@@ -31,8 +31,8 @@ interface Window {
 
 namespace beepbox {
 	// For performance debugging:
-	let samplesAccumulated: number = 0;
-	let samplePerformance: number = 0;
+	//let samplesAccumulated: number = 0;
+	//let samplePerformance: number = 0;
 	
 	const enum CharCode {
 		SPACE = 32,
@@ -2007,7 +2007,8 @@ namespace beepbox {
 		public fromJsonObject(jsonObject: any): void {
 			this.initToDefault(true);
 			if (!jsonObject) return;
-			const version: number = jsonObject["version"] | 0;
+			
+			//const version: number = jsonObject["version"] | 0;
 			//if (version > Song._latestVersion) return; // Go ahead and try to parse something from the future I guess? JSON is pretty easy-going!
 			
 			this.scale = 11; // default to expert.
@@ -2320,8 +2321,6 @@ namespace beepbox {
 			return (Math.pow(16.0, amplitude / 15.0) - 1.0) / 15.0;
 		}
 		
-		private static readonly negativePhaseGuard: number = 1000;
-		
 		public samplesPerSecond: number = 44100;
 		
 		public song: Song | null = null;
@@ -2577,7 +2576,7 @@ namespace beepbox {
 				this.enableIntro = false;
 			}
 			
-			const synthStartTime: number = performance.now();
+			//const synthStartTime: number = performance.now();
 			
 			if (this.samplesForChorus == null || this.samplesForChorus.length < bufferLength) {
 				this.samplesForChorus = new Float32Array(bufferLength);
@@ -2663,7 +2662,6 @@ namespace beepbox {
 					}
 
 					// Post processing:
-					const chorusYMult: number = 2.0 * Math.cos(chorusAngle);
 					let chorusTap0Index: number = chorusDelayPos + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
 					let chorusTap1Index: number = chorusDelayPos + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
 					let chorusTap2Index: number = chorusDelayPos + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
@@ -3837,7 +3835,8 @@ namespace beepbox {
 			var sineWave = beepbox.Config.sineWave;
 			
 			var phaseDeltaScale = +tone.phaseDeltaScale;
-			var operator#Phase       = +((tone.phases[#] % 1) + beepbox.Synth.negativePhaseGuard) * beepbox.Config.sineWaveLength;
+			// I'm adding 1000 to the phase to ensure that it's never negative even when modulated by other waves because negative numbers don't work with the modulus operator very well.
+			var operator#Phase       = +((tone.phases[#] % 1) + 1000) * beepbox.Config.sineWaveLength;
 			var operator#PhaseDelta  = +tone.phaseDeltas[#];
 			var operator#OutputMult  = +tone.volumeStarts[#];
 			var operator#OutputDelta = +tone.volumeDeltas[#];

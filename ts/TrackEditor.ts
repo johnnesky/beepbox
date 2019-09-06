@@ -103,7 +103,6 @@ namespace beepbox {
 		private readonly _grid: Box[][] = [];
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
-		private _pattern: Pattern | null = null;
 		private _mouseOver: boolean = false;
 		private _digits: string = "";
 		private _editorHeight: number = 128;
@@ -115,7 +114,7 @@ namespace beepbox {
 		private _renderedSquashed: boolean = false;
 		private _changePattern: ChangePattern | null = null;
 		
-		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
+		constructor(private _doc: SongDocument) {
 			this._svg.appendChild(this._boxContainer);
 			this._svg.appendChild(this._boxHighlight);
 			this._svg.appendChild(this._upHighlight);
@@ -338,8 +337,6 @@ namespace beepbox {
 		}
 		
 		public render(): void {
-			this._pattern = this._doc.getCurrentPattern();
-			
 			const wideScreen: boolean = window.innerWidth > 700;
 			const squashed: boolean = !wideScreen || this._doc.song.getChannelCount() > 4 || (this._doc.song.barCount > this._doc.trackVisibleBars && this._doc.song.getChannelCount() > 3);
 			this._channelHeight = squashed ? 27 : 32;

@@ -57,7 +57,7 @@ namespace beepbox {
 			this._cancelButton,
 		);
 		
-		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
+		constructor(private _doc: SongDocument) {
 			this._barsStepper.value = this._doc.song.barCount + "";
 			this._barsStepper.min = Config.barCountMin + "";
 			this._barsStepper.max = Config.barCountMax + "";

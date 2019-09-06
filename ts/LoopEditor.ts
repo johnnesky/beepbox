@@ -56,7 +56,7 @@ namespace beepbox {
 		private _change: ChangeLoop | null = null;
 		private _cursor: Cursor = {startBar: -1, mode: -1};
 		private _mouseX: number = 0;
-		private _mouseY: number = 0;
+		//private _mouseY: number = 0;
 		private _clientStartX: number = 0;
 		private _clientStartY: number = 0;
 		private _startedScrolling: boolean = false;
@@ -130,7 +130,7 @@ namespace beepbox {
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    //this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updateCursorStatus();
 			this._updatePreview();
 			this._whenMouseMoved(event);
@@ -141,7 +141,7 @@ namespace beepbox {
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
-			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			//this._mouseY = event.touches[0].clientY - boundingRect.top;
 			this._updateCursorStatus();
 			this._updatePreview();
 			//this._whenTouchMoved(event);
@@ -154,7 +154,7 @@ namespace beepbox {
 		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+		    //this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 		    this._whenCursorMoved();
 		}
 		
@@ -162,7 +162,7 @@ namespace beepbox {
 			if (!this._mouseDown) return;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
-			this._mouseY = event.touches[0].clientY - boundingRect.top;
+			//this._mouseY = event.touches[0].clientY - boundingRect.top;
 			
 			if (!this._draggingHorizontally && !this._startedScrolling) {
 				if (Math.abs(event.touches[0].clientY - this._clientStartY) > 10) {

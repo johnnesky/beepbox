@@ -126,7 +126,7 @@ namespace beepbox {
 			this._cancelButton,
 		);
 		
-		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
+		constructor(private _doc: SongDocument) {
 			this._loopDropDown.value = "1";
 			
 			if (this._doc.song.loopStart == 0) {
@@ -302,7 +302,7 @@ namespace beepbox {
 			const microsecondsPerMinute: number = secondsPerMinute * 1000000;
 			const beatsPerMinute: number = song.getBeatsPerMinute();
 			const microsecondsPerBeat: number = Math.round(microsecondsPerMinute / beatsPerMinute);
-			const secondsPerMidiTick: number = secondsPerMinute / (midiTicksPerBeat * beatsPerMinute);
+			//const secondsPerMidiTick: number = secondsPerMinute / (midiTicksPerBeat * beatsPerMinute);
 			const midiTicksPerBar: number = midiTicksPerBeat * song.beatsPerBar;
 			const pitchBendRange: number = 24;
 			const defaultNoteVelocity: number = 90;

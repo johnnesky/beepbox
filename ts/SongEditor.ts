@@ -139,7 +139,7 @@ namespace beepbox {
 		public prompt: Prompt | null = null;
 		
 		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
-		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
+		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc);
 		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
 		private readonly _trackContainer: HTMLDivElement = div({className: "trackContainer"},
 			this._trackEditor.container,
@@ -235,7 +235,7 @@ namespace beepbox {
 		private readonly _feedbackRow1: HTMLDivElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("feedbackType")}, "Feedback:"), div({className: "selectContainer"}, this._feedbackTypeSelect));
 		private readonly _spectrumEditor: SpectrumEditor = new SpectrumEditor(this._doc, null);
 		private readonly _spectrumRow: HTMLElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("spectrum")}, "Spectrum:"), this._spectrumEditor.container);
-		private readonly _harmonicsEditor: HarmonicsEditor = new HarmonicsEditor(this._doc, null);
+		private readonly _harmonicsEditor: HarmonicsEditor = new HarmonicsEditor(this._doc);
 		private readonly _harmonicsRow: HTMLElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("harmonics")}, "Harmonics:"), this._harmonicsEditor.container);
 		private readonly _drumsetGroup: HTMLElement = div({className: "editor-controls"});
 		
@@ -523,22 +523,22 @@ namespace beepbox {
 			if (promptName) {
 				switch (promptName) {
 					case "export":
-						this.prompt = new ExportPrompt(this._doc, this);
+						this.prompt = new ExportPrompt(this._doc);
 						break;
 					case "import":
-						this.prompt = new ImportPrompt(this._doc, this);
+						this.prompt = new ImportPrompt(this._doc);
 						break;
 					case "barCount":
-						this.prompt = new SongDurationPrompt(this._doc, this);
+						this.prompt = new SongDurationPrompt(this._doc);
 						break;
 					case "beatsPerBar":
-						this.prompt = new BeatsPerBarPrompt(this._doc, this);
+						this.prompt = new BeatsPerBarPrompt(this._doc);
 						break;
 					case "moveNotesSideways":
-						this.prompt = new MoveNotesSidewaysPrompt(this._doc, this);
+						this.prompt = new MoveNotesSidewaysPrompt(this._doc);
 						break;
 					case "channelSettings":
-						this.prompt = new ChannelSettingsPrompt(this._doc, this);
+						this.prompt = new ChannelSettingsPrompt(this._doc);
 						break;
 					default:
 						this.prompt = new TipPrompt(this._doc, promptName);

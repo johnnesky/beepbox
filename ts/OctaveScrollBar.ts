@@ -42,7 +42,7 @@ namespace beepbox {
 		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: pan-x; position: absolute;", width: this._editorWidth, height: "100%", viewBox: "0 0 20 481", preserveAspectRatio: "none"});
 		public readonly container: HTMLDivElement = HTML.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 100%; overflow: hidden; position: relative; flex-shrink: 0;"}, this._svg);
 		
-		private _mouseX: number = 0;
+		//private _mouseX: number = 0;
 		private _mouseY: number = 0;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
@@ -102,7 +102,7 @@ namespace beepbox {
 			event.preventDefault();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+    		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			if (this._doc.song.getChannelIsNoise(this._doc.channel)) return;
@@ -119,7 +119,7 @@ namespace beepbox {
 			event.preventDefault();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-			this._mouseX = event.touches[0].clientX - boundingRect.left;
+			//this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			if (this._doc.song.getChannelIsNoise(this._doc.channel)) return;
@@ -134,7 +134,7 @@ namespace beepbox {
 		
 		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+    		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 		    this._whenCursorMoved();
@@ -144,7 +144,7 @@ namespace beepbox {
 			if (!this._mouseDown) return;
 			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-			this._mouseX = event.touches[0].clientX - boundingRect.left;
+			//this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 		    this._whenCursorMoved();

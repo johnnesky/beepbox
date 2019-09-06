@@ -28,7 +28,6 @@ SOFTWARE.
 namespace beepbox {
 	function determineScaleFromNotes(song: Song): ReadonlyArray<boolean> {
 		const flags: boolean[] = [true, false, false, false, false, false, false, false, false, false, false, false];
-		let noteCount: number = 1;
 		for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
 			const channel: Channel = song.channels[channelIndex];
 			for (const pattern of channel.patterns) {
@@ -38,7 +37,6 @@ namespace beepbox {
 							const key: number = (pitch + pin.interval) % 12;
 							if (!flags[key]) {
 								flags[key] = true;
-								noteCount++;
 							}
 						}
 					}
