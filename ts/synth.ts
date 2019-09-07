@@ -2081,49 +2081,53 @@ namespace beepbox {
 				this.loopLength = clamp(1, this.barCount - this.loopStart + 1, jsonObject["loopBars"] | 0);
 			}
 			
-			let pitchChannelCount = 0;
-			let noiseChannelCount = 0;
+			const newPitchChannels: Channel[] = [];
+			const newNoiseChannels: Channel[] = [];
 			if (jsonObject["channels"]) {
-				for (let channel: number = 0; channel < jsonObject["channels"].length; channel++) {
-					let channelObject: any = jsonObject["channels"][channel];
+				for (let channelIndex: number = 0; channelIndex < jsonObject["channels"].length; channelIndex++) {
+					let channelObject: any = jsonObject["channels"][channelIndex];
 					
-					if (this.channels.length <= channel) this.channels[channel] = new Channel();
+					const channel: Channel = new Channel();
 					
 					let isNoiseChannel: boolean = false;
-					if (channelObject["type"]) {
+					if (channelObject["type"] != undefined) {
 						isNoiseChannel = (channelObject["type"] == "drum");
 					} else {
 						// for older files, assume drums are channel 3.
-						isNoiseChannel = (channel >= 3);
+						isNoiseChannel = (channelIndex >= 3);
 					}
-					if (isNoiseChannel) noiseChannelCount++; else pitchChannelCount++;
+					if (isNoiseChannel) {
+						newNoiseChannels.push(channel);
+					} else {
+						newPitchChannels.push(channel);
+					}
 					
 					if (channelObject["octaveScrollBar"] != undefined) {
-						this.channels[channel].octave = clamp(0, Config.scrollableOctaves + 1, channelObject["octaveScrollBar"] | 0);
+						channel.octave = clamp(0, Config.scrollableOctaves + 1, channelObject["octaveScrollBar"] | 0);
 					}
 					
-					for (let i: number = this.channels[channel].instruments.length; i < this.instrumentsPerChannel; i++) {
-						this.channels[channel].instruments[i] = new Instrument(isNoiseChannel);
+					for (let i: number = channel.instruments.length; i < this.instrumentsPerChannel; i++) {
+						channel.instruments[i] = new Instrument(isNoiseChannel);
 					}
-					this.channels[channel].instruments.length = this.instrumentsPerChannel;
+					channel.instruments.length = this.instrumentsPerChannel;
 					
-					for (let i: number = this.channels[channel].patterns.length; i < this.patternsPerChannel; i++) {
-						this.channels[channel].patterns[i] = new Pattern();
+					for (let i: number = channel.patterns.length; i < this.patternsPerChannel; i++) {
+						channel.patterns[i] = new Pattern();
 					}
-					this.channels[channel].patterns.length = this.patternsPerChannel;
+					channel.patterns.length = this.patternsPerChannel;
 					
 					for (let i: number = 0; i < this.barCount; i++) {
-						this.channels[channel].bars[i] = 1;
+						channel.bars[i] = 1;
 					}
-					this.channels[channel].bars.length = this.barCount;
+					channel.bars.length = this.barCount;
 					
 					for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-						const instrument: Instrument = this.channels[channel].instruments[i];
+						const instrument: Instrument = channel.instruments[i];
 						instrument.fromJsonObject(channelObject["instruments"][i], isNoiseChannel);
 					}
 					
 					for (let i: number = 0; i < this.patternsPerChannel; i++) {
-						const pattern: Pattern = this.channels[channel].patterns[i];
+						const pattern: Pattern = channel.patterns[i];
 					
 						let patternObject: any = undefined;
 						if (channelObject["patterns"]) patternObject = channelObject["patterns"][i];
@@ -2220,14 +2224,18 @@ namespace beepbox {
 					}
 				
 					for (let i: number = 0; i < this.barCount; i++) {
-						this.channels[channel].bars[i] = channelObject["sequence"] ? Math.min(this.patternsPerChannel, channelObject["sequence"][i] >>> 0) : 0;
+						channel.bars[i] = channelObject["sequence"] ? Math.min(this.patternsPerChannel, channelObject["sequence"][i] >>> 0) : 0;
 					}
 				}
 			}
 			
-			this.pitchChannelCount = pitchChannelCount;
-			this.noiseChannelCount = noiseChannelCount;
-			this.channels.length = this.getChannelCount();
+			if (newPitchChannels.length > Config.pitchChannelCountMax) newPitchChannels.length = Config.pitchChannelCountMax;
+			if (newNoiseChannels.length > Config.noiseChannelCountMax) newNoiseChannels.length = Config.noiseChannelCountMax;
+			this.pitchChannelCount = newPitchChannels.length;
+			this.noiseChannelCount = newNoiseChannels.length;
+			this.channels.length = 0;
+			Array.prototype.push.apply(this.channels, newPitchChannels);
+			Array.prototype.push.apply(this.channels, newNoiseChannels);
 		}
 		
 		public getPattern(channel: number, bar: number): Pattern | null {

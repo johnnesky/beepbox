@@ -111,6 +111,7 @@ namespace beepbox {
 		}
 		
 		private _whenMouseMoved = (event: MouseEvent): void => {
+			if (this.container.offsetParent == null) return;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
@@ -120,6 +121,7 @@ namespace beepbox {
 		}
 		
 		private _whenTouchMoved = (event: TouchEvent): void => {
+			if (this.container.offsetParent == null) return;
 			if (!this._mouseDown) return;
 			event.preventDefault();
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
@@ -134,7 +136,7 @@ namespace beepbox {
 			if (this._mouseDown) {
 				const freq: number = this._xToFreq(this._mouseX);
 				const amp: number = this._yToAmp(this._mouseY);
-			
+				
 				const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 				const harmonicsWave: HarmonicsWave = instrument.harmonicsWave; //(this._harmonicsIndex == null) ? instrument.harmonicsWave : instrument.drumsetSpectrumWaves[this._harmonicsIndex];
 				
