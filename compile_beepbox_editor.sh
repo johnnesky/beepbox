@@ -7,7 +7,7 @@ tsc
 uglifyjs \
 	--compress \
 	--mangle \
-	--mangle-props regex="/^_.+/g;" \
+	--mangle-props regex="/^_.+/;" \
 	beepbox-synth/beepbox_editor.js \
 	-o beepbox-synth/beepbox_editor.min.js
 
