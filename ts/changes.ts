@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/// <reference path="synth.ts" />
+/// <reference path="../synth/synth.ts" />
 /// <reference path="EditorConfig.ts" />
 /// <reference path="Change.ts" />
 /// <reference path="SongDocument.ts" />

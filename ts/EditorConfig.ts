@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/// <reference path="SynthConfig.ts" />
+/// <reference path="../synth/SynthConfig.ts" />
 
 namespace beepbox {
 	export interface PresetCategory extends BeepBoxOption {

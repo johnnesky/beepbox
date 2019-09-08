@@ -1,5 +1,5 @@
 {
-	"files": [ "ts/synth.ts" ],
+	"files": [ "synth/synth.ts" ],
 	"compilerOptions": {
 		"outFile": "beepbox-synth/beepbox_synth.js",
 		
