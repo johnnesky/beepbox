@@ -12,4 +12,4 @@ fi
 
 ./compile_beepbox_editor.sh
 
-gcloud app deploy --project beepbox-synth beepbox-synth/app.yaml
+gcloud app deploy --project beepbox-synth website/app.yaml

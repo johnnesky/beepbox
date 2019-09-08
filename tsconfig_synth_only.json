@@ -1,7 +1,7 @@
 {
 	"files": [ "synth/synth.ts" ],
 	"compilerOptions": {
-		"outFile": "beepbox-synth/beepbox_synth.js",
+		"outFile": "website/beepbox_synth.js",
 		
 		"target": "es6",
 		"sourceMap": true,
