@@ -824,6 +824,7 @@ namespace beepbox {
 								const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
 								instrument.fromJsonObject(preset.settings, isNoise);
 								instrument.preset = presetValue;
+								instrument.volume = 1;
 								newChannels[channel].instruments[j] = instrument;
 							}
 							for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
@@ -1659,17 +1660,11 @@ namespace beepbox {
 		for (let channelIndex: number = 0; channelIndex < song.channels.length; channelIndex++) {
 			for (const instrument of song.channels[channelIndex].instruments) {
 				const isNoise: boolean = song.getChannelIsNoise(channelIndex);
-				if (channelIndex == 0 || channelIndex == song.pitchChannelCount) {
-					const category: PresetCategory = EditorConfig.presetCategories.dictionary["Retro Presets"];
-					const preset: Preset = category.presets.dictionary[isNoise ? "chip noise" : "square wave"];
-					instrument.fromJsonObject(preset.settings, isNoise);
-					instrument.preset = (category.index << 6) + preset.index;
-				} else {
-					const presetValue: number = pickRandomPresetValue(isNoise);
-					const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
-					instrument.fromJsonObject(preset.settings, isNoise);
-					instrument.preset = presetValue;
-				}
+				const presetValue: number = (channelIndex == song.pitchChannelCount) ? EditorConfig.nameToPresetValue(Math.random() > 0.5 ? "chip noise" : "standard drumset")! : pickRandomPresetValue(isNoise);
+				const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
+				instrument.fromJsonObject(preset.settings, isNoise);
+				instrument.preset = presetValue;
+				instrument.volume = 1;
 			}
 		}
 	}
