@@ -1,4 +1,4 @@
-`
+/*!
 Copyright (C) 2019 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
@@ -18,7 +18,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 SOFTWARE.
-`
+*/
 	
 namespace beepbox {
 	export interface Dictionary<T> {
@@ -404,7 +404,7 @@ namespace beepbox {
 					wave[i] = Math.random() * 2.0 - 1.0;
 				}
 			} else if (index == 2) {
-				// The "clang" drums are inspired by similar drums in the modded beepbox! :D
+				// The "clang" noise wave is based on a similar noise wave in the modded beepbox made by DAzombieRE.
 				let drumBuffer: number = 1;
 				for (let i: number = 0; i < Config.chipNoiseLength; i++) {
 					wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
@@ -415,7 +415,7 @@ namespace beepbox {
 					drumBuffer = newBuffer;
 				}
 			} else if (index == 3) {
-				// The "buzz" drums are inspired by similar drums in the modded beepbox! :D
+				// The "buzz" noise wave is based on a similar noise wave in the modded beepbox made by DAzombieRE.
 				let drumBuffer: number = 1;
 				for (let i: number = 0; i < Config.chipNoiseLength; i++) {
 					wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
@@ -497,7 +497,7 @@ namespace beepbox {
 	}
 	
 	// These will be defined in FFT.ts, but I want SynthConfig.ts to be at the
-	// of the compiled JS so I won't directly depend on FFT here.
+	// top of the compiled JS so I won't directly depend on FFT here.
 	// synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
 	declare function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
 	declare function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
