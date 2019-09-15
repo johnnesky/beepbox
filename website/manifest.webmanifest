@@ -12,11 +12,5 @@
 	"icons": [
 		{ "src": "/icon_shadow_192.png",   "sizes": "192x192", "type": "image/png", "purpose": "any" },
 		{ "src": "/icon_maskable_192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }
-	],
-	"serviceworker": {
-		"src": "./serviceworker.js",
-		"scope": "/app",
-		"type": "",
-		"update_via_cache": "all"
-	}
+	]
 }
