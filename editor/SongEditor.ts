@@ -166,7 +166,8 @@ namespace beepbox {
 			option({value: "new"}, "+ New Blank Song"),
 			option({value: "import"}, "↑ Import Song..."),
 			option({value: "export"}, "↓ Export Song..."),
-			option({value: "copyUrl"}, "⤳ Copy URL for Saving & Sharing"),
+			option({value: "copyUrl"}, "⎘ Copy Song URL"),
+			option({value: "shareUrl"}, "⤳ Share Song URL"),
 		);
 		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"},
 			option({selected: true, disabled: true, hidden: false}, "Edit"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -399,6 +400,10 @@ namespace beepbox {
 		
 		constructor(private _doc: SongDocument) {
 			this._doc.notifier.watch(this.whenUpdated);
+			
+			if (!("share" in navigator)) {
+				this._fileMenu.removeChild(this._fileMenu.querySelector("[value='shareUrl']")!);
+			}
 			
 			this._phaseModGroup.appendChild(div({className: "operatorRow", style: "color: #999; height: 1em; margin-top: 0.5em;"},
 				div({style: "margin-right: .1em; visibility: hidden;"}, 1 + "."),
@@ -1139,6 +1144,9 @@ namespace beepbox {
 					document.execCommand("copy");
 					document.body.removeChild(text);
 				} break;
+				case "shareUrl":
+					(<any>navigator)["share"]({ url: location.href });
+					break;
 			}
 			this._fileMenu.selectedIndex = 0;
 		}
