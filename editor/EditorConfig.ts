@@ -45,6 +45,7 @@ namespace beepbox {
 	}
 	
 	export class EditorConfig {
+		public static readonly versionDisplayName: string = "BeepBox 3.0.1";
 		public static readonly presetCategories: DictionaryArray<PresetCategory> = toNameMap([
 			{name: "Custom Instruments", presets: <DictionaryArray<Preset>> toNameMap([
 				{name: "chip wave",        customType: InstrumentType.chip},

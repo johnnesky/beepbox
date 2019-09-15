@@ -164,8 +164,9 @@ namespace beepbox {
 		private readonly _fileMenu: HTMLSelectElement = select({style: "width: 100%;"},
 			option({selected: true, disabled: true, hidden: false}, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option({value: "new"}, "+ New Blank Song"),
-			option({value: "import"}, "↑ Import..."),
-			option({value: "export"}, "↓ Export..."),
+			option({value: "import"}, "↑ Import Song..."),
+			option({value: "export"}, "↓ Export Song..."),
+			option({value: "copyUrl"}, "⤳ Copy URL for Saving & Sharing"),
 		);
 		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"},
 			option({selected: true, disabled: true, hidden: false}, "Edit"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -304,7 +305,7 @@ namespace beepbox {
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"},
 			this._editorBox,
 			div({className: "editor-widget-column noSelection"},
-				div({style: "text-align: center; color: #999;"}, Config.versionDisplayName),
+				div({style: "text-align: center; color: #999;"}, EditorConfig.versionDisplayName),
 				div({className: "editor-widgets"},
 					div({className: "editor-controls"},
 						div({className: "playback-controls"},
@@ -1129,6 +1130,15 @@ namespace beepbox {
 				case "import":
 					this._openPrompt("import");
 					break;
+				case "copyUrl": {
+					const text: HTMLInputElement = document.createElement("input");
+					document.body.appendChild(text);
+					text.value = location.href;
+					text.select();
+					text.setSelectionRange(0, 99999); // For mobile devices
+					document.execCommand("copy");
+					document.body.removeChild(text);
+				} break;
 			}
 			this._fileMenu.selectedIndex = 0;
 		}

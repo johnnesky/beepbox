@@ -4,32 +4,7 @@ threadsafe: true
 
 default_expiration: "3h"
 
-#skip_files:
-#- ^(.*/)?app\.yaml
-#- ^(.*/)?index\.yaml
-
 handlers:
-
-- url: /BeepBoxOnline\.swf
-  static_files: BeepBoxOnline.swf
-  upload: BeepBoxOnline\.swf
-  expiration: "12h"
-
-- url: /beepbox_editor\.js
-  static_files: beepbox_editor.js
-  upload: beepbox_editor\.js
-
-- url: /beepbox_editor\.min\.js
-  static_files: beepbox_editor.min.js
-  upload: beepbox_editor\.min\.js
-
-- url: /beepbox_synth\.js
-  static_files: beepbox_synth.js
-  upload: beepbox_synth\.js
-
-- url: /beepbox_synth\.min\.js
-  static_files: beepbox_synth.min.js
-  upload: beepbox_synth\.min\.js
 
 - url: /favicon\.ico
   static_files: favicon.ico
@@ -38,12 +13,6 @@ handlers:
 - url: /robots\.txt
   static_files: robots.txt
   upload: robots\.txt
-
-- url: /
-  static_files: index.html
-  upload: index\.html
-  secure: always
-  redirect_http_response_code: 301
 
 - url: /synth_example\.html
   static_files: synth_example.html
@@ -56,33 +25,6 @@ handlers:
     Content-Type: text/html
     Content-Disposition: "attachment; filename=beepbox_offline.html"
 
-
-- url: /2_3/beepbox_editor\.js
-  static_files: 2_3/beepbox_editor.js
-  upload: 2_3/beepbox_editor\.js
-
-- url: /2_3/beepbox_editor\.min\.js
-  static_files: 2_3/beepbox_editor.min.js
-  upload: 2_3/beepbox_editor\.min\.js
-
-- url: /2_3/beepbox_synth\.js
-  static_files: 2_3/beepbox_synth.js
-  upload: 2_3/beepbox_synth\.js
-
-- url: /2_3/beepbox_synth\.min\.js
-  static_files: 2_3/beepbox_synth.min.js
-  upload: 2_3/beepbox_synth\.min\.js
-
-- url: /2_3/
-  static_files: 2_3/index.html
-  upload: 2_3/index\.html
-  secure: always
-  redirect_http_response_code: 301
-
-- url: /2_3/synth_example\.html
-  static_files: 2_3/synth_example.html
-  upload: 2_3/synth_example\.html
-
 - url: /2_3/beepbox_offline\.html
   static_files: 2_3/beepbox_offline.html
   upload: 2_3/beepbox_offline\.html
@@ -90,13 +32,26 @@ handlers:
     Content-Type: text/html
     Content-Disposition: "attachment; filename=beepbox_offline.html"
 
+- url: /manifest\.webmanifest
+  static_files: manifest.webmanifest
+  upload: manifest\.webmanifest
+  http_headers:
+    Content-Type: application/manifest+json
 
-- url: /competition/beepbox_obfuscated\.js
-  static_files: competition/beepbox_obfuscated.js
-  upload: competition/beepbox_obfuscated\.js
+- url: /browserconfig\.xml
+  static_files: browserconfig.xml
+  upload: browserconfig\.xml
 
-- url: /competition/
-  static_files: competition/index.html
-  upload: competition/index\.html
+- url: /(.*\.png)
+  static_files: \1
+  upload: (.*\.png)
+
+- url: /(.*\.js)
+  static_files: \1
+  upload: (.*\.js)
+
+- url: /(.+/)*
+  static_files: \1index.html
+  upload: (.+/)*index\.html
   secure: always
   redirect_http_response_code: 301
