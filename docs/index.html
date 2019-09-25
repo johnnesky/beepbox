@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>BeepBox</title>
+	<meta name="application-name" content="BeepBox" />
+	<meta name="apple-mobile-web-app-title" content="BeepBox">
+	<meta name="description" content="BeepBox is an online tool for sketching and sharing instrumental melodies." />
+	<meta name="keywords" content="chiptune, instrumental, music, melody, composition, tool, square wave, NES, NSF, BeepBox" />
+	<meta name="mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+	<meta name="theme-color" content="#444" />
+	<meta name="msapplication-TileColor" content="#603cba" />
+	<meta name="msapplication-config" content="/browserconfig.xml" />
+	<meta name="format-detection" content="telephone=no" />
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+	<link rel="icon" type="image/png" sizes="32x32" href="/icon_32.png" />
+	<link rel="manifest" href="/manifest.webmanifest" />
+	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" rel="stylesheet" media="none" onload="if (this.media != 'all') this.media='all';" /> <!-- this is a trick to load CSS asynchronously. -->
+	<style type="text/css">
+		body {
+			margin: auto;
+			background: #000;
+			font-family: 'Roboto', sans-serif;
+			font-size: large;
+			line-height: 1.3;
+			color: #fff;
+		}
+		h1 {
+			font-size: 30px;
+			text-align: center;
+		}
+		.centerDiv {
+			margin: 0px auto;
+		}
+		a {
+			color: #98f;
+		}
+		.donation form {
+			display: inline;
+		}
+		.donation input[type="submit"] {
+			-webkit-appearance: none;
+			appearance: none;
+			background: none;
+			border: none;
+			font-family: inherit;
+			font-size: inherit;
+			color: #98f;
+			text-decoration: none;
+			cursor: pointer;
+			padding: 0;
+			margin: 0;
+		}
+		#beepboxEditorContainer {
+			min-height: 645px;
+		}
+		
+		/* wide screen */
+		@media (min-width: 701px) {
+			body {
+				width: 700px;
+			}
+			.column-container {
+				display: flex;
+				justify-content: space-between;
+			}
+			.instructions-column {
+				width: 375px;
+			}
+			.twitter-column {
+				width: 300px;
+			}
+		}
+		
+		/* narrow screen */
+		@media (max-width: 700px) {
+			body {
+				width: 100vw;
+			}
+			p, .donation {
+				margin: 1em 0.5em;
+			}
+			.column-container {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<div id="beepboxEditorContainer"></div>
+	<button onclick="TogetherJS(this); return false;">Start TogetherJS</button>
+
+	<h1>
+		BeepBox
+	</h1>
+	<p id="introduction">
+		BeepBox is an online tool for sketching and sharing instrumental melodies. 
+	</p>
+	<p>
+		All song data is packaged into the URL at the top of your browser. 
+		When you make changes to the song, the URL is updated to reflect your changes. 
+		When you are satisfied with your song, just copy and paste the URL to save and share your song! 
+	</p>
+    <div class="donation">
+		BeepBox is a passion project, and will always be free to use. If you find it valuable and have the means, any gratuity via
+		<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
+			<input type="hidden" name="cmd" value="_donations" />
+			<input type="hidden" name="business" value="QZJTX9GRYEV9N" />
+			<input type="hidden" name="currency_code" value="USD" />
+			<input type="submit" name="submit" value="Paypal"/>
+		</form>
+		would be appreciated!
+    </div>
+	
+	<div class="column-container">
+		<div class="instructions-column">
+			<h1>
+				Instructions
+			</h1>
+			<p>
+				You can add or remove notes by clicking on the gray rows at the top. 
+				BeepBox automatically plays the notes out loud for you. Try it!
+			</p>
+			<p>
+				Notes go into patterns, and you can edit one pattern at a time.
+				Those numbered boxes at the bottom of the editor are the different patterns you can edit.
+				<span id="bar-editing">
+					Click the other boxes to move to a different part of the song, or click the arrows on the currently selected box to swap which pattern is played during that part of the song.
+				</span>
+			</p>
+			<p>
+				BeepBox can play several rows of patterns simultaneously, and each row has its own set of patterns. 
+				Most rows can play melodies or harmonies, but the bottom row is for drums.
+			</p>
+			<p>
+				The purple loop underneath the numbered boxes controls which part of the song is currently repeating. 
+				Move the loop to listen to a different part of the song, or drag the ends to expand the loop to include the whole song. 
+			</p>
+			<div id="keyboard-instructions">
+				<p>
+					When BeepBox has focus (click on its interface above), you can use these keyboard shortcuts: <br/>
+				</p>
+				<ul>
+					<li>Spacebar: Pause or Resume</li>
+					<li>Z: Undo</li>
+					<li>Y or Shift Z: Redo</li>
+					<li>C: Copy the current pattern</li>
+					<li>V: Paste the current pattern</li>
+					<li>[ ]: Move the playhead backward and forward</li>
+					<li>Arrow Keys: Change which bar is selected</li>
+					<li>1-8: Reassign a pattern to the currently selected bar</li>
+					<li>- +: Shift the notes in the pattern up or down</li>
+				</ul>
+			</div>
+			<p>
+				In the note pattern editor, you can click and drag horizontally on a note to adjust its duration.
+				You can also click above or below an existing note to add more notes to be played simultaneously, which is called a chord. 
+			</p>
+			<p>
+				ADVANCED: Drag vertically from an existing note to bend its pitch, or drag vertically from above or below the note to adjust its volume.
+			</p>
+			<p>
+				BeepBox has many more features. 
+				Try playing with the buttons and menus on the right side to find out what it can do!
+				You can also click on the label next to each option for a description of what it does.
+			</p>
+			<p>
+				<a href="https://twitter.com/beepboxco">Check out some of these songs that other people have posted on Twitter!</a>
+				If you find something you like, you should let the creator know!
+				And if you see any beginners asking for advice, maybe you can help them!
+			</p>
+			<h1>
+				About
+			</h1>
+			<p>
+				BeepBox is developed by <a href="http://www.johnnesky.com">John Nesky</a>, also known as <a href="https://twitter.com/shaktool">@shaktool</a>. 
+			</p>
+			<p>
+				BeepBox does not claim ownership over songs created with it, so original songs belong to their authors. 
+			</p>
+			<p>
+				Neither John Nesky nor BeepBox assume responsibility for any copyrighted material played on BeepBox. No songs are ever received, recorded, or distributed by BeepBox's servers. All song data is contained in the URL after the hash (#) mark, and BeepBox running inside your browser converts that data into sound waves.
+			</p>
+			<p>
+				You can download <a download="beepbox_offline.html" href="beepbox_offline.html">an offline version of BeepBox</a> to use when you don't have access to the internet. The features are otherwise the same.
+			</p>
+			<p>
+				You can download and use <a href="https://github.com/johnnesky/beepbox">the source code</a> under the MIT license. In particular, you can use the synth code <a href="synth_example.html">as demonstrated here</a> to play BeepBox songs in your own JavaScript projects!
+			</p>
+			<p>
+				Those who yearn for simpler times can find the old version of BeepBox <a href="2_3/" target="_blank">here</a>.
+			</p>
+		</div>
+		<div class="twitter-column">
+			<h1>
+				Shared on Twitter:
+			</h1>
+			<a class="twitter-timeline" data-width="300" data-height="2000" data-link-color="#9988ff" data-chrome="noheader nofooter transparent" data-dnt="true" data-theme="dark" href="https://twitter.com/beepboxco?ref_src=twsrc%5Etfw">Songs retweeted by @beepboxco</a>
+			<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+		</div>
+	</div>
+	
+	<!--
+	Instead of loading js beepbox editor interface directly, test for browser support.
+	<script type="text/javascript" src="beepbox_editor.min.js"></script>
+	-->
+	<script>
+		// TogetherJS configuration would go here, but we'll talk about that
+		// later
+		TogetherJSConfig_dontShowClicks = true
+	  </script>
+	  <script src="https://togetherjs.com/togetherjs-min.js"></script>
+	  <script>
+		  function fireTogetherJsUrlChange(element, msg){
+			  console.log(msg);
+			  console.log(element);
+			  TogetherJS.send({type: "updateUrl", newUrl: element.detail.url});
+		  }
+	
+		  TogetherJS.hub.on("updateUrl", function(msg) {
+			  console.log("updating");
+			  console.log(msg);
+			  window.location.href = window.location.href.split("#")[0] + "#" + msg.newUrl;
+			  
+		  })
+		  window.addEventListener("urlChange", fireTogetherJsUrlChange);
+		//   	TogetherJS.hub.on("urlChange", function(msg) {
+		// 	console.log(msg);
+		// 	console.log("changed~");
+		// })
+	  </script>
+	<script type="text/javascript">
+		
+		if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
+			document.getElementById("introduction").innerHTML = "BeepBox is an online tool for sketching and sharing instrumental melodies. Make sure that your volume is turned up, then press the play button!";
+			document.getElementById("keyboard-instructions").style.display = "none";
+			document.getElementById("bar-editing").innerHTML = "Tap the other boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
+		}
+		
+		function browserHasRequiredFeatures() {
+			"use strict";
+			if (window.AudioContext == undefined && window.webkitAudioContext == undefined) {
+				return false;
+			}
+			
+			try {
+				eval("class T {}");
+				eval("const a = () => 0");
+				eval("for (const a of []);");
+			} catch (error) {
+				return false;
+			}
+			
+			return true;
+		}
+		
+		if (browserHasRequiredFeatures()) {
+			// Go ahead and load js beepbox editor interface:
+			var fileref = document.createElement("script");
+			fileref.setAttribute("type", "text/javascript");
+			fileref.setAttribute("src", "beepbox_editor.min.js");
+			document.head.appendChild(fileref);
+		} else {
+			document.getElementById("beepboxEditorContainer").innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, Edge, Safari, or Opera.";
+		}
+		
+	</script>
+</body></html>
