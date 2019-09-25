@@ -1318,13 +1318,24 @@ namespace beepbox {
 			
 			const maxApplyArgs: number = 64000;
 			if (buffer.length < maxApplyArgs) {
-				// Note: Function.apply may break for long argument lists. 
-				return String.fromCharCode.apply(null, buffer);
+				// Note: Function.apply may break for long argument lists.
+				var compressed = String.fromCharCode.apply(null, buffer);
+				var event = new CustomEvent('urlChange', 
+					{'detail': 
+						{"url": compressed}
+					});
+				window.dispatchEvent(event);
+				return compressed;
 			} else {
 				let result: string = "";
 				for (let i: number = 0; i < buffer.length; i += maxApplyArgs) {
 					result += String.fromCharCode.apply(null, buffer.slice(i, i + maxApplyArgs));
 				}
+				var event2 = new CustomEvent('urlChange', 
+				{'detail': 
+					{"url": result}
+				});
+				window.dispatchEvent(event2);
 				return result;
 			}
 		}
