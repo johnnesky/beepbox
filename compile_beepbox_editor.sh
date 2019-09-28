@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Compile ts/SongEditor.ts into beepbox_editor.js
+# Compile editor/main.ts into website/beepbox_editor.js
 tsc
 
-# Minify beepbox_editor.js into beepbox_editor.min.js
+# Minify website/beepbox_editor.js into website/beepbox_editor.min.js
 uglifyjs \
 	--compress \
 	--mangle \

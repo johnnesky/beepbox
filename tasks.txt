@@ -334,6 +334,7 @@
 √ Added fine tempo control.
 √ PWA, web app manifest for home screen.
 √ Share and Copy URL options added to File Menu.
+√ Offsite song player with HTML embed code.
 
 MAJOR REMAINING FEATURES:
 - distortion? (how would it affect polyphonic channels?)
@@ -344,7 +345,6 @@ MAJOR REMAINING FEATURES:
 - MIDI live input, live output?
 - "inspire me" random song generator.
 - link shortener
-- embedded player
 - remember recent songs
 - export mp3/ogg and audio buffer
 - tutorial + music theory primer
@@ -353,8 +353,6 @@ MAJOR REMAINING FEATURES:
 
 
 TODO:
-- Get rid of flash code... after porting the embed player?
-- Rename compile scripts to make more sense.
 - Why do prompts sometimes not go away until you move the mouse after importing a song? hmm maybe the problem is the delay between the user action and the navigation action crosses some safety threshold...
 - Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth or sixteenth note triplet symbol for rhythm. for the reverb cube, use 3 point perspective, use thin lines for the corners, use more foreshortening on the floor than the ceiling to show the camera is near the floor, make the floor solid color, add vaulted arch ceiling? honestly I don't have much fidelity to work with...
 - Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
@@ -412,26 +410,6 @@ TODO:
 - Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
 - Improve naming/documentation/api so it's clear how replaceState and prospectiveChange would interact if used together. prospectiveChange is only used for keeping track of oldValue while dragging to determine if a recorded change ultimately isNoop() and should be commmitted. replaceState is used when a change is overwriting the previously committed change, like transposing notes. However, prospective change erases information about previously *committed* change, making it unclear if replaceState should be used. Additionally, if multiple inputs are setting prospectiveChange simultaneously, it's unclear what the correct oldValue is and thus whether either change isNoop(). (I considered just committing prospective changes when a competing input is used, but that could result in frequent, useless commits while dragging two inputs simultaneously.)
 - document synth api
-
-EMBEDDED PLAYER:
-- put title in data format if provided. show "artist - title" in placeholder text. make sure it is sanitized for security. :)
-- maybe instead of squashing notes really tiny, consider scrolling them instead.
-- If you hold control or shift and click play, put "*" in storage instead, and allow anything to continue playing until it is replaced with a unique id again or manually paused. 
-- It probably doesn't make sense to integrate licenses like creative commons into the data format: it would imply more authority than is actually possible. It is up to users to say how they want their songs to be used. However, there should be an option to disable the "Edit in BeepBox" link, which would turn on basic encryption.
-- Start generating the first few seconds of the song on hover, for fast response when clicking "play". Finish generating the entire song as a pcm track after clicking "play", and use that.
-- maybe add a download/export button? set default file title based on embedded title. (restricting character set appropriately)
-- support both flash and js embedded players?
-- should the author be able to set the default loop behavior?
-- under the file menu make a "share" button that displays a link that can be copied easily on mobile. 
-- the embed player itself should have a share button, for social media. which should link to a full page player instead of the editor?
-- These icons at the bottom of the embed player should have tooltips. 
-- maybe also make a full page song player, to link to from tweets when you don't want others to edit.
-- add "Share" or "HTML Embed" button under export? or "File" menu. Include "title" and "author" fields.
-- manifests to allow installing web app as mobile app. add note in instructions. add any new files to app.yaml
-- allow copying the url from the share menu, so the app version can hide the url bar.
-- sharing menu uses localSharedObject to remember your settings. same as editor volume?
-- should I make cards for twitter/facebook/slack/discord etc?
-- make sure bots ignore embed.html
 
 PLAYLIST EDITOR:
 - button to add more songs to list extracted from urls

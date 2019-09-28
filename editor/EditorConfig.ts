@@ -17,13 +17,6 @@ namespace beepbox {
 		readonly settings?: any;
 	}
 
-	export interface ChannelColors extends BeepBoxOption {
-		readonly channelDim: string;
-		readonly channelBright: string;
-		readonly noteDim: string;
-		readonly noteBright: string;
-	}
-	
 	export class EditorConfig {
 		public static readonly versionDisplayName: string = "BeepBox 3.0.1";
 		public static readonly presetCategories: DictionaryArray<PresetCategory> = toNameMap([
@@ -235,20 +228,6 @@ namespace beepbox {
 				{name: "breathing",        midiProgram: 126, isNoise: true, midiSubharmonicOctaves: -1, settings: {"type":"spectrum","effects":"reverb","transition":"hard fade","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"swell 2","spectrum":[14,14,14,29,29,29,29,29,43,29,29,43,43,43,29,29,71,43,86,86,57,100,86,86,86,86,71,86,71,57]}},
 				{name: "klaxon synth",     midiProgram: 125, isNoise: true, midiSubharmonicOctaves: -1, settings: {"type":"noise","effects":"reverb","transition":"slide","chord":"harmony","filterCutoffHz":2000,"filterResonance":86,"filterEnvelope":"steady","wave":"buzz"}},
 			])},
-		]);
-		
-		public static readonly pitchColors: DictionaryArray<ChannelColors> = toNameMap([
-			{name: "cyan",   channelDim: "#0099a1", channelBright: "#25f3ff", noteDim: "#00bdc7", noteBright: "#92f9ff"},
-			{name: "yellow", channelDim: "#a1a100", channelBright: "#ffff25", noteDim: "#c7c700", noteBright: "#ffff92"},
-			{name: "orange", channelDim: "#c75000", channelBright: "#ff9752", noteDim: "#ff771c", noteBright: "#ffcdab"},
-			{name: "green",  channelDim: "#00a100", channelBright: "#50ff50", noteDim: "#00c700", noteBright: "#a0ffa0"},
-			{name: "purple", channelDim: "#d020d0", channelBright: "#ff90ff", noteDim: "#e040e0", noteBright: "#ffc0ff"},
-			{name: "blue",   channelDim: "#7777b0", channelBright: "#a0a0ff", noteDim: "#8888d0", noteBright: "#d0d0ff"},
-		]);
-		public static readonly noiseColors: DictionaryArray<ChannelColors> = toNameMap([
-			{name: "gray",   channelDim: "#6f6f6f", channelBright: "#aaaaaa", noteDim: "#a7a7a7", noteBright: "#e0e0e0"},
-			{name: "brown",  channelDim: "#996633", channelBright: "#ddaa77", noteDim: "#cc9966", noteBright: "#f0d0bb"},
-			{name: "azure",  channelDim: "#4a6d8f", channelBright: "#77aadd", noteDim: "#6f9fcf", noteBright: "#bbd7ff"},
 		]);
 		
 		public static valueToPreset(presetValue: number): Preset | null {

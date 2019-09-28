@@ -2315,9 +2315,7 @@ namespace beepbox {
 		public liveInputPressed: boolean = false;
 		public liveInputPitches: number[] = [0];
 		public liveInputChannel: number = 0;
-		public enableIntro: boolean = true;
-		public enableOutro: boolean = false;
-		public loopCount: number = -1;
+		public loopRepeatCount: number = -1;
 		public volume: number = 1.0;
 		
 		private playheadInternal: number = 0.0;
@@ -2377,40 +2375,27 @@ namespace beepbox {
 				const samplesPerTick: number = this.getSamplesPerTick();
 				remainder = samplesPerTick * (remainder - this.tick);
 				this.tickSampleCountdown = Math.floor(samplesPerTick - remainder);
-				if (this.bar < this.song.loopStart) {
-					this.enableIntro = true;
-				}
-				if (this.bar > this.song.loopStart + this.song.loopLength) {
-					this.enableOutro = true;
-				}
 			}
 		}
 		
-		public get totalSamples(): number {
-			if (this.song == null) return 0;
-			const samplesPerBar: number = this.getSamplesPerTick() * Config.ticksPerPart * Config.partsPerBeat * this.song.beatsPerBar;
-			let loopMinCount: number = this.loopCount;
-			if (loopMinCount < 0) loopMinCount = 1;
-			let bars: number = this.song.loopLength * loopMinCount;
-			if (this.enableIntro) bars += this.song.loopStart;
-			if (this.enableOutro) bars += this.song.barCount - (this.song.loopStart + this.song.loopLength);
-			return bars * samplesPerBar;
+		public getSamplesPerBar(): number {
+			if (this.song == null) throw new Error();
+			return this.getSamplesPerTick() * Config.ticksPerPart * Config.partsPerBeat * this.song.beatsPerBar;
 		}
 		
-		public get totalSeconds(): number {
-			return this.totalSamples / this.samplesPerSecond;
+		public getTotalBars(enableIntro: boolean, enableOutro: boolean): number {
+			if (this.song == null) throw new Error();
+			let bars: number = this.song.loopLength * (this.loopRepeatCount + 1);
+			if (enableIntro) bars += this.song.loopStart;
+			if (enableOutro) bars += this.song.barCount - (this.song.loopStart + this.song.loopLength);
+			return bars;
 		}
 		
-		public get totalBars(): number {
-			if (this.song == null) return 0.0;
-			return this.song.barCount;
-		}
-		
-		constructor(song: any = null) {
+		constructor(song: Song | string | null = null) {
 			if (song != null) this.setSong(song);
 		}
 		
-		public setSong(song: any): void {
+		public setSong(song: Song | string): void {
 			if (typeof(song) == "string") {
 				this.song = new Song(song);
 			} else if (song instanceof Song) {
@@ -2448,7 +2433,6 @@ namespace beepbox {
 		
 		public snapToStart(): void {
 			this.bar = 0;
-			this.enableIntro = true;
 			this.snapToBar();
 		}
 		
@@ -2471,19 +2455,22 @@ namespace beepbox {
 			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
 		}
 		
+		public jumpIntoLoop(): void {
+			if (!this.song) return;
+			if (this.bar < this.song.loopStart || this.bar >= this.song.loopStart + this.song.loopLength) {
+				const oldBar: number = this.bar;
+				this.bar = this.song.loopStart;
+				this.playheadInternal += this.bar - oldBar;
+			}
+		}
+		
 		public nextBar(): void {
 			if (!this.song) return;
 			const oldBar: number = this.bar;
 			this.bar++;
-			if (this.enableOutro) {
-				if (this.bar >= this.song.barCount) {
-					this.bar = this.enableIntro ? 0 : this.song.loopStart;
-				}
-			} else {
-				if (this.bar >= this.song.loopStart + this.song.loopLength || this.bar >= this.song.barCount) {
-					this.bar = this.song.loopStart;
-				}
- 			}
+			if (this.bar >= this.song.barCount) {
+				this.bar = 0;
+			}
 			this.playheadInternal += this.bar - oldBar;
 		}
 		
@@ -2491,17 +2478,8 @@ namespace beepbox {
 			if (!this.song) return;
 			const oldBar: number = this.bar;
 			this.bar--;
-			if (this.bar < 0) {
-				this.bar = this.song.loopStart + this.song.loopLength - 1;
-			}
-			if (this.bar >= this.song.barCount) {
+			if (this.bar < 0 || this.bar >= this.song.barCount) {
 				this.bar = this.song.barCount - 1;
-			}
-			if (this.bar < this.song.loopStart) {
-				this.enableIntro = true;
-			}
-			if (!this.enableOutro && this.bar >= this.song.loopStart + this.song.loopLength) {
-				this.bar = this.song.loopStart + this.song.loopLength - 1;
 			}
 			this.playheadInternal += this.bar - oldBar;
 		}
@@ -2545,24 +2523,18 @@ namespace beepbox {
 				this.tick = 0;
 				this.tickSampleCountdown = samplesPerTick;
 				
-				if (this.loopCount == -1) {
-					if (this.bar < this.song.loopStart && !this.enableIntro) this.bar = this.song.loopStart;
-					if (this.bar >= this.song.loopStart + this.song.loopLength && !this.enableOutro) this.bar = this.song.loopStart;
+				if (this.loopRepeatCount != 0 && this.bar == this.song.loopStart + this.song.loopLength) {
+					this.bar = this.song.loopStart;
+					if (this.loopRepeatCount > 0) this.loopRepeatCount--;
 				}
 			}
 			if (this.bar >= this.song.barCount) {
-				if (this.enableOutro) {
-					this.bar = 0;
-					this.enableIntro = true;
+				this.bar = 0;
+				if (this.loopRepeatCount != -1) {
 					ended = true;
 					this.pause();
-				} else {
-					this.bar = this.song.loopStart;
 				}
  			}
-			if (this.bar >= this.song.loopStart) {
-				this.enableIntro = false;
-			}
 			
 			//const synthStartTime: number = performance.now();
 			
@@ -2613,198 +2585,186 @@ namespace beepbox {
 			const synthBufferByEffects: Float32Array[] = [data, samplesForReverb, samplesForChorus, samplesForChorusReverb];
 			while (bufferIndex < bufferLength && !ended) {
 				
-				while (bufferIndex < bufferLength) {
-			
-					const samplesLeftInBuffer: number = bufferLength - bufferIndex;
-					const runLength: number = (this.tickSampleCountdown <= samplesLeftInBuffer)
-						? this.tickSampleCountdown
-						: samplesLeftInBuffer;
-					for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
+				const samplesLeftInBuffer: number = bufferLength - bufferIndex;
+				const runLength: number = (this.tickSampleCountdown <= samplesLeftInBuffer)
+					? this.tickSampleCountdown
+					: samplesLeftInBuffer;
+				for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
 
-						if (channel == this.liveInputChannel) {
-							this.determineLiveInputTones(this.song);
+					if (channel == this.liveInputChannel) {
+						this.determineLiveInputTones(this.song);
 
-							for (let i: number = 0; i < this.liveInputTones.count(); i++) {
-								const tone: Tone = this.liveInputTones.get(i);
-								this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, false, false);
-							}
-						}
-
-						this.determineCurrentActiveTones(this.song, channel);
-						for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
-							const tone: Tone = this.activeTones[channel].get(i);
+						for (let i: number = 0; i < this.liveInputTones.count(); i++) {
+							const tone: Tone = this.liveInputTones.get(i);
 							this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, false, false);
 						}
+					}
+
+					this.determineCurrentActiveTones(this.song, channel);
+					for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
+						const tone: Tone = this.activeTones[channel].get(i);
+						this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, false, false);
+					}
+					for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
+						const tone: Tone = this.releasedTones[channel].get(i);
+						if (tone.ticksSinceReleased >= tone.instrument.getTransition().releaseTicks) {
+							this.freeReleasedTone(channel, i);
+							i--;
+							continue;
+						}
+
+						const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
+
+						this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
+					}
+				}
+				
+				// Post processing:
+				let chorusTap0Index: number = chorusDelayPos + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
+				let chorusTap1Index: number = chorusDelayPos + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
+				let chorusTap2Index: number = chorusDelayPos + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
+				chorusPhase += chorusAngle * runLength;
+				const chorusTap0End: number = chorusDelayPos + runLength + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
+				const chorusTap1End: number = chorusDelayPos + runLength + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
+				const chorusTap2End: number = chorusDelayPos + runLength + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
+				const chorusTap0Delta: number = (chorusTap0End - chorusTap0Index) / runLength;
+				const chorusTap1Delta: number = (chorusTap1End - chorusTap1Index) / runLength;
+				const chorusTap2Delta: number = (chorusTap2End - chorusTap2Index) / runLength;
+				const runEnd: number = bufferIndex + runLength;
+				for (let i: number = bufferIndex; i < runEnd; i++) {
+					const sampleForChorus: number = samplesForChorus[i];
+					samplesForChorus[i] = 0.0;
+					const sampleForChorusReverb: number = samplesForChorusReverb[i];
+					samplesForChorusReverb[i] = 0.0;
+					const sampleForReverb: number = samplesForReverb[i];
+					samplesForReverb[i] = 0.0;
+					const combinedChorus: number = sampleForChorus + sampleForChorusReverb;
+					
+					const chorusTap0Ratio: number = chorusTap0Index % 1;
+					const chorusTap1Ratio: number = chorusTap1Index % 1;
+					const chorusTap2Ratio: number = chorusTap2Index % 1;
+					const chorusTap0A: number = chorusDelayLine[(chorusTap0Index) & 0x3FF];
+					const chorusTap0B: number = chorusDelayLine[(chorusTap0Index + 1) & 0x3FF];
+					const chorusTap1A: number = chorusDelayLine[(chorusTap1Index) & 0x3FF];
+					const chorusTap1B: number = chorusDelayLine[(chorusTap1Index + 1) & 0x3FF];
+					const chorusTap2A: number = chorusDelayLine[(chorusTap2Index) & 0x3FF];
+					const chorusTap2B: number = chorusDelayLine[(chorusTap2Index + 1) & 0x3FF];
+					const chorusTap0: number = chorusTap0A + (chorusTap0B - chorusTap0A) * chorusTap0Ratio;
+					const chorusTap1: number = chorusTap1A + (chorusTap1B - chorusTap1A) * chorusTap1Ratio;
+					const chorusTap2: number = chorusTap2A + (chorusTap2B - chorusTap2A) * chorusTap2Ratio;
+					const chorusSample = 0.5 * (combinedChorus - chorusTap0 + chorusTap1 - chorusTap2);
+					chorusDelayLine[chorusDelayPos] = combinedChorus;
+					chorusDelayPos = (chorusDelayPos + 1) & 0x3FF;
+					chorusTap0Index += chorusTap0Delta;
+					chorusTap1Index += chorusTap1Delta;
+					chorusTap2Index += chorusTap2Delta;
+					
+					// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
+					// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
+					// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
+					// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
+					const reverbDelayPos1: number = (reverbDelayPos +  3041) & 0x3FFF;
+					const reverbDelayPos2: number = (reverbDelayPos +  6426) & 0x3FFF;
+					const reverbDelayPos3: number = (reverbDelayPos + 10907) & 0x3FFF;
+					const reverbSample0: number = (reverbDelayLine[reverbDelayPos] + sampleForReverb);
+					const reverbSample1: number = reverbDelayLine[reverbDelayPos1];
+					const reverbSample2: number = reverbDelayLine[reverbDelayPos2];
+					const reverbSample3: number = reverbDelayLine[reverbDelayPos3];
+					const reverbSample0Chorus: number = reverbSample0 + sampleForChorusReverb;
+					const reverbTemp0: number = -reverbSample0Chorus + reverbSample1;
+					const reverbTemp1: number = -reverbSample0Chorus - reverbSample1;
+					const reverbTemp2: number = -reverbSample2 + reverbSample3;
+					const reverbTemp3: number = -reverbSample2 - reverbSample3;
+					reverbFeedback0 += ((reverbTemp0 + reverbTemp2) * reverb - reverbFeedback0) * 0.5;
+					reverbFeedback1 += ((reverbTemp1 + reverbTemp3) * reverb - reverbFeedback1) * 0.5;
+					reverbFeedback2 += ((reverbTemp0 - reverbTemp2) * reverb - reverbFeedback2) * 0.5;
+					reverbFeedback3 += ((reverbTemp1 - reverbTemp3) * reverb - reverbFeedback3) * 0.5;
+					reverbDelayLine[reverbDelayPos1] = reverbFeedback0;
+					reverbDelayLine[reverbDelayPos2] = reverbFeedback1;
+					reverbDelayLine[reverbDelayPos3] = reverbFeedback2;
+					reverbDelayLine[reverbDelayPos ] = reverbFeedback3;
+					reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
+					
+					const sample = data[i] + chorusSample + reverbSample0 + reverbSample1 + reverbSample2 + reverbSample3;
+					
+					/*
+					highpassOutput = highpassOutput * highpassFilter + sample - highpassInput;
+					highpassInput = sample;
+					// use highpassOutput instead of sample below?
+					*/
+					
+					// A compressor/limiter.
+					const abs: number = sample < 0.0 ? -sample : sample;
+					limit += (abs - limit) * (limit < abs ? limitRise : limitDecay);
+					data[i] = (sample / (limit >= 1 ? limit * 1.05 : limit * 0.8 + 0.25)) * volume;
+				}
+				
+				bufferIndex += runLength;
+				
+				this.tickSampleCountdown -= runLength;
+				if (this.tickSampleCountdown <= 0) {
+					
+					// Track how long tones have been released, and free them if there are too many.
+					for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
 						for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
 							const tone: Tone = this.releasedTones[channel].get(i);
-							if (tone.ticksSinceReleased >= tone.instrument.getTransition().releaseTicks) {
-								this.freeReleasedTone(channel, i);
-								i--;
-								continue;
-							}
+							tone.ticksSinceReleased++;
 
 							const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
-
-							this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
+							if (shouldFadeOutFast) {
+								this.freeReleasedTone(channel, i);
+								i--;
+							}
 						}
 					}
-
-					// Post processing:
-					let chorusTap0Index: number = chorusDelayPos + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
-					let chorusTap1Index: number = chorusDelayPos + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
-					let chorusTap2Index: number = chorusDelayPos + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
-					chorusPhase += chorusAngle * runLength;
-					const chorusTap0End: number = chorusDelayPos + runLength + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
-					const chorusTap1End: number = chorusDelayPos + runLength + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
-					const chorusTap2End: number = chorusDelayPos + runLength + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
-					const chorusTap0Delta: number = (chorusTap0End - chorusTap0Index) / runLength;
-					const chorusTap1Delta: number = (chorusTap1End - chorusTap1Index) / runLength;
-					const chorusTap2Delta: number = (chorusTap2End - chorusTap2Index) / runLength;
-					const runEnd: number = bufferIndex + runLength;
-					for (let i: number = bufferIndex; i < runEnd; i++) {
-						const sampleForChorus: number = samplesForChorus[i];
-						samplesForChorus[i] = 0.0;
-						const sampleForChorusReverb: number = samplesForChorusReverb[i];
-						samplesForChorusReverb[i] = 0.0;
-						const sampleForReverb: number = samplesForReverb[i];
-						samplesForReverb[i] = 0.0;
-						const combinedChorus: number = sampleForChorus + sampleForChorusReverb;
-						
-						const chorusTap0Ratio: number = chorusTap0Index % 1;
-						const chorusTap1Ratio: number = chorusTap1Index % 1;
-						const chorusTap2Ratio: number = chorusTap2Index % 1;
-						const chorusTap0A: number = chorusDelayLine[(chorusTap0Index) & 0x3FF];
-						const chorusTap0B: number = chorusDelayLine[(chorusTap0Index + 1) & 0x3FF];
-						const chorusTap1A: number = chorusDelayLine[(chorusTap1Index) & 0x3FF];
-						const chorusTap1B: number = chorusDelayLine[(chorusTap1Index + 1) & 0x3FF];
-						const chorusTap2A: number = chorusDelayLine[(chorusTap2Index) & 0x3FF];
-						const chorusTap2B: number = chorusDelayLine[(chorusTap2Index + 1) & 0x3FF];
-						const chorusTap0: number = chorusTap0A + (chorusTap0B - chorusTap0A) * chorusTap0Ratio;
-						const chorusTap1: number = chorusTap1A + (chorusTap1B - chorusTap1A) * chorusTap1Ratio;
-						const chorusTap2: number = chorusTap2A + (chorusTap2B - chorusTap2A) * chorusTap2Ratio;
-						const chorusSample = 0.5 * (combinedChorus - chorusTap0 + chorusTap1 - chorusTap2);
-						chorusDelayLine[chorusDelayPos] = combinedChorus;
-						chorusDelayPos = (chorusDelayPos + 1) & 0x3FF;
-						chorusTap0Index += chorusTap0Delta;
-						chorusTap1Index += chorusTap1Delta;
-						chorusTap2Index += chorusTap2Delta;
-						
-						// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
-						// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
-						// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
-						// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
-						const reverbDelayPos1: number = (reverbDelayPos +  3041) & 0x3FFF;
-						const reverbDelayPos2: number = (reverbDelayPos +  6426) & 0x3FFF;
-						const reverbDelayPos3: number = (reverbDelayPos + 10907) & 0x3FFF;
-						const reverbSample0: number = (reverbDelayLine[reverbDelayPos] + sampleForReverb);
-						const reverbSample1: number = reverbDelayLine[reverbDelayPos1];
-						const reverbSample2: number = reverbDelayLine[reverbDelayPos2];
-						const reverbSample3: number = reverbDelayLine[reverbDelayPos3];
-						const reverbSample0Chorus: number = reverbSample0 + sampleForChorusReverb;
-						const reverbTemp0: number = -reverbSample0Chorus + reverbSample1;
-						const reverbTemp1: number = -reverbSample0Chorus - reverbSample1;
-						const reverbTemp2: number = -reverbSample2 + reverbSample3;
-						const reverbTemp3: number = -reverbSample2 - reverbSample3;
-						reverbFeedback0 += ((reverbTemp0 + reverbTemp2) * reverb - reverbFeedback0) * 0.5;
-						reverbFeedback1 += ((reverbTemp1 + reverbTemp3) * reverb - reverbFeedback1) * 0.5;
-						reverbFeedback2 += ((reverbTemp0 - reverbTemp2) * reverb - reverbFeedback2) * 0.5;
-						reverbFeedback3 += ((reverbTemp1 - reverbTemp3) * reverb - reverbFeedback3) * 0.5;
-						reverbDelayLine[reverbDelayPos1] = reverbFeedback0;
-						reverbDelayLine[reverbDelayPos2] = reverbFeedback1;
-						reverbDelayLine[reverbDelayPos3] = reverbFeedback2;
-						reverbDelayLine[reverbDelayPos ] = reverbFeedback3;
-						reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
-						
-						const sample = data[i] + chorusSample + reverbSample0 + reverbSample1 + reverbSample2 + reverbSample3;
-						
-						/*
-						highpassOutput = highpassOutput * highpassFilter + sample - highpassInput;
-						highpassInput = sample;
-						// use highpassOutput instead of sample below?
-						*/
-						
-						// A compressor/limiter.
-						const abs: number = sample < 0.0 ? -sample : sample;
-						limit += (abs - limit) * (limit < abs ? limitRise : limitDecay);
-						data[i] = (sample / (limit >= 1 ? limit * 1.05 : limit * 0.8 + 0.25)) * volume;
-					}
-
-					bufferIndex += runLength;
 					
-					this.tickSampleCountdown -= runLength;
-					if (this.tickSampleCountdown <= 0) {
+					this.tick++;
+					this.tickSampleCountdown = samplesPerTick;
+					if (this.tick == Config.ticksPerPart) {
+						this.tick = 0;
+						this.part++;
 						
-						// Track how long tones have been released, and free them if there are too many.
+						// Check if any active tones should be released.
 						for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
-							for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
-								const tone: Tone = this.releasedTones[channel].get(i);
-								tone.ticksSinceReleased++;
-
-								const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
-								if (shouldFadeOutFast) {
-									this.freeReleasedTone(channel, i);
+							for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
+								const tone: Tone = this.activeTones[channel].get(i);
+								const transition: Transition = tone.instrument.getTransition();
+								if (!transition.isSeamless && tone.note != null && tone.note.end == this.part + this.beat * Config.partsPerBeat) {
+									if (transition.releases) {
+										this.releaseTone(channel, tone);
+									} else {
+										this.freeTone(tone);
+									}
+									this.activeTones[channel].remove(i);
 									i--;
 								}
 							}
 						}
 						
-						this.tick++;
-						this.tickSampleCountdown = samplesPerTick;
-						if (this.tick == Config.ticksPerPart) {
-							this.tick = 0;
-							this.part++;
-							
-							// Check if any active tones should be released.
-							for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
-								for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
-									const tone: Tone = this.activeTones[channel].get(i);
-									const transition: Transition = tone.instrument.getTransition();
-									if (!transition.isSeamless && tone.note != null && tone.note.end == this.part + this.beat * Config.partsPerBeat) {
-										if (transition.releases) {
-											this.releaseTone(channel, tone);
-										} else {
-											this.freeTone(tone);
-										}
-										this.activeTones[channel].remove(i);
-										i--;
-									}
+						if (this.part == Config.partsPerBeat) {
+							this.part = 0;
+							this.beat++;
+							if (this.beat == this.song.beatsPerBar) {
+								// bar changed, reset for next bar:
+								this.beat = 0;
+								this.bar++;
+								if (this.loopRepeatCount != 0 && this.bar == this.song.loopStart + this.song.loopLength) {
+									this.bar = this.song.loopStart;
+									if (this.loopRepeatCount > 0) this.loopRepeatCount--;
 								}
-							}
-							
-							if (this.part == Config.partsPerBeat) {
-								this.part = 0;
-								this.beat++;
-								if (this.beat == this.song.beatsPerBar) {
-									// bar changed, reset for next bar:
-									this.beat = 0;
-									this.bar++;
-									if (this.bar < this.song.loopStart) {
-										if (!this.enableIntro) this.bar = this.song.loopStart;
-									} else {
-										this.enableIntro = false;
-									}
-									if (this.bar >= this.song.loopStart + this.song.loopLength) {
-										if (this.loopCount > 0) this.loopCount--;
-										if (this.loopCount > 0 || !this.enableOutro) {
-											this.bar = this.song.loopStart;
-										}
-									}
-									if (this.bar >= this.song.barCount) {
-										this.bar = 0;
-										this.enableIntro = true;
+								if (this.bar >= this.song.barCount) {
+									this.bar = 0;
+									if (this.loopRepeatCount != -1) {
 										ended = true;
 										this.pause();
 									}
-									
-									// When bar ends, may need to generate new synthesizer:
-									break;
 								}
 							}
 						}
 					}
 				}
 			}
-
+			
 			// Optimization: Avoid persistent reverb values in the float denormal range.
 			const epsilon: number = (1.0e-24);
 			if (-epsilon < reverbFeedback0 && reverbFeedback0 < epsilon) reverbFeedback0 = 0.0;
@@ -2815,7 +2775,6 @@ namespace beepbox {
 			//if (-epsilon < highpassOutput && highpassOutput < epsilon) highpassOutput = 0.0;
 			if (-epsilon < limit && limit < epsilon) limit = 0.0;
 			
-
 			this.chorusPhase = chorusPhase;
 			this.chorusDelayPos = chorusDelayPos;
 			this.reverbDelayPos = reverbDelayPos;

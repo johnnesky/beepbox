@@ -1,6 +1,7 @@
 // Copyright (C) 2019 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
+/// <reference path="ColorConfig.ts" />
 /// <reference path="SongDocument.ts" />
 /// <reference path="html.ts" />
 /// <reference path="SongEditor.ts" />
@@ -849,7 +850,7 @@ namespace beepbox {
 					for (const note of pattern2.notes) {
 						for (const pitch of note.pitches) {
 							const notePath: SVGPathElement = SVG.path();
-							notePath.setAttribute("fill", this._doc.getNoteColorDim(channel));
+							notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, channel).noteDim);
 							notePath.setAttribute("pointer-events", "none");
 							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channels[channel].octave * 12);
 							this._svgNoteContainer.appendChild(notePath);
@@ -863,12 +864,12 @@ namespace beepbox {
 					for (let i: number = 0; i < note.pitches.length; i++) {
 						const pitch: number = note.pitches[i];
 						let notePath: SVGPathElement = SVG.path();
-						notePath.setAttribute("fill", this._doc.getNoteColorDim(this._doc.channel));
+						notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteDim);
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
 						notePath = SVG.path();
-						notePath.setAttribute("fill", this._doc.getNoteColorBright(this._doc.channel));
+						notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright);
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);

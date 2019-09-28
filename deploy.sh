@@ -12,4 +12,6 @@ fi
 
 ./compile_beepbox_editor.sh
 
+./compile_beepbox_player.sh
+
 gcloud app deploy --project beepbox-synth website/app.yaml

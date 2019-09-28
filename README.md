@@ -39,11 +39,21 @@ pack system to be able to deploy a single JavaScript file. I don't use any other
 libraries so I don't need a package manager either, aside from installing npm in
 order to install TypeScript and Uglify. BeepBox is relatively self-contained.
 
-The code is divided into the synth/ and editor/ folders. The former has all the
-code you need to be able to play BeepBox songs, and you could use this code in
-your own projects, like a web game. The latter has additional code to display
-the online song editor interface. 
+## Code
 
-After compiling the synth code, open website/synth_example.html to see a demo
-using it. After compiling the editor code, open website/index.html to see the
+The code is divided into several folders. 
+
+The synth/ has just the code you need to be able to play BeepBox songs out loud,
+and you could use this code in your own projects, like a web game. After
+compiling the synth code, open website/synth_example.html to see a demo using
+it.
+
+The editor/ folder has additional code to display the online song editor
+interface. After compiling the editor code, open website/index.html to see the
 editor interface.
+
+The player/ folder has a miniature song player interface for embedding on other
+sites.
+
+The website/ folder contains index.html files to view the interfaces, and the
+TypeScript compiler is configured to output JavaScript files into this folder.

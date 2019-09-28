@@ -1,8 +1,9 @@
 // Copyright (C) 2019 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/SynthConfig.ts" />
-/// <reference path="../synth/synth.ts" />
+/// <reference path="ColorConfig.ts" />
 /// <reference path="EditorConfig.ts" />
+/// <reference path="../synth/synth.ts" />
 /// <reference path="SongDocument.ts" />
 /// <reference path="html.ts" />
 /// <reference path="style.ts" />
@@ -26,7 +27,7 @@
 namespace beepbox {
 	const {button, div, span, select, option, optgroup, input} = HTML;
 	
-	const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
+	export const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
 	
 	function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
 		for (let index: number = 0; index < items.length; index++) {
@@ -148,6 +149,8 @@ namespace beepbox {
 			option({value: "export"}, "↓ Export Song..."),
 			option({value: "copyUrl"}, "⎘ Copy Song URL"),
 			option({value: "shareUrl"}, "⤳ Share Song URL"),
+			option({value: "viewPlayer"}, "▶ View in Song Player"),
+			option({value: "copyEmbed"}, "⎘ Copy HTML Embed Code"),
 		);
 		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"},
 			option({selected: true, disabled: true, hidden: false}, "Edit"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -482,7 +485,11 @@ namespace beepbox {
 				}
 			});
 			
-			if (isMobile) (<HTMLOptionElement> this._optionsMenu.children[1]).disabled = true;
+			if (isMobile) {
+				const autoPlayOption: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.children[1]
+				autoPlayOption.disabled = true;
+				autoPlayOption.setAttribute("hidden", "");
+			}
 		}
 		
 		private _openPrompt(promptName: string): void {
@@ -740,7 +747,7 @@ namespace beepbox {
 				buildOptions(this._instrumentSelect, instrumentList);
 			}
 			
-			this._instrumentSettingsGroup.style.color = this._doc.getNoteColorBright(this._doc.channel);
+			this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
 			
 			this._filterCutoffSlider.updateValue(instrument.filterCutoff);
 			this._filterResonanceSlider.updateValue(instrument.filterResonance);
@@ -1116,19 +1123,29 @@ namespace beepbox {
 					this._openPrompt("import");
 					break;
 				case "copyUrl": {
-					const text: HTMLInputElement = document.createElement("input");
-					document.body.appendChild(text);
-					text.value = location.href;
-					text.select();
-					text.setSelectionRange(0, 99999); // For mobile devices
-					document.execCommand("copy");
-					document.body.removeChild(text);
+					SongEditor._copyText(location.href);
 				} break;
 				case "shareUrl":
-					(<any>navigator)["share"]({ url: location.href });
+					(<any>navigator).share({ url: location.href });
+					break;
+				case "viewPlayer":
+					location.href = "player/#song=" + location.hash;
+					break;
+				case "copyEmbed":
+					SongEditor._copyText(`<iframe width="434" height="50" style="border: none;" src="player/#song=${location.hash}"></iframe>`);
 					break;
 			}
 			this._fileMenu.selectedIndex = 0;
+		}
+		
+		private static _copyText(value: string): void {
+			const text: HTMLInputElement = document.createElement("input");
+			document.body.appendChild(text);
+			text.value = value;
+			text.select();
+			text.setSelectionRange(0, 99999); // For mobile devices
+			document.execCommand("copy");
+			document.body.removeChild(text);
 		}
 		
 		private _editMenuHandler = (event:Event): void => {
@@ -1205,35 +1222,4 @@ namespace beepbox {
 			this._doc.savePreferences();
 		}
 	}
-	
-	const doc: SongDocument = new SongDocument(location.hash);
-	const editor: SongEditor = new SongEditor(doc);
-	const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer")!;
-	beepboxEditorContainer.appendChild(editor.mainLayer);
-	editor.whenUpdated();
-	editor.mainLayer.focus();
-	
-	// don't autoplay on mobile devices, wait for input.
-	if (!isMobile && doc.autoPlay) {
-		function autoplay(): void {
-			if (!document.hidden) {
-				doc.synth.play();
-				editor.updatePlayButton();
-				window.removeEventListener("visibilitychange", autoplay);
-			}
-		}
-		if (document.hidden) {
-			// Wait until the tab is visible to autoplay:
-			window.addEventListener("visibilitychange", autoplay);
-		} else {
-			autoplay();
-		}
-	}
-	
-	// BeepBox uses browser history state as its own undo history. Browsers typically
-	// remember scroll position for each history state, but BeepBox users would prefer not 
-	// auto scrolling when undoing. Sadly this tweak doesn't work on Edge or IE.
-	if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-	
-	editor.updatePlayButton();
 }

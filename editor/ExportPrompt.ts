@@ -1,6 +1,7 @@
 // Copyright (C) 2019 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
+/// <reference path="ColorConfig.ts" />
 /// <reference path="EditorConfig.ts" />
 /// <reference path="SongDocument.ts" />
 /// <reference path="Prompt.ts" />
@@ -193,15 +194,13 @@ namespace beepbox {
 		private _exportToWav(): void {
 			
 			const synth: Synth = new Synth(this._doc.song)
-			synth.enableIntro = this._enableIntro.checked;
-			synth.enableOutro = this._enableOutro.checked;
-			synth.loopCount = Number(this._loopDropDown.value);
-			if (!synth.enableIntro) {
+			synth.loopRepeatCount = Number(this._loopDropDown.value) - 1;
+			if (!this._enableIntro.checked) {
 				for (let introIter: number = 0; introIter < this._doc.song.loopStart; introIter++) {
 					synth.nextBar();
 				}
 			}
-			const sampleFrames: number = synth.totalSamples;
+			const sampleFrames: number = synth.getSamplesPerBar() * synth.getTotalBars(this._enableIntro.checked, this._enableOutro.checked);
 			const recordedSamples: Float32Array = new Float32Array(sampleFrames);
 			//const timer: number = performance.now();
 			synth.synthesize(recordedSamples, sampleFrames);
@@ -405,9 +404,7 @@ namespace beepbox {
 				} else {
 					// For remaining tracks, set up the instruments and write the notes:
 					
-					let channelName: string = isNoise
-						? EditorConfig.noiseColors[(channel - song.pitchChannelCount) % EditorConfig.noiseColors.length].name + " channel"
-						: EditorConfig.pitchColors[channel % EditorConfig.pitchColors.length].name + " channel";
+					let channelName: string = ColorConfig.getChannelColor(song, channel).name + " channel";
 					writeEventTime(0);
 					writer.writeUint8(MidiEventType.meta);
 					writer.writeMidi7Bits(MidiMetaEventMessage.trackName);

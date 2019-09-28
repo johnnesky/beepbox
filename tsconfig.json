@@ -1,6 +1,6 @@
 {
 	"extends": "./tsconfig_synth_only.json",
-	"files": [ "editor/SongEditor.ts" ],
+	"files": [ "editor/main.ts" ],
 	"compilerOptions": {
 		"outFile": "website/beepbox_editor.js"
 	}
