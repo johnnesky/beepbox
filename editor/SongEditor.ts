@@ -1129,7 +1129,7 @@ namespace beepbox {
 					(<any>navigator).share({ url: location.href });
 					break;
 				case "viewPlayer":
-					location.href = "player/#song=" + location.hash;
+					location.href = "player/#song=" + this._doc.song.toBase64String();
 					break;
 				case "copyEmbed":
 					SongEditor._copyText(`<iframe width="434" height="50" style="border: none;" src="player/#song=${location.hash}"></iframe>`);

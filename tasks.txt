@@ -335,6 +335,7 @@
 √ PWA, web app manifest for home screen.
 √ Share and Copy URL options added to File Menu.
 √ Offsite song player with HTML embed code.
+√ Added service worker to cache resources for offline use.
 
 MAJOR REMAINING FEATURES:
 - distortion? (how would it affect polyphonic channels?)

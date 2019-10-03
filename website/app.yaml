@@ -50,6 +50,14 @@ handlers:
   static_files: \1
   upload: (.*\.js)
 
+- url: /
+  static_files: index.html
+  upload: index\.html
+  secure: always
+  redirect_http_response_code: 301
+  http_headers:
+    Link: "<https://beepbox.co/>; rel=\"canonical\"" 
+
 - url: /(.+/)*
   static_files: \1index.html
   upload: (.+/)*index\.html

@@ -33,4 +33,8 @@ namespace beepbox {
 	if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 	
 	editor.updatePlayButton();
+	
+	if ("serviceWorker" in navigator) {
+		navigator.serviceWorker.register("/service_worker.js", { scope: "/" });
+	}
 }
