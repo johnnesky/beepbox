@@ -35,6 +35,6 @@ namespace beepbox {
 	editor.updatePlayButton();
 	
 	if ("serviceWorker" in navigator) {
-		navigator.serviceWorker.register("/service_worker.js", { scope: "/" });
+		navigator.serviceWorker.register("/service_worker.js", {updateViaCache: "all", scope: "/"});
 	}
 }
