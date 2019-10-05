@@ -4,7 +4,7 @@
 	"description": "BeepBox is a tool for sketching and sharing instrumental melodies.",
 	"scope": "/",
 	"start_url": ".",
-	"display": "standalone",
+	"display": "browser",
 	"orientation": "portrait-primary",
 	"theme_color": "#444",
 	"background_color": "#000",
