@@ -338,17 +338,17 @@
 √ Added service worker to cache resources for offline use.
 
 MAJOR REMAINING FEATURES:
-- distortion? (how would it affect polyphonic channels?)
 - bar box selection
-- audio worklet thread
+- tutorial + music theory primer
+- remember recent songs
 - live input when song is paused
 - live keyboard performance. (make sure piano can play while song is paused?)
 - MIDI live input, live output?
+- distortion? (how would it affect polyphonic channels?)
+- audio worklet thread
 - "inspire me" random song generator.
 - link shortener
-- remember recent songs
 - export mp3/ogg and audio buffer
-- tutorial + music theory primer
 - playlist editor
 - translation
 
@@ -361,12 +361,10 @@ TODO:
 - Maybe make several tabs at the bottom for instructions, about, twitter, mastadon, etc, and save which tab was selected when reloading.
 - New pref: in paused mode, when editing a note, play it out loud.
 - Add some kind of warning if an error is thrown, it may prevent saving progress.
-- I don't like how BeepBox jumps into the loop if it was previously in a loop but the loop was moved to a later time and the left square bracket hasn't been pressed. at the very least, loading a new song should inhibit that behavior. Manually moving to a bar before the loop should inhibit it too, either with arrow keys or clicking (unlike square brackets which actually do what I want). maybe only trigger it if the loop was explicitly clicked to a later bar. (but not if undoing moved the loop?)
 - Make all colors controlled by CSS. Come up with themes.
 - Is there space between the instrument volume slider and label for a toggleable speaker/mute icon?
 - New file command: export channels as wavs. (Maybe this should just be a checkbox in the export dialog?)
 - If I paste a pattern with the wrong number of beats, (or too many beats?) just stretch it?
-- An edit option to push notes to the left or right some number of beats, creating new patterns as necessary for various combinations of old patterns. Or maybe just rotate all notes within a pattern, and let the author fix up the seams? Why not both! Also refactor ChangeBeatsPerBar a bit, pulling out a generic "note projection" function to be used by both.
 - The JSON export should include the scale flags, not just the name.
 - The piano key display accidental naming convention needs work. "C#" is a fine name for a minor scale but misnames F# as Gb, but the same key in major scale should be "Db" and the names of all the black keys should be flats instead of sharps.
 - The purple loop should have arrows at the ends to imply cyclical motion.
@@ -390,7 +388,6 @@ TODO:
 - remember recent songs in local shared object.
 - add a tutorial + music theory primer. exercise restraint choosing pitches, develop a rhythm first, explore intervals/pitch relationships. It would be cool to have mini beepbox editors with preloaded songs demonstrating concepts, with play, reset, clear, and "open in full editor" options. Mostly it would focus on the pattern editor, but may have one-off additions like a tempo slider to demonstrate tempo.
 - Oh shoot, if I hide the title options in the edit/prefs menus, mac chrome puts a checkmark next to the first displayed option instead, which confuses matters because I use checkmarks to indicate toggling prefs options. :(
-- Edit options to add or remove bars at the beginning of the song.
 - Edit options to remove specific channels.
 - Edit options for compacting and concatenating songs. I'm increasingly interested in the idea of allowing multiple songs, called sections, to be appended to each other. The song settings would apply to whichever section contains the currently selected pattern. But maybe this is just a hack, and it wouldn't make it any easier to gradually transition volume or tempo or stagger instrument changes. Being able to change reverb might be interesting. A more immediately plausible option is the ability to combine songs. I'm imagining a dialog box where you can paste in song urls and it concatenates the songs. you may need to select the beats per bar from a menu populated by the songs if they're not all the same, and the other songs would just get stretched? Use the validation/simplification to skip duplicate/unused patterns and also duplicate/unused instruments to avoid filling up all the slots quickly. Not sure how to handle different song keys, maybe a checkbox to transpose all songs to the first song's key.
 - asynchronous export. worker thread?
@@ -437,25 +434,19 @@ MAYBE:
 - maybe drums can have their own phase modulation mode, with different fractions for frequency? can modulator pitches bend at different rates? maybe the "envelopes" are basically the same except instead of controlling modulation they control pitch?
 - can I improve the interaction for volume envelope dragging and pitch dragging? illustrate volume envelope dragging to make it less confusing. 
 - I could parse the algorithm name, pull out the arrows and parens, rotate them 90 degrees and put them between the numbers. That's... diabolical. Wait that doesn't work for a single example: 1<3 2<4 because the numbers are out of order! >:( (What about feedback arrows?)
-- Maybe add a "release" envelope that decays carrier volume until the next note starts and cuts it off? Or is that redundant since you can do the same thing with envelope editing? (could it extend into the next bar? for 0 pattern bars, use same instrument as previous bar?) Also on "0" pattern bars, use the previous instrument in that channel to continue the fade out.
 - Guitar distortion applying to some channels? new song setting: distortion, nonlinear mixing of channels... can't handle a range of volumes?
 - on mobile, should move the new/edit/prefs/export/import etc buttons to the bottom, just above beepbox 2.X, but keep the play/volume controls between the track editor and the song/instrument settings.
 - If adding new note and mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
-- make some button to bookmark the song in your browser
 - Get in touch with ludum dare about linking to beepbox: http://www.ludumdare.com/compo/tools/
 - get in touch with http://youcanmakevideogames.com/resources/music
 - multitouch?
 - replace piano/drums canvas with svg
-- illustrate arpeggio texture on tones with multiple notes, striped fill
-- on linux chrome, select drop downs use same background color as select element, it's a bit too bright when focused.
+- on firefox and linux chrome, select drop downs use same background color as select element, it's a bit too bright when focused.
 - export fade in/out checkboxes
-- per-pattern drop down menu for instrument selection, prepopulated with common ones. 
 - circle of fifths display
 - Dim the column occupied by a tone to communicate mono voice?
 - visual feedback when a note is played
-- when on the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
-- options for timing offset
+- when hovering at the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
 - phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
-- a facebook app to put songs in your profile
 - preload some common tone shapes into the recentShape list. increment format number.
 - Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 

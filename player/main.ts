@@ -7,10 +7,10 @@
 
 namespace beepbox {
 	const {a, button, div, h1, input} = HTML;
-	const {svg, rect, path, text} = SVG;
+	const {svg, rect, path} = SVG;
 	
 	let prevHash: string | null = null;
-	const textHeight: number = 12;
+	const textHeight: number = 22;
 	let id: string = ((Math.random() * 0xffffffff) >>> 0).toString(16);
 	let pauseButtonDisplayed: boolean = false;
 	let animationRequest: number | null;
@@ -23,24 +23,12 @@ namespace beepbox {
 	let fullscreenLink: HTMLAnchorElement = a({target: "_top", style: "margin: 0 4px;"}, "⇱ Fullscreen");
 	
 	let draggingPlayhead: boolean = false;
-	const playIcon: SVGSVGElement = svg({viewBox: "-50, -50, 100, 100", style: "width: 100%; height: 100%"},
-		svg({y: -10, overflow: "visible"}, path({d: "M 25 0 L -15 21.65 L -15 -21.65 z", fill: "white"})),
-		text({x: 0, y: 35, "text-anchor": "middle", "font-size":"22px", fill: "currentColor"}, "Play"),
-	);
-	const pauseIcon: SVGSVGElement = svg({viewBox: "-50, -50, 100, 100", style: "width: 100%; height: 100%"},
-		rect({x: -15, y: -30, width: 10, height: 40, fill: "white"}),
-		rect({x: 5, y: -30, width: 10, height: 40, fill: "white"}),
-		text({x: 0, y: 35, "text-anchor": "middle", "font-size":"22px", fill: "currentColor"}, "Pause"),
-	);
-	const playButton: HTMLButtonElement = button({style: "width: 100%; height: 100%;"}, 
-		playIcon,
-		pauseIcon,
-	);
-	const playButtonContainer: HTMLDivElement = div({style: "flex-shrink: 0; padding: 2px; box-sizing: border-box;"},
+	const playButton: HTMLButtonElement = button({style: "width: 100%; height: 100%;"});
+	const playButtonContainer: HTMLDivElement = div({style: "flex-shrink: 0; display: flex; padding: 2px; width: 80px; height: "+textHeight+"px; box-sizing: border-box;"},
 		playButton,
 	);
 	const loopIcon: SVGPathElement = path({d: "M 4 2 L 4 0 L 7 3 L 4 6 L 4 4 Q 2 4 2 6 Q 2 8 4 8 L 4 10 Q 0 10 0 6 Q 0 2 4 2 M 8 10 L 8 12 L 5 9 L 8 6 L 8 8 Q 10 8 10 6 Q 10 4 8 4 L 8 2 Q 12 2 12 6 Q 12 10 8 10 z"});
-	const loopButton: HTMLButtonElement = button({title: "loop", style: "background: none; flex: 0 0 12px; margin: 0 1px;"}, svg({viewBox: "0 0 12 12"},
+	const loopButton: HTMLButtonElement = button({title: "loop", style: "background: none; flex: 0 0 12px; margin: 0 1px; height: 12px; display: flex;"}, svg({width: 12, height: 12, viewBox: "0 0 12 12"},
 		loopIcon,
 	));
 	const volumeIcon: SVGSVGElement = svg({style: "flex: 0 0 12px; margin: 0 1px;", viewBox: "0 0 12 12"},
@@ -49,25 +37,20 @@ namespace beepbox {
 	const volumeSlider: HTMLInputElement = input({title: "volume", type: "range", value: 75, min: 0, max: 100, step: 1, style: "width: 12vw; max-width: 100px; margin: 0 1px;"});
 	const timeline: SVGSVGElement = svg({style: "min-width: 0; min-height: 0;"});
 	const playhead: HTMLDivElement = div({style: "position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: white; pointer-events: none;"});
+	const timelineContainer: HTMLDivElement = div({style: "display: flex; position: relative;"}, timeline, playhead);
 	
-	document.body.style.display = "flex";
-	document.body.appendChild(playButtonContainer);
+	document.body.appendChild(timelineContainer);
 	document.body.appendChild(
-		div({style: "display: flex; flex-direction: column; flex-grow: 1; align-items: stretch;"},
-			div({style: "flex: 1 1 0; position: relative; width: 0; height: 0;"},
-				timeline,
-				playhead,
-			),
-			div({style: "flex: 0 0 12px; height: 12px; display: flex;"},
-				loopButton,
-				volumeIcon,
-				volumeSlider,
-				titleText,
-				editLink,
-				copyLink,
-				shareLink,
-				fullscreenLink,
-			),
+		div({style: `flex: 0 0 ${textHeight}px; height: ${textHeight}px; display: flex; align-items: center;`},
+			playButtonContainer,
+			loopButton,
+			volumeIcon,
+			volumeSlider,
+			titleText,
+			editLink,
+			copyLink,
+			shareLink,
+			fullscreenLink,
 		),
 	);
 	
@@ -116,10 +99,6 @@ namespace beepbox {
 	
 	function computePlayerHeight(): number {
 		return Math.min(Math.min(window.innerHeight, window.innerWidth / 4), textHeight + 3 * Config.windowPitchCount + 1);
-	}
-	
-	function computeTimelineWidth(): number {
-		return window.innerWidth - computePlayerHeight();
 	}
 	
 	function onWindowResize(): void {
@@ -196,7 +175,7 @@ namespace beepbox {
 	
 	function renderPlayhead(): void {
 		if (synth.song != null) {
-			const timelineWidth: number = computeTimelineWidth();
+			const timelineWidth: number = window.innerWidth;
 			let pos: number = timelineWidth * synth.playhead / synth.song.barCount;
 			playhead.style.left = pos + "px";
 		}
@@ -204,15 +183,14 @@ namespace beepbox {
 	
 	function renderTimeline(): void {
 		const playerHeight: number = computePlayerHeight();
-		const timelineWidth: number = computeTimelineWidth();
+		const timelineWidth: number = window.innerWidth;
 		const timelineHeight: number = playerHeight - textHeight;
-		
-		playButtonContainer.style.width = playerHeight + "px";
-		playButtonContainer.style.height = playerHeight + "px";
 		
 		timeline.innerHTML = "";
 		if (synth.song == null) return;
 		
+		timelineContainer.style.width = timelineWidth + "px";
+		timelineContainer.style.height = timelineHeight + "px";
 		timeline.style.width = timelineWidth + "px";
 		timeline.style.height = timelineHeight + "px";
 		
@@ -275,11 +253,15 @@ namespace beepbox {
 	
 	function renderPlayButton(): void {
 		if (synth.playing) {
-			playIcon.style.display = "none";
-			pauseIcon.style.display = "";
+			playButton.classList.remove("playButton");
+			playButton.classList.add("pauseButton");
+			playButton.title = "Pause (Space)";
+			playButton.innerText = "Pause";
 		} else {
-			playIcon.style.display = "";
-			pauseIcon.style.display = "none";
+			playButton.classList.remove("pauseButton");
+			playButton.classList.add("playButton");
+			playButton.title = "Play (Space)";
+			playButton.innerText = "Play";
 		}
 		pauseButtonDisplayed = synth.playing;
 	}
@@ -308,13 +290,18 @@ namespace beepbox {
 	}
 	
 	function onCopyClicked(): void {
-		const text: HTMLInputElement = document.createElement("input");
-		document.body.appendChild(text);
-		text.value = location.href;
-		text.select();
-		text.setSelectionRange(0, 99999); // For mobile devices
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(location.href).catch(()=>{
+				window.prompt("Copy to clipboard:", location.href);
+			});
+			return;
+		}
+		const textField: HTMLTextAreaElement = document.createElement("textarea");
+		textField.innerText = location.href;
+		document.body.appendChild(textField);
+		textField.select();
 		document.execCommand("copy");
-		document.body.removeChild(text);
+		textField.remove();
 	}
 	
 	function onShareClicked(): void {

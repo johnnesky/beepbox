@@ -894,11 +894,17 @@ namespace beepbox {
 		}
 		
 		private _copyTextToClipboard(text: string): void {
-			const textField: HTMLTextAreaElement = document.createElement('textarea');
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(text).catch(()=>{
+					window.prompt("Copy to clipboard:", text);
+				});
+				return;
+			}
+			const textField: HTMLTextAreaElement = document.createElement("textarea");
 			textField.innerText = text;
 			document.body.appendChild(textField);
 			textField.select();
-			document.execCommand('copy');
+			document.execCommand("copy");
 			textField.remove();
 			this._refocusStage();
 		}
@@ -1123,7 +1129,7 @@ namespace beepbox {
 					this._openPrompt("import");
 					break;
 				case "copyUrl": {
-					SongEditor._copyText(location.href);
+					this._copyTextToClipboard(location.href);
 				} break;
 				case "shareUrl":
 					(<any>navigator).share({ url: location.href });
@@ -1132,20 +1138,10 @@ namespace beepbox {
 					location.href = "player/#song=" + this._doc.song.toBase64String();
 					break;
 				case "copyEmbed":
-					SongEditor._copyText(`<iframe width="434" height="50" style="border: none;" src="player/#song=${location.hash}"></iframe>`);
+					this._copyTextToClipboard(`<iframe width="434" height="50" style="border: none;" src="${new URL("player/#song=" + location.hash, location.href).href}"></iframe>`);
 					break;
 			}
 			this._fileMenu.selectedIndex = 0;
-		}
-		
-		private static _copyText(value: string): void {
-			const text: HTMLInputElement = document.createElement("input");
-			document.body.appendChild(text);
-			text.value = value;
-			text.select();
-			text.setSelectionRange(0, 99999); // For mobile devices
-			document.execCommand("copy");
-			document.body.removeChild(text);
 		}
 		
 		private _editMenuHandler = (event:Event): void => {

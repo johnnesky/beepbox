@@ -227,6 +227,7 @@ namespace beepbox {
 				{name: "mosquito",         midiProgram:  93, settings: {"type":"PWM","effects":"reverb","transition":"cross fade","chord":"harmony","filterCutoffHz":2828,"filterResonance":57,"filterEnvelope":"steady","pulseWidth":4.40625,"pulseEnvelope":"tremolo6","vibrato":"shaky"}},
 				{name: "breathing",        midiProgram: 126, isNoise: true, midiSubharmonicOctaves: -1, settings: {"type":"spectrum","effects":"reverb","transition":"hard fade","chord":"harmony","filterCutoffHz":2000,"filterResonance":14,"filterEnvelope":"swell 2","spectrum":[14,14,14,29,29,29,29,29,43,29,29,43,43,43,29,29,71,43,86,86,57,100,86,86,86,86,71,86,71,57]}},
 				{name: "klaxon synth",     midiProgram: 125, isNoise: true, midiSubharmonicOctaves: -1, settings: {"type":"noise","effects":"reverb","transition":"slide","chord":"harmony","filterCutoffHz":2000,"filterResonance":86,"filterEnvelope":"steady","wave":"buzz"}},
+				{name: "theremin",         midiProgram:  40, settings: {"type":"harmonics","effects":"reverb","transition":"slide","chord":"harmony","filterCutoffHz":4000,"filterResonance":14,"filterEnvelope":"steady","interval":"union","vibrato":"heavy","harmonics":[100,71,57,43,29,29,14,14,14,14,14,14,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},
 			])},
 		]);
 		
