@@ -904,9 +904,10 @@ namespace beepbox {
 			textField.innerText = text;
 			document.body.appendChild(textField);
 			textField.select();
-			document.execCommand("copy");
+			const succeeded: boolean = document.execCommand("copy");
 			textField.remove();
 			this._refocusStage();
+			if (!succeeded) window.prompt("Copy this:", text);
 		}
 		
 		private _whenPrevBarPressed = (): void => {
@@ -1138,7 +1139,7 @@ namespace beepbox {
 					location.href = "player/#song=" + this._doc.song.toBase64String();
 					break;
 				case "copyEmbed":
-					this._copyTextToClipboard(`<iframe width="434" height="50" style="border: none;" src="${new URL("player/#song=" + location.hash, location.href).href}"></iframe>`);
+					this._copyTextToClipboard(`<iframe width="384" height="60" style="border: none;" src="${new URL("player/#song=" + this._doc.song.toBase64String(), location.href).href}"></iframe>`);
 					break;
 			}
 			this._fileMenu.selectedIndex = 0;

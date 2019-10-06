@@ -10,7 +10,6 @@ namespace beepbox {
 	const {svg, rect, path} = SVG;
 	
 	let prevHash: string | null = null;
-	const textHeight: number = 22;
 	let id: string = ((Math.random() * 0xffffffff) >>> 0).toString(16);
 	let pauseButtonDisplayed: boolean = false;
 	let animationRequest: number | null;
@@ -23,25 +22,26 @@ namespace beepbox {
 	let fullscreenLink: HTMLAnchorElement = a({target: "_top", style: "margin: 0 4px;"}, "⇱ Fullscreen");
 	
 	let draggingPlayhead: boolean = false;
-	const playButton: HTMLButtonElement = button({style: "width: 100%; height: 100%;"});
-	const playButtonContainer: HTMLDivElement = div({style: "flex-shrink: 0; display: flex; padding: 2px; width: 80px; height: "+textHeight+"px; box-sizing: border-box;"},
+	const playButton: HTMLButtonElement = button({style: "width: 100%; height: 100%; max-height: 50px;"});
+	const playButtonContainer: HTMLDivElement = div({style: "flex-shrink: 0; display: flex; padding: 2px; width: 80px; height: 100%; box-sizing: border-box; align-items: center;"},
 		playButton,
 	);
 	const loopIcon: SVGPathElement = path({d: "M 4 2 L 4 0 L 7 3 L 4 6 L 4 4 Q 2 4 2 6 Q 2 8 4 8 L 4 10 Q 0 10 0 6 Q 0 2 4 2 M 8 10 L 8 12 L 5 9 L 8 6 L 8 8 Q 10 8 10 6 Q 10 4 8 4 L 8 2 Q 12 2 12 6 Q 12 10 8 10 z"});
-	const loopButton: HTMLButtonElement = button({title: "loop", style: "background: none; flex: 0 0 12px; margin: 0 1px; height: 12px; display: flex;"}, svg({width: 12, height: 12, viewBox: "0 0 12 12"},
+	const loopButton: HTMLButtonElement = button({title: "loop", style: "background: none; flex: 0 0 12px; margin: 0 1px; width: 12px; height: 12px; display: flex;"}, svg({width: 12, height: 12, viewBox: "0 0 12 12"},
 		loopIcon,
 	));
-	const volumeIcon: SVGSVGElement = svg({style: "flex: 0 0 12px; margin: 0 1px;", viewBox: "0 0 12 12"},
+	const volumeIcon: SVGSVGElement = svg({style: "flex: 0 0 12px; margin: 0 1px; width: 12px; height: 12px;", viewBox: "0 0 12 12"},
 		path({fill: "#444444", d: "M 1 9 L 1 3 L 4 3 L 7 0 L 7 12 L 4 9 L 1 9 M 9 3 Q 12 6 9 9 L 8 8 Q 10.5 6 8 4 L 9 3 z"}),
 	);
 	const volumeSlider: HTMLInputElement = input({title: "volume", type: "range", value: 75, min: 0, max: 100, step: 1, style: "width: 12vw; max-width: 100px; margin: 0 1px;"});
 	const timeline: SVGSVGElement = svg({style: "min-width: 0; min-height: 0;"});
 	const playhead: HTMLDivElement = div({style: "position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: white; pointer-events: none;"});
-	const timelineContainer: HTMLDivElement = div({style: "display: flex; position: relative;"}, timeline, playhead);
+	const timelineContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; position: relative;"}, timeline, playhead);
+	const visualizationContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; height: 0; position: relative; align-items: center;"}, timelineContainer);
 	
-	document.body.appendChild(timelineContainer);
+	document.body.appendChild(visualizationContainer);
 	document.body.appendChild(
-		div({style: `flex: 0 0 ${textHeight}px; height: ${textHeight}px; display: flex; align-items: center;`},
+		div({style: `flex-shrink: 0; height: 20vh; min-height: 22px; max-height: 70px; display: flex; align-items: center;`},
 			playButtonContainer,
 			loopButton,
 			volumeIcon,
@@ -95,10 +95,6 @@ namespace beepbox {
 		}
 		
 		renderTimeline();
-	}
-	
-	function computePlayerHeight(): number {
-		return Math.min(Math.min(window.innerHeight, window.innerWidth / 4), textHeight + 3 * Config.windowPitchCount + 1);
 	}
 	
 	function onWindowResize(): void {
@@ -182,24 +178,27 @@ namespace beepbox {
 	}
 	
 	function renderTimeline(): void {
-		const playerHeight: number = computePlayerHeight();
-		const timelineWidth: number = window.innerWidth;
-		const timelineHeight: number = playerHeight - textHeight;
-		
 		timeline.innerHTML = "";
 		if (synth.song == null) return;
+		
+		const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
+		const timelineWidth: number = boundingRect.width;
+		const targetSemitoneHeight: number = Math.max(1, timelineWidth / (synth.song.barCount * synth.song.beatsPerBar) / 3);
+		const timelineHeight: number = Math.min(boundingRect.height, targetSemitoneHeight * (Config.maxPitch + 1) + 1);
+		const windowOctaves: number = Math.max(Config.windowOctaves, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * targetSemitoneHeight))));
+		const windowPitchCount: number = windowOctaves * 12 + 1;
 		
 		timelineContainer.style.width = timelineWidth + "px";
 		timelineContainer.style.height = timelineHeight + "px";
 		timeline.style.width = timelineWidth + "px";
 		timeline.style.height = timelineHeight + "px";
 		
-		let barWidth: number = timelineWidth / synth.song.barCount;
-		let partWidth: number = barWidth / (synth.song.beatsPerBar * Config.partsPerBeat);
-		let wavePitchHeight: number = (timelineHeight-1) / Config.windowPitchCount;
-		let drumPitchHeight: number =  (timelineHeight-1) / Config.drumCount;
+		const barWidth: number = timelineWidth / synth.song.barCount;
+		const partWidth: number = barWidth / (synth.song.beatsPerBar * Config.partsPerBeat);
+		const wavePitchHeight: number = (timelineHeight-1) / windowPitchCount;
+		const drumPitchHeight: number =  (timelineHeight-1) / Config.drumCount;
 		
-		for (let octave: number = 0; octave < 4; octave++) {
+		for (let octave: number = 0; octave <= windowOctaves; octave++) {
 			timeline.appendChild(rect({x: 0, y: octave * 12 * wavePitchHeight, width: timelineWidth, height: wavePitchHeight + 1, fill: "#664933"}));
 		}
 		
@@ -210,16 +209,32 @@ namespace beepbox {
 		
 		for (let channel: number = synth.song.channels.length - 1; channel >= 0; channel--) {
 			const isNoise: boolean = synth.song.getChannelIsNoise(channel);
-			let pitchHeight: number = isNoise ? drumPitchHeight : wavePitchHeight;
-			let offsetY: number = synth.song.channels[channel].octave * pitchHeight * 12 + timelineHeight - pitchHeight * 0.5 - 0.5;
+			const pitchHeight: number = isNoise ? drumPitchHeight : wavePitchHeight;
+			
+			const configuredOctaveScroll: number = synth.song.channels[channel].octave;
+			const octavesToMove: number = (windowOctaves - Config.windowOctaves) / 2;
+			const newScrollableOctaves: number = Config.pitchOctaves - windowOctaves;
+			const oldCenter: number = Config.scrollableOctaves / 2;
+			const newCenter: number = newScrollableOctaves / 2;
+			let distanceFromCenter: number = configuredOctaveScroll - oldCenter;
+			if (Math.abs(distanceFromCenter) <= octavesToMove) {
+				distanceFromCenter = 0;
+			} else if (distanceFromCenter < 0) {
+				distanceFromCenter += octavesToMove;
+			} else {
+				distanceFromCenter -= octavesToMove;
+			}
+			const newOctaveScroll = Math.max(0, Math.min(newScrollableOctaves, Math.round(newCenter + distanceFromCenter)));
+			
+			const offsetY: number = newOctaveScroll * pitchHeight * 12 + timelineHeight - pitchHeight * 0.5 - 0.5;
 			
 			for (let bar: number = 0; bar < synth.song.barCount; bar++) {
-				let pattern: Pattern | null = synth.song.getPattern(channel, bar);
+				const pattern: Pattern | null = synth.song.getPattern(channel, bar);
 				if (pattern == null) continue;
-				let offsetX: number = bar * barWidth;
+				const offsetX: number = bar * barWidth;
 				
 				for (let i: number = 0; i < pattern.notes.length; i++) {
-					let note: Note = pattern.notes[i];
+					const note: Note = pattern.notes[i];
 					
 					for (const pitch of note.pitches) {
 						const d: string = drawNote(pitch, note.start, note.pins, (pitchHeight + 1) / 2, offsetX, offsetY, partWidth, pitchHeight);
@@ -300,8 +315,9 @@ namespace beepbox {
 		textField.innerText = location.href;
 		document.body.appendChild(textField);
 		textField.select();
-		document.execCommand("copy");
+		const succeeded: boolean = document.execCommand("copy");
 		textField.remove();
+		if (!succeeded) window.prompt("Copy this:", location.href);
 	}
 	
 	function onShareClicked(): void {
