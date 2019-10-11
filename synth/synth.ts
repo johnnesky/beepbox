@@ -1069,7 +1069,7 @@ namespace beepbox {
 					channel.instruments.length = this.instrumentsPerChannel;
 				
 					for (let bar = 0; bar < this.barCount; bar++) {
-						channel.bars[bar] = 1;
+						channel.bars[bar] = bar < 4 ? 1 : 0;
 					}
 					channel.bars.length = this.barCount;
 				}
@@ -1427,7 +1427,7 @@ namespace beepbox {
 					}
 				} else if (command == SongTagCode.patternCount) {
 					this.patternsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
-					this.patternsPerChannel = Math.max(Config.patternsPerChannelMin, Math.min(Config.patternsPerChannelMax, this.patternsPerChannel));
+					this.patternsPerChannel = Math.max(1, Math.min(Config.barCountMax, this.patternsPerChannel));
 					for (let channel = 0; channel < this.getChannelCount(); channel++) {
 						for (let pattern = this.channels[channel].patterns.length; pattern < this.patternsPerChannel; pattern++) {
 							this.channels[channel].patterns[pattern] = new Pattern();

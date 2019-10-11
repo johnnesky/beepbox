@@ -1254,6 +1254,90 @@ namespace beepbox {
 		}
 	}
 	
+	export class ChangeEnsurePatternExists extends UndoableChange {
+		private _doc: SongDocument;
+		private _bar: number;
+		private _channel: number;
+		private _patternIndex: number;
+		private _patternOldNotes: Note[] | null = null;
+		private _oldPatternCount: number;
+		private _newPatternCount: number;
+		
+		constructor(doc: SongDocument) {
+			super(false);
+			const song: Song = doc.song;
+			if (song.channels[doc.channel].bars[doc.bar] != 0) return;
+			
+			this._doc = doc;
+			this._bar = doc.bar;
+			this._channel = doc.channel;
+			this._oldPatternCount = song.patternsPerChannel;
+			this._newPatternCount = song.patternsPerChannel;
+			
+			let firstEmptyUnusedIndex: number | null = null;
+			let firstUnusedIndex: number | null = null;
+			for (let patternIndex: number = 1; patternIndex <= song.patternsPerChannel; patternIndex++) {
+				let used = false;
+				for (let barIndex: number = 0; barIndex < song.barCount; barIndex++) {
+					if (song.channels[doc.channel].bars[barIndex] == patternIndex) {
+						used = true;
+						break;
+					}
+				}
+				if (used) continue;
+				if (firstUnusedIndex == null) {
+					firstUnusedIndex = patternIndex;
+				}
+				const pattern: Pattern = song.channels[doc.channel].patterns[patternIndex - 1];
+				if (pattern.notes.length == 0) {
+					firstEmptyUnusedIndex = patternIndex;
+					break;
+				}
+			}
+			
+			if (firstEmptyUnusedIndex != null) {
+				this._patternIndex = firstEmptyUnusedIndex;
+			} else if (song.patternsPerChannel < song.barCount) {
+				this._newPatternCount = song.patternsPerChannel + 1;
+				this._patternIndex = song.patternsPerChannel + 1;
+			} else if (firstUnusedIndex != null) {
+				this._patternIndex = firstUnusedIndex;
+				this._patternOldNotes = song.channels[doc.channel].patterns[firstUnusedIndex - 1].notes;
+			} else {
+				throw new Error();
+			}
+			
+			this._didSomething();
+			this._doForwards();
+		}
+		
+		protected _doForwards(): void {
+			const song: Song = this._doc.song;
+			for (let j: number = song.patternsPerChannel; j < this._newPatternCount; j++) {
+				for (let i: number = 0; i < song.getChannelCount(); i++) {
+					song.channels[i].patterns[j] = new Pattern();
+				}
+			}
+			song.patternsPerChannel = this._newPatternCount;
+			const pattern: Pattern = song.channels[this._channel].patterns[this._patternIndex - 1];
+			pattern.notes = [];
+			song.channels[this._channel].bars[this._bar] = this._patternIndex;
+			this._doc.notifier.changed();
+		}
+		
+		protected _doBackwards(): void {
+			const song: Song = this._doc.song;
+			const pattern: Pattern = song.channels[this._channel].patterns[this._patternIndex - 1];
+			if (this._patternOldNotes != null) pattern.notes = this._patternOldNotes;
+			song.channels[this._channel].bars[this._bar] = 0;
+			for (let i: number = 0; i < song.getChannelCount(); i++) {
+				song.channels[i].patterns.length = this._oldPatternCount;
+			}
+			song.patternsPerChannel = this._oldPatternCount;
+			this._doc.notifier.changed();
+		}
+	}
+	
 	export class ChangePinTime extends ChangePins {
 		constructor(doc: SongDocument, note: Note, pinIndex: number, shiftedTime: number) {
 			super(doc, note);
@@ -1723,7 +1807,7 @@ namespace beepbox {
 			song.noiseChannelCount = noiseChannels.length;
 			
 			song.barCount = Math.min(Config.barCountMax, song.barCount);
-			song.patternsPerChannel = Math.min(Config.patternsPerChannelMax, song.patternsPerChannel);
+			song.patternsPerChannel = Math.min(Config.barCountMax, song.patternsPerChannel);
 			song.instrumentsPerChannel = Math.min(Config.instrumentsPerChannelMax, song.instrumentsPerChannel);
 			for (let channelIndex: number = 0; channelIndex < song.channels.length; channelIndex++) {
 				const channel: Channel = song.channels[channelIndex];

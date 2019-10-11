@@ -43,8 +43,8 @@ namespace beepbox {
 		
 		constructor(private _doc: SongDocument) {
 			this._patternsStepper.value = this._doc.song.patternsPerChannel + "";
-			this._patternsStepper.min = Config.patternsPerChannelMin + "";
-			this._patternsStepper.max = Config.patternsPerChannelMax + "";
+			this._patternsStepper.min = "1";
+			this._patternsStepper.max = Config.barCountMax + "";
 			
 			this._instrumentsStepper.value = this._doc.song.instrumentsPerChannel + "";
 			this._instrumentsStepper.min = Config.instrumentsPerChannelMin + "";

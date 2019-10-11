@@ -150,8 +150,6 @@ namespace beepbox {
 		}
 		
 		private _updateCursorStatus(): void {
-			if (this._pattern == null) return;
-			
 			this._cursor = new PatternCursor();
 			
 			if (this._mouseX < 0 || this._mouseX > this._editorWidth || this._mouseY < 0 || this._mouseY > this._editorHeight) return;
@@ -165,15 +163,17 @@ namespace beepbox {
 					)
 				/ minDivision) * minDivision;
 			
-			for (const note of this._pattern.notes) {
-				if (note.end <= exactPart) {
-					this._cursor.prevNote = note;
-					this._cursor.curIndex++;
-				} else if (note.start <= exactPart && note.end > exactPart) {
-					this._cursor.curNote = note;
-				} else if (note.start > exactPart) {
-					this._cursor.nextNote = note;
-					break;
+			if (this._pattern != null) {
+				for (const note of this._pattern.notes) {
+					if (note.end <= exactPart) {
+						this._cursor.prevNote = note;
+						this._cursor.curIndex++;
+					} else if (note.start <= exactPart && note.end > exactPart) {
+						this._cursor.curNote = note;
+					} else if (note.start > exactPart) {
+						this._cursor.nextNote = note;
+						break;
+					}
 				}
 			}
 			
@@ -371,9 +371,8 @@ namespace beepbox {
 		
 		private _animatePlayhead = (timestamp: number): void => {
 			const playheadBar: number = Math.floor(this._doc.synth.playhead);
-			if (!this._doc.synth.playing || this._pattern == null || this._doc.song.getPattern(this._doc.channel, Math.floor(this._doc.synth.playhead)) != this._pattern) {
-				this._svgPlayhead.setAttribute("visibility", "hidden");
-			} else {
+			
+			if (this._doc.synth.playing && ((this._pattern != null && this._doc.song.getPattern(this._doc.channel, Math.floor(this._doc.synth.playhead)) == this._pattern) || Math.floor(this._doc.synth.playhead) == this._doc.bar)) {
 				this._svgPlayhead.setAttribute("visibility", "visible");
 				const modPlayhead: number = this._doc.synth.playhead - playheadBar;
 				if (Math.abs(modPlayhead - this._playheadX) > 0.1) {
@@ -382,6 +381,8 @@ namespace beepbox {
 					this._playheadX += (modPlayhead - this._playheadX) * 0.2;
 				}
 				this._svgPlayhead.setAttribute("x", "" + prettyNumber(this._playheadX * this._editorWidth - 2));
+			} else {
+				this._svgPlayhead.setAttribute("visibility", "hidden");
 			}
 			
 			if (this._doc.synth.playing && this._doc.autoFollow && this._followPlayheadBar != playheadBar) {
@@ -405,7 +406,6 @@ namespace beepbox {
 		
 		private _whenMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
-			if (this._pattern == null) return;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
     		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
@@ -417,7 +417,6 @@ namespace beepbox {
 		
 		private _whenTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
-			if (this._pattern == null) return;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 			this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
@@ -461,7 +460,6 @@ namespace beepbox {
 		private _whenCursorMoved(): void {
 			let start: number;
 			let end: number;
-			if (this._pattern == null) return;
 			
 			// HACK: Undoable pattern changes rely on persistent instance
 			// references. Loading song from hash via undo/redo breaks that,
@@ -565,13 +563,16 @@ namespace beepbox {
 						if (end > this._doc.song.beatsPerBar * Config.partsPerBeat) end = this._doc.song.beatsPerBar * Config.partsPerBeat;
 						
 						if (start < end) {
-							sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, start, end));
+							sequence.append(new ChangeEnsurePatternExists(this._doc));
+							const pattern: Pattern | null = this._doc.getCurrentPattern();
+							if (pattern == null) throw new Error();
+							sequence.append(new ChangeNoteTruncate(this._doc, pattern, start, end));
 							let i: number;
-							for (i = 0; i < this._pattern.notes.length; i++) {
-								if (this._pattern.notes[i].start >= end) break;
+							for (i = 0; i < pattern.notes.length; i++) {
+								if (pattern.notes[i].start >= end) break;
 							}
 							const theNote: Note = new Note(this._cursor.pitch, start, end, 3, this._doc.song.getChannelIsNoise(this._doc.channel));
-							sequence.append(new ChangeNoteAdded(this._doc, this._pattern, theNote, i));
+							sequence.append(new ChangeNoteAdded(this._doc, pattern, theNote, i));
 							this._copyPins(theNote);
 						
 							this._dragTime = backwards ? start : end;
@@ -579,6 +580,8 @@ namespace beepbox {
 							this._dragVolume = theNote.pins[backwards ? 0 : 1].volume;
 							this._dragVisible = true;
 						}
+						
+						this._pattern = this._doc.getCurrentPattern();
 					} else if (this._mouseHorizontal) {
 						const shift: number = (this._mouseX - this._mouseXStart) / this._partWidth;
 						
@@ -586,6 +589,8 @@ namespace beepbox {
 						let shiftedTime: number = Math.round((this._cursor.curNote.start + shiftedPin.time + shift) / minDivision) * minDivision;
 						if (shiftedTime < 0) shiftedTime = 0;
 						if (shiftedTime > this._doc.song.beatsPerBar * Config.partsPerBeat) shiftedTime = this._doc.song.beatsPerBar * Config.partsPerBeat;
+						
+						if (this._pattern == null) throw new Error();
 						
 						if (shiftedTime <= this._cursor.curNote.start && this._cursor.nearPinIndex == this._cursor.curNote.pins.length - 1 ||
 						    shiftedTime >= this._cursor.curNote.end   && this._cursor.nearPinIndex == 0)
@@ -641,6 +646,8 @@ namespace beepbox {
 					} else {
 						this._dragVolume = this._cursor.curNote.pins[this._cursor.nearPinIndex].volume;
 						
+						if (this._pattern == null) throw new Error();
+						
 						let bendStart: number;
 						let bendEnd: number;
 						if (this._mouseX >= this._mouseXStart) {
@@ -684,7 +691,6 @@ namespace beepbox {
 		
 		private _whenCursorReleased = (event: Event | null): void => {
 			if (!this._cursor.valid) return;
-			if (this._pattern == null) return;
 			const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
 			if (this._mouseDragging && continuousState) {
 				if (this._dragChange != null) {
@@ -698,8 +704,16 @@ namespace beepbox {
 					for (const oldPin of this._cursor.pins) {
 						note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
 					}
-					this._doc.record(new ChangeNoteAdded(this._doc, this._pattern, note, this._cursor.curIndex));
+					const sequence: ChangeSequence = new ChangeSequence();
+					sequence.append(new ChangeEnsurePatternExists(this._doc));
+					const pattern: Pattern | null = this._doc.getCurrentPattern();
+					if (pattern == null) throw new Error();
+					sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
+					this._doc.record(sequence);
 				} else {
+					
+					if (this._pattern == null) throw new Error();
+					
 					if (this._cursor.pitchIndex == -1) {
 						const sequence: ChangeSequence = new ChangeSequence();
 						if (this._cursor.curNote.pitches.length == 4) {
@@ -726,7 +740,7 @@ namespace beepbox {
 		
 		private _updatePreview(): void {
 			if (this._usingTouch) {
-				if (!this._mouseDown || !this._cursor.valid  || !this._mouseDragging || !this._dragVisible || this._pattern == null) {
+				if (!this._mouseDown || !this._cursor.valid  || !this._mouseDragging || !this._dragVisible) {
 					this._svgPreview.setAttribute("visibility", "hidden");
 				} else {
 					this._svgPreview.setAttribute("visibility", "visible");
@@ -756,7 +770,7 @@ namespace beepbox {
 					this._svgPreview.setAttribute("d", pathString);
 				}
 			} else {
-				if (!this._mouseOver || this._mouseDown || !this._cursor.valid || this._pattern == null) {
+				if (!this._mouseOver || this._mouseDown || !this._cursor.valid) {
 					this._svgPreview.setAttribute("visibility", "hidden");
 				} else {
 					this._svgPreview.setAttribute("visibility", "visible");
@@ -892,10 +906,6 @@ namespace beepbox {
 						}
 					}
 				}
-				
-				this._svgBackground.style.visibility = "visible";
-			} else {
-				this._svgBackground.style.visibility = "hidden";
 			}
 		}
 		

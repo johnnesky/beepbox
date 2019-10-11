@@ -947,10 +947,11 @@ namespace beepbox {
 		
 		private _copy(): void {
 			const pattern: Pattern | null = this._doc.getCurrentPattern();
-			if (pattern == null) return;
+			let notes: Note[] = [];
+			if (pattern != null) notes = pattern.notes;
 			
 			const patternCopy: PatternCopy = {
-				notes: pattern.notes,
+				notes: notes,
 				beatsPerBar: this._doc.song.beatsPerBar,
 				drums: this._doc.song.getChannelIsNoise(this._doc.channel),
 			};
@@ -959,12 +960,11 @@ namespace beepbox {
 		}
 		
 		private _paste(): void {
-			const pattern: Pattern | null = this._doc.getCurrentPattern();
-			if (pattern == null) return;
-			
 			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
-			
 			if (patternCopy != null && patternCopy["drums"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
+				new ChangeEnsurePatternExists(this._doc);
+				const pattern: Pattern | null = this._doc.getCurrentPattern();
+				if (pattern == null) throw new Error();
 				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy["notes"], patternCopy["beatsPerBar"]));
 			}
 		}

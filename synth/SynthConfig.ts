@@ -174,8 +174,6 @@ namespace beepbox {
 		public static readonly beatsPerBarMax: number = 16;
 		public static readonly barCountMin: number = 1;
 		public static readonly barCountMax: number = 128;
-		public static readonly patternsPerChannelMin: number = 1;
-		public static readonly patternsPerChannelMax: number = 64;
 		public static readonly instrumentsPerChannelMin: number = 1;
 		public static readonly instrumentsPerChannelMax: number = 10;
 		public static readonly partsPerBeat: number = 24;
