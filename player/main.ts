@@ -46,7 +46,7 @@ namespace beepbox {
 		zoomIcon,
 	);
 	
-	const timeline: SVGSVGElement = svg({style: "min-width: 0; min-height: 0;"});
+	const timeline: SVGSVGElement = svg({style: "min-width: 0; min-height: 0; touch-action: pan-y pinch-zoom;"});
 	const playhead: HTMLDivElement = div({style: "position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: white; pointer-events: none;"});
 	const timelineContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; position: relative;"}, timeline, playhead);
 	const visualizationContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; height: 0; position: relative; align-items: center; overflow: hidden;"}, timelineContainer);
@@ -168,19 +168,30 @@ namespace beepbox {
 		onTimelineMouseMove(event);
 	}
 	
-	function onTimelineMouseUp(event: MouseEvent): void {
-		draggingPlayhead = false;
+	function onTimelineMouseMove(event: MouseEvent): void {
+		event.preventDefault();
+		onTimelineCursorMove(event.clientX || event.pageX);
 	}
 	
-	function onTimelineMouseMove(event: MouseEvent): void {
-		if (draggingPlayhead) {
-			if (synth.song != null) {
-				const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
-				const mouseX = ((event.clientX || event.pageX) - boundingRect.left);
-				synth.playhead = synth.song.barCount * mouseX / (boundingRect.right - boundingRect.left);
-			}
+	function onTimelineTouchDown(event: TouchEvent): void {
+		draggingPlayhead = true;
+		onTimelineTouchMove(event);
+	}
+	
+	function onTimelineTouchMove(event: TouchEvent): void {
+		onTimelineCursorMove(event.touches[0].clientX);
+	}
+	
+	function onTimelineCursorMove(mouseX: number): void {
+		if (draggingPlayhead && synth.song != null) {
+			const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
+			synth.playhead = synth.song.barCount * (mouseX - boundingRect.left) / (boundingRect.right - boundingRect.left);
 			renderPlayhead();
 		}
+	}
+	
+	function onTimelineCursorUp(): void {
+		draggingPlayhead = false;
 	}
 	
 	function setSynthVolume(): void {
@@ -382,9 +393,15 @@ namespace beepbox {
 	
 	window.addEventListener("resize", onWindowResize);
 	window.addEventListener("keydown", onKeyPressed);
+	
 	timeline.addEventListener("mousedown", onTimelineMouseDown);
-	window.addEventListener("mouseup", onTimelineMouseUp);
 	window.addEventListener("mousemove", onTimelineMouseMove);
+	window.addEventListener("mouseup", onTimelineCursorUp);
+	timeline.addEventListener("touchstart", onTimelineTouchDown);
+	timeline.addEventListener("touchmove", onTimelineTouchMove);
+	timeline.addEventListener("touchend", onTimelineCursorUp);
+	timeline.addEventListener("touchcancel", onTimelineCursorUp);
+	
 	playButton.addEventListener("click", onTogglePlay);
 	loopButton.addEventListener("click", onToggleLoop);
 	volumeSlider.addEventListener("input", onVolumeChange);
