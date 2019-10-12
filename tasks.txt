@@ -338,6 +338,7 @@
 √ Added service worker to cache resources for offline use.
 √ Replace 0 pattern with positive pattern number when attempting to draw on it.
 √ Default patterns to 0 after first four bars.
+√ Song player timeline zoom mode.
 
 MAJOR REMAINING FEATURES:
 - bar box selection
