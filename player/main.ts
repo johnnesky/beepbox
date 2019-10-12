@@ -7,12 +7,14 @@
 
 namespace beepbox {
 	const {a, button, div, h1, input} = HTML;
-	const {svg, rect, path} = SVG;
+	const {svg, circle, rect, path} = SVG;
 	
 	let prevHash: string | null = null;
 	let id: string = ((Math.random() * 0xffffffff) >>> 0).toString(16);
 	let pauseButtonDisplayed: boolean = false;
 	let animationRequest: number | null;
+	let zoomEnabled: boolean = false;
+	let timelineWidth: number = 1;
 	
 	const synth: Synth = new Synth();
 	let titleText: HTMLHeadingElement = h1({style: "flex-grow: 1; margin: 0 1px;"}, "");
@@ -27,17 +29,27 @@ namespace beepbox {
 		playButton,
 	);
 	const loopIcon: SVGPathElement = path({d: "M 4 2 L 4 0 L 7 3 L 4 6 L 4 4 Q 2 4 2 6 Q 2 8 4 8 L 4 10 Q 0 10 0 6 Q 0 2 4 2 M 8 10 L 8 12 L 5 9 L 8 6 L 8 8 Q 10 8 10 6 Q 10 4 8 4 L 8 2 Q 12 2 12 6 Q 12 10 8 10 z"});
-	const loopButton: HTMLButtonElement = button({title: "loop", style: "background: none; flex: 0 0 12px; margin: 0 1px; width: 12px; height: 12px; display: flex;"}, svg({width: 12, height: 12, viewBox: "0 0 12 12"},
+	const loopButton: HTMLButtonElement = button({title: "loop", style: "background: none; flex: 0 0 12px; margin: 0 3px; width: 12px; height: 12px; display: flex;"}, svg({width: 12, height: 12, viewBox: "0 0 12 12"},
 		loopIcon,
 	));
+	
 	const volumeIcon: SVGSVGElement = svg({style: "flex: 0 0 12px; margin: 0 1px; width: 12px; height: 12px;", viewBox: "0 0 12 12"},
 		path({fill: "#444444", d: "M 1 9 L 1 3 L 4 3 L 7 0 L 7 12 L 4 9 L 1 9 M 9 3 Q 12 6 9 9 L 8 8 Q 10.5 6 8 4 L 9 3 z"}),
 	);
 	const volumeSlider: HTMLInputElement = input({title: "volume", type: "range", value: 75, min: 0, max: 100, step: 1, style: "width: 12vw; max-width: 100px; margin: 0 1px;"});
+	
+	const zoomIcon: SVGSVGElement = svg({width: 12, height: 12, viewBox: "0 0 12 12", style: "color: white;"},
+		circle({cx: "5", cy: "5", r: "4.5", "stroke-width": "1", stroke: "currentColor", fill: "none"}),
+		path({stroke: "currentColor", "stroke-width": "2", d: "M 8 8 L 11 11 M 5 2 L 5 8 M 2 5 L 8 5", fill: "none"}),
+	);
+	const zoomButton: HTMLButtonElement = button({title: "zoom", style: "background: none; flex: 0 0 12px; margin: 0 3px; width: 12px; height: 12px; display: flex;"},
+		zoomIcon,
+	);
+	
 	const timeline: SVGSVGElement = svg({style: "min-width: 0; min-height: 0;"});
 	const playhead: HTMLDivElement = div({style: "position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: white; pointer-events: none;"});
 	const timelineContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; position: relative;"}, timeline, playhead);
-	const visualizationContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; height: 0; position: relative; align-items: center;"}, timelineContainer);
+	const visualizationContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; height: 0; position: relative; align-items: center; overflow: hidden;"}, timelineContainer);
 	
 	document.body.appendChild(visualizationContainer);
 	document.body.appendChild(
@@ -46,6 +58,7 @@ namespace beepbox {
 			loopButton,
 			volumeIcon,
 			volumeSlider,
+			zoomButton,
 			titleText,
 			editLink,
 			copyLink,
@@ -144,6 +157,12 @@ namespace beepbox {
 		setSynthVolume();
 	}
 	
+	function onToggleZoom(): void {
+		zoomEnabled = !zoomEnabled;
+		renderZoomIcon();
+		renderTimeline();
+	}
+	
 	function onTimelineMouseDown(event: MouseEvent): void {
 		draggingPlayhead = true;
 		onTimelineMouseMove(event);
@@ -156,7 +175,7 @@ namespace beepbox {
 	function onTimelineMouseMove(event: MouseEvent): void {
 		if (draggingPlayhead) {
 			if (synth.song != null) {
-				const boundingRect: ClientRect = timeline.getBoundingClientRect();
+				const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
 				const mouseX = ((event.clientX || event.pageX) - boundingRect.left);
 				synth.playhead = synth.song.barCount * mouseX / (boundingRect.right - boundingRect.left);
 			}
@@ -171,9 +190,11 @@ namespace beepbox {
 	
 	function renderPlayhead(): void {
 		if (synth.song != null) {
-			const timelineWidth: number = window.innerWidth;
-			let pos: number = timelineWidth * synth.playhead / synth.song.barCount;
-			playhead.style.left = pos + "px";
+			let pos: number = synth.playhead / synth.song.barCount;
+			playhead.style.left = (timelineWidth * pos) + "px";
+			
+			const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
+			visualizationContainer.scrollLeft = pos * (timelineWidth - boundingRect.width);
 		}
 	}
 	
@@ -182,11 +203,25 @@ namespace beepbox {
 		if (synth.song == null) return;
 		
 		const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
-		const timelineWidth: number = boundingRect.width;
-		const targetSemitoneHeight: number = Math.max(1, timelineWidth / (synth.song.barCount * synth.song.beatsPerBar) / 3);
-		const timelineHeight: number = Math.min(boundingRect.height, targetSemitoneHeight * (Config.maxPitch + 1) + 1);
-		const windowOctaves: number = Math.max(Config.windowOctaves, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * targetSemitoneHeight))));
-		const windowPitchCount: number = windowOctaves * 12 + 1;
+		
+		let timelineHeight: number;
+		let windowOctaves: number;
+		let windowPitchCount: number;
+		
+		if (zoomEnabled) {
+			timelineHeight = boundingRect.height;
+			windowOctaves = Math.max(Config.windowOctaves, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * 2))));
+			windowPitchCount = windowOctaves * 12 + 1;
+			const semitoneHeight: number = (timelineHeight - 1) / windowPitchCount;
+			const targetBeatWidth: number = Math.max(8, semitoneHeight * 4);
+			timelineWidth = Math.max(boundingRect.width, targetBeatWidth * synth.song.barCount * synth.song.beatsPerBar);
+		} else {
+			timelineWidth = boundingRect.width;
+			const targetSemitoneHeight: number = Math.max(1, timelineWidth / (synth.song.barCount * synth.song.beatsPerBar) / 3);
+			timelineHeight = Math.min(boundingRect.height, targetSemitoneHeight * (Config.maxPitch + 1) + 1);
+			windowOctaves = Math.max(Config.windowOctaves, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * targetSemitoneHeight))));
+			windowPitchCount = windowOctaves * 12 + 1;
+		}
 		
 		timelineContainer.style.width = timelineWidth + "px";
 		timelineContainer.style.height = timelineHeight + "px";
@@ -238,7 +273,9 @@ namespace beepbox {
 					
 					for (const pitch of note.pitches) {
 						const d: string = drawNote(pitch, note.start, note.pins, (pitchHeight + 1) / 2, offsetX, offsetY, partWidth, pitchHeight);
-						timeline.appendChild(path({d: d, fill: ColorConfig.getChannelColor(synth.song, channel).channelBright}));
+						const noteElement: SVGPathElement = path({d: d, fill: ColorConfig.getChannelColor(synth.song, channel).channelBright});
+						if (isNoise) noteElement.style.opacity = String(0.6);
+						timeline.appendChild(noteElement);
 					}
 				}
 			}
@@ -283,6 +320,10 @@ namespace beepbox {
 	
 	function renderLoopIcon(): void {
 		loopIcon.setAttribute("fill", (synth.loopRepeatCount == -1) ? "#8866ff" : "#444444");
+	}
+	
+	function renderZoomIcon(): void {
+		zoomIcon.style.color = zoomEnabled ? "#8866ff" : "#444444";
 	}
 	
 	function onKeyPressed(event: KeyboardEvent): void {
@@ -347,11 +388,13 @@ namespace beepbox {
 	playButton.addEventListener("click", onTogglePlay);
 	loopButton.addEventListener("click", onToggleLoop);
 	volumeSlider.addEventListener("input", onVolumeChange);
+	zoomButton.addEventListener("click", onToggleZoom);
 	copyLink.addEventListener("click", onCopyClicked);
 	shareLink.addEventListener("click", onShareClicked);
 	window.addEventListener("hashchange", hashUpdatedExternally);
 	
 	hashUpdatedExternally();
 	renderLoopIcon();
+	renderZoomIcon();
 	renderPlayButton();
 }

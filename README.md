@@ -41,12 +41,12 @@ order to install TypeScript and Uglify. BeepBox is relatively self-contained.
 
 ## Code
 
-The code is divided into several folders. 
+The code is divided into several folders.
 
-The synth/ has just the code you need to be able to play BeepBox songs out loud,
-and you could use this code in your own projects, like a web game. After
-compiling the synth code, open website/synth_example.html to see a demo using
-it.
+The synth/ folder has just the code you need to be able to play BeepBox songs
+out loud, and you could use this code in your own projects, like a web game.
+After compiling the synth code, open website/synth_example.html to see a demo
+using it.
 
 The editor/ folder has additional code to display the online song editor
 interface. After compiling the editor code, open website/index.html to see the
