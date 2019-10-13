@@ -836,13 +836,15 @@ namespace beepbox {
 	}
 	
 	export class ChangeChannelBar extends Change {
-		constructor(doc: SongDocument, newChannel: number, newBar: number) {
+		constructor(doc: SongDocument, newChannel: number, newBar: number, silently: boolean = false) {
 			super();
 			const oldChannel: number = doc.channel;
 			const oldBar: number = doc.bar;
 			doc.channel = newChannel;
 			doc.bar = newBar;
-			doc.barScrollPos = Math.min(doc.bar, Math.max(doc.bar - (doc.trackVisibleBars - 1), doc.barScrollPos));
+			if (!silently) {
+				doc.barScrollPos = Math.min(doc.bar, Math.max(doc.bar - (doc.trackVisibleBars - 1), doc.barScrollPos));
+			}
 			doc.notifier.changed();
 			if (oldChannel != newChannel || oldBar != newBar) {
 				this._didSomething();

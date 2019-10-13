@@ -132,15 +132,18 @@ namespace beepbox {
 		spectrum = CharCode.S,
 		startInstrument = CharCode.T,
 		
-		pulseWidth = CharCode.W,
 		feedbackEnvelope = CharCode.V,
+		pulseWidth = CharCode.W,
 	}
+	
+	const base64IntToCharCode: ReadonlyArray<number> = [48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,45,95];
+	const base64CharCodeToInt: ReadonlyArray<number> = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,62,62,0,0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0,0,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,0,0,0,0,63,0,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,0,0,0,0,0]; // 62 could be represented by either "-" or "." for historical reasons. New songs should use "-".
 	
 	class BitFieldReader {
 		private _bits: number[] = [];
 		private _readIndex: number = 0;
 		
-		constructor(base64CharCodeToInt: ReadonlyArray<number>, source: string, startIndex: number, stopIndex: number) {
+		constructor(source: string, startIndex: number, stopIndex: number) {
 			for (let i: number = startIndex; i < stopIndex; i++) {
 				const value: number = base64CharCodeToInt[source.charCodeAt(i)];
 				this._bits.push((value >> 5) & 0x1);
@@ -248,7 +251,7 @@ namespace beepbox {
 			this._bits = this._bits.concat(other._bits);
 		}
 		
-		public encodeBase64(base64IntToCharCode: ReadonlyArray<number>, buffer: number[]): number[] {
+		public encodeBase64(buffer: number[]): number[] {
 			for (let i: number = 0; i < this._bits.length; i += 6) {
 				const value: number = (this._bits[i] << 5) | (this._bits[i+1] << 4) | (this._bits[i+2] << 3) | (this._bits[i+3] << 2) | (this._bits[i+4] << 1) | this._bits[i+5];
 				buffer.push(base64IntToCharCode[value]);
@@ -992,9 +995,7 @@ namespace beepbox {
 	export class Song {
 		private static readonly _format: string = "BeepBox";
 		private static readonly _oldestVersion: number = 2;
-		private static readonly _latestVersion: number = 7;
-		private static readonly _base64IntToCharCode: ReadonlyArray<number> = [48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,45,95];
-		private static readonly _base64CharCodeToInt: ReadonlyArray<number> = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,62,62,0,0,1,2,3,4,5,6,7,8,9,0,0,0,0,0,0,0,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,0,0,0,0,63,0,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,0,0,0,0,0]; // 62 could be represented by either "-" or "." for historical reasons. New songs should use "-".
+		private static readonly _latestVersion: number = 8;
 		
 		public scale: number;
 		public key: number;
@@ -1081,8 +1082,6 @@ namespace beepbox {
 			let bits: BitFieldWriter;
 			let buffer: number[] = [];
 			
-			const base64IntToCharCode: ReadonlyArray<number> = Song._base64IntToCharCode;
-			
 			buffer.push(base64IntToCharCode[Song._latestVersion]);
 			buffer.push(SongTagCode.channelCount, base64IntToCharCode[this.pitchChannelCount], base64IntToCharCode[this.noiseChannelCount]);
 			buffer.push(SongTagCode.scale, base64IntToCharCode[this.scale]);
@@ -1093,7 +1092,7 @@ namespace beepbox {
 			buffer.push(SongTagCode.reverb, base64IntToCharCode[this.reverb]);
 			buffer.push(SongTagCode.beatCount, base64IntToCharCode[this.beatsPerBar - 1]);
 			buffer.push(SongTagCode.barCount, base64IntToCharCode[(this.barCount - 1) >> 6], base64IntToCharCode[(this.barCount - 1) & 0x3f]);
-			buffer.push(SongTagCode.patternCount, base64IntToCharCode[this.patternsPerChannel - 1]);
+			buffer.push(SongTagCode.patternCount, base64IntToCharCode[(this.patternsPerChannel - 1) >> 6], base64IntToCharCode[(this.patternsPerChannel - 1) & 0x3f]);
 			buffer.push(SongTagCode.instrumentCount, base64IntToCharCode[this.instrumentsPerChannel - 1]);
 			buffer.push(SongTagCode.rhythm, base64IntToCharCode[this.rhythm]);
 			
@@ -1149,7 +1148,7 @@ namespace beepbox {
 						for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
 							spectrumBits.write(Config.spectrumControlPointBits, instrument.spectrumWave.spectrum[i]);
 						}
-						spectrumBits.encodeBase64(base64IntToCharCode, buffer);
+						spectrumBits.encodeBase64(buffer);
 					} else if (instrument.type == InstrumentType.drumset) {
 						buffer.push(SongTagCode.filterEnvelope);
 						for (let j: number = 0; j < Config.drumCount; j++) {
@@ -1163,7 +1162,7 @@ namespace beepbox {
 								spectrumBits.write(Config.spectrumControlPointBits, instrument.drumsetSpectrumWaves[j].spectrum[i]);
 							}
 						}
-						spectrumBits.encodeBase64(base64IntToCharCode, buffer);
+						spectrumBits.encodeBase64(buffer);
 					} else if (instrument.type == InstrumentType.harmonics) {
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
@@ -1173,7 +1172,7 @@ namespace beepbox {
 						for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
 							harmonicsBits.write(Config.harmonicsControlPointBits, instrument.harmonicsWave.harmonics[i]);
 						}
-						harmonicsBits.encodeBase64(base64IntToCharCode, buffer);
+						harmonicsBits.encodeBase64(buffer);
 					} else if (instrument.type == InstrumentType.pwm) {
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth], base64IntToCharCode[instrument.pulseEnvelope]);
@@ -1190,7 +1189,7 @@ namespace beepbox {
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) for (let i: number = 0; i < this.barCount; i++) {
 				bits.write(neededBits, this.channels[channel].bars[i]);
 			}
-			bits.encodeBase64(base64IntToCharCode, buffer);
+			bits.encodeBase64(buffer);
 			
 			buffer.push(SongTagCode.patterns);
 			bits = new BitFieldWriter();
@@ -1247,7 +1246,7 @@ namespace beepbox {
 								shapeBits.write(2, pin.volume);
 							}
 							
-							const shapeString: string = String.fromCharCode.apply(null, shapeBits.encodeBase64(base64IntToCharCode, []));
+							const shapeString: string = String.fromCharCode.apply(null, shapeBits.encodeBase64([]));
 							const shapeIndex: number = recentShapes.indexOf(shapeString);
 							if (shapeIndex == -1) {
 								bits.write(2, 1); // new shape
@@ -1314,7 +1313,7 @@ namespace beepbox {
 			}
 			buffer.push(base64IntToCharCode[digits.length]);
 			Array.prototype.push.apply(buffer, digits); // append digits to buffer.
-			bits.encodeBase64(base64IntToCharCode, buffer);
+			bits.encodeBase64(buffer);
 			
 			const maxApplyArgs: number = 64000;
 			if (buffer.length < maxApplyArgs) {
@@ -1345,14 +1344,14 @@ namespace beepbox {
 				return;
 			}
 			
-			const version: number = Song._base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+			const version: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 			if (version == -1 || version > Song._latestVersion || version < Song._oldestVersion) return;
 			const beforeThree: boolean = version < 3;
 			const beforeFour:  boolean = version < 4;
 			const beforeFive:  boolean = version < 5;
 			const beforeSix:   boolean = version < 6;
 			const beforeSeven: boolean = version < 7;
-			const base64CharCodeToInt: ReadonlyArray<number> = Song._base64CharCodeToInt;
+			const beforeEight: boolean = version < 8;
 			this.initToDefault(beforeSix);
 			
 			if (beforeThree) {
@@ -1426,7 +1425,11 @@ namespace beepbox {
 						this.channels[channel].bars.length = this.barCount;
 					}
 				} else if (command == SongTagCode.patternCount) {
-					this.patternsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
+					if (beforeEight) {
+						this.patternsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
+					} else {
+						this.patternsPerChannel = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
+					}
 					this.patternsPerChannel = Math.max(1, Math.min(Config.barCountMax, this.patternsPerChannel));
 					for (let channel = 0; channel < this.getChannelCount(); channel++) {
 						for (let pattern = this.channels[channel].patterns.length; pattern < this.patternsPerChannel; pattern++) {
@@ -1689,7 +1692,7 @@ namespace beepbox {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 					if (instrument.type == InstrumentType.spectrum) {
 						const byteCount: number = Math.ceil(Config.spectrumControlPoints * Config.spectrumControlPointBits / 6)
-						const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + byteCount);
+						const bits: BitFieldReader = new BitFieldReader(compressed, charIndex, charIndex + byteCount);
 						for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
 							instrument.spectrumWave.spectrum[i] = bits.read(Config.spectrumControlPointBits);
 						}
@@ -1697,7 +1700,7 @@ namespace beepbox {
 						charIndex += byteCount;
 					} else if (instrument.type == InstrumentType.drumset) {
 						const byteCount: number = Math.ceil(Config.drumCount * Config.spectrumControlPoints * Config.spectrumControlPointBits / 6)
-						const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + byteCount);
+						const bits: BitFieldReader = new BitFieldReader(compressed, charIndex, charIndex + byteCount);
 						for (let j: number = 0; j < Config.drumCount; j++) {
 							for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
 								instrument.drumsetSpectrumWaves[j].spectrum[i] = bits.read(Config.spectrumControlPointBits);
@@ -1711,7 +1714,7 @@ namespace beepbox {
 				} else if (command == SongTagCode.harmonics) {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 					const byteCount: number = Math.ceil(Config.harmonicsControlPoints * Config.harmonicsControlPointBits / 6)
-					const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + byteCount);
+					const bits: BitFieldReader = new BitFieldReader(compressed, charIndex, charIndex + byteCount);
 					for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
 						instrument.harmonicsWave.harmonics[i] = bits.read(Config.harmonicsControlPointBits);
 					}
@@ -1723,7 +1726,7 @@ namespace beepbox {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						const barCount: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						subStringLength = Math.ceil(barCount * 0.5);
-						const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + subStringLength);
+						const bits: BitFieldReader = new BitFieldReader(compressed, charIndex, charIndex + subStringLength);
 						for (let i: number = 0; i < barCount; i++) {
 							this.channels[channel].bars[i] = bits.read(3) + 1;
 						}
@@ -1731,7 +1734,7 @@ namespace beepbox {
 						let neededBits: number = 0;
 						while ((1 << neededBits) < this.patternsPerChannel) neededBits++;
 						subStringLength = Math.ceil(this.getChannelCount() * this.barCount * neededBits / 6);
-						const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + subStringLength);
+						const bits: BitFieldReader = new BitFieldReader(compressed, charIndex, charIndex + subStringLength);
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.barCount; i++) {
 								this.channels[channel].bars[i] = bits.read(neededBits) + 1;
@@ -1741,7 +1744,7 @@ namespace beepbox {
 						let neededBits: number = 0;
 						while ((1 << neededBits) < this.patternsPerChannel + 1) neededBits++;
 						subStringLength = Math.ceil(this.getChannelCount() * this.barCount * neededBits / 6);
-						const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + subStringLength);
+						const bits: BitFieldReader = new BitFieldReader(compressed, charIndex, charIndex + subStringLength);
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.barCount; i++) {
 								this.channels[channel].bars[i] = bits.read(neededBits);
@@ -1770,7 +1773,7 @@ namespace beepbox {
 						}
 					}
 					
-					const bits: BitFieldReader = new BitFieldReader(base64CharCodeToInt, compressed, charIndex, charIndex + bitStringLength);
+					const bits: BitFieldReader = new BitFieldReader(compressed, charIndex, charIndex + bitStringLength);
 					charIndex += bitStringLength;
 					
 					let neededInstrumentBits: number = 0;

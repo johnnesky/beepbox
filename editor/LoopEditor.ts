@@ -203,7 +203,7 @@ namespace beepbox {
 				}
 				this._doc.synth.jumpIntoLoop();
 				if (this._doc.autoFollow) {
-					new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
+					new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead), true);
 				}
 				this._doc.setProspectiveChange(this._change);
 			} else {

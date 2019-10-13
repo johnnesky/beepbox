@@ -373,7 +373,6 @@ TODO:
 - The purple loop should have arrows at the ends to imply cyclical motion.
 - built-in link shortener?
 - Feature-detect audio worklets, use toString() to get synth code (and FFT, Deque) for worklet, maybe use pooling for Note, Pattern, Channel, Instrument to deal with frequently regenerating song from string when user edits in main thread.
-- make the bot smarter. look at mentions, ignore "beepbox.co"... is it possible to drill down the redirects? maybe even parse the song and check if it has *any* notes? If the bot is good enough, use that instead of the search feature to display tweets on the front page. notify me about any questionable tweets? While we're at it, improve the home page twitter feed, maybe a new api or iframe is available now.
 - Live input tones should still play when song is paused.
 - Live input tones should handle slide mode better.
 - recording performances via keyboard or even midi... If you record over an existing pattern, do you erase it? Does it depend on whether you actually perform any notes during that pattern?
