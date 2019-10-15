@@ -563,7 +563,7 @@ namespace beepbox {
 						if (end > this._doc.song.beatsPerBar * Config.partsPerBeat) end = this._doc.song.beatsPerBar * Config.partsPerBeat;
 						
 						if (start < end) {
-							sequence.append(new ChangeEnsurePatternExists(this._doc));
+							sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
 							const pattern: Pattern | null = this._doc.getCurrentPattern();
 							if (pattern == null) throw new Error();
 							sequence.append(new ChangeNoteTruncate(this._doc, pattern, start, end));
@@ -705,7 +705,7 @@ namespace beepbox {
 						note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
 					}
 					const sequence: ChangeSequence = new ChangeSequence();
-					sequence.append(new ChangeEnsurePatternExists(this._doc));
+					sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
 					const pattern: Pattern | null = this._doc.getCurrentPattern();
 					if (pattern == null) throw new Error();
 					sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));

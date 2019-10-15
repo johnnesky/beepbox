@@ -27,8 +27,6 @@
 namespace beepbox {
 	const {button, div, span, select, option, optgroup, input} = HTML;
 	
-	export const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
-	
 	function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
 		for (let index: number = 0; index < items.length; index++) {
 			menu.appendChild(option({value: index}, items[index]));
@@ -80,12 +78,6 @@ namespace beepbox {
 	function setSelectedValue(menu: HTMLSelectElement, value: number): void {
 		const stringValue = value.toString();
 		if (menu.value != stringValue) menu.value = stringValue;
-	}
-	
-	interface PatternCopy {
-		notes: any[];
-		beatsPerBar: number;
-		drums: boolean;
 	}
 	
 	class Slider {
@@ -156,8 +148,9 @@ namespace beepbox {
 			option({selected: true, disabled: true, hidden: false}, "Edit"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option({value: "undo"}, "Undo (Z)"),
 			option({value: "redo"}, "Redo (Y)"),
-			option({value: "copy"}, "Copy Pattern Notes (C)"),
-			option({value: "paste"}, "Paste Pattern Notes (V)"),
+			option({value: "copy"}, "Copy Pattern (C)"),
+			option({value: "pasteNotes"}, "Paste Pattern Notes (V)"),
+			option({value: "pasteNumbers"}, "Paste Pattern Numbers (⇧V)"),
 			option({value: "transposeUp"}, "Move Pattern Notes Up (+)"),
 			option({value: "transposeDown"}, "Move Pattern Notes Down (-)"),
 			option({value: "forceScale"}, "Snap All Notes To Scale"),
@@ -849,11 +842,15 @@ namespace beepbox {
 					event.preventDefault();
 					break;
 				case 67: // c
-					this._copy();
+					this._trackEditor.copy();
 					event.preventDefault();
 					break;
 				case 86: // v
-					this._paste();
+					if (event.shiftKey) {
+						this._trackEditor.pasteNumbers();
+					} else {
+						this._trackEditor.pasteNotes();
+					}
 					event.preventDefault();
 					break;
 				case 73: // i
@@ -943,30 +940,6 @@ namespace beepbox {
 		
 		private _setVolumeSlider = (): void => {
 			this._doc.setVolume(Number(this._volumeSlider.value));
-		}
-		
-		private _copy(): void {
-			const pattern: Pattern | null = this._doc.getCurrentPattern();
-			let notes: Note[] = [];
-			if (pattern != null) notes = pattern.notes;
-			
-			const patternCopy: PatternCopy = {
-				notes: notes,
-				beatsPerBar: this._doc.song.beatsPerBar,
-				drums: this._doc.song.getChannelIsNoise(this._doc.channel),
-			};
-			
-			window.localStorage.setItem("patternCopy", JSON.stringify(patternCopy));
-		}
-		
-		private _paste(): void {
-			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
-			if (patternCopy != null && patternCopy["drums"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
-				new ChangeEnsurePatternExists(this._doc);
-				const pattern: Pattern | null = this._doc.getCurrentPattern();
-				if (pattern == null) throw new Error();
-				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy["notes"], patternCopy["beatsPerBar"]));
-			}
 		}
 		
 		private _copyInstrument(): void {
@@ -1154,10 +1127,13 @@ namespace beepbox {
 					this._doc.redo();
 					break;
 				case "copy":
-					this._copy();
+					this._trackEditor.copy();
 					break;
-				case "paste":
-					this._paste();
+				case "pasteNotes":
+					this._trackEditor.pasteNotes();
+					break;
+				case "pasteNumbers":
+					this._trackEditor.pasteNumbers();
 					break;
 				case "transposeUp":
 					this._transpose(true);

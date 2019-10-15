@@ -494,9 +494,6 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .trackContainer {
 		width: 512px;
 	}
-	.beepboxEditor .trackSelectBox {
-		display: none;
-	}
 	.beepboxEditor .playback-controls {
 		display: flex;
 		flex-direction: column;

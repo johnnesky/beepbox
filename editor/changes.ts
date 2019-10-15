@@ -733,13 +733,21 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangePattern extends Change {
-		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
+	export class ChangePatternNumbers extends Change {
+		constructor(doc: SongDocument, value: number, startBar: number, startChannel: number, width: number, height: number) {
 			super();
-			if (newValue > doc.song.patternsPerChannel) throw new Error("invalid pattern");
-			doc.song.channels[doc.channel].bars[doc.bar] = newValue;
+			if (value > doc.song.patternsPerChannel) throw new Error("invalid pattern");
+			
+			for (let bar: number = startBar; bar < startBar + width; bar++) {
+				for (let channel: number = startChannel; channel < startChannel + height; channel++) {
+					if (doc.song.channels[channel].bars[bar] != value) {
+						doc.song.channels[channel].bars[bar] = value;
+						this._didSomething();
+					}
+				}
+			}
+			
 			doc.notifier.changed();
-			if (oldValue != newValue) this._didSomething();
 		}
 	}
 	
@@ -1265,14 +1273,14 @@ namespace beepbox {
 		private _oldPatternCount: number;
 		private _newPatternCount: number;
 		
-		constructor(doc: SongDocument) {
+		constructor(doc: SongDocument, channel: number, bar: number) {
 			super(false);
 			const song: Song = doc.song;
-			if (song.channels[doc.channel].bars[doc.bar] != 0) return;
+			if (song.channels[channel].bars[bar] != 0) return;
 			
 			this._doc = doc;
-			this._bar = doc.bar;
-			this._channel = doc.channel;
+			this._bar = bar;
+			this._channel = channel;
 			this._oldPatternCount = song.patternsPerChannel;
 			this._newPatternCount = song.patternsPerChannel;
 			
@@ -1281,7 +1289,7 @@ namespace beepbox {
 			for (let patternIndex: number = 1; patternIndex <= song.patternsPerChannel; patternIndex++) {
 				let used = false;
 				for (let barIndex: number = 0; barIndex < song.barCount; barIndex++) {
-					if (song.channels[doc.channel].bars[barIndex] == patternIndex) {
+					if (song.channels[channel].bars[barIndex] == patternIndex) {
 						used = true;
 						break;
 					}
@@ -1290,7 +1298,7 @@ namespace beepbox {
 				if (firstUnusedIndex == null) {
 					firstUnusedIndex = patternIndex;
 				}
-				const pattern: Pattern = song.channels[doc.channel].patterns[patternIndex - 1];
+				const pattern: Pattern = song.channels[channel].patterns[patternIndex - 1];
 				if (pattern.notes.length == 0) {
 					firstEmptyUnusedIndex = patternIndex;
 					break;
@@ -1304,7 +1312,7 @@ namespace beepbox {
 				this._patternIndex = song.patternsPerChannel + 1;
 			} else if (firstUnusedIndex != null) {
 				this._patternIndex = firstUnusedIndex;
-				this._patternOldNotes = song.channels[doc.channel].patterns[firstUnusedIndex - 1].notes;
+				this._patternOldNotes = song.channels[channel].patterns[firstUnusedIndex - 1].notes;
 			} else {
 				throw new Error();
 			}
@@ -1852,7 +1860,33 @@ namespace beepbox {
 		}
 	}
 	
-	export function removeDuplicatePatterns(channels: Channel[]) {
+	export function comparePatternNotes(a: Note[], b: Note[]): boolean {
+		if (a.length != b.length) return false;
+		
+		for (let noteIndex: number = 0; noteIndex < a.length; noteIndex++) {
+			const oldNote: Note = a[noteIndex];
+			const newNote: Note = b[noteIndex];
+			if (newNote.start != oldNote.start || newNote.end != oldNote.end || newNote.pitches.length != oldNote.pitches.length || newNote.pins.length != oldNote.pins.length) {
+				return false;
+			}
+			
+			for (let pitchIndex: number = 0; pitchIndex < oldNote.pitches.length; pitchIndex++) {
+				if (newNote.pitches[pitchIndex] != oldNote.pitches[pitchIndex]) {
+					return false;
+				}
+			}
+			
+			for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
+				if (newNote.pins[pinIndex].interval != oldNote.pins[pinIndex].interval || newNote.pins[pinIndex].time != oldNote.pins[pinIndex].time || newNote.pins[pinIndex].volume != oldNote.pins[pinIndex].volume) {
+					return false;
+				}
+			}
+		}
+		
+		return true;
+	}
+	
+	export function removeDuplicatePatterns(channels: Channel[]): void {
 		for (const channel of channels) {
 			const newPatterns: Pattern[] = [];
 			for (let bar: number = 0; bar < channel.bars.length; bar++) {
@@ -1867,33 +1901,7 @@ namespace beepbox {
 						continue;
 					}
 					
-					let foundConflictingNote: boolean = false;
-					for (let noteIndex: number = 0; noteIndex < oldPattern.notes.length; noteIndex++) {
-						const oldNote: Note = oldPattern.notes[noteIndex];
-						const newNote: Note = newPattern.notes[noteIndex];
-						if (newNote.start != oldNote.start || newNote.end != oldNote.end || newNote.pitches.length != oldNote.pitches.length || newNote.pins.length != oldNote.pins.length) {
-							foundConflictingNote = true;
-							break;
-						}
-						
-						for (let pitchIndex: number = 0; pitchIndex < oldNote.pitches.length; pitchIndex++) {
-							if (newNote.pitches[pitchIndex] != oldNote.pitches[pitchIndex]) {
-								foundConflictingNote = true;
-								break;
-							}
-						}
-						if (foundConflictingNote) break;
-						
-						for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
-							if (newNote.pins[pinIndex].interval != oldNote.pins[pinIndex].interval || newNote.pins[pinIndex].time != oldNote.pins[pinIndex].time || newNote.pins[pinIndex].volume != oldNote.pins[pinIndex].volume) {
-								foundConflictingNote = true;
-								break;
-							}
-						}
-						if (foundConflictingNote) break;
-					}
-					
-					if (!foundConflictingNote) {
+					if (comparePatternNotes(oldPattern.notes, newPattern.notes)) {
 						foundMatchingPattern = true;
 						channel.bars[bar] = newPatternIndex + 1;
 						break;

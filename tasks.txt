@@ -339,20 +339,20 @@
 √ Replace 0 pattern with positive pattern number when attempting to draw on it.
 √ Default patterns to 0 after first four bars.
 √ Song player timeline zoom mode.
+√ Rectangular box selection in track editor for copying and pasting patterns.
 
 MAJOR REMAINING FEATURES:
-- bar box selection
+- stereo
 - tutorial + music theory primer
-- remember recent songs
+- audio worklet thread
 - live input when song is paused
 - live keyboard performance. (make sure piano can play while song is paused?)
 - MIDI live input, live output?
+- remember recent songs
 - distortion? (how would it affect polyphonic channels?)
-- audio worklet thread
 - "inspire me" random song generator.
 - link shortener
 - export mp3/ogg and audio buffer
-- playlist editor
 - translation
 
 
@@ -376,7 +376,6 @@ TODO:
 - Live input tones should still play when song is paused.
 - Live input tones should handle slide mode better.
 - recording performances via keyboard or even midi... If you record over an existing pattern, do you erase it? Does it depend on whether you actually perform any notes during that pattern?
-- Maybe different channels can have different numbers of patterns!
 - Eventually, maybe even stop forcing the user to manually choose pattern counts, and just autopopulate patterns as needed. And also provide mobile-style context buttons above selected bar to facilitate sharing patterns across bars, sort of a paste-shared vs paste-unique, and selecting a range of bars, looping the selection over more bars... Basically making it easier to use on mobile and without needing to remember numbers.
 - random song generator!?
 - remember recent songs in local shared object.
