@@ -1,21 +1,20 @@
-# BeepBox
+# JummBox
 
-BeepBox is an online tool for sketching and sharing instrumental melodies.
-Try it out [here](https://beepbox.co)!
+JummBox is an online tool for sketching and sharing instrumental melodies.
+You can find it [here](jummbus.bitbucket.io).
+It is a modification of the [original beepbox](https://beepbox.co), focused on improving ease-of-use.
 
 All song data is packaged into the URL at the top of your browser. When you make
 changes to the song, the URL is updated to reflect your changes. When you are
 satisfied with your song, just copy and paste the URL to save and share your
 song!
 
-BeepBox is a passion project, and will always be free to use. If you find it
-valuable and have the means, any gratuity via
-[PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=QZJTX9GRYEV9N&currency_code=USD)
-would be appreciated!
-
-Beep Box is developed by [John Nesky](http://www.johnnesky.com/).
+JummBox is free, as is BeepBox. If you ever feel so inclined, definitely send something to the original creator, [John Nesky](http://www.johnnesky.com/)'s
+[PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=QZJTX9GRYEV9N&currency_code=USD). He deserves it :)
 
 ## Compiling
+
+The compilation procedure is identical to the repository for BeepBox. I will include the excerpt on compiling from that page's readme below for convenience:
 
 The source code is available under the MIT license. The code is written in
 TypeScript, so to compile it you'll need to
@@ -41,7 +40,7 @@ order to install TypeScript and Uglify. BeepBox is relatively self-contained.
 
 ## Code
 
-The code is divided into several folders.
+The code is divided into several folders. Again, this bit is all the same as BeepBox. I will include the original excerpt again for reference.
 
 The synth/ folder has just the code you need to be able to play BeepBox songs
 out loud, and you could use this code in your own projects, like a web game.
