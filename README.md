@@ -2,7 +2,7 @@
 
 JummBox is an online tool for sketching and sharing instrumental melodies.
 You can find it [here](jummbus.bitbucket.io).
-It is a modification of the [original beepbox](https://beepbox.co), focused on improving ease-of-use.
+It is a modification of the [original BeepBox](https://beepbox.co), focused on improving ease-of-use.
 
 All song data is packaged into the URL at the top of your browser. When you make
 changes to the song, the URL is updated to reflect your changes. When you are
