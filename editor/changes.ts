@@ -2,8 +2,10 @@
 
 /// <reference path="../synth/synth.ts" />
 /// <reference path="EditorConfig.ts" />
+/// <reference path="../synth/SynthConfig.ts" />
 /// <reference path="Change.ts" />
 /// <reference path="SongDocument.ts" />
+/// <reference path="MuteButton.ts" />
 
 namespace beepbox {
 	function determineScaleFromNotes(song: Song): ReadonlyArray<boolean> {
@@ -310,6 +312,46 @@ namespace beepbox {
  			}
 		}
 	}
+	
+	export class ChangeCustomWave extends Change {
+        constructor(doc: SongDocument, newArray: Float64Array ) {
+            super();
+            const oldArray: Float64Array = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].customChipWave;
+            var comparisonResult: boolean = true;
+            for (let i: number = 0; i < oldArray.length; i++) {
+                if (oldArray[i] != newArray[i]) {
+                    comparisonResult = false;
+                    i = oldArray.length;
+                }
+            }
+          if (comparisonResult == false) {
+            let instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+            for (let i: number = 0; i < newArray.length; i++) {
+              instrument.customChipWave[i] = newArray[i];
+            }
+
+            let sum: number = 0.0;
+            for (let i: number = 0; i < instrument.customChipWave.length; i++) {
+              sum += instrument.customChipWave[i];
+            }
+            const average: number = sum / instrument.customChipWave.length;
+
+            // Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+            let cumulative: number = 0;
+            let wavePrev: number = 0;
+            for (let i: number = 0; i < instrument.customChipWave.length; i++) {
+              cumulative += wavePrev;
+              wavePrev = instrument.customChipWave[i] - average;
+              instrument.customChipWaveIntegral[i] = cumulative;
+            }
+
+            instrument.customChipWaveIntegral[64] = 0.0;
+            instrument.preset = instrument.type;
+            doc.notifier.changed();
+            this._didSomething();
+            }
+        }
+    }
 	
 	export class ChangePreset extends Change {
 		constructor(doc: SongDocument, newValue: number) {
@@ -744,7 +786,7 @@ namespace beepbox {
 	}
 	
 	export class ChangeBarCount extends Change {
-		constructor(doc: SongDocument, newValue: number, atBeginning: boolean) {
+		constructor(doc: SongDocument, trackEditor: TrackEditor, newValue: number, atBeginning: boolean) {
 			super();
 			if (doc.song.barCount != newValue) {
 				for (const channel of doc.song.channels) {
@@ -777,6 +819,7 @@ namespace beepbox {
 				doc.song.loopStart = Math.min(newValue - doc.song.loopLength, doc.song.loopStart);
 				doc.song.barCount = newValue;
 				doc.notifier.changed();
+                trackEditor.clearSelection();
 				
 				this._didSomething();
 			}
@@ -794,7 +837,7 @@ namespace beepbox {
 						const channel = i + newStart;
 						const oldChannel = i + oldStart;
 						if (i < oldCount) {
-							newChannels[channel] = doc.song.channels[oldChannel]
+              newChannels[channel] = doc.song.channels[oldChannel];
 						} else {
 							newChannels[channel] = new Channel();
 							newChannels[channel].octave = octave;
@@ -804,14 +847,13 @@ namespace beepbox {
 								const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
 								instrument.fromJsonObject(preset.settings, isNoise);
 								instrument.preset = presetValue;
-								instrument.volume = 1;
 								newChannels[channel].instruments[j] = instrument;
 							}
 							for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
 								newChannels[channel].patterns[j] = new Pattern();
 							}
 							for (let j: number = 0; j < doc.song.barCount; j++) {
-								newChannels[channel].bars[j] = 1;
+								newChannels[channel].bars[j] = ( j < 4 ) ? 1 : 0;
 							}
 						}
 					}
@@ -1730,11 +1772,10 @@ namespace beepbox {
 				const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
 				instrument.fromJsonObject(preset.settings, isNoise);
 				instrument.preset = presetValue;
-				instrument.volume = 1;
 			}
 		}
 	}
-	
+		
 	export class ChangeSong extends ChangeGroup {
 		constructor(doc: SongDocument, newHash: string) {
 			super();
@@ -2202,6 +2243,29 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].volume = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangeInputBoxText extends Change {
+        constructor(doc: SongDocument, oldValue: string, newValue: string) {
+            super();
+            if (newValue.length > 30) {
+                newValue = newValue.substring(0, 30);
+            }
+
+            doc.song.title = newValue;
+            document.title = newValue + " - Jummbox 1.2";
+            doc.notifier.changed();
+            if (oldValue != newValue) this._didSomething();
+        }
+    }
+	
+	export class ChangePan extends Change {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super();
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].pan = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}

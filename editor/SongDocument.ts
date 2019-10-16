@@ -25,7 +25,8 @@ namespace beepbox {
 		public showLetters: boolean;
 		public showChannels: boolean;
 		public showScrollBar: boolean;
-		public alwaysShowSettings: boolean;
+    	public alwaysFineNoteVol: boolean = false;
+		public alwaysShowSettings: boolean = true;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
@@ -36,7 +37,7 @@ namespace beepbox {
 		private _barFromCurrentState: number = 0;
 		private _channelFromCurrentState: number = 0;
 		private _shouldPushState: boolean = false;
-		private _waitingToUpdateState: boolean = false;
+		public _waitingToUpdateState: boolean = false;
 		
 		constructor(string?: string) {
 			this.song = new Song(string);
@@ -49,7 +50,8 @@ namespace beepbox {
 			this.showLetters = localStorage.getItem("showLetters") == "true";
 			this.showChannels = localStorage.getItem("showChannels") == "true";
 			this.showScrollBar = localStorage.getItem("showScrollBar") == "true";
-			this.alwaysShowSettings = localStorage.getItem("alwaysShowSettings") == "true";
+      		this.alwaysFineNoteVol = localStorage.getItem("alwaysFineNoteVol") == "true";
+			//this.alwaysShowSettings = localStorage.getItem("alwaysShowSettings") == "true";
 			
 			if (localStorage.getItem("volume") != null) this.volume = Number(localStorage.getItem("volume"));
 			
@@ -202,7 +204,8 @@ namespace beepbox {
 			localStorage.setItem("showLetters", this.showLetters ? "true" : "false");
 			localStorage.setItem("showChannels", this.showChannels ? "true" : "false");
 			localStorage.setItem("showScrollBar", this.showScrollBar ? "true" : "false");
-			localStorage.setItem("alwaysShowSettings", this.alwaysShowSettings ? "true" : "false");
+      		localStorage.setItem("alwaysFineNoteVol", this.alwaysFineNoteVol ? "true" : "false");
+			//localStorage.setItem("alwaysShowSettings", this.alwaysShowSettings ? "true" : "false");
 			localStorage.setItem("volume", String(this.volume));
 		}
 		

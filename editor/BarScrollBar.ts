@@ -9,24 +9,26 @@ namespace beepbox {
 		private readonly _editorWidth: number = 512;
 		private readonly _editorHeight: number = 20;
 		
+		private readonly _playhead : SVGRectElement = SVG.rect("rect", { fill: "white", x: 0, y: 0, width: 2, height: this._editorHeight });
 		private readonly _notches: SVGSVGElement = SVG.svg({"pointer-events": "none"});
-		private readonly _handle: SVGRectElement = SVG.rect({fill: "#444444", x: 0, y: 2, width: 10, height: this._editorHeight - 4});
+		private readonly _handle: SVGRectElement = SVG.rect({fill: "#393e4f", x: 0, y: 2, width: 10, height: this._editorHeight - 4});
 		private readonly _handleHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 0, y: 1, width: 10, height: this._editorHeight - 2});
 		private readonly _leftHighlight: SVGPathElement = SVG.path({fill: "white", "pointer-events": "none"});
 		private readonly _rightHighlight: SVGPathElement = SVG.path({fill: "white", "pointer-events": "none"});
+		private _renderedPlayhead: number = -1;
 		
-		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: pan-y; position: absolute;", width: this._editorWidth, height: this._editorHeight},
+		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #040410; touch-action: pan-y; position: absolute;", width: this._editorWidth, height: this._editorHeight},
 			this._notches,
 			this._handle,
 			this._handleHighlight,
 			this._leftHighlight,
 			this._rightHighlight,
+			this._playhead,
 		);
 		
 		public readonly container: HTMLElement = HTML.div({className: "barScrollBar", style: "width: 512px; height: 20px; overflow: hidden; position: relative;"}, this._svg);
 		
 		private _mouseX: number = 0;
-		//private _mouseY: number = 0;
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _dragging: boolean = false;
@@ -54,10 +56,21 @@ namespace beepbox {
 			this.container.addEventListener("touchend", this._whenCursorReleased);
 			this.container.addEventListener("touchcancel", this._whenCursorReleased);
 			
+            window.requestAnimationFrame(this._animatePlayhead);
+			
 			// Sorry, bypassing typescript type safety on this function because I want to use the new "passive" option.
 			//this._trackContainer.addEventListener("scroll", this._onScroll, {capture: false, passive: true});
 			(<Function>this._trackContainer.addEventListener)("scroll", this._onScroll, {capture: false, passive: true});
 		}
+		
+        private _animatePlayhead = (timestamp: number): void => {
+            const playhead = Math.min( 512, Math.max( 0, (this._barWidth * this._doc.synth.playhead - 2) ) );
+            if (this._renderedPlayhead != playhead) {
+                this._renderedPlayhead = playhead;
+                this._playhead.setAttribute("x", "" + playhead);
+            }
+            window.requestAnimationFrame(this._animatePlayhead);
+        }
 		
 		private _onScroll = (event: Event): void => {
 			this._doc.barScrollPos = (this._trackContainer.scrollLeft / 32);
@@ -141,6 +154,29 @@ namespace beepbox {
 			if (this._mouseOver) this._updatePreview();
 		}
 		
+        public changePos(offset: number) {
+            while (Math.abs(offset) >= 1) {
+
+                if (offset < 0) {
+                    if (this._doc.barScrollPos > 0) {
+                        this._doc.barScrollPos--;
+                        this._dragStart += this._barWidth;
+                        this._doc.notifier.changed();
+                    }
+                }
+                else {
+                    if (this._doc.barScrollPos < this._doc.song.barCount - this._doc.trackVisibleBars) {
+                        this._doc.barScrollPos++;
+                        this._dragStart += this._barWidth;
+                        this._doc.notifier.changed();
+                    }
+                }
+
+                offset += (offset > 0) ? -1 : 1;
+
+            }
+        }
+		
 		private _whenCursorReleased = (event: Event): void => {
 			if (!this._dragging && this._mouseDown) {
 				if (this._mouseX < (this._doc.barScrollPos + 8) * this._barWidth) {
@@ -188,7 +224,7 @@ namespace beepbox {
 				
 				for (let i: number = 0; i <= this._doc.song.barCount; i++) {
 					const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
-					this._notches.appendChild(SVG.rect({fill: "#444444", x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2}));
+					this._notches.appendChild(SVG.rect({fill: "#393e4f", x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2}));
 				}
 			}
 			

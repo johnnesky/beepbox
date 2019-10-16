@@ -6,13 +6,101 @@ const styleSheet = document.createElement('style');
 styleSheet.type = "text/css";
 styleSheet.appendChild(document.createTextNode(`
 
+/* This is a fix for being unable to click away from select2 nodes. See:
+  https://stackoverflow.com/questions/52297349/select2-does-not-close-the-choices-box-on-clicking-outside-it-with-closeonselec
+*/
+html,
+body {
+  height: 100%;
+}
+
 .beepboxEditor {
 	display: flex;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
 	position: relative;
 	touch-action: manipulation;
 	cursor: default;
 	font-size: small;
 	overflow: hidden;
+
+    opacity: 0;
+    -webkit-transition: opacity 0.2s ease-in;
+    -moz-transition: opacity 0.2s ease-in;
+    -o-transition: opacity 0.2s ease-in;
+    -ms-transition: opacity 0.2s ease-in;
+    transition: opacity 0.2s ease-in;
+    transition-delay: 0s;
+}
+
+.editorBox {
+     opacity: 0;
+    -webkit-transition: opacity 0.5s ease-in;
+    -moz-transition: opacity 0.5s ease-in;
+    -o-transition: opacity 0.5s ease-in;
+    -ms-transition: opacity 0.5s ease-in;
+    transition: opacity 0.5s ease-in;
+    transition-delay: 0s;
+}
+
+.playback-controls {
+    opacity: 0;
+    -webkit-transition: opacity 0.5s ease-in;
+    -moz-transition: opacity 0.5s ease-in;
+    -o-transition: opacity 0.5s ease-in;
+    -ms-transition: opacity 0.5s ease-in;
+    transition: opacity 0.5s ease-in;
+    transition-delay: 0.15s;
+}
+
+.editor-song-settings {
+    opacity: 0;
+    -webkit-transition: opacity 0.5s ease-in;
+    -moz-transition: opacity 0.5s ease-in;
+    -o-transition: opacity 0.5s ease-in;
+    -ms-transition: opacity 0.5s ease-in;
+    transition: opacity 0.5s ease-in;
+    transition-delay: 0.35s;
+}
+
+.editor-instrument-settings {
+    opacity: 0;
+    -webkit-transition: opacity 0.5s ease-in;
+    -moz-transition: opacity 0.5s ease-in;
+    -o-transition: opacity 0.5s ease-in;
+    -ms-transition: opacity 0.5s ease-in;
+    transition: opacity 0.5s ease-in;
+    transition-delay: 0.45s;
+}
+
+.trackBar {
+    opacity: 0;
+    -webkit-transition: opacity 0.5s ease-in;
+    -moz-transition: opacity 0.5s ease-in;
+    -o-transition: opacity 0.5s ease-in;
+    -ms-transition: opacity 0.5s ease-in;
+    transition: opacity 0.5s ease-in;
+    transition-delay: 0.4s;
+}
+
+.barScrollBar {
+    opacity: 0;
+    -webkit-transition: opacity 0.5s ease-in;
+    -moz-transition: opacity 0.5s ease-in;
+    -o-transition: opacity 0.5s ease-in;
+    -ms-transition: opacity 0.5s ease-in;
+    transition: opacity 0.5s ease-in;
+    transition-delay: 0.5s;
+}
+
+
+
+.load {
+    opacity: 1;
 }
 
 .beepboxEditor .noSelection {
@@ -55,9 +143,9 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor .prompt {
 	margin: auto;
 	text-align: center;
-	background: #000;
+	background: #040410;
 	border-radius: 15px;
-	border: 4px solid #444;
+	border: 4px solid #393e4f;
 	color: #fff;
 	padding: 20px;
 	display: flex;
@@ -124,7 +212,7 @@ styleSheet.appendChild(document.createTextNode(`
 	height: 2em;
 	border: none;
 	border-radius: 0.4em;
-	background: #444444;
+	background: #393e4f;
 	color: inherit;
 	font-size: inherit;
 	cursor: pointer;
@@ -134,11 +222,108 @@ styleSheet.appendChild(document.createTextNode(`
 	-moz-appearance: none;
 	appearance: none;
 }
+
+.select2-container .select2-selection--single {
+  height: auto;
+}
+
+.select2-container--default .select2-selection--single{
+  border-radius: 0px;
+  border: 0px;
+  background-color: transparent;
+  outline: none;
+}
+
+.select2-selection__rendered:not(.menu)::before {
+	content: "";
+	position: absolute;
+	right: 0.3em;
+	top: 0.4em;
+	border-bottom: 0.4em solid currentColor;
+	border-left: 0.3em solid transparent;
+	border-right: 0.3em solid transparent;
+	pointer-events: none;
+}
+.select2-selection__rendered:not(.menu)::after {
+	content: "";
+	position: absolute;
+	right: 0.3em;
+	bottom: 0.4em;
+	border-top: 0.4em solid currentColor;
+	border-left: 0.3em solid transparent;
+	border-right: 0.3em solid transparent;
+	pointer-events: none;
+}
+.select2-selection__rendered {
+	margin: 0;
+	padding: 0 0.3em;
+	display: block;
+	height: 2em;
+	border: none;
+	border-radius: 0.4em;
+	background: #393e4f;
+	color: inherit !important;
+	font-size: inherit;
+	cursor: pointer;
+	font-family: inherit;
+
+	-webkit-appearance:none;
+	-moz-appearance: none;
+	appearance: none;
+}
+.select2-selection__arrow b{
+    display:none !important;
+}
+
+.select2-selection__rendered--focus {
+	background: #6d6886;
+	outline: none;
+}
+.select2-search__field {
+    background: #393e4f;
+    color: inherit !important;
+    font-size: small;
+    font-family: inherit;
+    border: 0px !important;
+    padding: 1px !important;
+}
+.select2-dropdown {
+    box-sizing: border-box;
+    display: inline-block;
+    margin: 0;
+    font-size: small;
+    position: relative;
+    vertical-align: middle;
+    background-color: #6d6886;
+}
+
+.select2-container--default .select2-results>.select2-results__options {
+    max-height: 430px;
+    overflow-x: hidden;
+}
+.select2-container--default .select2-results__group {
+    cursor: default;
+    display: block;
+    padding: 1px;
+    background: #5d576f;
+}
+.select2-results__option {
+    padding: 2px;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.select2-container--default .select2-results__option .select2-results__option {
+    padding-left: 0.1em;
+}
+.select2-container--default .select2-results__option[aria-selected=true] {
+  background-color: transparent !important;
+}
+
 .beepboxEditor .menu select {
 	padding: 0 2em;
 }
 .beepboxEditor select:focus {
-	background: #777777;
+	background: #6d6886;
 	outline: none;
 }
 .beepboxEditor .menu select {
@@ -160,14 +345,14 @@ styleSheet.appendChild(document.createTextNode(`
 	height: 2em;
 	border: none;
 	border-radius: 0.4em;
-	background: #444;
+	background: #393e4f;
 	color: inherit;
 	font-size: inherit;
 	font-family: inherit;
 	cursor: pointer;
 }
 .beepboxEditor button:focus {
-	background: #777;
+	background: #6d6886;
 	outline: none;
 }
 
@@ -306,6 +491,7 @@ styleSheet.appendChild(document.createTextNode(`
 	overflow: hidden;
 	position: absolute;
 	display: block;
+  cursor: crosshair;
 }
 
 .beepboxEditor .trackContainer {
@@ -314,7 +500,7 @@ styleSheet.appendChild(document.createTextNode(`
 
 .beepboxEditor .selectRow {
 	margin: 2px 0;
-	height: 2em;
+	height: 2.2em;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -327,7 +513,7 @@ styleSheet.appendChild(document.createTextNode(`
 
 .beepboxEditor .operatorRow {
 	margin: 2px 0;
-	height: 2em;
+	height: 2.2em;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -388,13 +574,8 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor input[type=text], .beepboxEditor input[type=number] {
 	font-size: inherit;
 	background: transparent;
-	border: 1px solid #777;
-	color: white;
-}
-
-.beepboxEditor input[type=text]::selection, .beepboxEditor input[type=number]::selection {
-	/*background: #7744ff; ugh browsers override the alpha. */
-	background-color: rgba(119,68,255,0.99);
+    text-align: center;
+	border: 1px solid #222222;
 	color: white;
 }
 
@@ -410,8 +591,9 @@ styleSheet.appendChild(document.createTextNode(`
 	font-size: inherit;
 	margin: 0;
 	cursor: pointer;
-	background-color: black;
+	background-color: #040410;
 	touch-action: pan-y;
+  position: relative;
 }
 .beepboxEditor input[type=range]:focus {
 	outline: none;
@@ -420,7 +602,20 @@ styleSheet.appendChild(document.createTextNode(`
 	width: 100%;
 	height: 0.5em;
 	cursor: pointer;
-	background: #444;
+	background: #393e4f;
+
+}
+
+.beepboxEditor input[type=range].midTick:after {
+    content: "";
+    display:inline-block;
+    position: absolute;
+    background: currentColor;
+    width: 2%;
+    left: 49%;
+    height: 0.5em;
+    top: 37%;
+    z-index: 1;
 }
 .beepboxEditor input[type=range]::-webkit-slider-thumb {
 	height: 2em;
@@ -432,16 +627,16 @@ styleSheet.appendChild(document.createTextNode(`
 	margin-top: -0.75em;
 }
 .beepboxEditor input[type=range]:focus::-webkit-slider-runnable-track {
-	background: #777;
+	background: #7a7596;
 }
 .beepboxEditor input[type=range]::-moz-range-track {
 	width: 100%;
 	height: 0.5em;
 	cursor: pointer;
-	background: #444;
+	background: #393e4f;
 }
 .beepboxEditor input[type=range]:focus::-moz-range-track {
-	background: #777;
+	background: #6d6886;
 }
 .beepboxEditor input[type=range]::-moz-range-thumb {
 	height: 2em;
@@ -455,11 +650,11 @@ styleSheet.appendChild(document.createTextNode(`
 	width: 100%;
 	height: 0.5em;
 	cursor: pointer;
-	background: #444;
+	background: #393e4f;
 	border-color: transparent;
 }
 .beepboxEditor input[type=range]:focus::-ms-track {
-	background: #777;
+	background: #6d6886;
 }
 .beepboxEditor input[type=range]::-ms-thumb {
 	height: 2em;
@@ -480,6 +675,10 @@ styleSheet.appendChild(document.createTextNode(`
 	cursor: pointer;
 }
 
+li.select2-results__option[role=group] > strong:hover {
+  background-color: #516fbb;
+}
+
 /* wide screen */
 @media (min-width: 701px) {
 	#beepboxEditorContainer {
@@ -497,6 +696,9 @@ styleSheet.appendChild(document.createTextNode(`
 	.beepboxEditor .trackSelectBox {
 		display: none;
 	}
+    .beepboxEditor .muteButtonSelectBox {
+		display: none;
+	}
 	.beepboxEditor .playback-controls {
 		display: flex;
 		flex-direction: column;
@@ -512,7 +714,9 @@ styleSheet.appendChild(document.createTextNode(`
 		margin: 2px 0;
 		align-items: center;
 	}
-	.beepboxEditor .pauseButton, .beepboxEditor .playButton {
+	.beepboxEditor .pauseButton, .beepboxEditor .playButton,
+    .beepboxEditor .copyButton, .beepboxEditor .pasteButton
+    {
 		flex-grow: 1;
 	}
 	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
@@ -526,6 +730,9 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.beepboxEditor .editor-widgets {
 		flex-grow: 1;
+	}
+	.beepboxEditor .editor-settings input, .beepboxEditor .editor-settings select {
+		width: 8.6em;
 	}
 	.beepboxEditor .selectRow > :nth-child(2) {
 		width: 8.6em;
@@ -573,7 +780,9 @@ styleSheet.appendChild(document.createTextNode(`
 		flex-direction: row;
 	}
 	.beepboxEditor .pauseButton, .beepboxEditor .playButton,
-	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
+	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton,
+    .beepboxEditor .copyButton, .beepboxEditor .pasteButton
+    {
 		flex-grow: 1;
 		margin: 0 2px;
 	}
@@ -587,6 +796,30 @@ styleSheet.appendChild(document.createTextNode(`
 	}
 	.fullWidthOnly {
 		display: none;
+	}
+	p {
+		margin: 1em 0.5em;
+	}
+	
+	.beepboxEditor .soundIcon {
+	  background: #393e4f;
+	  display: inline-block;
+	  height: 10px;
+	  margin-left: 0px;
+	  margin-top: 8px;
+		position: relative;
+		width: 10px;
+	}
+	.beepboxEditor .soundIcon:before {
+	  border-bottom: 6px solid transparent;
+	  border-top: 6px solid transparent;
+	  border-right: 10px solid #393e4f;
+	  content: "";
+	  height: 10px;
+	  left: 6px;
+	  position: absolute;
+	  top: -6px;
+	  width: 0;
 	}
 }
 

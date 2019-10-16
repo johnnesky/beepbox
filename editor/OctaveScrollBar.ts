@@ -14,12 +14,12 @@ namespace beepbox {
 		private readonly _octaveHeight: number = (this._editorHeight - this._notchHeight) / this._octaveCount;
 		private readonly _barHeight: number = (this._octaveHeight * Config.windowOctaves + this._notchHeight);
 		
-		private readonly _handle: SVGRectElement = SVG.rect({fill: "#444444", x: 2, y: 0, width: this._editorWidth - 4, height: this._barHeight});
+		private readonly _handle: SVGRectElement = SVG.rect({fill: "#393e4f", x: 2, y: 0, width: this._editorWidth - 4, height: this._barHeight});
 		private readonly _handleHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight});
 		private readonly _upHighlight: SVGPathElement = SVG.path({fill: "white", "pointer-events": "none"});
 		private readonly _downHighlight: SVGPathElement = SVG.path({fill: "white", "pointer-events": "none"});
 		
-		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: pan-x; position: absolute;", width: this._editorWidth, height: "100%", viewBox: "0 0 20 481", preserveAspectRatio: "none"});
+		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #040410; touch-action: pan-x; position: absolute;", width: this._editorWidth, height: "100%", viewBox: "0 0 20 481", preserveAspectRatio: "none"});
 		public readonly container: HTMLDivElement = HTML.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 100%; overflow: hidden; position: relative; flex-shrink: 0;"}, this._svg);
 		
 		//private _mouseX: number = 0;
@@ -40,7 +40,7 @@ namespace beepbox {
 			
 			// notches:
 			for (let i: number = 0; i <= this._octaveCount; i++) {
-				this._svg.appendChild(SVG.rect({fill: "#886644", x: 0, y: i * this._octaveHeight, width: this._editorWidth, height: this._notchHeight}));
+				this._svg.appendChild(SVG.rect({fill: "#725491", x: 0, y: i * this._octaveHeight, width: this._editorWidth, height: this._notchHeight}));
 			}
 			
 			this._svg.appendChild(this._handleHighlight);

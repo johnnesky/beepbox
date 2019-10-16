@@ -4,7 +4,7 @@
 /// <reference path="Prompt.ts" />
 
 namespace beepbox {
-	const {button, div, p, h2} = HTML;
+	const {button, div, p, h2, h3} = HTML;
 	
 	export class TipPrompt implements Prompt {
 		private readonly _closeButton: HTMLButtonElement = button({className: "cancelButton"});
@@ -19,7 +19,7 @@ namespace beepbox {
 					message = div(
 						h2("Scale"),
 						p("This setting limits the available pitches for adding notes. You may think that there's no point in limiting your choices, but the set of pitches you use has a strong influence on the mood and feel of your song, and these scales serve as guides to help you choose appropriate pitches. Don't worry, you can change the scale at any time, so you're not locked into it. Try making little melodies using all the available notes of a scale to get a sense for how it sounds."),
-						p("Most of the scales have a major version, marked with a smiley face, and a minor version, marked with a sad face. Major scales tend to sound more playful or optimistic if you emphasize \"tonic\" notes (the brown rows in the pattern editor) at various points in your melody, whereas minor scales sound more serious or sad if you emphasize \"tonic\" notes."),
+						p("The most common scales are major and minor. Major scales tend to sound more playful or optimistic if you emphasize \"tonic\" notes (the brown rows in the pattern editor) at various points in your melody, whereas minor scales sound more serious or sad if you emphasize \"tonic\" notes."),
 					);
 				} break;
 				case "key": {
@@ -56,6 +56,7 @@ namespace beepbox {
 					message = div(
 						h2("Instrument Volume"),
 						p("This setting controls the volume of the selected instrument without affecting the volume of the other instruments. This allows you to balance the loudness of each instrument relative to each other."),
+            			p("Please be careful when using volume settings above 0. This indicates amplification and too much of that can trip the audio limiter built into this tool. This can lead to your song sounding muffled if overused. But when used carefully, amplification can be a powerful tool!"),
 					);
 				} break;
 				case "instrumentType": {
@@ -214,6 +215,28 @@ namespace beepbox {
 						p("The left side of the spectrum editor controls the noise energy at lower frequencies, and the right side controls higher frequencies."),
 					);
 				} break;
+		        case "pan": {
+		          message = div(
+		            h2("Panning"),
+		            p("This setting controls how far to the left or right your sound will play with stereo speakers."),
+		            p("A large negative value will pan your sound more towards the left speaker, and a large positive value will similarly pan the sound towards the right speaker."),
+		            p("Most music pans each instrument separately to make them sound like they are coming from slightly different positions in space."),
+		          );
+		        } break;
+		        case "usedInstrument": {
+		          message = div(
+		            h3("'Is this instrument used somehwere else?'"),
+		            p("This indicator will light up when the instrument you're currently looking at is used in another place in your song."),
+		            p("This can be useful when you're not sure if you've used the instrument before and making edits carelessly could change other parts of the song."),
+		          );
+		        } break;
+		        case "usedPattern": {
+		          message = div(
+		            h3("'Is this pattern used somewhere else?'"),
+		            p("This indicator will light up when the pattern you're currently looking at is used in another place in your song."),
+		            p("This can be useful when you're not sure if you've used the pattern before and making edits carelessly could change other parts of the song."),
+		          );
+		        } break;
 				default: throw new Error("Unhandled TipPrompt type: " + type);
 			}
 			

@@ -23,9 +23,10 @@
 /// <reference path="ChannelSettingsPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
+/// <reference path="MuteButton.ts" />
 
 namespace beepbox {
-	const {button, div, span, select, option, optgroup, input} = HTML;
+	const {button, div, span, select, option, optgroup, input, canvas} = HTML;
 	
 	export const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
 	
@@ -36,34 +37,39 @@ namespace beepbox {
 		return menu;
 	}
 	
-	function buildPresetOptions(isNoise: boolean): HTMLSelectElement {
-		const menu: HTMLSelectElement = select();
-		
-		menu.appendChild(optgroup({label: "Edit"},
-			option({value: "copyInstrument"}, "Copy Instrument"),
-			option({value: "pasteInstrument"}, "Paste Instrument"),
-			option({value: "randomPreset"}, "Random Preset"),
-			option({value: "randomGenerated"}, "Random Generated"),
-		));
+  // Similar to the above, but adds a non-interactive header to the list.
+  // @jummbus: Honestly not necessary with new HTML options interface, but not exactly necessary to change either!
+
+  function buildHeaderedOptions(header: string, menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
+    menu.appendChild(option({selected: true, disabled: true, value: header}, header));
+
+      for (const item of items) {
+        menu.appendChild(option({ value: item }, item));
+      }
+      return menu;
+  }
+	
+	function buildPresetOptions(isNoise: boolean, idSet: string): HTMLSelectElement {
+    const menu: HTMLSelectElement = select({ id: idSet });
 		
 		// Show the "spectrum" custom type in both pitched and noise channels.
-		const customTypeGroup: HTMLElement = optgroup({label: EditorConfig.presetCategories[0].name});
+		//const customTypeGroup: HTMLElement = optgroup({label: EditorConfig.presetCategories[0].name});
 		if (isNoise) {
-			customTypeGroup.appendChild(option({value: InstrumentType.noise}, EditorConfig.valueToPreset(InstrumentType.noise)!.name));
-			customTypeGroup.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
-			customTypeGroup.appendChild(option({value: InstrumentType.drumset}, EditorConfig.valueToPreset(InstrumentType.drumset)!.name));
+			menu.appendChild(option({value: InstrumentType.noise}, EditorConfig.valueToPreset(InstrumentType.noise)!.name));
+      		menu.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
+      		menu.appendChild(option({value: InstrumentType.drumset}, EditorConfig.valueToPreset(InstrumentType.drumset)!.name));
 		} else {
-			customTypeGroup.appendChild(option({value: InstrumentType.chip}, EditorConfig.valueToPreset(InstrumentType.chip)!.name));
-			customTypeGroup.appendChild(option({value: InstrumentType.pwm}, EditorConfig.valueToPreset(InstrumentType.pwm)!.name));
-			customTypeGroup.appendChild(option({value: InstrumentType.harmonics}, EditorConfig.valueToPreset(InstrumentType.harmonics)!.name));
-			customTypeGroup.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
-			customTypeGroup.appendChild(option({value: InstrumentType.fm}, EditorConfig.valueToPreset(InstrumentType.fm)!.name));
+	        menu.appendChild(option({value: InstrumentType.chip}, EditorConfig.valueToPreset(InstrumentType.chip)!.name));
+	        menu.appendChild(option({value: InstrumentType.pwm}, EditorConfig.valueToPreset(InstrumentType.pwm)!.name));
+	        menu.appendChild(option({value: InstrumentType.harmonics}, EditorConfig.valueToPreset(InstrumentType.harmonics)!.name));
+	        menu.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
+	        menu.appendChild(option({ value: InstrumentType.fm }, EditorConfig.valueToPreset(InstrumentType.fm)!.name));
+	        menu.appendChild(option({ value: InstrumentType.customChipWave }, EditorConfig.valueToPreset(InstrumentType.customChipWave)!.name));
 		}
-		menu.appendChild(customTypeGroup);
 		
 		for (let categoryIndex: number = 1; categoryIndex < EditorConfig.presetCategories.length; categoryIndex++) {
 			const category: PresetCategory = EditorConfig.presetCategories[categoryIndex];
-			const group: HTMLElement = optgroup({label: category.name});
+			const group: HTMLElement = optgroup({label: category.name + " ▾"});
 			let foundAny: boolean = false;
 			for (let presetIndex: number = 0; presetIndex < category.presets.length; presetIndex++) {
 				const preset: Preset = category.presets[presetIndex];
@@ -72,14 +78,49 @@ namespace beepbox {
 					foundAny = true;
 				}
 			}
+
+	      // Need to re-sort some elements for readability. Can't just do this in the menu, because indices are saved in URLs and would get broken if the ordering actually changed.
+	      if (category.name == "String Presets" && foundAny ) {
+	
+	        // Put violin 2 after violin 1
+	        let moveViolin2 = group.removeChild(group.children[11]);
+	        group.insertBefore(moveViolin2, group.children[1]);
+	      }
+	
+	      if (category.name == "Flute Presets" && foundAny) {
+	
+	        // Put flute 2 after flute 1
+	        let moveFlute2 = group.removeChild(group.children[11]);
+	        group.insertBefore(moveFlute2, group.children[1]);
+	      }
+	
+	      if (category.name == "Keyboard Presets" && foundAny) {
+	
+	        // Put grand piano 2 after grand piano 1
+	        let moveGrandPiano2 = group.removeChild(group.children[9]);
+	        group.insertBefore(moveGrandPiano2, group.children[1]);
+	      }
+	
+	
 			if (foundAny) menu.appendChild(group);
 		}
+
+	    const randomGroup: HTMLElement = optgroup({ label: "Randomize ▾" });
+	    randomGroup.appendChild(option({ value: "randomPreset" }, "Random Preset"));
+	    randomGroup.appendChild(option({ value: "randomGenerated" }, "Random Generated"));
+	    menu.appendChild(randomGroup);
+
 		return menu;
 	}
 	
 	function setSelectedValue(menu: HTMLSelectElement, value: number): void {
 		const stringValue = value.toString();
 		if (menu.value != stringValue) menu.value = stringValue;
+
+	    // Change select2 value, if this select is a member of that class.
+	    if ($(menu).data('select2')) {
+	      $(menu).val(value).trigger('change.select2');
+	    }
 	}
 	
 	interface PatternCopy {
@@ -87,6 +128,196 @@ namespace beepbox {
 		beatsPerBar: number;
 		drums: boolean;
 	}
+	
+    class Canvas {
+        private mouseDown: boolean;
+        private continuousEdit: boolean;
+        private lastX: number;
+        private lastY: number;
+        public newArray: Float64Array;
+
+        private _change: Change | null = null;
+
+        constructor(public readonly canvas: HTMLCanvasElement, private readonly _doc: SongDocument, private readonly _getChange: (newArray: Float64Array) => Change) {
+            //canvas.addEventListener("input", this._whenInput);
+            //canvas.addEventListener("change", this._whenChange);
+            canvas.addEventListener("mousemove", this._onMouseMove);
+            canvas.addEventListener("mousedown", this._onMouseDown);
+            canvas.addEventListener("mouseup", this._onMouseUp);
+            canvas.addEventListener("mouseleave", this._onMouseUp);
+
+            this.mouseDown = false;
+            this.continuousEdit = false;
+            this.lastX = 0;
+            this.lastY = 0;
+
+            this.newArray = new Float64Array( 64 );
+
+            // Init waveform
+            this.redrawCanvas();
+
+        }
+
+        public redrawCanvas(): void {
+            var ctx = this.canvas.getContext("2d") as CanvasRenderingContext2D;
+
+            // Black BG
+            ctx.fillStyle = "#040410";
+            ctx.fillRect(0, 0, 128, 52);
+
+            // Mid-bar
+            ctx.fillStyle = "#393e4f";
+            ctx.fillRect(0, 25, 128, 2);
+
+            // 25-75 bars
+            ctx.fillStyle = "#1c1d28";
+            ctx.fillRect(0, 13, 128, 1);
+            ctx.fillRect(0, 39, 128, 1);
+
+            // Waveform
+            ctx.fillStyle = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+
+            for (let x: number = 0; x < 64; x++) {
+                var y: number = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].customChipWave[x] + 26;
+                ctx.fillRect(x * 2, y - 2, 2, 4);
+
+                this.newArray[x] = y - 26;
+            }
+        }
+
+        private _onMouseMove = ( event: MouseEvent ): void => {
+            if (this.mouseDown) {
+
+                var x = (event.clientX || event.pageX) - this.canvas.getBoundingClientRect().left;
+                var y = Math.floor((event.clientY || event.pageY) - this.canvas.getBoundingClientRect().top);
+
+                if (y < 2) y = 2;
+                if (y > 50) y = 50;
+
+                var ctx = this.canvas.getContext("2d") as CanvasRenderingContext2D;
+
+                if (this.continuousEdit == true && Math.abs(this.lastX - x) < 40) {
+
+                    var lowerBound = (x < this.lastX) ? x : this.lastX;
+                    var upperBound = (x < this.lastX) ? this.lastX : x;
+
+                    for (let i = lowerBound; i <= upperBound; i += 2) {
+
+                        var progress = (Math.abs(x - this.lastX) > 2.0) ? ((x > this.lastX) ?
+                            1.0 - ((i - lowerBound) / (upperBound - lowerBound))
+                            : ((i - lowerBound) / (upperBound - lowerBound))) : 0.0;
+                        var j = Math.round( y + (this.lastY - y) * progress );
+
+                        ctx.fillStyle = "#040410";
+                        ctx.fillRect(Math.floor(i / 2) * 2, 0, 2, 53);
+                        ctx.fillStyle = "#393e4f";
+                        ctx.fillRect(Math.floor(i / 2) * 2, 25, 2, 2);
+                        ctx.fillStyle = "#1c1d28";
+                        ctx.fillRect(Math.floor(i / 2) * 2, 13, 2, 1);
+                        ctx.fillRect(Math.floor(i / 2) * 2, 39, 2, 1);
+                        ctx.fillStyle = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+                        ctx.fillRect(Math.floor(i / 2) * 2, j - 2, 2, 4);
+
+                        // Actually update current instrument's custom waveform
+                        this.newArray[Math.floor(i / 2)] = (j - 26);
+                    }
+
+                }
+                else {
+
+                    ctx.fillStyle = "#040410";
+                    ctx.fillRect(Math.floor(x / 2) * 2, 0, 2, 52);
+                    ctx.fillStyle = "#393e4f";
+                    ctx.fillRect(Math.floor(x / 2) * 2, 25, 2, 2);
+                    ctx.fillStyle = "#1c1d28";
+                    ctx.fillRect(Math.floor(x / 2) * 2, 13, 2, 1);
+                    ctx.fillRect(Math.floor(x / 2) * 2, 39, 2, 1);
+                    ctx.fillStyle = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+                    ctx.fillRect(Math.floor(x / 2) * 2, y - 2, 2, 4);
+
+                    // Actually update current instrument's custom waveform
+                    this.newArray[Math.floor(x / 2)] = (y - 26);
+
+                }
+                                         
+                this.continuousEdit = true;
+                this.lastX = x;
+                this.lastY = y;
+
+                // Preview - update integral used for sound synthesis based on new array, not actual stored array. When mouse is released, real update will happen.
+                let instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+
+                let sum: number = 0.0;
+                for (let i: number = 0; i < this.newArray.length; i++) {
+                  sum += this.newArray[i];
+                }
+                const average: number = sum / this.newArray.length;
+
+                // Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+                let cumulative: number = 0;
+                let wavePrev: number = 0;
+                for (let i: number = 0; i < this.newArray.length; i++) {
+                  cumulative += wavePrev;
+                  wavePrev = this.newArray[i] - average;
+                  instrument.customChipWaveIntegral[i] = cumulative;
+                }
+
+                  instrument.customChipWaveIntegral[64] = 0.0;
+            }
+
+        }
+
+        private _onMouseDown = ( event: MouseEvent  ) : void => {
+            this.mouseDown = true;
+
+            // Allow single-click edit
+            this._onMouseMove( event );
+        }
+        private _onMouseUp = () : void => {
+            this.mouseDown = false;
+            this.continuousEdit = false;
+
+            this._whenChange( );
+        }
+
+        private _whenChange = (): void => {
+          this._change = this._getChange(this.newArray);
+
+          this._doc.record(this._change!);
+
+          this._change = null;
+        };
+
+
+    }
+
+    class InputBox {
+        private _change: Change | null = null;
+        private _value: string = "";
+        private _oldValue: string = "";
+
+        constructor(public readonly input: HTMLInputElement, private readonly _doc: SongDocument, private readonly _getChange: (oldValue: string, newValue: string) => Change) {
+            input.addEventListener("input", this._whenInput);
+            input.addEventListener("change", this._whenChange);
+        }
+
+        public updateValue(value: string): void {
+            this._value = value;
+            this.input.value = String(value);
+        }
+
+        private _whenInput = (): void => {
+            const continuingProspectiveChange: boolean = this._doc.lastChangeWas(this._change);
+            if (!continuingProspectiveChange) this._oldValue = this._value;
+            this._change = this._getChange(this._oldValue, this.input.value);
+            this._doc.setProspectiveChange(this._change);
+        };
+
+        private _whenChange = (): void => {
+            this._doc.record(this._change!);
+            this._change = null;
+        };
+    }
 	
 	class Slider {
 		private _change: Change | null = null;
@@ -120,12 +351,20 @@ namespace beepbox {
 		public prompt: Prompt | null = null;
 		
 		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
-		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc);
+		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
 		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
-		private readonly _trackContainer: HTMLDivElement = div({className: "trackContainer"},
+        private readonly _muteButtonEditor: MuteButtonEditor = new MuteButtonEditor(this._doc);
+        private readonly _trackOptionsEditor: HTMLDivElement = div({ className: "trackEditorOptions", style: "width: 32px; display: flex; flex-direction: row" }, [
+            this._muteButtonEditor.container,
+        ]);
+		private readonly _trackContainer: HTMLDivElement = div({className: "trackContainer", tabindex:"1"}, [
 			this._trackEditor.container,
 			this._loopEditor.container,
-		);
+		]);
+        private readonly _trackBar: HTMLDivElement = div({ className: "trackBar", style: "display: flex; flex-direction: row;" }, [
+            this._trackOptionsEditor,
+			this._trackContainer,
+		]);
 		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackContainer);
 		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
 		private readonly _piano: Piano = new Piano(this._doc);
@@ -135,13 +374,16 @@ namespace beepbox {
 				this._patternEditor.container,
 				this._octaveScrollBar.container,
 			),
-			this._trackContainer,
+			this._trackBar,
+            div({ style: "display:flex; flex-direction: row;" }, 
+                div({ style: "width: 32px; height: 32px" }, []),
 			this._barScrollBar.container,
+			),
 		);
 		private readonly _playButton: HTMLButtonElement = button({style: "width: 80px;", type: "button"});
 		private readonly _prevBarButton: HTMLButtonElement = button({className: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)"});
 		private readonly _nextBarButton: HTMLButtonElement = button({className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
-		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "100", value: "50", step: "1"});
+		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "115", value: "50", step: "1"});
 		private readonly _fileMenu: HTMLSelectElement = select({style: "width: 100%;"},
 			option({selected: true, disabled: true, hidden: false}, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option({value: "new"}, "+ New Blank Song"),
@@ -175,23 +417,31 @@ namespace beepbox {
 			option({value: "showLetters"}, "Show Piano Keys"),
 			option({value: "showFifth"}, 'Highlight "Fifth" Notes'),
 			option({value: "showChannels"}, "Show All Channels"),
-			option({value: "showScrollBar"}, "Octave Scroll Bar"),
-			option({value: "alwaysShowSettings"}, "Customize All Instruments"),
+      		option({ value: "showScrollBar" }, "Octave Scroll Bar"),
+      		option({ value: "alwaysFineNoteVol" }, "Always Fine Note Vol.")
+			//option({value: "alwaysShowSettings"}, "Customize All Instruments"),
 		);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale=>scale.name));
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select(), Config.keys.map(key=>key.name).reverse());
-		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0; width: 4em; flex-grow: 1; vertical-align: middle;", type: "range", min: "0", max: "14", value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, Math.round(120.0 * Math.pow(2.0, (-4.0 + newValue) / 9.0))));
-		private readonly _tempoStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 0.4em; vertical-align: middle;", type: "number", step: "1"});
-		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
+		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0; vertical-align: middle;", type: "range", min: "30", max: "320", value: "160", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
+		private readonly _tempoStepper: HTMLInputElement = input({style: "width: 4em; font-size: 80%; margin-left: 0.4em; vertical-align: middle;", type: "number", step: "1"});
+    	private readonly _reverbSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
 		private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select(), Config.rhythms.map(rhythm=>rhythm.name));
-		private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false);
-		private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true);
+		private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false, "pitchPresetSelect");
+		private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true, "drumPresetSelect");
 		private readonly _algorithmSelect: HTMLSelectElement = buildOptions(select(), Config.algorithms.map(algorithm=>algorithm.name));
 		private readonly _algorithmSelectRow: HTMLDivElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("algorithm")}, "Algorithm: "), div({className: "selectContainer"}, this._algorithmSelect));
 		private readonly _instrumentSelect: HTMLSelectElement = select();
 		private readonly _instrumentSelectRow: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentIndex")}, "Instrument: "), div({className: "selectContainer"}, this._instrumentSelect));
-		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: -(Config.volumeRange - 1), max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
-		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume: "), this._instrumentVolumeSlider.input);
+		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0; position: sticky;", className:"midTick", type: "range", min: Math.floor(-Config.volumeRange/2), max: Math.floor(Config.volumeRange/2), value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, newValue));
+        private readonly _instrumentVolumeSliderInputBox: HTMLInputElement = input({ style: "width: 4em; font-size: 80%", id: "volumeSliderInputBox", type: "number", step: "1", min: Math.floor(-Config.volumeRange/2), max: Math.floor(Config.volumeRange/2), value: "0" });
+		private readonly _instrumentVolumeSliderTip: HTMLDivElement = div({className: "selectRow", style: "height: 1em"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume: "));
+		
+		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({ className: "selectRow" }, div({}, 
+            div({ style: "color: #999" }, span({}, this._instrumentVolumeSliderTip)),
+            div({ style: "color: #555" }, this._instrumentVolumeSliderInputBox),
+        ), this._instrumentVolumeSlider.input );
+		
 		private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select(), Config.chipWaves.map(wave=>wave.name));
 		private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select(), Config.chipNoises.map(wave=>wave.name));
 		private readonly _chipWaveSelectRow: HTMLDivElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipWave")}, "Wave: "), div({className: "selectContainer"}, this._chipWaveSelect));
@@ -224,6 +474,43 @@ namespace beepbox {
 		private readonly _harmonicsRow: HTMLElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("harmonics")}, "Harmonics:"), this._harmonicsEditor.container);
 		private readonly _drumsetGroup: HTMLElement = div({className: "editor-controls"});
 		
+		
+        private readonly _instrumentCopyButton: HTMLButtonElement = button({ style: "max-width:86px;", className: "copyButton" }, [
+            "Copy",
+            // Copy icon:
+            SVG.svg( { style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26" }, [
+                SVG.path( { d: "M 0 -15 L 1 -15 L 1 0 L 13 0 L 13 1 L 0 1 L 0 -15 z M 2 -1 L 2 -17 L 10 -17 L 14 -13 L 14 -1 z M 3 -2 L 13 -2 L 13 -12 L 9 -12 L 9 -16 L 3 -16 z", fill: "currentColor" }),
+            ]),
+        ]);
+        private readonly _instrumentPasteButton: HTMLButtonElement = button({ style: "max-width:86px;", className: "pasteButton" }, [
+            "Paste",
+            // Paste icon:
+            SVG.svg( { style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "0 0 26 26" }, [
+                SVG.path( { d: "M 8 18 L 6 18 L 6 5 L 17 5 L 17 7 M 9 8 L 16 8 L 20 12 L 20 22 L 9 22 z", stroke: "currentColor", fill: "none" }),
+                SVG.path( { d: "M 9 3 L 14 3 L 14 6 L 9 6 L 9 3 z M 16 8 L 20 12 L 16 12 L 16 8 z", fill: "currentColor", }),
+            ]),
+        ]);
+
+        private readonly _panSlider: Slider = new Slider(input({ style: "margin: 0px; position: sticky;", className: "midTick", type: "range", min: "0", max: "100", value: "50", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangePan(this._doc, oldValue, newValue ));
+        private readonly _panSliderInputBox: HTMLInputElement = input({ style: "width: 4em; font-size: 80%; ", id: "panSliderInputBox", type: "number", step: "1", min: "-100", max: "100", value: "0"});
+		    private readonly _panSliderRow: HTMLDivElement = div({className: "selectRow"}, div({}, 							
+          div({ class: "tip", style: "color: #999; height:1em;", onclick: () => this._openPrompt("pan") }, "Pan: "),
+				  div({style: "color: #555"}, this._panSliderInputBox),		
+			  ), this._panSlider.input );
+
+        private readonly _customWaveDrawCanvas: Canvas = new Canvas(canvas({ width: 128, height: 52, style: "border:2px solid #393e4f;", id: "customWaveDrawCanvas" }), this._doc, (newArray: Float64Array) => new ChangeCustomWave(this._doc, newArray));
+        private readonly _customWavePresetDrop: HTMLSelectElement = buildHeaderedOptions( "Load Preset", select({ style: "height:1.5em; text-align: center; text-align-last: center;" } ),
+            Config.chipWaves.map(wave=>wave.name)
+        );
+
+        private readonly _customWaveDraw: HTMLDivElement = div({ style: "height:80px; margin-top:10px; margin-bottom:5px" }, [
+            div({ style: "height:54px; display:flex; justify-content:center;" }, [this._customWaveDrawCanvas.canvas]),
+            div({ style: "margin-top:5px; display:flex; justify-content:center;" }, [this._customWavePresetDrop]),
+        ]);
+        
+        private readonly _songTitleInputBox: InputBox = new InputBox(input({ style: "border:none; background-color:#040410; color:#FFFFFF; text-align:center", maxlength:"30", type: "text", value: "JummBox 1.2" }), this._doc, (oldValue: string, newValue: string) => new ChangeInputBoxText(this._doc, oldValue, newValue));
+
+
 		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
 		private readonly _feedbackEnvelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Feedback Envelope"}), Config.envelopes.map(envelope=>envelope.name));
 		private readonly _feedbackRow2: HTMLDivElement = div({className: "operatorRow"},
@@ -232,6 +519,9 @@ namespace beepbox {
 			this._feedbackAmplitudeSlider.input,
 			div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, this._feedbackEnvelopeSelect),
 		);
+		/*
+     	* @jummbus - my very real, valid reason for cutting this button: I don't like it.
+     	* 
 		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", style: "margin: 2px 0"},
 			"Customize Instrument",
 			// Dial icon
@@ -251,7 +541,11 @@ namespace beepbox {
 				),
 			),
 		);
-		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({className: "editor-controls"},
+	    */
+	    private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({ className: "editor-controls" },
+	        this._chipWaveSelectRow,
+	        this._chipNoiseSelectRow,
+	        this._customWaveDraw,	
 			this._filterCutoffRow,
 			this._filterResonanceRow,
 			this._filterEnvelopeRow,
@@ -263,8 +557,6 @@ namespace beepbox {
 			this._chordSelectRow,
 			this._vibratoSelectRow,
 			this._intervalSelectRow,
-			this._chipWaveSelectRow,
-			this._chipNoiseSelectRow,
 			this._algorithmSelectRow,
 			this._phaseModGroup,
 			this._feedbackRow1,
@@ -275,33 +567,46 @@ namespace beepbox {
 			this._pulseEnvelopeRow,
 			this._pulseWidthRow,
 		);
+	    private readonly _instrumentCopyGroup: HTMLDivElement = div({}, 
+	      div({ className: "selectRow" }, 
+	          this._instrumentCopyButton,
+	          this._instrumentPasteButton,
+	      ),
+	    );
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({className: "editor-controls"},
 			this._instrumentSelectRow,
-			this._instrumentVolumeSliderRow,
-			div({className: "selectRow"},
-				span({class: "tip", onclick: ()=>this._openPrompt("instrumentType")}, "Type: "),
-				div({className: "selectContainer"}, this._pitchedPresetSelect, this._drumPresetSelect),
-			),
-			this._customizeInstrumentButton,
+      		div({ className: "selectRow", id: "typeSelectRow" },
+        		span({ class: "tip", onclick: () => this._openPrompt("instrumentType") }, "Type: "),
+        			div(
+          				div({ className: "pitchSelect" }, this._pitchedPresetSelect),
+          				div({ className: "drumSelect" }, this._drumPresetSelect)
+				),
+      		),
+      		this._instrumentVolumeSliderRow,
+      		this._panSliderRow,
+			//this._customizeInstrumentButton,
 			this._customInstrumentSettingsGroup,
 		);
+	    private readonly _usedPatternIndicator: SVGElement = SVG.path( { d: "M -6 -6 H 6 V 6 H -6 V -6 M -2 -3 L -2 -3 L -1 -4 H 1 V 4 H -1 V -1.2 L -1.2 -1 H -2 V -3 z", fill: "#393e4f", "fill-rule": "evenodd" });
+	    private readonly _usedInstrumentIndicator: SVGElement = SVG.path( { d: "M -6 -0.8 H -3.8 V -6 H 0.8 V 4.4 H 2.2 V -0.8 H 6 V 0.8 H 3.8 V 6 H -0.8 V -4.4 H -2.2 V 0.8 H -6 z", fill: "#393e4f" });
+	        
 		private readonly _promptContainer: HTMLDivElement = div({className: "promptContainer", style: "display: none;"});
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"},
 			this._editorBox,
 			div({className: "editor-widget-column noSelection"},
-				div({style: "text-align: center; color: #999;"}, EditorConfig.versionDisplayName),
-				div({className: "editor-widgets"},
-					div({className: "editor-controls"},
-						div({className: "playback-controls"},
-							div({className: "playback-bar-controls"},
-								this._playButton,
-								this._prevBarButton,
-								this._nextBarButton,
-							),
-							div({className: "playback-volume-controls"},
-								// Volume speaker icon:
-								SVG.svg({style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26"},
-									SVG.path({d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777"}),
+        		div({ style: "text-align: center; color: #79B;" }, [this._songTitleInputBox.input]),
+					div({className: "editor-widgets"},
+						div({className: "editor-controls"},
+							div({className: "playback-controls"},
+								div({className: "playback-bar-controls"},
+									this._playButton,
+									this._prevBarButton,
+									this._nextBarButton,
+								),
+								div({className: "playback-volume-controls"},
+									// Volume speaker icon:
+									SVG.svg({style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26"},
+										SVG.path({d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777"}),
 								),
 								this._volumeSlider,
 							),
@@ -332,9 +637,23 @@ namespace beepbox {
 									),
 								),
 							),
-							div({style: "margin: 3px 0; text-align: center; color: #999;"},
-								"Song Settings"
-							),
+							div({className: "editor-settings"}, 
+								div({className: "editor-song-settings"}, 
+                  					div({ style: "margin: 3px 0; position: relative; text-align: center; color: #999;" }, 
+                    					div({ class: "tip", style: "flex-shrink: 0; position:absolute; left: 0; top: 0; width: 12px; height: 12px", onclick: () => this._openPrompt("usedPattern") }, 
+                      						SVG.svg({ style: "flex-shrink: 0; position: absolute; left: 0; top: 0; pointer-events: none;", width: "12px", height: "12px", "margin-right": "0.5em", viewBox: "-6 -6 12 12" }, 
+                        						this._usedPatternIndicator,
+                      						),
+                    					),
+                    					div({ class: "tip", style: "flex-shrink: 0; position: absolute; left: 14px; top: 0; width: 12px; height: 12px", onclick: () => this._openPrompt("usedInstrument") }, 
+                      						SVG.svg( { style: "flex-shrink: 0; position: absolute; left: 0; top: 0; pointer-events: none;", width: "12px", height: "12px", "margin-right": "1em", viewBox: "-6 -6 12 12" }, 
+                        						this._usedInstrumentIndicator,
+                    						),
+                						),
+										"Song Settings"
+									),
+								),
+    						),
 							div({className: "selectRow"},
 								span({class: "tip", onclick: ()=>this._openPrompt("scale")}, "Scale: "),
 								div({className: "selectContainer"}, this._scaleSelect),
@@ -343,12 +662,11 @@ namespace beepbox {
 								span({class: "tip", onclick: ()=>this._openPrompt("key")}, "Key: "),
 								div({className: "selectContainer"}, this._keySelect),
 							),
-							div({className: "selectRow"},
-								span({class: "tip", onclick: ()=>this._openPrompt("tempo")}, "Tempo: "),
-								span({style: "display: flex;"},
-									this._tempoSlider.input,
-									this._tempoStepper,
-								),
+
+              				div({ className: "selectRow" },
+                				div({ style: "color: #999" }, span({}, div({ class: "tip", style: "color: #999; height:1em;", onclick: () => this._openPrompt("tempo") }, "Tempo: ")),
+                				div({ style: "color: #555" }, this._tempoStepper),
+                				), this._tempoSlider.input
 							),
 							div({className: "selectRow"},
 								span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb: "),
@@ -364,6 +682,7 @@ namespace beepbox {
 								"Instrument Settings"
 							),
 							this._instrumentSettingsGroup,
+              				this._instrumentCopyGroup,
 						),
 					),
 				),
@@ -371,6 +690,7 @@ namespace beepbox {
 			this._promptContainer,
 		);
 		
+    //private _copiedInstrument: string;
 		private _wasPlaying: boolean = false;
 		private _currentPromptName: string | null = null;
 		private _changeTranspose: ChangeTranspose | null = null;
@@ -448,15 +768,16 @@ namespace beepbox {
 			this._fileMenu.addEventListener("change", this._fileMenuHandler);
 			this._editMenu.addEventListener("change", this._editMenuHandler);
 			this._optionsMenu.addEventListener("change", this._optionsMenuHandler);
+      		this._customWavePresetDrop.addEventListener("change", this._customWavePresetHandler);
 			this._tempoStepper.addEventListener("change", this._whenSetTempo);
 			this._scaleSelect.addEventListener("change", this._whenSetScale);
 			this._keySelect.addEventListener("change", this._whenSetKey);
 			this._rhythmSelect.addEventListener("change", this._whenSetRhythm);
-			this._pitchedPresetSelect.addEventListener("change", this._whenSetPitchedPreset);
-			this._drumPresetSelect.addEventListener("change", this._whenSetDrumPreset);
+			//this._pitchedPresetSelect.addEventListener("change", this._whenSetPitchedPreset);
+			//this._drumPresetSelect.addEventListener("change", this._whenSetDrumPreset);
 			this._algorithmSelect.addEventListener("change", this._whenSetAlgorithm);
 			this._instrumentSelect.addEventListener("change", this._whenSetInstrument);
-			this._customizeInstrumentButton.addEventListener("click", this._whenCustomizePressed);
+			//this._customizeInstrumentButton.addEventListener("click", this._whenCustomizePressed);
 			this._feedbackTypeSelect.addEventListener("change", this._whenSetFeedbackType);
 			this._feedbackEnvelopeSelect.addEventListener("change", this._whenSetFeedbackEnvelope);
 			this._chipWaveSelect.addEventListener("change", this._whenSetChipWave);
@@ -478,6 +799,14 @@ namespace beepbox {
 			this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
+			this.mainLayer.addEventListener("keyup", this._whenKeyUp);
+	        this._instrumentCopyButton.addEventListener("click", this._copyInstrument.bind(this));
+	        this._instrumentPasteButton.addEventListener("click", this._pasteInstrument.bind(this));
+	            
+      this._instrumentVolumeSliderInputBox.addEventListener("input", () => { this._doc.record(new ChangeVolume(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].volume, Math.min( 50.0, Math.max( -50.0, Math.round( +this._instrumentVolumeSliderInputBox.value ) )))) }); 
+      this._panSliderInputBox.addEventListener("input", () => { this._doc.record(new ChangePan(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].pan, Math.min( 100.0, Math.max( 0.0, Math.round( +this._panSliderInputBox.value ) ) ))) } ); 
+	
+	        this._customWaveDraw.addEventListener("input", () => { this._doc.record(new ChangeCustomWave(this._doc, this._customWaveDrawCanvas.newArray)) });
 			
 			this._promptContainer.addEventListener("click", (event) => {
 				if (event.target == this._promptContainer) {
@@ -490,6 +819,12 @@ namespace beepbox {
 				autoPlayOption.disabled = true;
 				autoPlayOption.setAttribute("hidden", "");
 			}
+
+		}
+
+        public changeInstrument(index: number) : void {
+            this._instrumentSelect.selectedIndex = index;
+            this._whenSetInstrument();
 		}
 		
 		private _openPrompt(promptName: string): void {
@@ -522,7 +857,7 @@ namespace beepbox {
 						this.prompt = new ImportPrompt(this._doc);
 						break;
 					case "barCount":
-						this.prompt = new SongDurationPrompt(this._doc);
+						this.prompt = new SongDurationPrompt(this._doc, this._trackEditor);
 						break;
 					case "beatsPerBar":
 						this.prompt = new BeatsPerBarPrompt(this._doc);
@@ -553,12 +888,17 @@ namespace beepbox {
 			this.mainLayer.focus();
 		}
 		
+	    public changeBarScrollPos( offset: number ) {
+	        this._barScrollBar.changePos(offset);
+	    }
+		
 		public whenUpdated = (): void => {
 			const trackBounds = this._trackContainer.getBoundingClientRect();
 			this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left) / 32);
-			this._barScrollBar.render();
 			this._trackEditor.render();
-			
+		    this._barScrollBar.render();
+		    this._muteButtonEditor.render();
+					
 			const optionCommands: ReadonlyArray<string> = [
 				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
 				(this._doc.autoFollow ? "✓ " : "") + "Auto Follow Track",
@@ -566,7 +906,8 @@ namespace beepbox {
 				(this._doc.showFifth ? "✓ " : "") + 'Highlight "Fifth" Notes',
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
-				(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
+        		(this._doc.alwaysFineNoteVol ? "✓ " : "") + "Always Fine Note Vol.",
+				//(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
 			]
 			for (let i: number = 0; i < optionCommands.length; i++) {
 				const option: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.children[i + 1];
@@ -584,25 +925,72 @@ namespace beepbox {
 			setSelectedValue(this._keySelect, Config.keys.length - 1 - this._doc.song.key);
 			this._tempoSlider.updateValue(Math.max(0, Math.min(28, Math.round(4.0 + 9.0 * Math.log(this._doc.song.tempo / 120.0) / Math.LN2))));
 			this._tempoStepper.value = this._doc.song.tempo.toString();
+      		this._songTitleInputBox.updateValue(this._doc.song.title);
 			this._reverbSlider.updateValue(this._doc.song.reverb);
+
+		    // Check if current viewed pattern on channel is used anywhere
+		    // + Check if current instrument on channel is used anywhere
+		    var instrumentUsed = false;
+		    var patternUsed = false;
+		
+		    if (channel.bars[this._doc.bar] != 0) {
+		
+		        for (let i: number = 0; i < this._doc.song.barCount; i++) {
+		            if (channel.bars[i] == channel.bars[this._doc.bar] && i != this._doc.bar) {
+		                patternUsed = true;
+		                i = this._doc.song.barCount;
+		            }
+		        }
+		
+		        for (let i: number = 0; i < this._doc.song.barCount; i++) {
+		            if (channel.bars[i] != 0 && this._doc.song.getPatternInstrument(this._doc.channel, i) == instrumentIndex && i != this._doc.bar) {
+		                instrumentUsed = true;
+		                i = this._doc.song.barCount;
+		            }
+		        }
+		
+		    }
+		
+		    if (patternUsed) {
+		        this._usedPatternIndicator.style.setProperty("fill", "#9c64f7");
+		    }
+		    else {
+		        this._usedPatternIndicator.style.setProperty("fill", "#393e4f");
+		    }
+		    if (instrumentUsed) {
+		        this._usedInstrumentIndicator.style.setProperty("fill", "#9c64f7");
+		    }
+		    else {
+		        this._usedInstrumentIndicator.style.setProperty("fill", "#393e4f");
+		    }
+
 			setSelectedValue(this._rhythmSelect, this._doc.song.rhythm);
 			
 			if (this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				this._pitchedPresetSelect.style.display = "none";
 				this._drumPresetSelect.style.display = "";
+	        // Also hide select2
+	        $("#pitchPresetSelect").parent().hide();
+	        $("#drumPresetSelect").parent().show();
+
 				setSelectedValue(this._drumPresetSelect, instrument.preset);
 			} else {
 				this._pitchedPresetSelect.style.display = "";
 				this._drumPresetSelect.style.display = "none";
+
+	        // Also hide select2
+	        $("#pitchPresetSelect").parent().show();
+	        $("#drumPresetSelect").parent().hide();
+
 				setSelectedValue(this._pitchedPresetSelect, instrument.preset);
 			}
 			
 			if (!this._doc.alwaysShowSettings && instrument.preset != instrument.type) {
-				this._customizeInstrumentButton.style.display = "";
-				this._customInstrumentSettingsGroup.style.display = "none";
+				//this._customizeInstrumentButton.style.display = "";
+				//this._customInstrumentSettingsGroup.style.display = "none";
 			} else {
-				this._customizeInstrumentButton.style.display = "none";
-				this._customInstrumentSettingsGroup.style.display = "";
+				//this._customizeInstrumentButton.style.display = "none";
+				//this._customInstrumentSettingsGroup.style.display = "";
 				
 				if (instrument.type == InstrumentType.noise) {
 					this._chipNoiseSelectRow.style.display = "";
@@ -611,18 +999,21 @@ namespace beepbox {
 					this._chipNoiseSelectRow.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.spectrum) {
+          			this._chipWaveSelectRow.style.display = "none";
 					this._spectrumRow.style.display = "";
 					this._spectrumEditor.render();
 				} else {
 					this._spectrumRow.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.harmonics) {
+          			this._chipWaveSelectRow.style.display = "none";
 					this._harmonicsRow.style.display = "";
 					this._harmonicsEditor.render();
 				} else {
 					this._harmonicsRow.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.drumset) {
+          			this._chipWaveSelectRow.style.display = "none";
 					this._drumsetGroup.style.display = "";
 					this._transitionRow.style.display = "none";
 					this._chordSelectRow.style.display = "none";
@@ -644,10 +1035,18 @@ namespace beepbox {
 				if (instrument.type == InstrumentType.chip) {
 					this._chipWaveSelectRow.style.display = "";
 					setSelectedValue(this._chipWaveSelect, instrument.chipWave);
-				} else {
+				}
+
+        		if (instrument.type == InstrumentType.customChipWave) {
+          			this._customWaveDraw.style.display = "";
 					this._chipWaveSelectRow.style.display = "none";
 				}
+        		else {
+          			this._customWaveDraw.style.display = "none";
+        		}
+
 				if (instrument.type == InstrumentType.fm) {
+          			this._chipWaveSelectRow.style.display = "none";
 					this._algorithmSelectRow.style.display = "";
 					this._phaseModGroup.style.display = "";
 					this._feedbackRow1.style.display = "";
@@ -676,9 +1075,10 @@ namespace beepbox {
 					this._feedbackRow2.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.pwm) {
+          			this._chipWaveSelectRow.style.display = "none";
 					this._pulseEnvelopeRow.style.display = "";
 					this._pulseWidthRow.style.display = "";
-					this._pulseWidthSlider.input.title = prettyNumber(Math.pow(0.5, (Config.pulseWidthRange - instrument.pulseWidth - 1) * 0.5) * 50) + "%";
+					this._pulseWidthSlider.input.title = prettyNumber( instrument.pulseWidth ) + "%";
 					setSelectedValue(this._pulseEnvelopeSelect, instrument.pulseEnvelope);
 					this._pulseWidthSlider.updateValue(instrument.pulseWidth);
 				} else {
@@ -687,6 +1087,7 @@ namespace beepbox {
 				}
 				
 				if (instrument.type == InstrumentType.noise) {
+          			this._chipWaveSelectRow.style.display = "none";
 					this._vibratoSelectRow.style.display = "none";
 					this._intervalSelectRow.style.display = "none";
 				} else if (instrument.type == InstrumentType.spectrum) {
@@ -707,6 +1108,9 @@ namespace beepbox {
 				} else if (instrument.type == InstrumentType.pwm) {
 					this._vibratoSelectRow.style.display = "";
 					this._intervalSelectRow.style.display = "none";
+		        } else if (instrument.type == InstrumentType.customChipWave) {
+		            this._vibratoSelectRow.style.display = "";
+		            this._intervalSelectRow.style.display = "";
 				} else {
 					throw new Error("Unrecognized instrument type: " + instrument.type);
 				}
@@ -757,7 +1161,11 @@ namespace beepbox {
 			setSelectedValue(this._vibratoSelect, instrument.vibrato);
 			setSelectedValue(this._intervalSelect, instrument.interval);
 			setSelectedValue(this._chordSelect, instrument.chord);
-			this._instrumentVolumeSlider.updateValue(-instrument.volume);
+      		this._panSlider.updateValue(instrument.pan);
+      		this._customWaveDrawCanvas.redrawCanvas();
+			this._panSliderInputBox.value = instrument.pan + "";
+			this._instrumentVolumeSlider.updateValue( instrument.volume );
+      		this._instrumentVolumeSliderInputBox.value = "" + ( instrument.volume );
 			setSelectedValue(this._instrumentSelect, instrumentIndex);
 			
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
@@ -798,6 +1206,11 @@ namespace beepbox {
 			}
 		}
 		
+	    private _whenKeyUp = (event: KeyboardEvent): void => {
+	        if (event.keyCode == 17)
+	            this._patternEditor.controlMode = false;
+	    }
+		
 		private _tempoStepperCaptureNumberKeys = (event: KeyboardEvent): void => {
 			switch (event.keyCode) {
 				case 38: // up
@@ -827,10 +1240,33 @@ namespace beepbox {
 				return;
 			}
 			
+            // Defer to actively editing song title
+            if (document.activeElement == this._songTitleInputBox.input) {
+                // Enter/esc returns focus to form
+                if (event.keyCode == 13 || event.keyCode == 27) {
+                    this.mainLayer.focus();
+                }
+
+                return;
+            }
+			
+			// Defer to actively editing volume/pan rows
+			if ( document.activeElement == this._panSliderInputBox || document.activeElement == this._instrumentVolumeSliderInputBox ) {
+				// Enter/esc returns focus to form
+				if (event.keyCode == 13 || event.keyCode == 27) {
+					this.mainLayer.focus();
+				}
+				
+				return;
+			}
+			
 			this._trackEditor.onKeyPressed(event);
 			//if (event.ctrlKey)
 			//trace(event.keyCode)
 			switch (event.keyCode) {
+		        case 17: // Ctrl
+		            this._patternEditor.controlMode = true;
+		            break;
 				case 32: // space
 					//stage.focus = stage;
 					this._togglePlay();
@@ -852,6 +1288,119 @@ namespace beepbox {
 					this._copy();
 					event.preventDefault();
 					break;
+        case 70: // f
+          this._doc.synth.firstBar();
+          if (this._doc.autoFollow) {
+              new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
+          }
+          event.preventDefault();
+          break;
+      case 72: // h
+          this._doc.synth.jumpToEditingBar(this._doc.bar);
+          new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
+          event.preventDefault();
+          break;
+      case 65: // a
+
+          var muteCondition = true;
+
+          for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
+              if (this._muteButtonEditor._muteButtons[i].getMuteState() == true)
+                  muteCondition = false;
+          }
+
+          // If any channel is muted, unmute all
+          if (muteCondition == false) {
+              for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
+                  if (this._muteButtonEditor._muteButtons[i].getMuteState() == true)
+                      this._muteButtonEditor._muteButtons[i].toggleMute();
+
+                  this._doc.song.channels[i].muted = this._muteButtonEditor._muteButtons[i].getMuteState();
+              }
+          }
+          // Else, mute all
+          else {
+              for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
+                  if (this._muteButtonEditor._muteButtons[i].getMuteState() == false)
+                      this._muteButtonEditor._muteButtons[i].toggleMute();
+
+                  this._doc.song.channels[i].muted = this._muteButtonEditor._muteButtons[i].getMuteState();
+              }
+          }
+           event.preventDefault();
+          break;
+      case 78: // n
+          // Find lowest-index unused pattern for current channel
+          // Shift+n - lowest-index completely empty pattern
+
+          if (event.shiftKey || event.ctrlKey) {
+              let nextEmpty: number = 0;
+              while (this._doc.song.channels[this._doc.channel].patterns[nextEmpty].notes.length > 0
+                  && nextEmpty <= this._doc.song.patternsPerChannel)
+                  nextEmpty++;
+
+              if (nextEmpty <= this._doc.song.patternsPerChannel) {
+                  this._doc.song.channels[this._doc.channel].bars[this._doc.bar] = nextEmpty + 1;
+
+                  this._doc.notifier.changed();
+              }
+
+          }
+          else {
+              let nextUnused: number = 1;
+              while (this._doc.song.channels[this._doc.channel].bars.indexOf(nextUnused) != -1
+                  && nextUnused <= this._doc.song.patternsPerChannel)
+                  nextUnused++;
+
+              if (nextUnused <= this._doc.song.patternsPerChannel) {
+                  this._doc.song.channels[this._doc.channel].bars[this._doc.bar] = nextUnused;
+                  
+                  this._doc.notifier.changed();
+              }
+          }
+          
+           event.preventDefault();
+          break;
+      case 77: // m
+          this._muteButtonEditor._muteButtons[this._doc.channel].toggleMute();
+           this._doc.song.channels[this._doc.channel].muted = this._muteButtonEditor._muteButtons[this._doc.channel].getMuteState();
+           event.preventDefault();
+          break;
+      case 83: // s
+
+          var muteCondition = false;
+
+          for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
+              if (this._muteButtonEditor._muteButtons[i].getMuteState() == ( i == this._doc.channel ) )
+                  muteCondition = true;
+          }
+
+          // If this channel exactly is solo, unmute all
+          if (muteCondition == false) {
+              for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
+                  if (this._muteButtonEditor._muteButtons[i].getMuteState() == true)
+                      this._muteButtonEditor._muteButtons[i].toggleMute();
+
+                  this._doc.song.channels[i].muted = this._muteButtonEditor._muteButtons[i].getMuteState();
+              }
+          }
+          // Else, mute all except current channel
+          else {
+              for (let i: number = 0; i < this._muteButtonEditor._muteButtons.length; i++) {
+
+                  if (i == this._doc.channel && this._muteButtonEditor._muteButtons[i].getMuteState() == true)
+                      this._muteButtonEditor._muteButtons[i].toggleMute();
+                  else if (i != this._doc.channel && this._muteButtonEditor._muteButtons[i].getMuteState() == false)
+                      this._muteButtonEditor._muteButtons[i].toggleMute();
+
+                  this._doc.song.channels[i].muted = this._muteButtonEditor._muteButtons[i].getMuteState();
+
+              }
+
+
+          }
+           event.preventDefault();
+          break;
 				case 86: // v
 					this._paste();
 					event.preventDefault();
@@ -882,20 +1431,34 @@ namespace beepbox {
 					break;
 				case 189: // -
 				case 173: // Firefox -
-					this._transpose(false);
+		            if (event.shiftKey || event.ctrlKey) { //Octave shift
+		                for (let i: number = 0; i < 11; i++) {
+		                    this._transpose(false, true);
+		                }
+		            }
+					this._transpose(false, false);
 					event.preventDefault();
 					break;
 				case 187: // +
 				case 61: // Firefox +
-					this._transpose(true);
+          			if (event.shiftKey || event.ctrlKey) { //Octave shift
+              			for (let i: number = 0; i < 11; i++) {
+                  			this._transpose(true, true);
+              			}
+          			}
+					this._transpose(true, false);
 					event.preventDefault();
 					break;
 			}
 		}
 		
 		private _copyTextToClipboard(text: string): void {
-			if (navigator.clipboard && navigator.clipboard.writeText) {
-				navigator.clipboard.writeText(text).catch(()=>{
+			// Set as any to allow compilation without clipboard types (since, uh, I didn't write this bit and don't know the proper types library) -jummbus
+			let nav : any;
+			nav = navigator;
+			
+			if (nav.clipboard && nav.clipboard.writeText) {
+				nav.clipboard.writeText(text).catch(()=>{
 					window.prompt("Copy to clipboard:", text);
 				});
 				return;
@@ -944,29 +1507,155 @@ namespace beepbox {
 		private _setVolumeSlider = (): void => {
 			this._doc.setVolume(Number(this._volumeSlider.value));
 		}
+
+      /*
+    	private multiPatternZero(): void {
+
+	        var patternArray: (PatternCopy | null)[][] = [];
+	        var indexArray: number[][] = [];
+	
+	        for (let bar: number = 0; bar <= this._trackEditor._selectionWidth; bar++) {
+	
+	            for (let channel: number = 0; channel <= this._trackEditor._selectionHeight; channel++) {
+	
+	                const pattern: Pattern | null = this._doc.song.getPattern(channel + this._trackEditor._selectionTop, bar + this._trackEditor._selectionLeft);
+	
+	                if (pattern == null) {
+	                    patternArray[bar][channel] = null;
+	                }
+	                else {
+	                    const patternCopy: PatternCopy = {
+	                    notes: pattern.notes,
+	                    beatsPerBar: this._doc.song.beatsPerBar,
+	                	drums: this._doc.song.getChannelIsNoise(channel + this._trackEditor._selectionTop),
+	                };
+	
+	                patternArray[bar][channel] = patternCopy;
+	
+	            }
+	
+	            indexArray[bar][channel] = this._doc.song.channels[channel + this._trackEditor._selectionTop].bars[bar + this._trackEditor._selectionLeft];
+	        }
+        }
+
+        var storageArray: any[] = [this._trackEditor._selectionWidth, this._trackEditor._selectionHeight, patternArray, indexArray];
+
+        window.localStorage.setItem("patternCopyMulti", JSON.stringify(storageArray));
+        window.localStorage.setItem("patternCopy", "{}");
+
+        this._trackEditor.clearSelection();
+        this._trackEditor.render();
+
+    }
+    */
 		
 		private _copy(): void {
+            // Determine whether to copy single pattern or multiple based on track editor's selection
+            if (this._trackEditor.hasASelection()) {
+
+                var patternArray: (PatternCopy | null)[][] = [];
+                var indexArray: number[][] = [];
+
+                for (let bar: number = 0; bar <= this._trackEditor._selectionWidth; bar++) {
+
+                    patternArray[bar] = [];
+                    indexArray[bar] = [];
+
+                    for (let channel: number = 0; channel <= this._trackEditor._selectionHeight; channel++) {
+
+                        const pattern: Pattern | null = this._doc.song.getPattern(channel + this._trackEditor._selectionTop, bar + this._trackEditor._selectionLeft);
+
+                        if (pattern == null) {
+                            patternArray[bar][channel] = null;
+                        }
+                        else {
+                            const patternCopy : PatternCopy = {
+                                notes: pattern.notes,
+                                beatsPerBar: this._doc.song.beatsPerBar,
+                                drums: this._doc.song.getChannelIsNoise(channel + this._trackEditor._selectionTop),
+                            };
+
+                            patternArray[bar][channel] = patternCopy;
+                            
+                        }
+
+                        indexArray[bar][channel] = this._doc.song.channels[channel + this._trackEditor._selectionTop].bars[bar + this._trackEditor._selectionLeft];
+                    }
+                }
+
+                var storageArray: any[] = [this._trackEditor._selectionWidth, this._trackEditor._selectionHeight, patternArray, indexArray];
+
+                window.localStorage.setItem("patternCopyMulti", JSON.stringify(storageArray));
+                window.localStorage.setItem("patternCopy", "{}");
+
+                this._trackEditor.clearSelection();
+                this._trackEditor.render();
+
+            } else {
+
 			const pattern: Pattern | null = this._doc.getCurrentPattern();
-			let notes: Note[] = [];
-			if (pattern != null) notes = pattern.notes;
+                if (pattern == null) return;
 			
 			const patternCopy: PatternCopy = {
-				notes: notes,
+                    notes: pattern.notes,
 				beatsPerBar: this._doc.song.beatsPerBar,
 				drums: this._doc.song.getChannelIsNoise(this._doc.channel),
 			};
 			
 			window.localStorage.setItem("patternCopy", JSON.stringify(patternCopy));
+                window.localStorage.setItem("patternCopyMulti", "{}");
+
+            }
 		}
 		
 		private _paste(): void {
-			const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
-			if (patternCopy != null && patternCopy["drums"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
-				new ChangeEnsurePatternExists(this._doc);
 				const pattern: Pattern | null = this._doc.getCurrentPattern();
-				if (pattern == null) throw new Error();
+			
+      const patternCopy: PatternCopy | null = JSON.parse(String(window.localStorage.getItem("patternCopy")));
+      const patternCopyMulti: any[] | null = JSON.parse(String(window.localStorage.getItem("patternCopyMulti")));
+			
+			if (patternCopy != null && pattern != null && patternCopy["drums"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				this._doc.record(new ChangePaste(this._doc, pattern, patternCopy["notes"], patternCopy["beatsPerBar"]));
 			}
+            else if (patternCopyMulti != null) {
+                // If check for property "drums" fails, check if this is a multi-pattern copy and handle that instead.
+                var selectionWidth = +patternCopyMulti[0];
+                var selectionHeight = +patternCopyMulti[1];
+                var patternArray : PatternCopy[][] = patternCopyMulti[2];
+                var indexArray : number[][] = patternCopyMulti[3];
+
+                var pasteGroup: ChangeGroup = new ChangeGroup();
+
+                var prevChannel = this._doc.channel;
+                var prevBar = this._doc.bar;
+
+                for (let bar: number = 0; bar <= selectionWidth && bar + prevBar < this._doc.song.barCount; bar++) {
+                    for (let channel: number = 0; channel <= selectionHeight && channel + prevChannel < this._doc.song.getChannelCount(); channel++) {
+                        const patternCopy: PatternCopy | null = patternArray[bar][channel];
+
+                        // Change pattern
+                        this._doc.channel = channel + prevChannel;
+                        this._doc.bar = bar + prevBar;
+                        pasteGroup.append(new ChangePattern(this._doc, this._doc.song.channels[this._doc.channel].bars[this._doc.bar], indexArray[bar][channel]));
+
+                        // Change notes in pattern
+                        if (patternCopy != null && patternCopy.drums == this._doc.song.getChannelIsNoise(this._doc.channel)) {
+
+                            var currentPattern = this._doc.song.getPattern(this._doc.channel, this._doc.bar);
+
+                            if ( currentPattern != null ) 
+                                pasteGroup.append(new ChangePaste(this._doc, currentPattern, patternCopy.notes, patternCopy.beatsPerBar));
+                        }
+                        
+                    }
+                }
+
+                this._doc.channel = prevChannel;
+                this._doc.bar = prevBar;
+
+                this._doc.record(pasteGroup, false);
+                
+            }
 		}
 		
 		private _copyInstrument(): void {
@@ -981,7 +1670,10 @@ namespace beepbox {
 			const channel: Channel = this._doc.song.channels[this._doc.channel];
 			const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
 			const instrumentCopy: any = JSON.parse(String(window.localStorage.getItem("instrumentCopy")));
-			delete instrumentCopy["volume"];
+
+	        // @jummbus: Guh, I don't know why you'd do this. I like the volume where it is!
+	        // delete instrumentCopy["volume"];
+
 			if (instrumentCopy != null && instrumentCopy["isDrum"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				this._doc.record(new ChangePasteInstrument(this._doc, instrument, instrumentCopy));
 			}
@@ -996,14 +1688,59 @@ namespace beepbox {
 			this._doc.record(new ChangeRandomGeneratedInstrument(this._doc));
 		}
 		
-		private _transpose(upward: boolean): void {
-			const pattern: Pattern | null = this._doc.getCurrentPattern();
-			if (pattern == null) return;
-			
-			const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTranspose);
-			this._changeTranspose = new ChangeTranspose(this._doc, pattern, upward);
-			this._doc.record(this._changeTranspose, canReplaceLastChange);
-		}
+	    private _transpose(upward: boolean, ignoreScale: boolean): void {
+	
+	        // Apply transpose to all selected patterns. But only a single, discrete pattern once (So if you select [1123], the transpose will apply once to 1,2,3.)
+	        if (this._trackEditor.hasASelection()) {
+	
+	            let previousChannel = this._doc.channel;
+	            let previousBar = this._doc.bar;
+	
+	            let changeGroup: ChangeGroup = new ChangeGroup();
+	            const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTranspose);
+	
+	            for (let channel: number = 0; channel <= this._trackEditor._selectionHeight; channel++) {
+	          	    let usedBars: number[] = [];
+	
+	                for (let bar: number = 0; bar <= this._trackEditor._selectionWidth; bar++) {
+	
+	            	    // ChangeTranspose uses current channel, so these are temporarily updated.
+	            	    this._doc.bar = bar;
+	            	    this._doc.channel = channel;
+	
+	            	    const ptnNum: number = this._doc.song.channels[channel + this._trackEditor._selectionTop].bars[bar + this._trackEditor._selectionLeft];
+	
+	            	    // Check if this pattern for this channel was already transposed to or not.
+	            	    if ( usedBars.indexOf(ptnNum) < 0 ) {
+	              		    usedBars.push(ptnNum);
+	
+	              		    const pattern: Pattern | null = this._doc.song.getPattern(channel + this._trackEditor._selectionTop, bar + this._trackEditor._selectionLeft);
+	              		    if (pattern == null) continue;
+	
+	              		    changeGroup.append( new ChangeTranspose(this._doc, pattern, upward, ignoreScale) );
+	
+	            	    }
+	
+	                }
+	            }
+	
+	            this._doc.channel = previousChannel;
+	            this._doc.bar = previousBar;
+	
+	            this._doc.record(changeGroup, canReplaceLastChange);
+	
+	        }
+	        else {
+	
+				 const pattern: Pattern | null = this._doc.getCurrentPattern();
+				 if (pattern == null) return;
+				
+				 const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTranspose);
+	        	 this._changeTranspose = new ChangeTranspose(this._doc, pattern, upward, ignoreScale);
+				 this._doc.record(this._changeTranspose, canReplaceLastChange);
+		    }
+	    }
+
 		/*
 		private _openInstrumentTypePrompt = (): void => {
 			this._openPrompt("instrumentType");
@@ -1029,12 +1766,17 @@ namespace beepbox {
 			this._doc.record(new ChangeRhythm(this._doc, this._rhythmSelect.selectedIndex));
 		}
 		
-		private _whenSetPitchedPreset = (): void => {
-			this._setPreset(this._pitchedPresetSelect.value);
+    public _refocus = (): void => {
+          // Waits a bit because select2 "steals" back focus even after the close event fires.
+      		setTimeout(function (this: SongEditor) { this.mainLayer.focus(); }, 20);
 		}
 		
-		private _whenSetDrumPreset = (): void => {
-			this._setPreset(this._drumPresetSelect.value);
+		public _whenSetPitchedPreset = (): void => {
+      		this._setPreset($('#pitchPresetSelect').val() + "");
+		}
+		
+		public _whenSetDrumPreset = (): void => {
+      		this._setPreset($('#drumPresetSelect').val() + "");
 		}
 		
 		private _setPreset(preset: string): void {
@@ -1075,11 +1817,12 @@ namespace beepbox {
 			const pattern : Pattern | null = this._doc.getCurrentPattern();
 			if (pattern == null) return;
 			this._doc.record(new ChangePatternInstrument(this._doc, this._instrumentSelect.selectedIndex, pattern));
+		    this.mainLayer.focus();
 		}
 		
-		private _whenCustomizePressed = (): void => {
-			this._doc.record(new ChangeCustomizeInstrument(this._doc));
-		}
+		//private _whenCustomizePressed = (): void => {
+		//	this._doc.record(new ChangeCustomizeInstrument(this._doc));
+		//}
 		
 		private _whenSetChipWave = (): void => {
 			this._doc.record(new ChangeChipWave(this._doc, this._chipWaveSelect.selectedIndex));
@@ -1160,10 +1903,10 @@ namespace beepbox {
 					this._paste();
 					break;
 				case "transposeUp":
-					this._transpose(true);
+					this._transpose(true, false);
 					break;
 				case "transposeDown":
-					this._transpose(false);
+					this._transpose(false, false);
 					break;
 				case "detectKey":
 					this._doc.record(new ChangeDetectKey(this._doc));
@@ -1210,13 +1953,67 @@ namespace beepbox {
 				case "showScrollBar":
 					this._doc.showScrollBar = !this._doc.showScrollBar;
 					break;
-				case "alwaysShowSettings":
-					this._doc.alwaysShowSettings = !this._doc.alwaysShowSettings;
+        		case "alwaysFineNoteVol":
+          			this._doc.alwaysFineNoteVol = !this._doc.alwaysFineNoteVol;
 					break;
+				//case "alwaysShowSettings":
+					//this._doc.alwaysShowSettings = !this._doc.alwaysShowSettings;
+					//break;
 			}
 			this._optionsMenu.selectedIndex = 0;
 			this._doc.notifier.changed();
 			this._doc.savePreferences();
 		}
+
+	    private _customWavePresetHandler = (event: Event): void => {
+	        
+	        // Update custom wave value
+	        let customWaveArray: Float64Array = new Float64Array(64);
+	        let index: number = this._customWavePresetDrop.selectedIndex - 1;
+	        let maxValue: number = Number.MIN_VALUE;
+	        let minValue: number = Number.MAX_VALUE;
+	        let arrayPoint: number = 0;
+	        let arrayStep: number = (Config.chipWaves[index].samples.length - 1) / 64.0;
+	
+	        for (let i: number = 0; i < 64; i++) {
+	             // Compute derivative to get original wave.
+	             customWaveArray[i] = (Config.chipWaves[index].samples[Math.floor(arrayPoint)] - Config.chipWaves[index].samples[(Math.floor(arrayPoint) + 1)]) / arrayStep;
+	
+	             if (customWaveArray[i] < minValue)
+	                 minValue = customWaveArray[i];
+	
+	             if (customWaveArray[i] > maxValue)
+	                 maxValue = customWaveArray[i];
+	
+	             // Scale an any-size array to 64 elements
+	             arrayPoint += arrayStep;
+	        }
+	
+	        for (let i: number = 0; i < 64; i++) {
+	            // Change array range from Min~Max to 0~(Max-Min)
+	            customWaveArray[i] -= minValue;
+	            // Divide by (Max-Min) to get a range of 0~1,
+	            customWaveArray[i] /= (maxValue - minValue);
+	            //then multiply by 48 to get 0~48,
+	            customWaveArray[i] *= 48.0;
+	            //then subtract 24 to get - 24~24
+	            customWaveArray[i] -= 24.0;
+	            //need to force integers
+	            customWaveArray[i] = Math.ceil(customWaveArray[i]);
+	
+	            // Copy back data to canvas
+	            this._customWaveDrawCanvas.newArray[i] = customWaveArray[i];
+	        }
+	
+	        //this._instrumentVolumeSlider.input.value = "" + Math.round(Config.waveVolumes[index] * 50.0 - 50.0);
+	        
+	        this._doc.record(new ChangeCustomWave(this._doc, customWaveArray))
+	        this._doc.record(new ChangeVolume(this._doc, +this._instrumentVolumeSlider.input.value, -Config.volumeRange / 2 + Math.round(Config.chipWaves[index].volume * Config.volumeRange/2 ) ));
+	
+	        this._customWavePresetDrop.selectedIndex = 0;
+	        this._doc.notifier.changed();
+	        this._doc.savePreferences();
+	    }
 	}
+	
 }

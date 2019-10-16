@@ -26,7 +26,7 @@ namespace beepbox {
 		private readonly _loop: SVGPathElement = SVG.path({fill: "none", stroke: "#7744ff", "stroke-width": 4});
 		private readonly _highlight: SVGPathElement = SVG.path({fill: "white", "pointer-events": "none"});
 		
-		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: pan-y; position: absolute;", height: this._editorHeight},
+		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #040410; touch-action: pan-y; position: absolute;", height: this._editorHeight},
 			this._loop,
 			this._highlight,
 		);
@@ -109,8 +109,8 @@ namespace beepbox {
 			event.preventDefault();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    //this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+    	this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+		  //this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updateCursorStatus();
 			this._updatePreview();
 			this._whenMouseMoved(event);

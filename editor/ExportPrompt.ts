@@ -138,12 +138,19 @@ namespace beepbox {
 			this._exportButton.addEventListener("click", this._export);
 			this._cancelButton.addEventListener("click", this._close);
 			this.container.addEventListener("keydown", this._whenKeyPressed);
+
+      		this._fileName.value = _doc.song.title;
+      		ExportPrompt._validateFileName(null, this._fileName);
 		}
 		
 		private _close = (): void => { 
 			this._doc.undo();
 		}
 		
+	    public changeFileName(newValue: string) {
+	      this._fileName.value = newValue;
+	    }
+
 		public cleanUp = (): void => { 
 			this._fileName.removeEventListener("input", ExportPrompt._validateFileName);
 			this._loopDropDown.removeEventListener("blur", ExportPrompt._validateNumber);
@@ -158,8 +165,17 @@ namespace beepbox {
 			}
 		}
 		
-		private static _validateFileName(event: Event): void {
-			const input: HTMLInputElement = <HTMLInputElement>event.target;
+		private static _validateFileName(event: Event | null, use?: HTMLInputElement): void {
+
+	      let input: HTMLInputElement;
+	      if (event != null) {
+	          input = <HTMLInputElement>event.target;
+	      } else if (use != undefined) {
+	          input = use;
+	      }
+	      else {
+	          return;
+	      }
 			const deleteChars = /[\+\*\$\?\|\{\}\\\/<>#%!`&'"=:@]/gi;
 			if (deleteChars.test(input.value)) {
 				let cursorPos: number = <number>input.selectionStart;
@@ -201,13 +217,14 @@ namespace beepbox {
 				}
 			}
 			const sampleFrames: number = synth.getSamplesPerBar() * synth.getTotalBars(this._enableIntro.checked, this._enableOutro.checked);
-			const recordedSamples: Float32Array = new Float32Array(sampleFrames);
+			const recordedSamplesL: Float32Array = new Float32Array(sampleFrames);
+            const recordedSamplesR: Float32Array = new Float32Array(sampleFrames);
 			//const timer: number = performance.now();
-			synth.synthesize(recordedSamples, sampleFrames);
+            synth.synthesize(recordedSamplesL, recordedSamplesR, sampleFrames);
 			//console.log("export timer", (performance.now() - timer) / 1000.0);
 			
 			const srcChannelCount: number = 1;
-			const wavChannelCount: number = 1;
+			const wavChannelCount: number = 2;
 			const sampleRate: number = 44100;
 			const bytesPerSample: number = 2;
 			const bitsPerSample: number = 8 * bytesPerSample;
@@ -227,7 +244,7 @@ namespace beepbox {
 			data.setUint16(index, wavChannelCount, true); index += 2; // channel count
 			data.setUint32(index, sampleRate, true); index += 4; // sample rate
 			data.setUint32(index, sampleRate * bytesPerSample * wavChannelCount, true); index += 4; // bytes per second
-			data.setUint16(index, bytesPerSample, true); index += 2; // sample rate
+            data.setUint16(index, bytesPerSample * wavChannelCount, true); index += 2; // sample rate
 			data.setUint16(index, bitsPerSample, true); index += 2; // sample rate
 			data.setUint32(index, 0x64617461, false); index += 4;
 			data.setUint32(index, sampleCount * bytesPerSample, true); index += 4;
@@ -241,16 +258,18 @@ namespace beepbox {
 				repeat = wavChannelCount;
 			}
 			
-			let val: number;
+            let val: number[] = [];
+
 			if (bytesPerSample > 1) {
 				// usually samples are signed. 
 				for (let i: number = 0; i < sampleFrames; i++) {
-					val = Math.floor(Math.max(-1, Math.min(1, recordedSamples[i * stride])) * ((1 << (bitsPerSample - 1)) - 1));
+					val[0] = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i * stride])) * ((1 << (bitsPerSample - 1)) - 1));
+					val[1] = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i * stride])) * ((1 << (bitsPerSample - 1)) - 1));
 					for (let k: number = 0; k < repeat; k++) {
 						if (bytesPerSample == 2) {
-							data.setInt16(index, val, true); index += 2;
+							data.setInt16(index, val[k], true); index += 2;
 						} else if (bytesPerSample == 4) {
-							data.setInt32(index, val, true); index += 4;
+							data.setInt32(index, val[k], true); index += 4;
 						} else {
 							throw new Error("unsupported sample size");
 						}
@@ -259,9 +278,10 @@ namespace beepbox {
 			} else {
 				// 8 bit samples are a special case: they are unsigned.
 				for (let i: number = 0; i < sampleFrames; i++) {
-					val = Math.floor(Math.max(-1, Math.min(1, recordedSamples[i * stride])) * 127 + 128);
+					val[0] = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i * stride])) * 127 + 128);
+					val[1] = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i * stride])) * 127 + 128);
 					for (let k: number = 0; k < repeat; k++) {
-						data.setUint8(index, val > 255 ? 255 : (val < 0 ? 0 : val)); index++;
+						data.setUint8(index, val[k] > 255 ? 255 : (val[k] < 0 ? 0 : val[k])); index++;
 					}
 				}
 			}
@@ -404,7 +424,9 @@ namespace beepbox {
 				} else {
 					// For remaining tracks, set up the instruments and write the notes:
 					
-					let channelName: string = ColorConfig.getChannelColor(song, channel).name + " channel";
+		            let channelName: string = isNoise
+		            	? "noise channel " + channel
+		            	: "pitch channel " + channel;
 					writeEventTime(0);
 					writer.writeUint8(MidiEventType.meta);
 					writer.writeMidi7Bits(MidiMetaEventMessage.trackName);

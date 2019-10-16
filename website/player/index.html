@@ -3,19 +3,19 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>BeepBox Song Player</title>
-	<meta name="description" content="BeepBox is an online tool for sketching and sharing instrumental melodies." />
+	<title>JummBox Song Player</title>
+	<meta name="description" content="JummBox is an online tool for sketching and sharing instrumental melodies." />
 	<meta name="keywords" content="chiptune, instrumental, music, melody, composition, tool, square wave, NES, NSF, BeepBox" />
-	<meta name="theme-color" content="#444" />
+	<meta name="theme-color" content="#393e4f" />
 	<meta name="format-detection" content="telephone=no" />
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 	<link rel="icon" type="image/png" sizes="32x32" href="/icon_32.png" />
-	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" rel="stylesheet" media="none" onload="if (this.media != 'all') this.media='all';" /> <!-- this is a trick to load CSS asynchronously. -->
+	<link href="https://fonts.googleapis.com/css?family=B612" rel="stylesheet" rel="stylesheet" media="none" onload="if (this.media != 'all') this.media='all';" /> <!-- this is a trick to load CSS asynchronously. -->
 	<meta name="robots" content="noindex, nofollow" />
 	<style>
 		html {
 			width: 100vw;
-			font-family: 'Roboto', sans-serif;
+			font-family: 'B612', sans-serif;
 			color: white;
 			align-items: center;
 		}
@@ -25,7 +25,7 @@
 			display: flex;
 			margin: 0;
 			padding: 0;
-			background: black;
+			background: #040410;
 		}
 		body {
 			width: 100vw;
@@ -52,14 +52,14 @@
 			position: relative;
 			border: none;
 			border-radius: 5px;
-			background: #444;
+			background: #393e4f;
 			color: white;
 			cursor: pointer;
 			font-size: 14px;
 			font-family: inherit;
 		}
 		button:hover, button:focus {
-			background: #777;
+			background: #6d6886;
 		}
 		.playButton, .pauseButton {
 			padding-left: 24px;
@@ -96,7 +96,7 @@
 			height: 16px;
 			margin: 0;
 			cursor: pointer;
-			background-color: black;
+			background-color: #040410;
 			touch-action: pan-y;
 		}
 		input[type=range]:focus {
@@ -106,7 +106,7 @@
 			width: 100%;
 			height: 4px;
 			cursor: pointer;
-			background: #444;
+			background: #393e4f;
 		}
 		input[type=range]::-webkit-slider-thumb {
 			height: 16px;
@@ -118,16 +118,16 @@
 			margin-top: -6px;
 		}
 		input[type=range]:focus::-webkit-slider-runnable-track, input[type=range]:hover::-webkit-slider-runnable-track {
-			background: #777;
+			background: #6d6886;
 		}
 		input[type=range]::-moz-range-track {
 			width: 100%;
 			height: 4px;
 			cursor: pointer;
-			background: #444;
+			background: #393e4f;
 		}
 		input[type=range]:focus::-moz-range-track, input[type=range]:hover::-moz-range-track  {
-			background: #777;
+			background: #6d6886;
 		}
 		input[type=range]::-moz-range-thumb {
 			height: 16px;
@@ -141,11 +141,11 @@
 			width: 100%;
 			height: 4px;
 			cursor: pointer;
-			background: #444;
+			background: #393e4f;
 			border-color: transparent;
 		}
 		input[type=range]:focus::-ms-track, input[type=range]:hover::-ms-track {
-			background: #777;
+			background: #6d6886;
 		}
 		input[type=range]::-ms-thumb {
 			height: 16px;
@@ -182,7 +182,7 @@
 			fileref.setAttribute("src", "beepbox_player.min.js");
 			document.head.appendChild(fileref);
 		} else {
-			document.body.innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, Edge, Safari, or Opera.";
+			document.body.innerHTML = "Sorry, JummBox doesn't support your browser. Try a recent version of Chrome, Firefox, Edge, Safari, or Opera.";
 		}
 	</script>
 </body>

@@ -37,7 +37,8 @@ namespace beepbox {
 			this._cancelButton,
 		);
 		
-		constructor(private _doc: SongDocument) {
+		constructor(private _doc: SongDocument, private _trackEditor: TrackEditor) {
+
 			this._barsStepper.value = this._doc.song.barCount + "";
 			this._barsStepper.min = Config.barCountMin + "";
 			this._barsStepper.max = Config.barCountMax + "";
@@ -96,7 +97,7 @@ namespace beepbox {
 		private _saveChanges = (): void => {
 			window.localStorage.setItem("barCountPosition", this._positionSelect.value);
 			const group: ChangeGroup = new ChangeGroup();
-			group.append(new ChangeBarCount(this._doc, SongDurationPrompt._validate(this._barsStepper), this._positionSelect.value == "beginning"));
+			group.append(new ChangeBarCount(this._doc, this._trackEditor, SongDurationPrompt._validate(this._barsStepper), this._positionSelect.value == "beginning"));
 			this._doc.prompt = null;
 			this._doc.record(group, true);
 		}

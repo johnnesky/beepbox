@@ -17,7 +17,7 @@ namespace beepbox {
 	let timelineWidth: number = 1;
 	
 	const synth: Synth = new Synth();
-	let titleText: HTMLHeadingElement = h1({style: "flex-grow: 1; margin: 0 1px;"}, "");
+	let titleText: HTMLHeadingElement = h1({style: "flex-grow: 1; margin: 0 1px; margin-left: 10px; overflow: hidden;"}, "");
 	let editLink: HTMLAnchorElement = a({target: "_top", style: "margin: 0 4px;"}, "✎ Edit");
 	let copyLink: HTMLAnchorElement = a({href: "javascript:void(0)", style: "margin: 0 4px;"}, "⎘ Copy URL");
 	let shareLink: HTMLAnchorElement = a({href: "javascript:void(0)", style: "margin: 0 4px;"}, "⤳ Share");
@@ -77,7 +77,7 @@ namespace beepbox {
 			myHash = myHash.substring(1);
 		}
 		
-		//titleText.textContent = "";
+		//titleText.textContent = synth.song.title;
 		
 		fullscreenLink.setAttribute("href", location.href);
 		
@@ -90,6 +90,9 @@ namespace beepbox {
 					case "song":
 						synth.setSong(value);
 						synth.snapToStart();
+						if ( synth.song ) {
+							titleText.textContent = synth.song.title;
+						}
 						editLink.setAttribute("href", "../#" + value);
 						break;
 					//case "title":
@@ -228,7 +231,7 @@ namespace beepbox {
 			timelineWidth = Math.max(boundingRect.width, targetBeatWidth * synth.song.barCount * synth.song.beatsPerBar);
 		} else {
 			timelineWidth = boundingRect.width;
-			const targetSemitoneHeight: number = Math.max(1, timelineWidth / (synth.song.barCount * synth.song.beatsPerBar) / 3);
+			const targetSemitoneHeight: number = Math.max(1, timelineWidth / (synth.song.barCount * synth.song.beatsPerBar) / 6.0);
 			timelineHeight = Math.min(boundingRect.height, targetSemitoneHeight * (Config.maxPitch + 1) + 1);
 			windowOctaves = Math.max(Config.windowOctaves, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * targetSemitoneHeight))));
 			windowPitchCount = windowOctaves * 12 + 1;
@@ -245,11 +248,11 @@ namespace beepbox {
 		const drumPitchHeight: number =  (timelineHeight-1) / Config.drumCount;
 		
 		for (let octave: number = 0; octave <= windowOctaves; octave++) {
-			timeline.appendChild(rect({x: 0, y: octave * 12 * wavePitchHeight, width: timelineWidth, height: wavePitchHeight + 1, fill: "#664933"}));
+			timeline.appendChild(rect({x: 0, y: octave * 12 * wavePitchHeight, width: timelineWidth, height: wavePitchHeight + 1, fill: "#5E4C71"}));
 		}
 		
 		for (let bar: number = 0; bar < synth.song.barCount + 1; bar++) {
-			const color: string = (bar == synth.song.loopStart || bar == synth.song.loopStart + synth.song.loopLength) ? "#8866ff" : "#444444"
+			const color: string = (bar == synth.song.loopStart || bar == synth.song.loopStart + synth.song.loopLength) ? "#8866ff" : "#393e4f"
 			timeline.appendChild(rect({x: bar * barWidth - 1, y: 0, width: 2, height: timelineHeight, fill: color}));
 		}
 		
@@ -296,19 +299,19 @@ namespace beepbox {
 	}
 	
 	function drawNote(pitch: number, start: number, pins: NotePin[], radius: number, offsetX: number, offsetY: number, partWidth: number, pitchHeight: number): string {
-		let d: string = `M ${offsetX + partWidth * (start + pins[0].time)} ${offsetY - pitch * pitchHeight + radius * (pins[0].volume / 3.0)} `; 
+		let d: string = `M ${offsetX + partWidth * (start + pins[0].time)} ${offsetY - pitch * pitchHeight + radius * (pins[0].volume / 6.0)} `; 
 		for (let i: number = 0; i < pins.length; i++) {
 			const pin: NotePin = pins[i];
 			const x:   number = offsetX + partWidth * (start + pin.time);
 			const y: number = offsetY - pitchHeight * (pitch + pin.interval);
-			const expression: number = pin.volume / 3.0;
+			const expression: number = pin.volume / 6.0;
 			d += `L ${x} ${y - radius * expression} `;
 		}
 		for (let i: number = pins.length - 1; i >= 0; i--) {
 			const pin: NotePin = pins[i];
 			const x:   number = offsetX + partWidth * (start + pin.time);
 			const y: number = offsetY - pitchHeight * (pitch + pin.interval);
-			const expression: number = pin.volume / 3.0;
+			const expression: number = pin.volume / 6.0;
 			d += `L ${x} ${y + radius * expression} `;
 		}
 		return d;
@@ -330,11 +333,11 @@ namespace beepbox {
 	}
 	
 	function renderLoopIcon(): void {
-		loopIcon.setAttribute("fill", (synth.loopRepeatCount == -1) ? "#8866ff" : "#444444");
+		loopIcon.setAttribute("fill", (synth.loopRepeatCount == -1) ? "#8866ff" : "#393e4f");
 	}
 	
 	function renderZoomIcon(): void {
-		zoomIcon.style.color = zoomEnabled ? "#8866ff" : "#444444";
+		zoomIcon.style.color = zoomEnabled ? "#8866ff" : "#393e4f";
 	}
 	
 	function onKeyPressed(event: KeyboardEvent): void {
@@ -357,8 +360,12 @@ namespace beepbox {
 	}
 	
 	function onCopyClicked(): void {
-		if (navigator.clipboard && navigator.clipboard.writeText) {
-			navigator.clipboard.writeText(location.href).catch(()=>{
+		// Set as any to allow compilation without clipboard types (since, uh, I didn't write this bit and don't know the proper types library) -jummbus
+		let nav : any;
+		nav = navigator;
+		
+		if (nav.clipboard && nav.clipboard.writeText) {
+			nav.clipboard.writeText(location.href).catch(()=>{
 				window.prompt("Copy to clipboard:", location.href);
 			});
 			return;

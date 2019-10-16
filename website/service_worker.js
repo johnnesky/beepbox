@@ -1,5 +1,5 @@
 
-const cacheName = "BeepBox";
+const cacheName = "JummBox";
 
 self.addEventListener("install", function(event) {
 	event.waitUntil(
@@ -7,8 +7,8 @@ self.addEventListener("install", function(event) {
 			return cache.addAll([
 				"/",
 				"/beepbox_editor.min.js",
-				"/2_3/",
-				"/2_3/beepbox_editor.min.js",
+				//"/2_3/",
+				//"/2_3/beepbox_editor.min.js",
 				"/player/",
 				"/player/beepbox_player.min.js",
 			]).then(() => self.skipWaiting());

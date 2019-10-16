@@ -31,13 +31,14 @@ namespace beepbox {
 	}
 	
 	export class PatternEditor {
+		public controlMode: boolean = false;
 		private readonly _svgNoteBackground: SVGPatternElement = SVG.pattern({id: "patternEditorNoteBackground", x: "0", y: "0", width: "64", height: "156", patternUnits: "userSpaceOnUse"});
 		private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({id: "patternEditorDrumBackground", x: "0", y: "0", width: "64", height: "40", patternUnits: "userSpaceOnUse"});
 		private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", width: "512", height: "481", "pointer-events": "none", fill: "url(#patternEditorNoteBackground)"});
 		private _svgNoteContainer: SVGSVGElement = SVG.svg();
 		private readonly _svgPlayhead: SVGRectElement = SVG.rect({id: "", x: "0", y: "0", width: "4", height: "481", fill: "white", "pointer-events": "none"});
 		private readonly _svgPreview: SVGPathElement = SVG.path({fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none"});
-		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: none; position: absolute;", width: "100%", height: "100%", viewBox: "0 0 512 481", preserveAspectRatio: "none"},
+		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #040410; touch-action: none; position: absolute;", width: "100%", height: "100%", viewBox: "0 0 512 481", preserveAspectRatio: "none"},
 			SVG.defs(
 				this._svgNoteBackground,
 				this._svgDrumBackground,
@@ -70,6 +71,8 @@ namespace beepbox {
 		private _copiedPins: NotePin[];
 		private _mouseXStart: number = 0;
 		private _mouseYStart: number = 0;
+		//private _mouseXPrev: number = 0;
+		//private _mouseYPrev: number = 0;
 		private _dragTime: number = 0;
 		private _dragPitch: number = 0;
 		private _dragVolume: number = 0;
@@ -95,7 +98,7 @@ namespace beepbox {
 				rectangle.setAttribute("x", "1");
 				rectangle.setAttribute("y", "" + (y * this._defaultPitchHeight + 1));
 				rectangle.setAttribute("height", "" + (this._defaultPitchHeight - 2));
-				rectangle.setAttribute("fill", (i == 0) ? "#886644" : "#444444");
+				rectangle.setAttribute("fill", (i == 0) ? "#725491" : "#393e4f");
 				this._svgNoteBackground.appendChild(rectangle);
 				this._backgroundPitchRows[i] = rectangle;
 			}
@@ -103,7 +106,7 @@ namespace beepbox {
 			this._backgroundDrumRow.setAttribute("x", "1");
 			this._backgroundDrumRow.setAttribute("y", "1");
 			this._backgroundDrumRow.setAttribute("height", "" + (this._defaultDrumHeight - 2));
-			this._backgroundDrumRow.setAttribute("fill", "#444444");
+			this._backgroundDrumRow.setAttribute("fill", "#393e4f");
 			this._svgDrumBackground.appendChild(this._backgroundDrumRow);
 			
 			this._doc.notifier.watch(this._documentChanged);
@@ -362,10 +365,10 @@ namespace beepbox {
 			const maxDivision: number = this._getMaxDivision();
 			this._copiedPinChannels.length = this._doc.song.getChannelCount();
 			for (let i: number = 0; i < this._doc.song.pitchChannelCount; i++) {
-				this._copiedPinChannels[i] = [makeNotePin(0, 0, 3), makeNotePin(0, maxDivision, 3)];
+				this._copiedPinChannels[i] = [makeNotePin(0, 0, 6), makeNotePin(0, maxDivision, 6)];
 			}
 			for (let i: number = this._doc.song.pitchChannelCount; i < this._doc.song.getChannelCount(); i++) {
-				this._copiedPinChannels[i] = [makeNotePin(0, 0, 3), makeNotePin(0, maxDivision, 0)];
+				this._copiedPinChannels[i] = [makeNotePin(0, 0, 6), makeNotePin(0, maxDivision, 0)];
 			}
 		}
 		
@@ -430,6 +433,8 @@ namespace beepbox {
 			this._mouseDown = true;
 			this._mouseXStart = this._mouseX;
 			this._mouseYStart = this._mouseY;
+			//this._mouseXPrev = this._mouseX;
+			//this._mouseYPrev = this._mouseY;
 			this._updateCursorStatus();
 			this._updatePreview();
 			this._dragChange = new ChangeSequence();
@@ -571,7 +576,7 @@ namespace beepbox {
 							for (i = 0; i < pattern.notes.length; i++) {
 								if (pattern.notes[i].start >= end) break;
 							}
-							const theNote: Note = new Note(this._cursor.pitch, start, end, 3, this._doc.song.getChannelIsNoise(this._doc.channel));
+							const theNote: Note = new Note(this._cursor.pitch, start, end, 6, this._doc.song.getChannelIsNoise(this._doc.channel));
 							sequence.append(new ChangeNoteAdded(this._doc, pattern, theNote, i));
 							this._copyPins(theNote);
 						
@@ -629,9 +634,13 @@ namespace beepbox {
 							if (bendPart > nextPin.time) continue;
 							if (bendPart < prevPin.time) throw new Error();
 							const volumeRatio: number = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
-							bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((this._mouseYStart - this._mouseY) / 25.0));
+				              bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((this._mouseYStart - this._mouseY) / 13.0));
+				              // If not in fine control mode, round to 0~2~4~6 (normal 4 settings)
+				              if (this.controlMode == false && this._doc.alwaysFineNoteVol == false) {
+				                  bendVolume = Math.floor(bendVolume / 2) * 2;
+				              }
 							if (bendVolume < 0) bendVolume = 0;
-							if (bendVolume > 3) bendVolume = 3;
+							if (bendVolume > 6) bendVolume = 6;
 							bendInterval = this._snapToPitch(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + this._cursor.curNote.pitches[0], 0, Config.maxPitch) - this._cursor.curNote.pitches[0];
 							break;
 						}
@@ -683,6 +692,8 @@ namespace beepbox {
 						this._dragVisible = true;
 					}
 				}
+				//this._mouseXPrev = this._mouseX;
+				//this._mouseYPrev = this._mouseY;
 			} else {
 				this._updateCursorStatus();
 				this._updatePreview();
@@ -699,7 +710,7 @@ namespace beepbox {
 				}
 			} else if (this._mouseDown && continuousState) {
 				if (this._cursor.curNote == null) {
-					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.song.getChannelIsNoise(this._doc.channel));
+					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 6, this._doc.song.getChannelIsNoise(this._doc.channel));
 					note.pins = [];
 					for (const oldPin of this._cursor.pins) {
 						note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
@@ -754,18 +765,18 @@ namespace beepbox {
 					
 					let pathString: string = "";
 					
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0) - height) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0) + height) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0) - height) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0) + height) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
 					
 					this._svgPreview.setAttribute("d", pathString);
 				}
@@ -831,7 +842,7 @@ namespace beepbox {
 			
 			if (this._renderedFifths != this._doc.showFifth) {
 				this._renderedFifths = this._doc.showFifth;
-				this._backgroundPitchRows[7].setAttribute("fill", this._doc.showFifth ? "#446688" : "#444444");
+				this._backgroundPitchRows[7].setAttribute("fill", this._doc.showFifth ? "#446688" : "#393e4f");
 			}
 			
 			for (let j: number = 0; j < 12; j++) {
@@ -896,7 +907,7 @@ namespace beepbox {
 								oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
 								oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));
 								oscillatorLabel.setAttribute("width", "30");
-								oscillatorLabel.setAttribute("fill", "black");
+								oscillatorLabel.setAttribute("fill", "#040410");
 								oscillatorLabel.setAttribute("text-anchor", "start");
 								oscillatorLabel.setAttribute("dominant-baseline", "central");
 								oscillatorLabel.setAttribute("pointer-events", "none");
@@ -915,7 +926,7 @@ namespace beepbox {
 			
 			let nextPin: NotePin = pins[0];
 			
-			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + endOffset) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
+			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + endOffset) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / 6.0 : 1.0)) + " ";
 			for (let i: number = 1; i < pins.length; i++) {
 				let prevPin: NotePin = nextPin;
 				nextPin = pins[i];
@@ -923,8 +934,8 @@ namespace beepbox {
 				let nextSide: number = this._partWidth * (start + nextPin.time) - (i == pins.length - 1 ? endOffset : 0);
 				let prevHeight: number = this._pitchToPixelHeight(pitch + prevPin.interval - offset);
 				let nextHeight: number = this._pitchToPixelHeight(pitch + nextPin.interval - offset);
-				let prevVolume: number = showVolume ? prevPin.volume / 3.0 : 1.0;
-				let nextVolume: number = showVolume ? nextPin.volume / 3.0 : 1.0;
+				let prevVolume: number = showVolume ? prevPin.volume / 6.0 : 1.0;
+				let nextVolume: number = showVolume ? nextPin.volume / 6.0 : 1.0;
 				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
 				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(prevSide + 1) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
 				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(nextSide - 1) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
@@ -937,8 +948,8 @@ namespace beepbox {
 				let nextSide: number = this._partWidth * (start + nextPin.time) + (i == 0 ? endOffset : 0);
 				let prevHeight: number = this._pitchToPixelHeight(pitch + prevPin.interval - offset);
 				let nextHeight: number = this._pitchToPixelHeight(pitch + nextPin.interval - offset);
-				let prevVolume: number = showVolume ? prevPin.volume / 3.0 : 1.0;
-				let nextVolume: number = showVolume ? nextPin.volume / 3.0 : 1.0;
+				let prevVolume: number = showVolume ? prevPin.volume / 6.0 : 1.0;
+				let nextVolume: number = showVolume ? nextPin.volume / 6.0 : 1.0;
 				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
 				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(prevSide - 1) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
 				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(nextSide + 1) + " " + prettyNumber(nextHeight + radius * nextVolume) + " ";

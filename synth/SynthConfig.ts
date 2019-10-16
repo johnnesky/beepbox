@@ -49,6 +49,7 @@ namespace beepbox {
 		drumset = 4,
 		harmonics = 5,
 		pwm = 6,
+        customChipWave = 7,
 		length,
 	}
 	
@@ -138,19 +139,36 @@ namespace beepbox {
 	}
 
 	export class Config {
+        // Params for post-processing compressor
+        public static thresholdVal: number = -10;
+        public static kneeVal: number = 40;
+        public static ratioVal: number = 12;
+        public static attackVal: number = 0;
+        public static releaseVal: number = 0.25;
+
+		public static readonly versionDisplayName: string = "JummBox 1.2";
 		public static readonly scales: DictionaryArray<Scale> = toNameMap([
-			{name: "easy :)",         flags: [ true, false,  true, false,  true, false, false,  true, false,  true, false, false]},
-			{name: "easy :(",         flags: [ true, false, false,  true, false,  true, false,  true, false, false,  true, false]},
-			{name: "island :)",       flags: [ true, false, false, false,  true,  true, false,  true, false, false, false,  true]},
-			{name: "island :(",       flags: [ true,  true, false,  true, false, false, false,  true,  true, false, false, false]},
-			{name: "blues :)",        flags: [ true, false,  true,  true,  true, false, false,  true, false,  true, false, false]},
-			{name: "blues :(",        flags: [ true, false, false,  true, false,  true,  true,  true, false, false,  true, false]},
-			{name: "normal :)",       flags: [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true]},
-			{name: "normal :(",       flags: [ true, false,  true,  true, false,  true, false,  true,  true, false,  true, false]},
-			{name: "dbl harmonic :)", flags: [ true,  true, false, false,  true,  true, false,  true,  true, false, false,  true]},
-			{name: "dbl harmonic :(", flags: [ true, false,  true,  true, false, false,  true,  true,  true, false, false,  true]},
-			{name: "enigma",          flags: [ true, false,  true, false,  true, false,  true, false,  true, false,  true, false]},
-			{name: "expert",          flags: [ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true]},
+                                            //   C     Db       D     Eb      E      F     F#      G     Ab      A     Bb      B      C
+	        {name: "Free",              flags: [ true,  true,   true,  true,  true,  true,  true,  true,  true,  true,  true,  true]}, // Free
+	        {name: "Major",             flags: [ true, false,   true, false,  true,  true, false,  true, false,  true, false,  true]}, // Major
+	        {name: "Minor",             flags: [ true, false,   true,  true, false,  true, false,  true,  true, false,  true, false]}, // Minor
+	        {name: "Mixolydian",        flags: [ true, false,   true, false,  true,  true, false,  true, false,  true,  true, false]}, // Mixolydian
+	        {name: "Lydian",            flags: [ true, false,   true, false,  true, false,  true,  true, false,  true, false,  true]}, // Lydian
+	        {name: "Dorian",            flags: [ true, false,   true,  true, false,  true, false,  true, false,  true,  true, false]}, // Dorian
+	      	{name: "Phrygian",          flags: [ true,  true,  false,  true, false,  true, false,  true,  true, false,  true, false]}, // Phrygian
+	      	{name: "Locrian",           flags: [ true,  true,  false,  true, false,  true,  true, false,  true, false,  true, false]}, // Locrian
+	      	{name: "Lydian Dominant",            flags: [ true, false,   true, false,  true, false,  true,  true, false,  true,  true, false]}, // Lydian Dominant
+	      	{name: "Phrygian Dominant", flags: [ true,  true,  false, false,  true,  true, false,  true,  true, false,  true, false]}, // Phrygian Dominant
+	      	{name: "Harmonic Major",    flags: [ true, false,   true, false,  true,  true, false,  true,  true, false, false,  true]}, // Harmonic Major
+	      	{name: "Harmonic Minor",    flags: [ true, false,   true,  true, false,  true, false,  true,  true, false, false,  true]}, // Harmonic Minor
+	      	{name: "Melodic Minor",     flags: [ true, false,   true,  true, false,  true, false,  true, false,  true, false,  true]}, // Melodic Minor
+	      	{name: "Blues",             flags: [ true, false,  false,  true, false,  true,  true,  true, false, false,  true, false]}, // Blues
+	      	{name: "Altered",           flags: [ true,  true,  false,  true,  true, false,  true, false,  true, false,  true, false]}, // Altered
+	      	{name: "Major Pentatonic",  flags: [ true, false,   true, false,  true, false, false,  true, false,  true, false, false]}, // Major Pentatonic
+	      	{name: "Minor Pentatonic",  flags: [ true, false,  false,  true, false,  true, false,  true, false, false,  true, false]}, // Minor Pentatonic
+	      	{name: "Whole Tone",        flags: [ true, false,   true, false,  true, false,  true, false,  true, false,  true, false]}, // Whole Tone
+	      	{name: "Octatonic",         flags: [ true, false,   true,  true, false,  true,  true, false,  true,  true, false,  true]}, // Octatonic
+	      	{name: "Hexatonic",         flags: [ true, false,  false,  true,  true, false, false,  true,  true, false, false,  true]}, // Hexatonic
 		]);
 		public static readonly keys: DictionaryArray<Key> = toNameMap([
 			{name: "C",  isWhiteKey:  true, basePitch: 12}, // C0 has index 12 on the MIDI scale. C7 is 96, and C9 is 120. C10 is barely in the audible range.
@@ -168,12 +186,12 @@ namespace beepbox {
 		]);
 		public static readonly blackKeyNameParents: ReadonlyArray<number> = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
 		public static readonly tempoMin: number = 30;
-		public static readonly tempoMax: number = 300;
-		public static readonly reverbRange: number = 4;
+		public static readonly tempoMax: number = 320;
+		public static readonly reverbRange: number = 32;
 		public static readonly beatsPerBarMin: number = 3;
 		public static readonly beatsPerBarMax: number = 16;
 		public static readonly barCountMin: number = 1;
-		public static readonly barCountMax: number = 128;
+		public static readonly barCountMax: number = 256;
 		public static readonly instrumentsPerChannelMin: number = 1;
 		public static readonly instrumentsPerChannelMax: number = 10;
 		public static readonly partsPerBeat: number = 24;
@@ -186,9 +204,9 @@ namespace beepbox {
 			{name: "freehand",      stepsPerBeat:24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null},
 		]);
 		
-		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM"];
-		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false];
-		public static readonly instrumentTypeHasChorus: ReadonlyArray<boolean> = [true, true, true, false, false, true, true];
+		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "custom chip"];
+		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false, true];
+		public static readonly instrumentTypeHasChorus: ReadonlyArray<boolean> = [true, true, true, false, false, true, true, true];
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
 			{name: "rounded",      volume: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
 			{name: "triangle",     volume: 1.0,  samples: centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0])},
@@ -199,6 +217,17 @@ namespace beepbox {
 			{name: "double saw",   volume: 0.5,  samples: centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2])},
 			{name: "double pulse", volume: 0.4,  samples: centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0])},
 			{name: "spiky",        volume: 0.4,  samples: centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0])},
+		    {name: "sine",           volume: 0.88, samples: centerAndNormalizeWave([8.0, 9.0, 11.0, 12.0, 13.0, 14.0, 15.0, 15.0, 15.0, 15.0, 14.0, 14.0, 13.0, 11.0, 10.0, 9.0, 7.0, 6.0, 4.0, 3.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 2.0, 4.0, 5.0, 6.0])},
+            {name: "flute",          volume: 0.8,  samples: centerAndNormalizeWave([3.0, 4.0, 6.0, 8.0, 10.0, 11.0, 13.0, 14.0, 15.0, 15.0, 14.0, 13.0, 11.0, 8.0, 5.0, 3.0])},
+      		{name: "harp",           volume: 0.8,  samples: centerAndNormalizeWave([0.0, 3.0, 3.0, 3.0, 4.0, 5.0, 5.0, 6.0, 7.0, 8.0, 9.0, 11.0, 11.0, 13.0, 13.0, 15.0, 15.0, 14.0, 12.0, 11.0, 10.0, 9.0, 8.0, 7.0, 7.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0, 0.0])},
+      		{name: "sharp clarinet", volume: 0.38, samples: centerAndNormalizeWave([0.0, 0.0, 0.0, 1.0, 1.0, 8.0, 8.0, 9.0, 9.0, 9.0, 8.0, 8.0, 8.0, 8.0, 8.0, 9.0, 9.0, 7.0, 9.0, 9.0, 10.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])},
+      		{name: "soft clarinet",  volume: 0.45, samples: centerAndNormalizeWave([0.0, 1.0, 5.0, 8.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 11.0, 11.0, 12.0, 13.0, 12.0, 10.0, 9.0, 7.0, 6.0, 4.0, 3.0, 3.0, 3.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])},
+      		{name: "alto sax",       volume: 0.3,  samples: centerAndNormalizeWave([5.0, 5.0, 6.0, 4.0, 3.0, 6.0, 8.0, 7.0, 2.0, 1.0, 5.0, 6.0, 5.0, 4.0, 5.0, 7.0, 9.0, 11.0, 13.0, 14.0, 14.0, 14.0, 14.0, 13.0, 10.0, 8.0, 7.0, 7.0, 4.0, 3.0, 4.0, 2.0])},
+      		{name: "bassoon",        volume: 0.35, samples: centerAndNormalizeWave([9.0, 9.0, 7.0, 6.0, 5.0, 4.0, 4.0, 4.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 11.0, 13.0, 13.0, 11.0, 10.0, 9.0, 7.0, 6.0, 4.0, 2.0, 1.0, 1.0, 1.0, 2.0, 2.0, 5.0, 11.0, 14.0])},
+      		{name: "trumpet",        volume: 0.22, samples: centerAndNormalizeWave([10.0, 11.0, 8.0, 6.0, 5.0, 5.0, 5.0, 6.0, 7.0, 7.0, 7.0, 7.0, 6.0, 6.0, 7.0, 7.0, 7.0, 7.0, 7.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 7.0, 8.0, 9.0, 11.0, 14.0])},
+      		{name: "electric guitar",volume: 0.2,  samples: centerAndNormalizeWave([11.0, 12.0, 12.0, 10.0, 6.0, 6.0, 8.0, 0.0, 2.0, 4.0, 8.0, 10.0, 9.0, 10.0, 1.0, 7.0, 11.0, 3.0, 6.0, 6.0, 8.0, 13.0, 14.0, 2.0, 0.0, 12.0, 8.0, 4.0, 13.0, 11.0, 10.0, 13.0])},
+      		{name: "organ",          volume: 0.2,  samples: centerAndNormalizeWave([11.0, 10.0, 12.0, 11.0, 14.0, 7.0, 5.0, 5.0, 12.0, 10.0, 10.0, 9.0, 12.0, 6.0, 4.0, 5.0, 13.0, 12.0, 12.0, 10.0, 12.0, 5.0, 2.0, 2.0, 8.0, 6.0, 6.0, 5.0, 8.0, 3.0, 2.0, 1.0])},
+      		{name: "pan flute",      volume: 0.35, samples: centerAndNormalizeWave([1.0, 4.0, 7.0, 6.0, 7.0, 9.0, 7.0, 7.0, 11.0, 12.0, 13.0, 15.0, 13.0, 11.0, 11.0, 12.0, 13.0, 10.0, 7.0, 5.0, 3.0, 6.0, 10.0, 7.0, 3.0, 3.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0])},
 		]);
 		// Noise waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
 		public static readonly chipNoises: DictionaryArray<ChipNoise> = toNameMap([
@@ -208,6 +237,10 @@ namespace beepbox {
 			{name: "clang",   volume: 0.4,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
 			{name: "buzz",    volume: 0.3,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
 			{name: "hollow",  volume: 1.5,  basePitch: 96,  pitchFilterMult:    1.0, isSoft: true,  samples: null},
+      		{name: "shine",   volume: 1.0,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
+      		{name: "deep",    volume: 1.5,  basePitch: 120, pitchFilterMult: 1024.0, isSoft: true,  samples: null},
+      		{name: "cutter",  volume: 0.005,basePitch: 96,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
+      		{name: "metallic",volume: 1.0,  basePitch: 96,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
 		]);
 		public static readonly filterCutoffMaxHz: number = 8000; // This is carefully calculated to correspond to no change when filtering at 48000 samples per second.
 		public static readonly filterCutoffMinHz: number = 1;
@@ -243,8 +276,10 @@ namespace beepbox {
 			{name: "bowed",      spread: 0.02, offset: 0.0, volume: 1.0, sign:-1.0},
 		]);
 		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
-		public static readonly volumeRange: number = 8;
-		public static readonly volumeLogScale: number = -0.5;
+    	public static readonly volumeRange: number = 50;
+    	// Beepbox's old volume scale used factor -0.5 and was [0~7] had roughly value 6 = 0.125 power. This new value is chosen to have -21 be the same,
+    	// given that the new scale is [-25~25]. This is such that conversion between the scales is roughly equivalent by satisfying (0.5*6 = 0.1428*21)
+		public static readonly volumeLogScale: number = 0.1428;
 		public static readonly chords: DictionaryArray<Chord> = toNameMap([
 			{name: "harmony",         harmonizes:  true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 0},
 			{name: "strum",           harmonizes:  true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 1},
@@ -340,11 +375,11 @@ namespace beepbox {
 		public static readonly harmonicsControlPointBits: number = 3;
 		public static readonly harmonicsMax: number = (1 << Config.harmonicsControlPointBits) - 1;
 		public static readonly harmonicsWavelength: number = 1 << 11; // 2048
-		public static readonly pulseWidthRange: number = 8;
+		public static readonly pulseWidthRange: number = 50;
 		public static readonly pitchChannelCountMin: number = 1;
-		public static readonly pitchChannelCountMax: number = 6;
+		public static readonly pitchChannelCountMax: number = 20;
 		public static readonly noiseChannelCountMin: number = 0;
-		public static readonly noiseChannelCountMax: number = 3;
+		public static readonly noiseChannelCountMax: number = 4;
 		public static readonly noiseInterval: number = 6;
 		public static readonly drumCount: number = 12;
 		public static readonly pitchOctaves: number = 7;
@@ -356,6 +391,10 @@ namespace beepbox {
 		public static readonly sineWaveLength: number = 1 << 8; // 256
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
 		public static readonly sineWave: Float64Array = generateSineWave();
+
+        // Height of the small editor column for inserting/deleting rows, in pixels.
+        public static readonly barEditorHeight: number = 10;
+
 	}
 	
 	function centerWave(wave: Array<number>): Float64Array {
@@ -377,6 +416,30 @@ namespace beepbox {
 		wave.push(0);
 		return new Float64Array(wave);
 	}
+	
+  function centerAndNormalizeWave(wave: Array<number>): Float64Array {
+		let sum: number = 0.0;
+    	let magn: number = 0.0;
+		for (let i: number = 0; i < wave.length; i++) {
+			sum += wave[i];
+            magn += Math.abs(wave[i]);
+		}
+		const average: number = sum / wave.length;
+		const magnAvg: number = magn / wave.length;
+
+		// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+		let cumulative: number = 0;
+		let wavePrev: number = 0;
+		for (let i: number = 0; i < wave.length; i++) {
+			cumulative += wavePrev;
+			wavePrev = ( wave[i] - average ) / ( magnAvg );
+			wave[i] = cumulative;
+		}
+		// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
+		wave.push(0);
+		return new Float64Array(wave);
+	}
+
 	
 	export function getDrumWave(index: number): Float32Array {
 		let wave: Float32Array | null = Config.chipNoises[index].samples;
@@ -428,6 +491,45 @@ namespace beepbox {
 				drawNoiseSpectrum(wave, 11, 14, .6578, .6578, 0);
 				inverseRealFourierTransform(wave, Config.chipNoiseLength);
 				scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
+			} else if (index == 5) {
+		        // "Shine" drums from modbox!
+		        var drumBuffer = 1;
+		        for (var i = 0; i < Config.chipNoiseLength; i++) {
+		            wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+		            var newBuffer = drumBuffer >> 1;
+		            if (((drumBuffer + newBuffer) & 1) == 1) {
+		                newBuffer += 10 << 2;
+		            }
+		            drumBuffer = newBuffer;
+		        }
+		      } else if (index == 6) {
+		        // "Deep" drums from modbox!
+		        drawNoiseSpectrum(wave, 1, 10, 1, 1, 0);
+		        drawNoiseSpectrum(wave, 20, 14, -2, -2, 0);
+		        inverseRealFourierTransform(wave, Config.chipNoiseLength);
+		        scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
+		      } else if (index == 7) {
+		        // "Cutter" drums from modbox!
+		        var drumBuffer = 1;
+		        for (var i = 0; i < Config.chipNoiseLength; i++) {
+		            wave[i] = (drumBuffer & 1) * 4.0 * ( Math.random()*14 + 1 );
+		            var newBuffer = drumBuffer >> 1;
+		            if (((drumBuffer + newBuffer) & 1) == 1) {
+		                newBuffer += 15 << 2;
+		            }
+		            drumBuffer = newBuffer;
+		        }
+		      } else if (index == 8) {
+		        // "Metallic" drums from modbox!
+		        var drumBuffer = 1;
+		        for (var i = 0; i < 32768; i++) {
+		            wave[i] = (drumBuffer & 1) / 2.0 + 0.5;
+		            var newBuffer = drumBuffer >> 1;
+		            if (((drumBuffer + newBuffer) & 1) == 1) {
+		                newBuffer -= 10 << 2;
+		            }
+		            drumBuffer = newBuffer;
+		        }
 			} else {
 				throw new Error("Unrecognized drum index: " + index);
 			}

@@ -126,6 +126,11 @@ namespace beepbox {
 		
 		harmonics = CharCode.H,
 		
+	    squareDuty = CharCode.K,
+	    panning = CharCode.L,
+	    customChipWave = CharCode.M,
+	    songTitle = CharCode.N,
+			
 		operatorAmplitudes = CharCode.P,
 		operatorFrequencies = CharCode.Q,
 		
@@ -332,7 +337,7 @@ namespace beepbox {
 		public cloneNotes(): Note[] {
 			const result: Note[] = [];
 			for (const oldNote of this.notes) {
-				const newNote: Note = new Note(-1, oldNote.start, oldNote.end, 3);
+				const newNote: Note = new Note(-1, oldNote.start, oldNote.end, 6);
 				newNote.pitches = oldNote.pitches.concat();
 				newNote.pins = [];
 				for (const oldPin of oldNote.pins) {
@@ -362,6 +367,12 @@ namespace beepbox {
 			this.frequency = 0;
 			this.amplitude = (index <= 1) ? Config.operatorAmplitudeMax : 0;
 			this.envelope = (index == 0) ? 0 : 1;
+		}
+
+    	public copy(other: Operator): void {
+			this.frequency = other.frequency;
+			this.amplitude = other.amplitude;
+			this.envelope = other.envelope;
 		}
 	}
 	
@@ -525,7 +536,7 @@ namespace beepbox {
 		public preset: number = 0;
 		public chipWave: number = 2;
 		public chipNoise: number = 1;
-		public filterCutoff: number = 6;
+		public filterCutoff: number = 12;
 		public filterResonance: number = 0;
 		public filterEnvelope: number = 1;
 		public transition: number = 1;
@@ -534,12 +545,15 @@ namespace beepbox {
 		public effects: number = 0;
 		public chord: number = 1;
 		public volume: number = 0;
+		public pan: number = 50;
 		public pulseWidth: number = Config.pulseWidthRange - 1;
 		public pulseEnvelope: number = 1;
 		public algorithm: number = 0;
 		public feedbackType: number = 0;
 		public feedbackAmplitude: number = 0;
 		public feedbackEnvelope: number = 1;
+    	public customChipWave: Float64Array = new Float64Array(64);
+    	public customChipWaveIntegral: Float64Array = new Float64Array(65); // One extra element for wrap-around in chipSynth.
 		public readonly operators: Operator[] = [];
 		public readonly spectrumWave: SpectrumWave;
 		public readonly harmonicsWave: HarmonicsWave = new HarmonicsWave();
@@ -555,6 +569,29 @@ namespace beepbox {
 				this.drumsetEnvelopes[i] = Config.envelopes.dictionary["twang 2"].index;
 				this.drumsetSpectrumWaves[i] = new SpectrumWave(true);
 			}
+
+	      for (let i = 0; i < 64; i++) {
+	        this.customChipWave[i] = 24 - Math.floor(i * (48 / 64));
+	      }
+	
+	      let sum: number = 0.0;
+	      for (let i: number = 0; i < this.customChipWave.length; i++) {
+	        sum += this.customChipWave[i];
+	      }
+	      const average: number = sum / this.customChipWave.length;
+	
+	      // Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+	      let cumulative: number = 0;
+	      let wavePrev: number = 0;
+	      for (let i: number = 0; i < this.customChipWave.length; i++) {
+	        cumulative += wavePrev;
+	        wavePrev = this.customChipWave[i] - average;
+	        this.customChipWaveIntegral[i] = cumulative;
+	      }
+	
+	      // 65th, last sample is for anti-aliasing
+	      this.customChipWaveIntegral[64] = 0.0;
+      
 		}
 		
 		public setTypeAndReset(type: InstrumentType, isNoiseChannel: boolean): void {
@@ -572,6 +609,39 @@ namespace beepbox {
 					this.interval = 0;
 					this.effects = 1;
 					this.chord = 2;
+          			this.pan = 50;
+					break;
+          case InstrumentType.customChipWave:
+					this.chipWave = 2;
+					this.filterCutoff = 6;
+					this.filterResonance = 0;
+					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
+					this.transition = 1;
+					this.vibrato = 0;
+					this.interval = 0;
+					this.effects = 1;
+					this.chord = 2;
+          			this.pan = 50;
+			        for (let i: number = 0; i < 64; i++) {
+			            this.customChipWave[i] = 24 - (Math.floor(i * (48 / 64)));
+			        }
+
+		            let sum: number = 0.0;
+		            for (let i: number = 0; i < this.customChipWave.length; i++) {
+		                sum += this.customChipWave[i];
+		            }
+          			const average: number = sum / this.customChipWave.length;
+
+		            // Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+		            let cumulative: number = 0;
+		            let wavePrev: number = 0;
+		            for (let i: number = 0; i < this.customChipWave.length; i++) {
+		            	cumulative += wavePrev;
+		            	wavePrev = this.customChipWave[i] - average;
+		            	this.customChipWaveIntegral[i] = cumulative;
+		          	}
+
+          			this.customChipWaveIntegral[64] = 0.0;
 					break;
 				case InstrumentType.fm:
 					this.transition = 1;
@@ -585,6 +655,7 @@ namespace beepbox {
 					this.feedbackType = 0;
 					this.feedbackAmplitude = 0;
 					this.feedbackEnvelope = Config.envelopes.dictionary["steady"].index;
+          			this.pan = 50;
 					for (let i: number = 0; i < this.operators.length; i++) {
 						this.operators[i].reset(i);
 					}
@@ -597,6 +668,7 @@ namespace beepbox {
 					this.filterCutoff = 10;
 					this.filterResonance = 0;
 					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
+          			this.pan = 50;
 					break;
 				case InstrumentType.spectrum:
 					this.transition = 1;
@@ -606,9 +678,11 @@ namespace beepbox {
 					this.filterResonance = 0;
 					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					this.spectrumWave.reset(isNoiseChannel);
+          			this.pan = 50;
 					break;
 				case InstrumentType.drumset:
 					this.effects = 0;
+          			this.pan = 50;
 					for (let i: number = 0; i < Config.drumCount; i++) {
 						this.drumsetEnvelopes[i] = Config.envelopes.dictionary["twang 2"].index;
 						this.drumsetSpectrumWaves[i].reset(isNoiseChannel);
@@ -623,6 +697,7 @@ namespace beepbox {
 					this.interval = 0;
 					this.effects = 1;
 					this.chord = 0;
+          			this.pan = 50;
 					this.harmonicsWave.reset();
 					break;
 				case InstrumentType.pwm:
@@ -634,6 +709,7 @@ namespace beepbox {
 					this.interval = 0;
 					this.effects = 1;
 					this.chord = 2;
+					this.pan = 50;
 					this.pulseWidth = Config.pulseWidthRange - 1;
 					this.pulseEnvelope = Config.envelopes.dictionary["twang 2"].index;
 					break;
@@ -645,8 +721,9 @@ namespace beepbox {
 		public toJsonObject(): Object {
 			const instrumentObject: any = {
 				"type": Config.instrumentTypeNames[this.type],
-				"volume": (5 - this.volume) * 20,
+				"volume": this.volume,
 				"effects": Config.effectsNames[this.effects],
+        		"pan": this.pan,
 			};
 			
 			if (this.preset != this.type) {
@@ -684,8 +761,21 @@ namespace beepbox {
 				instrumentObject["wave"] = Config.chipWaves[this.chipWave].name;
 				instrumentObject["interval"] = Config.intervals[this.interval].name;
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
-			} else if (this.type == InstrumentType.pwm) {
-				instrumentObject["pulseWidth"] = Math.round(Math.pow(0.5, (Config.pulseWidthRange - this.pulseWidth - 1) * 0.5) * 50 * 32) / 32;
+			} else if (this.type == InstrumentType.customChipWave) {
+        		instrumentObject["wave"] = Config.chipWaves[this.chipWave].name;
+				instrumentObject["interval"] = Config.intervals[this.interval].name;
+        		instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
+        		instrumentObject["customChipWave"] = new Float64Array(64);
+        		instrumentObject["customChipWaveIntegral"] = new Float64Array(65);
+        		for (let i: number = 0; i < this.customChipWave.length; i++) {
+          			instrumentObject["customChipWave"][i] = this.customChipWave[i];
+          			// Meh, waste of space and can be inaccurate. It will be recalc'ed when instrument loads.
+          			//instrumentObject["customChipWaveIntegral"][i] = this.customChipWaveIntegral[i];
+        		}
+
+        		instrumentObject["customChipWaveIntegral"][64] = 0;
+      		} else if (this.type == InstrumentType.pwm) {
+				instrumentObject["pulseWidth"] = this.pulseWidth;
 				instrumentObject["pulseEnvelope"] = Config.envelopes[this.pulseEnvelope].name;
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 			} else if (this.type == InstrumentType.harmonics) {
@@ -727,8 +817,12 @@ namespace beepbox {
 				this.preset = instrumentObject["preset"] >>> 0;
 			}
 			
+	        if (instrumentObject["pan"] != undefined) {
+	            this.pan = instrumentObject["pan"] >>> 0;
+	        }
+
 			if (instrumentObject["volume"] != undefined) {
-				this.volume = clamp(0, Config.volumeRange, Math.round(5 - (instrumentObject["volume"] | 0) / 20));
+				this.volume = clamp(-Config.volumeRange/2, Config.volumeRange/2, instrumentObject["volume"] | 0 );
 			} else {
 				this.volume = 0;
 			}
@@ -755,7 +849,7 @@ namespace beepbox {
 			if (this.filterEnvelope == -1) this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 			
 			if (instrumentObject["filter"] != undefined) {
-				const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
+				const legacyToCutoff: number[] = [20, 12, 6, 0, 16, 10, 4];
 				const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
 				const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
 				const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
@@ -822,7 +916,7 @@ namespace beepbox {
 				if (this.chord == -1) this.chord = 0;
 			} else if (this.type == InstrumentType.pwm) {
 				if (instrumentObject["pulseWidth"] != undefined) {
-					this.pulseWidth = clamp(0, Config.pulseWidthRange, Math.round((Math.log((+instrumentObject["pulseWidth"]) / 50) / Math.LN2) / 0.5 - 1 + 8));
+          			this.pulseWidth = clamp(0, Config.pulseWidthRange, instrumentObject["pulseWidth"] );
 				} else {
 					this.pulseWidth = Config.pulseWidthRange - 1;
 				}
@@ -911,6 +1005,60 @@ namespace beepbox {
 					operator.envelope = legacyEnvelopeNames[operatorObject["envelope"]] != undefined ? legacyEnvelopeNames[operatorObject["envelope"]] : Config.envelopes.findIndex(envelope=>envelope.name==operatorObject["envelope"]);
 					if (operator.envelope == -1) operator.envelope = 0;
 				}
+		    } else if (this.type == InstrumentType.customChipWave) {
+		        if (instrumentObject["interval"] != undefined) {
+		          this.interval = Config.intervals.findIndex(interval => interval.name == instrumentObject["interval"]);
+		          if (this.interval == -1) this.interval = 0;
+		        } else if (instrumentObject["chorus"] != undefined) {
+		          const legacyChorusNames: Dictionary<number> = { "fifths": 5, "octaves": 6 };
+		          this.interval = legacyChorusNames[instrumentObject["chorus"]] != undefined ? legacyChorusNames[instrumentObject["chorus"]] : Config.intervals.findIndex(interval => interval.name == instrumentObject["chorus"]);
+		          if (this.interval == -1) this.interval = 0;
+		        }
+		
+		        if (instrumentObject["vibrato"] != undefined) {
+		          this.vibrato = Config.vibratos.findIndex(vibrato => vibrato.name == instrumentObject["vibrato"]);
+		          if (this.vibrato == -1) this.vibrato = 0;
+		        } else if (instrumentObject["effect"] != undefined) {
+		          this.vibrato = legacyEffectNames.indexOf(instrumentObject["effect"]);
+		          if (this.vibrato == -1) this.vibrato = 0;
+		        }
+		
+		        this.chord = Config.chords.findIndex(chord => chord.name == instrumentObject["chord"]);
+		        if (this.chord == -1) this.chord = 2;
+		
+		        // The original chorus setting had an option that now maps to two different settings. Override those if necessary.
+		        if (instrumentObject["chorus"] == "custom harmony") {
+		          this.interval = 2;
+		          this.chord = 3;
+		        }
+		
+		        if (instrumentObject["customChipWave"]) {
+		
+		          for (let i: number = 0; i < 64; i++) {
+		            this.customChipWave[i] = instrumentObject["customChipWave"][i];
+		          }
+		
+		
+		          let sum: number = 0.0;
+		          for (let i: number = 0; i < this.customChipWave.length; i++) {
+		            sum += this.customChipWave[i];
+		          }
+		          const average: number = sum / this.customChipWave.length;
+		
+		          // Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+		          let cumulative: number = 0;
+		          let wavePrev: number = 0;
+		          for (let i: number = 0; i < this.customChipWave.length; i++) {
+		            cumulative += wavePrev;
+		            wavePrev = this.customChipWave[i] - average;
+		            this.customChipWaveIntegral[i] = cumulative;
+		          }
+		
+		          // 65th, last sample is for anti-aliasing
+		          this.customChipWaveIntegral[64] = 0.0;
+		
+		        }
+
 			} else {
 				throw new Error("Unrecognized instrument type.");
 			}
@@ -990,13 +1138,19 @@ namespace beepbox {
 		public readonly instruments: Instrument[] = [];
 		public readonly patterns: Pattern[] = [];
 		public readonly bars: number[] = [];
+    	public muted: boolean = false;
 	}
 	
 	export class Song {
 		private static readonly _format: string = "BeepBox";
-		private static readonly _oldestVersion: number = 2;
-		private static readonly _latestVersion: number = 8;
+		private static readonly _oldestBeepboxVersion: number = 2;
+		private static readonly _latestBeepboxVersion: number = 8;
+    	private static readonly _oldestJummBoxVersion: number = 1;
+    	private static readonly _latestJummBoxVersion: number = 1;
+    	// One-character variant detection at the start of URL to distinguish variants such as JummBox.
+        private static readonly _variant = 0x6A; //"j" ~ jummbox
 		
+    	public title: string;
 		public scale: number;
 		public key: number;
 		public tempo: number;
@@ -1041,6 +1195,9 @@ namespace beepbox {
 			this.rhythm = 1;
 			this.instrumentsPerChannel = 1;
 			
+      		this.title = "Unnamed";
+      		document.title = "JummBox 1.2";
+			
 			if (andResetChannels) {
 				this.pitchChannelCount = 3;
 				this.noiseChannelCount = 1;
@@ -1081,14 +1238,27 @@ namespace beepbox {
 		public toBase64String(): string {
 			let bits: BitFieldWriter;
 			let buffer: number[] = [];
-			
-			buffer.push(base64IntToCharCode[Song._latestVersion]);
+
+            buffer.push(Song._variant);
+			buffer.push(base64IntToCharCode[Song._latestJummBoxVersion]);
+
+	        buffer.push(SongTagCode.songTitle);
+	        
+	        // Length of the song name string
+	        var encodedSongTitle: string = encodeURIComponent(this.title);
+	        buffer.push(base64IntToCharCode[encodedSongTitle.length >> 6], base64IntToCharCode[encodedSongTitle.length & 0x3f]);
+	      
+	        // Actual encoded string follows
+	        for (let i: number = 0; i < encodedSongTitle.length; i++) {
+	            buffer.push(encodedSongTitle.charCodeAt(i));
+	        }
+
 			buffer.push(SongTagCode.channelCount, base64IntToCharCode[this.pitchChannelCount], base64IntToCharCode[this.noiseChannelCount]);
 			buffer.push(SongTagCode.scale, base64IntToCharCode[this.scale]);
 			buffer.push(SongTagCode.key, base64IntToCharCode[this.key]);
 			buffer.push(SongTagCode.loopStart, base64IntToCharCode[this.loopStart >> 6], base64IntToCharCode[this.loopStart & 0x3f]);
 			buffer.push(SongTagCode.loopEnd, base64IntToCharCode[(this.loopLength - 1) >> 6], base64IntToCharCode[(this.loopLength - 1) & 0x3f]);
-			buffer.push(SongTagCode.tempo, base64IntToCharCode[this.tempo >> 6], base64IntToCharCode[this.tempo & 63]);
+			buffer.push(SongTagCode.tempo, base64IntToCharCode[this.tempo >> 6], base64IntToCharCode[this.tempo & 0x3F]);
 			buffer.push(SongTagCode.reverb, base64IntToCharCode[this.reverb]);
 			buffer.push(SongTagCode.beatCount, base64IntToCharCode[this.beatsPerBar - 1]);
 			buffer.push(SongTagCode.barCount, base64IntToCharCode[(this.barCount - 1) >> 6], base64IntToCharCode[(this.barCount - 1) & 0x3f]);
@@ -1105,9 +1275,10 @@ namespace beepbox {
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					const instrument: Instrument = this.channels[channel].instruments[i];
 					buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
-					buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
+          			buffer.push(SongTagCode.volume, base64IntToCharCode[(instrument.volume + Config.volumeRange / 2) >> 6], base64IntToCharCode[(instrument.volume + Config.volumeRange / 2) & 0x3f]);
 					buffer.push(SongTagCode.preset, base64IntToCharCode[instrument.preset >> 6], base64IntToCharCode[instrument.preset & 63]);
 					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects]);
+          			buffer.push(SongTagCode.panning, base64IntToCharCode[instrument.pan >> 6], base64IntToCharCode[instrument.pan & 0x3f]);
 					
 					if (instrument.type != InstrumentType.drumset) {
 						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
@@ -1140,6 +1311,16 @@ namespace beepbox {
 						for (let o: number = 0; o < Config.operatorCount; o++) {
 							buffer.push(base64IntToCharCode[instrument.operators[o].envelope]);
 						}
+			        } else if (instrument.type == InstrumentType.customChipWave) {
+			            buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipWave]);
+						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
+						buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
+			
+			            buffer.push(SongTagCode.customChipWave);
+			            // Push custom wave values
+			            for (let j: number = 0; j < 64; j++) {
+			                buffer.push(base64IntToCharCode[(instrument.customChipWave[j] + 24) as number]);
+			            }
 					} else if (instrument.type == InstrumentType.noise) {
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipNoise]);
 					} else if (instrument.type == InstrumentType.spectrum) {
@@ -1225,7 +1406,7 @@ namespace beepbox {
 							
 							shapeBits.writePinCount(note.pins.length - 1);
 							
-							shapeBits.write(2, note.pins[0].volume); // volume
+							shapeBits.write(3, note.pins[0].volume); // volume
 							
 							let shapePart: number = 0;
 							let startPitch: number = note.pitches[0];
@@ -1243,7 +1424,7 @@ namespace beepbox {
 								}
 								shapeBits.writePartDuration(pin.time - shapePart);
 								shapePart = pin.time;
-								shapeBits.write(2, pin.volume);
+								shapeBits.write(3, pin.volume);
 							}
 							
 							const shapeString: string = String.fromCharCode.apply(null, shapeBits.encodeBase64([]));
@@ -1344,17 +1525,33 @@ namespace beepbox {
 				return;
 			}
 			
+		    const variantTest: number = compressed.charCodeAt(charIndex);
+		    var variant: string = "";
+		
+		    // Detect variant here. If version doesn't match known variant, assume it is a vanilla string which does not report variant.
+		    if ( variantTest == 0x6A ) { //"j"
+		        variant = "jummbox";
+		        charIndex++;
+		    }
+		    else {
+		        variant = "beepbox";
+		    }
+
 			const version: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-			if (version == -1 || version > Song._latestVersion || version < Song._oldestVersion) return;
+
+			if (variant == "beepbox" && (version == -1 || version > Song._latestBeepboxVersion || version < Song._oldestBeepboxVersion)) return;
+	        if (variant == "jummbox" && (version == -1 || version > Song._latestJummBoxVersion || version < Song._oldestJummBoxVersion)) return;
+            
+      //const beforeTwo:   boolean = version < 2;
 			const beforeThree: boolean = version < 3;
 			const beforeFour:  boolean = version < 4;
 			const beforeFive:  boolean = version < 5;
 			const beforeSix:   boolean = version < 6;
 			const beforeSeven: boolean = version < 7;
 			const beforeEight: boolean = version < 8;
-			this.initToDefault(beforeSix);
+			this.initToDefault( variant == "beepbox" && beforeSix );
 			
-			if (beforeThree) {
+			if (beforeThree && variant == "beepbox") {
 				// Originally, the only instrument transition was "seamless" and the only drum wave was "retro".
 				for (const channel of this.channels) channel.instruments[0].transition = 0;
 				this.channels[3].instruments[0].chipNoise = 0;
@@ -1366,7 +1563,14 @@ namespace beepbox {
 			while (charIndex < compressed.length) {
 				const command: number = compressed.charCodeAt(charIndex++);
 				let channel: number;
-				if (command == SongTagCode.channelCount) {
+        		if (command == SongTagCode.songTitle) {
+            		// Length of song name string
+            		var songNameLength = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+            		this.title = decodeURIComponent(compressed.substring(charIndex, charIndex + songNameLength));
+            		document.title = this.title + " - JummBox 1.2";
+
+            		charIndex += songNameLength;
+        		} else if (command == SongTagCode.channelCount) {
 					this.pitchChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.noiseChannelCount  = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.pitchChannelCount = clamp(Config.pitchChannelCountMin, Config.pitchChannelCountMax + 1, this.pitchChannelCount);
@@ -1377,39 +1581,46 @@ namespace beepbox {
 					this.channels.length = this.getChannelCount();
 				} else if (command == SongTagCode.scale) {
 					this.scale = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					if (beforeThree && this.scale == 10) this.scale = 11;
+          			// All the scales were jumbled around by Jummbox. Just convert to free.
+					if (variant == "beepbox") this.scale = 0;
 				} else if (command == SongTagCode.key) {
-					if (beforeSeven) {
+					if (beforeSeven && variant == "beepbox") {
 						this.key = clamp(0, Config.keys.length, 11 - base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
 						this.key = clamp(0, Config.keys.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				} else if (command == SongTagCode.loopStart) {
-					if (beforeFive) {
+					if (beforeFive && variant == "beepbox") {
 						this.loopStart = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					} else {
 						this.loopStart = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					}
 				} else if (command == SongTagCode.loopEnd) {
-					if (beforeFive) {
+					if (beforeFive && variant == "beepbox") {
 						this.loopLength = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					} else {
 						this.loopLength = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					}
 				} else if (command == SongTagCode.tempo) {
-					if (beforeFour) {
+					if (beforeFour && variant == "beepbox") {
 						this.tempo = [95, 120, 151, 190][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
-					} else if (beforeSeven) {
+					} else if (beforeSeven && variant == "beepbox") {
 						this.tempo = [88, 95, 103, 111, 120, 130, 140, 151, 163, 176, 190, 206, 222, 240, 259][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
 					} else {
 						this.tempo = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 					this.tempo = clamp(Config.tempoMin, Config.tempoMax + 1, this.tempo);
 				} else if (command == SongTagCode.reverb) {
-					this.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					this.reverb = clamp(0, Config.reverbRange, this.reverb);
+		            if (variant == "beepbox") {
+		                this.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] * 8;
+		            	this.reverb = clamp(0, Config.reverbRange, this.reverb);
+		            }
+		          	else {
+						this.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						this.reverb = clamp(0, Config.reverbRange, this.reverb);
+         			}
 				} else if (command == SongTagCode.beatCount) {
-					if (beforeThree) {
+					if (beforeThree && variant == "beepbox") {
 						this.beatsPerBar = [6, 7, 8, 9, 10][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
 					} else {
 						this.beatsPerBar = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
@@ -1420,12 +1631,12 @@ namespace beepbox {
 					this.barCount = Math.max(Config.barCountMin, Math.min(Config.barCountMax, this.barCount));
 					for (let channel = 0; channel < this.getChannelCount(); channel++) {
 						for (let bar = this.channels[channel].bars.length; bar < this.barCount; bar++) {
-							this.channels[channel].bars[bar] = 1;
+							this.channels[channel].bars[bar] = (bar < 4) ? 1 : 0;
 						}
 						this.channels[channel].bars.length = this.barCount;
 					}
 				} else if (command == SongTagCode.patternCount) {
-					if (beforeEight) {
+          			if (variant == "beepbox" && beforeEight) {
 						this.patternsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					} else {
 						this.patternsPerChannel = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
@@ -1446,7 +1657,7 @@ namespace beepbox {
 							this.channels[channel].instruments[instrumentIndex] = new Instrument(isNoiseChannel);
 						}
 						this.channels[channel].instruments.length = this.instrumentsPerChannel;
-						if (beforeSix) {
+						if (beforeSix && variant == "beepbox") {
 							for (let instrumentIndex = 0; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
 								this.channels[channel].instruments[instrumentIndex].setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel);
 							}
@@ -1455,7 +1666,7 @@ namespace beepbox {
 				} else if (command == SongTagCode.rhythm) {
 					this.rhythm = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 				} else if (command == SongTagCode.channelOctave) {
-					if (beforeThree) {
+					if (beforeThree && variant == "beepbox") {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						this.channels[channel].octave = clamp(0, Config.scrollableOctaves + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else {
@@ -1476,11 +1687,11 @@ namespace beepbox {
 					const presetValue: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].preset = presetValue;
 				} else if (command == SongTagCode.wave) {
-					if (beforeThree) {
+					if (beforeThree && variant == "beepbox") {
 						const legacyWaves: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0];
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						this.channels[channel].instruments[0].chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
-					} else if (beforeSix) {
+					} else if (beforeSix && variant == "beepbox") {
 						const legacyWaves: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0];
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
@@ -1491,7 +1702,7 @@ namespace beepbox {
 								}
 							}
 						}
-					} else if (beforeSeven) {
+					} else if (beforeSeven && variant == "beepbox") {
 						const legacyWaves: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0];
 						if (instrumentChannelIterator >= this.pitchChannelCount) {
 							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chipNoise = clamp(0, Config.chipNoises.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -1506,19 +1717,19 @@ namespace beepbox {
 						}
 					}
 				} else if (command == SongTagCode.filterCutoff) {
-					if (beforeSeven) {
+					if (beforeSeven && variant == "beepbox") {
 						const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
 						const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
 						const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
 					
-						if (beforeThree) {
+						if (beforeThree && variant == "beepbox") {
 							channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 							const instrument: Instrument = this.channels[channel].instruments[0];
 							const legacyFilter: number = [1, 3, 4, 5][clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
 							instrument.filterCutoff = legacyToCutoff[legacyFilter];
 							instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
 							instrument.filterResonance = 0;
-						} else if (beforeSix) {
+						} else if (beforeSix && variant == "beepbox") {
 							for (channel = 0; channel < this.getChannelCount(); channel++) {
 								for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 									const instrument: Instrument = this.channels[channel].instruments[i];
@@ -1557,14 +1768,23 @@ namespace beepbox {
 						instrument.filterEnvelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				} else if (command == SongTagCode.pulseWidth) {
-					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					instrument.pulseWidth = clamp(0, Config.pulseWidthRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					instrument.pulseEnvelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+		            if (variant == "beepbox") {
+			            // Convert back from beepbox's weird pulse width storage formula, rounding. The "7" in there is the old
+			            // piece of the formula "beepbox.Config.pulseWidthRange - 1".
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+	            		instrument.pulseWidth = Math.round( clamp(0, Config.pulseWidthRange + 1, Math.pow( 0.5, ( 7 - base64CharCodeToInt[compressed.charCodeAt(charIndex++)] ) * 0.5 ) * 50 ) );
+						instrument.pulseEnvelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+			        }
+			        else {
+			            const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+			            instrument.pulseWidth = clamp(0, Config.pulseWidthRange + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+			            instrument.pulseEnvelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+			        }
 				} else if (command == SongTagCode.transition) {
-					if (beforeThree) {
+					if (beforeThree && variant == "beepbox") {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						this.channels[channel].instruments[0].transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					} else if (beforeSix) {
+					} else if (beforeSix && variant == "beepbox") {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 								this.channels[channel].instruments[i].transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -1574,7 +1794,7 @@ namespace beepbox {
 						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				} else if (command == SongTagCode.vibrato) {
-					if (beforeThree) {
+					if (beforeThree && variant == "beepbox") {
 						const legacyEffects: number[] = [0, 3, 2, 0];
 						const legacyEnvelopes: number[] = [1, 1, 1, 13];
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
@@ -1584,7 +1804,7 @@ namespace beepbox {
 						instrument.filterEnvelope = (instrument.filterEnvelope == 1)
 							? legacyEnvelopes[effect]
 							: instrument.filterEnvelope;
-					} else if (beforeSix) {
+					} else if (beforeSix && variant == "beepbox") {
 						const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
 						const legacyEnvelopes: number[] = [1, 1, 1, 1, 16, 13];
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
@@ -1597,7 +1817,7 @@ namespace beepbox {
 									: instrument.filterEnvelope;
 							}
 						}
-					} else if (beforeSeven) {
+					} else if (beforeSeven && variant == "beepbox") {
 						const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
 						const legacyEnvelopes: number[] = [1, 1, 1, 1, 16, 13];
 						const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -1611,10 +1831,10 @@ namespace beepbox {
 						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].vibrato = vibrato;
 					}
 				} else if (command == SongTagCode.interval) {
-					if (beforeThree) {
+					if (beforeThree && variant == "beepbox") {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						this.channels[channel].instruments[0].interval = clamp(0, Config.intervals.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					} else if (beforeSix) {
+					} else if (beforeSix && variant == "beepbox") {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 								const originalValue: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
@@ -1627,7 +1847,7 @@ namespace beepbox {
 								this.channels[channel].instruments[i].interval = interval;
 							}
 						}
-					} else if (beforeSeven) {
+					} else if (beforeSeven && variant == "beepbox") {
 						const originalValue: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						let interval: number = clamp(0, Config.intervals.length, originalValue);
 						if (originalValue == 8) {
@@ -1644,30 +1864,59 @@ namespace beepbox {
 				} else if (command == SongTagCode.effects) {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].effects = clamp(0, Config.effectsNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.volume) {
-					if (beforeThree) {
+          			if (beforeThree && variant == "beepbox") {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						const instrument: Instrument = this.channels[channel].instruments[0];
-						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						// legacy mute value:
-						if (instrument.volume == 5) instrument.volume = Config.volumeRange - 1;
-					} else if (beforeSix) {
+            			instrument.volume = Math.round(clamp(-Config.volumeRange, 1, -base64CharCodeToInt[compressed.charCodeAt(charIndex++)] * 5.0));
+          			} else if (beforeSix && variant == "beepbox") {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 								const instrument: Instrument = this.channels[channel].instruments[i];
-								instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-								// legacy mute value:
-								if (instrument.volume == 5) instrument.volume = Config.volumeRange - 1;
+                				instrument.volume = Math.round(clamp(-Config.volumeRange, 1, -base64CharCodeToInt[compressed.charCodeAt(charIndex++)] * 5.0));
 							}
 						}
-					} else if (beforeSeven) {
+          			} else if (beforeSeven && variant == "beepbox") {
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						// legacy mute value:
-						if (instrument.volume == 5) instrument.volume = Config.volumeRange - 1;
-					} else {
+            			instrument.volume = Math.round(clamp(-Config.volumeRange, 1, -base64CharCodeToInt[compressed.charCodeAt(charIndex++)] * 5.0));
+          			} else if (variant == "beepbox") {
+            			const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+            			// Beepbox v7's volume range is 0-7 (0 is max, 7 is mute)
+            			instrument.volume = Math.round(clamp(-Config.volumeRange / 2, 1, -base64CharCodeToInt[compressed.charCodeAt(charIndex++)] * 25.0 / 7.0));
+          			}
+          			else {
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+			            // Volume is stored in two bytes in jummbox just in case range ever exceeds one byte, e.g. through later waffling on the subject.
+			            instrument.volume = Math.round(clamp(-Config.volumeRange / 2, Config.volumeRange / 2 + 1, ( (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) ) - Config.volumeRange/2));
+			        }
+			    } else if (command == SongTagCode.panning) {
+			        this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].pan = clamp(0, 101, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+			    }
+			    else if (command == SongTagCode.customChipWave) {
+			        let instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+			        // Pop custom wave values
+			        for (let j: number = 0; j < 64; j++) {
+			            instrument.customChipWave[j]
+			            = clamp(-24, 25, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] - 24);
 					}
+
+		            let sum: number = 0.0;
+		            for (let i: number = 0; i < instrument.customChipWave.length; i++) {
+		                sum += instrument.customChipWave[i];
+		            }
+		            const average: number = sum / instrument.customChipWave.length;
+		
+		            // Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+		            let cumulative: number = 0;
+		            let wavePrev: number = 0;
+		            for (let i: number = 0; i < instrument.customChipWave.length; i++) {
+		            	cumulative += wavePrev;
+		            	wavePrev = instrument.customChipWave[i] - average;
+		            	instrument.customChipWaveIntegral[i] = cumulative;
+		            }
+		
+		            // 65th, last sample is for anti-aliasing
+		            instrument.customChipWaveIntegral[64] = 0.0;
+
 				} else if (command == SongTagCode.algorithm) {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].algorithm = clamp(0, Config.algorithms.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.feedbackType) {
@@ -1722,7 +1971,7 @@ namespace beepbox {
 					charIndex += byteCount;
 				} else if (command == SongTagCode.bars) {
 					let subStringLength: number;
-					if (beforeThree) {
+					if (beforeThree && variant == "beepbox") {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						const barCount: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						subStringLength = Math.ceil(barCount * 0.5);
@@ -1730,7 +1979,7 @@ namespace beepbox {
 						for (let i: number = 0; i < barCount; i++) {
 							this.channels[channel].bars[i] = bits.read(3) + 1;
 						}
-					} else if (beforeFive) {
+					} else if (beforeFive && variant == "beepbox") {
 						let neededBits: number = 0;
 						while ((1 << neededBits) < this.patternsPerChannel) neededBits++;
 						subStringLength = Math.ceil(this.getChannelCount() * this.barCount * neededBits / 6);
@@ -1754,7 +2003,7 @@ namespace beepbox {
 					charIndex += subStringLength;
 				} else if (command == SongTagCode.patterns) {
 					let bitStringLength: number = 0;
-					if (beforeThree) {
+					if (beforeThree && variant == "beepbox") {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						
 						// The old format used the next character to represent the number of patterns in the channel, which is usually eight, the default. 
@@ -1795,7 +2044,7 @@ namespace beepbox {
 							newPattern.reset();
 							newPattern.instrument = bits.read(neededInstrumentBits);
 							
-							if (!beforeThree && bits.read(1) == 0) continue;
+							if (!( variant == "beepbox" && beforeThree ) && bits.read(1) == 0) continue;
 							
 							let curPart: number = 0;
 							const newNotes: Note[] = newPattern.notes;
@@ -1811,7 +2060,7 @@ namespace beepbox {
 								}
 								
 								if (!useOldShape && !newNote) {
-									const restLength: number = beforeSeven
+									const restLength: number = ( beforeSeven && variant == "beepbox" )
 										? bits.readLegacyPartDuration() * Config.partsPerBeat / Config.rhythms[this.rhythm].stepsPerBeat
 										: bits.readPartDuration();
 									curPart += restLength;
@@ -1829,7 +2078,12 @@ namespace beepbox {
 										while (shape.pitchCount < 4 && bits.read(1) == 1) shape.pitchCount++;
 										
 										shape.pinCount = bits.readPinCount();
-										shape.initialVolume = bits.read(2);
+
+					                    if (variant == "beepbox") {
+					                      shape.initialVolume = bits.read(2) * 2;
+					                    } else {
+					                      shape.initialVolume = bits.read(3);
+					                    }
 										
 										shape.pins = [];
 										shape.length = 0;
@@ -1838,11 +2092,16 @@ namespace beepbox {
 											pinObj = {};
 											pinObj.pitchBend = bits.read(1) == 1;
 											if (pinObj.pitchBend) shape.bendCount++;
-											shape.length += beforeSeven
+											shape.length += ( beforeSeven && variant == "beepbox" )
 												? bits.readLegacyPartDuration() * Config.partsPerBeat / Config.rhythms[this.rhythm].stepsPerBeat
 												: bits.readPartDuration();
 											pinObj.time = shape.length;
-											pinObj.volume = bits.read(2);
+
+					                        if ( variant == "beepbox" ) {
+											    pinObj.volume = bits.read(2) * 2;
+					                        } else {
+					                            pinObj.volume = bits.read(3);
+					                        }
 											shape.pins.push(pinObj);
 										}
 									}
@@ -1904,7 +2163,7 @@ namespace beepbox {
 							}
 						}
 						
-						if (beforeThree) {
+						if (beforeThree && variant == "beepbox") {
 							break;
 						} else {
 							channel++;
@@ -1933,7 +2192,7 @@ namespace beepbox {
 							pointArray.push({
 								"tick": (pin.time + note.start) * Config.rhythms[this.rhythm].stepsPerBeat / Config.partsPerBeat,
 								"pitchBend": pin.interval,
-								"volume": Math.round(pin.volume * 100 / 3),
+								"volume": Math.round(pin.volume * 100 / 6),
 							});
 						}
 						
@@ -1971,7 +2230,7 @@ namespace beepbox {
 			
 			return {
 				"format": Song._format,
-				"version": Song._latestVersion,
+				"version": Song._latestJummBoxVersion,
 				"scale": Config.scales[this.scale].name,
 				"key": Config.keys[this.key].name,
 				"introBars": this.loopStart,
@@ -1994,7 +2253,7 @@ namespace beepbox {
 			//const version: number = jsonObject["version"] | 0;
 			//if (version > Song._latestVersion) return; // Go ahead and try to parse something from the future I guess? JSON is pretty easy-going!
 			
-			this.scale = 11; // default to expert.
+			this.scale = 0; // default to free.
 			if (jsonObject["scale"] != undefined) {
 				const oldScaleNames: Dictionary<number> = {"romani :)": 8, "romani :(": 9};
 				const scale: number = oldScaleNames[jsonObject["scale"]] != undefined ? oldScaleNames[jsonObject["scale"]] : Config.scales.findIndex(scale=>scale.name==jsonObject["scale"]);
@@ -2152,7 +2411,7 @@ namespace beepbox {
 									
 									const time: number = Math.round((+pointObject["tick"]) * Config.partsPerBeat / importedPartsPerBeat);
 									
-									const volume: number = (pointObject["volume"] == undefined) ? 3 : Math.max(0, Math.min(3, Math.round((pointObject["volume"] | 0) * 3 / 100)));
+									const volume: number = (pointObject["volume"] == undefined) ? 6 : Math.max(0, Math.min(6, Math.round((pointObject["volume"] | 0) * 6 / 100)));
 								
 									if (time > this.beatsPerBar * Config.partsPerBeat) continue;
 									if (note.pins.length == 0) {
@@ -2328,6 +2587,7 @@ namespace beepbox {
 		private tick: number = 0;
 		private tickSampleCountdown: number = 0;
 		private paused: boolean = true;
+    	private forceMono : boolean = false;
 		
 		private readonly tonePool: Deque<Tone> = new Deque<Tone>();
 		private readonly activeTones: Array<Deque<Tone>> = [];
@@ -2336,25 +2596,41 @@ namespace beepbox {
 		
 		//private highpassInput: number = 0.0;
 		//private highpassOutput: number = 0.0;
-		private limit: number = 0.0;
+		private limitL: number = 0.0;
+    	private limitR: number = 0.0;
 		
-		private samplesForChorus: Float32Array | null = null;
-		private samplesForChorusReverb: Float32Array | null = null;
-		private samplesForReverb: Float32Array | null = null;
+		private samplesForChorusLeft: Float32Array | null = null;
+    	private samplesForChorusRight: Float32Array | null = null;
+		private samplesForChorusReverbLeft: Float32Array | null = null;
+    	private samplesForChorusReverbRight: Float32Array | null = null;
+		private samplesForReverbLeft: Float32Array | null = null;
+    	private samplesForReverbRight: Float32Array | null = null;
 		
-		private chorusDelayLine: Float32Array = new Float32Array(1024);
+		private chorusDelayLineLeft: Float32Array = new Float32Array(1024);
+    	private chorusDelayLineRight: Float32Array = new Float32Array(1024);
 		private chorusDelayPos: number = 0;
 		private chorusPhase: number = 0;
 		
-		private reverbDelayLine: Float32Array = new Float32Array(16384);
+		private reverbDelayLineLeft: Float32Array = new Float32Array(16384);
+    	private reverbDelayLineRight: Float32Array = new Float32Array(16384);
 		private reverbDelayPos: number = 0;
-		private reverbFeedback0: number = 0.0;
-		private reverbFeedback1: number = 0.0;
-		private reverbFeedback2: number = 0.0;
-		private reverbFeedback3: number = 0.0;
+		private reverbFeedback0L: number = 0.0;
+		private reverbFeedback1L: number = 0.0;
+		private reverbFeedback2L: number = 0.0;
+		private reverbFeedback3L: number = 0.0;
+		private reverbFeedback0R: number = 0.0;
+		private reverbFeedback1R: number = 0.0;
+		private reverbFeedback2R: number = 0.0;
+		private reverbFeedback3R: number = 0.0;
 		
 		private audioCtx: any | null = null;
 		private scriptNode: any | null = null;
+		
+	    private splitter: ChannelSplitterNode | null = null;
+	    private pannerLeft: StereoPannerNode | PannerNode | null = null;
+	    private pannerRight: StereoPannerNode | PannerNode | null = null;
+	    private merger: ChannelMergerNode | null = null;
+	    private compressor: DynamicsCompressorNode | null = null;
 		
 		public get playing(): boolean {
 			return !this.paused;
@@ -2414,19 +2690,104 @@ namespace beepbox {
 			
 			const contextClass = (window.AudioContext || window.webkitAudioContext);
 			this.audioCtx = this.audioCtx || new contextClass();
-			this.scriptNode = this.audioCtx.createScriptProcessor ? this.audioCtx.createScriptProcessor(2048, 0, 1) : this.audioCtx.createJavaScriptNode(2048, 0, 1); // 2048, 0 input channels, 1 output
+      		this.scriptNode = this.audioCtx.createScriptProcessor ? this.audioCtx.createScriptProcessor(2048, 0, 2) : this.audioCtx.createJavaScriptNode(2048, 0, 2); // 2048, 0 input channels, 2 outputs (L + R)
 			this.scriptNode.onaudioprocess = this.audioProcessCallback;
 			this.scriptNode.channelCountMode = 'explicit';
 			this.scriptNode.channelInterpretation = 'speakers';
+      this.forceMono = false;
+
+      // Set up splitters and panners for hard left/right channels
+      this.splitter = this.audioCtx.createChannelSplitter(2);
+
+      // Some contexts don't have stereoPannerNode.
+      if (this.audioCtx.createStereoPanner) {
+
+        this.pannerLeft = this.audioCtx.createStereoPanner();
+        this.pannerRight = this.audioCtx.createStereoPanner();
+
+      } else if (this.audioCtx.createPanner) {
+
+        this.pannerLeft = this.audioCtx.createPanner();
+        this.pannerRight = this.audioCtx.createPanner();
+
+      }
+      else {
+        this.forceMono = true;
+
+        // TODO: show some visual display that panning won't work.
+        // document.
+      }
+
+
+      this.compressor = this.audioCtx.createDynamicsCompressor();
+
+      // Check if we should set up panning at all.
+      if (!this.forceMono) {
+
+
+        this.merger = this.audioCtx.createChannelMerger(2);
+
+        if (this.splitter == null || this.pannerLeft == null || this.pannerRight == null || this.merger == null || this.compressor == null) {
+          this.paused = true;
+          return;
+        }
+
+        // Some contexts don't have stereoPannerNode.
+        if (this.audioCtx.createStereoPanner) {
+
+          (this.pannerLeft as StereoPannerNode).pan.setValueAtTime(-1.0, this.audioCtx.currentTime); // Hard left
+
+          (this.pannerRight as StereoPannerNode).pan.setValueAtTime(1.0, this.audioCtx.currentTime); // Hard right
+
+        }
+        else {
+
+          (this.pannerLeft as PannerNode).setPosition(-5, 0, 1); // Hard left
+
+          (this.pannerRight as PannerNode).setPosition(5, 0, 1); // Hard right
+
+        }
+
+        // Connection:
+        // scriptNode -- splitter -+-- pannerLeft --+- merger -- compressor -- destination
+        //                         \-- pannerRight -/
+        this.scriptNode.connect(this.splitter);
+        this.splitter.connect(this.pannerLeft, 0);
+        this.splitter.connect(this.pannerRight, 1);
+        this.pannerLeft.connect(this.merger, 0, 0);
+        this.pannerRight.connect(this.merger, 0, 1);
+        //this.merger.connect(this.compressor);
+        //this.compressor.connect(this.audioCtx.destination);
+
+        // Do this instead to cut out compressor
+        this.merger.connect(this.audioCtx.destination);
+
+      }
+      // Mono setup
+      else {
+
+        // Connection:
+        // scriptNode -- compressor -- destination
+        // Right now compressor is cut out of the sequence.
 			this.scriptNode.connect(this.audioCtx.destination);
 			
+      }
+
+      /*
+      this.compressor.threshold.setValueAtTime(Config.thresholdVal, this.audioCtx.currentTime);
+      this.compressor.knee.setValueAtTime(Config.kneeVal, this.audioCtx.currentTime);
+      this.compressor.ratio.setValueAtTime(Config.ratioVal, this.audioCtx.currentTime);
+      this.compressor.attack.setValueAtTime(Config.attackVal, this.audioCtx.currentTime);
+      this.compressor.release.setValueAtTime(Config.releaseVal, this.audioCtx.currentTime);
+      */
+
 			this.samplesPerSecond = this.audioCtx.sampleRate;
 		}
 		
 		public pause(): void {
 			if (this.paused) return;
 			this.paused = true;
-			this.scriptNode.disconnect(this.audioCtx.destination);
+			this.scriptNode.disconnect(this.splitter);
 			if (this.audioCtx.close) {
 				this.audioCtx.close(); // firefox is missing this function?
 			}
@@ -2447,15 +2808,16 @@ namespace beepbox {
 			this.tick = 0;
 			this.tickSampleCountdown = 0;
 			this.reverbDelayPos = 0;
-			this.reverbFeedback0 = 0.0;
-			this.reverbFeedback1 = 0.0;
-			this.reverbFeedback2 = 0.0;
-			this.reverbFeedback3 = 0.0;
+			this.reverbFeedback0L = 0.0; this.reverbFeedback0R = 0.0;
+			this.reverbFeedback1L = 0.0; this.reverbFeedback1R = 0.0;
+			this.reverbFeedback2L = 0.0; this.reverbFeedback2R = 0.0;
+			this.reverbFeedback3L = 0.0; this.reverbFeedback3R = 0.0;
 			//this.highpassInput = 0.0;
 			//this.highpassOutput = 0.0;
 			this.freeAllTones();
-			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
-			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
+			for (let i: number = 0; i < this.reverbDelayLineLeft.length; i++) { this.reverbDelayLineLeft[i] = 0.0; this.reverbDelayLineRight[i] = 0.0; }
+			for (let i: number = 0; i < this.chorusDelayLineLeft.length; i++) { this.chorusDelayLineLeft[i] = 0.0; this.chorusDelayLineRight[i] = 0.0; }
+			
 		}
 		
 		public jumpIntoLoop(): void {
@@ -2475,7 +2837,32 @@ namespace beepbox {
 				this.bar = 0;
 			}
 			this.playheadInternal += this.bar - oldBar;
-		}
+    }
+
+    public firstBar(): void {
+      if (!this.song) return;
+      this.bar = 0;
+      this.playheadInternal = 0;
+      this.beat = 0;
+      this.part = 0;
+    }
+		
+		public jumpToEditingBar(bar: number): void {
+          if (!this.song) return;
+
+          this.bar = bar;
+
+          //if (this.bar < this.song.loopStart) {
+          //  this.enableIntro = true;
+          //}
+          //if (this.bar >= this.song.loopStart + this.song.loopLength) {
+          //    this.enableOutro = true;
+          //}
+
+          this.playheadInternal = bar;
+          this.beat = 0;
+          this.part = 0;
+        }
 		
 		public prevBar(): void {
 			if (!this.song) return;
@@ -2489,17 +2876,18 @@ namespace beepbox {
 		
 		private audioProcessCallback = (audioProcessingEvent: any): void => {
 			const outputBuffer = audioProcessingEvent.outputBuffer;
-			const outputData: Float32Array = outputBuffer.getChannelData(0);
+			const outputDataL: Float32Array = outputBuffer.getChannelData(0);
+      		const outputDataR: Float32Array = outputBuffer.getChannelData(1);
 			if (this.paused) {
-				for (let i: number = 0; i < outputBuffer.length; i++) outputData[i] = 0.0;
+				for (let i: number = 0; i < outputBuffer.length; i++) { outputDataL[i] = 0.0; outputDataR[i] = 0.0; }
 			} else {
-				this.synthesize(outputData, outputBuffer.length);
+				this.synthesize(outputDataL, outputDataR, outputBuffer.length);
 			}
 		}
 		
-		public synthesize(data: Float32Array, bufferLength: number): void {
+		public synthesize(dataLeft: Float32Array, dataRight: Float32Array, bufferLength: number): void {
 			if (this.song == null) {
-				for (let i: number = 0; i < bufferLength; i++) data[i] = 0.0;
+				for (let i: number = 0; i < bufferLength; i++) { dataLeft[i] = 0.0; dataRight[i] = 0.0; }
 				return;
 			}
 			
@@ -2539,31 +2927,52 @@ namespace beepbox {
 				}
  			}
 			
-			//const synthStartTime: number = performance.now();
+			if (this.samplesForChorusLeft == null || this.samplesForChorusLeft.length < bufferLength) {
+				this.samplesForChorusLeft = new Float32Array(bufferLength);
+			}
+      		if (this.samplesForChorusRight == null || this.samplesForChorusRight.length < bufferLength) {
+				this.samplesForChorusRight = new Float32Array(bufferLength);
+			}
 			
-			if (this.samplesForChorus == null || this.samplesForChorus.length < bufferLength) {
-				this.samplesForChorus = new Float32Array(bufferLength);
+			if (this.samplesForChorusReverbLeft == null || this.samplesForChorusReverbLeft.length < bufferLength) {
+				this.samplesForChorusReverbLeft = new Float32Array(bufferLength);
 			}
-			if (this.samplesForChorusReverb == null || this.samplesForChorusReverb.length < bufferLength) {
-				this.samplesForChorusReverb = new Float32Array(bufferLength);
+      		if (this.samplesForChorusReverbRight == null || this.samplesForChorusReverbRight.length < bufferLength) {
+				this.samplesForChorusReverbRight = new Float32Array(bufferLength);
 			}
-			if (this.samplesForReverb == null || this.samplesForReverb.length < bufferLength) {
-				this.samplesForReverb = new Float32Array(bufferLength);
+
+			if (this.samplesForReverbLeft == null || this.samplesForReverbLeft.length < bufferLength) {
+				this.samplesForReverbLeft = new Float32Array(bufferLength);
 			}
-			const samplesForChorus: Float32Array = this.samplesForChorus;
-			const samplesForChorusReverb: Float32Array = this.samplesForChorusReverb;
-			const samplesForReverb: Float32Array = this.samplesForReverb;
+     		if (this.samplesForReverbRight == null || this.samplesForReverbRight.length < bufferLength) {
+				this.samplesForReverbRight = new Float32Array(bufferLength);
+			}
+
+			const samplesForChorusLeft: Float32Array = this.samplesForChorusLeft;
+      		const samplesForChorusRight: Float32Array = this.samplesForChorusRight;
+			const samplesForChorusReverbLeft: Float32Array = this.samplesForChorusReverbLeft;
+			const samplesForChorusReverbRight: Float32Array = this.samplesForChorusReverbRight;
+			const samplesForReverbLeft: Float32Array = this.samplesForReverbLeft;
+      		const samplesForReverbRight: Float32Array = this.samplesForReverbRight;
 
 			// Fill output data with zeroes using a partially unrolled loop before instruments accumulate sample values, since it's not guaranteed to be initialized to zeroes.
 			for (let i: number = 0; i < bufferLength;) {
-				data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0;
-				data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0;
+				dataRight[i] = 0.0; dataLeft[i++] = 0.0;
+				dataRight[i] = 0.0; dataLeft[i++] = 0.0;
+				dataRight[i] = 0.0; dataLeft[i++] = 0.0;
+				dataRight[i] = 0.0; dataLeft[i++] = 0.0;
+        		dataRight[i] = 0.0; dataLeft[i++] = 0.0;
+				dataRight[i] = 0.0; dataLeft[i++] = 0.0;
+				dataRight[i] = 0.0; dataLeft[i++] = 0.0;
+				dataRight[i] = 0.0; dataLeft[i++] = 0.0;
 			}
 			
 			// Post processing parameters:
 			const volume: number = +this.volume;
-			const chorusDelayLine: Float32Array = this.chorusDelayLine;
-			const reverbDelayLine: Float32Array = this.reverbDelayLine;
+			const chorusDelayLineLeft: Float32Array = this.chorusDelayLineLeft;
+      		const chorusDelayLineRight: Float32Array = this.chorusDelayLineRight;
+			const reverbDelayLineLeft: Float32Array = this.reverbDelayLineLeft;
+      		const reverbDelayLineRight: Float32Array = this.reverbDelayLineRight;
 			const chorusDuration: number = 2.0;
 			const chorusAngle: number = Math.PI * 2.0 / (chorusDuration * this.samplesPerSecond);
 			const chorusRange: number = 150 * this.samplesPerSecond / 44100;
@@ -2573,19 +2982,24 @@ namespace beepbox {
 			let chorusPhase: number = this.chorusPhase % (Math.PI * 2.0);
 			let chorusDelayPos: number = this.chorusDelayPos & 0x3FF;
 			let reverbDelayPos: number = this.reverbDelayPos & 0x3FFF;
-			let reverbFeedback0: number = +this.reverbFeedback0;
-			let reverbFeedback1: number = +this.reverbFeedback1;
-			let reverbFeedback2: number = +this.reverbFeedback2;
-			let reverbFeedback3: number = +this.reverbFeedback3;
+			let reverbFeedback0L: number = +this.reverbFeedback0L;
+			let reverbFeedback1L: number = +this.reverbFeedback1L;
+			let reverbFeedback2L: number = +this.reverbFeedback2L;
+			let reverbFeedback3L: number = +this.reverbFeedback3L;
+      		let reverbFeedback0R: number = +this.reverbFeedback0R;
+			let reverbFeedback1R: number = +this.reverbFeedback1R;
+			let reverbFeedback2R: number = +this.reverbFeedback2R;
+			let reverbFeedback3R: number = +this.reverbFeedback3R;
 			const reverb: number = Math.pow(this.song.reverb / Config.reverbRange, 0.667) * 0.425;
 			//const highpassFilter: number = Math.pow(0.5, 400 / this.samplesPerSecond);
 			const limitDecay: number = 1.0 - Math.pow(0.5, 4.0 / this.samplesPerSecond);
 			const limitRise: number = 1.0 - Math.pow(0.5, 4000.0 / this.samplesPerSecond);
 			//let highpassInput: number = +this.highpassInput;
 			//let highpassOutput: number = +this.highpassOutput;
-			let limit: number = +this.limit;
+			let limitL: number = +this.limitL;
+      		let limitR: number = +this.limitR;
 			
-			const synthBufferByEffects: Float32Array[] = [data, samplesForReverb, samplesForChorus, samplesForChorusReverb];
+			const synthBufferByEffects: Float32Array[] = [dataLeft, dataRight, samplesForReverbLeft, samplesForReverbRight, samplesForChorusLeft, samplesForChorusRight, samplesForChorusReverbLeft, samplesForChorusReverbRight];
 			while (bufferIndex < bufferLength && !ended) {
 				
 				const samplesLeftInBuffer: number = bufferLength - bufferIndex;
@@ -2635,28 +3049,52 @@ namespace beepbox {
 				const chorusTap2Delta: number = (chorusTap2End - chorusTap2Index) / runLength;
 				const runEnd: number = bufferIndex + runLength;
 				for (let i: number = bufferIndex; i < runEnd; i++) {
-					const sampleForChorus: number = samplesForChorus[i];
-					samplesForChorus[i] = 0.0;
-					const sampleForChorusReverb: number = samplesForChorusReverb[i];
-					samplesForChorusReverb[i] = 0.0;
-					const sampleForReverb: number = samplesForReverb[i];
-					samplesForReverb[i] = 0.0;
-					const combinedChorus: number = sampleForChorus + sampleForChorusReverb;
+					const sampleForChorusL: number = samplesForChorusLeft[i];
+            		const sampleForChorusR: number = samplesForChorusRight[i];
+					samplesForChorusLeft[i] = 0.0;
+					samplesForChorusRight[i] = 0.0;
+					const sampleForChorusReverbL: number = samplesForChorusReverbLeft[i];
+            		const sampleForChorusReverbR: number = samplesForChorusReverbRight[i];
+					samplesForChorusReverbLeft[i] = 0.0;
+					samplesForChorusReverbRight[i] = 0.0;
+					const sampleForReverbL: number = samplesForReverbLeft[i];
+            		const sampleForReverbR: number = samplesForReverbRight[i];
+					samplesForReverbLeft[i] = 0.0;
+            		samplesForReverbRight[i] = 0.0;
+					const combinedChorusL: number = sampleForChorusL + sampleForChorusReverbL;
+            		const combinedChorusR: number = sampleForChorusR + sampleForChorusReverbR;
 					
 					const chorusTap0Ratio: number = chorusTap0Index % 1;
 					const chorusTap1Ratio: number = chorusTap1Index % 1;
 					const chorusTap2Ratio: number = chorusTap2Index % 1;
-					const chorusTap0A: number = chorusDelayLine[(chorusTap0Index) & 0x3FF];
-					const chorusTap0B: number = chorusDelayLine[(chorusTap0Index + 1) & 0x3FF];
-					const chorusTap1A: number = chorusDelayLine[(chorusTap1Index) & 0x3FF];
-					const chorusTap1B: number = chorusDelayLine[(chorusTap1Index + 1) & 0x3FF];
-					const chorusTap2A: number = chorusDelayLine[(chorusTap2Index) & 0x3FF];
-					const chorusTap2B: number = chorusDelayLine[(chorusTap2Index + 1) & 0x3FF];
-					const chorusTap0: number = chorusTap0A + (chorusTap0B - chorusTap0A) * chorusTap0Ratio;
-					const chorusTap1: number = chorusTap1A + (chorusTap1B - chorusTap1A) * chorusTap1Ratio;
-					const chorusTap2: number = chorusTap2A + (chorusTap2B - chorusTap2A) * chorusTap2Ratio;
-					const chorusSample = 0.5 * (combinedChorus - chorusTap0 + chorusTap1 - chorusTap2);
-					chorusDelayLine[chorusDelayPos] = combinedChorus;
+
+					const chorusTap0AL: number = chorusDelayLineLeft[(chorusTap0Index) & 0x3FF];
+					const chorusTap0BL: number = chorusDelayLineLeft[(chorusTap0Index + 1) & 0x3FF];
+					const chorusTap1AL: number = chorusDelayLineLeft[(chorusTap1Index) & 0x3FF];
+					const chorusTap1BL: number = chorusDelayLineLeft[(chorusTap1Index + 1) & 0x3FF];
+					const chorusTap2AL: number = chorusDelayLineLeft[(chorusTap2Index) & 0x3FF];
+					const chorusTap2BL: number = chorusDelayLineLeft[(chorusTap2Index + 1) & 0x3FF];
+					const chorusTap0L: number = chorusTap0AL + (chorusTap0BL - chorusTap0AL) * chorusTap0Ratio;
+					const chorusTap1L: number = chorusTap1AL + (chorusTap1BL - chorusTap1AL) * chorusTap1Ratio;
+					const chorusTap2L: number = chorusTap2AL + (chorusTap2BL - chorusTap2AL) * chorusTap2Ratio;
+
+            		const chorusTap0AR: number = chorusDelayLineRight[(chorusTap0Index) & 0x3FF];
+					const chorusTap0BR: number = chorusDelayLineRight[(chorusTap0Index + 1) & 0x3FF];
+					const chorusTap1AR: number = chorusDelayLineRight[(chorusTap1Index) & 0x3FF];
+					const chorusTap1BR: number = chorusDelayLineRight[(chorusTap1Index + 1) & 0x3FF];
+					const chorusTap2AR: number = chorusDelayLineRight[(chorusTap2Index) & 0x3FF];
+					const chorusTap2BR: number = chorusDelayLineRight[(chorusTap2Index + 1) & 0x3FF];
+					const chorusTap0R: number = chorusTap0AR + (chorusTap0BR - chorusTap0AR) * chorusTap0Ratio;
+					const chorusTap1R: number = chorusTap1AR + (chorusTap1BR - chorusTap1AR) * chorusTap1Ratio;
+					const chorusTap2R: number = chorusTap2AR + (chorusTap2BR - chorusTap2AR) * chorusTap2Ratio;
+
+
+					const chorusSampleLeft = 0.5 * (combinedChorusL - chorusTap0L + chorusTap1L - chorusTap2L);
+            		const chorusSampleRight = 0.5 * (combinedChorusR - chorusTap0R + chorusTap1R - chorusTap2R);
+
+					chorusDelayLineLeft[chorusDelayPos] = combinedChorusL;
+            		chorusDelayLineRight[chorusDelayPos] = combinedChorusR;
+						
 					chorusDelayPos = (chorusDelayPos + 1) & 0x3FF;
 					chorusTap0Index += chorusTap0Delta;
 					chorusTap1Index += chorusTap1Delta;
@@ -2669,26 +3107,50 @@ namespace beepbox {
 					const reverbDelayPos1: number = (reverbDelayPos +  3041) & 0x3FFF;
 					const reverbDelayPos2: number = (reverbDelayPos +  6426) & 0x3FFF;
 					const reverbDelayPos3: number = (reverbDelayPos + 10907) & 0x3FFF;
-					const reverbSample0: number = (reverbDelayLine[reverbDelayPos] + sampleForReverb);
-					const reverbSample1: number = reverbDelayLine[reverbDelayPos1];
-					const reverbSample2: number = reverbDelayLine[reverbDelayPos2];
-					const reverbSample3: number = reverbDelayLine[reverbDelayPos3];
-					const reverbSample0Chorus: number = reverbSample0 + sampleForChorusReverb;
-					const reverbTemp0: number = -reverbSample0Chorus + reverbSample1;
-					const reverbTemp1: number = -reverbSample0Chorus - reverbSample1;
-					const reverbTemp2: number = -reverbSample2 + reverbSample3;
-					const reverbTemp3: number = -reverbSample2 - reverbSample3;
-					reverbFeedback0 += ((reverbTemp0 + reverbTemp2) * reverb - reverbFeedback0) * 0.5;
-					reverbFeedback1 += ((reverbTemp1 + reverbTemp3) * reverb - reverbFeedback1) * 0.5;
-					reverbFeedback2 += ((reverbTemp0 - reverbTemp2) * reverb - reverbFeedback2) * 0.5;
-					reverbFeedback3 += ((reverbTemp1 - reverbTemp3) * reverb - reverbFeedback3) * 0.5;
-					reverbDelayLine[reverbDelayPos1] = reverbFeedback0;
-					reverbDelayLine[reverbDelayPos2] = reverbFeedback1;
-					reverbDelayLine[reverbDelayPos3] = reverbFeedback2;
-					reverbDelayLine[reverbDelayPos ] = reverbFeedback3;
-					reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
 					
-					const sample = data[i] + chorusSample + reverbSample0 + reverbSample1 + reverbSample2 + reverbSample3;
+					
+            		// Left channel
+            		const reverbSample0L: number = (reverbDelayLineLeft[reverbDelayPos] + sampleForReverbL);
+					const reverbSample1L: number = reverbDelayLineLeft[reverbDelayPos1];
+					const reverbSample2L: number = reverbDelayLineLeft[reverbDelayPos2];
+					const reverbSample3L: number = reverbDelayLineLeft[reverbDelayPos3];
+					const reverbSample0ChorusL: number = reverbSample0L + sampleForChorusReverbL;
+					const reverbTemp0L: number = -reverbSample0ChorusL + reverbSample1L;
+					const reverbTemp1L: number = -reverbSample0ChorusL - reverbSample1L;
+					const reverbTemp2L: number = -reverbSample2L + reverbSample3L;
+					const reverbTemp3L: number = -reverbSample2L - reverbSample3L;
+					reverbFeedback0L += ((reverbTemp0L + reverbTemp2L) * reverb - reverbFeedback0L) * 0.5;
+					reverbFeedback1L += ((reverbTemp1L + reverbTemp3L) * reverb - reverbFeedback1L) * 0.5;
+					reverbFeedback2L += ((reverbTemp0L - reverbTemp2L) * reverb - reverbFeedback2L) * 0.5;
+					reverbFeedback3L += ((reverbTemp1L - reverbTemp3L) * reverb - reverbFeedback3L) * 0.5;
+					reverbDelayLineLeft[reverbDelayPos1] = reverbFeedback0L;
+					reverbDelayLineLeft[reverbDelayPos2] = reverbFeedback1L;
+					reverbDelayLineLeft[reverbDelayPos3] = reverbFeedback2L;
+					reverbDelayLineLeft[reverbDelayPos ] = reverbFeedback3L;
+
+            		// Right channel
+            		const reverbSample0R: number = (reverbDelayLineRight[reverbDelayPos] + sampleForReverbR);
+					const reverbSample1R: number = reverbDelayLineRight[reverbDelayPos1];
+					const reverbSample2R: number = reverbDelayLineRight[reverbDelayPos2];
+					const reverbSample3R: number = reverbDelayLineRight[reverbDelayPos3];
+					const reverbSample0ChorusR: number = reverbSample0R + sampleForChorusReverbR;
+					const reverbTemp0R: number = -reverbSample0ChorusR + reverbSample1R;
+					const reverbTemp1R: number = -reverbSample0ChorusR - reverbSample1R;
+					const reverbTemp2R: number = -reverbSample2R + reverbSample3R;
+					const reverbTemp3R: number = -reverbSample2R - reverbSample3R;
+					reverbFeedback0R += ((reverbTemp0R + reverbTemp2R) * reverb - reverbFeedback0R) * 0.5;
+					reverbFeedback1R += ((reverbTemp1R + reverbTemp3R) * reverb - reverbFeedback1R) * 0.5;
+					reverbFeedback2R += ((reverbTemp0R - reverbTemp2R) * reverb - reverbFeedback2R) * 0.5;
+					reverbFeedback3R += ((reverbTemp1R - reverbTemp3R) * reverb - reverbFeedback3R) * 0.5;
+					reverbDelayLineRight[reverbDelayPos1] = reverbFeedback0R;
+					reverbDelayLineRight[reverbDelayPos2] = reverbFeedback1R;
+					reverbDelayLineRight[reverbDelayPos3] = reverbFeedback2R;
+					reverbDelayLineRight[reverbDelayPos ] = reverbFeedback3R;
+
+            		reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
+
+					const sampleLeft = dataLeft[i] + chorusSampleLeft + reverbSample0L + reverbSample1L + reverbSample2L + reverbSample3L;
+					const sampleRight = dataRight[i] + chorusSampleRight + reverbSample0R + reverbSample1R + reverbSample2R + reverbSample3R;
 					
 					/*
 					highpassOutput = highpassOutput * highpassFilter + sample - highpassInput;
@@ -2697,9 +3159,13 @@ namespace beepbox {
 					*/
 					
 					// A compressor/limiter.
-					const abs: number = sample < 0.0 ? -sample : sample;
-					limit += (abs - limit) * (limit < abs ? limitRise : limitDecay);
-					data[i] = (sample / (limit >= 1 ? limit * 1.05 : limit * 0.8 + 0.25)) * volume;
+					const absL: number = sampleLeft < 0.0 ? -sampleLeft : sampleLeft;
+					limitL += (absL - limitL) * (limitL < absL ? limitRise : limitDecay);
+					dataLeft[i] = (sampleLeft / (limitL >= 1 ? limitL * 1.05 : limitL * 0.8 + 0.25)) * volume;
+
+            		const absR: number = sampleRight < 0.0 ? -sampleRight : sampleRight;
+					limitR += (absR - limitR) * (limitR < absR ? limitRise : limitDecay);
+					dataRight[i] = (sampleRight / (limitR >= 1 ? limitR * 1.05 : limitR * 0.8 + 0.25)) * volume;
 				}
 				
 				bufferIndex += runLength;
@@ -2770,24 +3236,35 @@ namespace beepbox {
 			
 			// Optimization: Avoid persistent reverb values in the float denormal range.
 			const epsilon: number = (1.0e-24);
-			if (-epsilon < reverbFeedback0 && reverbFeedback0 < epsilon) reverbFeedback0 = 0.0;
-			if (-epsilon < reverbFeedback1 && reverbFeedback1 < epsilon) reverbFeedback1 = 0.0;
-			if (-epsilon < reverbFeedback2 && reverbFeedback2 < epsilon) reverbFeedback2 = 0.0;
-			if (-epsilon < reverbFeedback3 && reverbFeedback3 < epsilon) reverbFeedback3 = 0.0;
+			if (-epsilon < reverbFeedback0L && reverbFeedback0L < epsilon) reverbFeedback0L = 0.0;
+			if (-epsilon < reverbFeedback1L && reverbFeedback1L < epsilon) reverbFeedback1L = 0.0;
+			if (-epsilon < reverbFeedback2L && reverbFeedback2L < epsilon) reverbFeedback2L = 0.0;
+			if (-epsilon < reverbFeedback3L && reverbFeedback3L < epsilon) reverbFeedback3L = 0.0;
+      		if (-epsilon < reverbFeedback0R && reverbFeedback0R < epsilon) reverbFeedback0R = 0.0;
+			if (-epsilon < reverbFeedback1R && reverbFeedback1R < epsilon) reverbFeedback1R = 0.0;
+			if (-epsilon < reverbFeedback2R && reverbFeedback2R < epsilon) reverbFeedback2R = 0.0;
+			if (-epsilon < reverbFeedback3R && reverbFeedback3R < epsilon) reverbFeedback3R = 0.0;
 			//if (-epsilon < highpassInput && highpassInput < epsilon) highpassInput = 0.0;
 			//if (-epsilon < highpassOutput && highpassOutput < epsilon) highpassOutput = 0.0;
-			if (-epsilon < limit && limit < epsilon) limit = 0.0;
+			if (-epsilon < limitL && limitL < epsilon) limitL = 0.0;
+      		if (-epsilon < limitR && limitR < epsilon) limitR = 0.0;
+			
 			
 			this.chorusPhase = chorusPhase;
 			this.chorusDelayPos = chorusDelayPos;
 			this.reverbDelayPos = reverbDelayPos;
-			this.reverbFeedback0 = reverbFeedback0;
-			this.reverbFeedback1 = reverbFeedback1;
-			this.reverbFeedback2 = reverbFeedback2;
-			this.reverbFeedback3 = reverbFeedback3;
+			this.reverbFeedback0L = reverbFeedback0L;
+			this.reverbFeedback1L = reverbFeedback1L;
+			this.reverbFeedback2L = reverbFeedback2L;
+			this.reverbFeedback3L = reverbFeedback3L;
+			this.reverbFeedback0R = reverbFeedback0R;
+			this.reverbFeedback1R = reverbFeedback1R;
+			this.reverbFeedback2R = reverbFeedback2R;
+			this.reverbFeedback3R = reverbFeedback3R;
 			//this.highpassInput = highpassInput;
 			//this.highpassOutput = highpassOutput;
-			this.limit = limit;
+			this.limitL = limitL;
+      		this.limitR = limitR;
 			
 			this.playheadInternal = (((this.tick + 1.0 - this.tickSampleCountdown / samplesPerTick) / 2.0 + this.part) / Config.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
 			
@@ -3002,9 +3479,11 @@ namespace beepbox {
 
 		private playTone(song: Song, bufferIndex: number, synthBufferByEffects: Float32Array[], channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
 			Synth.computeTone(this, song, channel, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
-			const synthBuffer: Float32Array = synthBufferByEffects[tone.instrument.effects];
+			const synthBufferL: Float32Array = synthBufferByEffects[tone.instrument.effects * 2];
+      		const synthBufferR: Float32Array = synthBufferByEffects[tone.instrument.effects * 2 + 1];
 			const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
-			synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
+      		if ( song.channels[channel].muted == false )
+			    synthesizer(this, synthBufferL, synthBufferR, bufferIndex, runLength, tone, tone.instrument);
 		}
 		
 		private static computeEnvelope(envelope: Envelope, time: number, beats: number, customVolume: number): number {
@@ -3104,7 +3583,7 @@ namespace beepbox {
 				baseVolume = 0.03;
 				volumeReferencePitch = 16;
 				pitchDamping = 48;
-			} else if (instrument.type == InstrumentType.chip) {
+            } else if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.customChipWave) {
 				basePitch = Config.keys[song.key].basePitch;
 				baseVolume = 0.03375; // looks low compared to drums, but it's doubled for chorus and drums tend to be loud anyway.
 				volumeReferencePitch = 16;
@@ -3140,8 +3619,8 @@ namespace beepbox {
 				partsSinceStart = Math.floor(ticksSoFar / Config.ticksPerPart);
 				intervalStart = intervalEnd = tone.lastInterval;
 				customVolumeStart = customVolumeEnd = Synth.expressionToVolumeMult(tone.lastVolume);
-				transitionVolumeStart = Synth.expressionToVolumeMult((1.0 - startTicksSinceReleased / toneTransition.releaseTicks) * 3.0);
-				transitionVolumeEnd   = Synth.expressionToVolumeMult((1.0 - endTicksSinceReleased / toneTransition.releaseTicks) * 3.0);
+				transitionVolumeStart = Synth.expressionToVolumeMult((1.0 - startTicksSinceReleased / toneTransition.releaseTicks) * 6.0);
+				transitionVolumeEnd   = Synth.expressionToVolumeMult((1.0 - endTicksSinceReleased / toneTransition.releaseTicks) * 6.0);
 				decayTimeStart = startTick / Config.ticksPerPart;
 				decayTimeEnd   = endTick / Config.ticksPerPart;
 
@@ -3290,7 +3769,7 @@ namespace beepbox {
 			const sampleTime: number = 1.0 / synth.samplesPerSecond;
 			tone.active = true;
 			
-			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pwm) {
+			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.customChipWave) {
 				const lfoEffectStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeStart);
 				const lfoEffectEnd:   number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeEnd);
 				const vibratoScale: number = (partsSinceStart < Config.vibratos[instrument.vibrato].delayParts) ? 0.0 : Config.vibratos[instrument.vibrato].amplitude;
@@ -3437,15 +3916,15 @@ namespace beepbox {
 				if (instrument.type == InstrumentType.noise) {
 					settingsVolumeMult *= Config.chipNoises[instrument.chipNoise].volume;
 				}
-				if (instrument.type == InstrumentType.chip) {
+				if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.customChipWave) {
 					settingsVolumeMult *= Config.chipWaves[instrument.chipWave].volume;
 				}
-				if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics) {
+				if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.customChipWave) {
 					settingsVolumeMult *= Config.intervals[instrument.interval].volume;
 				}
 				if (instrument.type == InstrumentType.pwm) {
 					const pulseEnvelope: Envelope = Config.envelopes[instrument.pulseEnvelope];
-					const basePulseWidth: number = Math.pow(0.5, (Config.pulseWidthRange - instrument.pulseWidth - 1) * 0.5) * 0.5;
+					const basePulseWidth: number = instrument.pulseWidth / 100;
 					const pulseWidthStart: number = basePulseWidth * Synth.computeEnvelope(pulseEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
 					const pulseWidthEnd: number = basePulseWidth * Synth.computeEnvelope(pulseEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
 					
@@ -3527,11 +4006,13 @@ namespace beepbox {
 					
 					//console.log(synthSource.join("\n"));
 					
-					Synth.fmSynthFunctionCache[fingerprint] = new Function("synth", "data", "bufferIndex", "runLength", "tone", "instrument", synthSource.join("\n"));
+					Synth.fmSynthFunctionCache[fingerprint] = new Function("synth", "dataLeft", "dataRight", "bufferIndex", "runLength", "tone", "instrument", synthSource.join("\n"));
 				}
 				return Synth.fmSynthFunctionCache[fingerprint];
 			} else if (instrument.type == InstrumentType.chip) {
 				return Synth.chipSynth;
+			} else if ( instrument.type == InstrumentType.customChipWave ) {
+        		return Synth.chipSynth;
 			} else if (instrument.type == InstrumentType.harmonics) {
 				return Synth.harmonicsSynth;
 			} else if (instrument.type == InstrumentType.pwm) {
@@ -3547,8 +4028,23 @@ namespace beepbox {
 			}
 		}
 		
-		private static chipSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
-			const wave: Float64Array = Config.chipWaves[instrument.chipWave].samples;
+		private static chipSynth(synth: Synth, dataLeft: Float32Array, dataRight: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+
+	      	var wave: Float64Array;
+	      	var volumeScale: number;
+	
+	        const isCustomWave: boolean = (instrument.type == InstrumentType.customChipWave); 
+	
+	      	if (!isCustomWave) {
+	        	wave = Config.chipWaves[instrument.chipWave].samples;
+	        	volumeScale = 1.0;
+	      	}
+	      	else {
+	        	wave = instrument.customChipWaveIntegral;
+	        	// Integrals for custom chip wave can get rather big. This "zero point" can be config'ed later.
+	        	volumeScale = 0.1;
+	        }
+
 			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
 			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
@@ -3615,7 +4111,21 @@ namespace beepbox {
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				data[bufferIndex] += filterSample1 * volume;
+		        // Check if panning should be used - otherwise just use mono and both channels will be the same power.
+		        if ( !synth.forceMono ) {
+		
+		          // "Constant Power" panning - left audio is cos(angle), right audio is sin(angle)
+		          // "angle" in this context is in radians from 0 (left) to pi/2 (right)
+		          dataLeft[bufferIndex] += filterSample1 * volume * volumeScale * Math.cos(((instrument.pan) / 100.0) * Math.PI / 2);
+		          dataRight[bufferIndex] += filterSample1 * volume * volumeScale * Math.sin(((instrument.pan) / 100.0) * Math.PI / 2);
+		
+		        } else {
+		
+		          dataLeft[bufferIndex] += filterSample1 * volume * volumeScale;
+		          dataRight[bufferIndex] += filterSample1 * volume * volumeScale;
+		
+		        }
+
 				volume += volumeDelta;
 				bufferIndex++;
 			}
@@ -3630,7 +4140,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static harmonicsSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static harmonicsSynth(synth: Synth, dataLeft: Float32Array, dataRight: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			const wave: Float32Array = instrument.harmonicsWave.getCustomWave();
 			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
@@ -3699,7 +4209,21 @@ namespace beepbox {
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				data[bufferIndex] += filterSample1 * volume;
+		        // Check if panning should be used - otherwise just use mono and both channels will be the same power.
+		        if (!synth.forceMono ) {
+		
+		          // "Constant Power" panning - left audio is cos(angle), right audio is sin(angle)
+		          // "angle" in this context is in radians from 0 (left) to pi/2 (right)
+		          dataLeft[bufferIndex] += filterSample1 * volume * Math.cos(((instrument.pan) / 100.0) * Math.PI / 2);
+		          dataRight[bufferIndex] += filterSample1 * volume * Math.sin(((instrument.pan) / 100.0) * Math.PI / 2);
+		
+		        } else {
+		
+		          dataLeft[bufferIndex] += filterSample1 * volume;
+		          dataRight[bufferIndex] += dataLeft[bufferIndex];
+		
+		        }
+
 				volume += volumeDelta;
 				bufferIndex++;
 			}
@@ -3714,7 +4238,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static pulseWidthSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static pulseWidthSynth(synth: Synth, dataLeft: Float32Array, dataRight: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let phaseDelta: number = tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
@@ -3767,7 +4291,22 @@ namespace beepbox {
 				phaseDelta *= phaseDeltaScale;
 				pulseWidth += pulseWidthDelta;
 				
-				data[bufferIndex] += filterSample1 * volume;
+		        // Check if panning should be used - otherwise just use mono and both channels will be the same power.
+		        if (!synth.forceMono) {
+		
+		          // "Constant Power" panning - left audio is cos(angle), right audio is sin(angle)
+		          // "angle" in this context is in radians from 0 (left) to pi/2 (right)
+		          dataLeft[bufferIndex] += filterSample1 * volume * Math.cos(((instrument.pan) / 100.0) * Math.PI / 2);
+		          dataRight[bufferIndex] += filterSample1 * volume * Math.sin(((instrument.pan) / 100.0) * Math.PI / 2);
+		
+		        } else {
+		
+		          dataLeft[bufferIndex] += filterSample1 * volume;
+		          dataRight[bufferIndex] += dataLeft[bufferIndex];
+		
+		        }
+
+
 				volume += volumeDelta;
 				bufferIndex++;
 			}
@@ -3820,7 +4359,22 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				
-				data[bufferIndex] += filterSample1 * volume;
+				// Check if panning should be used - otherwise just use mono and both channels will be the same power.
+		        if ( !synth.forceMono ) {
+		
+		          // "Constant Power" panning - left audio is cos(angle), right audio is sin(angle)
+		          // "angle" in this context is in radians from 0 (left) to pi/2 (right)
+		          dataLeft[bufferIndex] += filterSample1 * volume * Math.cos(((instrument.pan) / 100.0) * Math.PI / 2);
+		          dataRight[bufferIndex] += filterSample1 * volume * Math.sin(((instrument.pan) / 100.0) * Math.PI / 2);
+		
+		        } else {
+		
+		          dataLeft[bufferIndex] += filterSample1 * volume;
+		          dataRight[bufferIndex] += dataLeft[bufferIndex];
+		
+		        }
+
+
 				volume += volumeDelta;
 				bufferIndex++;
 			}
@@ -3844,7 +4398,7 @@ namespace beepbox {
 				var operator#Scaled   = operator#OutputMult * operator#Output;
 		`).split("\n");
 		
-		private static noiseSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static noiseSynth(synth: Synth, dataLeft: Float32Array, dataRight: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = +tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
@@ -3882,7 +4436,22 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1 * volume;
+
+		        // Check if panning should be used - otherwise just use mono and both channels will be the same power.
+		        if (!synth.forceMono) {
+		
+		          // "Constant Power" panning - left audio is cos(angle), right audio is sin(angle)
+		          // "angle" in this context is in radians from 0 (left) to pi/2 (right)
+		          dataLeft[bufferIndex] += filterSample1 * volume * Math.cos(((instrument.pan) / 100.0) * Math.PI / 2);
+		          dataRight[bufferIndex] += filterSample1 * volume * Math.sin(((instrument.pan) / 100.0) * Math.PI / 2);
+		
+		        } else {
+		
+		          dataLeft[bufferIndex] += filterSample1 * volume;
+		          dataRight[bufferIndex] += dataLeft[bufferIndex];
+		
+		        }
+
 				volume += volumeDelta;
 				bufferIndex++;
 			}
@@ -3897,7 +4466,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static spectrumSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static spectrumSynth(synth: Synth, dataLeft: Float32Array, dataRight: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = tone.phaseDeltas[0] * (1 << 7);
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
@@ -3936,7 +4505,22 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1 * volume;
+
+		        // Check if panning should be used - otherwise just use mono and both channels will be the same power.
+		        if (!synth.forceMono) {
+		
+		          // "Constant Power" panning - left audio is cos(angle), right audio is sin(angle)
+		          // "angle" in this context is in radians from 0 (left) to pi/2 (right)
+		          dataLeft[bufferIndex] += filterSample1 * volume * Math.cos(((instrument.pan) / 100.0) * Math.PI / 2);
+		          dataRight[bufferIndex] += filterSample1 * volume * Math.sin(((instrument.pan) / 100.0) * Math.PI / 2);
+		
+		        } else {
+		
+		          dataLeft[bufferIndex] += filterSample1 * volume;
+		          dataRight[bufferIndex] += dataLeft[bufferIndex];
+		
+		        }
+
 				volume += volumeDelta;
 				bufferIndex++;
 			}
@@ -3951,7 +4535,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static drumsetSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static drumsetSynth(synth: Synth, dataLeft: Float32Array, dataRight: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let wave: Float32Array = instrument.getDrumsetWave(tone.drumsetPitch);
 			let phaseDelta: number = tone.phaseDeltas[0] / Instrument.drumsetIndexReferenceDelta(tone.drumsetPitch);;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
@@ -3986,7 +4570,22 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1 * volume;
+				
+	        // Check if panning should be used - otherwise just use mono and both channels will be the same power.
+	        if (!synth.forceMono) {
+	
+	          // "Constant Power" panning - left audio is cos(angle), right audio is sin(angle)
+	          // "angle" in this context is in radians from 0 (left) to pi/2 (right)
+	          dataLeft[bufferIndex] += filterSample1 * volume * Math.cos(((instrument.pan) / 100.0) * Math.PI / 2);
+	          dataRight[bufferIndex] += filterSample1 * volume * Math.sin(((instrument.pan) / 100.0) * Math.PI / 2);
+	
+	        } else {
+	
+	          dataLeft[bufferIndex] += filterSample1 * volume;
+	          dataRight[bufferIndex] += dataLeft[bufferIndex];
+	
+	        }
+
 				volume += volumeDelta;
 				bufferIndex++;
 			}
@@ -4042,16 +4641,16 @@ namespace beepbox {
 		}
 		
 		public static instrumentVolumeToVolumeMult(instrumentVolume: number): number {
-			return (instrumentVolume == Config.volumeRange - 1) ? 0.0 : Math.pow(2, Config.volumeLogScale * instrumentVolume);
+			return (instrumentVolume == -Config.volumeRange/2.0 ) ? 0.0 : Math.pow(2, Config.volumeLogScale * instrumentVolume);
 		}
 		public static volumeMultToInstrumentVolume(volumeMult: number): number {
-			return (volumeMult <= 0.0) ? Config.volumeRange - 1 : Math.min(Config.volumeRange - 2, (Math.log(volumeMult) / Math.LN2) / Config.volumeLogScale);
+			return (volumeMult <= 0.0) ? -Config.volumeRange/2 : Math.min(Config.volumeRange, (Math.log(volumeMult) / Math.LN2) / Config.volumeLogScale);
 		}
 		public static expressionToVolumeMult(expression: number): number {
-			return Math.pow(Math.max(0.0, expression) / 3.0, 1.5);
+			return Math.pow(Math.max(0.0, expression) / 6.0, 1.5);
 		}
 		public static volumeMultToExpression(volumeMult: number): number {
-			return Math.pow(Math.max(0.0, volumeMult), 1/1.5) * 3.0;
+			return Math.pow(Math.max(0.0, volumeMult), 1/1.5) * 6.0;
 		}
 		
 		private getSamplesPerTick(): number {

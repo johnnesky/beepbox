@@ -8,7 +8,78 @@ namespace beepbox {
 	const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer")!;
 	beepboxEditorContainer.appendChild(editor.mainLayer);
 	editor.whenUpdated();
-	editor.mainLayer.focus();
+	
+	// Fade-in transitions
+      editor.mainLayer.className += " load";
+      editor.mainLayer.getElementsByClassName("editorBox")[0].className += " load";
+      editor.mainLayer.getElementsByClassName("playback-controls")[0].className += " load";
+      editor.mainLayer.getElementsByClassName("editor-song-settings")[0].className += " load";
+      editor.mainLayer.getElementsByClassName("editor-song-settings")[1].className += " load";
+      editor.mainLayer.getElementsByClassName("editor-instrument-settings")[0].className += " load";
+      editor.mainLayer.getElementsByClassName("trackBar")[0].className += " load";
+      editor.mainLayer.getElementsByClassName("barScrollBar")[0].className += " load";
+
+      // Give select2 class to these
+      $('#pitchPresetSelect').select2({ dropdownAutoWidth: true });
+      $('#drumPresetSelect').select2({ dropdownAutoWidth: true });
+
+      // Onclick event to expand/collapse optgroups
+      $("body").on('click', '.select2-container--open .select2-results__group', function () {
+        $(this).siblings().toggle();
+      });
+
+      // Open event to collapse all optgroups by default
+      $("#pitchPresetSelect").on('select2:open', function () {
+        $('.select2-dropdown--below').css('opacity', 0);
+        $('.select2-dropdown').css('opacity', 1);
+        $('#pitchPresetSelect')
+        setTimeout(() => {
+          let groups = $('.select2-container--open .select2-results__group');
+          let options = $('.select2-container--open .select2-results__option');
+
+          $.each(groups, (index, v) => {
+            $(v).siblings().hide();
+            $(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).noteBright + ";");
+          })
+          $.each(options, (index, v) => {
+            $(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).noteBright + ";");
+          })
+
+          $('.select2-dropdown--below').css('opacity', 1);
+        }, 0);
+      });
+
+      // Open event to collapse all optgroups by default
+      $("#drumPresetSelect").on('select2:open', function () {
+        $('.select2-dropdown--below').css('opacity', 0);
+        $('.select2-dropdown').css('opacity', 1);
+        $('#drumPresetSelect')
+        setTimeout(() => {
+          let groups = $('.select2-container--open .select2-results__group');
+          let options = $('.select2-container--open .select2-results__option');
+
+          $.each(groups, (index, v) => {
+            $(v).siblings().hide();
+            $(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).noteBright + ";");
+          })
+          $.each(options, (index, v) => {
+            $(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).noteBright + ";");
+          })
+
+          $('.select2-dropdown--below').css('opacity', 1);
+        }, 0);
+      });
+
+      // Select2 events
+      // The latter is to ensure select2 doesn't keep focus after the select2 is closed without making a selection.
+      $('#pitchPresetSelect').on("change", editor._whenSetPitchedPreset);
+  $('#pitchPresetSelect').on("select2:close", editor._refocus);
+
+  $('#drumPresetSelect').on("change", editor._whenSetDrumPreset);
+  $('#drumPresetSelect').on("select2:close", editor._refocus);
+
+
+  editor.mainLayer.focus();
 	
 	// don't autoplay on mobile devices, wait for input.
 	if (!isMobile && doc.autoPlay) {
