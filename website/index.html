@@ -221,8 +221,8 @@
 			</p>
 			-->
 			<p>
-				You can download and use <a href="https://bitbucket.org/jummbus/testbox">the source code</a> under the MIT license.
-				The original BeepBox source code by John Nesky can be found <a href="https://bitbucket.org/shaktool/beepbox">here</a>.
+				You can download and use <a href="https://github.com/jummbus/jummbox">the source code</a> under the MIT license.
+				The original BeepBox source code by John Nesky can be found <a href="https://github.com/johnnesky/beepbox">here</a>.
 			</p>
 		</div>
 		<div class="twitter-column">
@@ -243,7 +243,7 @@
 		// Randomize display of header
 		// 1-in-10
 		if ( Math.floor( Math.random() * 10 ) == 0 ) {
-			switch ( Math.floor( Math.random() * 4 ) ) {
+			switch ( Math.floor( Math.random() * 5 ) ) {
 				case 0:
 					document.getElementById("jummboxPlant").innerHTML = "  🍂";
 					break;
@@ -255,6 +255,10 @@
 					break;
 				case 3:
 					document.getElementById("jummboxPlant").innerHTML = "  🍃";
+					break;
+				case 4:
+					document.getElementById("jummboxPlant").style.color = "#e18426";
+					document.getElementById("jummboxPlant").innerHTML = "  🎃";
 					break;
 			}
 		}

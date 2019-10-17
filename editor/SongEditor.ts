@@ -1768,7 +1768,8 @@ namespace beepbox {
 		
     public _refocus = (): void => {
           // Waits a bit because select2 "steals" back focus even after the close event fires.
-      		setTimeout(function (this: SongEditor) { this.mainLayer.focus(); }, 20);
+          var selfRef = this;
+      		setTimeout(function () { selfRef.mainLayer.focus(); }, 20);
 		}
 		
 		public _whenSetPitchedPreset = (): void => {
