@@ -252,6 +252,16 @@ namespace beepbox {
 			}
 		}
 		
+		public insertBars(): void {
+			this._doc.record(new ChangeInsertBars(this._doc, this._boxSelectionBar + this._boxSelectionWidth, this._boxSelectionWidth), "jump");
+			this._boxSelectionBar += this._boxSelectionWidth;
+		}
+		
+		public deleteBars(): void {
+			this._doc.record(new ChangeDeleteBars(this._doc, this._boxSelectionBar, this._boxSelectionWidth), "jump");
+			this._boxSelectionBar = Math.max(0, this._boxSelectionBar - this._boxSelectionWidth);
+		}
+		
 		public copy(): void {
 			const channels: ChannelCopy[] = [];
 			
@@ -493,7 +503,7 @@ namespace beepbox {
 				// if the touch has started dragging, cancel opening the select menu.
 				event.preventDefault();
 			}
-			this._dragBoxSelection();
+			if (this._mousePressed) this._dragBoxSelection();
 			this._updatePreview();
 		}
 		
@@ -639,6 +649,7 @@ namespace beepbox {
 				}
 				
 				this._grid.length = this._doc.song.getChannelCount();
+				this._mousePressed = false;
 			}
 			
 			if (this._renderedBarCount != this._doc.song.barCount) {
@@ -659,6 +670,7 @@ namespace beepbox {
 				const editorWidth = 32 * this._doc.song.barCount;
 				this.container.style.width = editorWidth + "px";
 				this._svg.setAttribute("width", editorWidth + "");
+				this._mousePressed = false;
 			}
 			
 			if (this._renderedSquashed != squashed) {
@@ -667,6 +679,7 @@ namespace beepbox {
 						this._grid[y][x].setSquashed(squashed, y);
 					}
 				}
+				this._mousePressed = false;
 			}
 			
 			if (this._renderedSquashed != squashed || this._renderedChannelCount != this._doc.song.getChannelCount()) {

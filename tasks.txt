@@ -340,6 +340,7 @@
 √ Default patterns to 0 after first four bars.
 √ Song player timeline zoom mode.
 √ Rectangular box selection in track editor for copying and pasting patterns.
+√ New keyboard shortcuts to insert/delete bars.
 
 MAJOR REMAINING FEATURES:
 - stereo

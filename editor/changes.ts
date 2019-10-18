@@ -791,6 +791,58 @@ namespace beepbox {
 		}
 	}
 	
+	export class ChangeInsertBars extends Change {
+		constructor(doc: SongDocument, start: number, count: number) {
+			super();
+			
+			const newLength: number = Math.min(Config.barCountMax, doc.song.barCount + count);
+			count = newLength - doc.song.barCount;
+			if (count == 0) return;
+			
+			for (const channel of doc.song.channels) {
+				while (channel.bars.length < newLength) {
+					channel.bars.splice(start, 0, 0);
+				}
+			}
+			doc.song.barCount = newLength;
+			
+			doc.bar = start;
+			doc.barScrollPos = Math.min(newLength - doc.trackVisibleBars, doc.barScrollPos + count);
+			if (doc.song.loopStart >= start) {
+				doc.song.loopStart += count;
+			} else if (doc.song.loopStart + doc.song.loopLength >= start) {
+				doc.song.loopLength += count;
+			}
+			
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+	
+	export class ChangeDeleteBars extends Change {
+		constructor(doc: SongDocument, start: number, count: number) {
+			super();
+			
+			for (const channel of doc.song.channels) {
+				channel.bars.splice(start, count);
+				if (channel.bars.length == 0) channel.bars.push(0);
+			}
+			doc.song.barCount = Math.max(1, doc.song.barCount - count);
+			
+			doc.bar = Math.max(0, start - count);
+			doc.barScrollPos = Math.max(0, doc.barScrollPos - count);
+			if (doc.song.loopStart >= start) {
+				doc.song.loopStart = Math.max(0, doc.song.loopStart - count);
+			} else if (doc.song.loopStart + doc.song.loopLength > start) {
+				doc.song.loopLength -= count;
+			}
+			doc.song.loopLength = Math.max(1, Math.min(doc.song.barCount - doc.song.loopStart, doc.song.loopLength));
+			
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+	
 	export class ChangeChannelCount extends Change {
 		constructor(doc: SongDocument, newPitchChannelCount: number, newNoiseChannelCount: number) {
 			super();

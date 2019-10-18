@@ -13,6 +13,8 @@ namespace beepbox {
 		prompt: string | null;
 	}
 	
+	type StateChangeType = "replace" | "push" | "jump";
+	
 	export class SongDocument {
 		public song: Song;
 		public synth: Synth;
@@ -33,9 +35,9 @@ namespace beepbox {
 		
 		private _recentChange: Change | null = null;
 		private _sequenceNumber: number = 0;
+		private _stateChangeType: StateChangeType = "replace";
 		private _barFromCurrentState: number = 0;
 		private _channelFromCurrentState: number = 0;
-		private _shouldPushState: boolean = false;
 		private _waitingToUpdateState: boolean = false;
 		
 		constructor(string?: string) {
@@ -72,7 +74,7 @@ namespace beepbox {
 			this.prompt = state.prompt;
 			
 			// For all input events, catch them when they are about to finish bubbling,
-			// presumably after all handlers are done updating the model and update the
+			// presumably after all handlers are done updating the model, then update the
 			// view before the screen renders. mouseenter and mouseleave do not bubble,
 			// but they are immediately followed by mousemove which does. 
 			for (const eventName of ["input", "change", "click", "keyup", "keydown", "mousedown", "mousemove", "mouseup", "touchstart", "touchmove", "touchend", "touchcancel"]) {
@@ -124,31 +126,35 @@ namespace beepbox {
 		private _updateHistoryState = (): void => {
 			this._waitingToUpdateState = false;
 			const hash: string = "#" + this.song.toBase64String();
-			let state: HistoryState;
-			if (this._shouldPushState) {
+			if (this._stateChangeType == "push") {
 				this._sequenceNumber++;
-				state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
+			} else if (this._stateChangeType == "jump") {
+				this._sequenceNumber += 2;
+			}
+			let state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
+			if (this._stateChangeType == "push" || this._stateChangeType == "jump") {
 				window.history.pushState(state, "", hash);
 			} else {
-				state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
 				window.history.replaceState(state, "", hash);
 			}
 			this._barFromCurrentState = state.bar;
 			this._channelFromCurrentState = state.channel;
-			this._shouldPushState = false;
+			this._stateChangeType = "replace";
 		}
 		
-		public record(change: Change, replaceState: boolean = false): void {
+		public record(change: Change, stateChangeType: StateChangeType = "push"): void {
 			if (change.isNoop()) {
 				this._recentChange = null;
-				if (replaceState) {
+				if (stateChangeType == "replace") {
 					window.history.back();
 				}
 			} else {
 				change.commit();
 				this._recentChange = change;
-				if (!replaceState) {
-					this._shouldPushState = true;
+				if (stateChangeType == "push" && this._stateChangeType == "replace") {
+					this._stateChangeType = stateChangeType;
+				} else if (stateChangeType == "jump") {
+					this._stateChangeType = stateChangeType;
 				}
 				if (!this._waitingToUpdateState) {
 					window.requestAnimationFrame(this._updateHistoryState);

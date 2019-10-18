@@ -174,12 +174,12 @@ namespace beepbox {
 					if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
 						if (currentOctave < Config.scrollableOctaves) {
 							this._change = new ChangeOctave(this._doc, oldValue, currentOctave + 1);
-							this._doc.record(this._change, canReplaceLastChange);
+							this._doc.record(this._change, canReplaceLastChange ? "replace" : "push");
 						}
 					} else {
 						if (currentOctave > 0) {
 							this._change = new ChangeOctave(this._doc, oldValue, currentOctave - 1);
-							this._doc.record(this._change, canReplaceLastChange);
+							this._doc.record(this._change, canReplaceLastChange ? "replace" : "push");
 						}
 					}
 				}

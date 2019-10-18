@@ -55,7 +55,7 @@ namespace beepbox {
 				reader.addEventListener("load", (event: Event): void => {
 					this._doc.prompt = null;
 					this._doc.goBackToStart();
-					this._doc.record(new ChangeSong(this._doc, <string>reader.result), true);
+					this._doc.record(new ChangeSong(this._doc, <string>reader.result), "replace");
 				});
 				reader.readAsText(file);
 			} else if (extension == "midi" || extension == "mid") {
@@ -834,7 +834,7 @@ namespace beepbox {
 			}
 			this._doc.goBackToStart();
 			this._doc.prompt = null;
-			this._doc.record(new ChangeImportMidi(this._doc), true);
+			this._doc.record(new ChangeImportMidi(this._doc), "replace");
 		}
 	}
 }

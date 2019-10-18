@@ -122,7 +122,7 @@ namespace beepbox {
 			group.append(new ChangeInstrumentsPerChannel(this._doc, ChannelSettingsPrompt._validate(this._instrumentsStepper)));
 			group.append(new ChangeChannelCount(this._doc, ChannelSettingsPrompt._validate(this._pitchChannelStepper), ChannelSettingsPrompt._validate(this._drumChannelStepper)));
 			this._doc.prompt = null;
-			this._doc.record(group, true);
+			this._doc.record(group, "replace");
 		}
 	}
 }

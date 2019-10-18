@@ -153,6 +153,8 @@ namespace beepbox {
 			option({value: "pasteNumbers"}, "Paste Pattern Numbers (⇧V)"),
 			option({value: "transposeUp"}, "Move Pattern Notes Up (+)"),
 			option({value: "transposeDown"}, "Move Pattern Notes Down (-)"),
+			option({value: "insertBars"}, "Insert Bar After Selection (⏎)"),
+			option({value: "deleteBars"}, "Delete Selected Bar (⌫)"),
 			option({value: "forceScale"}, "Snap All Notes To Scale"),
 			option({value: "forceRhythm"}, "Snap All Notes To Rhythm"),
 			option({value: "moveNotesSideways"}, "Move All Notes Sideways..."),
@@ -808,6 +810,7 @@ namespace beepbox {
 				case 56: // 8
 				case 57: // 9
 					event.stopPropagation();
+					break;
 			}
 		}
 		
@@ -821,11 +824,8 @@ namespace beepbox {
 			}
 			
 			this._trackEditor.onKeyPressed(event);
-			//if (event.ctrlKey)
-			//trace(event.keyCode)
 			switch (event.keyCode) {
 				case 32: // space
-					//stage.focus = stage;
 					this._togglePlay();
 					event.preventDefault();
 					break;
@@ -845,6 +845,14 @@ namespace beepbox {
 					this._trackEditor.copy();
 					event.preventDefault();
 					break;
+				case 13: // enter/return
+					this._trackEditor.insertBars();
+					event.preventDefault();
+					break;
+				case 8: // backspace/delete
+					this._trackEditor.deleteBars();
+					event.preventDefault();
+					break;
 				case 86: // v
 					if (event.shiftKey) {
 						this._trackEditor.pasteNumbers();
@@ -854,7 +862,6 @@ namespace beepbox {
 					event.preventDefault();
 					break;
 				case 73: // i
-					//this._copy();
 					if (event.shiftKey) {
 						const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 						const instrumentObject: any = instrument.toJsonObject();
@@ -975,17 +982,9 @@ namespace beepbox {
 			
 			const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTranspose);
 			this._changeTranspose = new ChangeTranspose(this._doc, pattern, upward);
-			this._doc.record(this._changeTranspose, canReplaceLastChange);
-		}
-		/*
-		private _openInstrumentTypePrompt = (): void => {
-			this._openPrompt("instrumentType");
+			this._doc.record(this._changeTranspose, canReplaceLastChange ? "replace" : "push");
 		}
 		
-		private _openIntervalPrompt = (): void => {
-			this._openPrompt("interval");
-		}
-		*/
 		private _whenSetTempo = (): void => {
 			this._doc.record(new ChangeTempo(this._doc, -1, parseInt(this._tempoStepper.value) | 0));
 		}
@@ -1128,6 +1127,12 @@ namespace beepbox {
 					break;
 				case "copy":
 					this._trackEditor.copy();
+					break;
+				case "insertBars":
+					this._trackEditor.insertBars();
+					break;
+				case "deleteBars":
+					this._trackEditor.deleteBars();
 					break;
 				case "pasteNotes":
 					this._trackEditor.pasteNotes();

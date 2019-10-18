@@ -97,7 +97,7 @@ namespace beepbox {
 		private _saveChanges = (): void => {
 			window.localStorage.setItem("beatCountStrategy", this._conversionStrategySelect.value);
 			this._doc.prompt = null;
-			this._doc.record(new ChangeBeatsPerBar(this._doc, BeatsPerBarPrompt._validate(this._beatsStepper), this._conversionStrategySelect.value), true);
+			this._doc.record(new ChangeBeatsPerBar(this._doc, BeatsPerBarPrompt._validate(this._beatsStepper), this._conversionStrategySelect.value), "replace");
 		}
 	}
 }
