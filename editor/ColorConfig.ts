@@ -27,6 +27,10 @@ namespace beepbox {
 			{name: "azure",  channelDim: "#4a6d8f", channelBright: "#77aadd", noteDim: "#6f9fcf", noteBright: "#bbd7ff"},
 		]);
 		*/
+
+    public static resetColors() {
+      this.colorLookup.clear();
+    }
 		
 		public static getChannelColor(song: Song, channel: number): ChannelColors {
 

@@ -870,7 +870,9 @@ namespace beepbox {
 				doc.song.channels.length = doc.song.getChannelCount();
 				
 				doc.channel = Math.min(doc.channel, newPitchChannelCount + newNoiseChannelCount - 1);
-				doc.notifier.changed();
+        doc.notifier.changed();
+
+        ColorConfig.resetColors();
 				
 				this._didSomething();
 			}
@@ -1889,7 +1891,9 @@ namespace beepbox {
 			
 			this.append(new ChangeValidateDoc(doc));
 			doc.notifier.changed();
-			this._didSomething();
+      this._didSomething();
+
+      ColorConfig.resetColors();
 		}
 	}
 	

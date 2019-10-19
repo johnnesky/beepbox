@@ -1578,7 +1578,8 @@ namespace beepbox {
 					for (let channelIndex = this.channels.length; channelIndex < this.getChannelCount(); channelIndex++) {
 						this.channels[channelIndex] = new Channel();
 					}
-					this.channels.length = this.getChannelCount();
+          this.channels.length = this.getChannelCount();
+          ColorConfig.resetColors();
 				} else if (command == SongTagCode.scale) {
 					this.scale = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
           			// All the scales were jumbled around by Jummbox. Just convert to free.
