@@ -6,27 +6,20 @@
 /// <reference path="SongDocument.ts" />
 
 namespace beepbox {
-	function determineScaleFromNotes(song: Song): ReadonlyArray<boolean> {
-		const flags: boolean[] = [true, false, false, false, false, false, false, false, false, false, false, false];
-		for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
-			const channel: Channel = song.channels[channelIndex];
-			for (const pattern of channel.patterns) {
-				for (const note of pattern.notes) {
-					for (const pitch of note.pitches) {
-						for (const pin of note.pins) {
-							const key: number = (pitch + pin.interval) % 12;
-							if (!flags[key]) {
-								flags[key] = true;
-							}
-						}
+	export function unionOfUsedNotes(pattern: Pattern, flags: boolean[]): void {
+		for (const note of pattern.notes) {
+			for (const pitch of note.pitches) {
+				for (const pin of note.pins) {
+					const key: number = (pitch + pin.interval) % 12;
+					if (!flags[key]) {
+						flags[key] = true;
 					}
 				}
 			}
 		}
-		return flags;
 	}
 	
-	function generateScaleMap(oldScaleFlags: ReadonlyArray<boolean>, newScaleValue: number): number[] {
+	export function generateScaleMap(oldScaleFlags: ReadonlyArray<boolean>, newScaleValue: number): number[] {
 		const newScaleFlags: ReadonlyArray<boolean> = Config.scales[newScaleValue].flags;
 		const oldScale: number[] = [];
 		const newScale: number[] = [];
@@ -1504,8 +1497,8 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeForceRhythm extends ChangeSequence {
-		constructor(doc: SongDocument) {
+	export class ChangePatternRhythm extends ChangeSequence {
+		constructor(doc: SongDocument, pattern: Pattern) {
 			super();
 			const minDivision: number = Config.partsPerBeat / Config.rhythms[doc.song.rhythm].stepsPerBeat;
 			
@@ -1528,18 +1521,14 @@ namespace beepbox {
 				}
 			};
 			
-			for (const channel of doc.song.channels) {
-				for (const pattern of channel.patterns) {
-					let i: number = 0;
-					while (i < pattern.notes.length) {
-						const note: Note = pattern.notes[i];
-						if (changeRhythm(note.start) >= changeRhythm(note.end)) {
-							this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
-						} else {
-							this.append(new ChangeRhythmNote(doc, note, changeRhythm));
-							i++;
-						}
-					}
+			let i: number = 0;
+			while (i < pattern.notes.length) {
+				const note: Note = pattern.notes[i];
+				if (changeRhythm(note.start) >= changeRhythm(note.end)) {
+					this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
+				} else {
+					this.append(new ChangeRhythmNote(doc, note, changeRhythm));
+					i++;
 				}
 			}
 		}
@@ -1691,23 +1680,6 @@ namespace beepbox {
 		}
 	}
 	
-	export class ChangeForceScale extends ChangeGroup {
-		constructor(doc: SongDocument) {
-			super();
-				
-			const scaleFlags: ReadonlyArray<boolean> = determineScaleFromNotes(doc.song);
-			const scaleMap: number[] = generateScaleMap(scaleFlags, doc.song.scale);
-			for (let i: number = 0; i < doc.song.pitchChannelCount; i++) {
-				for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
-					this.append(new ChangePatternScale(doc, doc.song.channels[i].patterns[j], scaleMap));
-				}
-			}
-			
-			doc.notifier.changed();
-			this._didSomething();
-		}
-	}
-	
 	export class ChangeDetectKey extends ChangeGroup {
 		constructor(doc: SongDocument) {
 			super();
@@ -1755,7 +1727,7 @@ namespace beepbox {
 				for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
 					for (const pattern of song.channels[channelIndex].patterns) {
 						for (let i: number = 0; i < absoluteDiff; i++) {
-							this.append(new ChangeTranspose(doc, pattern, diff > 0, true));
+							this.append(new ChangeTranspose(doc, channelIndex, pattern, diff > 0, true));
 						}
 					}
 				}
@@ -2091,7 +2063,7 @@ namespace beepbox {
 		protected _newPins: NotePin[];
 		protected _oldPitches: number[];
 		protected _newPitches: number[];
-		constructor(doc: SongDocument, note: Note, upward: boolean, ignoreScale: boolean = false) {
+		constructor(doc: SongDocument, channel: number, note: Note, upward: boolean, ignoreScale: boolean = false, octave: boolean = false) {
 			super(false);
 			this._doc = doc;
 			this._note = note;
@@ -2100,22 +2072,36 @@ namespace beepbox {
 			this._oldPitches = note.pitches;
 			this._newPitches = [];
 			
-			const maxPitch: number = (doc.song.getChannelIsNoise(doc.channel) ? Config.drumCount - 1 : Config.maxPitch);
+			// I'm disabling pitch transposing for noise channels to avoid
+			// accidentally messing up noise channels when pitch shifting all
+			// channels at once.
+			const isNoise: boolean = doc.song.getChannelIsNoise(channel);
+			if (isNoise != doc.song.getChannelIsNoise(doc.channel)) return;
+			
+			const maxPitch: number = (isNoise ? Config.drumCount - 1 : Config.maxPitch);
 			
 			for (let i: number = 0; i < this._oldPitches.length; i++) {
 				let pitch: number = this._oldPitches[i];
-				if (upward) {
-					for (let j: number = pitch + 1; j <= maxPitch; j++) {
-						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
-							pitch = j;
-							break;
-						}
+				if (octave && !isNoise) {
+					if (upward) {
+						pitch = Math.min(maxPitch, pitch + 12);
+					} else {
+						pitch = Math.max(0, pitch - 12);
 					}
 				} else {
-					for (let j: number = pitch - 1; j >= 0; j--) {
-						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
-							pitch = j;
-							break;
+					if (upward) {
+						for (let j: number = pitch + 1; j <= maxPitch; j++) {
+							if (isNoise || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
+								pitch = j;
+								break;
+							}
+						}
+					} else {
+						for (let j: number = pitch - 1; j >= 0; j--) {
+							if (isNoise || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
+								pitch = j;
+								break;
+							}
 						}
 					}
 				}
@@ -2144,18 +2130,26 @@ namespace beepbox {
 				
 				if (interval < min) interval = min;
 				if (interval > max) interval = max;
-				if (upward) {
-					for (let i: number = interval + 1; i <= max; i++) {
-						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
-							interval = i;
-							break;
-						}
+				if (octave && !isNoise) {
+					if (upward) {
+						interval = Math.min(max, interval + 12);
+					} else {
+						interval = Math.max(min, interval - 12);
 					}
 				} else {
-					for (let i: number = interval - 1; i >= min; i--) {
-						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
-							interval = i;
-							break;
+					if (upward) {
+						for (let i: number = interval + 1; i <= max; i++) {
+							if (isNoise || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
+								interval = i;
+								break;
+							}
+						}
+					} else {
+						for (let i: number = interval - 1; i >= min; i--) {
+							if (isNoise || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
+								interval = i;
+								break;
+							}
 						}
 					}
 				}
@@ -2195,10 +2189,10 @@ namespace beepbox {
 	}
 	
 	export class ChangeTranspose extends ChangeSequence {
-		constructor(doc: SongDocument, pattern: Pattern, upward: boolean, ignoreScale: boolean = false) {
+		constructor(doc: SongDocument, channel: number, pattern: Pattern, upward: boolean, ignoreScale: boolean = false, octave: boolean = false) {
 			super();
 			for (let i: number = 0; i < pattern.notes.length; i++) {
-				this.append(new ChangeTransposeNote(doc, pattern.notes[i], upward, ignoreScale));
+				this.append(new ChangeTransposeNote(doc, channel, pattern.notes[i], upward, ignoreScale, octave));
 			}
 		}
 	}

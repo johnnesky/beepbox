@@ -151,12 +151,15 @@ namespace beepbox {
 			option({value: "copy"}, "Copy Pattern (C)"),
 			option({value: "pasteNotes"}, "Paste Pattern Notes (V)"),
 			option({value: "pasteNumbers"}, "Paste Pattern Numbers (⇧V)"),
-			option({value: "transposeUp"}, "Move Pattern Notes Up (+)"),
-			option({value: "transposeDown"}, "Move Pattern Notes Down (-)"),
 			option({value: "insertBars"}, "Insert Bar After Selection (⏎)"),
 			option({value: "deleteBars"}, "Delete Selected Bar (⌫)"),
-			option({value: "forceScale"}, "Snap All Notes To Scale"),
-			option({value: "forceRhythm"}, "Snap All Notes To Rhythm"),
+			option({value: "selectAll"}, "Select All (A)"),
+			option({value: "selectChannel"}, "Select Channel (⇧A)"),
+			option({value: "duplicatePatterns"}, "Duplicate Reused Patterns (D)"),
+			option({value: "transposeUp"}, "Move Notes Up (+)"),
+			option({value: "transposeDown"}, "Move Notes Down (-)"),
+			option({value: "forceScale"}, "Snap Notes To Scale"),
+			option({value: "forceRhythm"}, "Snap Notes To Rhythm"),
 			option({value: "moveNotesSideways"}, "Move All Notes Sideways..."),
 			option({value: "beatsPerBar"}, "Change Beats Per Bar..."),
 			option({value: "barCount"}, "Change Song Length..."),
@@ -368,7 +371,6 @@ namespace beepbox {
 		
 		private _wasPlaying: boolean = false;
 		private _currentPromptName: string | null = null;
-		private _changeTranspose: ChangeTranspose | null = null;
 		private readonly _operatorRows: HTMLDivElement[] = []
 		private readonly _operatorAmplitudeSliders: Slider[] = []
 		private readonly _operatorEnvelopeSelects: HTMLSelectElement[] = []
@@ -853,6 +855,18 @@ namespace beepbox {
 					this._trackEditor.deleteBars();
 					event.preventDefault();
 					break;
+				case 65: // a
+					if (event.shiftKey) {
+						this._trackEditor.selectChannel();
+					} else {
+						this._trackEditor.selectAll();
+					}
+					event.preventDefault();
+					break;
+				case 68: // d
+					this._trackEditor.duplicatePatterns();
+					event.preventDefault();
+					break;
 				case 86: // v
 					if (event.shiftKey) {
 						this._trackEditor.pasteNumbers();
@@ -869,6 +883,7 @@ namespace beepbox {
 						delete instrumentObject["preset"];
 						this._copyTextToClipboard(JSON.stringify(instrumentObject));
 					}
+					event.preventDefault();
 					break;
 				case 219: // left brace
 					this._doc.synth.prevBar();
@@ -886,12 +901,12 @@ namespace beepbox {
 					break;
 				case 189: // -
 				case 173: // Firefox -
-					this._transpose(false);
+					this._trackEditor.transpose(false, event.shiftKey);
 					event.preventDefault();
 					break;
 				case 187: // +
 				case 61: // Firefox +
-					this._transpose(true);
+					this._trackEditor.transpose(true, event.shiftKey);
 					event.preventDefault();
 					break;
 			}
@@ -976,15 +991,6 @@ namespace beepbox {
 			this._doc.record(new ChangeRandomGeneratedInstrument(this._doc));
 		}
 		
-		private _transpose(upward: boolean): void {
-			const pattern: Pattern | null = this._doc.getCurrentPattern();
-			if (pattern == null) return;
-			
-			const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTranspose);
-			this._changeTranspose = new ChangeTranspose(this._doc, pattern, upward);
-			this._doc.record(this._changeTranspose, canReplaceLastChange ? "replace" : "push");
-		}
-		
 		private _whenSetTempo = (): void => {
 			this._doc.record(new ChangeTempo(this._doc, -1, parseInt(this._tempoStepper.value) | 0));
 		}
@@ -1044,9 +1050,7 @@ namespace beepbox {
 		}
 		
 		private _whenSetInstrument = (): void => {
-			const pattern : Pattern | null = this._doc.getCurrentPattern();
-			if (pattern == null) return;
-			this._doc.record(new ChangePatternInstrument(this._doc, this._instrumentSelect.selectedIndex, pattern));
+			this._trackEditor.setInstrument(this._instrumentSelect.selectedIndex);
 		}
 		
 		private _whenCustomizePressed = (): void => {
@@ -1141,19 +1145,28 @@ namespace beepbox {
 					this._trackEditor.pasteNumbers();
 					break;
 				case "transposeUp":
-					this._transpose(true);
+					this._trackEditor.transpose(true, false);
 					break;
 				case "transposeDown":
-					this._transpose(false);
+					this._trackEditor.transpose(false, false);
+					break;
+				case "selectAll":
+					this._trackEditor.selectAll();
+					break;
+				case "selectChannel":
+					this._trackEditor.selectChannel();
+					break;
+				case "duplicatePatterns":
+					this._trackEditor.duplicatePatterns();
 					break;
 				case "detectKey":
 					this._doc.record(new ChangeDetectKey(this._doc));
 					break;
 				case "forceScale":
-					this._doc.record(new ChangeForceScale(this._doc));
+					this._trackEditor.forceScale();
 					break;
 				case "forceRhythm":
-					this._doc.record(new ChangeForceRhythm(this._doc));
+					this._trackEditor.forceRhythm();
 					break;
 				case "barCount":
 					this._openPrompt("barCount");

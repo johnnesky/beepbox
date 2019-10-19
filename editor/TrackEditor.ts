@@ -103,7 +103,7 @@ namespace beepbox {
 			this._playhead,
 		);
 		private readonly _select: HTMLSelectElement = HTML.select({className: "trackSelectBox", style: "width: 32px; height: 32px; background: none; border: none; appearance: none; color: transparent; position: absolute; touch-action: none;"});
-		public readonly container: HTMLElement = HTML.div({style: "height: 128px; position: relative; overflow:hidden;"}, this._svg, this._select);
+		public readonly container: HTMLElement = HTML.div({class: "noSelection", style: "height: 128px; position: relative; overflow:hidden;"}, this._svg, this._select);
 		
 		
 		private readonly _grid: Box[][] = [];
@@ -129,6 +129,7 @@ namespace beepbox {
 		private _renderedPlayhead: number = -1;
 		private _renderedSquashed: boolean = false;
 		private _touchMode: boolean = isMobile;
+		private _changeTranspose: ChangeGroup | null = null;
 		
 		constructor(private _doc: SongDocument) {
 			window.requestAnimationFrame(this._animatePlayhead);
@@ -174,10 +175,15 @@ namespace beepbox {
 			window.requestAnimationFrame(this._animatePlayhead);
 		}
 		
-		private _setChannelBar(channel: number, bar: number): void {
-			new ChangeChannelBar(this._doc, channel, bar);
+		private _selectionUpdated(): void {
+			this._doc.notifier.changed();
 			this._digits = "";
 			this._doc.forgetLastChange();
+		}
+		
+		private _setChannelBar(channel: number, bar: number): void {
+			new ChangeChannelBar(this._doc, channel, bar);
+			this._selectionUpdated();
 		}
 		
 		private _setPattern(pattern: number): void {
@@ -262,14 +268,56 @@ namespace beepbox {
 			this._boxSelectionBar = Math.max(0, this._boxSelectionBar - this._boxSelectionWidth);
 		}
 		
+		private *_eachSelectedChannel(): IterableIterator<number> {
+			for (let channel: number = this._boxSelectionChannel; channel < this._boxSelectionChannel + this._boxSelectionHeight; channel++) {
+				yield channel;
+			}
+		}
+		
+		private *_eachSelectedBar(): IterableIterator<number> {
+			for (let bar: number = this._boxSelectionBar; bar < this._boxSelectionBar + this._boxSelectionWidth; bar++) {
+				yield bar;
+			}
+		}
+		
+		private *_eachUnselectedBar(): IterableIterator<number> {
+			for (let bar: number = 0; bar < this._doc.song.barCount; bar++) {
+				if (bar < this._boxSelectionBar || bar >= this._boxSelectionBar + this._boxSelectionWidth) {
+					yield bar;
+				}
+			}
+		}
+		
+		private *_eachSelectedPattern(channel: number): IterableIterator<Pattern> {
+			const handledPatterns: Dictionary<boolean> = {};
+			for (const bar of this._eachSelectedBar()) {
+				const currentPatternIndex: number = this._doc.song.channels[channel].bars[bar];
+				if (currentPatternIndex == 0) continue;
+				if (handledPatterns[String(currentPatternIndex)]) continue;
+				handledPatterns[String(currentPatternIndex)] = true;
+				const pattern: Pattern | null = this._doc.song.getPattern(channel, bar);
+				if (pattern == null) throw new Error();
+				yield pattern;
+			}
+		}
+		
+		private _patternIndexIsUnused(channel: number, patternIndex: number): boolean {
+			for (let i: number = 0; i < this._doc.song.barCount; i++) {
+				if (this._doc.song.channels[channel].bars[i] == patternIndex) {
+					return false;
+				}
+			}
+			return true;
+		}
+		
 		public copy(): void {
 			const channels: ChannelCopy[] = [];
 			
-			for (let channel: number = this._boxSelectionChannel; channel < this._boxSelectionChannel + this._boxSelectionHeight; channel++) {
+			for (const channel of this._eachSelectedChannel()) {
 				const patterns: Dictionary<PatternCopy> = {};
 				const bars: number[] = [];
 				
-				for (let bar: number = this._boxSelectionBar; bar < this._boxSelectionBar + this._boxSelectionWidth; bar++) {
+				for (const bar of this._eachSelectedBar()) {
 					const patternNumber: number = this._doc.song.channels[channel].bars[bar];
 					bars.push(patternNumber);
 					if (patterns[String(patternNumber)] == undefined) {
@@ -297,15 +345,6 @@ namespace beepbox {
 				"channels": channels,
 			};
 			window.localStorage.setItem("selectionCopy", JSON.stringify(selectionCopy));
-		}
-		
-		private _patternIndexIsUnused(channel: number, patternIndex: number): boolean {
-			for (let i: number = 0; i < this._doc.song.barCount; i++) {
-				if (this._doc.song.channels[channel].bars[i] == patternIndex) {
-					return false;
-				}
-			}
-			return true;
 		}
 		
 		// I'm sorry this function is so complicated!
@@ -446,6 +485,138 @@ namespace beepbox {
 			this._doc.record(group);
 		}
 		
+		public selectAll(): void {
+			if (
+				this._boxSelectionBar == 0 &&
+				this._boxSelectionChannel == 0 &&
+				this._boxSelectionWidth == this._doc.song.barCount &&
+				this._boxSelectionHeight == this._doc.song.getChannelCount()
+			) {
+				this._resetBoxSelection();
+			} else {
+				this._boxSelectionBar = 0;
+				this._boxSelectionChannel = 0;
+				this._boxSelectionWidth = this._doc.song.barCount;
+				this._boxSelectionHeight = this._doc.song.getChannelCount();
+			}
+			this._selectionUpdated();
+		}
+		
+		public selectChannel(): void {
+			if (
+				this._boxSelectionBar == 0 &&
+				this._boxSelectionWidth == this._doc.song.barCount
+			) {
+				this._boxSelectionBar = this._doc.bar;
+				this._boxSelectionWidth = 1;
+			} else {
+				this._boxSelectionBar = 0;
+				this._boxSelectionWidth = this._doc.song.barCount;
+			}
+			this._selectionUpdated();
+		}
+		
+		public duplicatePatterns(): void {
+			const group: ChangeGroup = new ChangeGroup();
+			
+			for (const channel of this._eachSelectedChannel()) {
+				const reusablePatterns: Dictionary<number> = {};
+				
+				for (const bar of this._eachSelectedBar()) {
+					const currentPatternIndex: number = this._doc.song.channels[channel].bars[bar];
+					if (currentPatternIndex == 0) continue;
+					
+					if (reusablePatterns[String(currentPatternIndex)] == undefined) {
+						let isUsedElsewhere = false;
+						for (const bar2 of this._eachUnselectedBar()) {
+							if (this._doc.song.channels[channel].bars[bar2] == currentPatternIndex) {
+								isUsedElsewhere = true;
+								break;
+							}
+						}
+						if (isUsedElsewhere) {
+							// Need to duplicate the pattern.
+							const copiedPattern: Pattern = this._doc.song.getPattern(channel, bar)!;
+							group.append(new ChangePatternNumbers(this._doc, 0, bar, channel, 1, 1));
+							group.append(new ChangeEnsurePatternExists(this._doc, channel, bar));
+							const newPattern: Pattern | null = this._doc.song.getPattern(channel, bar);
+							if (newPattern == null) throw new Error();
+							group.append(new ChangePaste(this._doc, newPattern, copiedPattern.notes, this._doc.song.beatsPerBar));
+							group.append(new ChangePatternInstrument(this._doc, copiedPattern.instrument, newPattern));
+							reusablePatterns[String(currentPatternIndex)] = this._doc.song.channels[channel].bars[bar];
+						} else {
+							reusablePatterns[String(currentPatternIndex)] = currentPatternIndex;
+						}
+					}
+					
+					group.append(new ChangePatternNumbers(this._doc, reusablePatterns[String(currentPatternIndex)], bar, channel, 1, 1));
+				}
+			}
+			
+			this._doc.record(group);
+		}
+		
+		public forceRhythm(): void {
+			const group: ChangeGroup = new ChangeGroup();
+			
+			for (const channel of this._eachSelectedChannel()) {
+				for (const pattern of this._eachSelectedPattern(channel)) {
+					group.append(new ChangePatternRhythm(this._doc, pattern));
+				}
+			}
+			
+			this._doc.record(group);
+		}
+		
+		public forceScale(): void {
+			const group: ChangeGroup = new ChangeGroup();
+			
+			const scaleFlags: boolean[] = [true, false, false, false, false, false, false, false, false, false, false, false];
+			for (const channel of this._eachSelectedChannel()) {
+				if (this._doc.song.getChannelIsNoise(channel)) continue;
+				for (const pattern of this._eachSelectedPattern(channel)) {
+					unionOfUsedNotes(pattern, scaleFlags);
+				}
+			}
+				
+			const scaleMap: number[] = generateScaleMap(scaleFlags, this._doc.song.scale);
+				
+			for (const channel of this._eachSelectedChannel()) {
+				if (this._doc.song.getChannelIsNoise(channel)) continue;
+				for (const pattern of this._eachSelectedPattern(channel)) {
+					group.append(new ChangePatternScale(this._doc, pattern, scaleMap));
+				}
+			}
+			
+			this._doc.record(group);
+		}
+		
+		public transpose(upward: boolean, octave: boolean): void {
+			const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTranspose);
+			const group: ChangeGroup = new ChangeGroup();
+			this._changeTranspose = group;
+			
+			for (const channel of this._eachSelectedChannel()) {
+				for (const pattern of this._eachSelectedPattern(channel)) {
+					group.append(new ChangeTranspose(this._doc, channel, pattern, upward, false, octave));
+				}
+			}
+			
+			this._doc.record(group, canReplaceLastChange ? "replace" : "push");
+		}
+		
+		public setInstrument(instrument: number): void {
+			const group: ChangeGroup = new ChangeGroup();
+			
+			for (const channel of this._eachSelectedChannel()) {
+				for (const pattern of this._eachSelectedPattern(channel)) {
+					group.append(new ChangePatternInstrument(this._doc, instrument, pattern));
+				}
+			}
+			
+			this._doc.record(group);
+		}
+		
 		private _nextDigit(digit: string): void {
 			this._digits += digit;
 			let parsed: number = parseInt(this._digits);
@@ -476,7 +647,7 @@ namespace beepbox {
 			this._boxSelectionChannel = Math.min(this._mouseStartChannel, this._mouseChannel);
 			this._boxSelectionWidth = Math.abs(this._mouseStartBar - this._mouseBar) + 1;
 			this._boxSelectionHeight = Math.abs(this._mouseStartChannel - this._mouseChannel) + 1;
-			this._setChannelBar(this._boxSelectionChannel, this._boxSelectionBar);
+			this._selectionUpdated();
 		}
 		
 		private _updateSelectPos(event: TouchEvent): void {
