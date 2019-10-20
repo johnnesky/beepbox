@@ -797,6 +797,8 @@ namespace beepbox {
 		
 		private _tempoStepperCaptureNumberKeys = (event: KeyboardEvent): void => {
 			switch (event.keyCode) {
+				case 8: // backspace/delete
+				case 13: // enter/return
 				case 38: // up
 				case 40: // down
 				case 37: // left
