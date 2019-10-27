@@ -201,13 +201,13 @@ namespace beepbox {
 				}
 			}
 			const sampleFrames: number = synth.getSamplesPerBar() * synth.getTotalBars(this._enableIntro.checked, this._enableOutro.checked);
-			const recordedSamples: Float32Array = new Float32Array(sampleFrames);
+			const recordedSamplesL: Float32Array = new Float32Array(sampleFrames);
+			const recordedSamplesR: Float32Array = new Float32Array(sampleFrames);
 			//const timer: number = performance.now();
-			synth.synthesize(recordedSamples, sampleFrames);
+			synth.synthesize(recordedSamplesL, recordedSamplesR, sampleFrames);
 			//console.log("export timer", (performance.now() - timer) / 1000.0);
 			
-			const srcChannelCount: number = 1;
-			const wavChannelCount: number = 1;
+			const wavChannelCount: number = 2;
 			const sampleRate: number = 44100;
 			const bytesPerSample: number = 2;
 			const bitsPerSample: number = 8 * bytesPerSample;
@@ -231,38 +231,29 @@ namespace beepbox {
 			data.setUint16(index, bitsPerSample, true); index += 2; // sample rate
 			data.setUint32(index, 0x64617461, false); index += 4;
 			data.setUint32(index, sampleCount * bytesPerSample, true); index += 4;
-			let stride: number;
-			let repeat: number;
-			if (srcChannelCount == wavChannelCount) {
-				stride = 1;
-				repeat = 1;
-			} else {
-				stride = srcChannelCount;
-				repeat = wavChannelCount;
-			}
 			
-			let val: number;
 			if (bytesPerSample > 1) {
 				// usually samples are signed. 
 				for (let i: number = 0; i < sampleFrames; i++) {
-					val = Math.floor(Math.max(-1, Math.min(1, recordedSamples[i * stride])) * ((1 << (bitsPerSample - 1)) - 1));
-					for (let k: number = 0; k < repeat; k++) {
-						if (bytesPerSample == 2) {
-							data.setInt16(index, val, true); index += 2;
-						} else if (bytesPerSample == 4) {
-							data.setInt32(index, val, true); index += 4;
-						} else {
-							throw new Error("unsupported sample size");
-						}
+					let valL: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i])) * ((1 << (bitsPerSample - 1)) - 1));
+					let valR: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i])) * ((1 << (bitsPerSample - 1)) - 1));
+					if (bytesPerSample == 2) {
+						data.setInt16(index, valL, true); index += 2;
+						data.setInt16(index, valR, true); index += 2;
+					} else if (bytesPerSample == 4) {
+						data.setInt32(index, valL, true); index += 4;
+						data.setInt32(index, valR, true); index += 4;
+					} else {
+						throw new Error("unsupported sample size");
 					}
 				}
 			} else {
 				// 8 bit samples are a special case: they are unsigned.
 				for (let i: number = 0; i < sampleFrames; i++) {
-					val = Math.floor(Math.max(-1, Math.min(1, recordedSamples[i * stride])) * 127 + 128);
-					for (let k: number = 0; k < repeat; k++) {
-						data.setUint8(index, val > 255 ? 255 : (val < 0 ? 0 : val)); index++;
-					}
+					let valL: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i])) * 127 + 128);
+					let valR: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i])) * 127 + 128);
+					data.setUint8(index, valL > 255 ? 255 : (valL < 0 ? 0 : valL)); index++;
+					data.setUint8(index, valR > 255 ? 255 : (valR < 0 ? 0 : valR)); index++;
 				}
 			}
 			
@@ -469,10 +460,15 @@ namespace beepbox {
 								writer.writeMidi7Bits(instrumentProgram);
 							}
 						
-							// Channel volume:
+							// Instrument volume:
 							writeEventTime(barStartTime);
-							let channelVolume: number = volumeMultToMidiVolume(Synth.instrumentVolumeToVolumeMult(instrument.volume));
-							writeControlEvent(MidiControlEventMessage.volumeMSB, Math.min(0x7f, Math.round(channelVolume)));
+							let instrumentVolume: number = volumeMultToMidiVolume(Synth.instrumentVolumeToVolumeMult(instrument.volume));
+							writeControlEvent(MidiControlEventMessage.volumeMSB, Math.min(0x7f, Math.round(instrumentVolume)));
+							
+							// Instrument pan:
+							writeEventTime(barStartTime);
+							let instrumentPan: number = (instrument.pan / Config.panCenter - 1) * 0x3f + 0x40;
+							writeControlEvent(MidiControlEventMessage.panMSB, Math.min(0x7f, Math.round(instrumentPan)));
 						}
 					}
 					if (song.getPattern(channel, 0) == null) {

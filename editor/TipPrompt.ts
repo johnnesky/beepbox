@@ -58,6 +58,13 @@ namespace beepbox {
 						p("This setting controls the volume of the selected instrument without affecting the volume of the other instruments. This allows you to balance the loudness of each instrument relative to each other."),
 					);
 				} break;
+				case "pan": {
+					message = div(
+						h2("Instrument Panning"),
+						p("If you're listening through headphones or some other stereo sound system, this controls the position of the instrument and where the sound is coming from, ranging from left to right."),
+						p("As a rule of thumb, composers typically put lead melodies, drums, and basses in the center, and spread any other instruments to either side. If too many instruments seem like they're coming from the same place, it can feel crowded and harder to distinguish individual sounds, especially if they cover a similar pitch range."),
+					);
+				} break;
 				case "instrumentType": {
 					message = div(
 						h2("Instrument Type"),

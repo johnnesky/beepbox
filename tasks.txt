@@ -342,9 +342,9 @@
 √ Rectangular box selection in track editor for copying and pasting patterns.
 √ New commands to insert/delete bars.
 √ New commands select all and duplicate pattern, changed several existing commands to apply to the current box selection.
+√ Panning/stereo
 
 MAJOR REMAINING FEATURES:
-- stereo
 - tutorial + music theory primer
 - audio worklet thread
 - live input when song is paused
@@ -393,7 +393,6 @@ TODO:
 - It's probably okay if "parts" and "arpeggios" don't transition at exact sample boundaries, rather than fractional sample points. Maybe still keep beats aligned to sample boundaries, but you can have more precise BPM tempos by loosening up the alignment.
 - maybe command+S should do something useful?
 - wav export quality: CD (44100) vs Video (48000) standards, 1x, downsampled from 2x to 1x, downsampled from 4x to 2x. How does this affect FM feedback and noise volume?
-- Maybe support stereo delay effects in high quality mode.
 - maybe sum adjacent fm synth samples (at half volume) to cancel out inaudible feedback artifacts? for the carrier wave(s), try that integral thing to reduce the aliasing... or is that not really the problem here? (fortunately the integral of a sine wave is just an offset sinewave!) The FM feedback has been bugging me because it has a tendency to alternate between high and low values every other output sample. This is probably (?) inaudible, but is nevertheless an artifact. I could probably mitigate it by adding each FM sample to the previous sample before outputting (and cutting the volume in half to compensate). Does this help with more complicated structures? Note that this won't fix the audible FM aliasing, I'm not sure if there's anything besides super sampling that would fix that.
 - The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
 - divert www traffic to beepbox.co. Okay wow this is a lot more complicated than it ought to be... You can only get load balancing on most available web servers by using CNAME records to repeat the request with a different domain whose DNS records are managed by the web server provider, which will choose an appropriate IP address for your location. For naked domains, your dns records can only provide static hardcoded IP addresses, (assuming you don't rapidly manage the ip addresses yourself via the user interface!) which can be cycled to distribute the load but generally isn't smart enough to actually detect server availability. :/

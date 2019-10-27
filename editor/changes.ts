@@ -322,8 +322,10 @@ namespace beepbox {
 						}
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
+						const tempPan: number = instrument.pan;
 						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel));
 						instrument.volume = tempVolume;
+						instrument.pan = tempPan;
 					}
 				}
 				instrument.preset = newValue;
@@ -2256,6 +2258,15 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].volume = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangePan extends Change {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super();
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].pan = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}

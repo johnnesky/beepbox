@@ -138,6 +138,7 @@ namespace beepbox {
 				velocity: number;
 				program: number;
 				instrumentVolume: number;
+				instrumentPan: number;
 				on: boolean;
 			}
 			interface PitchBendEvent {
@@ -159,6 +160,7 @@ namespace beepbox {
 			const pitchBendRangeLSB: number[] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]; // and 0 cents.
 			const currentInstrumentProgram: number[] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 			const currentInstrumentVolumes: number[] = [100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100];
+			const currentInstrumentPans: number[] = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64];
 			const noteEvents: NoteEvent[][] = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
 			const pitchBendEvents: PitchBendEvent[][] = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
 			const expressionEvents: ExpressionEvent[][] = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
@@ -197,16 +199,29 @@ namespace beepbox {
 							case MidiEventType.noteOff: {
 								const pitch: number = track.reader.readMidi7Bits();
 								/*const velocity: number =*/ track.reader.readMidi7Bits();
-								noteEvents[eventChannel].push({midiTick: currentMidiTick, pitch: pitch, velocity: 0.0, program: -1, instrumentVolume: -1, on: false});
+								noteEvents[eventChannel].push({midiTick: currentMidiTick, pitch: pitch, velocity: 0.0, program: -1, instrumentVolume: -1, instrumentPan: -1, on: false});
 							} break;
 							case MidiEventType.noteOn: {
 								const pitch: number = track.reader.readMidi7Bits();
 								const velocity: number = track.reader.readMidi7Bits();
 								if (velocity == 0) {
-									noteEvents[eventChannel].push({midiTick: currentMidiTick, pitch: pitch, velocity: 0.0, program: -1, instrumentVolume: -1, on: false});
+									noteEvents[eventChannel].push({midiTick: currentMidiTick, pitch: pitch, velocity: 0.0, program: -1, instrumentVolume: -1, instrumentPan: -1, on: false});
 								} else {
-									const volume: number = Math.max(0, Math.min(Config.volumeRange - 1, Math.round(Synth.volumeMultToInstrumentVolume(midiVolumeToVolumeMult(currentInstrumentVolumes[eventChannel])))));
-									noteEvents[eventChannel].push({midiTick: currentMidiTick, pitch: pitch, velocity: Math.max(0.0, Math.min(1.0, (velocity + 14) / 90.0)), program: currentInstrumentProgram[eventChannel], instrumentVolume: volume, on: true});
+									const volume: number = Math.max(0, Math.min(Config.volumeRange - 1, Math.round(
+										Synth.volumeMultToInstrumentVolume(midiVolumeToVolumeMult(currentInstrumentVolumes[eventChannel]))
+									)));
+									const pan: number = Math.max(0, Math.min(Config.panMax, Math.round(
+										((currentInstrumentPans[eventChannel] - 64) / 63 + 1) * Config.panCenter
+									)));
+									noteEvents[eventChannel].push({
+										midiTick: currentMidiTick,
+										pitch: pitch,
+										velocity: Math.max(0.0, Math.min(1.0, (velocity + 14) / 90.0)),
+										program: currentInstrumentProgram[eventChannel],
+										instrumentVolume: volume,
+										instrumentPan: pan,
+										on: true,
+									});
 								}
 							} break;
 							case MidiEventType.keyPressure: {
@@ -226,6 +241,9 @@ namespace beepbox {
 									} break;
 									case MidiControlEventMessage.volumeMSB: {
 										currentInstrumentVolumes[eventChannel] = value;
+									} break;
+									case MidiControlEventMessage.panMSB: {
+										currentInstrumentPans[eventChannel] = value;
 									} break;
 									case MidiControlEventMessage.expressionMSB: {
 										expressionEvents[eventChannel].push({midiTick: currentMidiTick, volume: Synth.volumeMultToExpression(midiExpressionToVolumeMult(value))});
@@ -397,6 +415,7 @@ namespace beepbox {
 				let currentVelocity: number = 1.0;
 				let currentProgram: number = 0;
 				let currentInstrumentVolume: number = 0;
+				let currentInstrumentPan: number = Config.panCenter;
 				
 				if (isDrumsetChannel) {
 					const heldPitches: number[] = [];
@@ -438,6 +457,7 @@ namespace beepbox {
 							// zero volume.
 							if (!setInstrumentVolume || instrument.volume > currentInstrumentVolume) {
 								instrument.volume = currentInstrumentVolume;
+								instrument.pan = currentInstrumentPan;
 								setInstrumentVolume = true;
 							}
 
@@ -478,6 +498,7 @@ namespace beepbox {
 							prevEventPart = nextEventPart;
 							currentVelocity = noteEvent.velocity;
 							currentInstrumentVolume = noteEvent.instrumentVolume;
+							currentInstrumentPan = noteEvent.instrumentPan;
 						}
 					}
 				} else {
@@ -562,6 +583,7 @@ namespace beepbox {
 											}
 											
 											instrument.volume = currentInstrumentVolume;
+											instrument.pan = currentInstrumentPan;
 											
 											channel.instruments.push(instrument);
 										}
@@ -575,6 +597,7 @@ namespace beepbox {
 									// zero volume.
 									if (instrumentByProgram[currentProgram] != undefined) {
 										instrumentByProgram[currentProgram].volume = Math.min(instrumentByProgram[currentProgram].volume, currentInstrumentVolume);
+										instrumentByProgram[currentProgram].pan = Math.min(instrumentByProgram[currentProgram].pan, currentInstrumentPan);
 									}
 									
 									// Create a new note, and interpret the pitch bend and expression events
@@ -741,6 +764,7 @@ namespace beepbox {
 							currentVelocity = noteEvent.velocity;
 							currentProgram = noteEvent.program;
 							currentInstrumentVolume = noteEvent.instrumentVolume;
+							currentInstrumentPan = noteEvent.instrumentPan;
 						}
 						
 						prevEventMidiTick = nextEventMidiTick;

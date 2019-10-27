@@ -190,6 +190,8 @@ namespace beepbox {
 		private readonly _instrumentSelectRow: HTMLDivElement = div({className: "selectRow", style: "display: none;"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentIndex")}, "Instrument: "), div({className: "selectContainer"}, this._instrumentSelect));
 		private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: -(Config.volumeRange - 1), max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
 		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume: "), this._instrumentVolumeSlider.input);
+		private readonly _panSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.panMax, value: Config.panCenter, step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangePan(this._doc, oldValue, newValue));
+		private readonly _panSliderRow: HTMLDivElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pan")}, "Panning: "), this._panSlider.input);
 		private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select(), Config.chipWaves.map(wave=>wave.name));
 		private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select(), Config.chipNoises.map(wave=>wave.name));
 		private readonly _chipWaveSelectRow: HTMLDivElement = div({className: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipWave")}, "Wave: "), div({className: "selectContainer"}, this._chipWaveSelect));
@@ -276,6 +278,7 @@ namespace beepbox {
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({className: "editor-controls"},
 			this._instrumentSelectRow,
 			this._instrumentVolumeSliderRow,
+			this._panSliderRow,
 			div({className: "selectRow"},
 				span({class: "tip", onclick: ()=>this._openPrompt("instrumentType")}, "Type: "),
 				div({className: "selectContainer"}, this._pitchedPresetSelect, this._drumPresetSelect),
@@ -755,6 +758,7 @@ namespace beepbox {
 			setSelectedValue(this._intervalSelect, instrument.interval);
 			setSelectedValue(this._chordSelect, instrument.chord);
 			this._instrumentVolumeSlider.updateValue(-instrument.volume);
+			this._panSlider.updateValue(instrument.pan);
 			setSelectedValue(this._instrumentSelect, instrumentIndex);
 			
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
@@ -882,6 +886,7 @@ namespace beepbox {
 						const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 						const instrumentObject: any = instrument.toJsonObject();
 						delete instrumentObject["volume"];
+						delete instrumentObject["pan"];
 						delete instrumentObject["preset"];
 						this._copyTextToClipboard(JSON.stringify(instrumentObject));
 					}

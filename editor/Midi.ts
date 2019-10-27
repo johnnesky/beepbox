@@ -37,6 +37,7 @@ namespace beepbox {
 		
 		setParameterMSB = 0x06,
 		volumeMSB = 0x07,
+		panMSB = 0x0A,
 		expressionMSB = 0x0B,
 		
 		setParameterLSB = 0x26,

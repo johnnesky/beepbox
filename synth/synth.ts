@@ -125,6 +125,7 @@ namespace beepbox {
 		feedbackType = CharCode.F,
 		
 		harmonics = CharCode.H,
+		pan = CharCode.L,
 		
 		operatorAmplitudes = CharCode.P,
 		operatorFrequencies = CharCode.Q,
@@ -534,6 +535,7 @@ namespace beepbox {
 		public effects: number = 0;
 		public chord: number = 1;
 		public volume: number = 0;
+		public pan: number = Config.panCenter;
 		public pulseWidth: number = Config.pulseWidthRange - 1;
 		public pulseEnvelope: number = 1;
 		public algorithm: number = 0;
@@ -561,6 +563,7 @@ namespace beepbox {
 			this.type = type;
 			this.preset = type;
 			this.volume = 0;
+			this.pan = Config.panCenter;
 			switch (type) {
 				case InstrumentType.chip:
 					this.chipWave = 2;
@@ -646,6 +649,7 @@ namespace beepbox {
 			const instrumentObject: any = {
 				"type": Config.instrumentTypeNames[this.type],
 				"volume": (5 - this.volume) * 20,
+				"pan": (this.pan - Config.panCenter) * 100 / Config.panCenter,
 				"effects": Config.effectsNames[this.effects],
 			};
 			
@@ -731,6 +735,12 @@ namespace beepbox {
 				this.volume = clamp(0, Config.volumeRange, Math.round(5 - (instrumentObject["volume"] | 0) / 20));
 			} else {
 				this.volume = 0;
+			}
+			
+			if (instrumentObject["pan"] != undefined) {
+				this.pan = clamp(0, Config.panMax + 1, Math.round(Config.panCenter + (instrumentObject["pan"] | 0) * Config.panCenter / 100));
+			} else {
+				this.pan = Config.panCenter;
 			}
 			
 			const oldTransitionNames: Dictionary<number> = {"binary": 0, "sudden": 1, "smooth": 2};
@@ -1106,6 +1116,7 @@ namespace beepbox {
 					const instrument: Instrument = this.channels[channel].instruments[i];
 					buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
 					buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
+					buffer.push(SongTagCode.pan, base64IntToCharCode[instrument.pan]);
 					buffer.push(SongTagCode.preset, base64IntToCharCode[instrument.preset >> 6], base64IntToCharCode[instrument.preset & 63]);
 					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects]);
 					
@@ -1668,6 +1679,9 @@ namespace beepbox {
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 						instrument.volume = clamp(0, Config.volumeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
+				} else if (command == SongTagCode.pan) {
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					instrument.pan = clamp(0, Config.panMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.algorithm) {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].algorithm = clamp(0, Config.algorithms.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} else if (command == SongTagCode.feedbackType) {
@@ -2256,6 +2270,10 @@ namespace beepbox {
 		public liveInputSamplesHeld: number = 0;
 		public lastInterval: number = 0;
 		public lastVolume: number = 0;
+		public stereoVolume1: number = 0.0;
+		public stereoVolume2: number = 0.0;
+		public stereoOffset: number = 0.0;
+		public stereoDelay: number = 0.0;
 		public sample: number = 0.0;
 		public readonly phases: number[] = [];
 		public readonly phaseDeltas: number[] = [];
@@ -2338,11 +2356,13 @@ namespace beepbox {
 		//private highpassOutput: number = 0.0;
 		private limit: number = 0.0;
 		
+		private stereoBufferIndex: number = 0;
+		private samplesForNone: Float32Array | null = null;
+		private samplesForReverb: Float32Array | null = null;
 		private samplesForChorus: Float32Array | null = null;
 		private samplesForChorusReverb: Float32Array | null = null;
-		private samplesForReverb: Float32Array | null = null;
 		
-		private chorusDelayLine: Float32Array = new Float32Array(1024);
+		private chorusDelayLine: Float32Array = new Float32Array(2048);
 		private chorusDelayPos: number = 0;
 		private chorusPhase: number = 0;
 		
@@ -2414,7 +2434,7 @@ namespace beepbox {
 			
 			const contextClass = (window.AudioContext || window.webkitAudioContext);
 			this.audioCtx = this.audioCtx || new contextClass();
-			this.scriptNode = this.audioCtx.createScriptProcessor ? this.audioCtx.createScriptProcessor(2048, 0, 1) : this.audioCtx.createJavaScriptNode(2048, 0, 1); // 2048, 0 input channels, 1 output
+			this.scriptNode = this.audioCtx.createScriptProcessor ? this.audioCtx.createScriptProcessor(2048, 0, 2) : this.audioCtx.createJavaScriptNode(2048, 0, 2); // 2048, 0 input channels, 2 output channels
 			this.scriptNode.onaudioprocess = this.audioProcessCallback;
 			this.scriptNode.channelCountMode = 'explicit';
 			this.scriptNode.channelInterpretation = 'speakers';
@@ -2432,6 +2452,15 @@ namespace beepbox {
 			}
 			this.audioCtx = null;
 			this.scriptNode = null;
+		}
+		
+		private resetBuffers(): void {
+			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
+			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
+			if (this.samplesForNone != null) for (let i: number = 0; i < this.samplesForNone.length; i++) this.samplesForNone[i] = 0.0;
+			if (this.samplesForReverb != null) for (let i: number = 0; i < this.samplesForReverb.length; i++) this.samplesForReverb[i] = 0.0;
+			if (this.samplesForChorus != null) for (let i: number = 0; i < this.samplesForChorus.length; i++) this.samplesForChorus[i] = 0.0;
+			if (this.samplesForChorusReverb != null) for (let i: number = 0; i < this.samplesForChorusReverb.length; i++) this.samplesForChorusReverb[i] = 0.0;
 		}
 		
 		public snapToStart(): void {
@@ -2454,8 +2483,7 @@ namespace beepbox {
 			//this.highpassInput = 0.0;
 			//this.highpassOutput = 0.0;
 			this.freeAllTones();
-			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
-			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
+			this.resetBuffers();
 		}
 		
 		public jumpIntoLoop(): void {
@@ -2489,17 +2517,24 @@ namespace beepbox {
 		
 		private audioProcessCallback = (audioProcessingEvent: any): void => {
 			const outputBuffer = audioProcessingEvent.outputBuffer;
-			const outputData: Float32Array = outputBuffer.getChannelData(0);
+			const outputDataL: Float32Array = outputBuffer.getChannelData(0);
+			const outputDataR: Float32Array = outputBuffer.getChannelData(1);
 			if (this.paused) {
-				for (let i: number = 0; i < outputBuffer.length; i++) outputData[i] = 0.0;
+				for (let i: number = 0; i < outputBuffer.length; i++) {
+					outputDataL[i] = 0.0;
+					outputDataR[i] = 0.0;
+				}
 			} else {
-				this.synthesize(outputData, outputBuffer.length);
+				this.synthesize(outputDataL, outputDataR, outputBuffer.length);
 			}
 		}
 		
-		public synthesize(data: Float32Array, bufferLength: number): void {
+		public synthesize(outputDataL: Float32Array, outputDataR: Float32Array, outputBufferLength: number): void {
 			if (this.song == null) {
-				for (let i: number = 0; i < bufferLength; i++) data[i] = 0.0;
+				for (let i: number = 0; i < outputBufferLength; i++) {
+					outputDataL[i] = 0.0;
+					outputDataR[i] = 0.0;
+				}
 				return;
 			}
 			
@@ -2541,24 +2576,23 @@ namespace beepbox {
 			
 			//const synthStartTime: number = performance.now();
 			
-			if (this.samplesForChorus == null || this.samplesForChorus.length < bufferLength) {
-				this.samplesForChorus = new Float32Array(bufferLength);
+			const stereoBufferLength: number = outputBufferLength * 4;
+			if (this.samplesForNone == null || this.samplesForNone.length != stereoBufferLength ||
+				this.samplesForReverb == null || this.samplesForReverb.length != stereoBufferLength ||
+				this.samplesForChorus == null || this.samplesForChorus.length != stereoBufferLength ||
+				this.samplesForChorusReverb == null || this.samplesForChorusReverb.length != stereoBufferLength)
+			{
+				this.samplesForNone = new Float32Array(stereoBufferLength);
+				this.samplesForReverb = new Float32Array(stereoBufferLength);
+				this.samplesForChorus = new Float32Array(stereoBufferLength);
+				this.samplesForChorusReverb = new Float32Array(stereoBufferLength);
+				this.stereoBufferIndex = 0;
 			}
-			if (this.samplesForChorusReverb == null || this.samplesForChorusReverb.length < bufferLength) {
-				this.samplesForChorusReverb = new Float32Array(bufferLength);
-			}
-			if (this.samplesForReverb == null || this.samplesForReverb.length < bufferLength) {
-				this.samplesForReverb = new Float32Array(bufferLength);
-			}
+			let stereoBufferIndex: number = this.stereoBufferIndex;
+			const samplesForNone: Float32Array = this.samplesForNone;
+			const samplesForReverb: Float32Array = this.samplesForReverb;
 			const samplesForChorus: Float32Array = this.samplesForChorus;
 			const samplesForChorusReverb: Float32Array = this.samplesForChorusReverb;
-			const samplesForReverb: Float32Array = this.samplesForReverb;
-
-			// Fill output data with zeroes using a partially unrolled loop before instruments accumulate sample values, since it's not guaranteed to be initialized to zeroes.
-			for (let i: number = 0; i < bufferLength;) {
-				data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0;
-				data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0; data[i++] = 0.0;
-			}
 			
 			// Post processing parameters:
 			const volume: number = +this.volume;
@@ -2567,11 +2601,14 @@ namespace beepbox {
 			const chorusDuration: number = 2.0;
 			const chorusAngle: number = Math.PI * 2.0 / (chorusDuration * this.samplesPerSecond);
 			const chorusRange: number = 150 * this.samplesPerSecond / 44100;
-			const chorusOffset0: number = 0x400 - 1.51 * chorusRange;
-			const chorusOffset1: number = 0x400 - 2.10 * chorusRange;
-			const chorusOffset2: number = 0x400 - 3.35 * chorusRange;
+			const chorusOffset0: number = 0x800 - 1.51 * chorusRange;
+			const chorusOffset1: number = 0x800 - 2.10 * chorusRange;
+			const chorusOffset2: number = 0x800 - 3.35 * chorusRange;
+			const chorusOffset3: number = 0x800 - 1.47 * chorusRange;
+			const chorusOffset4: number = 0x800 - 2.15 * chorusRange;
+			const chorusOffset5: number = 0x800 - 3.25 * chorusRange;
 			let chorusPhase: number = this.chorusPhase % (Math.PI * 2.0);
-			let chorusDelayPos: number = this.chorusDelayPos & 0x3FF;
+			let chorusDelayPos: number = this.chorusDelayPos & 0x7FF;
 			let reverbDelayPos: number = this.reverbDelayPos & 0x3FFF;
 			let reverbFeedback0: number = +this.reverbFeedback0;
 			let reverbFeedback1: number = +this.reverbFeedback1;
@@ -2585,10 +2622,9 @@ namespace beepbox {
 			//let highpassOutput: number = +this.highpassOutput;
 			let limit: number = +this.limit;
 			
-			const synthBufferByEffects: Float32Array[] = [data, samplesForReverb, samplesForChorus, samplesForChorusReverb];
-			while (bufferIndex < bufferLength && !ended) {
+			while (bufferIndex < outputBufferLength && !ended) {
 				
-				const samplesLeftInBuffer: number = bufferLength - bufferIndex;
+				const samplesLeftInBuffer: number = outputBufferLength - bufferIndex;
 				const runLength: number = (this.tickSampleCountdown <= samplesLeftInBuffer)
 					? this.tickSampleCountdown
 					: samplesLeftInBuffer;
@@ -2599,14 +2635,14 @@ namespace beepbox {
 
 						for (let i: number = 0; i < this.liveInputTones.count(); i++) {
 							const tone: Tone = this.liveInputTones.get(i);
-							this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, false, false);
+							this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, false, false);
 						}
 					}
 
 					this.determineCurrentActiveTones(this.song, channel);
 					for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
 						const tone: Tone = this.activeTones[channel].get(i);
-						this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, false, false);
+						this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, false, false);
 					}
 					for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
 						const tone: Tone = this.releasedTones[channel].get(i);
@@ -2618,7 +2654,7 @@ namespace beepbox {
 
 						const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
 
-						this.playTone(this.song, bufferIndex, synthBufferByEffects, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
+						this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
 					}
 				}
 				
@@ -2626,41 +2662,74 @@ namespace beepbox {
 				let chorusTap0Index: number = chorusDelayPos + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
 				let chorusTap1Index: number = chorusDelayPos + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
 				let chorusTap2Index: number = chorusDelayPos + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
+				let chorusTap3Index: number = chorusDelayPos + 0x400 + chorusOffset3 - chorusRange * Math.sin(chorusPhase + 3.2);
+				let chorusTap4Index: number = chorusDelayPos + 0x400 + chorusOffset4 - chorusRange * Math.sin(chorusPhase + 5.3);
+				let chorusTap5Index: number = chorusDelayPos + 0x400 + chorusOffset5 - chorusRange * Math.sin(chorusPhase + 1.0);
 				chorusPhase += chorusAngle * runLength;
 				const chorusTap0End: number = chorusDelayPos + runLength + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
 				const chorusTap1End: number = chorusDelayPos + runLength + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
 				const chorusTap2End: number = chorusDelayPos + runLength + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
+				const chorusTap3End: number = chorusDelayPos + runLength + 0x400 + chorusOffset3 - chorusRange * Math.sin(chorusPhase + 3.2);
+				const chorusTap4End: number = chorusDelayPos + runLength + 0x400 + chorusOffset4 - chorusRange * Math.sin(chorusPhase + 5.3);
+				const chorusTap5End: number = chorusDelayPos + runLength + 0x400 + chorusOffset5 - chorusRange * Math.sin(chorusPhase + 1.0);
 				const chorusTap0Delta: number = (chorusTap0End - chorusTap0Index) / runLength;
 				const chorusTap1Delta: number = (chorusTap1End - chorusTap1Index) / runLength;
 				const chorusTap2Delta: number = (chorusTap2End - chorusTap2Index) / runLength;
+				const chorusTap3Delta: number = (chorusTap3End - chorusTap3Index) / runLength;
+				const chorusTap4Delta: number = (chorusTap4End - chorusTap4Index) / runLength;
+				const chorusTap5Delta: number = (chorusTap5End - chorusTap5Index) / runLength;
 				const runEnd: number = bufferIndex + runLength;
 				for (let i: number = bufferIndex; i < runEnd; i++) {
-					const sampleForChorus: number = samplesForChorus[i];
-					samplesForChorus[i] = 0.0;
-					const sampleForChorusReverb: number = samplesForChorusReverb[i];
-					samplesForChorusReverb[i] = 0.0;
-					const sampleForReverb: number = samplesForReverb[i];
-					samplesForReverb[i] = 0.0;
-					const combinedChorus: number = sampleForChorus + sampleForChorusReverb;
+					const bufferIndexL: number = stereoBufferIndex;
+					const bufferIndexR: number = stereoBufferIndex + 1;
+					const sampleForNoneL: number = samplesForNone[bufferIndexL]; samplesForNone[bufferIndexL] = 0.0;
+					const sampleForNoneR: number = samplesForNone[bufferIndexR]; samplesForNone[bufferIndexR] = 0.0;
+					const sampleForReverbL: number = samplesForReverb[bufferIndexL]; samplesForReverb[bufferIndexL] = 0.0;
+					const sampleForReverbR: number = samplesForReverb[bufferIndexR]; samplesForReverb[bufferIndexR] = 0.0;
+					const sampleForChorusL: number = samplesForChorus[bufferIndexL]; samplesForChorus[bufferIndexL] = 0.0;
+					const sampleForChorusR: number = samplesForChorus[bufferIndexR]; samplesForChorus[bufferIndexR] = 0.0;
+					const sampleForChorusReverbL: number = samplesForChorusReverb[bufferIndexL]; samplesForChorusReverb[bufferIndexL] = 0.0;
+					const sampleForChorusReverbR: number = samplesForChorusReverb[bufferIndexR]; samplesForChorusReverb[bufferIndexR] = 0.0;
+					stereoBufferIndex += 2;
+					
+					const combinedChorusL: number = sampleForChorusL + sampleForChorusReverbL;
+					const combinedChorusR: number = sampleForChorusR + sampleForChorusReverbR;
 					
 					const chorusTap0Ratio: number = chorusTap0Index % 1;
 					const chorusTap1Ratio: number = chorusTap1Index % 1;
 					const chorusTap2Ratio: number = chorusTap2Index % 1;
-					const chorusTap0A: number = chorusDelayLine[(chorusTap0Index) & 0x3FF];
-					const chorusTap0B: number = chorusDelayLine[(chorusTap0Index + 1) & 0x3FF];
-					const chorusTap1A: number = chorusDelayLine[(chorusTap1Index) & 0x3FF];
-					const chorusTap1B: number = chorusDelayLine[(chorusTap1Index + 1) & 0x3FF];
-					const chorusTap2A: number = chorusDelayLine[(chorusTap2Index) & 0x3FF];
-					const chorusTap2B: number = chorusDelayLine[(chorusTap2Index + 1) & 0x3FF];
+					const chorusTap3Ratio: number = chorusTap3Index % 1;
+					const chorusTap4Ratio: number = chorusTap4Index % 1;
+					const chorusTap5Ratio: number = chorusTap5Index % 1;
+					const chorusTap0A: number = chorusDelayLine[(chorusTap0Index) & 0x7FF];
+					const chorusTap0B: number = chorusDelayLine[(chorusTap0Index + 1) & 0x7FF];
+					const chorusTap1A: number = chorusDelayLine[(chorusTap1Index) & 0x7FF];
+					const chorusTap1B: number = chorusDelayLine[(chorusTap1Index + 1) & 0x7FF];
+					const chorusTap2A: number = chorusDelayLine[(chorusTap2Index) & 0x7FF];
+					const chorusTap2B: number = chorusDelayLine[(chorusTap2Index + 1) & 0x7FF];
+					const chorusTap3A: number = chorusDelayLine[(chorusTap3Index) & 0x7FF];
+					const chorusTap3B: number = chorusDelayLine[(chorusTap3Index + 1) & 0x7FF];
+					const chorusTap4A: number = chorusDelayLine[(chorusTap4Index) & 0x7FF];
+					const chorusTap4B: number = chorusDelayLine[(chorusTap4Index + 1) & 0x7FF];
+					const chorusTap5A: number = chorusDelayLine[(chorusTap5Index) & 0x7FF];
+					const chorusTap5B: number = chorusDelayLine[(chorusTap5Index + 1) & 0x7FF];
 					const chorusTap0: number = chorusTap0A + (chorusTap0B - chorusTap0A) * chorusTap0Ratio;
 					const chorusTap1: number = chorusTap1A + (chorusTap1B - chorusTap1A) * chorusTap1Ratio;
 					const chorusTap2: number = chorusTap2A + (chorusTap2B - chorusTap2A) * chorusTap2Ratio;
-					const chorusSample = 0.5 * (combinedChorus - chorusTap0 + chorusTap1 - chorusTap2);
-					chorusDelayLine[chorusDelayPos] = combinedChorus;
-					chorusDelayPos = (chorusDelayPos + 1) & 0x3FF;
+					const chorusTap3: number = chorusTap3A + (chorusTap3B - chorusTap3A) * chorusTap3Ratio;
+					const chorusTap4: number = chorusTap4A + (chorusTap4B - chorusTap4A) * chorusTap4Ratio;
+					const chorusTap5: number = chorusTap5A + (chorusTap5B - chorusTap5A) * chorusTap5Ratio;
+					const chorusSampleL = 0.5 * (combinedChorusL - chorusTap0 + chorusTap1 - chorusTap2);
+					const chorusSampleR = 0.5 * (combinedChorusR - chorusTap3 + chorusTap4 - chorusTap5);
+					chorusDelayLine[chorusDelayPos] = combinedChorusL;
+					chorusDelayLine[(chorusDelayPos + 0x400) & 0x7FF] = combinedChorusR;
+					chorusDelayPos = (chorusDelayPos + 1) & 0x7FF;
 					chorusTap0Index += chorusTap0Delta;
 					chorusTap1Index += chorusTap1Delta;
 					chorusTap2Index += chorusTap2Delta;
+					chorusTap3Index += chorusTap3Delta;
+					chorusTap4Index += chorusTap4Delta;
+					chorusTap5Index += chorusTap5Delta;
 					
 					// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
 					// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
@@ -2669,13 +2738,12 @@ namespace beepbox {
 					const reverbDelayPos1: number = (reverbDelayPos +  3041) & 0x3FFF;
 					const reverbDelayPos2: number = (reverbDelayPos +  6426) & 0x3FFF;
 					const reverbDelayPos3: number = (reverbDelayPos + 10907) & 0x3FFF;
-					const reverbSample0: number = (reverbDelayLine[reverbDelayPos] + sampleForReverb);
+					const reverbSample0: number = (reverbDelayLine[reverbDelayPos]);
 					const reverbSample1: number = reverbDelayLine[reverbDelayPos1];
 					const reverbSample2: number = reverbDelayLine[reverbDelayPos2];
 					const reverbSample3: number = reverbDelayLine[reverbDelayPos3];
-					const reverbSample0Chorus: number = reverbSample0 + sampleForChorusReverb;
-					const reverbTemp0: number = -reverbSample0Chorus + reverbSample1;
-					const reverbTemp1: number = -reverbSample0Chorus - reverbSample1;
+					const reverbTemp0: number = -(reverbSample0 + sampleForChorusReverbL + sampleForReverbL) + reverbSample1;
+					const reverbTemp1: number = -(reverbSample0 + sampleForChorusReverbR + sampleForReverbR) - reverbSample1;
 					const reverbTemp2: number = -reverbSample2 + reverbSample3;
 					const reverbTemp3: number = -reverbSample2 - reverbSample3;
 					reverbFeedback0 += ((reverbTemp0 + reverbTemp2) * reverb - reverbFeedback0) * 0.5;
@@ -2688,7 +2756,8 @@ namespace beepbox {
 					reverbDelayLine[reverbDelayPos ] = reverbFeedback3;
 					reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
 					
-					const sample = data[i] + chorusSample + reverbSample0 + reverbSample1 + reverbSample2 + reverbSample3;
+					const sampleL = sampleForNoneL + chorusSampleL + sampleForReverbL + reverbSample1 + reverbSample2 + reverbSample3;
+					const sampleR = sampleForNoneR + chorusSampleR + sampleForReverbR + reverbSample0 + reverbSample2 - reverbSample3;
 					
 					/*
 					highpassOutput = highpassOutput * highpassFilter + sample - highpassInput;
@@ -2697,9 +2766,13 @@ namespace beepbox {
 					*/
 					
 					// A compressor/limiter.
-					const abs: number = sample < 0.0 ? -sample : sample;
+					const absL: number = sampleL < 0.0 ? -sampleL : sampleL;
+					const absR: number = sampleR < 0.0 ? -sampleR : sampleR;
+					const abs: number = absL > absR ? absL : absR;
 					limit += (abs - limit) * (limit < abs ? limitRise : limitDecay);
-					data[i] = (sample / (limit >= 1 ? limit * 1.05 : limit * 0.8 + 0.25)) * volume;
+					const limitedVolume = volume / (limit >= 1 ? limit * 1.05 : limit * 0.8 + 0.25);
+					outputDataL[i] = sampleL * limitedVolume;
+					outputDataR[i] = sampleR * limitedVolume;
 				}
 				
 				bufferIndex += runLength;
@@ -2759,6 +2832,7 @@ namespace beepbox {
 									this.bar = 0;
 									if (this.loopRepeatCount != -1) {
 										ended = true;
+										this.resetBuffers();
 										this.pause();
 									}
 								}
@@ -2778,6 +2852,7 @@ namespace beepbox {
 			//if (-epsilon < highpassOutput && highpassOutput < epsilon) highpassOutput = 0.0;
 			if (-epsilon < limit && limit < epsilon) limit = 0.0;
 			
+			this.stereoBufferIndex = (this.stereoBufferIndex + outputBufferLength * 2) % stereoBufferLength;
 			this.chorusPhase = chorusPhase;
 			this.chorusDelayPos = chorusDelayPos;
 			this.reverbDelayPos = reverbDelayPos;
@@ -2794,7 +2869,7 @@ namespace beepbox {
 			/*
 			const synthDuration: number = performance.now() - synthStartTime;
 			// Performance measurements:
-			samplesAccumulated += bufferLength;
+			samplesAccumulated += outputBufferLength;
 			samplePerformance += synthDuration;
 			
 			if (samplesAccumulated >= 44100 * 4) {
@@ -3000,11 +3075,18 @@ namespace beepbox {
 			}
 		}
 
-		private playTone(song: Song, bufferIndex: number, synthBufferByEffects: Float32Array[], channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
+		private playTone(song: Song, stereoBufferIndex: number, stereoBufferLength: number, channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
 			Synth.computeTone(this, song, channel, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
-			const synthBuffer: Float32Array = synthBufferByEffects[tone.instrument.effects];
+			let synthBuffer: Float32Array;
+			switch (tone.instrument.effects) {
+				case 0: synthBuffer = this.samplesForNone!; break;
+				case 1: synthBuffer = this.samplesForReverb!; break;
+				case 2: synthBuffer = this.samplesForChorus!; break;
+				case 3: synthBuffer = this.samplesForChorusReverb!; break;
+				default: throw new Error();
+			}
 			const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
-			synthesizer(this, synthBuffer, bufferIndex, runLength, tone, tone.instrument);
+			synthesizer(this, synthBuffer, stereoBufferIndex, stereoBufferLength, runLength * 2, tone, tone.instrument);
 		}
 		
 		private static computeEnvelope(envelope: Envelope, time: number, beats: number, customVolume: number): number {
@@ -3061,6 +3143,25 @@ namespace beepbox {
 			tone.intervalMult = 1.0;
 			tone.intervalVolumeMult = 1.0;
 			tone.active = false;
+			
+			const pan: number = (instrument.pan - Config.panCenter) / Config.panCenter;
+			const maxDelay: number = 0.00065 * synth.samplesPerSecond;
+			const delay: number = Math.round(-pan * maxDelay) * 2;
+			const volumeL: number = Math.cos((1 + pan) * Math.PI * 0.25) * 1.414;
+			const volumeR: number = Math.cos((1 - pan) * Math.PI * 0.25) * 1.414;
+			const delayL: number = Math.max(0.0, -delay);
+			const delayR: number = Math.max(0.0, delay);
+			if (delay >= 0) {
+				tone.stereoVolume1 = volumeL;
+				tone.stereoVolume2 = volumeR;
+				tone.stereoOffset = 0;
+				tone.stereoDelay = delayR + 1;
+			} else {
+				tone.stereoVolume1 = volumeR;
+				tone.stereoVolume2 = volumeL;
+				tone.stereoOffset = 1;
+				tone.stereoDelay = delayL - 1;
+			}
 			
 			let resetPhases: boolean = true;
 			let partsSinceStart: number = 0.0;
@@ -3527,7 +3628,7 @@ namespace beepbox {
 					
 					//console.log(synthSource.join("\n"));
 					
-					Synth.fmSynthFunctionCache[fingerprint] = new Function("synth", "data", "bufferIndex", "runLength", "tone", "instrument", synthSource.join("\n"));
+					Synth.fmSynthFunctionCache[fingerprint] = new Function("synth", "data", "stereoBufferIndex", "stereoBufferLength", "runLength", "tone", "instrument", synthSource.join("\n"));
 				}
 				return Synth.fmSynthFunctionCache[fingerprint];
 			} else if (instrument.type == InstrumentType.chip) {
@@ -3547,7 +3648,7 @@ namespace beepbox {
 			}
 		}
 		
-		private static chipSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static chipSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			const wave: Float64Array = Config.chipWaves[instrument.chipWave].samples;
 			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
@@ -3583,8 +3684,12 @@ namespace beepbox {
 			prevWaveIntegralA += (wave[indexA+1] - prevWaveIntegralA) * phaseRatioA;
 			prevWaveIntegralB += (wave[indexB+1] - prevWaveIntegralB) * phaseRatioB;
 			
-			const stopIndex: number = bufferIndex + runLength;
-			while (bufferIndex < stopIndex) {
+			const stopIndex: number = stereoBufferIndex + runLength;
+			stereoBufferIndex += tone.stereoOffset;
+			const stereoVolume1: number = tone.stereoVolume1;
+			const stereoVolume2: number = tone.stereoVolume2;
+			const stereoDelay: number = tone.stereoDelay;
+			while (stereoBufferIndex < stopIndex) {
 				
 				phaseA += phaseDeltaA;
 				phaseB += phaseDeltaB;
@@ -3615,9 +3720,12 @@ namespace beepbox {
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				data[bufferIndex] += filterSample1 * volume;
+				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
-				bufferIndex++;
+				
+				data[stereoBufferIndex] += output * stereoVolume1;
+				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				stereoBufferIndex += 2;
 			}
 			
 			tone.phases[0] = phaseA / waveLength;
@@ -3630,7 +3738,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static harmonicsSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static harmonicsSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			const wave: Float32Array = instrument.harmonicsWave.getCustomWave();
 			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
@@ -3666,8 +3774,12 @@ namespace beepbox {
 			prevWaveIntegralA += (wave[indexA+1] - prevWaveIntegralA) * phaseRatioA;
 			prevWaveIntegralB += (wave[indexB+1] - prevWaveIntegralB) * phaseRatioB;
 			
-			const stopIndex: number = bufferIndex + runLength;
-			while (bufferIndex < stopIndex) {
+			const stopIndex: number = stereoBufferIndex + runLength;
+			stereoBufferIndex += tone.stereoOffset;
+			const stereoVolume1: number = tone.stereoVolume1;
+			const stereoVolume2: number = tone.stereoVolume2;
+			const stereoDelay: number = tone.stereoDelay;
+			while (stereoBufferIndex < stopIndex) {
 
 				phaseA += phaseDeltaA;
 				phaseB += phaseDeltaB;
@@ -3699,9 +3811,12 @@ namespace beepbox {
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				data[bufferIndex] += filterSample1 * volume;
+				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
-				bufferIndex++;
+				
+				data[stereoBufferIndex] += output * stereoVolume1;
+				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				stereoBufferIndex += 2;
 			}
 			
 			tone.phases[0] = phaseA / waveLength;
@@ -3714,7 +3829,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static pulseWidthSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static pulseWidthSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let phaseDelta: number = tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
@@ -3732,8 +3847,12 @@ namespace beepbox {
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 			
-			const stopIndex: number = bufferIndex + runLength;
-			while (bufferIndex < stopIndex) {
+			const stopIndex: number = stereoBufferIndex + runLength;
+			stereoBufferIndex += tone.stereoOffset;
+			const stereoVolume1: number = tone.stereoVolume1;
+			const stereoVolume2: number = tone.stereoVolume2;
+			const stereoDelay: number = tone.stereoDelay;
+			while (stereoBufferIndex < stopIndex) {
 				
 				const sawPhaseA: number = phase % 1;
 				const sawPhaseB: number = (phase + pulseWidth) % 1;
@@ -3767,9 +3886,12 @@ namespace beepbox {
 				phaseDelta *= phaseDeltaScale;
 				pulseWidth += pulseWidthDelta;
 				
-				data[bufferIndex] += filterSample1 * volume;
+				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
-				bufferIndex++;
+				
+				data[stereoBufferIndex] += output * stereoVolume1;
+				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				stereoBufferIndex += 2;
 			}
 			
 			tone.phases[0] = phase;
@@ -3782,34 +3904,38 @@ namespace beepbox {
 		}
 		
 		private static fmSourceTemplate: string[] = (`
-			var sineWave = beepbox.Config.sineWave;
+			const sineWave = beepbox.Config.sineWave;
 			
-			var phaseDeltaScale = +tone.phaseDeltaScale;
+			let phaseDeltaScale = +tone.phaseDeltaScale;
 			// I'm adding 1000 to the phase to ensure that it's never negative even when modulated by other waves because negative numbers don't work with the modulus operator very well.
-			var operator#Phase       = +((tone.phases[#] % 1) + 1000) * beepbox.Config.sineWaveLength;
-			var operator#PhaseDelta  = +tone.phaseDeltas[#];
-			var operator#OutputMult  = +tone.volumeStarts[#];
-			var operator#OutputDelta = +tone.volumeDeltas[#];
-			var operator#Output      = +tone.feedbackOutputs[#];
-			var feedbackMult         = +tone.feedbackMult;
-			var feedbackDelta        = +tone.feedbackDelta;
-			var volume = +tone.volumeStart;
-			var volumeDelta = +tone.volumeDelta;
+			let operator#Phase       = +((tone.phases[#] % 1) + 1000) * beepbox.Config.sineWaveLength;
+			let operator#PhaseDelta  = +tone.phaseDeltas[#];
+			let operator#OutputMult  = +tone.volumeStarts[#];
+			const operator#OutputDelta = +tone.volumeDeltas[#];
+			let operator#Output      = +tone.feedbackOutputs[#];
+			let feedbackMult         = +tone.feedbackMult;
+			const feedbackDelta        = +tone.feedbackDelta;
+			let volume = +tone.volumeStart;
+			const volumeDelta = +tone.volumeDelta;
 			
-			var filter1 = +tone.filter;
-			var filter2 = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
-			var filterScale1 = +tone.filterScale;
-			var filterScale2 = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			var filterResonance = beepbox.Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (beepbox.Config.filterResonanceRange - 2), 0.5);
-			var filterSample0 = +tone.filterSample0;
-			var filterSample1 = +tone.filterSample1;
+			let filter1 = +tone.filter;
+			let filter2 = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+			const filterScale1 = +tone.filterScale;
+			const filterScale2 = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
+			const filterResonance = beepbox.Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (beepbox.Config.filterResonanceRange - 2), 0.5);
+			let filterSample0 = +tone.filterSample0;
+			let filterSample1 = +tone.filterSample1;
 			
-			var stopIndex = bufferIndex + runLength;
-			while (bufferIndex < stopIndex) {
+			const stopIndex = stereoBufferIndex + runLength;
+			stereoBufferIndex += tone.stereoOffset;
+			const stereoVolume1 = tone.stereoVolume1;
+			const stereoVolume2 = tone.stereoVolume2;
+			const stereoDelay = tone.stereoDelay;
+			while (stereoBufferIndex < stopIndex) {
 				// INSERT OPERATOR COMPUTATION HERE
-				var fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
+				const fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
 				
-				var feedback = filterResonance + filterResonance / (1.0 - filter1);
+				const feedback = filterResonance + filterResonance / (1.0 - filter1);
 				filterSample0 += filter1 * (fmOutput - filterSample0 + feedback * (filterSample0 - filterSample1));
 				filterSample1 += filter2 * (filterSample0 - filterSample1);
 				
@@ -3820,15 +3946,18 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				
-				data[bufferIndex] += filterSample1 * volume;
+				const output = filterSample1 * volume;
 				volume += volumeDelta;
-				bufferIndex++;
+				
+				data[stereoBufferIndex] += output * stereoVolume1;
+				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				stereoBufferIndex += 2;
 			}
 			
 			tone.phases[#] = operator#Phase / ` + Config.sineWaveLength + `;
 			tone.feedbackOutputs[#] = operator#Output;
 			
-			var epsilon = (1.0e-24);
+			const epsilon = (1.0e-24);
 			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
 			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
 			tone.filterSample0 = filterSample0;
@@ -3836,15 +3965,15 @@ namespace beepbox {
 		`).split("\n");
 		
 		private static operatorSourceTemplate: string[] = (`
-				var operator#PhaseMix = operator#Phase/* + operator@Scaled*/;
-				var operator#PhaseInt = operator#PhaseMix|0;
-				var operator#Index    = operator#PhaseInt & ` + Config.sineWaveMask + `;
-				var operator#Sample   = sineWave[operator#Index];
+				const operator#PhaseMix = operator#Phase/* + operator@Scaled*/;
+				const operator#PhaseInt = operator#PhaseMix|0;
+				const operator#Index    = operator#PhaseInt & ` + Config.sineWaveMask + `;
+				const operator#Sample   = sineWave[operator#Index];
 				operator#Output       = operator#Sample + (sineWave[operator#Index + 1] - operator#Sample) * (operator#PhaseMix - operator#PhaseInt);
-				var operator#Scaled   = operator#OutputMult * operator#Output;
+				const operator#Scaled   = operator#OutputMult * operator#Output;
 		`).split("\n");
 		
-		private static noiseSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static noiseSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = +tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
@@ -3867,9 +3996,12 @@ namespace beepbox {
 			
 			const pitchRelativefilter: number = Math.min(1.0, tone.phaseDeltas[0] * Config.chipNoises[instrument.chipNoise].pitchFilterMult);
 			
-			const stopIndex: number = bufferIndex + runLength;
-			
-			while (bufferIndex < stopIndex) {
+			const stopIndex: number = stereoBufferIndex + runLength;
+			stereoBufferIndex += tone.stereoOffset;
+			const stereoVolume1: number = tone.stereoVolume1;
+			const stereoVolume2: number = tone.stereoVolume2;
+			const stereoDelay: number = tone.stereoDelay;
+			while (stereoBufferIndex < stopIndex) {
 				const waveSample: number = wave[phase & 0x7fff];
 				
 				sample += (waveSample - sample) * pitchRelativefilter;
@@ -3882,9 +4014,13 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1 * volume;
+				
+				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
-				bufferIndex++;
+				
+				data[stereoBufferIndex] += output * stereoVolume1;
+				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				stereoBufferIndex += 2;
 			}
 			
 			tone.phases[0] = phase / Config.chipNoiseLength;
@@ -3897,7 +4033,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static spectrumSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static spectrumSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = tone.phaseDeltas[0] * (1 << 7);
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
@@ -3918,8 +4054,12 @@ namespace beepbox {
 			
 			const pitchRelativefilter: number = Math.min(1.0, phaseDelta);
 			
-			const stopIndex: number = bufferIndex + runLength;
-			while (bufferIndex < stopIndex) {
+			const stopIndex: number = stereoBufferIndex + runLength;
+			stereoBufferIndex += tone.stereoOffset;
+			const stereoVolume1: number = tone.stereoVolume1;
+			const stereoVolume2: number = tone.stereoVolume2;
+			const stereoDelay: number = tone.stereoDelay;
+			while (stereoBufferIndex < stopIndex) {
 				const phaseInt: number = phase|0;
 				const index: number = phaseInt & 0x7fff;
 				let waveSample: number = wave[index];
@@ -3936,9 +4076,13 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1 * volume;
+				
+				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
-				bufferIndex++;
+				
+				data[stereoBufferIndex] += output * stereoVolume1;
+				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				stereoBufferIndex += 2;
 			}
 			
 			tone.phases[0] = phase / Config.chipNoiseLength;
@@ -3951,7 +4095,7 @@ namespace beepbox {
 			tone.filterSample1 = filterSample1;
 		}
 		
-		private static drumsetSynth(synth: Synth, data: Float32Array, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static drumsetSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			let wave: Float32Array = instrument.getDrumsetWave(tone.drumsetPitch);
 			let phaseDelta: number = tone.phaseDeltas[0] / Instrument.drumsetIndexReferenceDelta(tone.drumsetPitch);;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
@@ -3970,8 +4114,12 @@ namespace beepbox {
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
 			if (tone.phases[0] == 0) phase = Synth.findRandomZeroCrossing(wave) + phaseDelta;
 			
-			const stopIndex: number = bufferIndex + runLength;
-			while (bufferIndex < stopIndex) {
+			const stopIndex: number = stereoBufferIndex + runLength;
+			stereoBufferIndex += tone.stereoOffset;
+			const stereoVolume1: number = tone.stereoVolume1;
+			const stereoVolume2: number = tone.stereoVolume2;
+			const stereoDelay: number = tone.stereoDelay;
+			while (stereoBufferIndex < stopIndex) {
 				const phaseInt: number = phase|0;
 				const index: number = phaseInt & 0x7fff;
 				sample = wave[index];
@@ -3986,9 +4134,13 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
-				data[bufferIndex] += filterSample1 * volume;
+				
+				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
-				bufferIndex++;
+				
+				data[stereoBufferIndex] += output * stereoVolume1;
+				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				stereoBufferIndex += 2;
 			}
 			
 			tone.phases[0] = phase / Config.chipNoiseLength;
