@@ -983,7 +983,6 @@ namespace beepbox {
 			const channel: Channel = this._doc.song.channels[this._doc.channel];
 			const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
 			const instrumentCopy: any = JSON.parse(String(window.localStorage.getItem("instrumentCopy")));
-			delete instrumentCopy["volume"];
 			if (instrumentCopy != null && instrumentCopy["isDrum"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				this._doc.record(new ChangePasteInstrument(this._doc, instrument, instrumentCopy));
 			}
