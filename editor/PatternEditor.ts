@@ -831,7 +831,9 @@ namespace beepbox {
 			
 			if (this._renderedFifths != this._doc.showFifth) {
 				this._renderedFifths = this._doc.showFifth;
-				this._backgroundPitchRows[7].setAttribute("fill", this._doc.showFifth ? "#446688" : "#444444");
+				for (let i: number = 1; i < ColorConfig.pitchBackgroundColors.length; i++) {
+					this._backgroundPitchRows[i].setAttribute("fill", this._doc.showFifth ? ColorConfig.pitchBackgroundColors[i] : "#444444");
+				}
 			}
 			
 			for (let j: number = 0; j < 12; j++) {
