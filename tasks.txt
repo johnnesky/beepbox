@@ -339,20 +339,22 @@
 √ Replace 0 pattern with positive pattern number when attempting to draw on it.
 √ Default patterns to 0 after first four bars.
 √ Song player timeline zoom mode.
+√ Rectangular box selection in track editor for copying and pasting patterns.
+√ New commands to insert/delete bars.
+√ New commands select all and duplicate pattern, changed several existing commands to apply to the current box selection.
+√ Panning/stereo
 
 MAJOR REMAINING FEATURES:
-- bar box selection
 - tutorial + music theory primer
-- remember recent songs
+- audio worklet thread
 - live input when song is paused
 - live keyboard performance. (make sure piano can play while song is paused?)
 - MIDI live input, live output?
+- remember recent songs
 - distortion? (how would it affect polyphonic channels?)
-- audio worklet thread
 - "inspire me" random song generator.
 - link shortener
 - export mp3/ogg and audio buffer
-- playlist editor
 - translation
 
 
@@ -376,7 +378,6 @@ TODO:
 - Live input tones should still play when song is paused.
 - Live input tones should handle slide mode better.
 - recording performances via keyboard or even midi... If you record over an existing pattern, do you erase it? Does it depend on whether you actually perform any notes during that pattern?
-- Maybe different channels can have different numbers of patterns!
 - Eventually, maybe even stop forcing the user to manually choose pattern counts, and just autopopulate patterns as needed. And also provide mobile-style context buttons above selected bar to facilitate sharing patterns across bars, sort of a paste-shared vs paste-unique, and selecting a range of bars, looping the selection over more bars... Basically making it easier to use on mobile and without needing to remember numbers.
 - random song generator!?
 - remember recent songs in local shared object.
@@ -392,7 +393,6 @@ TODO:
 - It's probably okay if "parts" and "arpeggios" don't transition at exact sample boundaries, rather than fractional sample points. Maybe still keep beats aligned to sample boundaries, but you can have more precise BPM tempos by loosening up the alignment.
 - maybe command+S should do something useful?
 - wav export quality: CD (44100) vs Video (48000) standards, 1x, downsampled from 2x to 1x, downsampled from 4x to 2x. How does this affect FM feedback and noise volume?
-- Maybe support stereo delay effects in high quality mode.
 - maybe sum adjacent fm synth samples (at half volume) to cancel out inaudible feedback artifacts? for the carrier wave(s), try that integral thing to reduce the aliasing... or is that not really the problem here? (fortunately the integral of a sine wave is just an offset sinewave!) The FM feedback has been bugging me because it has a tendency to alternate between high and low values every other output sample. This is probably (?) inaudible, but is nevertheless an artifact. I could probably mitigate it by adding each FM sample to the previous sample before outputting (and cutting the volume in half to compensate). Does this help with more complicated structures? Note that this won't fix the audible FM aliasing, I'm not sure if there's anything besides super sampling that would fix that.
 - The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
 - divert www traffic to beepbox.co. Okay wow this is a lot more complicated than it ought to be... You can only get load balancing on most available web servers by using CNAME records to repeat the request with a different domain whose DNS records are managed by the web server provider, which will choose an appropriate IP address for your location. For naked domains, your dns records can only provide static hardcoded IP addresses, (assuming you don't rapidly manage the ip addresses yourself via the user interface!) which can be cycled to distribute the load but generally isn't smart enough to actually detect server availability. :/

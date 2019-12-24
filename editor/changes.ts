@@ -8,31 +8,24 @@
 /// <reference path="MuteButton.ts" />
 
 namespace beepbox {
-	function determineScaleFromNotes(song: Song): ReadonlyArray<boolean> {
-		const flags: boolean[] = [true, false, false, false, false, false, false, false, false, false, false, false];
-		for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
-			const channel: Channel = song.channels[channelIndex];
-			for (const pattern of channel.patterns) {
-				for (const note of pattern.notes) {
-					for (const pitch of note.pitches) {
-						for (const pin of note.pins) {
-							const key: number = (pitch + pin.interval) % 12;
-							if (!flags[key]) {
-								flags[key] = true;
-							}
-						}
+	export function unionOfUsedNotes(pattern: Pattern, flags: boolean[]): void {
+		for (const note of pattern.notes) {
+			for (const pitch of note.pitches) {
+				for (const pin of note.pins) {
+					const key: number = (pitch + pin.interval) % 12;
+					if (!flags[key]) {
+						flags[key] = true;
 					}
 				}
 			}
 		}
-		return flags;
 	}
-	
-	function generateScaleMap(oldScaleFlags: ReadonlyArray<boolean>, newScaleValue: number): number[] {
+
+	export function generateScaleMap(oldScaleFlags: ReadonlyArray<boolean>, newScaleValue: number): number[] {
 		const newScaleFlags: ReadonlyArray<boolean> = Config.scales[newScaleValue].flags;
 		const oldScale: number[] = [];
 		const newScale: number[] = [];
-		for (let i: number = 0; i <  12; i++) {
+		for (let i: number = 0; i < 12; i++) {
 			if (oldScaleFlags[i]) oldScale.push(i);
 			if (newScaleFlags[i]) newScale.push(i);
 		}
@@ -47,7 +40,7 @@ namespace beepbox {
 
 		while (stack.length > 0) {
 			const indexMap: number[] = stack.pop()!;
-	
+
 			if (indexMap.length == smallerScale.length) {
 				// Score this mapping.
 				let score: number = 0;
@@ -87,15 +80,15 @@ namespace beepbox {
 
 		let sparseIndex: number = 0;
 		const fullPitchMap: number[] = [];
-		for (let i: number = 0; i <  12; i++) {
+		for (let i: number = 0; i < 12; i++) {
 			const oldLow: number = sparsePitchMap[sparseIndex][0];
 			const newLow: number = sparsePitchMap[sparseIndex][1];
 			const oldHigh: number = sparsePitchMap[sparseIndex + 1][0];
 			const newHigh: number = sparsePitchMap[sparseIndex + 1][1];
 			if (i == oldHigh - 1) sparseIndex++;
-	
+
 			const transformedPitch: number = (i - oldLow) * (newHigh - newLow) / (oldHigh - oldLow) + newLow;
-	
+
 			let nearestPitch: number = 0;
 			let nearestPitchDistance: number = Number.MAX_SAFE_INTEGER;
 			for (const newPitch of newScale) {
@@ -109,13 +102,13 @@ namespace beepbox {
 					nearestPitch = newPitch;
 				}
 			}
-	
+
 			fullPitchMap[i] = nearestPitch;
 		}
-		
+
 		return fullPitchMap;
 	}
-	
+
 	function projectNoteIntoBar(oldNote: Note, timeOffset: number, noteStartPart: number, noteEndPart: number, newNotes: Note[]): void {
 		// Create a new note, and interpret the pitch bend and expression events
 		// to determine where we need to insert pins to control interval and volume.
@@ -155,14 +148,14 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeMoveAndOverflowNotes extends ChangeGroup {
 		constructor(doc: SongDocument, newBeatsPerBar: number, partsToMove: number) {
 			super();
-			
+
 			const pitchChannels: Channel[] = [];
 			const noiseChannels: Channel[] = [];
-			
+
 			for (let channelIndex: number = 0; channelIndex < doc.song.getChannelCount(); channelIndex++) {
 				const oldChannel: Channel = doc.song.channels[channelIndex];
 				const newChannel: Channel = new Channel();
@@ -171,33 +164,33 @@ namespace beepbox {
 				} else {
 					noiseChannels.push(newChannel);
 				}
-				
+
 				newChannel.octave = oldChannel.octave;
 				for (const instrument of oldChannel.instruments) {
 					newChannel.instruments.push(instrument);
 				}
-				
+
 				const oldPartsPerBar: number = Config.partsPerBeat * doc.song.beatsPerBar;
 				const newPartsPerBar: number = Config.partsPerBeat * newBeatsPerBar;
 				let currentBar: number = -1;
 				let pattern: Pattern | null = null;
-				
+
 				for (let oldBar: number = 0; oldBar < doc.song.barCount; oldBar++) {
 					const oldPattern: Pattern | null = doc.song.getPattern(channelIndex, oldBar);
 					if (oldPattern != null) {
 						const oldBarStart: number = oldBar * oldPartsPerBar;
 						for (const oldNote of oldPattern.notes) {
-							
+
 							const absoluteNoteStart: number = oldNote.start + oldBarStart + partsToMove;
 							const absoluteNoteEnd: number = oldNote.end + oldBarStart + partsToMove;
-							
+
 							const startBar: number = Math.floor(absoluteNoteStart / newPartsPerBar);
 							const endBar: number = Math.ceil(absoluteNoteEnd / newPartsPerBar);
 							for (let bar: number = startBar; bar < endBar; bar++) {
 								const barStartPart: number = bar * newPartsPerBar;
 								const noteStartPart: number = Math.max(0, absoluteNoteStart - barStartPart);
 								const noteEndPart: number = Math.min(newPartsPerBar, absoluteNoteEnd - barStartPart);
-								
+
 								if (noteStartPart < noteEndPart) {
 									// Ensure a pattern exists for the current bar before inserting notes into it.
 									if (currentBar != bar || pattern == null) {
@@ -211,7 +204,7 @@ namespace beepbox {
 										newChannel.bars[currentBar] = newChannel.patterns.length;
 										pattern.instrument = oldPattern.instrument;
 									}
-									
+
 									projectNoteIntoBar(oldNote, absoluteNoteStart - barStartPart - noteStartPart, noteStartPart, noteEndPart, pattern.notes);
 								}
 							}
@@ -219,13 +212,13 @@ namespace beepbox {
 					}
 				}
 			}
-		
+
 			removeDuplicatePatterns(pitchChannels);
 			removeDuplicatePatterns(noiseChannels);
 			this.append(new ChangeReplacePatterns(doc, pitchChannels, noiseChannels));
 		}
 	}
-	
+
 	export class ChangePins extends UndoableChange {
 		protected _oldStart: number;
 		protected _newStart: number;
@@ -238,36 +231,35 @@ namespace beepbox {
 		constructor(protected _doc: SongDocument, protected _note: Note) {
 			super(false);
 			this._oldStart = this._note.start;
-			this._oldEnd   = this._note.end;
+			this._oldEnd = this._note.end;
 			this._newStart = this._note.start;
-			this._newEnd   = this._note.end;
+			this._newEnd = this._note.end;
 			this._oldPins = this._note.pins;
 			this._newPins = [];
 			this._oldPitches = this._note.pitches;
 			this._newPitches = [];
 		}
-		
+
 		protected _finishSetup(): void {
-			for (let i: number = 0; i < this._newPins.length - 1; ) {
-				if (this._newPins[i].time >= this._newPins[i+1].time) {
+			for (let i: number = 0; i < this._newPins.length - 1;) {
+				if (this._newPins[i].time >= this._newPins[i + 1].time) {
 					this._newPins.splice(i, 1);
 				} else {
 					i++;
 				}
 			}
-			
-			for (let i: number = 1; i < this._newPins.length - 1; ) {
-				if (this._newPins[i-1].interval == this._newPins[i].interval && 
-				    this._newPins[i].interval == this._newPins[i+1].interval && 
-				    this._newPins[i-1].volume == this._newPins[i].volume && 
-				    this._newPins[i].volume == this._newPins[i+1].volume)
-				{
+
+			for (let i: number = 1; i < this._newPins.length - 1;) {
+				if (this._newPins[i - 1].interval == this._newPins[i].interval &&
+					this._newPins[i].interval == this._newPins[i + 1].interval &&
+					this._newPins[i - 1].volume == this._newPins[i].volume &&
+					this._newPins[i].volume == this._newPins[i + 1].volume) {
 					this._newPins.splice(i, 1);
 				} else {
 					i++;
 				}
 			}
-			
+
 			const firstInterval: number = this._newPins[0].interval;
 			const firstTime: number = this._newPins[0].time;
 			for (let i: number = 0; i < this._oldPitches.length; i++) {
@@ -278,12 +270,12 @@ namespace beepbox {
 				this._newPins[i].time -= firstTime;
 			}
 			this._newStart = this._oldStart + firstTime;
-			this._newEnd   = this._newStart + this._newPins[this._newPins.length-1].time;
-			
+			this._newEnd = this._newStart + this._newPins[this._newPins.length - 1].time;
+
 			this._doForwards();
 			this._didSomething();
 		}
-		
+
 		protected _doForwards(): void {
 			this._note.pins = this._newPins;
 			this._note.pitches = this._newPitches;
@@ -291,7 +283,7 @@ namespace beepbox {
 			this._note.end = this._newEnd;
 			this._doc.notifier.changed();
 		}
-		
+
 		protected _doBackwards(): void {
 			this._note.pins = this._oldPins;
 			this._note.pitches = this._oldPitches;
@@ -300,59 +292,59 @@ namespace beepbox {
 			this._doc.notifier.changed();
 		}
 	}
-	
+
 	export class ChangeCustomizeInstrument extends Change {
- 		constructor(doc: SongDocument) {
- 			super();
+		constructor(doc: SongDocument) {
+			super();
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
- 			if (instrument.preset != instrument.type) {
+			if (instrument.preset != instrument.type) {
 				instrument.preset = instrument.type;
- 				doc.notifier.changed();
- 				this._didSomething();
- 			}
+				doc.notifier.changed();
+				this._didSomething();
+			}
 		}
 	}
-	
+
 	export class ChangeCustomWave extends Change {
-        constructor(doc: SongDocument, newArray: Float64Array ) {
-            super();
-            const oldArray: Float64Array = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].customChipWave;
-            var comparisonResult: boolean = true;
-            for (let i: number = 0; i < oldArray.length; i++) {
-                if (oldArray[i] != newArray[i]) {
-                    comparisonResult = false;
-                    i = oldArray.length;
-                }
-            }
-          if (comparisonResult == false) {
-            let instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
-            for (let i: number = 0; i < newArray.length; i++) {
-              instrument.customChipWave[i] = newArray[i];
-            }
+		constructor(doc: SongDocument, newArray: Float64Array) {
+			super();
+			const oldArray: Float64Array = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].customChipWave;
+			var comparisonResult: boolean = true;
+			for (let i: number = 0; i < oldArray.length; i++) {
+				if (oldArray[i] != newArray[i]) {
+					comparisonResult = false;
+					i = oldArray.length;
+				}
+			}
+			if (comparisonResult == false) {
+				let instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+				for (let i: number = 0; i < newArray.length; i++) {
+					instrument.customChipWave[i] = newArray[i];
+				}
 
-            let sum: number = 0.0;
-            for (let i: number = 0; i < instrument.customChipWave.length; i++) {
-              sum += instrument.customChipWave[i];
-            }
-            const average: number = sum / instrument.customChipWave.length;
+				let sum: number = 0.0;
+				for (let i: number = 0; i < instrument.customChipWave.length; i++) {
+					sum += instrument.customChipWave[i];
+				}
+				const average: number = sum / instrument.customChipWave.length;
 
-            // Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
-            let cumulative: number = 0;
-            let wavePrev: number = 0;
-            for (let i: number = 0; i < instrument.customChipWave.length; i++) {
-              cumulative += wavePrev;
-              wavePrev = instrument.customChipWave[i] - average;
-              instrument.customChipWaveIntegral[i] = cumulative;
-            }
+				// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
+				let cumulative: number = 0;
+				let wavePrev: number = 0;
+				for (let i: number = 0; i < instrument.customChipWave.length; i++) {
+					cumulative += wavePrev;
+					wavePrev = instrument.customChipWave[i] - average;
+					instrument.customChipWaveIntegral[i] = cumulative;
+				}
 
-            instrument.customChipWaveIntegral[64] = 0.0;
-            instrument.preset = instrument.type;
-            doc.notifier.changed();
-            this._didSomething();
-            }
-        }
-    }
-	
+				instrument.customChipWaveIntegral[64] = 0.0;
+				instrument.preset = instrument.type;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+
 	export class ChangePreset extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -371,8 +363,10 @@ namespace beepbox {
 						}
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
+						const tempPan: number = instrument.pan;
 						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel));
 						instrument.volume = tempVolume;
+						instrument.pan = tempPan;
 					}
 				}
 				instrument.preset = newValue;
@@ -381,11 +375,11 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeRandomGeneratedInstrument extends Change {
 		constructor(doc: SongDocument) {
 			super();
-			
+
 			interface ItemWeight<T> {
 				readonly item: T;
 				readonly weight: number;
@@ -400,67 +394,67 @@ namespace beepbox {
 					random -= entry.weight;
 					if (random <= 0.0) return entry.item;
 				}
-				return entries[(Math.random() * entries.length)|0].item;
+				return entries[(Math.random() * entries.length) | 0].item;
 			}
 			function selectCurvedDistribution(min: number, max: number, peak: number, width: number): number {
 				const entries: Array<ItemWeight<number>> = [];
 				for (let i: number = min; i <= max; i++) {
-					entries.push({item: i, weight: 1.0 / (Math.pow((i - peak) / width, 2.0) + 1.0)});
+					entries.push({ item: i, weight: 1.0 / (Math.pow((i - peak) / width, 2.0) + 1.0) });
 				}
 				return selectWeightedRandom(entries);
 			}
-			
+
 			const isNoise: boolean = doc.song.getChannelIsNoise(doc.channel);
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
-			
+
 			if (isNoise) {
 				const type: InstrumentType = selectWeightedRandom([
-					{item: InstrumentType.noise,    weight: 1},
-					{item: InstrumentType.spectrum, weight: 3},
+					{ item: InstrumentType.noise, weight: 1 },
+					{ item: InstrumentType.spectrum, weight: 3 },
 				]);
 				instrument.preset = instrument.type = type;
 				instrument.filterCutoff = selectCurvedDistribution(4, Config.filterCutoffRange - 1, Config.filterCutoffRange - 2, 2);
 				instrument.filterResonance = selectCurvedDistribution(0, Config.filterResonanceRange - 1, 1, 2);
 				instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-					{item: "steady"  , weight: 2},
-					{item: "punch"   , weight: 4},
-					{item: "flare 1" , weight: 2},
-					{item: "flare 2" , weight: 2},
-					{item: "flare 3" , weight: 2},
-					{item: "twang 1" , weight: 8},
-					{item: "twang 2" , weight: 8},
-					{item: "twang 3" , weight: 8},
-					{item: "swell 1" , weight: 2},
-					{item: "swell 2" , weight: 2},
-					{item: "swell 3" , weight: 1},
-					{item: "tremolo1", weight: 1},
-					{item: "tremolo2", weight: 1},
-					{item: "tremolo3", weight: 1},
-					{item: "tremolo4", weight: 1},
-					{item: "tremolo5", weight: 1},
-					{item: "tremolo6", weight: 1},
-					{item: "decay 1" , weight: 4},
-					{item: "decay 2" , weight: 4},
-					{item: "decay 3" , weight: 4},
+					{ item: "steady", weight: 2 },
+					{ item: "punch", weight: 4 },
+					{ item: "flare 1", weight: 2 },
+					{ item: "flare 2", weight: 2 },
+					{ item: "flare 3", weight: 2 },
+					{ item: "twang 1", weight: 8 },
+					{ item: "twang 2", weight: 8 },
+					{ item: "twang 3", weight: 8 },
+					{ item: "swell 1", weight: 2 },
+					{ item: "swell 2", weight: 2 },
+					{ item: "swell 3", weight: 1 },
+					{ item: "tremolo1", weight: 1 },
+					{ item: "tremolo2", weight: 1 },
+					{ item: "tremolo3", weight: 1 },
+					{ item: "tremolo4", weight: 1 },
+					{ item: "tremolo5", weight: 1 },
+					{ item: "tremolo6", weight: 1 },
+					{ item: "decay 1", weight: 4 },
+					{ item: "decay 2", weight: 4 },
+					{ item: "decay 3", weight: 4 },
 				])].index;
 				instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
-					{item: "seamless"   , weight: 1},
-					{item: "hard"       , weight: 4},
-					{item: "soft"       , weight: 2},
-					{item: "slide"      , weight: 1},
-					{item: "cross fade" , weight: 2},
-					{item: "hard fade"  , weight: 8},
-					{item: "medium fade", weight: 2},
-					{item: "soft fade"  , weight: 1},
+					{ item: "seamless", weight: 1 },
+					{ item: "hard", weight: 4 },
+					{ item: "soft", weight: 2 },
+					{ item: "slide", weight: 1 },
+					{ item: "cross fade", weight: 2 },
+					{ item: "hard fade", weight: 8 },
+					{ item: "medium fade", weight: 2 },
+					{ item: "soft fade", weight: 1 },
 				])].index;
 				instrument.effects = Config.effectsNames.indexOf(selectWeightedRandom([
-					{item: "none"  , weight: 1},
-					{item: "reverb", weight: 3},
+					{ item: "none", weight: 1 },
+					{ item: "reverb", weight: 3 },
 				]));
 				instrument.chord = Config.chords.dictionary[selectWeightedRandom([
-					{item: "harmony" , weight: 4},
-					{item: "strum"   , weight: 2},
-					{item: "arpeggio", weight: 1},
+					{ item: "harmony", weight: 4 },
+					{ item: "strum", weight: 2 },
+					{ item: "arpeggio", weight: 1 },
 				])].index;
 				function normalize(harmonics: number[]): void {
 					let max: number = 0;
@@ -473,7 +467,7 @@ namespace beepbox {
 				}
 				switch (type) {
 					case InstrumentType.noise: {
-						instrument.chipNoise = (Math.random() * Config.chipNoises.length)|0;
+						instrument.chipNoise = (Math.random() * Config.chipNoises.length) | 0;
 					} break;
 					case InstrumentType.spectrum: {
 						const spectrumGenerators: Function[] = [
@@ -503,7 +497,7 @@ namespace beepbox {
 								return spectrum;
 							},
 						];
-						const generator = spectrumGenerators[(Math.random() * spectrumGenerators.length)|0];
+						const generator = spectrumGenerators[(Math.random() * spectrumGenerators.length) | 0];
 						const spectrum: number[] = generator();
 						normalize(spectrum);
 						for (let i = 0; i < Config.spectrumControlPoints; i++) {
@@ -515,77 +509,77 @@ namespace beepbox {
 				}
 			} else {
 				const type: InstrumentType = selectWeightedRandom([
-					{item: InstrumentType.chip,      weight: 4},
-					{item: InstrumentType.pwm,       weight: 4},
-					{item: InstrumentType.harmonics, weight: 6},
-					{item: InstrumentType.spectrum,  weight: 1},
-					{item: InstrumentType.fm,        weight: 4},
+					{ item: InstrumentType.chip, weight: 4 },
+					{ item: InstrumentType.pwm, weight: 4 },
+					{ item: InstrumentType.harmonics, weight: 6 },
+					{ item: InstrumentType.spectrum, weight: 1 },
+					{ item: InstrumentType.fm, weight: 4 },
 				]);
 				instrument.preset = instrument.type = type;
 				instrument.filterCutoff = selectCurvedDistribution(2, Config.filterCutoffRange - 1, 7, 1.5);
 				instrument.filterResonance = selectCurvedDistribution(0, Config.filterResonanceRange - 1, 1, 2);
 				instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-					{item: "steady"  , weight: 10},
-					{item: "punch"   , weight: 6},
-					{item: "flare 1" , weight: 2},
-					{item: "flare 2" , weight: 4},
-					{item: "flare 3" , weight: 2},
-					{item: "twang 1" , weight: 2},
-					{item: "twang 2" , weight: 4},
-					{item: "twang 3" , weight: 4},
-					{item: "swell 1" , weight: 4},
-					{item: "swell 2" , weight: 2},
-					{item: "swell 3" , weight: 1},
-					{item: "tremolo1", weight: 1},
-					{item: "tremolo2", weight: 1},
-					{item: "tremolo3", weight: 1},
-					{item: "tremolo4", weight: 1},
-					{item: "tremolo5", weight: 1},
-					{item: "tremolo6", weight: 1},
-					{item: "decay 1" , weight: 1},
-					{item: "decay 2" , weight: 2},
-					{item: "decay 3" , weight: 2},
+					{ item: "steady", weight: 10 },
+					{ item: "punch", weight: 6 },
+					{ item: "flare 1", weight: 2 },
+					{ item: "flare 2", weight: 4 },
+					{ item: "flare 3", weight: 2 },
+					{ item: "twang 1", weight: 2 },
+					{ item: "twang 2", weight: 4 },
+					{ item: "twang 3", weight: 4 },
+					{ item: "swell 1", weight: 4 },
+					{ item: "swell 2", weight: 2 },
+					{ item: "swell 3", weight: 1 },
+					{ item: "tremolo1", weight: 1 },
+					{ item: "tremolo2", weight: 1 },
+					{ item: "tremolo3", weight: 1 },
+					{ item: "tremolo4", weight: 1 },
+					{ item: "tremolo5", weight: 1 },
+					{ item: "tremolo6", weight: 1 },
+					{ item: "decay 1", weight: 1 },
+					{ item: "decay 2", weight: 2 },
+					{ item: "decay 3", weight: 2 },
 				])].index;
 				instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
-					{item: "seamless"   , weight: 1},
-					{item: "hard"       , weight: 4},
-					{item: "soft"       , weight: 4},
-					{item: "slide"      , weight: 2},
-					{item: "cross fade" , weight: 4},
-					{item: "hard fade"  , weight: 4},
-					{item: "medium fade", weight: 2},
-					{item: "soft fade"  , weight: 2},
+					{ item: "seamless", weight: 1 },
+					{ item: "hard", weight: 4 },
+					{ item: "soft", weight: 4 },
+					{ item: "slide", weight: 2 },
+					{ item: "cross fade", weight: 4 },
+					{ item: "hard fade", weight: 4 },
+					{ item: "medium fade", weight: 2 },
+					{ item: "soft fade", weight: 2 },
 				])].index;
 				instrument.effects = Config.effectsNames.indexOf(selectWeightedRandom([
-					{item: "none"           , weight: 1},
-					{item: "reverb"         , weight: 10},
-					{item: "chorus"         , weight: Config.instrumentTypeHasChorus[type] ? 2 : 0},
-					{item: "chorus & reverb", weight: Config.instrumentTypeHasChorus[type] ? 2 : 0},
+					{ item: "none", weight: 1 },
+					{ item: "reverb", weight: 10 },
+					{ item: "chorus", weight: Config.instrumentTypeHasChorus[type] ? 2 : 0 },
+					{ item: "chorus & reverb", weight: Config.instrumentTypeHasChorus[type] ? 2 : 0 },
 				]));
 				instrument.chord = Config.chords.dictionary[selectWeightedRandom([
-					{item: "harmony" , weight: 7},
-					{item: "strum"   , weight: 2},
-					{item: "arpeggio", weight: 1},
+					{ item: "harmony", weight: 7 },
+					{ item: "strum", weight: 2 },
+					{ item: "arpeggio", weight: 1 },
 				])].index;
 				if (type != InstrumentType.spectrum) {
 					instrument.vibrato = Config.vibratos.dictionary[selectWeightedRandom([
-						{item: "none"   , weight: 6},
-						{item: "light"  , weight: 2},
-						{item: "delayed", weight: 2},
-						{item: "heavy"  , weight: 1},
-						{item: "shaky"  , weight: 2},
+						{ item: "none", weight: 6 },
+						{ item: "light", weight: 2 },
+						{ item: "delayed", weight: 2 },
+						{ item: "heavy", weight: 1 },
+						{ item: "shaky", weight: 2 },
 					])].index;
 				}
 				if (type == InstrumentType.chip || type == InstrumentType.harmonics) {
 					instrument.interval = Config.intervals.dictionary[selectWeightedRandom([
-						{item: "union"     , weight: 10},
-						{item: "shimmer"   , weight: 5},
-						{item: "hum"       , weight: 4},
-						{item: "honky tonk", weight: 3},
-						{item: "dissonant" , weight: 1},
-						{item: "fifth"     , weight: 1},
-						{item: "octave"    , weight: 2},
-						{item: "bowed"     , weight: 2},
+						{ item: "union", weight: 10 },
+						{ item: "shimmer", weight: 5 },
+						{ item: "hum", weight: 4 },
+						{ item: "honky tonk", weight: 3 },
+						{ item: "dissonant", weight: 1 },
+						{ item: "fifth", weight: 1 },
+						{ item: "octave", weight: 2 },
+						{ item: "bowed", weight: 2 },
 					])].index;
 				}
 				function normalize(harmonics: number[]): void {
@@ -599,30 +593,30 @@ namespace beepbox {
 				}
 				switch (type) {
 					case InstrumentType.chip: {
-						instrument.chipWave = (Math.random() * Config.chipWaves.length)|0;
+						instrument.chipWave = (Math.random() * Config.chipWaves.length) | 0;
 					} break;
 					case InstrumentType.pwm: {
 						instrument.pulseEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-							{item: "steady"  , weight: 10},
-							{item: "punch"   , weight: 6},
-							{item: "flare 1" , weight: 2},
-							{item: "flare 2" , weight: 4},
-							{item: "flare 3" , weight: 2},
-							{item: "twang 1" , weight: 4},
-							{item: "twang 2" , weight: 4},
-							{item: "twang 3" , weight: 4},
-							{item: "swell 1" , weight: 4},
-							{item: "swell 2" , weight: 4},
-							{item: "swell 3" , weight: 4},
-							{item: "tremolo1", weight: 1},
-							{item: "tremolo2", weight: 1},
-							{item: "tremolo3", weight: 1},
-							{item: "tremolo4", weight: 2},
-							{item: "tremolo5", weight: 2},
-							{item: "tremolo6", weight: 2},
-							{item: "decay 1" , weight: 2},
-							{item: "decay 2" , weight: 2},
-							{item: "decay 3" , weight: 2},
+							{ item: "steady", weight: 10 },
+							{ item: "punch", weight: 6 },
+							{ item: "flare 1", weight: 2 },
+							{ item: "flare 2", weight: 4 },
+							{ item: "flare 3", weight: 2 },
+							{ item: "twang 1", weight: 4 },
+							{ item: "twang 2", weight: 4 },
+							{ item: "twang 3", weight: 4 },
+							{ item: "swell 1", weight: 4 },
+							{ item: "swell 2", weight: 4 },
+							{ item: "swell 3", weight: 4 },
+							{ item: "tremolo1", weight: 1 },
+							{ item: "tremolo2", weight: 1 },
+							{ item: "tremolo3", weight: 1 },
+							{ item: "tremolo4", weight: 2 },
+							{ item: "tremolo5", weight: 2 },
+							{ item: "tremolo6", weight: 2 },
+							{ item: "decay 1", weight: 2 },
+							{ item: "decay 2", weight: 2 },
+							{ item: "decay 3", weight: 2 },
 						])].index;
 						instrument.pulseWidth = selectCurvedDistribution(0, Config.pulseWidthRange - 1, Config.pulseWidthRange - 1, 2);
 					} break;
@@ -633,7 +627,7 @@ namespace beepbox {
 								for (let i = 0; i < Config.harmonicsControlPoints; i++) {
 									harmonics[i] = (Math.random() < 0.4) ? Math.random() : 0.0;
 								}
-								harmonics[(Math.random() * 8)|0] = Math.pow(Math.random(), 0.25);
+								harmonics[(Math.random() * 8) | 0] = Math.pow(Math.random(), 0.25);
 								return harmonics;
 							},
 							(): number[] => {
@@ -655,7 +649,7 @@ namespace beepbox {
 								return harmonics;
 							},
 						];
-						const generator = harmonicGenerators[(Math.random() * harmonicGenerators.length)|0];
+						const generator = harmonicGenerators[(Math.random() * harmonicGenerators.length) | 0];
 						const harmonics: number[] = generator();
 						normalize(harmonics);
 						for (let i = 0; i < Config.harmonicsControlPoints; i++) {
@@ -666,7 +660,7 @@ namespace beepbox {
 					case InstrumentType.spectrum: {
 						const spectrum: number[] = [];
 						for (let i = 0; i < Config.spectrumControlPoints; i++) {
-							const isHarmonic: boolean = i==0 || i==7 || i==11 || i==14 || i==16 || i==18 || i==21;
+							const isHarmonic: boolean = i == 0 || i == 7 || i == 11 || i == 14 || i == 16 || i == 18 || i == 21;
 							if (isHarmonic) {
 								spectrum[i] = Math.pow(Math.random(), 0.25);
 							} else {
@@ -680,8 +674,8 @@ namespace beepbox {
 						instrument.spectrumWave.markCustomWaveDirty();
 					} break;
 					case InstrumentType.fm: {
-						instrument.algorithm = (Math.random() * Config.algorithms.length)|0;
-						instrument.feedbackType = (Math.random() * Config.feedbacks.length)|0;
+						instrument.algorithm = (Math.random() * Config.algorithms.length) | 0;
+						instrument.feedbackType = (Math.random() * Config.feedbacks.length) | 0;
 						const algorithm: Algorithm = Config.algorithms[instrument.algorithm];
 						for (let i: number = 0; i < algorithm.carrierCount; i++) {
 							instrument.operators[i].frequency = selectCurvedDistribution(0, Config.operatorFrequencies.length - 1, 0, 3);
@@ -690,63 +684,63 @@ namespace beepbox {
 						}
 						for (let i: number = algorithm.carrierCount; i < Config.operatorCount; i++) {
 							instrument.operators[i].frequency = selectCurvedDistribution(3, Config.operatorFrequencies.length - 1, 0, 3);
-							instrument.operators[i].amplitude = (Math.pow(Math.random(), 2) * Config.operatorAmplitudeMax)|0;
+							instrument.operators[i].amplitude = (Math.pow(Math.random(), 2) * Config.operatorAmplitudeMax) | 0;
 							instrument.operators[i].envelope = Config.envelopes.dictionary[selectWeightedRandom([
-								{item: "steady"  , weight: 6},
-								{item: "punch"   , weight: 2},
-								{item: "flare 1" , weight: 2},
-								{item: "flare 2" , weight: 2},
-								{item: "flare 3" , weight: 2},
-								{item: "twang 1" , weight: 2},
-								{item: "twang 2" , weight: 2},
-								{item: "twang 3" , weight: 2},
-								{item: "swell 1" , weight: 2},
-								{item: "swell 2" , weight: 2},
-								{item: "swell 3" , weight: 2},
-								{item: "tremolo1", weight: 1},
-								{item: "tremolo2", weight: 1},
-								{item: "tremolo3", weight: 1},
-								{item: "tremolo4", weight: 1},
-								{item: "tremolo5", weight: 1},
-								{item: "tremolo6", weight: 1},
-								{item: "decay 1" , weight: 1},
-								{item: "decay 2" , weight: 1},
-								{item: "decay 3" , weight: 1},
+								{ item: "steady", weight: 6 },
+								{ item: "punch", weight: 2 },
+								{ item: "flare 1", weight: 2 },
+								{ item: "flare 2", weight: 2 },
+								{ item: "flare 3", weight: 2 },
+								{ item: "twang 1", weight: 2 },
+								{ item: "twang 2", weight: 2 },
+								{ item: "twang 3", weight: 2 },
+								{ item: "swell 1", weight: 2 },
+								{ item: "swell 2", weight: 2 },
+								{ item: "swell 3", weight: 2 },
+								{ item: "tremolo1", weight: 1 },
+								{ item: "tremolo2", weight: 1 },
+								{ item: "tremolo3", weight: 1 },
+								{ item: "tremolo4", weight: 1 },
+								{ item: "tremolo5", weight: 1 },
+								{ item: "tremolo6", weight: 1 },
+								{ item: "decay 1", weight: 1 },
+								{ item: "decay 2", weight: 1 },
+								{ item: "decay 3", weight: 1 },
 							])].index;
 						}
-						instrument.feedbackAmplitude = (Math.pow(Math.random(), 3) * Config.operatorAmplitudeMax)|0;
+						instrument.feedbackAmplitude = (Math.pow(Math.random(), 3) * Config.operatorAmplitudeMax) | 0;
 						instrument.feedbackEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-							{item: "steady"  , weight: 4},
-							{item: "punch"   , weight: 2},
-							{item: "flare 1" , weight: 2},
-							{item: "flare 2" , weight: 2},
-							{item: "flare 3" , weight: 2},
-							{item: "twang 1" , weight: 2},
-							{item: "twang 2" , weight: 2},
-							{item: "twang 3" , weight: 2},
-							{item: "swell 1" , weight: 2},
-							{item: "swell 2" , weight: 2},
-							{item: "swell 3" , weight: 2},
-							{item: "tremolo1", weight: 1},
-							{item: "tremolo2", weight: 1},
-							{item: "tremolo3", weight: 1},
-							{item: "tremolo4", weight: 1},
-							{item: "tremolo5", weight: 1},
-							{item: "tremolo6", weight: 1},
-							{item: "decay 1" , weight: 1},
-							{item: "decay 2" , weight: 1},
-							{item: "decay 3" , weight: 1},
+							{ item: "steady", weight: 4 },
+							{ item: "punch", weight: 2 },
+							{ item: "flare 1", weight: 2 },
+							{ item: "flare 2", weight: 2 },
+							{ item: "flare 3", weight: 2 },
+							{ item: "twang 1", weight: 2 },
+							{ item: "twang 2", weight: 2 },
+							{ item: "twang 3", weight: 2 },
+							{ item: "swell 1", weight: 2 },
+							{ item: "swell 2", weight: 2 },
+							{ item: "swell 3", weight: 2 },
+							{ item: "tremolo1", weight: 1 },
+							{ item: "tremolo2", weight: 1 },
+							{ item: "tremolo3", weight: 1 },
+							{ item: "tremolo4", weight: 1 },
+							{ item: "tremolo5", weight: 1 },
+							{ item: "tremolo6", weight: 1 },
+							{ item: "decay 1", weight: 1 },
+							{ item: "decay 2", weight: 1 },
+							{ item: "decay 3", weight: 1 },
 						])].index;
 					} break;
 					default: throw new Error("Unhandled pitched instrument type in random generator.");
 				}
 			}
-			
+
 			doc.notifier.changed();
 			this._didSomething();
 		}
 	}
-	
+
 	export class ChangeTransition extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -760,7 +754,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeEffects extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -774,17 +768,25 @@ namespace beepbox {
 			}
 		}
 	}
-	
-	export class ChangePattern extends Change {
-		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
+
+	export class ChangePatternNumbers extends Change {
+		constructor(doc: SongDocument, value: number, startBar: number, startChannel: number, width: number, height: number) {
 			super();
-			if (newValue > doc.song.patternsPerChannel) throw new Error("invalid pattern");
-			doc.song.channels[doc.channel].bars[doc.bar] = newValue;
+			if (value > doc.song.patternsPerChannel) throw new Error("invalid pattern");
+
+			for (let bar: number = startBar; bar < startBar + width; bar++) {
+				for (let channel: number = startChannel; channel < startChannel + height; channel++) {
+					if (doc.song.channels[channel].bars[bar] != value) {
+						doc.song.channels[channel].bars[bar] = value;
+						this._didSomething();
+					}
+				}
+			}
+
 			doc.notifier.changed();
-			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangeBarCount extends Change {
 		constructor(doc: SongDocument, trackEditor: TrackEditor, newValue: number, atBeginning: boolean) {
 			super();
@@ -804,7 +806,7 @@ namespace beepbox {
 						channel.bars.length = newValue;
 					}
 				}
-				
+
 				if (atBeginning) {
 					const diff: number = newValue - doc.song.barCount;
 					doc.bar = Math.max(0, doc.bar + diff);
@@ -819,25 +821,77 @@ namespace beepbox {
 				doc.song.loopStart = Math.min(newValue - doc.song.loopLength, doc.song.loopStart);
 				doc.song.barCount = newValue;
 				doc.notifier.changed();
-                trackEditor.clearSelection();
-				
+				//trackEditor._resetBoxSelection();
+
 				this._didSomething();
 			}
 		}
 	}
-	
+
+	export class ChangeInsertBars extends Change {
+		constructor(doc: SongDocument, start: number, count: number) {
+			super();
+
+			const newLength: number = Math.min(Config.barCountMax, doc.song.barCount + count);
+			count = newLength - doc.song.barCount;
+			if (count == 0) return;
+
+			for (const channel of doc.song.channels) {
+				while (channel.bars.length < newLength) {
+					channel.bars.splice(start, 0, 0);
+				}
+			}
+			doc.song.barCount = newLength;
+
+			doc.bar = start;
+			doc.barScrollPos = Math.min(newLength - doc.trackVisibleBars, doc.barScrollPos + count);
+			if (doc.song.loopStart >= start) {
+				doc.song.loopStart += count;
+			} else if (doc.song.loopStart + doc.song.loopLength >= start) {
+				doc.song.loopLength += count;
+			}
+
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+
+	export class ChangeDeleteBars extends Change {
+		constructor(doc: SongDocument, start: number, count: number) {
+			super();
+
+			for (const channel of doc.song.channels) {
+				channel.bars.splice(start, count);
+				if (channel.bars.length == 0) channel.bars.push(0);
+			}
+			doc.song.barCount = Math.max(1, doc.song.barCount - count);
+
+			doc.bar = Math.max(0, start - count);
+			doc.barScrollPos = Math.max(0, doc.barScrollPos - count);
+			if (doc.song.loopStart >= start) {
+				doc.song.loopStart = Math.max(0, doc.song.loopStart - count);
+			} else if (doc.song.loopStart + doc.song.loopLength > start) {
+				doc.song.loopLength -= count;
+			}
+			doc.song.loopLength = Math.max(1, Math.min(doc.song.barCount - doc.song.loopStart, doc.song.loopLength));
+
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+
 	export class ChangeChannelCount extends Change {
 		constructor(doc: SongDocument, newPitchChannelCount: number, newNoiseChannelCount: number) {
 			super();
 			if (doc.song.pitchChannelCount != newPitchChannelCount || doc.song.noiseChannelCount != newNoiseChannelCount) {
 				const newChannels: Channel[] = [];
-				
+
 				function changeGroup(newCount: number, oldCount: number, newStart: number, oldStart: number, octave: number, isNoise: boolean): void {
 					for (let i: number = 0; i < newCount; i++) {
 						const channel = i + newStart;
 						const oldChannel = i + oldStart;
 						if (i < oldCount) {
-              newChannels[channel] = doc.song.channels[oldChannel];
+							newChannels[channel] = doc.song.channels[oldChannel];
 						} else {
 							newChannels[channel] = new Channel();
 							newChannels[channel].octave = octave;
@@ -853,32 +907,32 @@ namespace beepbox {
 								newChannels[channel].patterns[j] = new Pattern();
 							}
 							for (let j: number = 0; j < doc.song.barCount; j++) {
-								newChannels[channel].bars[j] = ( j < 4 ) ? 1 : 0;
+								newChannels[channel].bars[j] = (j < 4) ? 1 : 0;
 							}
 						}
 					}
 				}
-				
+
 				changeGroup(newPitchChannelCount, doc.song.pitchChannelCount, 0, 0, 2, false);
 				changeGroup(newNoiseChannelCount, doc.song.noiseChannelCount, newPitchChannelCount, doc.song.pitchChannelCount, 0, true);
-				
+
 				doc.song.pitchChannelCount = newPitchChannelCount;
 				doc.song.noiseChannelCount = newNoiseChannelCount;
 				for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
 					doc.song.channels[channel] = newChannels[channel];
 				}
 				doc.song.channels.length = doc.song.getChannelCount();
-				
-				doc.channel = Math.min(doc.channel, newPitchChannelCount + newNoiseChannelCount - 1);
-        doc.notifier.changed();
 
-        ColorConfig.resetColors();
-				
+				doc.channel = Math.min(doc.channel, newPitchChannelCount + newNoiseChannelCount - 1);
+				doc.notifier.changed();
+
+				ColorConfig.resetColors();
+
 				this._didSomething();
 			}
 		}
 	}
-	
+
 	export class ChangeChannelBar extends Change {
 		constructor(doc: SongDocument, newChannel: number, newBar: number, silently: boolean = false) {
 			super();
@@ -895,7 +949,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeInterval extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -909,7 +963,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeChord extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -923,7 +977,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeVibrato extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -937,7 +991,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeSpectrum extends Change {
 		constructor(doc: SongDocument, instrument: Instrument, spectrumWave: SpectrumWave) {
 			super();
@@ -947,7 +1001,7 @@ namespace beepbox {
 			this._didSomething();
 		}
 	}
-	
+
 	export class ChangeHarmonics extends Change {
 		constructor(doc: SongDocument, instrument: Instrument, harmonicsWave: HarmonicsWave) {
 			super();
@@ -957,7 +1011,7 @@ namespace beepbox {
 			this._didSomething();
 		}
 	}
-	
+
 	export class ChangeDrumsetEnvelope extends Change {
 		constructor(doc: SongDocument, drumIndex: number, newValue: number) {
 			super();
@@ -971,14 +1025,14 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	class ChangeInstrumentSlider extends Change {
 		protected _instrument: Instrument;
 		constructor(private _doc: SongDocument) {
 			super();
 			this._instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 		}
-		
+
 		public commit(): void {
 			if (!this.isNoop()) {
 				this._instrument.preset = this._instrument.type;
@@ -986,7 +1040,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangePulseWidth extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
@@ -995,7 +1049,7 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangePulseEnvelope extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1009,7 +1063,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeFilterCutoff extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
@@ -1018,7 +1072,7 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangeFilterResonance extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
@@ -1027,7 +1081,7 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangeFilterEnvelope extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1041,7 +1095,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeAlgorithm extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1055,7 +1109,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeFeedbackType extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1069,7 +1123,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeFeedbackEnvelope extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1083,7 +1137,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeOperatorEnvelope extends Change {
 		constructor(doc: SongDocument, operatorIndex: number, newValue: number) {
 			super();
@@ -1097,7 +1151,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeOperatorFrequency extends Change {
 		constructor(doc: SongDocument, operatorIndex: number, newValue: number) {
 			super();
@@ -1111,7 +1165,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeOperatorAmplitude extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, operatorIndex: number, oldValue: number, newValue: number) {
 			super(doc);
@@ -1120,7 +1174,7 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangeFeedbackAmplitude extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
@@ -1129,7 +1183,7 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangeInstrumentsPerChannel extends Change {
 		constructor(doc: SongDocument, newInstrumentsPerChannel: number) {
 			super();
@@ -1160,7 +1214,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeKey extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1171,7 +1225,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeLoop extends Change {
 		constructor(private _doc: SongDocument, public oldStart: number, public oldLength: number, public newStart: number, public newLength: number) {
 			super();
@@ -1183,7 +1237,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangePitchAdded extends UndoableChange {
 		private _doc: SongDocument;
 		private _note: Note;
@@ -1198,18 +1252,18 @@ namespace beepbox {
 			this._didSomething();
 			this.redo();
 		}
-		
+
 		protected _doForwards(): void {
 			this._note.pitches.splice(this._index, 0, this._pitch);
 			this._doc.notifier.changed();
 		}
-		
+
 		protected _doBackwards(): void {
 			this._note.pitches.splice(this._index, 1);
 			this._doc.notifier.changed();
 		}
 	}
-	
+
 	export class ChangeOctave extends Change {
 		constructor(doc: SongDocument, public oldValue: number, newValue: number) {
 			super();
@@ -1218,11 +1272,11 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangeRhythm extends ChangeGroup {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
-			
+
 			if (doc.song.rhythm != newValue) {
 				doc.song.rhythm = newValue;
 				doc.notifier.changed();
@@ -1230,11 +1284,11 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangePaste extends ChangeGroup {
 		constructor(doc: SongDocument, pattern: Pattern, notes: any[], oldBeatsPerBar: number) {
 			super();
-			
+
 			pattern.notes.length = 0;
 			for (const noteObject of notes) {
 				const note: Note = new Note(noteObject["pitches"][0], noteObject["start"], noteObject["end"], noteObject["pins"][0]["volume"], false);
@@ -1248,16 +1302,16 @@ namespace beepbox {
 				}
 				pattern.notes.push(note);
 			}
-			
+
 			if (doc.song.beatsPerBar < oldBeatsPerBar) {
 				this.append(new ChangeNoteTruncate(doc, pattern, doc.song.beatsPerBar * Config.partsPerBeat, oldBeatsPerBar * Config.partsPerBeat));
 			}
-			
+
 			doc.notifier.changed();
 			this._didSomething();
 		}
 	}
-	
+
 	export class ChangePasteInstrument extends ChangeGroup {
 		constructor(doc: SongDocument, instrument: Instrument, instrumentCopy: any) {
 			super();
@@ -1266,7 +1320,7 @@ namespace beepbox {
 			this._didSomething();
 		}
 	}
-	
+
 	export class ChangePatternInstrument extends Change {
 		constructor(doc: SongDocument, newValue: number, pattern: Pattern) {
 			super();
@@ -1277,7 +1331,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangePatternsPerChannel extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1299,7 +1353,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeEnsurePatternExists extends UndoableChange {
 		private _doc: SongDocument;
 		private _bar: number;
@@ -1308,24 +1362,24 @@ namespace beepbox {
 		private _patternOldNotes: Note[] | null = null;
 		private _oldPatternCount: number;
 		private _newPatternCount: number;
-		
-		constructor(doc: SongDocument) {
+
+		constructor(doc: SongDocument, channel: number, bar: number) {
 			super(false);
 			const song: Song = doc.song;
-			if (song.channels[doc.channel].bars[doc.bar] != 0) return;
-			
+			if (song.channels[channel].bars[bar] != 0) return;
+
 			this._doc = doc;
-			this._bar = doc.bar;
-			this._channel = doc.channel;
+			this._bar = bar;
+			this._channel = channel;
 			this._oldPatternCount = song.patternsPerChannel;
 			this._newPatternCount = song.patternsPerChannel;
-			
+
 			let firstEmptyUnusedIndex: number | null = null;
 			let firstUnusedIndex: number | null = null;
 			for (let patternIndex: number = 1; patternIndex <= song.patternsPerChannel; patternIndex++) {
 				let used = false;
 				for (let barIndex: number = 0; barIndex < song.barCount; barIndex++) {
-					if (song.channels[doc.channel].bars[barIndex] == patternIndex) {
+					if (song.channels[channel].bars[barIndex] == patternIndex) {
 						used = true;
 						break;
 					}
@@ -1334,13 +1388,13 @@ namespace beepbox {
 				if (firstUnusedIndex == null) {
 					firstUnusedIndex = patternIndex;
 				}
-				const pattern: Pattern = song.channels[doc.channel].patterns[patternIndex - 1];
+				const pattern: Pattern = song.channels[channel].patterns[patternIndex - 1];
 				if (pattern.notes.length == 0) {
 					firstEmptyUnusedIndex = patternIndex;
 					break;
 				}
 			}
-			
+
 			if (firstEmptyUnusedIndex != null) {
 				this._patternIndex = firstEmptyUnusedIndex;
 			} else if (song.patternsPerChannel < song.barCount) {
@@ -1348,15 +1402,15 @@ namespace beepbox {
 				this._patternIndex = song.patternsPerChannel + 1;
 			} else if (firstUnusedIndex != null) {
 				this._patternIndex = firstUnusedIndex;
-				this._patternOldNotes = song.channels[doc.channel].patterns[firstUnusedIndex - 1].notes;
+				this._patternOldNotes = song.channels[channel].patterns[firstUnusedIndex - 1].notes;
 			} else {
 				throw new Error();
 			}
-			
+
 			this._didSomething();
 			this._doForwards();
 		}
-		
+
 		protected _doForwards(): void {
 			const song: Song = this._doc.song;
 			for (let j: number = song.patternsPerChannel; j < this._newPatternCount; j++) {
@@ -1370,7 +1424,7 @@ namespace beepbox {
 			song.channels[this._channel].bars[this._bar] = this._patternIndex;
 			this._doc.notifier.changed();
 		}
-		
+
 		protected _doBackwards(): void {
 			const song: Song = this._doc.song;
 			const pattern: Pattern = song.channels[this._channel].patterns[this._patternIndex - 1];
@@ -1383,11 +1437,11 @@ namespace beepbox {
 			this._doc.notifier.changed();
 		}
 	}
-	
+
 	export class ChangePinTime extends ChangePins {
 		constructor(doc: SongDocument, note: Note, pinIndex: number, shiftedTime: number) {
 			super(doc, note);
-			
+
 			shiftedTime -= this._oldStart;
 			const originalTime: number = this._oldPins[pinIndex].time;
 			const skipStart: number = Math.min(originalTime, shiftedTime);
@@ -1409,43 +1463,43 @@ namespace beepbox {
 			if (!setPin) {
 				this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
 			}
-			
+
 			this._finishSetup();
 		}
 	}
-	
+
 	export class ChangePitchBend extends ChangePins {
 		constructor(doc: SongDocument, note: Note, bendStart: number, bendEnd: number, bendTo: number, pitchIndex: number) {
 			super(doc, note);
-			
+
 			bendStart -= this._oldStart;
-			bendEnd   -= this._oldStart;
-			bendTo    -= note.pitches[pitchIndex];
-			
+			bendEnd -= this._oldStart;
+			bendTo -= note.pitches[pitchIndex];
+
 			let setStart: boolean = false;
-			let setEnd: boolean   = false;
+			let setEnd: boolean = false;
 			let prevInterval: number = 0;
 			let prevVolume: number = 3;
 			let persist: boolean = true;
 			let i: number;
 			let direction: number;
 			let stop: number;
-			let push: (item: NotePin)=>void;
+			let push: (item: NotePin) => void;
 			if (bendEnd > bendStart) {
 				i = 0;
 				direction = 1;
 				stop = note.pins.length;
-				push = (item: NotePin)=>{ this._newPins.push(item); };
+				push = (item: NotePin) => { this._newPins.push(item); };
 			} else {
 				i = note.pins.length - 1;
 				direction = -1;
 				stop = -1;
-				push = (item: NotePin)=>{ this._newPins.unshift(item); };
+				push = (item: NotePin) => { this._newPins.unshift(item); };
 			}
 			for (; i != stop; i += direction) {
 				const oldPin: NotePin = note.pins[i];
 				const time: number = oldPin.time;
-				for (;;) {
+				for (; ;) {
 					if (!setStart) {
 						if (time * direction <= bendStart * direction) {
 							prevInterval = oldPin.interval;
@@ -1483,17 +1537,17 @@ namespace beepbox {
 			if (!setEnd) {
 				push(makeNotePin(bendTo, bendEnd, prevVolume));
 			}
-			
+
 			this._finishSetup();
 		}
 	}
-	
-	export class ChangeForceRhythm extends ChangeSequence {
-		constructor(doc: SongDocument) {
+
+	export class ChangePatternRhythm extends ChangeSequence {
+		constructor(doc: SongDocument, pattern: Pattern) {
 			super();
 			const minDivision: number = Config.partsPerBeat / Config.rhythms[doc.song.rhythm].stepsPerBeat;
-			
-			const changeRhythm: (oldTime:number)=>number = function(oldTime: number): number {
+
+			const changeRhythm: (oldTime: number) => number = function (oldTime: number): number {
 				let thresholds: number[] | null = Config.rhythms[doc.song.rhythm].roundUpThresholds;
 				if (thresholds != null) {
 					const beatStart: number = Math.floor(oldTime / Config.partsPerBeat) * Config.partsPerBeat;
@@ -1511,65 +1565,61 @@ namespace beepbox {
 					return Math.round(oldTime / minDivision) * minDivision;
 				}
 			};
-			
-			for (const channel of doc.song.channels) {
-				for (const pattern of channel.patterns) {
-					let i: number = 0;
-					while (i < pattern.notes.length) {
-						const note: Note = pattern.notes[i];
-						if (changeRhythm(note.start) >= changeRhythm(note.end)) {
-							this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
-						} else {
-							this.append(new ChangeRhythmNote(doc, note, changeRhythm));
-							i++;
-						}
-					}
+
+			let i: number = 0;
+			while (i < pattern.notes.length) {
+				const note: Note = pattern.notes[i];
+				if (changeRhythm(note.start) >= changeRhythm(note.end)) {
+					this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
+				} else {
+					this.append(new ChangeRhythmNote(doc, note, changeRhythm));
+					i++;
 				}
 			}
 		}
 	}
-	
+
 	class ChangeRhythmNote extends ChangePins {
-		constructor(doc: SongDocument, note: Note, changeRhythm: (oldTime:number)=>number) {
+		constructor(doc: SongDocument, note: Note, changeRhythm: (oldTime: number) => number) {
 			super(doc, note);
-			
+
 			for (const oldPin of this._oldPins) {
 				this._newPins.push(makeNotePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.volume));
 			}
-			
+
 			this._finishSetup();
 		}
 	}
-	
+
 	export class ChangeMoveNotesSideways extends ChangeGroup {
 		constructor(doc: SongDocument, beatsToMove: number, strategy: string) {
 			super();
 			let partsToMove: number = Math.round((beatsToMove % doc.song.beatsPerBar) * Config.partsPerBeat);
 			if (partsToMove < 0) partsToMove += doc.song.beatsPerBar * Config.partsPerBeat;
 			if (partsToMove == 0.0) return;
-			
+
 			switch (strategy) {
 				case "wrapAround": {
 					const partsPerBar: number = Config.partsPerBeat * doc.song.beatsPerBar;
 					for (const channel of doc.song.channels) {
 						for (const pattern of channel.patterns) {
 							const newNotes: Note[] = [];
-							
+
 							for (let bar: number = 1; bar >= 0; bar--) {
 								const barStartPart: number = bar * partsPerBar;
-								
+
 								for (const oldNote of pattern.notes) {
 									const absoluteNoteStart: number = oldNote.start + partsToMove;
 									const absoluteNoteEnd: number = oldNote.end + partsToMove;
 									const noteStartPart: number = Math.max(0, absoluteNoteStart - barStartPart);
 									const noteEndPart: number = Math.min(partsPerBar, absoluteNoteEnd - barStartPart);
-									
+
 									if (noteStartPart < noteEndPart) {
 										projectNoteIntoBar(oldNote, absoluteNoteStart - barStartPart - noteStartPart, noteStartPart, noteEndPart, newNotes);
 									}
 								}
 							}
-							
+
 							pattern.notes = newNotes;
 						}
 					}
@@ -1578,9 +1628,9 @@ namespace beepbox {
 					let originalBarCount: number = doc.song.barCount;
 					let originalLoopStart: number = doc.song.loopStart;
 					let originalLoopLength: number = doc.song.loopLength;
-					
+
 					this.append(new ChangeMoveAndOverflowNotes(doc, doc.song.beatsPerBar, partsToMove));
-					
+
 					if (beatsToMove < 0) {
 						let firstBarIsEmpty: boolean = true;
 						for (const channel of doc.song.channels) {
@@ -1613,7 +1663,7 @@ namespace beepbox {
 			this._didSomething();
 		}
 	}
-	
+
 	export class ChangeBeatsPerBar extends ChangeGroup {
 		constructor(doc: SongDocument, newValue: number, strategy: string) {
 			super();
@@ -1630,12 +1680,12 @@ namespace beepbox {
 						}
 					} break;
 					case "stretch": {
-						const changeRhythm = function(oldTime: number): number {
+						const changeRhythm = function (oldTime: number): number {
 							return Math.round(oldTime * newValue / doc.song.beatsPerBar);
 						};
 						for (let channelIndex: number = 0; channelIndex < doc.song.getChannelCount(); channelIndex++) {
 							for (let patternIndex: number = 0; patternIndex < doc.song.channels[channelIndex].patterns.length; patternIndex++) {
-								const pattern: Pattern = doc.song.channels[channelIndex].patterns[patternIndex]; 
+								const pattern: Pattern = doc.song.channels[channelIndex].patterns[patternIndex];
 								let noteIndex: number = 0;
 								while (noteIndex < pattern.notes.length) {
 									const note: Note = pattern.notes[noteIndex];
@@ -1663,7 +1713,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeScale extends ChangeGroup {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1674,30 +1724,13 @@ namespace beepbox {
 			}
 		}
 	}
-	
-	export class ChangeForceScale extends ChangeGroup {
-		constructor(doc: SongDocument) {
-			super();
-				
-			const scaleFlags: ReadonlyArray<boolean> = determineScaleFromNotes(doc.song);
-			const scaleMap: number[] = generateScaleMap(scaleFlags, doc.song.scale);
-			for (let i: number = 0; i < doc.song.pitchChannelCount; i++) {
-				for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
-					this.append(new ChangePatternScale(doc, doc.song.channels[i].patterns[j], scaleMap));
-				}
-			}
-			
-			doc.notifier.changed();
-			this._didSomething();
-		}
-	}
-	
+
 	export class ChangeDetectKey extends ChangeGroup {
 		constructor(doc: SongDocument) {
 			super();
 			const song: Song = doc.song;
 			const basePitch: number = Config.keys[song.key].basePitch;
-			const keyWeights: number[] = [0,0,0,0,0,0,0,0,0,0,0,0];
+			const keyWeights: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 			for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
 				for (let barIndex: number = 0; barIndex < song.barCount; barIndex++) {
 					const pattern: Pattern | null = song.getPattern(channelIndex, barIndex);
@@ -1720,7 +1753,7 @@ namespace beepbox {
 					}
 				}
 			}
-			
+
 			let bestKey: number = 0;
 			let bestKeyWeight: number = 0;
 			for (let key: number = 0; key < 12; key++) {
@@ -1731,26 +1764,26 @@ namespace beepbox {
 					bestKey = key;
 				}
 			}
-			
+
 			if (bestKey != song.key) {
 				const diff: number = song.key - bestKey;
 				const absoluteDiff: number = Math.abs(diff);
-				
+
 				for (let channelIndex: number = 0; channelIndex < song.pitchChannelCount; channelIndex++) {
 					for (const pattern of song.channels[channelIndex].patterns) {
 						for (let i: number = 0; i < absoluteDiff; i++) {
-							this.append(new ChangeTranspose(doc, pattern, diff > 0, true));
+							this.append(new ChangeTranspose(doc, channelIndex, pattern, diff > 0, true));
 						}
 					}
 				}
-				
+
 				song.key = bestKey;
 				doc.notifier.changed();
 				this._didSomething();
 			}
 		}
 	}
-	
+
 	export function pickRandomPresetValue(isNoise: boolean): number {
 		const eligiblePresetValues: number[] = [];
 		for (let categoryIndex: number = 0; categoryIndex < EditorConfig.presetCategories.length; categoryIndex++) {
@@ -1763,9 +1796,9 @@ namespace beepbox {
 				}
 			}
 		}
-		return eligiblePresetValues[(Math.random() * eligiblePresetValues.length)|0];
+		return eligiblePresetValues[(Math.random() * eligiblePresetValues.length) | 0];
 	}
-	
+
 	export function setDefaultInstruments(song: Song): void {
 		for (let channelIndex: number = 0; channelIndex < song.channels.length; channelIndex++) {
 			for (const instrument of song.channels[channelIndex].instruments) {
@@ -1777,7 +1810,7 @@ namespace beepbox {
 			}
 		}
 	}
-		
+
 	export class ChangeSong extends ChangeGroup {
 		constructor(doc: SongDocument, newHash: string) {
 			super();
@@ -1788,7 +1821,7 @@ namespace beepbox {
 			this._didSomething();
 		}
 	}
-	
+
 	export class ChangeValidateDoc extends Change {
 		constructor(doc: SongDocument) {
 			super();
@@ -1804,13 +1837,13 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeReplacePatterns extends ChangeGroup {
 		constructor(doc: SongDocument, pitchChannels: Channel[], noiseChannels: Channel[]) {
 			super();
-			
+
 			const song: Song = doc.song;
-			
+
 			function removeExtraSparseChannels(channels: Channel[], maxLength: number): void {
 				while (channels.length > maxLength) {
 					let sparsestIndex: number = channels.length - 1;
@@ -1828,13 +1861,13 @@ namespace beepbox {
 					channels.splice(sparsestIndex, 1);
 				}
 			}
-			
+
 			removeExtraSparseChannels(pitchChannels, Config.pitchChannelCountMax);
 			removeExtraSparseChannels(noiseChannels, Config.noiseChannelCountMax);
-			
+
 			while (pitchChannels.length < Config.pitchChannelCountMin) pitchChannels.push(new Channel());
 			while (noiseChannels.length < Config.noiseChannelCountMin) noiseChannels.push(new Channel());
-			
+
 			// Set minimum counts.
 			song.barCount = 1;
 			song.instrumentsPerChannel = 1;
@@ -1850,7 +1883,7 @@ namespace beepbox {
 			song.channels.length = combinedChannels.length;
 			song.pitchChannelCount = pitchChannels.length;
 			song.noiseChannelCount = noiseChannels.length;
-			
+
 			song.barCount = Math.min(Config.barCountMax, song.barCount);
 			song.patternsPerChannel = Math.min(Config.barCountMax, song.patternsPerChannel);
 			song.instrumentsPerChannel = Math.min(Config.instrumentsPerChannelMax, song.instrumentsPerChannel);
@@ -1873,7 +1906,7 @@ namespace beepbox {
 					channel.patterns.push(new Pattern());
 				}
 				while (channel.instruments.length < song.instrumentsPerChannel) {
-					const instrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channelIndex)); 
+					const instrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channelIndex));
 					if (song.getChannelIsNoise(channelIndex)) {
 						instrument.setTypeAndReset(InstrumentType.noise, true);
 					} else {
@@ -1885,79 +1918,79 @@ namespace beepbox {
 				channel.patterns.length = song.patternsPerChannel;
 				channel.instruments.length = song.instrumentsPerChannel;
 			}
-			
+
 			song.loopStart = Math.max(0, Math.min(song.barCount - 1, song.loopStart));
 			song.loopLength = Math.min(song.barCount - song.loopStart, song.loopLength);
-			
+
 			this.append(new ChangeValidateDoc(doc));
 			doc.notifier.changed();
-      this._didSomething();
+			this._didSomething();
 
-      ColorConfig.resetColors();
+			ColorConfig.resetColors();
 		}
 	}
-	
-	export function removeDuplicatePatterns(channels: Channel[]) {
+
+	export function comparePatternNotes(a: Note[], b: Note[]): boolean {
+		if (a.length != b.length) return false;
+
+		for (let noteIndex: number = 0; noteIndex < a.length; noteIndex++) {
+			const oldNote: Note = a[noteIndex];
+			const newNote: Note = b[noteIndex];
+			if (newNote.start != oldNote.start || newNote.end != oldNote.end || newNote.pitches.length != oldNote.pitches.length || newNote.pins.length != oldNote.pins.length) {
+				return false;
+			}
+
+			for (let pitchIndex: number = 0; pitchIndex < oldNote.pitches.length; pitchIndex++) {
+				if (newNote.pitches[pitchIndex] != oldNote.pitches[pitchIndex]) {
+					return false;
+				}
+			}
+
+			for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
+				if (newNote.pins[pinIndex].interval != oldNote.pins[pinIndex].interval || newNote.pins[pinIndex].time != oldNote.pins[pinIndex].time || newNote.pins[pinIndex].volume != oldNote.pins[pinIndex].volume) {
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	export function removeDuplicatePatterns(channels: Channel[]): void {
 		for (const channel of channels) {
 			const newPatterns: Pattern[] = [];
 			for (let bar: number = 0; bar < channel.bars.length; bar++) {
 				if (channel.bars[bar] == 0) continue;
-				
+
 				const oldPattern: Pattern = channel.patterns[channel.bars[bar] - 1];
-				
+
 				let foundMatchingPattern: boolean = false;
 				for (let newPatternIndex: number = 0; newPatternIndex < newPatterns.length; newPatternIndex++) {
 					const newPattern: Pattern = newPatterns[newPatternIndex];
 					if (newPattern.instrument != oldPattern.instrument || newPattern.notes.length != oldPattern.notes.length) {
 						continue;
 					}
-					
-					let foundConflictingNote: boolean = false;
-					for (let noteIndex: number = 0; noteIndex < oldPattern.notes.length; noteIndex++) {
-						const oldNote: Note = oldPattern.notes[noteIndex];
-						const newNote: Note = newPattern.notes[noteIndex];
-						if (newNote.start != oldNote.start || newNote.end != oldNote.end || newNote.pitches.length != oldNote.pitches.length || newNote.pins.length != oldNote.pins.length) {
-							foundConflictingNote = true;
-							break;
-						}
-						
-						for (let pitchIndex: number = 0; pitchIndex < oldNote.pitches.length; pitchIndex++) {
-							if (newNote.pitches[pitchIndex] != oldNote.pitches[pitchIndex]) {
-								foundConflictingNote = true;
-								break;
-							}
-						}
-						if (foundConflictingNote) break;
-						
-						for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
-							if (newNote.pins[pinIndex].interval != oldNote.pins[pinIndex].interval || newNote.pins[pinIndex].time != oldNote.pins[pinIndex].time || newNote.pins[pinIndex].volume != oldNote.pins[pinIndex].volume) {
-								foundConflictingNote = true;
-								break;
-							}
-						}
-						if (foundConflictingNote) break;
-					}
-					
-					if (!foundConflictingNote) {
+
+					if (comparePatternNotes(oldPattern.notes, newPattern.notes)) {
 						foundMatchingPattern = true;
 						channel.bars[bar] = newPatternIndex + 1;
 						break;
 					}
 				}
-				
+
 				if (!foundMatchingPattern) {
 					newPatterns.push(oldPattern);
 					channel.bars[bar] = newPatterns.length;
 				}
 			}
-			
+
 			for (let patternIndex: number = 0; patternIndex < newPatterns.length; patternIndex++) {
 				channel.patterns[patternIndex] = newPatterns[patternIndex];
 			}
 			channel.patterns.length = newPatterns.length;
 		}
 	}
-	
+
 	export class ChangeTempo extends Change {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
@@ -1966,7 +1999,7 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangeReverb extends Change {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
@@ -1975,7 +2008,7 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangeNoteAdded extends UndoableChange {
 		private _doc: SongDocument;
 		private _pattern: Pattern;
@@ -1990,24 +2023,24 @@ namespace beepbox {
 			this._didSomething();
 			this.redo();
 		}
-		
+
 		protected _doForwards(): void {
 			this._pattern.notes.splice(this._index, 0, this._note);
 			this._doc.notifier.changed();
 		}
-		
+
 		protected _doBackwards(): void {
 			this._pattern.notes.splice(this._index, 1);
 			this._doc.notifier.changed();
 		}
 	}
-	
+
 	export class ChangeNoteLength extends ChangePins {
 		constructor(doc: SongDocument, note: Note, truncStart: number, truncEnd: number) {
 			super(doc, note);
-			
+
 			truncStart -= this._oldStart;
-			truncEnd   -= this._oldStart;
+			truncEnd -= this._oldStart;
 			let setStart: boolean = false;
 			let prevVolume: number = this._oldPins[0].volume;
 			let prevInterval: number = this._oldPins[0].interval;
@@ -2030,16 +2063,16 @@ namespace beepbox {
 					}
 				} else {
 					break;
-				} 
-				
+				}
+
 			}
-			
+
 			if (pushLastPin) this._newPins.push(makeNotePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
-			
+
 			this._finishSetup();
 		}
 	}
-	
+
 	export class ChangeNoteTruncate extends ChangeSequence {
 		constructor(doc: SongDocument, pattern: Pattern, start: number, end: number, skipNote?: Note) {
 			super();
@@ -2064,7 +2097,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	class ChangeTransposeNote extends UndoableChange {
 		protected _doc: SongDocument;
 		protected _note: Note;
@@ -2076,7 +2109,7 @@ namespace beepbox {
 		protected _newPins: NotePin[];
 		protected _oldPitches: number[];
 		protected _newPitches: number[];
-		constructor(doc: SongDocument, note: Note, upward: boolean, ignoreScale: boolean = false) {
+		constructor(doc: SongDocument, channel: number, note: Note, upward: boolean, ignoreScale: boolean = false, octave: boolean = false) {
 			super(false);
 			this._doc = doc;
 			this._note = note;
@@ -2084,27 +2117,41 @@ namespace beepbox {
 			this._newPins = [];
 			this._oldPitches = note.pitches;
 			this._newPitches = [];
-			
-			const maxPitch: number = (doc.song.getChannelIsNoise(doc.channel) ? Config.drumCount - 1 : Config.maxPitch);
-			
+
+			// I'm disabling pitch transposing for noise channels to avoid
+			// accidentally messing up noise channels when pitch shifting all
+			// channels at once.
+			const isNoise: boolean = doc.song.getChannelIsNoise(channel);
+			if (isNoise != doc.song.getChannelIsNoise(doc.channel)) return;
+
+			const maxPitch: number = (isNoise ? Config.drumCount - 1 : Config.maxPitch);
+
 			for (let i: number = 0; i < this._oldPitches.length; i++) {
 				let pitch: number = this._oldPitches[i];
-				if (upward) {
-					for (let j: number = pitch + 1; j <= maxPitch; j++) {
-						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
-							pitch = j;
-							break;
-						}
+				if (octave && !isNoise) {
+					if (upward) {
+						pitch = Math.min(maxPitch, pitch + 12);
+					} else {
+						pitch = Math.max(0, pitch - 12);
 					}
 				} else {
-					for (let j: number = pitch - 1; j >= 0; j--) {
-						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[j%12]) {
-							pitch = j;
-							break;
+					if (upward) {
+						for (let j: number = pitch + 1; j <= maxPitch; j++) {
+							if (isNoise || ignoreScale || Config.scales[doc.song.scale].flags[j % 12]) {
+								pitch = j;
+								break;
+							}
+						}
+					} else {
+						for (let j: number = pitch - 1; j >= 0; j--) {
+							if (isNoise || ignoreScale || Config.scales[doc.song.scale].flags[j % 12]) {
+								pitch = j;
+								break;
+							}
 						}
 					}
 				}
-				
+
 				let foundMatch: boolean = false;
 				for (let j: number = 0; j < this._newPitches.length; j++) {
 					if (this._newPitches[j] == pitch) {
@@ -2114,86 +2161,93 @@ namespace beepbox {
 				}
 				if (!foundMatch) this._newPitches.push(pitch);
 			}
-			
+
 			let min: number = 0;
 			let max: number = maxPitch;
-			
+
 			for (let i: number = 1; i < this._newPitches.length; i++) {
 				const diff: number = this._newPitches[0] - this._newPitches[i];
 				if (min < diff) min = diff;
 				if (max > diff + maxPitch) max = diff + maxPitch;
 			}
-			
+
 			for (const oldPin of this._oldPins) {
 				let interval: number = oldPin.interval + this._oldPitches[0];
-				
+
 				if (interval < min) interval = min;
 				if (interval > max) interval = max;
-				if (upward) {
-					for (let i: number = interval + 1; i <= max; i++) {
-						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
-							interval = i;
-							break;
-						}
+				if (octave && !isNoise) {
+					if (upward) {
+						interval = Math.min(max, interval + 12);
+					} else {
+						interval = Math.max(min, interval - 12);
 					}
 				} else {
-					for (let i: number = interval - 1; i >= min; i--) {
-						if (doc.song.getChannelIsNoise(doc.channel) || ignoreScale || Config.scales[doc.song.scale].flags[i%12]) {
-							interval = i;
-							break;
+					if (upward) {
+						for (let i: number = interval + 1; i <= max; i++) {
+							if (isNoise || ignoreScale || Config.scales[doc.song.scale].flags[i % 12]) {
+								interval = i;
+								break;
+							}
+						}
+					} else {
+						for (let i: number = interval - 1; i >= min; i--) {
+							if (isNoise || ignoreScale || Config.scales[doc.song.scale].flags[i % 12]) {
+								interval = i;
+								break;
+							}
 						}
 					}
 				}
 				interval -= this._newPitches[0];
 				this._newPins.push(makeNotePin(interval, oldPin.time, oldPin.volume));
 			}
-			
+
 			if (this._newPins[0].interval != 0) throw new Error("wrong pin start interval");
-			
-			for (let i: number = 1; i < this._newPins.length - 1; ) {
-				if (this._newPins[i-1].interval == this._newPins[i].interval && 
-				    this._newPins[i].interval == this._newPins[i+1].interval && 
-				    this._newPins[i-1].volume == this._newPins[i].volume && 
-				    this._newPins[i].volume == this._newPins[i+1].volume)
-				{
+
+			for (let i: number = 1; i < this._newPins.length - 1;) {
+				if (this._newPins[i - 1].interval == this._newPins[i].interval &&
+					this._newPins[i].interval == this._newPins[i + 1].interval &&
+					this._newPins[i - 1].volume == this._newPins[i].volume &&
+					this._newPins[i].volume == this._newPins[i + 1].volume) {
 					this._newPins.splice(i, 1);
 				} else {
 					i++;
 				}
 			}
-			
+
 			this._doForwards();
 			this._didSomething();
 		}
-		
+
 		protected _doForwards(): void {
 			this._note.pins = this._newPins;
 			this._note.pitches = this._newPitches;
 			this._doc.notifier.changed();
 		}
-		
+
 		protected _doBackwards(): void {
 			this._note.pins = this._oldPins;
 			this._note.pitches = this._oldPitches;
 			this._doc.notifier.changed();
 		}
 	}
-	
+
 	export class ChangeTranspose extends ChangeSequence {
-		constructor(doc: SongDocument, pattern: Pattern, upward: boolean, ignoreScale: boolean = false) {
+		constructor(doc: SongDocument, channel: number, pattern: Pattern, upward: boolean, ignoreScale: boolean = false, octave: boolean = false) {
 			super();
 			for (let i: number = 0; i < pattern.notes.length; i++) {
-				this.append(new ChangeTransposeNote(doc, pattern.notes[i], upward, ignoreScale));
+				this.append(new ChangeTransposeNote(doc, channel, pattern.notes[i], upward, ignoreScale, octave));
 			}
 		}
 	}
-	
+
 	export class ChangePatternScale extends Change {
 		constructor(doc: SongDocument, pattern: Pattern, scaleMap: number[]) {
 			super();
 			const maxPitch: number = Config.maxPitch;
 			for (const note of pattern.notes) {
-				
+
 				const newPitches: number[] = [];
 				const newPins: NotePin[] = [];
 				for (let i: number = 0; i < note.pitches.length; i++) {
@@ -2203,16 +2257,16 @@ namespace beepbox {
 						newPitches.push(transformedPitch);
 					}
 				}
-				
+
 				let min: number = 0;
 				let max: number = maxPitch;
-				
+
 				for (let i: number = 1; i < newPitches.length; i++) {
 					const diff: number = newPitches[0] - newPitches[i];
 					if (min < diff) min = diff;
 					if (max > diff + maxPitch) max = diff + maxPitch;
 				}
-			
+
 				for (const oldPin of note.pins) {
 					let interval: number = oldPin.interval + note.pitches[0];
 					if (interval < min) interval = min;
@@ -2220,21 +2274,20 @@ namespace beepbox {
 					const transformedInterval: number = scaleMap[interval % 12] + (interval - (interval % 12));
 					newPins.push(makeNotePin(transformedInterval - newPitches[0], oldPin.time, oldPin.volume));
 				}
-			
+
 				if (newPins[0].interval != 0) throw new Error("wrong pin start interval");
-			
-				for (let i: number = 1; i < newPins.length - 1; ) {
-					if (newPins[i-1].interval == newPins[i].interval && 
-						newPins[i].interval == newPins[i+1].interval && 
-						newPins[i-1].volume == newPins[i].volume && 
-						newPins[i].volume == newPins[i+1].volume)
-					{
+
+				for (let i: number = 1; i < newPins.length - 1;) {
+					if (newPins[i - 1].interval == newPins[i].interval &&
+						newPins[i].interval == newPins[i + 1].interval &&
+						newPins[i - 1].volume == newPins[i].volume &&
+						newPins[i].volume == newPins[i + 1].volume) {
 						newPins.splice(i, 1);
 					} else {
 						i++;
 					}
 				}
-				
+
 				note.pitches = newPitches;
 				note.pins = newPins;
 			}
@@ -2242,7 +2295,7 @@ namespace beepbox {
 			doc.notifier.changed();
 		}
 	}
-	
+
 	export class ChangeVolume extends Change {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
@@ -2251,21 +2304,21 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
-	export class ChangeInputBoxText extends Change {
-        constructor(doc: SongDocument, oldValue: string, newValue: string) {
-            super();
-            if (newValue.length > 30) {
-                newValue = newValue.substring(0, 30);
-            }
 
-            doc.song.title = newValue;
-            document.title = newValue + " - Jummbox 1.2";
-            doc.notifier.changed();
-            if (oldValue != newValue) this._didSomething();
-        }
-    }
-	
+	export class ChangeInputBoxText extends Change {
+		constructor(doc: SongDocument, oldValue: string, newValue: string) {
+			super();
+			if (newValue.length > 30) {
+				newValue = newValue.substring(0, 30);
+			}
+
+			doc.song.title = newValue;
+			document.title = newValue + " - Jummbox 1.3";
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+
 	export class ChangePan extends Change {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
@@ -2274,7 +2327,7 @@ namespace beepbox {
 			if (oldValue != newValue) this._didSomething();
 		}
 	}
-	
+
 	export class ChangeVolumeBend extends UndoableChange {
 		private _doc: SongDocument;
 		private _note: Note;
@@ -2286,9 +2339,9 @@ namespace beepbox {
 			this._note = note;
 			this._oldPins = note.pins;
 			this._newPins = [];
-			
+
 			let inserted: boolean = false;
-			
+
 			for (const pin of note.pins) {
 				if (pin.time < bendPart) {
 					this._newPins.push(pin);
@@ -2303,34 +2356,33 @@ namespace beepbox {
 					this._newPins.push(pin);
 				}
 			}
-			
-			for (let i: number = 1; i < this._newPins.length - 1; ) {
-				if (this._newPins[i-1].interval == this._newPins[i].interval && 
-				    this._newPins[i].interval == this._newPins[i+1].interval && 
-				    this._newPins[i-1].volume == this._newPins[i].volume && 
-				    this._newPins[i].volume == this._newPins[i+1].volume)
-				{
+
+			for (let i: number = 1; i < this._newPins.length - 1;) {
+				if (this._newPins[i - 1].interval == this._newPins[i].interval &&
+					this._newPins[i].interval == this._newPins[i + 1].interval &&
+					this._newPins[i - 1].volume == this._newPins[i].volume &&
+					this._newPins[i].volume == this._newPins[i + 1].volume) {
 					this._newPins.splice(i, 1);
 				} else {
 					i++;
 				}
 			}
-			
+
 			this._doForwards();
 			this._didSomething();
 		}
-		
+
 		protected _doForwards(): void {
 			this._note.pins = this._newPins;
 			this._doc.notifier.changed();
 		}
-		
+
 		protected _doBackwards(): void {
 			this._note.pins = this._oldPins;
 			this._doc.notifier.changed();
 		}
 	}
-	
+
 	export class ChangeChipWave extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -2343,7 +2395,7 @@ namespace beepbox {
 			}
 		}
 	}
-	
+
 	export class ChangeNoiseWave extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();

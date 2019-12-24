@@ -19,16 +19,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 SOFTWARE.
 */
-	
+
 namespace beepbox {
 	export interface Dictionary<T> {
 		[K: string]: T;
 	}
-	
+
 	export interface DictionaryArray<T> extends ReadonlyArray<T> {
 		dictionary: Dictionary<T>;
 	}
-	
+
 	export const enum EnvelopeType {
 		custom,
 		steady,
@@ -40,7 +40,7 @@ namespace beepbox {
 		tremolo2,
 		decay,
 	}
-	
+
 	export const enum InstrumentType {
 		chip = 0,
 		fm = 1,
@@ -49,19 +49,19 @@ namespace beepbox {
 		drumset = 4,
 		harmonics = 5,
 		pwm = 6,
-        customChipWave = 7,
+		customChipWave = 7,
 		length,
 	}
-	
+
 	export interface BeepBoxOption {
 		readonly index: number;
 		readonly name: string;
 	}
-	
+
 	export interface Scale extends BeepBoxOption {
 		readonly flags: ReadonlyArray<boolean>;
 	}
-	
+
 	export interface Key extends BeepBoxOption {
 		readonly isWhiteKey: boolean;
 		readonly basePitch: number;
@@ -139,50 +139,50 @@ namespace beepbox {
 	}
 
 	export class Config {
-        // Params for post-processing compressor
-        public static thresholdVal: number = -10;
-        public static kneeVal: number = 40;
-        public static ratioVal: number = 12;
-        public static attackVal: number = 0;
-        public static releaseVal: number = 0.25;
+		// Params for post-processing compressor
+		public static thresholdVal: number = -10;
+		public static kneeVal: number = 40;
+		public static ratioVal: number = 12;
+		public static attackVal: number = 0;
+		public static releaseVal: number = 0.25;
 
 		public static readonly versionDisplayName: string = "JummBox 1.2";
 		public static readonly scales: DictionaryArray<Scale> = toNameMap([
-                                            //   C     Db       D     Eb      E      F     F#      G     Ab      A     Bb      B      C
-	        {name: "Free",              flags: [ true,  true,   true,  true,  true,  true,  true,  true,  true,  true,  true,  true]}, // Free
-	        {name: "Major",             flags: [ true, false,   true, false,  true,  true, false,  true, false,  true, false,  true]}, // Major
-	        {name: "Minor",             flags: [ true, false,   true,  true, false,  true, false,  true,  true, false,  true, false]}, // Minor
-	        {name: "Mixolydian",        flags: [ true, false,   true, false,  true,  true, false,  true, false,  true,  true, false]}, // Mixolydian
-	        {name: "Lydian",            flags: [ true, false,   true, false,  true, false,  true,  true, false,  true, false,  true]}, // Lydian
-	        {name: "Dorian",            flags: [ true, false,   true,  true, false,  true, false,  true, false,  true,  true, false]}, // Dorian
-	      	{name: "Phrygian",          flags: [ true,  true,  false,  true, false,  true, false,  true,  true, false,  true, false]}, // Phrygian
-	      	{name: "Locrian",           flags: [ true,  true,  false,  true, false,  true,  true, false,  true, false,  true, false]}, // Locrian
-	      	{name: "Lydian Dominant",            flags: [ true, false,   true, false,  true, false,  true,  true, false,  true,  true, false]}, // Lydian Dominant
-	      	{name: "Phrygian Dominant", flags: [ true,  true,  false, false,  true,  true, false,  true,  true, false,  true, false]}, // Phrygian Dominant
-	      	{name: "Harmonic Major",    flags: [ true, false,   true, false,  true,  true, false,  true,  true, false, false,  true]}, // Harmonic Major
-	      	{name: "Harmonic Minor",    flags: [ true, false,   true,  true, false,  true, false,  true,  true, false, false,  true]}, // Harmonic Minor
-	      	{name: "Melodic Minor",     flags: [ true, false,   true,  true, false,  true, false,  true, false,  true, false,  true]}, // Melodic Minor
-	      	{name: "Blues",             flags: [ true, false,  false,  true, false,  true,  true,  true, false, false,  true, false]}, // Blues
-	      	{name: "Altered",           flags: [ true,  true,  false,  true,  true, false,  true, false,  true, false,  true, false]}, // Altered
-	      	{name: "Major Pentatonic",  flags: [ true, false,   true, false,  true, false, false,  true, false,  true, false, false]}, // Major Pentatonic
-	      	{name: "Minor Pentatonic",  flags: [ true, false,  false,  true, false,  true, false,  true, false, false,  true, false]}, // Minor Pentatonic
-	      	{name: "Whole Tone",        flags: [ true, false,   true, false,  true, false,  true, false,  true, false,  true, false]}, // Whole Tone
-	      	{name: "Octatonic",         flags: [ true, false,   true,  true, false,  true,  true, false,  true,  true, false,  true]}, // Octatonic
-	      	{name: "Hexatonic",         flags: [ true, false,  false,  true,  true, false, false,  true,  true, false, false,  true]}, // Hexatonic
+														              //   C     Db      D     Eb      E      F     F#      G     Ab      A     Bb      B      C
+			{ name: "Free", flags:              [ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true] }, // Free
+			{ name: "Major", flags:             [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true] }, // Major
+			{ name: "Minor", flags:             [ true, false,  true,  true, false,  true, false,  true,  true, false,  true, false] }, // Minor
+			{ name: "Mixolydian", flags:        [ true, false,  true, false,  true,  true, false,  true, false,  true,  true, false] }, // Mixolydian
+			{ name: "Lydian", flags:            [ true, false,  true, false,  true, false,  true,  true, false,  true, false,  true] }, // Lydian
+			{ name: "Dorian", flags:            [ true, false,  true,  true, false,  true, false,  true, false,  true,  true, false] }, // Dorian
+			{ name: "Phrygian", flags:          [ true,  true, false,  true, false,  true, false,  true,  true, false,  true, false] }, // Phrygian
+			{ name: "Locrian", flags:           [ true,  true, false,  true, false,  true,  true, false,  true, false,  true, false] }, // Locrian
+			{ name: "Lydian Dominant", flags:   [ true, false,  true, false,  true, false,  true,  true, false,  true,  true, false] }, // Lydian Dominant
+			{ name: "Phrygian Dominant", flags: [ true,  true, false, false,  true,  true, false,  true,  true, false,  true, false] }, // Phrygian Dominant
+			{ name: "Harmonic Major", flags:    [ true, false,  true, false,  true,  true, false,  true,  true, false, false,  true] }, // Harmonic Major
+			{ name: "Harmonic Minor", flags:    [ true, false,  true,  true, false,  true, false,  true,  true, false, false,  true] }, // Harmonic Minor
+			{ name: "Melodic Minor", flags:     [ true, false,  true,  true, false,  true, false,  true, false,  true, false,  true] }, // Melodic Minor
+			{ name: "Blues", flags:             [ true, false, false,  true, false,  true,  true,  true, false, false,  true, false] }, // Blues
+			{ name: "Altered", flags:           [ true,  true, false,  true,  true, false,  true, false,  true, false,  true, false] }, // Altered
+			{ name: "Major Pentatonic", flags:  [ true, false,  true, false,  true, false, false,  true, false,  true, false, false] }, // Major Pentatonic
+			{ name: "Minor Pentatonic", flags:  [ true, false, false,  true, false,  true, false,  true, false, false,  true, false] }, // Minor Pentatonic
+			{ name: "Whole Tone", flags:        [ true, false,  true, false,  true, false,  true, false,  true, false,  true, false] }, // Whole Tone
+			{ name: "Octatonic", flags:         [ true, false,  true,  true, false,  true,  true, false,  true,  true, false,  true] }, // Octatonic
+			{ name: "Hexatonic", flags:         [ true, false, false,  true,  true, false, false,  true,  true, false, false,  true] }, // Hexatonic
 		]);
 		public static readonly keys: DictionaryArray<Key> = toNameMap([
-			{name: "C",  isWhiteKey:  true, basePitch: 12}, // C0 has index 12 on the MIDI scale. C7 is 96, and C9 is 120. C10 is barely in the audible range.
-			{name: "C♯", isWhiteKey: false, basePitch: 13},
-			{name: "D",  isWhiteKey:  true, basePitch: 14},
-			{name: "D♯", isWhiteKey: false, basePitch: 15},
-			{name: "E",  isWhiteKey:  true, basePitch: 16},
-			{name: "F",  isWhiteKey:  true, basePitch: 17},
-			{name: "F♯", isWhiteKey: false, basePitch: 18},
-			{name: "G",  isWhiteKey:  true, basePitch: 19},
-			{name: "G♯", isWhiteKey: false, basePitch: 20},
-			{name: "A",  isWhiteKey:  true, basePitch: 21},
-			{name: "A♯", isWhiteKey: false, basePitch: 22},
-			{name: "B",  isWhiteKey:  true, basePitch: 23},
+			{ name: "C", isWhiteKey: true, basePitch: 12 }, // C0 has index 12 on the MIDI scale. C7 is 96, and C9 is 120. C10 is barely in the audible range.
+			{ name: "C♯", isWhiteKey: false, basePitch: 13 },
+			{ name: "D", isWhiteKey: true, basePitch: 14 },
+			{ name: "D♯", isWhiteKey: false, basePitch: 15 },
+			{ name: "E", isWhiteKey: true, basePitch: 16 },
+			{ name: "F", isWhiteKey: true, basePitch: 17 },
+			{ name: "F♯", isWhiteKey: false, basePitch: 18 },
+			{ name: "G", isWhiteKey: true, basePitch: 19 },
+			{ name: "G♯", isWhiteKey: false, basePitch: 20 },
+			{ name: "A", isWhiteKey: true, basePitch: 21 },
+			{ name: "A♯", isWhiteKey: false, basePitch: 22 },
+			{ name: "B", isWhiteKey: true, basePitch: 23 },
 		]);
 		public static readonly blackKeyNameParents: ReadonlyArray<number> = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
 		public static readonly tempoMin: number = 30;
@@ -197,50 +197,50 @@ namespace beepbox {
 		public static readonly partsPerBeat: number = 24;
 		public static readonly ticksPerPart: number = 2;
 		public static readonly rhythms: DictionaryArray<Rhythm> = toNameMap([
-			{name: "÷3 (triplets)", stepsPerBeat: 3, ticksPerArpeggio: 4, arpeggioPatterns: [[0], [0, 0, 1, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: [/*0*/ 5, /*8*/ 12, /*16*/ 18 /*24*/]},
-			{name: "÷4 (standard)", stepsPerBeat: 4, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 0, 1, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: [/*0*/ 3, /*6*/ 9, /*12*/ 17, /*18*/ 21 /*24*/]},
-			{name: "÷6",            stepsPerBeat: 6, ticksPerArpeggio: 4, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null},
-			{name: "÷8",            stepsPerBeat: 8, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null},
-			{name: "freehand",      stepsPerBeat:24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null},
+			{ name: "÷3 (triplets)", stepsPerBeat: 3, ticksPerArpeggio: 4, arpeggioPatterns: [[0], [0, 0, 1, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: [/*0*/ 5, /*8*/ 12, /*16*/ 18 /*24*/] },
+			{ name: "÷4 (standard)", stepsPerBeat: 4, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 0, 1, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: [/*0*/ 3, /*6*/ 9, /*12*/ 17, /*18*/ 21 /*24*/] },
+			{ name: "÷6", stepsPerBeat: 6, ticksPerArpeggio: 4, arpeggioPatterns: [[0], [0, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null },
+			{ name: "÷8", stepsPerBeat: 8, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null },
+			{ name: "freehand", stepsPerBeat: 24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null },
 		]);
-		
+
 		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "custom chip"];
 		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false, true];
 		public static readonly instrumentTypeHasChorus: ReadonlyArray<boolean> = [true, true, true, false, false, true, true, true];
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
-			{name: "rounded",      volume: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
-			{name: "triangle",     volume: 1.0,  samples: centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0])},
-			{name: "square",       volume: 0.5,  samples: centerWave([1.0, -1.0])},
-			{name: "1/4 pulse",    volume: 0.5,  samples: centerWave([1.0, -1.0, -1.0, -1.0])},
-			{name: "1/8 pulse",    volume: 0.5,  samples: centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "sawtooth",     volume: 0.65, samples: centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0])},
-			{name: "double saw",   volume: 0.5,  samples: centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2])},
-			{name: "double pulse", volume: 0.4,  samples: centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "spiky",        volume: 0.4,  samples: centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0])},
-		    {name: "sine",           volume: 0.88, samples: centerAndNormalizeWave([8.0, 9.0, 11.0, 12.0, 13.0, 14.0, 15.0, 15.0, 15.0, 15.0, 14.0, 14.0, 13.0, 11.0, 10.0, 9.0, 7.0, 6.0, 4.0, 3.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 2.0, 4.0, 5.0, 6.0])},
-            {name: "flute",          volume: 0.8,  samples: centerAndNormalizeWave([3.0, 4.0, 6.0, 8.0, 10.0, 11.0, 13.0, 14.0, 15.0, 15.0, 14.0, 13.0, 11.0, 8.0, 5.0, 3.0])},
-      		{name: "harp",           volume: 0.8,  samples: centerAndNormalizeWave([0.0, 3.0, 3.0, 3.0, 4.0, 5.0, 5.0, 6.0, 7.0, 8.0, 9.0, 11.0, 11.0, 13.0, 13.0, 15.0, 15.0, 14.0, 12.0, 11.0, 10.0, 9.0, 8.0, 7.0, 7.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0, 0.0])},
-      		{name: "sharp clarinet", volume: 0.38, samples: centerAndNormalizeWave([0.0, 0.0, 0.0, 1.0, 1.0, 8.0, 8.0, 9.0, 9.0, 9.0, 8.0, 8.0, 8.0, 8.0, 8.0, 9.0, 9.0, 7.0, 9.0, 9.0, 10.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])},
-      		{name: "soft clarinet",  volume: 0.45, samples: centerAndNormalizeWave([0.0, 1.0, 5.0, 8.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 11.0, 11.0, 12.0, 13.0, 12.0, 10.0, 9.0, 7.0, 6.0, 4.0, 3.0, 3.0, 3.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])},
-      		{name: "alto sax",       volume: 0.3,  samples: centerAndNormalizeWave([5.0, 5.0, 6.0, 4.0, 3.0, 6.0, 8.0, 7.0, 2.0, 1.0, 5.0, 6.0, 5.0, 4.0, 5.0, 7.0, 9.0, 11.0, 13.0, 14.0, 14.0, 14.0, 14.0, 13.0, 10.0, 8.0, 7.0, 7.0, 4.0, 3.0, 4.0, 2.0])},
-      		{name: "bassoon",        volume: 0.35, samples: centerAndNormalizeWave([9.0, 9.0, 7.0, 6.0, 5.0, 4.0, 4.0, 4.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 11.0, 13.0, 13.0, 11.0, 10.0, 9.0, 7.0, 6.0, 4.0, 2.0, 1.0, 1.0, 1.0, 2.0, 2.0, 5.0, 11.0, 14.0])},
-      		{name: "trumpet",        volume: 0.22, samples: centerAndNormalizeWave([10.0, 11.0, 8.0, 6.0, 5.0, 5.0, 5.0, 6.0, 7.0, 7.0, 7.0, 7.0, 6.0, 6.0, 7.0, 7.0, 7.0, 7.0, 7.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 7.0, 8.0, 9.0, 11.0, 14.0])},
-      		{name: "electric guitar",volume: 0.2,  samples: centerAndNormalizeWave([11.0, 12.0, 12.0, 10.0, 6.0, 6.0, 8.0, 0.0, 2.0, 4.0, 8.0, 10.0, 9.0, 10.0, 1.0, 7.0, 11.0, 3.0, 6.0, 6.0, 8.0, 13.0, 14.0, 2.0, 0.0, 12.0, 8.0, 4.0, 13.0, 11.0, 10.0, 13.0])},
-      		{name: "organ",          volume: 0.2,  samples: centerAndNormalizeWave([11.0, 10.0, 12.0, 11.0, 14.0, 7.0, 5.0, 5.0, 12.0, 10.0, 10.0, 9.0, 12.0, 6.0, 4.0, 5.0, 13.0, 12.0, 12.0, 10.0, 12.0, 5.0, 2.0, 2.0, 8.0, 6.0, 6.0, 5.0, 8.0, 3.0, 2.0, 1.0])},
-      		{name: "pan flute",      volume: 0.35, samples: centerAndNormalizeWave([1.0, 4.0, 7.0, 6.0, 7.0, 9.0, 7.0, 7.0, 11.0, 12.0, 13.0, 15.0, 13.0, 11.0, 11.0, 12.0, 13.0, 10.0, 7.0, 5.0, 3.0, 6.0, 10.0, 7.0, 3.0, 3.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0])},
+			{ name: "rounded", volume: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]) },
+			{ name: "triangle", volume: 1.0, samples: centerWave([1.0 / 15.0, 3.0 / 15.0, 5.0 / 15.0, 7.0 / 15.0, 9.0 / 15.0, 11.0 / 15.0, 13.0 / 15.0, 15.0 / 15.0, 15.0 / 15.0, 13.0 / 15.0, 11.0 / 15.0, 9.0 / 15.0, 7.0 / 15.0, 5.0 / 15.0, 3.0 / 15.0, 1.0 / 15.0, -1.0 / 15.0, -3.0 / 15.0, -5.0 / 15.0, -7.0 / 15.0, -9.0 / 15.0, -11.0 / 15.0, -13.0 / 15.0, -15.0 / 15.0, -15.0 / 15.0, -13.0 / 15.0, -11.0 / 15.0, -9.0 / 15.0, -7.0 / 15.0, -5.0 / 15.0, -3.0 / 15.0, -1.0 / 15.0]) },
+			{ name: "square", volume: 0.5, samples: centerWave([1.0, -1.0]) },
+			{ name: "1/4 pulse", volume: 0.5, samples: centerWave([1.0, -1.0, -1.0, -1.0]) },
+			{ name: "1/8 pulse", volume: 0.5, samples: centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0]) },
+			{ name: "sawtooth", volume: 0.65, samples: centerWave([1.0 / 31.0, 3.0 / 31.0, 5.0 / 31.0, 7.0 / 31.0, 9.0 / 31.0, 11.0 / 31.0, 13.0 / 31.0, 15.0 / 31.0, 17.0 / 31.0, 19.0 / 31.0, 21.0 / 31.0, 23.0 / 31.0, 25.0 / 31.0, 27.0 / 31.0, 29.0 / 31.0, 31.0 / 31.0, -31.0 / 31.0, -29.0 / 31.0, -27.0 / 31.0, -25.0 / 31.0, -23.0 / 31.0, -21.0 / 31.0, -19.0 / 31.0, -17.0 / 31.0, -15.0 / 31.0, -13.0 / 31.0, -11.0 / 31.0, -9.0 / 31.0, -7.0 / 31.0, -5.0 / 31.0, -3.0 / 31.0, -1.0 / 31.0]) },
+			{ name: "double saw", volume: 0.5, samples: centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2]) },
+			{ name: "double pulse", volume: 0.4, samples: centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0]) },
+			{ name: "spiky", volume: 0.4, samples: centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0]) },
+			{ name: "sine", volume: 0.88, samples: centerAndNormalizeWave([8.0, 9.0, 11.0, 12.0, 13.0, 14.0, 15.0, 15.0, 15.0, 15.0, 14.0, 14.0, 13.0, 11.0, 10.0, 9.0, 7.0, 6.0, 4.0, 3.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 2.0, 4.0, 5.0, 6.0]) },
+			{ name: "flute", volume: 0.8, samples: centerAndNormalizeWave([3.0, 4.0, 6.0, 8.0, 10.0, 11.0, 13.0, 14.0, 15.0, 15.0, 14.0, 13.0, 11.0, 8.0, 5.0, 3.0]) },
+			{ name: "harp", volume: 0.8, samples: centerAndNormalizeWave([0.0, 3.0, 3.0, 3.0, 4.0, 5.0, 5.0, 6.0, 7.0, 8.0, 9.0, 11.0, 11.0, 13.0, 13.0, 15.0, 15.0, 14.0, 12.0, 11.0, 10.0, 9.0, 8.0, 7.0, 7.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0, 0.0]) },
+			{ name: "sharp clarinet", volume: 0.38, samples: centerAndNormalizeWave([0.0, 0.0, 0.0, 1.0, 1.0, 8.0, 8.0, 9.0, 9.0, 9.0, 8.0, 8.0, 8.0, 8.0, 8.0, 9.0, 9.0, 7.0, 9.0, 9.0, 10.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]) },
+			{ name: "soft clarinet", volume: 0.45, samples: centerAndNormalizeWave([0.0, 1.0, 5.0, 8.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 11.0, 11.0, 12.0, 13.0, 12.0, 10.0, 9.0, 7.0, 6.0, 4.0, 3.0, 3.0, 3.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) },
+			{ name: "alto sax", volume: 0.3, samples: centerAndNormalizeWave([5.0, 5.0, 6.0, 4.0, 3.0, 6.0, 8.0, 7.0, 2.0, 1.0, 5.0, 6.0, 5.0, 4.0, 5.0, 7.0, 9.0, 11.0, 13.0, 14.0, 14.0, 14.0, 14.0, 13.0, 10.0, 8.0, 7.0, 7.0, 4.0, 3.0, 4.0, 2.0]) },
+			{ name: "bassoon", volume: 0.35, samples: centerAndNormalizeWave([9.0, 9.0, 7.0, 6.0, 5.0, 4.0, 4.0, 4.0, 4.0, 5.0, 7.0, 8.0, 9.0, 10.0, 11.0, 13.0, 13.0, 11.0, 10.0, 9.0, 7.0, 6.0, 4.0, 2.0, 1.0, 1.0, 1.0, 2.0, 2.0, 5.0, 11.0, 14.0]) },
+			{ name: "trumpet", volume: 0.22, samples: centerAndNormalizeWave([10.0, 11.0, 8.0, 6.0, 5.0, 5.0, 5.0, 6.0, 7.0, 7.0, 7.0, 7.0, 6.0, 6.0, 7.0, 7.0, 7.0, 7.0, 7.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 7.0, 8.0, 9.0, 11.0, 14.0]) },
+			{ name: "electric guitar", volume: 0.2, samples: centerAndNormalizeWave([11.0, 12.0, 12.0, 10.0, 6.0, 6.0, 8.0, 0.0, 2.0, 4.0, 8.0, 10.0, 9.0, 10.0, 1.0, 7.0, 11.0, 3.0, 6.0, 6.0, 8.0, 13.0, 14.0, 2.0, 0.0, 12.0, 8.0, 4.0, 13.0, 11.0, 10.0, 13.0]) },
+			{ name: "organ", volume: 0.2, samples: centerAndNormalizeWave([11.0, 10.0, 12.0, 11.0, 14.0, 7.0, 5.0, 5.0, 12.0, 10.0, 10.0, 9.0, 12.0, 6.0, 4.0, 5.0, 13.0, 12.0, 12.0, 10.0, 12.0, 5.0, 2.0, 2.0, 8.0, 6.0, 6.0, 5.0, 8.0, 3.0, 2.0, 1.0]) },
+			{ name: "pan flute", volume: 0.35, samples: centerAndNormalizeWave([1.0, 4.0, 7.0, 6.0, 7.0, 9.0, 7.0, 7.0, 11.0, 12.0, 13.0, 15.0, 13.0, 11.0, 11.0, 12.0, 13.0, 10.0, 7.0, 5.0, 3.0, 6.0, 10.0, 7.0, 3.0, 3.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0]) },
 		]);
 		// Noise waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
 		public static readonly chipNoises: DictionaryArray<ChipNoise> = toNameMap([
-			{name: "retro",   volume: 0.25, basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
-			{name: "white",   volume: 1.0,  basePitch: 69,  pitchFilterMult:    8.0, isSoft: true,  samples: null},
+			{ name: "retro", volume: 0.25, basePitch: 69, pitchFilterMult: 1024.0, isSoft: false, samples: null },
+			{ name: "white", volume: 1.0, basePitch: 69, pitchFilterMult: 8.0, isSoft: true, samples: null },
 			// The "clang" and "buzz" noises are based on similar noises in the modded beepbox! :D
-			{name: "clang",   volume: 0.4,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
-			{name: "buzz",    volume: 0.3,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
-			{name: "hollow",  volume: 1.5,  basePitch: 96,  pitchFilterMult:    1.0, isSoft: true,  samples: null},
-      		{name: "shine",   volume: 1.0,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
-      		{name: "deep",    volume: 1.5,  basePitch: 120, pitchFilterMult: 1024.0, isSoft: true,  samples: null},
-      		{name: "cutter",  volume: 0.005,basePitch: 96,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
-      		{name: "metallic",volume: 1.0,  basePitch: 96,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
+			{ name: "clang", volume: 0.4, basePitch: 69, pitchFilterMult: 1024.0, isSoft: false, samples: null },
+			{ name: "buzz", volume: 0.3, basePitch: 69, pitchFilterMult: 1024.0, isSoft: false, samples: null },
+			{ name: "hollow", volume: 1.5, basePitch: 96, pitchFilterMult: 1.0, isSoft: true, samples: null },
+			{ name: "shine", volume: 1.0, basePitch: 69, pitchFilterMult: 1024.0, isSoft: false, samples: null },
+			{ name: "deep", volume: 1.5, basePitch: 120, pitchFilterMult: 1024.0, isSoft: true, samples: null },
+			{ name: "cutter", volume: 0.005, basePitch: 96, pitchFilterMult: 1024.0, isSoft: false, samples: null },
+			{ name: "metallic", volume: 1.0, basePitch: 96, pitchFilterMult: 1024.0, isSoft: false, samples: null },
 		]);
 		public static readonly filterCutoffMaxHz: number = 8000; // This is carefully calculated to correspond to no change when filtering at 48000 samples per second.
 		public static readonly filterCutoffMinHz: number = 1;
@@ -249,120 +249,122 @@ namespace beepbox {
 		public static readonly filterCutoffRange: number = 11;
 		public static readonly filterResonanceRange: number = 8;
 		public static readonly transitions: DictionaryArray<Transition> = toNameMap([
-			{name: "seamless",    isSeamless: true,  attackSeconds: 0.0,    releases: false, releaseTicks: 1,  slides: false, slideTicks: 3},
-			{name: "hard",        isSeamless: false, attackSeconds: 0.0,    releases: false, releaseTicks: 3,  slides: false, slideTicks: 3},
-			{name: "soft",        isSeamless: false, attackSeconds: 0.025,  releases: false, releaseTicks: 3,  slides: false, slideTicks: 3},
-			{name: "slide",       isSeamless: true,  attackSeconds: 0.025,  releases: false, releaseTicks: 3,  slides: true,  slideTicks: 3},
-			{name: "cross fade",  isSeamless: false, attackSeconds: 0.04,   releases: true,  releaseTicks: 6,  slides: false, slideTicks: 3},
-			{name: "hard fade",   isSeamless: false, attackSeconds: 0.0,    releases: true,  releaseTicks: 48, slides: false, slideTicks: 3},
-			{name: "medium fade", isSeamless: false, attackSeconds: 0.0125, releases: true,  releaseTicks: 72, slides: false, slideTicks: 3},
-			{name: "soft fade",   isSeamless: false, attackSeconds: 0.06,   releases: true,  releaseTicks: 96, slides: false, slideTicks: 6},
+			{ name: "seamless", isSeamless: true, attackSeconds: 0.0, releases: false, releaseTicks: 1, slides: false, slideTicks: 3 },
+			{ name: "hard", isSeamless: false, attackSeconds: 0.0, releases: false, releaseTicks: 3, slides: false, slideTicks: 3 },
+			{ name: "soft", isSeamless: false, attackSeconds: 0.025, releases: false, releaseTicks: 3, slides: false, slideTicks: 3 },
+			{ name: "slide", isSeamless: true, attackSeconds: 0.025, releases: false, releaseTicks: 3, slides: true, slideTicks: 3 },
+			{ name: "cross fade", isSeamless: false, attackSeconds: 0.04, releases: true, releaseTicks: 6, slides: false, slideTicks: 3 },
+			{ name: "hard fade", isSeamless: false, attackSeconds: 0.0, releases: true, releaseTicks: 48, slides: false, slideTicks: 3 },
+			{ name: "medium fade", isSeamless: false, attackSeconds: 0.0125, releases: true, releaseTicks: 72, slides: false, slideTicks: 3 },
+			{ name: "soft fade", isSeamless: false, attackSeconds: 0.06, releases: true, releaseTicks: 96, slides: false, slideTicks: 6 },
 		]);
 		public static readonly vibratos: DictionaryArray<Vibrato> = toNameMap([
-			{name: "none",    amplitude: 0.0,  periodsSeconds: [0.14], delayParts: 0},
-			{name: "light",   amplitude: 0.15, periodsSeconds: [0.14], delayParts: 0},
-			{name: "delayed", amplitude: 0.3,  periodsSeconds: [0.14], delayParts: 18},
-			{name: "heavy",   amplitude: 0.45, periodsSeconds: [0.14], delayParts: 0},
-			{name: "shaky",   amplitude: 0.1,  periodsSeconds: [0.11, 1.618*0.11, 3*0.11], delayParts: 0},
+			{ name: "none", amplitude: 0.0, periodsSeconds: [0.14], delayParts: 0 },
+			{ name: "light", amplitude: 0.15, periodsSeconds: [0.14], delayParts: 0 },
+			{ name: "delayed", amplitude: 0.3, periodsSeconds: [0.14], delayParts: 18 },
+			{ name: "heavy", amplitude: 0.45, periodsSeconds: [0.14], delayParts: 0 },
+			{ name: "shaky", amplitude: 0.1, periodsSeconds: [0.11, 1.618 * 0.11, 3 * 0.11], delayParts: 0 },
 		]);
 		public static readonly intervals: DictionaryArray<Interval> = toNameMap([
-			{name: "union",      spread: 0.0,  offset: 0.0, volume: 0.7, sign: 1.0},
-			{name: "shimmer",    spread: 0.016,offset: 0.0, volume: 0.8, sign: 1.0},
-			{name: "hum",        spread: 0.045,offset: 0.0, volume: 1.0, sign: 1.0},
-			{name: "honky tonk", spread: 0.09, offset: 0.0, volume: 1.0, sign: 1.0},
-			{name: "dissonant",  spread: 0.25, offset: 0.0, volume: 0.9, sign: 1.0},
-			{name: "fifth",      spread: 3.5,  offset: 3.5, volume: 0.9, sign: 1.0},
-			{name: "octave",     spread: 6.0,  offset: 6.0, volume: 0.8, sign: 1.0},
-			{name: "bowed",      spread: 0.02, offset: 0.0, volume: 1.0, sign:-1.0},
+			{ name: "union", spread: 0.0, offset: 0.0, volume: 0.7, sign: 1.0 },
+			{ name: "shimmer", spread: 0.016, offset: 0.0, volume: 0.8, sign: 1.0 },
+			{ name: "hum", spread: 0.045, offset: 0.0, volume: 1.0, sign: 1.0 },
+			{ name: "honky tonk", spread: 0.09, offset: 0.0, volume: 1.0, sign: 1.0 },
+			{ name: "dissonant", spread: 0.25, offset: 0.0, volume: 0.9, sign: 1.0 },
+			{ name: "fifth", spread: 3.5, offset: 3.5, volume: 0.9, sign: 1.0 },
+			{ name: "octave", spread: 6.0, offset: 6.0, volume: 0.8, sign: 1.0 },
+			{ name: "bowed", spread: 0.02, offset: 0.0, volume: 1.0, sign: -1.0 },
 		]);
 		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
-    	public static readonly volumeRange: number = 50;
-    	// Beepbox's old volume scale used factor -0.5 and was [0~7] had roughly value 6 = 0.125 power. This new value is chosen to have -21 be the same,
-    	// given that the new scale is [-25~25]. This is such that conversion between the scales is roughly equivalent by satisfying (0.5*6 = 0.1428*21)
+		public static readonly volumeRange: number = 50;
+		// Beepbox's old volume scale used factor -0.5 and was [0~7] had roughly value 6 = 0.125 power. This new value is chosen to have -21 be the same,
+		// given that the new scale is [-25~25]. This is such that conversion between the scales is roughly equivalent by satisfying (0.5*6 = 0.1428*21)
 		public static readonly volumeLogScale: number = 0.1428;
+		public static readonly panCenter: number = 50;
+		public static readonly panMax: number = Config.panCenter * 2;
 		public static readonly chords: DictionaryArray<Chord> = toNameMap([
-			{name: "harmony",         harmonizes:  true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 0},
-			{name: "strum",           harmonizes:  true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 1},
-			{name: "arpeggio",        harmonizes: false, customInterval: false, arpeggiates:  true, isCustomInterval: false, strumParts: 0},
-			{name: "custom interval", harmonizes:  true, customInterval:  true, arpeggiates:  true, isCustomInterval:  true, strumParts: 0},
+			{ name: "harmony", harmonizes: true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 0 },
+			{ name: "strum", harmonizes: true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 1 },
+			{ name: "arpeggio", harmonizes: false, customInterval: false, arpeggiates: true, isCustomInterval: false, strumParts: 0 },
+			{ name: "custom interval", harmonizes: true, customInterval: true, arpeggiates: true, isCustomInterval: true, strumParts: 0 },
 		]);
 		public static readonly operatorCount: number = 4;
 		public static readonly algorithms: DictionaryArray<Algorithm> = toNameMap([
-			{name: "1←(2 3 4)",   carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3, 4], [],     [],  []]},
-			{name: "1←(2 3←4)",   carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3],    [],     [4], []]},
-			{name: "1←2←(3 4)",   carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2],       [3, 4], [],  []]},
-			{name: "1←(2 3)←4",   carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3],    [4],    [4], []]},
-			{name: "1←2←3←4",     carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2],       [3],    [4], []]},
-			{name: "1←3 2←4",     carrierCount: 2, associatedCarrier: [1, 2, 1, 2], modulatedBy: [[3],       [4],    [],  []]},
-			{name: "1 2←(3 4)",   carrierCount: 2, associatedCarrier: [1, 2, 2, 2], modulatedBy: [[],        [3, 4], [],  []]},
-			{name: "1 2←3←4",     carrierCount: 2, associatedCarrier: [1, 2, 2, 2], modulatedBy: [[],        [3],    [4], []]},
-			{name: "(1 2)←3←4",   carrierCount: 2, associatedCarrier: [1, 2, 2, 2], modulatedBy: [[3],       [3],    [4], []]},
-			{name: "(1 2)←(3 4)", carrierCount: 2, associatedCarrier: [1, 2, 2, 2], modulatedBy: [[3, 4],    [3, 4], [],  []]},
-			{name: "1 2 3←4",     carrierCount: 3, associatedCarrier: [1, 2, 3, 3], modulatedBy: [[],        [],     [4], []]},
-			{name: "(1 2 3)←4",   carrierCount: 3, associatedCarrier: [1, 2, 3, 3], modulatedBy: [[4],       [4],    [4], []]},
-			{name: "1 2 3 4",     carrierCount: 4, associatedCarrier: [1, 2, 3, 4], modulatedBy: [[],        [],     [],  []]},
+			{ name: "1←(2 3 4)", carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3, 4], [], [], []] },
+			{ name: "1←(2 3←4)", carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3], [], [4], []] },
+			{ name: "1←2←(3 4)", carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2], [3, 4], [], []] },
+			{ name: "1←(2 3)←4", carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3], [4], [4], []] },
+			{ name: "1←2←3←4", carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2], [3], [4], []] },
+			{ name: "1←3 2←4", carrierCount: 2, associatedCarrier: [1, 2, 1, 2], modulatedBy: [[3], [4], [], []] },
+			{ name: "1 2←(3 4)", carrierCount: 2, associatedCarrier: [1, 2, 2, 2], modulatedBy: [[], [3, 4], [], []] },
+			{ name: "1 2←3←4", carrierCount: 2, associatedCarrier: [1, 2, 2, 2], modulatedBy: [[], [3], [4], []] },
+			{ name: "(1 2)←3←4", carrierCount: 2, associatedCarrier: [1, 2, 2, 2], modulatedBy: [[3], [3], [4], []] },
+			{ name: "(1 2)←(3 4)", carrierCount: 2, associatedCarrier: [1, 2, 2, 2], modulatedBy: [[3, 4], [3, 4], [], []] },
+			{ name: "1 2 3←4", carrierCount: 3, associatedCarrier: [1, 2, 3, 3], modulatedBy: [[], [], [4], []] },
+			{ name: "(1 2 3)←4", carrierCount: 3, associatedCarrier: [1, 2, 3, 3], modulatedBy: [[4], [4], [4], []] },
+			{ name: "1 2 3 4", carrierCount: 4, associatedCarrier: [1, 2, 3, 4], modulatedBy: [[], [], [], []] },
 		]);
 		public static readonly operatorCarrierInterval: ReadonlyArray<number> = [0.0, 0.04, -0.073, 0.091];
 		public static readonly operatorAmplitudeMax: number = 15;
 		public static readonly operatorFrequencies: DictionaryArray<OperatorFrequency> = toNameMap([
-			{name:  "1×", mult:  1.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name: "~1×", mult:  1.0, hzOffset: 1.5, amplitudeSign:-1.0},
-			{name:  "2×", mult:  2.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name: "~2×", mult:  2.0, hzOffset:-1.3, amplitudeSign:-1.0},
-			{name:  "3×", mult:  3.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name:  "4×", mult:  4.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name:  "5×", mult:  5.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name:  "6×", mult:  6.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name:  "7×", mult:  7.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name:  "8×", mult:  8.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name:  "9×", mult:  9.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name: "11×", mult: 11.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name: "13×", mult: 13.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name: "16×", mult: 16.0, hzOffset: 0.0, amplitudeSign: 1.0},
-			{name: "20×", mult: 20.0, hzOffset: 0.0, amplitudeSign: 1.0},
+			{ name: "1×", mult: 1.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "~1×", mult: 1.0, hzOffset: 1.5, amplitudeSign: -1.0 },
+			{ name: "2×", mult: 2.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "~2×", mult: 2.0, hzOffset: -1.3, amplitudeSign: -1.0 },
+			{ name: "3×", mult: 3.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "4×", mult: 4.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "5×", mult: 5.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "6×", mult: 6.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "7×", mult: 7.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "8×", mult: 8.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "9×", mult: 9.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "11×", mult: 11.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "13×", mult: 13.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "16×", mult: 16.0, hzOffset: 0.0, amplitudeSign: 1.0 },
+			{ name: "20×", mult: 20.0, hzOffset: 0.0, amplitudeSign: 1.0 },
 		]);
 		public static readonly envelopes: DictionaryArray<Envelope> = toNameMap([
-			{name: "custom",   type: EnvelopeType.custom,   speed:  0.0},
-			{name: "steady",   type: EnvelopeType.steady,   speed:  0.0},
-			{name: "punch",    type: EnvelopeType.punch,    speed:  0.0},
-			{name: "flare 1",  type: EnvelopeType.flare,    speed: 32.0},
-			{name: "flare 2",  type: EnvelopeType.flare,    speed:  8.0},
-			{name: "flare 3",  type: EnvelopeType.flare,    speed:  2.0},
-			{name: "twang 1",  type: EnvelopeType.twang,    speed: 32.0},
-			{name: "twang 2",  type: EnvelopeType.twang,    speed:  8.0},
-			{name: "twang 3",  type: EnvelopeType.twang,    speed:  2.0},
-			{name: "swell 1",  type: EnvelopeType.swell,    speed: 32.0},
-			{name: "swell 2",  type: EnvelopeType.swell,    speed:  8.0},
-			{name: "swell 3",  type: EnvelopeType.swell,    speed:  2.0},
-			{name: "tremolo1", type: EnvelopeType.tremolo,  speed:  4.0},
-			{name: "tremolo2", type: EnvelopeType.tremolo,  speed:  2.0},
-			{name: "tremolo3", type: EnvelopeType.tremolo,  speed:  1.0},
-			{name: "tremolo4", type: EnvelopeType.tremolo2, speed:  4.0},
-			{name: "tremolo5", type: EnvelopeType.tremolo2, speed:  2.0},
-			{name: "tremolo6", type: EnvelopeType.tremolo2, speed:  1.0},
-			{name: "decay 1",  type: EnvelopeType.decay,    speed: 10.0},
-			{name: "decay 2",  type: EnvelopeType.decay,    speed:  7.0},
-			{name: "decay 3",  type: EnvelopeType.decay,    speed:  4.0},
+			{ name: "custom", type: EnvelopeType.custom, speed: 0.0 },
+			{ name: "steady", type: EnvelopeType.steady, speed: 0.0 },
+			{ name: "punch", type: EnvelopeType.punch, speed: 0.0 },
+			{ name: "flare 1", type: EnvelopeType.flare, speed: 32.0 },
+			{ name: "flare 2", type: EnvelopeType.flare, speed: 8.0 },
+			{ name: "flare 3", type: EnvelopeType.flare, speed: 2.0 },
+			{ name: "twang 1", type: EnvelopeType.twang, speed: 32.0 },
+			{ name: "twang 2", type: EnvelopeType.twang, speed: 8.0 },
+			{ name: "twang 3", type: EnvelopeType.twang, speed: 2.0 },
+			{ name: "swell 1", type: EnvelopeType.swell, speed: 32.0 },
+			{ name: "swell 2", type: EnvelopeType.swell, speed: 8.0 },
+			{ name: "swell 3", type: EnvelopeType.swell, speed: 2.0 },
+			{ name: "tremolo1", type: EnvelopeType.tremolo, speed: 4.0 },
+			{ name: "tremolo2", type: EnvelopeType.tremolo, speed: 2.0 },
+			{ name: "tremolo3", type: EnvelopeType.tremolo, speed: 1.0 },
+			{ name: "tremolo4", type: EnvelopeType.tremolo2, speed: 4.0 },
+			{ name: "tremolo5", type: EnvelopeType.tremolo2, speed: 2.0 },
+			{ name: "tremolo6", type: EnvelopeType.tremolo2, speed: 1.0 },
+			{ name: "decay 1", type: EnvelopeType.decay, speed: 10.0 },
+			{ name: "decay 2", type: EnvelopeType.decay, speed: 7.0 },
+			{ name: "decay 3", type: EnvelopeType.decay, speed: 4.0 },
 		]);
 		public static readonly feedbacks: DictionaryArray<Feedback> = toNameMap([
-			{name: "1⟲",          indices: [[1],  [],  [],  []]},
-			{name: "2⟲",          indices: [ [], [2],  [],  []]},
-			{name: "3⟲",          indices: [ [],  [], [3],  []]},
-			{name: "4⟲",          indices: [ [],  [],  [], [4]]},
-			{name: "1⟲ 2⟲",       indices: [[1], [2],  [],  []]},
-			{name: "3⟲ 4⟲",       indices: [ [],  [], [3], [4]]},
-			{name: "1⟲ 2⟲ 3⟲",    indices: [[1], [2], [3],  []]},
-			{name: "2⟲ 3⟲ 4⟲",    indices: [ [], [2], [3], [4]]},
-			{name: "1⟲ 2⟲ 3⟲ 4⟲", indices: [[1], [2], [3], [4]]},
-			{name: "1→2",         indices: [ [], [1],  [],  []]},
-			{name: "1→3",         indices: [ [],  [], [1],  []]},
-			{name: "1→4",         indices: [ [],  [],  [], [1]]},
-			{name: "2→3",         indices: [ [],  [], [2],  []]},
-			{name: "2→4",         indices: [ [],  [],  [], [2]]},
-			{name: "3→4",         indices: [ [],  [],  [], [3]]},
-			{name: "1→3 2→4",     indices: [ [],  [], [1], [2]]},
-			{name: "1→4 2→3",     indices: [ [],  [], [2], [1]]},
-			{name: "1→2→3→4",     indices: [ [], [1], [2], [3]]},
+			{ name: "1⟲", indices: [[1], [], [], []] },
+			{ name: "2⟲", indices: [[], [2], [], []] },
+			{ name: "3⟲", indices: [[], [], [3], []] },
+			{ name: "4⟲", indices: [[], [], [], [4]] },
+			{ name: "1⟲ 2⟲", indices: [[1], [2], [], []] },
+			{ name: "3⟲ 4⟲", indices: [[], [], [3], [4]] },
+			{ name: "1⟲ 2⟲ 3⟲", indices: [[1], [2], [3], []] },
+			{ name: "2⟲ 3⟲ 4⟲", indices: [[], [2], [3], [4]] },
+			{ name: "1⟲ 2⟲ 3⟲ 4⟲", indices: [[1], [2], [3], [4]] },
+			{ name: "1→2", indices: [[], [1], [], []] },
+			{ name: "1→3", indices: [[], [], [1], []] },
+			{ name: "1→4", indices: [[], [], [], [1]] },
+			{ name: "2→3", indices: [[], [], [2], []] },
+			{ name: "2→4", indices: [[], [], [], [2]] },
+			{ name: "3→4", indices: [[], [], [], [3]] },
+			{ name: "1→3 2→4", indices: [[], [], [1], [2]] },
+			{ name: "1→4 2→3", indices: [[], [], [2], [1]] },
+			{ name: "1→2→3→4", indices: [[], [1], [2], [3]] },
 		]);
 		public static readonly chipNoiseLength: number = 1 << 15; // 32768
 		public static readonly spectrumBasePitch: number = 24;
@@ -377,9 +379,9 @@ namespace beepbox {
 		public static readonly harmonicsWavelength: number = 1 << 11; // 2048
 		public static readonly pulseWidthRange: number = 50;
 		public static readonly pitchChannelCountMin: number = 1;
-		public static readonly pitchChannelCountMax: number = 20;
+		public static readonly pitchChannelCountMax: number = 40;
 		public static readonly noiseChannelCountMin: number = 0;
-		public static readonly noiseChannelCountMax: number = 4;
+		public static readonly noiseChannelCountMax: number = 8;
 		public static readonly noiseInterval: number = 6;
 		public static readonly drumCount: number = 12;
 		public static readonly pitchOctaves: number = 7;
@@ -392,18 +394,18 @@ namespace beepbox {
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
 		public static readonly sineWave: Float64Array = generateSineWave();
 
-        // Height of the small editor column for inserting/deleting rows, in pixels.
-        public static readonly barEditorHeight: number = 10;
+		// Height of the small editor column for inserting/deleting rows, in pixels.
+		public static readonly barEditorHeight: number = 10;
 
 	}
-	
+
 	function centerWave(wave: Array<number>): Float64Array {
 		let sum: number = 0.0;
 		for (let i: number = 0; i < wave.length; i++) {
 			sum += wave[i];
 		}
 		const average: number = sum / wave.length;
-		
+
 		// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
 		let cumulative: number = 0;
 		let wavePrev: number = 0;
@@ -416,13 +418,13 @@ namespace beepbox {
 		wave.push(0);
 		return new Float64Array(wave);
 	}
-	
-  function centerAndNormalizeWave(wave: Array<number>): Float64Array {
+
+	function centerAndNormalizeWave(wave: Array<number>): Float64Array {
 		let sum: number = 0.0;
-    	let magn: number = 0.0;
+		let magn: number = 0.0;
 		for (let i: number = 0; i < wave.length; i++) {
 			sum += wave[i];
-            magn += Math.abs(wave[i]);
+			magn += Math.abs(wave[i]);
 		}
 		const average: number = sum / wave.length;
 		const magnAvg: number = magn / wave.length;
@@ -432,7 +434,7 @@ namespace beepbox {
 		let wavePrev: number = 0;
 		for (let i: number = 0; i < wave.length; i++) {
 			cumulative += wavePrev;
-			wavePrev = ( wave[i] - average ) / ( magnAvg );
+			wavePrev = (wave[i] - average) / (magnAvg);
 			wave[i] = cumulative;
 		}
 		// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
@@ -440,13 +442,13 @@ namespace beepbox {
 		return new Float64Array(wave);
 	}
 
-	
+
 	export function getDrumWave(index: number): Float32Array {
 		let wave: Float32Array | null = Config.chipNoises[index].samples;
 		if (wave == null) {
 			wave = new Float32Array(Config.chipNoiseLength + 1);
 			Config.chipNoises[index].samples = wave;
-			
+
 			if (index == 0) {
 				// The "retro" drum uses a "Linear Feedback Shift Register" similar to the NES noise channel.
 				let drumBuffer: number = 1;
@@ -492,54 +494,54 @@ namespace beepbox {
 				inverseRealFourierTransform(wave, Config.chipNoiseLength);
 				scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
 			} else if (index == 5) {
-		        // "Shine" drums from modbox!
-		        var drumBuffer = 1;
-		        for (var i = 0; i < Config.chipNoiseLength; i++) {
-		            wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
-		            var newBuffer = drumBuffer >> 1;
-		            if (((drumBuffer + newBuffer) & 1) == 1) {
-		                newBuffer += 10 << 2;
-		            }
-		            drumBuffer = newBuffer;
-		        }
-		      } else if (index == 6) {
-		        // "Deep" drums from modbox!
-		        drawNoiseSpectrum(wave, 1, 10, 1, 1, 0);
-		        drawNoiseSpectrum(wave, 20, 14, -2, -2, 0);
-		        inverseRealFourierTransform(wave, Config.chipNoiseLength);
-		        scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
-		      } else if (index == 7) {
-		        // "Cutter" drums from modbox!
-		        var drumBuffer = 1;
-		        for (var i = 0; i < Config.chipNoiseLength; i++) {
-		            wave[i] = (drumBuffer & 1) * 4.0 * ( Math.random()*14 + 1 );
-		            var newBuffer = drumBuffer >> 1;
-		            if (((drumBuffer + newBuffer) & 1) == 1) {
-		                newBuffer += 15 << 2;
-		            }
-		            drumBuffer = newBuffer;
-		        }
-		      } else if (index == 8) {
-		        // "Metallic" drums from modbox!
-		        var drumBuffer = 1;
-		        for (var i = 0; i < 32768; i++) {
-		            wave[i] = (drumBuffer & 1) / 2.0 + 0.5;
-		            var newBuffer = drumBuffer >> 1;
-		            if (((drumBuffer + newBuffer) & 1) == 1) {
-		                newBuffer -= 10 << 2;
-		            }
-		            drumBuffer = newBuffer;
-		        }
+				// "Shine" drums from modbox!
+				var drumBuffer = 1;
+				for (var i = 0; i < Config.chipNoiseLength; i++) {
+					wave[i] = (drumBuffer & 1) * 2.0 - 1.0;
+					var newBuffer = drumBuffer >> 1;
+					if (((drumBuffer + newBuffer) & 1) == 1) {
+						newBuffer += 10 << 2;
+					}
+					drumBuffer = newBuffer;
+				}
+			} else if (index == 6) {
+				// "Deep" drums from modbox!
+				drawNoiseSpectrum(wave, 1, 10, 1, 1, 0);
+				drawNoiseSpectrum(wave, 20, 14, -2, -2, 0);
+				inverseRealFourierTransform(wave, Config.chipNoiseLength);
+				scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
+			} else if (index == 7) {
+				// "Cutter" drums from modbox!
+				var drumBuffer = 1;
+				for (var i = 0; i < Config.chipNoiseLength; i++) {
+					wave[i] = (drumBuffer & 1) * 4.0 * (Math.random() * 14 + 1);
+					var newBuffer = drumBuffer >> 1;
+					if (((drumBuffer + newBuffer) & 1) == 1) {
+						newBuffer += 15 << 2;
+					}
+					drumBuffer = newBuffer;
+				}
+			} else if (index == 8) {
+				// "Metallic" drums from modbox!
+				var drumBuffer = 1;
+				for (var i = 0; i < 32768; i++) {
+					wave[i] = (drumBuffer & 1) / 2.0 + 0.5;
+					var newBuffer = drumBuffer >> 1;
+					if (((drumBuffer + newBuffer) & 1) == 1) {
+						newBuffer -= 10 << 2;
+					}
+					drumBuffer = newBuffer;
+				}
 			} else {
 				throw new Error("Unrecognized drum index: " + index);
 			}
-			
+
 			wave[Config.chipNoiseLength] = wave[0];
 		}
-		
+
 		return wave;
 	}
-	
+
 	export function drawNoiseSpectrum(wave: Float32Array, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overallSlope: number): number {
 		const referenceOctave: number = 11;
 		const referenceIndex: number = 1 << referenceOctave;
@@ -548,16 +550,16 @@ namespace beepbox {
 		const retroWave: Float32Array = getDrumWave(0);
 		let combinedAmplitude: number = 0.0;
 		for (let i: number = lowIndex; i < highIndex; i++) {
-			
+
 			let lerped: number = lowPower + (highPower - lowPower) * (Math.log(i) / Math.LN2 - lowOctave) / (highOctave - lowOctave);
 			//let amplitude: number = Math.pow(2, lerped);
 			//let amplitude: number = Math.pow((lerped + 5) / 7, 4);
-			let amplitude: number = Math.pow(2, (lerped-1)*Config.spectrumMax + 1) * lerped;
-			
+			let amplitude: number = Math.pow(2, (lerped - 1) * Config.spectrumMax + 1) * lerped;
+
 			amplitude *= Math.pow(i / referenceIndex, overallSlope);
-			
+
 			combinedAmplitude += amplitude;
-			
+
 			// Add two different sources of psuedo-randomness to the noise
 			// (individually they aren't random enough) but in a deterministic
 			// way so that live spectrum editing doesn't result in audible pops.
@@ -566,14 +568,14 @@ namespace beepbox {
 			// of each sine wave based on the golden angle to disrupt the symmetry.
 			amplitude *= retroWave[i];
 			const radians: number = 0.61803398875 * i * i * Math.PI * 2.0;
-			
+
 			wave[i] = Math.cos(radians) * amplitude;
 			wave[Config.chipNoiseLength - i] = Math.sin(radians) * amplitude;
 		}
-		
+
 		return combinedAmplitude;
 	}
-	
+
 	function generateSineWave(): Float64Array {
 		const wave: Float64Array = new Float64Array(Config.sineWaveLength + 1);
 		for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
@@ -581,16 +583,16 @@ namespace beepbox {
 		}
 		return wave;
 	}
-	
+
 	// Pardon the messy type casting. This allows accessing array members by numerical index or string name.
 	export function toNameMap<T extends BeepBoxOption>(array: Array<Pick<T, Exclude<keyof T, "index">>>): DictionaryArray<T> {
 		const dictionary: Dictionary<T> = {};
 		for (let i: number = 0; i < array.length; i++) {
 			const value: any = array[i];
 			value.index = i;
-			dictionary[value.name] = <T> value;
+			dictionary[value.name] = <T>value;
 		}
-		const result: DictionaryArray<T> = <DictionaryArray<T>> <any> array;
+		const result: DictionaryArray<T> = <DictionaryArray<T>><any>array;
 		result.dictionary = dictionary;
 		return result;
 	}

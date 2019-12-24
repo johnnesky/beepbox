@@ -4,16 +4,16 @@
 /// <reference path="Prompt.ts" />
 
 namespace beepbox {
-	const {button, div, p, h2, h3} = HTML;
-	
+	const { button, div, p, h2, h3 } = HTML;
+
 	export class TipPrompt implements Prompt {
-		private readonly _closeButton: HTMLButtonElement = button({className: "cancelButton"});
-		
+		private readonly _closeButton: HTMLButtonElement = button({ className: "cancelButton" });
+
 		public readonly container: HTMLDivElement;
-		
+
 		constructor(private _doc: SongDocument, type: string) {
 			let message: HTMLDivElement;
-			
+
 			switch (type) {
 				case "scale": {
 					message = div(
@@ -56,7 +56,14 @@ namespace beepbox {
 					message = div(
 						h2("Instrument Volume"),
 						p("This setting controls the volume of the selected instrument without affecting the volume of the other instruments. This allows you to balance the loudness of each instrument relative to each other."),
-            			p("Please be careful when using volume settings above 0. This indicates amplification and too much of that can trip the audio limiter built into this tool. This can lead to your song sounding muffled if overused. But when used carefully, amplification can be a powerful tool!"),
+						p("Please be careful when using volume settings above 0. This indicates amplification and too much of that can trip the audio limiter built into this tool. This can lead to your song sounding muffled if overused. But when used carefully, amplification can be a powerful tool!"),
+					);
+				} break;
+				case "pan": {
+					message = div(
+						h2("Instrument Panning"),
+						p("If you're listening through headphones or some other stereo sound system, this controls the position of the instrument and where the sound is coming from, ranging from left to right."),
+						p("As a rule of thumb, composers typically put lead melodies, drums, and basses in the center, and spread any other instruments to either side. If too many instruments seem like they're coming from the same place, it can feel crowded and harder to distinguish individual sounds, especially if they cover a similar pitch range."),
 					);
 				} break;
 				case "instrumentType": {
@@ -149,7 +156,7 @@ namespace beepbox {
 						h2("FM Algorithm"),
 						p('FM Synthesis is a mysterious but powerful technique for crafting sounds, popularized by Yamaha keyboards and the Sega Genesis/Mega Drive. It may seem confusing, but try playing around with the options until you get a feel for it, or check out some of the preset examples!'),
 						p('This FM synthesizer uses up to four waves, numbered 1, 2, 3, and 4. Each wave may have its own frequency, volume, and volume envelope to control its effect over time.'),
-						p('There are two kinds of waves: "carrier" waves play a tone out loud, but "modulator" waves distort other waves instead. Wave 1 is always a carrier and plays a tone, but other waves may distort it. The "Algorithm" setting determines which waves are modulators, and which other waves those modulators distort. For example, "1←2" means that wave 2 is modulating wave 1, and wave 1 is played out loud.'),
+						p('There are two kinds of waves: "carrier" waves play a tone out loud, but "modulator" waves distort other waves instead. Wave 1 is always a carrier and plays a tone, but other waves may distort it. The "Algorithm" setting determines which waves are modulators, and which other waves those modulators distort. For example, "1←2" means that wave 2 modulates wave 1, and wave 1 plays out loud.'),
 					);
 				} break;
 				case "feedbackType": {
@@ -215,46 +222,38 @@ namespace beepbox {
 						p("The left side of the spectrum editor controls the noise energy at lower frequencies, and the right side controls higher frequencies."),
 					);
 				} break;
-		        case "pan": {
-		          message = div(
-		            h2("Panning"),
-		            p("This setting controls how far to the left or right your sound will play with stereo speakers."),
-		            p("A large negative value will pan your sound more towards the left speaker, and a large positive value will similarly pan the sound towards the right speaker."),
-		            p("Most music pans each instrument separately to make them sound like they are coming from slightly different positions in space."),
-		          );
-		        } break;
-		        case "usedInstrument": {
-		          message = div(
-		            h3("'Is this instrument used somehwere else?'"),
-		            p("This indicator will light up when the instrument you're currently looking at is used in another place in your song."),
-		            p("This can be useful when you're not sure if you've used the instrument before and making edits carelessly could change other parts of the song."),
-		          );
-		        } break;
-		        case "usedPattern": {
-		          message = div(
-		            h3("'Is this pattern used somewhere else?'"),
-		            p("This indicator will light up when the pattern you're currently looking at is used in another place in your song."),
-		            p("This can be useful when you're not sure if you've used the pattern before and making edits carelessly could change other parts of the song."),
-		          );
-		        } break;
+				case "usedInstrument": {
+					message = div(
+						h3("'Is this instrument used somehwere else?'"),
+						p("This indicator will light up when the instrument you're currently looking at is used in another place in your song (outside the selection)."),
+						p("This can be useful when you're not sure if you've used the instrument before and making edits carelessly could change other parts of the song."),
+					);
+				} break;
+				case "usedPattern": {
+					message = div(
+						h3("'Is this pattern used somewhere else?'"),
+						p("This indicator will light up when the pattern you're currently looking at is used in another place in your song (outside the selection)."),
+						p("This can be useful when you're not sure if you've used the pattern before and making edits carelessly could change other parts of the song."),
+					);
+				} break;
 				default: throw new Error("Unhandled TipPrompt type: " + type);
 			}
-			
-			this.container = div({className: "prompt", style: "width: 250px;"},
+
+			this.container = div({ className: "prompt", style: "width: 250px;" },
 				message,
 				this._closeButton,
 			);
-			
-			setTimeout(()=>this._closeButton.focus());
-			
+
+			setTimeout(() => this._closeButton.focus());
+
 			this._closeButton.addEventListener("click", this._close);
 		}
-		
-		private _close = (): void => { 
+
+		private _close = (): void => {
 			this._doc.undo();
 		}
-		
-		public cleanUp = (): void => { 
+
+		public cleanUp = (): void => {
 			this._closeButton.removeEventListener("click", this._close);
 		}
 	}

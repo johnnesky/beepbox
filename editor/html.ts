@@ -1,8 +1,8 @@
 // Copyright (C) 2019 John Nesky, distributed under the MIT license.
 
 namespace beepbox {
-	const classAttributeNames: Record<string, boolean> = {"class": true, "classList": true, "className": true};
-	
+	const classAttributeNames: Record<string, boolean> = { "class": true, "classList": true, "className": true };
+
 	function applyElementArgs(elem: any, args: ReadonlyArray<any>): any {
 		// TODO: In general, it would be nice to test more assumptions about all the arguments and print helpful warnings if those assumptions are violated.
 		for (const arg of args) {
@@ -10,7 +10,7 @@ namespace beepbox {
 				applyElementArgs(elem, arg);
 			} else if (arg instanceof Node) {
 				elem.appendChild(arg);
-			} else if(arg && arg.constructor === Object) {
+			} else if (arg && arg.constructor === Object) {
 				// If the argument is a literal Objects {}
 				for (const key of Object.keys(arg)) {
 					const value = arg[key];
@@ -37,10 +37,10 @@ namespace beepbox {
 						} else {
 							elem.setAttribute(key, value);
 						}
-					} else if (typeof(value) === "function") {
+					} else if (typeof (value) === "function") {
 						// If value is a callback, set property.
 						elem[key] = value;
-					} else if (typeof(value) === "boolean") {
+					} else if (typeof (value) === "boolean") {
 						// If value is boolean, set attribute if true, remove if false.
 						if (value) elem.setAttribute(key, "");
 						else elem.removeAttribute(key);
@@ -55,7 +55,7 @@ namespace beepbox {
 		}
 		return elem;
 	}
-	
+
 	interface HTMLElementFactory {
 		element(name: string, ...args: Array<any>): HTMLElement;
 		a(...args: Array<any>): HTMLAnchorElement;
@@ -166,7 +166,7 @@ namespace beepbox {
 		video(...args: Array<any>): HTMLVideoElement;
 		wbr(...args: Array<any>): HTMLElement;
 	}
-	
+
 	interface SVGElementFactory {
 		element(name: string, ...args: Array<any>): SVGElement;
 		a(...args: Array<any>): SVGAElement;
@@ -251,31 +251,31 @@ namespace beepbox {
 		view(...args: Array<any>): SVGViewElement;
 		vkern(...args: Array<any>): SVGElement;
 	}
-	
+
 	const svgNS: string = "http://www.w3.org/2000/svg";
-	
-	export const HTML: HTMLElementFactory = <HTMLElementFactory><unknown>function() {};
-	(<any>HTML).element = function(name: string, ...args: Array<any>): HTMLElement {
+
+	export const HTML: HTMLElementFactory = <HTMLElementFactory><unknown>function () { };
+	(<any>HTML).element = function (name: string, ...args: Array<any>): HTMLElement {
 		return applyElementArgs(document.createElement(name), args);
 	};
-	
-	export const SVG: SVGElementFactory = <SVGElementFactory><unknown>function() {};
-	(<any>SVG).element = function(name: string, ...args: Array<any>): SVGElement {
+
+	export const SVG: SVGElementFactory = <SVGElementFactory><unknown>function () { };
+	(<any>SVG).element = function (name: string, ...args: Array<any>): SVGElement {
 		return applyElementArgs(document.createElementNS(svgNS, name), args);
 	};
-	
+
 	for (const name of "a abbr address area article aside audio b base bdi bdo blockquote br button canvas caption cite code col colgroup datalist dd del details dfn dialog div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hr i iframe img input ins kbd label legend li link main map mark menu menuitem meta meter nav noscript object ol optgroup option output p param picture pre progress q rp rt ruby s samp script section select small source span strong style sub summary sup table tbody td template textarea tfoot th thead time title tr track u ul var video wbr".split(" ")) {
-		(<any>HTML)[name] = function(...args: Array<any>) {
+		(<any>HTML)[name] = function (...args: Array<any>) {
 			return applyElementArgs(document.createElement(name), args);
 		};
 	}
-	
+
 	for (const name of "a altGlyph altGlyphDef altGlyphItem animate animateMotion animateTransform circle clipPath color-profile cursor defs desc discard ellipse feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight feDropShadow feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence filter font font-face font-face-format font-face-name font-face-src font-face-uri foreignObject g glyph glyphRef hkern image line linearGradient marker mask metadata missing-glyph mpath path pattern polygon polyline radialGradient rect script set stop style svg switch symbol text textPath title tref tspan use view vkern".split(" ")) {
-		(<any>SVG)[name] = function(...args: Array<any>) {
+		(<any>SVG)[name] = function (...args: Array<any>) {
 			return applyElementArgs(document.createElementNS(svgNS, name), args);
 		};
 	}
-	
+
 	export function prettyNumber(value: number): string {
 		return value.toFixed(2).replace(/\.?0*$/, "");
 	}

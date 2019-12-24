@@ -2,9 +2,9 @@
 
 namespace beepbox {
 
-const styleSheet = document.createElement('style');
-styleSheet.type = "text/css";
-styleSheet.appendChild(document.createTextNode(`
+	const styleSheet = document.createElement('style');
+	styleSheet.type = "text/css";
+	styleSheet.appendChild(document.createTextNode(`
 
 /* This is a fix for being unable to click away from select2 nodes. See:
   https://stackoverflow.com/questions/52297349/select2-does-not-close-the-choices-box-on-clicking-outside-it-with-closeonselec
@@ -494,6 +494,16 @@ body {
   cursor: crosshair;
 }
 
+@keyframes dash-animation {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+.beepboxEditor .dash-move {
+  animation: dash-animation 20s infinite linear;
+}
+
 .beepboxEditor .trackContainer {
 	overflow-x: hidden;
 }
@@ -825,6 +835,6 @@ li.select2-results__option[role=group] > strong:hover {
 
 `));
 
-document.head.appendChild(styleSheet);
-	
+	document.head.appendChild(styleSheet);
+
 }
