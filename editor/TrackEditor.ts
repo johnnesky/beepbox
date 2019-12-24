@@ -844,7 +844,7 @@ namespace beepbox {
 			if (isNaN(this._mouseX)) this._mouseX = 0;
 			if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._mouseBar = Math.floor(Math.min(this._doc.song.barCount - 1, Math.max(0, this._mouseX / this._barWidth)));
-			this._mouseChannel = Math.floor(Math.min(this._doc.song.getChannelCount() - 1, Math.max(0, this._mouseY / this._channelHeight - Config.barEditorHeight)));
+			this._mouseChannel = Math.floor(Math.min(this._doc.song.getChannelCount() - 1, Math.max(0, (this._mouseY - Config.barEditorHeight ) / this._channelHeight )));
 		}
 
 		private _whenSelectPressed = (event: TouchEvent): void => {
@@ -886,7 +886,7 @@ namespace beepbox {
 			this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 			this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._mouseBar = Math.floor(Math.min(this._doc.song.barCount - 1, Math.max(0, this._mouseX / this._barWidth)));
-			this._mouseChannel = Math.floor(Math.min(this._doc.song.getChannelCount() - 1, Math.max(0, this._mouseY / this._channelHeight)));
+			this._mouseChannel = Math.floor(Math.min(this._doc.song.getChannelCount() - 1, Math.max(0, (this._mouseY - Config.barEditorHeight) / this._channelHeight)));
 		}
 
 		private _whenMousePressed = (event: MouseEvent): void => {

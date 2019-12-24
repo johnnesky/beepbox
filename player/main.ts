@@ -6,54 +6,54 @@
 /// <reference path="../editor/html.ts" />
 
 namespace beepbox {
-	const {a, button, div, h1, input} = HTML;
-	const {svg, circle, rect, path} = SVG;
-	
+	const { a, button, div, h1, input } = HTML;
+	const { svg, circle, rect, path } = SVG;
+
 	let prevHash: string | null = null;
 	let id: string = ((Math.random() * 0xffffffff) >>> 0).toString(16);
 	let pauseButtonDisplayed: boolean = false;
 	let animationRequest: number | null;
 	let zoomEnabled: boolean = false;
 	let timelineWidth: number = 1;
-	
+
 	const synth: Synth = new Synth();
-	let titleText: HTMLHeadingElement = h1({style: "flex-grow: 1; margin: 0 1px; margin-left: 10px; overflow: hidden;"}, "");
-	let editLink: HTMLAnchorElement = a({target: "_top", style: "margin: 0 4px;"}, "✎ Edit");
-	let copyLink: HTMLAnchorElement = a({href: "javascript:void(0)", style: "margin: 0 4px;"}, "⎘ Copy URL");
-	let shareLink: HTMLAnchorElement = a({href: "javascript:void(0)", style: "margin: 0 4px;"}, "⤳ Share");
-	let fullscreenLink: HTMLAnchorElement = a({target: "_top", style: "margin: 0 4px;"}, "⇱ Fullscreen");
-	
+	let titleText: HTMLHeadingElement = h1({ style: "flex-grow: 1; margin: 0 1px; margin-left: 10px; overflow: hidden;" }, "");
+	let editLink: HTMLAnchorElement = a({ target: "_top", style: "margin: 0 4px;" }, "✎ Edit");
+	let copyLink: HTMLAnchorElement = a({ href: "javascript:void(0)", style: "margin: 0 4px;" }, "⎘ Copy URL");
+	let shareLink: HTMLAnchorElement = a({ href: "javascript:void(0)", style: "margin: 0 4px;" }, "⤳ Share");
+	let fullscreenLink: HTMLAnchorElement = a({ target: "_top", style: "margin: 0 4px;" }, "⇱ Fullscreen");
+
 	let draggingPlayhead: boolean = false;
-	const playButton: HTMLButtonElement = button({style: "width: 100%; height: 100%; max-height: 50px;"});
-	const playButtonContainer: HTMLDivElement = div({style: "flex-shrink: 0; display: flex; padding: 2px; width: 80px; height: 100%; box-sizing: border-box; align-items: center;"},
+	const playButton: HTMLButtonElement = button({ style: "width: 100%; height: 100%; max-height: 50px;" });
+	const playButtonContainer: HTMLDivElement = div({ style: "flex-shrink: 0; display: flex; padding: 2px; width: 80px; height: 100%; box-sizing: border-box; align-items: center;" },
 		playButton,
 	);
-	const loopIcon: SVGPathElement = path({d: "M 4 2 L 4 0 L 7 3 L 4 6 L 4 4 Q 2 4 2 6 Q 2 8 4 8 L 4 10 Q 0 10 0 6 Q 0 2 4 2 M 8 10 L 8 12 L 5 9 L 8 6 L 8 8 Q 10 8 10 6 Q 10 4 8 4 L 8 2 Q 12 2 12 6 Q 12 10 8 10 z"});
-	const loopButton: HTMLButtonElement = button({title: "loop", style: "background: none; flex: 0 0 12px; margin: 0 3px; width: 12px; height: 12px; display: flex;"}, svg({width: 12, height: 12, viewBox: "0 0 12 12"},
+	const loopIcon: SVGPathElement = path({ d: "M 4 2 L 4 0 L 7 3 L 4 6 L 4 4 Q 2 4 2 6 Q 2 8 4 8 L 4 10 Q 0 10 0 6 Q 0 2 4 2 M 8 10 L 8 12 L 5 9 L 8 6 L 8 8 Q 10 8 10 6 Q 10 4 8 4 L 8 2 Q 12 2 12 6 Q 12 10 8 10 z" });
+	const loopButton: HTMLButtonElement = button({ title: "loop", style: "background: none; flex: 0 0 12px; margin: 0 3px; width: 12px; height: 12px; display: flex;" }, svg({ width: 12, height: 12, viewBox: "0 0 12 12" },
 		loopIcon,
 	));
-	
-	const volumeIcon: SVGSVGElement = svg({style: "flex: 0 0 12px; margin: 0 1px; width: 12px; height: 12px;", viewBox: "0 0 12 12"},
-		path({fill: "#444444", d: "M 1 9 L 1 3 L 4 3 L 7 0 L 7 12 L 4 9 L 1 9 M 9 3 Q 12 6 9 9 L 8 8 Q 10.5 6 8 4 L 9 3 z"}),
+
+	const volumeIcon: SVGSVGElement = svg({ style: "flex: 0 0 12px; margin: 0 1px; width: 12px; height: 12px;", viewBox: "0 0 12 12" },
+		path({ fill: "#444444", d: "M 1 9 L 1 3 L 4 3 L 7 0 L 7 12 L 4 9 L 1 9 M 9 3 Q 12 6 9 9 L 8 8 Q 10.5 6 8 4 L 9 3 z" }),
 	);
-	const volumeSlider: HTMLInputElement = input({title: "volume", type: "range", value: 75, min: 0, max: 100, step: 1, style: "width: 12vw; max-width: 100px; margin: 0 1px;"});
-	
-	const zoomIcon: SVGSVGElement = svg({width: 12, height: 12, viewBox: "0 0 12 12", style: "color: white;"},
-		circle({cx: "5", cy: "5", r: "4.5", "stroke-width": "1", stroke: "currentColor", fill: "none"}),
-		path({stroke: "currentColor", "stroke-width": "2", d: "M 8 8 L 11 11 M 5 2 L 5 8 M 2 5 L 8 5", fill: "none"}),
+	const volumeSlider: HTMLInputElement = input({ title: "volume", type: "range", value: 75, min: 0, max: 100, step: 1, style: "width: 12vw; max-width: 100px; margin: 0 1px;" });
+
+	const zoomIcon: SVGSVGElement = svg({ width: 12, height: 12, viewBox: "0 0 12 12", style: "color: white;" },
+		circle({ cx: "5", cy: "5", r: "4.5", "stroke-width": "1", stroke: "currentColor", fill: "none" }),
+		path({ stroke: "currentColor", "stroke-width": "2", d: "M 8 8 L 11 11 M 5 2 L 5 8 M 2 5 L 8 5", fill: "none" }),
 	);
-	const zoomButton: HTMLButtonElement = button({title: "zoom", style: "background: none; flex: 0 0 12px; margin: 0 3px; width: 12px; height: 12px; display: flex;"},
+	const zoomButton: HTMLButtonElement = button({ title: "zoom", style: "background: none; flex: 0 0 12px; margin: 0 3px; width: 12px; height: 12px; display: flex;" },
 		zoomIcon,
 	);
-	
-	const timeline: SVGSVGElement = svg({style: "min-width: 0; min-height: 0; touch-action: pan-y pinch-zoom;"});
-	const playhead: HTMLDivElement = div({style: "position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: white; pointer-events: none;"});
-	const timelineContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; position: relative;"}, timeline, playhead);
-	const visualizationContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; height: 0; position: relative; align-items: center; overflow: hidden;"}, timelineContainer);
-	
+
+	const timeline: SVGSVGElement = svg({ style: "min-width: 0; min-height: 0; touch-action: pan-y pinch-zoom;" });
+	const playhead: HTMLDivElement = div({ style: "position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: white; pointer-events: none;" });
+	const timelineContainer: HTMLDivElement = div({ style: "display: flex; flex-grow: 1; flex-shrink: 1; position: relative;" }, timeline, playhead);
+	const visualizationContainer: HTMLDivElement = div({ style: "display: flex; flex-grow: 1; flex-shrink: 1; height: 0; position: relative; align-items: center; overflow: hidden;" }, timelineContainer);
+
 	document.body.appendChild(visualizationContainer);
 	document.body.appendChild(
-		div({style: `flex-shrink: 0; height: 20vh; min-height: 22px; max-height: 70px; display: flex; align-items: center;`},
+		div({ style: `flex-shrink: 0; height: 20vh; min-height: 22px; max-height: 70px; display: flex; align-items: center;` },
 			playButtonContainer,
 			loopButton,
 			volumeIcon,
@@ -66,21 +66,21 @@ namespace beepbox {
 			fullscreenLink,
 		),
 	);
-	
+
 	function hashUpdatedExternally(): void {
 		let myHash: string = location.hash;
 		if (prevHash == myHash || myHash == "") return;
-		
+
 		prevHash = myHash;
-		
+
 		if (myHash.charAt(0) == "#") {
 			myHash = myHash.substring(1);
 		}
-		
+
 		//titleText.textContent = synth.song.title;
-		
+
 		fullscreenLink.setAttribute("href", location.href);
-		
+
 		for (const parameter of myHash.split("&")) {
 			let equalsIndex: number = parameter.indexOf("=");
 			if (equalsIndex != -1) {
@@ -90,7 +90,7 @@ namespace beepbox {
 					case "song":
 						synth.setSong(value);
 						synth.snapToStart();
-						if ( synth.song ) {
+						if (synth.song) {
 							titleText.textContent = synth.song.title;
 						}
 						editLink.setAttribute("href", "../#" + value);
@@ -109,14 +109,14 @@ namespace beepbox {
 				editLink.setAttribute("href", "../#" + myHash);
 			}
 		}
-		
+
 		renderTimeline();
 	}
-	
+
 	function onWindowResize(): void {
 		renderTimeline();
 	}
-	
+
 	function animate(): void {
 		if (synth.playing) {
 			animationRequest = requestAnimationFrame(animate);
@@ -125,12 +125,12 @@ namespace beepbox {
 			}
 			renderPlayhead();
 		}
-		
+
 		if (pauseButtonDisplayed != synth.playing) {
 			renderPlayButton();
 		}
 	}
-	
+
 	function onTogglePlay(): void {
 		if (synth.song != null) {
 			if (animationRequest != null) cancelAnimationFrame(animationRequest);
@@ -145,7 +145,7 @@ namespace beepbox {
 		}
 		renderPlayButton();
 	}
-	
+
 	function onToggleLoop(): void {
 		if (synth.loopRepeatCount == -1) {
 			synth.loopRepeatCount = 0;
@@ -154,37 +154,37 @@ namespace beepbox {
 		}
 		renderLoopIcon();
 	}
-	
+
 	function onVolumeChange(): void {
 		localStorage.setItem("volume", volumeSlider.value);
 		setSynthVolume();
 	}
-	
+
 	function onToggleZoom(): void {
 		zoomEnabled = !zoomEnabled;
 		renderZoomIcon();
 		renderTimeline();
 	}
-	
+
 	function onTimelineMouseDown(event: MouseEvent): void {
 		draggingPlayhead = true;
 		onTimelineMouseMove(event);
 	}
-	
+
 	function onTimelineMouseMove(event: MouseEvent): void {
 		event.preventDefault();
 		onTimelineCursorMove(event.clientX || event.pageX);
 	}
-	
+
 	function onTimelineTouchDown(event: TouchEvent): void {
 		draggingPlayhead = true;
 		onTimelineTouchMove(event);
 	}
-	
+
 	function onTimelineTouchMove(event: TouchEvent): void {
 		onTimelineCursorMove(event.touches[0].clientX);
 	}
-	
+
 	function onTimelineCursorMove(mouseX: number): void {
 		if (draggingPlayhead && synth.song != null) {
 			const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
@@ -192,36 +192,36 @@ namespace beepbox {
 			renderPlayhead();
 		}
 	}
-	
+
 	function onTimelineCursorUp(): void {
 		draggingPlayhead = false;
 	}
-	
+
 	function setSynthVolume(): void {
 		const volume: number = +volumeSlider.value;
 		synth.volume = Math.min(1.0, Math.pow(volume / 50.0, 0.5)) * Math.pow(2.0, (volume - 75.0) / 25.0);
 	}
-	
+
 	function renderPlayhead(): void {
 		if (synth.song != null) {
 			let pos: number = synth.playhead / synth.song.barCount;
 			playhead.style.left = (timelineWidth * pos) + "px";
-			
+
 			const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
 			visualizationContainer.scrollLeft = pos * (timelineWidth - boundingRect.width);
 		}
 	}
-	
+
 	function renderTimeline(): void {
 		timeline.innerHTML = "";
 		if (synth.song == null) return;
-		
+
 		const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
-		
+
 		let timelineHeight: number;
 		let windowOctaves: number;
 		let windowPitchCount: number;
-		
+
 		if (zoomEnabled) {
 			timelineHeight = boundingRect.height;
 			windowOctaves = Math.max(Config.windowOctaves, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * 2))));
@@ -236,30 +236,30 @@ namespace beepbox {
 			windowOctaves = Math.max(Config.windowOctaves, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * targetSemitoneHeight))));
 			windowPitchCount = windowOctaves * 12 + 1;
 		}
-		
+
 		timelineContainer.style.width = timelineWidth + "px";
 		timelineContainer.style.height = timelineHeight + "px";
 		timeline.style.width = timelineWidth + "px";
 		timeline.style.height = timelineHeight + "px";
-		
+
 		const barWidth: number = timelineWidth / synth.song.barCount;
 		const partWidth: number = barWidth / (synth.song.beatsPerBar * Config.partsPerBeat);
-		const wavePitchHeight: number = (timelineHeight-1) / windowPitchCount;
-		const drumPitchHeight: number =  (timelineHeight-1) / Config.drumCount;
-		
+		const wavePitchHeight: number = (timelineHeight - 1) / windowPitchCount;
+		const drumPitchHeight: number = (timelineHeight - 1) / Config.drumCount;
+
 		for (let octave: number = 0; octave <= windowOctaves; octave++) {
-			timeline.appendChild(rect({x: 0, y: octave * 12 * wavePitchHeight, width: timelineWidth, height: wavePitchHeight + 1, fill: "#5E4C71"}));
+			timeline.appendChild(rect({ x: 0, y: octave * 12 * wavePitchHeight, width: timelineWidth, height: wavePitchHeight + 1, fill: "#5E4C71" }));
 		}
-		
+
 		for (let bar: number = 0; bar < synth.song.barCount + 1; bar++) {
 			const color: string = (bar == synth.song.loopStart || bar == synth.song.loopStart + synth.song.loopLength) ? "#8866ff" : "#393e4f"
-			timeline.appendChild(rect({x: bar * barWidth - 1, y: 0, width: 2, height: timelineHeight, fill: color}));
+			timeline.appendChild(rect({ x: bar * barWidth - 1, y: 0, width: 2, height: timelineHeight, fill: color }));
 		}
-		
+
 		for (let channel: number = synth.song.channels.length - 1; channel >= 0; channel--) {
 			const isNoise: boolean = synth.song.getChannelIsNoise(channel);
 			const pitchHeight: number = isNoise ? drumPitchHeight : wavePitchHeight;
-			
+
 			const configuredOctaveScroll: number = synth.song.channels[channel].octave;
 			const octavesToMove: number = (windowOctaves - Config.windowOctaves) / 2;
 			const newScrollableOctaves: number = Config.pitchOctaves - windowOctaves;
@@ -274,49 +274,49 @@ namespace beepbox {
 				distanceFromCenter -= octavesToMove;
 			}
 			const newOctaveScroll = Math.max(0, Math.min(newScrollableOctaves, Math.round(newCenter + distanceFromCenter)));
-			
+
 			const offsetY: number = newOctaveScroll * pitchHeight * 12 + timelineHeight - pitchHeight * 0.5 - 0.5;
-			
+
 			for (let bar: number = 0; bar < synth.song.barCount; bar++) {
 				const pattern: Pattern | null = synth.song.getPattern(channel, bar);
 				if (pattern == null) continue;
 				const offsetX: number = bar * barWidth;
-				
+
 				for (let i: number = 0; i < pattern.notes.length; i++) {
 					const note: Note = pattern.notes[i];
-					
+
 					for (const pitch of note.pitches) {
 						const d: string = drawNote(pitch, note.start, note.pins, (pitchHeight + 1) / 2, offsetX, offsetY, partWidth, pitchHeight);
-						const noteElement: SVGPathElement = path({d: d, fill: ColorConfig.getChannelColor(synth.song, channel).channelBright});
+						const noteElement: SVGPathElement = path({ d: d, fill: ColorConfig.getChannelColor(synth.song, channel).channelBright });
 						if (isNoise) noteElement.style.opacity = String(0.6);
 						timeline.appendChild(noteElement);
 					}
 				}
 			}
 		}
-		
+
 		renderPlayhead();
 	}
-	
+
 	function drawNote(pitch: number, start: number, pins: NotePin[], radius: number, offsetX: number, offsetY: number, partWidth: number, pitchHeight: number): string {
-		let d: string = `M ${offsetX + partWidth * (start + pins[0].time)} ${offsetY - pitch * pitchHeight + radius * (pins[0].volume / 6.0)} `; 
+		let d: string = `M ${offsetX + partWidth * (start + pins[0].time)} ${offsetY - pitch * pitchHeight + radius * (pins[0].volume / 6.0)} `;
 		for (let i: number = 0; i < pins.length; i++) {
 			const pin: NotePin = pins[i];
-			const x:   number = offsetX + partWidth * (start + pin.time);
+			const x: number = offsetX + partWidth * (start + pin.time);
 			const y: number = offsetY - pitchHeight * (pitch + pin.interval);
 			const expression: number = pin.volume / 6.0;
 			d += `L ${x} ${y - radius * expression} `;
 		}
 		for (let i: number = pins.length - 1; i >= 0; i--) {
 			const pin: NotePin = pins[i];
-			const x:   number = offsetX + partWidth * (start + pin.time);
+			const x: number = offsetX + partWidth * (start + pin.time);
 			const y: number = offsetY - pitchHeight * (pitch + pin.interval);
 			const expression: number = pin.volume / 6.0;
 			d += `L ${x} ${y + radius * expression} `;
 		}
 		return d;
 	}
-	
+
 	function renderPlayButton(): void {
 		if (synth.playing) {
 			playButton.classList.remove("playButton");
@@ -331,15 +331,15 @@ namespace beepbox {
 		}
 		pauseButtonDisplayed = synth.playing;
 	}
-	
+
 	function renderLoopIcon(): void {
 		loopIcon.setAttribute("fill", (synth.loopRepeatCount == -1) ? "#8866ff" : "#393e4f");
 	}
-	
+
 	function renderZoomIcon(): void {
 		zoomIcon.style.color = zoomEnabled ? "#8866ff" : "#393e4f";
 	}
-	
+
 	function onKeyPressed(event: KeyboardEvent): void {
 		switch (event.keyCode) {
 			case 32: // space
@@ -358,14 +358,14 @@ namespace beepbox {
 				break;
 		}
 	}
-	
+
 	function onCopyClicked(): void {
 		// Set as any to allow compilation without clipboard types (since, uh, I didn't write this bit and don't know the proper types library) -jummbus
-		let nav : any;
+		let nav: any;
 		nav = navigator;
-		
+
 		if (nav.clipboard && nav.clipboard.writeText) {
-			nav.clipboard.writeText(location.href).catch(()=>{
+			nav.clipboard.writeText(location.href).catch(() => {
 				window.prompt("Copy to clipboard:", location.href);
 			});
 			return;
@@ -378,12 +378,12 @@ namespace beepbox {
 		textField.remove();
 		if (!succeeded) window.prompt("Copy this:", location.href);
 	}
-	
+
 	function onShareClicked(): void {
 		(<any>navigator).share({ url: location.href });
 	}
-	
-	if ( top !== self ) {
+
+	if (top !== self) {
 		// In an iframe.
 		copyLink.style.display = "none";
 		shareLink.style.display = "none";
@@ -392,15 +392,15 @@ namespace beepbox {
 		fullscreenLink.style.display = "none";
 		if (!("share" in navigator)) shareLink.style.display = "none";
 	}
-	
+
 	if (localStorage.getItem("volume") != null) {
 		volumeSlider.value = localStorage.getItem("volume")!;
 	}
 	setSynthVolume();
-	
+
 	window.addEventListener("resize", onWindowResize);
 	window.addEventListener("keydown", onKeyPressed);
-	
+
 	timeline.addEventListener("mousedown", onTimelineMouseDown);
 	window.addEventListener("mousemove", onTimelineMouseMove);
 	window.addEventListener("mouseup", onTimelineCursorUp);
@@ -408,7 +408,7 @@ namespace beepbox {
 	timeline.addEventListener("touchmove", onTimelineTouchMove);
 	timeline.addEventListener("touchend", onTimelineCursorUp);
 	timeline.addEventListener("touchcancel", onTimelineCursorUp);
-	
+
 	playButton.addEventListener("click", onTogglePlay);
 	loopButton.addEventListener("click", onToggleLoop);
 	volumeSlider.addEventListener("input", onVolumeChange);
@@ -416,7 +416,7 @@ namespace beepbox {
 	copyLink.addEventListener("click", onCopyClicked);
 	shareLink.addEventListener("click", onShareClicked);
 	window.addEventListener("hashchange", hashUpdatedExternally);
-	
+
 	hashUpdatedExternally();
 	renderLoopIcon();
 	renderZoomIcon();
