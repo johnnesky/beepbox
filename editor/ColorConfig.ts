@@ -31,17 +31,17 @@ namespace beepbox {
 		// Merge note - may need to change more than just the first value. What are the others used for? @jummbus
 		public static readonly pitchBackgroundColors: string[] = [
 			"#446688",
-			"#3E444E",
-			"#4A443A",
-			"#3E444E",
-			"#4A443A",
-			"#3E444E",
-			"#4A443A",
+			"#393e4f",
+			"#393e4f",
+			"#393e4f",
+			"#393e4f",
+			"#393e4f",
+			"#393e4f",
 			"#446688",
-			"#4A443A",
-			"#3E444E",
-			"#4A443A",
-			"#3E444E",
+			"#393e4f",
+			"#393e4f",
+			"#393e4f",
+			"#393e4f",
 		];
 
 		public static resetColors() {
