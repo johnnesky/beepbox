@@ -211,10 +211,6 @@ namespace beepbox {
 
 		}
 
-		public hasASelection(): boolean {
-			return (this._boxSelectionWidth > 1 || this._boxSelectionHeight > 1)
-		}
-
 		private _barDropDownGetOpenedPosition = (event: MouseEvent): void => {
 			this._barDropDownBar = Math.floor(Math.min(this._doc.song.barCount - 1, Math.max(0, this._mouseX / this._barWidth)));
 		}
@@ -785,17 +781,9 @@ namespace beepbox {
 				this._digits += digit;
 				let parsed: number = parseInt(this._digits);
 				if (parsed <= this._doc.song.patternsPerChannel) {
-					if (this.hasASelection()) {
-						var patternGroup: ChangeGroup = new ChangeGroup();
 
-						// TODO
-						//this._setPatternRangeChangeGroup(parsed, patternGroup);
-
-						this._doc.record(patternGroup, "push");
-					}
-					else {
-						this._setPattern(parsed);
-					}
+					this._setPattern(parsed);
+						
 					return;
 				}
 
@@ -803,18 +791,8 @@ namespace beepbox {
 				parsed = parseInt(this._digits);
 				if (parsed <= this._doc.song.patternsPerChannel) {
 
-					if (this.hasASelection()) {
-						var patternGroup: ChangeGroup = new ChangeGroup();
-
-						// TODO
-						//this._setPatternRangeChangeGroup(parsed, patternGroup);
-
-						this._doc.record(patternGroup, "push");
-
-					}
-					else {
-						this._setPattern(parsed);
-					}
+					this._setPattern(parsed);
+					
 					return;
 				}
 
