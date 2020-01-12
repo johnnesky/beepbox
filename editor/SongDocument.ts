@@ -53,7 +53,7 @@ namespace beepbox {
 			this.showScrollBar = localStorage.getItem("showScrollBar") == "true";
 			this.alwaysShowSettings = localStorage.getItem("alwaysShowSettings") == "true";
 			
-			if (localStorage.getItem("volume") != null) this.volume = Number(localStorage.getItem("volume"));
+			if (localStorage.getItem("volume") != null) this.volume = Math.min(<any>localStorage.getItem("volume") >>> 0, 75);
 			
 			this.synth.volume = this._calcVolume();
 			
