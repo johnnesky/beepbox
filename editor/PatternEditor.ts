@@ -35,9 +35,9 @@ namespace beepbox {
 		private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({id: "patternEditorDrumBackground", x: "0", y: "0", width: "64", height: "40", patternUnits: "userSpaceOnUse"});
 		private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", width: "512", height: "481", "pointer-events": "none", fill: "url(#patternEditorNoteBackground)"});
 		private _svgNoteContainer: SVGSVGElement = SVG.svg();
-		private readonly _svgPlayhead: SVGRectElement = SVG.rect({id: "", x: "0", y: "0", width: "4", height: "481", fill: "white", "pointer-events": "none"});
-		private readonly _svgPreview: SVGPathElement = SVG.path({fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none"});
-		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: none; position: absolute;", width: "100%", height: "100%", viewBox: "0 0 512 481", preserveAspectRatio: "none"},
+		private readonly _svgPlayhead: SVGRectElement = SVG.rect({id: "", x: "0", y: "0", width: "4", height: "481", fill: ColorConfig.playhead, "pointer-events": "none"});
+		private readonly _svgPreview: SVGPathElement = SVG.path({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": "2", "pointer-events": "none"});
+		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; position: absolute;`, width: "100%", height: "100%", viewBox: "0 0 512 481", preserveAspectRatio: "none"},
 			SVG.defs(
 				this._svgNoteBackground,
 				this._svgDrumBackground,
@@ -95,7 +95,7 @@ namespace beepbox {
 				rectangle.setAttribute("x", "1");
 				rectangle.setAttribute("y", "" + (y * this._defaultPitchHeight + 1));
 				rectangle.setAttribute("height", "" + (this._defaultPitchHeight - 2));
-				rectangle.setAttribute("fill", (i == 0) ? "#886644" : "#444444");
+				rectangle.setAttribute("fill", (i == 0) ? ColorConfig.tonic : ColorConfig.pitchBackground);
 				this._svgNoteBackground.appendChild(rectangle);
 				this._backgroundPitchRows[i] = rectangle;
 			}
@@ -103,7 +103,7 @@ namespace beepbox {
 			this._backgroundDrumRow.setAttribute("x", "1");
 			this._backgroundDrumRow.setAttribute("y", "1");
 			this._backgroundDrumRow.setAttribute("height", "" + (this._defaultDrumHeight - 2));
-			this._backgroundDrumRow.setAttribute("fill", "#444444");
+			this._backgroundDrumRow.setAttribute("fill", ColorConfig.pitchBackground);
 			this._svgDrumBackground.appendChild(this._backgroundDrumRow);
 			
 			this._doc.notifier.watch(this._documentChanged);
@@ -831,9 +831,7 @@ namespace beepbox {
 			
 			if (this._renderedFifths != this._doc.showFifth) {
 				this._renderedFifths = this._doc.showFifth;
-				for (let i: number = 1; i < ColorConfig.pitchBackgroundColors.length; i++) {
-					this._backgroundPitchRows[i].setAttribute("fill", this._doc.showFifth ? ColorConfig.pitchBackgroundColors[i] : "#444444");
-				}
+				this._backgroundPitchRows[7].setAttribute("fill", this._doc.showFifth ? ColorConfig.fifthNote : ColorConfig.pitchBackground);
 			}
 			
 			for (let j: number = 0; j < 12; j++) {
@@ -898,7 +896,7 @@ namespace beepbox {
 								oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
 								oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));
 								oscillatorLabel.setAttribute("width", "30");
-								oscillatorLabel.setAttribute("fill", "black");
+								oscillatorLabel.setAttribute("fill", ColorConfig.editorBackground);
 								oscillatorLabel.setAttribute("text-anchor", "start");
 								oscillatorLabel.setAttribute("dominant-baseline", "central");
 								oscillatorLabel.setAttribute("pointer-events", "none");

@@ -23,10 +23,10 @@ namespace beepbox {
 		private readonly _endMode:     number = 1;
 		private readonly _bothMode:    number = 2;
 		
-		private readonly _loop: SVGPathElement = SVG.path({fill: "none", stroke: "#7744ff", "stroke-width": 4});
-		private readonly _highlight: SVGPathElement = SVG.path({fill: "white", "pointer-events": "none"});
+		private readonly _loop: SVGPathElement = SVG.path({fill: "none", stroke: ColorConfig.loopAccent, "stroke-width": 4});
+		private readonly _highlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
 		
-		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: pan-y; position: absolute;", height: this._editorHeight},
+		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: pan-y; position: absolute;`, height: this._editorHeight},
 			this._loop,
 			this._highlight,
 		);

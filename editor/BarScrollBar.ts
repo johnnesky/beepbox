@@ -10,12 +10,12 @@ namespace beepbox {
 		private readonly _editorHeight: number = 20;
 		
 		private readonly _notches: SVGSVGElement = SVG.svg({"pointer-events": "none"});
-		private readonly _handle: SVGRectElement = SVG.rect({fill: "#444444", x: 0, y: 2, width: 10, height: this._editorHeight - 4});
-		private readonly _handleHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 0, y: 1, width: 10, height: this._editorHeight - 2});
-		private readonly _leftHighlight: SVGPathElement = SVG.path({fill: "white", "pointer-events": "none"});
-		private readonly _rightHighlight: SVGPathElement = SVG.path({fill: "white", "pointer-events": "none"});
+		private readonly _handle: SVGRectElement = SVG.rect({fill: ColorConfig.uiWidgetBackground, x: 0, y: 2, width: 10, height: this._editorHeight - 4});
+		private readonly _handleHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 0, y: 1, width: 10, height: this._editorHeight - 2});
+		private readonly _leftHighlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
+		private readonly _rightHighlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
 		
-		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; touch-action: pan-y; position: absolute;", width: this._editorWidth, height: this._editorHeight},
+		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: pan-y; position: absolute;`, width: this._editorWidth, height: this._editorHeight},
 			this._notches,
 			this._handle,
 			this._handleHighlight,
@@ -188,7 +188,7 @@ namespace beepbox {
 				
 				for (let i: number = 0; i <= this._doc.song.barCount; i++) {
 					const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
-					this._notches.appendChild(SVG.rect({fill: "#444444", x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2}));
+					this._notches.appendChild(SVG.rect({fill: ColorConfig.uiWidgetBackground, x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2}));
 				}
 			}
 			

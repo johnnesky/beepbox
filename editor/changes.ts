@@ -866,7 +866,7 @@ namespace beepbox {
 								newChannels[channel].patterns[j] = new Pattern();
 							}
 							for (let j: number = 0; j < doc.song.barCount; j++) {
-								newChannels[channel].bars[j] = 1;
+								newChannels[channel].bars[j] = 0;
 							}
 						}
 					}

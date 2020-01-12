@@ -9,6 +9,135 @@ namespace beepbox {
 	const {a, button, div, h1, input} = HTML;
 	const {svg, circle, rect, path} = SVG;
 	
+	document.head.appendChild(HTML.style({type: "text/css"}, `
+		body {
+			color: ${ColorConfig.primaryText};
+			background: ${ColorConfig.editorBackground};
+		}
+		h1 {
+			font-weight: bold;
+			font-size: 14px;
+			line-height: 22px;
+			text-align: initial;
+			margin: 0;
+		}
+		a {
+			font-weight: bold;
+			font-size: 12px;
+			line-height: 22px;
+			white-space: nowrap;
+			color: ${ColorConfig.linkAccent};
+		}
+		button {
+			margin: 0;
+			padding: 0;
+			position: relative;
+			border: none;
+			border-radius: 5px;
+			background: ${ColorConfig.uiWidgetBackground};
+			color: ${ColorConfig.primaryText};
+			cursor: pointer;
+			font-size: 14px;
+			font-family: inherit;
+		}
+		button:hover, button:focus {
+			background: ${ColorConfig.uiWidgetFocus};
+		}
+		.playButton, .pauseButton {
+			padding-left: 24px;
+			padding-right: 6px;
+		}
+		.playButton::before {
+			content: "";
+			position: absolute;
+			left: 6px;
+			top: 50%;
+			margin-top: -6px;
+			width: 12px;
+			height: 12px;
+			pointer-events: none;
+			background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="-6 -6 12 12"><path d="M 6 0 L -5 6 L -5 -6 z" fill="${ColorConfig.primaryText}"/></svg>');
+			background-repeat: no-repeat;
+		}
+		.pauseButton::before {
+			content: "";
+			position: absolute;
+			left: 6px;
+			top: 50%;
+			margin-top: -6px;
+			width: 12px;
+			height: 12px;
+			pointer-events: none;
+			background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="-6 -6 12 12"><rect x="-5" y="-6" width="3" height="12" fill="${ColorConfig.primaryText}"/><rect x="2"  y="-6" width="3" height="12" fill="${ColorConfig.primaryText}"/></svg>');
+			background-repeat: no-repeat;
+		}
+		
+		input[type=range] {
+			-webkit-appearance: none;
+			appearance: none;
+			height: 16px;
+			margin: 0;
+			cursor: pointer;
+			background-color: ${ColorConfig.editorBackground};
+			touch-action: pan-y;
+		}
+		input[type=range]:focus {
+			outline: none;
+		}
+		input[type=range]::-webkit-slider-runnable-track {
+			width: 100%;
+			height: 4px;
+			cursor: pointer;
+			background: ${ColorConfig.uiWidgetBackground};
+		}
+		input[type=range]::-webkit-slider-thumb {
+			height: 16px;
+			width: 4px;
+			border-radius: 2px;
+			background: ${ColorConfig.primaryText};
+			cursor: pointer;
+			-webkit-appearance: none;
+			margin-top: -6px;
+		}
+		input[type=range]:focus::-webkit-slider-runnable-track, input[type=range]:hover::-webkit-slider-runnable-track {
+			background: ${ColorConfig.uiWidgetFocus};
+		}
+		input[type=range]::-moz-range-track {
+			width: 100%;
+			height: 4px;
+			cursor: pointer;
+			background: ${ColorConfig.uiWidgetBackground};
+		}
+		input[type=range]:focus::-moz-range-track, input[type=range]:hover::-moz-range-track  {
+			background: ${ColorConfig.uiWidgetFocus};
+		}
+		input[type=range]::-moz-range-thumb {
+			height: 16px;
+			width: 4px;
+			border-radius: 2px;
+			border: none;
+			background: ${ColorConfig.primaryText};
+			cursor: pointer;
+		}
+		input[type=range]::-ms-track {
+			width: 100%;
+			height: 4px;
+			cursor: pointer;
+			background: ${ColorConfig.uiWidgetBackground};
+			border-color: transparent;
+		}
+		input[type=range]:focus::-ms-track, input[type=range]:hover::-ms-track {
+			background: ${ColorConfig.uiWidgetFocus};
+		}
+		input[type=range]::-ms-thumb {
+			height: 16px;
+			width: 4px;
+			border-radius: 2px;
+			background: ${ColorConfig.primaryText};
+			cursor: pointer;
+		}
+	`));
+	
 	let prevHash: string | null = null;
 	let id: string = ((Math.random() * 0xffffffff) >>> 0).toString(16);
 	let pauseButtonDisplayed: boolean = false;
@@ -34,11 +163,11 @@ namespace beepbox {
 	));
 	
 	const volumeIcon: SVGSVGElement = svg({style: "flex: 0 0 12px; margin: 0 1px; width: 12px; height: 12px;", viewBox: "0 0 12 12"},
-		path({fill: "#444444", d: "M 1 9 L 1 3 L 4 3 L 7 0 L 7 12 L 4 9 L 1 9 M 9 3 Q 12 6 9 9 L 8 8 Q 10.5 6 8 4 L 9 3 z"}),
+		path({fill: ColorConfig.uiWidgetBackground, d: "M 1 9 L 1 3 L 4 3 L 7 0 L 7 12 L 4 9 L 1 9 M 9 3 Q 12 6 9 9 L 8 8 Q 10.5 6 8 4 L 9 3 z"}),
 	);
 	const volumeSlider: HTMLInputElement = input({title: "volume", type: "range", value: 75, min: 0, max: 100, step: 1, style: "width: 12vw; max-width: 100px; margin: 0 1px;"});
 	
-	const zoomIcon: SVGSVGElement = svg({width: 12, height: 12, viewBox: "0 0 12 12", style: "color: white;"},
+	const zoomIcon: SVGSVGElement = svg({width: 12, height: 12, viewBox: "0 0 12 12"},
 		circle({cx: "5", cy: "5", r: "4.5", "stroke-width": "1", stroke: "currentColor", fill: "none"}),
 		path({stroke: "currentColor", "stroke-width": "2", d: "M 8 8 L 11 11 M 5 2 L 5 8 M 2 5 L 8 5", fill: "none"}),
 	);
@@ -47,7 +176,7 @@ namespace beepbox {
 	);
 	
 	const timeline: SVGSVGElement = svg({style: "min-width: 0; min-height: 0; touch-action: pan-y pinch-zoom;"});
-	const playhead: HTMLDivElement = div({style: "position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: white; pointer-events: none;"});
+	const playhead: HTMLDivElement = div({style: `position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: ${ColorConfig.playhead}; pointer-events: none;`});
 	const timelineContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; position: relative;"}, timeline, playhead);
 	const visualizationContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; height: 0; position: relative; align-items: center; overflow: hidden;"}, timelineContainer);
 	
@@ -244,13 +373,13 @@ namespace beepbox {
 		const wavePitchHeight: number = (timelineHeight-1) / windowPitchCount;
 		const drumPitchHeight: number =  (timelineHeight-1) / Config.drumCount;
 		
-		for (let octave: number = 0; octave <= windowOctaves; octave++) {
-			timeline.appendChild(rect({x: 0, y: octave * 12 * wavePitchHeight, width: timelineWidth, height: wavePitchHeight + 1, fill: "#664933"}));
+		for (let bar: number = 0; bar < synth.song.barCount + 1; bar++) {
+			const color: string = (bar == synth.song.loopStart || bar == synth.song.loopStart + synth.song.loopLength) ? ColorConfig.loopAccent : ColorConfig.uiWidgetBackground;
+			timeline.appendChild(rect({x: bar * barWidth - 1, y: 0, width: 2, height: timelineHeight, fill: color}));
 		}
 		
-		for (let bar: number = 0; bar < synth.song.barCount + 1; bar++) {
-			const color: string = (bar == synth.song.loopStart || bar == synth.song.loopStart + synth.song.loopLength) ? "#8866ff" : "#444444"
-			timeline.appendChild(rect({x: bar * barWidth - 1, y: 0, width: 2, height: timelineHeight, fill: color}));
+		for (let octave: number = 0; octave <= windowOctaves; octave++) {
+			timeline.appendChild(rect({x: 0, y: octave * 12 * wavePitchHeight, width: timelineWidth, height: wavePitchHeight + 1, fill: ColorConfig.tonic, opacity: 0.75}));
 		}
 		
 		for (let channel: number = synth.song.channels.length - 1; channel >= 0; channel--) {
@@ -330,11 +459,11 @@ namespace beepbox {
 	}
 	
 	function renderLoopIcon(): void {
-		loopIcon.setAttribute("fill", (synth.loopRepeatCount == -1) ? "#8866ff" : "#444444");
+		loopIcon.setAttribute("fill", (synth.loopRepeatCount == -1) ? ColorConfig.linkAccent : ColorConfig.uiWidgetBackground);
 	}
 	
 	function renderZoomIcon(): void {
-		zoomIcon.style.color = zoomEnabled ? "#8866ff" : "#444444";
+		zoomIcon.style.color = zoomEnabled ? ColorConfig.linkAccent : ColorConfig.uiWidgetBackground;
 	}
 	
 	function onKeyPressed(event: KeyboardEvent): void {

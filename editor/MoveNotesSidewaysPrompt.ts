@@ -24,7 +24,7 @@ namespace beepbox {
 				div({style: "text-align: right;"},
 					"Beats to move:",
 					br(),
-					span({style: "font-size: smaller; color: #888888;"}, "(Negative is left, positive is right)"),
+					span({style: `font-size: smaller; color: ${ColorConfig.secondaryText};`}, "(Negative is left, positive is right)"),
 				),
 				this._beatsStepper,
 			),

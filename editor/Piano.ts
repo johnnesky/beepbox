@@ -165,7 +165,7 @@ namespace beepbox {
 			this._preview.style.left = "0px";
 			this._preview.style.top = this._pitchHeight * (this._pitchCount - this._cursorPitch - 1) + "px";
 			this._previewGraphics.lineWidth = 2;
-			this._previewGraphics.strokeStyle = "#ffffff";
+			this._previewGraphics.strokeStyle = ColorConfig.hoverPreview;
 			this._previewGraphics.strokeRect(1, 1, this._editorWidth - 2, this._pitchHeight - 2);
 		}
 		
@@ -235,7 +235,7 @@ namespace beepbox {
 						}
 					}
 					
-					const textColor: string = Config.keys[pitchNameIndex].isWhiteKey ? "#000000" : "#ffffff";
+					const textColor: string = Config.keys[pitchNameIndex].isWhiteKey ? "black" : "white";
 					key = Config.keys[pitchNameIndex].isWhiteKey ? WhiteKey : BlackKey;
 				    this._graphics.drawImage(key, 0, this._pitchHeight * (this._pitchCount - j - 1));
 					this._graphics.font = "bold 11px sans-serif";

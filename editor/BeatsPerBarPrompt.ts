@@ -25,7 +25,7 @@ namespace beepbox {
 				div({style: "text-align: right;"},
 					"Beats per bar:",
 					br(),
-					span({style: "font-size: smaller; color: #888888;"}, "(Multiples of 3 or 4 are recommended)"),
+					span({style: `font-size: smaller; color: ${ColorConfig.secondaryText};`}, "(Multiples of 3 or 4 are recommended)"),
 				),
 				this._beatsStepper,
 			),

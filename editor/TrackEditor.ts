@@ -36,7 +36,7 @@ namespace beepbox {
 		constructor(channel: number, x: number, y: number, color: string) {
 			this.container.setAttribute("x", "" + (x * 32));
 			this.container.setAttribute("y", "" + (y * 32));
-			this._rect.setAttribute("fill", "#444444");
+			this._rect.setAttribute("fill", ColorConfig.uiWidgetBackground);
 			this._label.setAttribute("fill", color);
 		}
 		
@@ -55,7 +55,7 @@ namespace beepbox {
 		public setIndex(index: number, dim: boolean, selected: boolean, y: number, color: string): void {
 			if (this._renderedIndex != index) {
 				if (!this._renderedSelected && ((index == 0) != (this._renderedIndex == 0))) {
-					this._rect.setAttribute("fill", (index == 0) ? "none" : "#444444");
+					this._rect.setAttribute("fill", (index == 0) ? "none" : ColorConfig.uiWidgetBackground);
 				}
 			
 				this._renderedIndex = index;
@@ -65,7 +65,7 @@ namespace beepbox {
 			if (this._renderedDim != dim || this._renderedColor != color) {
 				this._renderedDim = dim;
 				if (selected) {
-					this._label.setAttribute("fill", "#000000");
+					this._label.setAttribute("fill", ColorConfig.editorBackground);
 				} else {
 					this._label.setAttribute("fill", color);
 				}
@@ -75,9 +75,9 @@ namespace beepbox {
 				this._renderedSelected = selected;
 				if (selected) {
 					this._rect.setAttribute("fill", color);
-					this._label.setAttribute("fill", "#000000");
+					this._label.setAttribute("fill", ColorConfig.editorBackground);
 				} else {
-					this._rect.setAttribute("fill", (this._renderedIndex == 0) ? "#000000" : "#444444");
+					this._rect.setAttribute("fill", (this._renderedIndex == 0) ? ColorConfig.editorBackground : ColorConfig.uiWidgetBackground);
 					this._label.setAttribute("fill", color);
 				}
 			}
@@ -89,12 +89,12 @@ namespace beepbox {
 	export class TrackEditor {
 		private readonly _barWidth: number = 32;
 		private readonly _boxContainer: SVGGElement = SVG.g();
-		private readonly _playhead: SVGRectElement = SVG.rect({fill: "white", x: 0, y: 0, width: 4, height: 128});
-		private readonly _boxHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
-		private readonly _upHighlight: SVGPathElement = SVG.path({fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
-		private readonly _downHighlight: SVGPathElement = SVG.path({fill: "black", stroke: "black", "stroke-width": 1, "pointer-events": "none"});
-		private readonly _selectionRect: SVGRectElement = SVG.rect({fill: "rgba(255,255,255,0.2)", stroke: "white", "stroke-width": 2, "stroke-dasharray": "5, 3", "pointer-events": "none", visibility: "hidden", x: 1, y: 1, width: 62, height: 62});
-		private readonly _svg: SVGSVGElement = SVG.svg({style: "background-color: #000000; position: absolute;", height: 128},
+		private readonly _playhead: SVGRectElement = SVG.rect({fill: ColorConfig.playhead, x: 0, y: 0, width: 4, height: 128});
+		private readonly _boxHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
+		private readonly _upHighlight: SVGPathElement = SVG.path({fill: ColorConfig.editorBackground, stroke: ColorConfig.editorBackground, "stroke-width": 1, "pointer-events": "none"});
+		private readonly _downHighlight: SVGPathElement = SVG.path({fill: ColorConfig.editorBackground, stroke: ColorConfig.editorBackground, "stroke-width": 1, "pointer-events": "none"});
+		private readonly _selectionRect: SVGRectElement = SVG.rect({fill: "rgba(255,255,255,0.2)", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "pointer-events": "none", visibility: "hidden", x: 1, y: 1, width: 62, height: 62});
+		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; position: absolute;`, height: 128},
 			this._boxContainer,
 			this._selectionRect,
 			this._boxHighlight,
@@ -768,8 +768,8 @@ namespace beepbox {
 				const tip: number = this._channelHeight * 0.4;
 				const width: number = this._channelHeight * 0.175;
 				
-				this._upHighlight.setAttribute("fill", up && !this._touchMode ? "#fff" : "#000");
-				this._downHighlight.setAttribute("fill", !up && !this._touchMode ? "#fff" : "#000");
+				this._upHighlight.setAttribute("fill", up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.editorBackground);
+				this._downHighlight.setAttribute("fill", !up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.editorBackground);
 				
 				this._upHighlight.setAttribute("d", `M ${center} ${middle - tip} L ${center + width} ${middle - base} L ${center - width} ${middle - base} z`);
 				this._downHighlight.setAttribute("d", `M ${center} ${middle + tip} L ${center + width} ${middle + base} L ${center - width} ${middle + base} z`);

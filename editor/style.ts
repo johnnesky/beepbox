@@ -1,10 +1,10 @@
 // Copyright (C) 2019 John Nesky, distributed under the MIT license.
 
+/// <reference path="ColorConfig.ts" />
+
 namespace beepbox {
 
-const styleSheet = document.createElement('style');
-styleSheet.type = "text/css";
-styleSheet.appendChild(document.createTextNode(`
+document.head.appendChild(HTML.style({type: "text/css"}, `
 
 .beepboxEditor {
 	display: flex;
@@ -13,6 +13,8 @@ styleSheet.appendChild(document.createTextNode(`
 	cursor: default;
 	font-size: small;
 	overflow: hidden;
+	color: ${ColorConfig.primaryText};
+	background: ${ColorConfig.editorBackground};
 }
 
 .beepboxEditor .noSelection {
@@ -33,11 +35,11 @@ styleSheet.appendChild(document.createTextNode(`
 }
 
 .beepboxEditor .tip:hover {
-	color: #98f;
+	color: ${ColorConfig.linkAccent}
 	text-decoration: underline;
 }
 .beepboxEditor .tip:active {
-	color: white;
+	color: ${ColorConfig.primaryText};
 }
 
 .beepboxEditor .promptContainer {
@@ -55,10 +57,10 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor .prompt {
 	margin: auto;
 	text-align: center;
-	background: #000;
+	background: ${ColorConfig.editorBackground};
 	border-radius: 15px;
-	border: 4px solid #444;
-	color: #fff;
+	border: 4px solid ${ColorConfig.uiWidgetBackground};
+	color: ${ColorConfig.primaryText};
 	padding: 20px;
 	display: flex;
 	flex-direction: column;
@@ -124,7 +126,7 @@ styleSheet.appendChild(document.createTextNode(`
 	height: 2em;
 	border: none;
 	border-radius: 0.4em;
-	background: #444444;
+	background: ${ColorConfig.uiWidgetBackground};
 	color: inherit;
 	font-size: inherit;
 	cursor: pointer;
@@ -138,7 +140,7 @@ styleSheet.appendChild(document.createTextNode(`
 	padding: 0 2em;
 }
 .beepboxEditor select:focus {
-	background: #777777;
+	background: ${ColorConfig.uiWidgetFocus};
 	outline: none;
 }
 .beepboxEditor .menu select {
@@ -160,14 +162,14 @@ styleSheet.appendChild(document.createTextNode(`
 	height: 2em;
 	border: none;
 	border-radius: 0.4em;
-	background: #444;
+	background: ${ColorConfig.uiWidgetBackground};
 	color: inherit;
 	font-size: inherit;
 	font-family: inherit;
 	cursor: pointer;
 }
 .beepboxEditor button:focus {
-	background: #777;
+	background: ${ColorConfig.uiWidgetFocus};
 	outline: none;
 }
 
@@ -274,7 +276,7 @@ styleSheet.appendChild(document.createTextNode(`
 	left: 0;
 	top: 0;
 	pointer-events: none;
-	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="white" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"></path></svg>');
+	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="${ColorConfig.primaryText}" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"></path></svg>');
 	background-repeat: no-repeat;
 }
 
@@ -286,7 +288,7 @@ styleSheet.appendChild(document.createTextNode(`
 	left: 0;
 	top: 0;
 	pointer-events: none;
-	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="white" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"></path></svg>');
+	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="${ColorConfig.primaryText}" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"></path></svg>');
 	background-repeat: no-repeat;
 }
 
@@ -298,7 +300,7 @@ styleSheet.appendChild(document.createTextNode(`
 	left: 0;
 	top: 0;
 	pointer-events: none;
-	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="white" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"></path></svg>');
+	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="${ColorConfig.primaryText}" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"></path></svg>');
 	background-repeat: no-repeat;
 }
 
@@ -322,7 +324,7 @@ styleSheet.appendChild(document.createTextNode(`
 }
 
 .beepboxEditor .selectRow > span:first-child {
-	color: #999;
+	color: ${ColorConfig.secondaryText};
 }
 
 .beepboxEditor .operatorRow {
@@ -388,14 +390,14 @@ styleSheet.appendChild(document.createTextNode(`
 .beepboxEditor input[type=text], .beepboxEditor input[type=number] {
 	font-size: inherit;
 	background: transparent;
-	border: 1px solid #777;
-	color: white;
+	border: 1px solid ${ColorConfig.uiWidgetFocus};
+	color: ${ColorConfig.primaryText};
 }
 
 .beepboxEditor input[type=text]::selection, .beepboxEditor input[type=number]::selection {
 	/*background: #7744ff; ugh browsers override the alpha. */
 	background-color: rgba(119,68,255,0.99);
-	color: white;
+	color: ${ColorConfig.primaryText};
 }
 
 .beepboxEditor input[type=checkbox] {
@@ -410,7 +412,7 @@ styleSheet.appendChild(document.createTextNode(`
 	font-size: inherit;
 	margin: 0;
 	cursor: pointer;
-	background-color: black;
+	background-color: ${ColorConfig.editorBackground};
 	touch-action: pan-y;
 }
 .beepboxEditor input[type=range]:focus {
@@ -420,7 +422,7 @@ styleSheet.appendChild(document.createTextNode(`
 	width: 100%;
 	height: 0.5em;
 	cursor: pointer;
-	background: #444;
+	background: ${ColorConfig.uiWidgetBackground};
 }
 .beepboxEditor input[type=range]::-webkit-slider-thumb {
 	height: 2em;
@@ -432,16 +434,16 @@ styleSheet.appendChild(document.createTextNode(`
 	margin-top: -0.75em;
 }
 .beepboxEditor input[type=range]:focus::-webkit-slider-runnable-track {
-	background: #777;
+	background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-moz-range-track {
 	width: 100%;
 	height: 0.5em;
 	cursor: pointer;
-	background: #444;
+	background: ${ColorConfig.uiWidgetBackground};
 }
 .beepboxEditor input[type=range]:focus::-moz-range-track {
-	background: #777;
+	background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-moz-range-thumb {
 	height: 2em;
@@ -455,11 +457,11 @@ styleSheet.appendChild(document.createTextNode(`
 	width: 100%;
 	height: 0.5em;
 	cursor: pointer;
-	background: #444;
+	background: ${ColorConfig.uiWidgetBackground};
 	border-color: transparent;
 }
 .beepboxEditor input[type=range]:focus::-ms-track {
-	background: #777;
+	background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-ms-thumb {
 	height: 2em;
@@ -588,7 +590,5 @@ styleSheet.appendChild(document.createTextNode(`
 }
 
 `));
-
-document.head.appendChild(styleSheet);
 	
 }

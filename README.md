@@ -27,7 +27,7 @@ Running the TypeScript compiler command (tsc) in the repository should output
 JavaScript (.js) files into the website/ folder. I also recommend
 [installing uglify-es](https://www.npmjs.com/package/uglify-es)
 because I use that to create minified JavaScript (.min.js) files. I've included
-shells scripts that run the compiler and minifier for you.
+shell scripts that run the compiler and minifier for you.
 
 Those who are familiar with TypeScript may be surprised to learn that I do not
 use any of TypeScript's module systems. Instead I use

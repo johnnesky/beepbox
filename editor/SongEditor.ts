@@ -290,7 +290,7 @@ namespace beepbox {
 		public readonly mainLayer: HTMLDivElement = div({className: "beepboxEditor", tabIndex: "0"},
 			this._editorBox,
 			div({className: "editor-widget-column noSelection"},
-				div({style: "text-align: center; color: #999;"}, EditorConfig.versionDisplayName),
+				div({style: `text-align: center; color: ${ColorConfig.secondaryText};`}, EditorConfig.versionDisplayName),
 				div({className: "editor-widgets"},
 					div({className: "editor-controls"},
 						div({className: "playback-controls"},
@@ -302,7 +302,7 @@ namespace beepbox {
 							div({className: "playback-volume-controls"},
 								// Volume speaker icon:
 								SVG.svg({style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26"},
-									SVG.path({d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777"}),
+									SVG.path({d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: ColorConfig.secondaryText}),
 								),
 								this._volumeSlider,
 							),
@@ -333,7 +333,7 @@ namespace beepbox {
 									),
 								),
 							),
-							div({style: "margin: 3px 0; text-align: center; color: #999;"},
+							div({style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};`},
 								"Song Settings"
 							),
 							div({className: "selectRow"},
@@ -361,7 +361,7 @@ namespace beepbox {
 							),
 						),
 						div({className: "editor-instrument-settings"},
-							div({style: "margin: 3px 0; text-align: center; color: #999;"},
+							div({style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};`},
 								"Instrument Settings"
 							),
 							this._instrumentSettingsGroup,
@@ -388,7 +388,7 @@ namespace beepbox {
 				this._fileMenu.removeChild(this._fileMenu.querySelector("[value='shareUrl']")!);
 			}
 			
-			this._phaseModGroup.appendChild(div({className: "operatorRow", style: "color: #999; height: 1em; margin-top: 0.5em;"},
+			this._phaseModGroup.appendChild(div({className: "operatorRow", style: `color: ${ColorConfig.secondaryText}; height: 1em; margin-top: 0.5em;`},
 				div({style: "margin-right: .1em; visibility: hidden;"}, 1 + "."),
 				div({style: "width: 3em; margin-right: .3em;", class: "tip", onclick: ()=>this._openPrompt("operatorFrequency")}, "Freq:"),
 				div({style: "width: 4em; margin: 0;", class: "tip", onclick: ()=>this._openPrompt("operatorVolume")}, "Volume:"),
@@ -396,7 +396,7 @@ namespace beepbox {
 			));
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				const operatorIndex: number = i;
-				const operatorNumber: HTMLDivElement = div({style: "margin-right: .1em; color: #999;"}, i + 1 + ".");
+				const operatorNumber: HTMLDivElement = div({style: `margin-right: .1em; color: ${ColorConfig.secondaryText};`}, i + 1 + ".");
 				const frequencySelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Frequency"}), Config.operatorFrequencies.map(freq=>freq.name));
 				const amplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Volume"}), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue));
 				const envelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Envelope"}), Config.envelopes.map(envelope=>envelope.name));
@@ -656,10 +656,10 @@ namespace beepbox {
 					setSelectedValue(this._feedbackTypeSelect, instrument.feedbackType);
 					this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
 					setSelectedValue(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
-					this._feedbackEnvelopeSelect.parentElement!.style.color = (instrument.feedbackAmplitude > 0) ? "" : "#999";
+					this._feedbackEnvelopeSelect.parentElement!.style.color = (instrument.feedbackAmplitude > 0) ? "" : ColorConfig.secondaryText;
 					for (let i: number = 0; i < Config.operatorCount; i++) {
 						const isCarrier: boolean = (i < Config.algorithms[instrument.algorithm].carrierCount);
-						this._operatorRows[i].style.color = isCarrier ? "white" : "";
+						this._operatorRows[i].style.color = isCarrier ? ColorConfig.primaryText : "";
 						setSelectedValue(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
 						this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
 						setSelectedValue(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
@@ -667,7 +667,7 @@ namespace beepbox {
 						this._operatorFrequencySelects[i].title = operatorName + " Frequency";
 						this._operatorAmplitudeSliders[i].input.title = operatorName + (isCarrier ? " Volume" : " Amplitude");
 						this._operatorEnvelopeSelects[i].title = operatorName + " Envelope";
-						this._operatorEnvelopeSelects[i].parentElement!.style.color = (instrument.operators[i].amplitude > 0) ? "" : "#999";
+						this._operatorEnvelopeSelects[i].parentElement!.style.color = (instrument.operators[i].amplitude > 0) ? "" : ColorConfig.secondaryText;
 					}
 				} else {
 					this._algorithmSelectRow.style.display = "none";

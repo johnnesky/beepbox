@@ -24,7 +24,7 @@ namespace beepbox {
 				div({style: "display: inline-block; text-align: right;"},
 					"Bars per song:",
 					br(),
-					span({style: "font-size: smaller; color: #888888;"}, "(Multiples of 4 are recommended)"),
+					span({style: `font-size: smaller; color: ${ColorConfig.secondaryText};`}, "(Multiples of 4 are recommended)"),
 				),
 				this._barsStepper,
 			),
