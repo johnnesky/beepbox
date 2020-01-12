@@ -158,13 +158,10 @@ namespace beepbox {
 			option({value: "duplicatePatterns"}, "Duplicate Reused Patterns (D)"),
 			option({value: "transposeUp"}, "Move Notes Up (+)"),
 			option({value: "transposeDown"}, "Move Notes Down (-)"),
-			option({value: "forceScale"}, "Snap Notes To Scale"),
-			option({value: "forceRhythm"}, "Snap Notes To Rhythm"),
 			option({value: "moveNotesSideways"}, "Move All Notes Sideways..."),
 			option({value: "beatsPerBar"}, "Change Beats Per Bar..."),
 			option({value: "barCount"}, "Change Song Length..."),
 			option({value: "channelSettings"}, "Channel Settings..."),
-			option({value: "detectKey"}, "Detect Key"),
 		);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"},
 			option({selected: true, disabled: true, hidden: false}, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -387,6 +384,16 @@ namespace beepbox {
 			if (!("share" in navigator)) {
 				this._fileMenu.removeChild(this._fileMenu.querySelector("[value='shareUrl']")!);
 			}
+			
+			this._scaleSelect.appendChild(optgroup({label: "Edit"},
+				option({value: "forceScale"}, "Snap Notes To Scale"),
+			));
+			this._keySelect.appendChild(optgroup({label: "Edit"},
+				option({value: "detectKey"}, "Detect Key"),
+			));
+			this._rhythmSelect.appendChild(optgroup({label: "Edit"},
+				option({value: "forceRhythm"}, "Snap Notes To Rhythm"),
+			));
 			
 			this._phaseModGroup.appendChild(div({className: "operatorRow", style: `color: ${ColorConfig.secondaryText}; height: 1em; margin-top: 0.5em;`},
 				div({style: "margin-right: .1em; visibility: hidden;"}, 1 + "."),
@@ -1002,15 +1009,42 @@ namespace beepbox {
 		}
 		
 		private _whenSetScale = (): void => {
-			this._doc.record(new ChangeScale(this._doc, this._scaleSelect.selectedIndex));
+			if (isNaN(<number> <unknown> this._scaleSelect.value)) {
+				switch (this._scaleSelect.value) {
+					case "forceScale":
+						this._trackEditor.forceScale();
+						break;
+				}
+				this._doc.notifier.changed();
+			} else {
+				this._doc.record(new ChangeScale(this._doc, this._scaleSelect.selectedIndex));
+			}
 		}
 		
 		private _whenSetKey = (): void => {
-			this._doc.record(new ChangeKey(this._doc, Config.keys.length - 1 - this._keySelect.selectedIndex));
+			if (isNaN(<number> <unknown> this._keySelect.value)) {
+				switch (this._keySelect.value) {
+					case "detectKey":
+						this._doc.record(new ChangeDetectKey(this._doc));
+						break;
+				}
+				this._doc.notifier.changed();
+			} else {
+				this._doc.record(new ChangeKey(this._doc, Config.keys.length - 1 - this._keySelect.selectedIndex));
+			}
 		}
 		
 		private _whenSetRhythm = (): void => {
-			this._doc.record(new ChangeRhythm(this._doc, this._rhythmSelect.selectedIndex));
+			if (isNaN(<number> <unknown> this._rhythmSelect.value)) {
+				switch (this._rhythmSelect.value) {
+					case "forceRhythm":
+						this._trackEditor.forceRhythm();
+						break;
+				}
+				this._doc.notifier.changed();
+			} else {
+				this._doc.record(new ChangeRhythm(this._doc, this._rhythmSelect.selectedIndex));
+			}
 		}
 		
 		private _whenSetPitchedPreset = (): void => {
@@ -1164,15 +1198,6 @@ namespace beepbox {
 					break;
 				case "duplicatePatterns":
 					this._trackEditor.duplicatePatterns();
-					break;
-				case "detectKey":
-					this._doc.record(new ChangeDetectKey(this._doc));
-					break;
-				case "forceScale":
-					this._trackEditor.forceScale();
-					break;
-				case "forceRhythm":
-					this._trackEditor.forceRhythm();
 					break;
 				case "barCount":
 					this._openPrompt("barCount");
