@@ -1715,7 +1715,7 @@ namespace beepbox {
 			let bestKeyWeight: number = 0;
 			for (let key: number = 0; key < 12; key++) {
 				// Look for the root of the most prominent major or minor chord.
-				const keyWeight: number = keyWeights[key] + 0.6 * keyWeights[(key + 7) % 12] + 0.2 * keyWeights[(key + 4) % 12] + 0.2 * keyWeights[(key + 3) % 12];
+				const keyWeight: number = keyWeights[key] * (3 * keyWeights[(key + 7) % 12] + keyWeights[(key + 4) % 12] + keyWeights[(key + 3) % 12]);
 				if (bestKeyWeight < keyWeight) {
 					bestKeyWeight = keyWeight;
 					bestKey = key;
