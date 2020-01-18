@@ -343,6 +343,8 @@
 √ New commands to insert/delete bars.
 √ New commands select all and duplicate pattern, changed several existing commands to apply to the current box selection.
 √ Panning/stereo
+√ Moved Snap to Scale, Snap to Rhythm, and Detect Key into submenus of scale, rhythm, and key.
+√ Added channel muting to preferences.
 
 MAJOR REMAINING FEATURES:
 - tutorial + music theory primer
@@ -367,7 +369,6 @@ TODO:
 - New pref: in paused mode, when editing a note, play it out loud.
 - Add some kind of warning if an error is thrown, it may prevent saving progress.
 - Make all colors controlled by CSS. Come up with themes.
-- Is there space between the instrument volume slider and label for a toggleable speaker/mute icon?
 - New file command: export channels as wavs. (Maybe this should just be a checkbox in the export dialog?)
 - If I paste a pattern with the wrong number of beats, (or too many beats?) just stretch it?
 - The JSON export should include the scale flags, not just the name.

@@ -26,33 +26,28 @@ namespace beepbox {
 	
 	class Box {
 		private readonly _text: Text = document.createTextNode("1");
-		private readonly _label: SVGTextElement = SVG.text({x: 16, y: 23, "font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red"}, this._text);
-		private readonly _rect: SVGRectElement = SVG.rect({width: 30, height: 30, x: 1, y: 1});
+		private readonly _label: SVGTextElement = SVG.text({"font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red"}, this._text);
+		private readonly _rect: SVGRectElement = SVG.rect({x: 1, y: 1});
 		public readonly container: SVGSVGElement = SVG.svg(this._rect, this._label);
 		private _renderedIndex: number = 1;
 		private _renderedDim: boolean = true;
 		private _renderedSelected: boolean = false;
 		private _renderedColor: string = "";
-		constructor(channel: number, x: number, y: number, color: string) {
-			this.container.setAttribute("x", "" + (x * 32));
-			this.container.setAttribute("y", "" + (y * 32));
+		constructor(channel: number, private readonly _x: number, private readonly _y: number, color: string) {
 			this._rect.setAttribute("fill", ColorConfig.uiWidgetBackground);
 			this._label.setAttribute("fill", color);
 		}
 		
-		public setSquashed(squashed: boolean, y: number): void {
-			if (squashed) {
-				this.container.setAttribute("y", "" + (y * 27));
-				this._rect.setAttribute("height", "" + 25);
-				this._label.setAttribute("y", "" + 21);
-			} else {
-				this.container.setAttribute("y", "" + (y * 32));
-				this._rect.setAttribute("height", "" + 30);
-				this._label.setAttribute("y", "" + 23);
-			}
+		public setSize(width: number, height: number): void {
+			this.container.setAttribute("x", "" + (this._x * width));
+			this.container.setAttribute("y", "" + (this._y * height));
+			this._rect.setAttribute("width", "" + (width - 2));
+			this._rect.setAttribute("height", "" + (height - 2));
+			this._label.setAttribute("x", "" + (width / 2));
+			this._label.setAttribute("y", "" + Math.round(height / 2 + 7));
 		}
 		
-		public setIndex(index: number, dim: boolean, selected: boolean, y: number, color: string): void {
+		public setIndex(index: number, dim: boolean, selected: boolean, color: string): void {
 			if (this._renderedIndex != index) {
 				if (!this._renderedSelected && ((index == 0) != (this._renderedIndex == 0))) {
 					this._rect.setAttribute("fill", (index == 0) ? "none" : ColorConfig.uiWidgetBackground);
@@ -87,7 +82,6 @@ namespace beepbox {
 	}
 	
 	export class TrackEditor {
-		private readonly _barWidth: number = 32;
 		private readonly _boxContainer: SVGGElement = SVG.g();
 		private readonly _playhead: SVGRectElement = SVG.rect({fill: ColorConfig.playhead, x: 0, y: 0, width: 4, height: 128});
 		private readonly _boxHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
@@ -102,7 +96,7 @@ namespace beepbox {
 			this._downHighlight,
 			this._playhead,
 		);
-		private readonly _select: HTMLSelectElement = HTML.select({className: "trackSelectBox", style: "width: 32px; height: 32px; background: none; border: none; appearance: none; color: transparent; position: absolute; touch-action: none;"});
+		private readonly _select: HTMLSelectElement = HTML.select({className: "trackSelectBox", style: "background: none; border: none; appearance: none; color: transparent; position: absolute; touch-action: none;"});
 		public readonly container: HTMLElement = HTML.div({class: "noSelection", style: "height: 128px; position: relative; overflow:hidden;"}, this._svg, this._select);
 		
 		
@@ -117,7 +111,7 @@ namespace beepbox {
 		private _mousePressed: boolean = false;
 		private _mouseDragging = false;
 		private _digits: string = "";
-		private _editorHeight: number = 128;
+		private _barWidth: number = 32;
 		private _channelHeight: number = 32;
 		private _boxSelectionBar: number = 0;
 		private _boxSelectionChannel: number = 0;
@@ -127,7 +121,8 @@ namespace beepbox {
 		private _renderedBarCount: number = 0;
 		private _renderedPatternCount: number = 0;
 		private _renderedPlayhead: number = -1;
-		private _renderedSquashed: boolean = false;
+		private _renderedBarWidth: number = -1;
+		private _renderedChannelHeight: number = -1;
 		private _touchMode: boolean = isMobile;
 		private _changeTranspose: ChangeGroup | null = null;
 		
@@ -556,6 +551,58 @@ namespace beepbox {
 			this._doc.record(group);
 		}
 		
+		public muteChannels(allChannels: boolean): void {
+			if (allChannels) {
+				let anyMuted: boolean = false;
+				for (let channel: number = 0; channel < this._doc.song.channels.length; channel++) {
+					if (this._doc.song.channels[channel].muted) {
+						anyMuted = true;
+						break;
+					}
+				}
+				for (let channel: number = 0; channel < this._doc.song.channels.length; channel++) {
+					this._doc.song.channels[channel].muted = !anyMuted;
+				}
+			} else {
+				let anyUnmuted: boolean = false;
+				for (const channel of this._eachSelectedChannel()) {
+					if (!this._doc.song.channels[channel].muted) {
+						anyUnmuted = true;
+						break;
+					}
+				}
+				for (const channel of this._eachSelectedChannel()) {
+					this._doc.song.channels[channel].muted = anyUnmuted;
+				}
+			}
+			
+			this._doc.notifier.changed();
+		}
+		
+		public soloChannels(): void {
+			let alreadySoloed: boolean = true;
+			
+			for (let channel: number = 0; channel < this._doc.song.channels.length; channel++) {
+				const shouldBeMuted: boolean = channel < this._boxSelectionChannel || channel >= this._boxSelectionChannel + this._boxSelectionHeight;
+				if (this._doc.song.channels[channel].muted != shouldBeMuted) {
+					alreadySoloed = false;
+					break;
+				}
+			}
+			
+			if (alreadySoloed) {
+				for (let channel: number = 0; channel < this._doc.song.channels.length; channel++) {
+					this._doc.song.channels[channel].muted = false;
+				}
+			} else {
+				for (let channel: number = 0; channel < this._doc.song.channels.length; channel++) {
+					this._doc.song.channels[channel].muted = channel < this._boxSelectionChannel || channel >= this._boxSelectionChannel + this._boxSelectionHeight;
+				}
+			}
+			
+			this._doc.notifier.changed();
+		}
+		
 		public forceRhythm(): void {
 			const group: ChangeGroup = new ChangeGroup();
 			
@@ -798,16 +845,15 @@ namespace beepbox {
 		}
 		
 		public render(): void {
-			const wideScreen: boolean = window.innerWidth > 700;
-			const squashed: boolean = !wideScreen || this._doc.song.getChannelCount() > 4 || (this._doc.song.barCount > this._doc.trackVisibleBars && this._doc.song.getChannelCount() > 3);
-			this._channelHeight = squashed ? 27 : 32;
+			this._barWidth = this._doc.getBarWidth();
+			this._channelHeight = this._doc.getChannelHeight();
 			
 			if (this._renderedChannelCount != this._doc.song.getChannelCount()) {
 				for (let y: number = this._renderedChannelCount; y < this._doc.song.getChannelCount(); y++) {
 					this._grid[y] = [];
 					for (let x: number = 0; x < this._renderedBarCount; x++) {
 						const box: Box = new Box(y, x, y, ColorConfig.getChannelColor(this._doc.song, y).channelDim);
-						box.setSquashed(squashed, y);
+						box.setSize(this._barWidth, this._channelHeight);
 						this._boxContainer.appendChild(box.container);
 						this._grid[y][x] = box;
 					}
@@ -827,7 +873,7 @@ namespace beepbox {
 				for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
 					for (let x: number = this._renderedBarCount; x < this._doc.song.barCount; x++) {
 						const box: Box = new Box(y, x, y, ColorConfig.getChannelColor(this._doc.song, y).channelDim);
-						box.setSquashed(squashed, y);
+						box.setSize(this._barWidth, this._channelHeight);
 						this._boxContainer.appendChild(box.container);
 						this._grid[y][x] = box;
 					}
@@ -836,30 +882,33 @@ namespace beepbox {
 					}
 					this._grid[y].length = this._doc.song.barCount;
 				}
-				
+			}
+			
+			if (this._renderedBarCount != this._doc.song.barCount || this._renderedBarWidth != this._barWidth) {
 				this._renderedBarCount = this._doc.song.barCount;
-				const editorWidth = 32 * this._doc.song.barCount;
+				const editorWidth = this._barWidth * this._doc.song.barCount;
 				this.container.style.width = editorWidth + "px";
 				this._svg.setAttribute("width", editorWidth + "");
 				this._mousePressed = false;
 			}
 			
-			if (this._renderedSquashed != squashed) {
+			if (this._renderedChannelHeight != this._channelHeight || this._renderedBarWidth != this._barWidth) {
+				this._renderedBarWidth = this._barWidth;
 				for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
 					for (let x: number = 0; x < this._renderedBarCount; x++) {
-						this._grid[y][x].setSquashed(squashed, y);
+						this._grid[y][x].setSize(this._barWidth, this._channelHeight);
 					}
 				}
 				this._mousePressed = false;
 			}
 			
-			if (this._renderedSquashed != squashed || this._renderedChannelCount != this._doc.song.getChannelCount()) {
-				this._renderedSquashed = squashed;
+			if (this._renderedChannelHeight != this._channelHeight || this._renderedChannelCount != this._doc.song.getChannelCount()) {
+				this._renderedChannelHeight = this._channelHeight;
 				this._renderedChannelCount = this._doc.song.getChannelCount();
-				this._editorHeight = this._doc.song.getChannelCount() * this._channelHeight;
-				this._svg.setAttribute("height", "" + this._editorHeight);
-				this._playhead.setAttribute("height", "" + this._editorHeight);
-				this.container.style.height = this._editorHeight + "px";
+				const editorHeight: number = this._doc.song.getChannelCount() * this._channelHeight;
+				this._svg.setAttribute("height", "" + editorHeight);
+				this._playhead.setAttribute("height", "" + editorHeight);
+				this.container.style.height = editorHeight + "px";
 			}
 			
 			for (let j: number = 0; j < this._doc.song.getChannelCount(); j++) {
@@ -871,7 +920,7 @@ namespace beepbox {
 					const box: Box = this._grid[j][i];
 					if (i < this._doc.song.barCount) {
 						const colors: ChannelColors = ColorConfig.getChannelColor(this._doc.song, j);
-						box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, j, dim && !selected ? colors.channelDim : colors.channelBright);
+						box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, dim && !selected ? colors.channelDim : colors.channelBright);
 						box.container.style.visibility = "visible";
 					} else {
 						box.container.style.visibility = "hidden";
@@ -895,6 +944,9 @@ namespace beepbox {
 			}
 			
 			if (this._boxSelectionWidth > 1 || this._boxSelectionHeight > 1) {
+				// TODO: This causes the selection rectangle to repaint every time the
+				// editor renders and the selection is visible. Check if anything changed
+				// before overwriting the attributes?
 				this._selectionRect.setAttribute("x", String(this._barWidth * this._boxSelectionBar + 1));
 				this._selectionRect.setAttribute("y", String(this._channelHeight * this._boxSelectionChannel + 1));
 				this._selectionRect.setAttribute("width", String(this._barWidth * this._boxSelectionWidth - 2));

@@ -17,7 +17,6 @@ namespace beepbox {
 	}
 	
 	export class LoopEditor {
-		private readonly _barWidth: number = 32;
 		private readonly _editorHeight: number = 20;
 		private readonly _startMode:   number = 0;
 		private readonly _endMode:     number = 1;
@@ -33,6 +32,7 @@ namespace beepbox {
 		
 		public readonly container: HTMLElement = HTML.div({style: "height: 20px; position: relative; margin: 5px 0;"}, this._svg);
 		
+		private _barWidth: number = 32;
 		private _change: ChangeLoop | null = null;
 		private _cursor: Cursor = {startBar: -1, mode: -1};
 		private _mouseX: number = 0;
@@ -46,6 +46,7 @@ namespace beepbox {
 		private _renderedLoopStart: number = -1;
 		private _renderedLoopStop: number = -1;
 		private _renderedBarCount: number = 0;
+		private _renderedBarWidth: number = -1;
 		
 		constructor(private _doc: SongDocument) {
 			this._updateCursorStatus();
@@ -265,13 +266,16 @@ namespace beepbox {
 		}
 		
 		private _render(): void {
+			this._barWidth = this._doc.getBarWidth();
+			
 			const radius: number = this._editorHeight / 2;
 			const loopStart: number = (this._doc.song.loopStart) * this._barWidth;
 			const loopStop: number = (this._doc.song.loopStart + this._doc.song.loopLength) * this._barWidth;
 			
-			if (this._renderedBarCount != this._doc.song.barCount) {
+			if (this._renderedBarCount != this._doc.song.barCount || this._renderedBarWidth != this._barWidth) {
 				this._renderedBarCount = this._doc.song.barCount;
-				const editorWidth = 32 * this._doc.song.barCount;
+				this._renderedBarWidth = this._barWidth;
+				const editorWidth = this._barWidth * this._doc.song.barCount;
 				this.container.style.width = editorWidth + "px";
 				this._svg.setAttribute("width", editorWidth + "");
 			}

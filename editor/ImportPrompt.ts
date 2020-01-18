@@ -857,6 +857,7 @@ namespace beepbox {
 				}
 			}
 			this._doc.goBackToStart();
+			for (const channel of this._doc.song.channels) channel.muted = false;
 			this._doc.prompt = null;
 			this._doc.record(new ChangeImportMidi(this._doc), "replace");
 		}

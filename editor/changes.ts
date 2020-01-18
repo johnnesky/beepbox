@@ -163,6 +163,7 @@ namespace beepbox {
 					noiseChannels.push(newChannel);
 				}
 				
+				newChannel.muted = oldChannel.muted;
 				newChannel.octave = oldChannel.octave;
 				for (const instrument of oldChannel.instruments) {
 					newChannel.instruments.push(instrument);

@@ -10,6 +10,7 @@
 /// <reference path="Prompt.ts" />
 /// <reference path="TipPrompt.ts" />
 /// <reference path="PatternEditor.ts" />
+/// <reference path="MuteEditor.ts" />
 /// <reference path="TrackEditor.ts" />
 /// <reference path="LoopEditor.ts" />
 /// <reference path="SpectrumEditor.ts" />
@@ -112,11 +113,16 @@ namespace beepbox {
 		public prompt: Prompt | null = null;
 		
 		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
+		private readonly _muteEditor: MuteEditor = new MuteEditor(this._doc);
 		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc);
 		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
 		private readonly _trackContainer: HTMLDivElement = div({className: "trackContainer"},
 			this._trackEditor.container,
 			this._loopEditor.container,
+		);
+		private readonly _trackAndMuteContainer: HTMLDivElement = div({className: "trackAndMuteContainer"},
+			this._muteEditor.container,
+			this._trackContainer,
 		);
 		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackContainer);
 		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
@@ -127,7 +133,7 @@ namespace beepbox {
 				this._patternEditor.container,
 				this._octaveScrollBar.container,
 			),
-			this._trackContainer,
+			this._trackAndMuteContainer,
 			this._barScrollBar.container,
 		);
 		private readonly _playButton: HTMLButtonElement = button({style: "width: 80px;", type: "button"});
@@ -172,6 +178,7 @@ namespace beepbox {
 			option({value: "showChannels"}, "Show All Channels"),
 			option({value: "showScrollBar"}, "Octave Scroll Bar"),
 			option({value: "alwaysShowSettings"}, "Customize All Instruments"),
+			option({value: "enableChannelMuting"}, "Enable Channel Muting"),
 		);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale=>scale.name));
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select(), Config.keys.map(key=>key.name).reverse());
@@ -561,9 +568,11 @@ namespace beepbox {
 		}
 		
 		public whenUpdated = (): void => {
+			this._muteEditor.container.style.display = this._doc.enableChannelMuting ? "" : "none";
 			const trackBounds = this._trackContainer.getBoundingClientRect();
-			this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left) / 32);
+			this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left) / this._doc.getBarWidth());
 			this._barScrollBar.render();
+			this._muteEditor.render();
 			this._trackEditor.render();
 			
 			const optionCommands: ReadonlyArray<string> = [
@@ -574,6 +583,7 @@ namespace beepbox {
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
 				(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
+				(this._doc.enableChannelMuting ? "✓ " : "") + "Enable Channel Muting",
 			]
 			for (let i: number = 0; i < optionCommands.length; i++) {
 				const option: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.children[i + 1];
@@ -880,6 +890,22 @@ namespace beepbox {
 					this._trackEditor.duplicatePatterns();
 					event.preventDefault();
 					break;
+				case 77: // m
+					if (this._doc.enableChannelMuting) {
+						this._trackEditor.muteChannels(event.shiftKey);
+						event.preventDefault();
+					}
+					break;
+				case 83: // s
+					if (this._doc.enableChannelMuting) {
+						if (event.shiftKey) {
+							this._trackEditor.muteChannels(false);
+						} else {
+							this._trackEditor.soloChannels();
+						}
+						event.preventDefault();
+					}
+					break;
 				case 86: // v
 					if (event.shiftKey) {
 						this._trackEditor.pasteNumbers();
@@ -1137,6 +1163,7 @@ namespace beepbox {
 			switch (this._fileMenu.value) {
 				case "new":
 					this._doc.goBackToStart();
+					for (const channel of this._doc.song.channels) channel.muted = false;
 					this._doc.record(new ChangeSong(this._doc, ""));
 					break;
 				case "export":
@@ -1237,6 +1264,10 @@ namespace beepbox {
 					break;
 				case "alwaysShowSettings":
 					this._doc.alwaysShowSettings = !this._doc.alwaysShowSettings;
+					break;
+				case "enableChannelMuting":
+					this._doc.enableChannelMuting = !this._doc.enableChannelMuting;
+					for (const channel of this._doc.song.channels) channel.muted = false;
 					break;
 			}
 			this._optionsMenu.selectedIndex = 0;

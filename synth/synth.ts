@@ -1000,6 +1000,7 @@ namespace beepbox {
 		public readonly instruments: Instrument[] = [];
 		public readonly patterns: Pattern[] = [];
 		public readonly bars: number[] = [];
+		public muted: boolean = false;
 	}
 	
 	export class Song {
@@ -2905,7 +2906,7 @@ namespace beepbox {
 			this.freeTone(this.releasedTones[channel].get(toneIndex));
 			this.releasedTones[channel].remove(toneIndex);
 		}
-
+		
 		public freeAllTones(): void {
 			while (this.liveInputTones.count() > 0) {
 				this.freeTone(this.liveInputTones.popBack());
@@ -2921,7 +2922,7 @@ namespace beepbox {
 				}
 			}
 		}
-
+		
 		private determineLiveInputTones(song: Song): void {
 			if (this.liveInputPressed) {
 				// TODO: Support multiple live pitches correctly. Distinguish between arpeggio and harmony behavior like with song notes.
@@ -2962,7 +2963,7 @@ namespace beepbox {
 			let prevNote: Note | null = null;
 			let nextNote: Note | null = null;
 			
-			if (pattern != null) {
+			if (pattern != null && !song.channels[channel].muted) {
 				for (let i: number = 0; i < pattern.notes.length; i++) {
 					if (pattern.notes[i].end <= time) {
 						prevNote = pattern.notes[i];
@@ -2974,7 +2975,7 @@ namespace beepbox {
 					}
 				}
 			}
-
+			
 			const toneList: Deque<Tone> = this.activeTones[channel];
 			if (note != null) {
 				if (prevNote != null && prevNote.end != note.start) prevNote = null;
@@ -2991,7 +2992,7 @@ namespace beepbox {
 				}
 			}
 		}
-
+		
 		private syncTones(channel: number, toneList: Deque<Tone>, instrument: Instrument, pitches: number[], note: Note, prevNote: Note | null, nextNote: Note | null, currentPart: number): void {
 			let toneCount: number = 0;
 			if (instrument.getChord().arpeggiates) {
@@ -3074,7 +3075,7 @@ namespace beepbox {
 				}
 			}
 		}
-
+		
 		private playTone(song: Song, stereoBufferIndex: number, stereoBufferLength: number, channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
 			Synth.computeTone(this, song, channel, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
 			let synthBuffer: Float32Array;

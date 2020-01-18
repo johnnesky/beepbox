@@ -312,6 +312,21 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 
 .beepboxEditor .trackContainer {
 	overflow-x: hidden;
+	flex-grow: 1;
+}
+
+.beepboxEditor .trackAndMuteContainer {
+	display: flex;
+	align-items: flex-start;
+}
+
+.beepboxEditor .muteEditor {
+	height: 128px;
+	width: 32px;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
 }
 
 .beepboxEditor .selectRow {
@@ -493,7 +508,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	.beepboxEditor:focus-within {
 		outline: 3px solid #555;
 	}
-	.beepboxEditor .trackContainer {
+	.beepboxEditor .trackAndMuteContainer {
 		width: 512px;
 	}
 	.beepboxEditor .playback-controls {
