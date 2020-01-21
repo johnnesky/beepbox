@@ -29,6 +29,7 @@ namespace beepbox {
 		public showScrollBar: boolean;
 		public alwaysShowSettings: boolean;
 		public enableChannelMuting: boolean;
+		public colorTheme: string;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
@@ -54,6 +55,9 @@ namespace beepbox {
 			this.showScrollBar = localStorage.getItem("showScrollBar") == "true";
 			this.alwaysShowSettings = localStorage.getItem("alwaysShowSettings") == "true";
 			this.enableChannelMuting = localStorage.getItem("enableChannelMuting") == "true";
+			this.colorTheme = localStorage.getItem("colorTheme") || "dark classic";
+			
+			ColorConfig.setTheme(this.colorTheme);
 			
 			if (localStorage.getItem("volume") != null) this.volume = Math.min(<any>localStorage.getItem("volume") >>> 0, 75);
 			
@@ -212,6 +216,7 @@ namespace beepbox {
 			localStorage.setItem("showScrollBar", this.showScrollBar ? "true" : "false");
 			localStorage.setItem("alwaysShowSettings", this.alwaysShowSettings ? "true" : "false");
 			localStorage.setItem("enableChannelMuting", this.enableChannelMuting ? "true" : "false");
+			localStorage.setItem("colorTheme", this.colorTheme);
 			localStorage.setItem("volume", String(this.volume));
 		}
 		

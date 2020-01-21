@@ -864,7 +864,7 @@ namespace beepbox {
 					for (const note of pattern2.notes) {
 						for (const pitch of note.pitches) {
 							const notePath: SVGPathElement = SVG.path();
-							notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, channel).noteDim);
+							notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, channel).secondaryNote);
 							notePath.setAttribute("pointer-events", "none");
 							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channels[channel].octave * 12);
 							this._svgNoteContainer.appendChild(notePath);
@@ -878,12 +878,12 @@ namespace beepbox {
 					for (let i: number = 0; i < note.pitches.length; i++) {
 						const pitch: number = note.pitches[i];
 						let notePath: SVGPathElement = SVG.path();
-						notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteDim);
+						notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).secondaryNote);
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
 						notePath = SVG.path();
-						notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright);
+						notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote);
 						notePath.setAttribute("pointer-events", "none");
 						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
@@ -896,7 +896,7 @@ namespace beepbox {
 								oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
 								oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));
 								oscillatorLabel.setAttribute("width", "30");
-								oscillatorLabel.setAttribute("fill", ColorConfig.editorBackground);
+								oscillatorLabel.setAttribute("fill", ColorConfig.invertedText);
 								oscillatorLabel.setAttribute("text-anchor", "start");
 								oscillatorLabel.setAttribute("dominant-baseline", "central");
 								oscillatorLabel.setAttribute("pointer-events", "none");

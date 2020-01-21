@@ -43,11 +43,7 @@ namespace beepbox {
 			
 			if (this._renderedChannelCount != this._doc.song.getChannelCount()) {
 				for (let y: number = this._renderedChannelCount; y < this._doc.song.getChannelCount(); y++) {
-					const muteButton: HTMLButtonElement = HTML.button({style: `height: ${channelHeight - 4}px; margin: 2px;`},
-						SVG.svg({width: "100%", height: "100%", viewBox: "3 3 20 20", style: "pointer-events: none;"},
-							SVG.path({d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "currentColor"}),
-						),
-					);
+					const muteButton: HTMLButtonElement = HTML.button({class: "mute-button", style: `height: ${channelHeight - 4}px; margin: 2px;`});
 					this.container.appendChild(muteButton);
 					this._buttons[y] = muteButton;
 				}
@@ -60,9 +56,11 @@ namespace beepbox {
 			}
 			
 			for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
-				this._buttons[y].style.color = this._doc.song.channels[y].muted
-					? ColorConfig.editorBackground
-					: ColorConfig.primaryText; // ColorConfig.getChannelColor(this._doc.song, y).channelBright
+				if (this._doc.song.channels[y].muted) {
+					this._buttons[y].classList.add("muted");
+				} else {
+					this._buttons[y].classList.remove("muted");
+				}
 			}
 			
 			if (this._renderedChannelHeight != channelHeight) {

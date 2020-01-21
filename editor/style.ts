@@ -6,6 +6,39 @@ namespace beepbox {
 
 document.head.appendChild(HTML.style({type: "text/css"}, `
 
+:root {
+	--play-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -8 L -4 8 L 9 0 z" fill="gray"/></svg>');
+	--pause-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-4" y="-8" width="4" height="16" fill="gray"/><rect x="5" y="-8" width="4" height="16" fill="gray"/></svg>');
+	--prev-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-6" y="-6" width="2" height="12" fill="gray"/><path d="M 6 -6 L 6 6 L -3 0 z" fill="gray"/></svg>');
+	--next-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="4" y="-6" width="2" height="12" fill="gray"/><path d="M -6 -6 L -6 6 L 3 0 z" fill="gray"/></svg>');
+	--volume-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z" fill="gray"/></svg>');
+	--unmuted-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="3 3 20 20"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z" fill="gray"/></svg>');
+	--muted-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="3 3 20 20"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z" fill="gray"/></svg>');
+	--menu-down-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -2 L 4 -2 L 0 3 z" fill="gray"/></svg>');
+	--select-arrows-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -3 L 4 -3 L 0 -8 z M -4 3 L 4 3 L 0 8 z" fill="gray"/></svg>');
+	--file-page-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-5 -21 26 26"><path d="M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z" fill="gray"/></svg>');
+	--edit-pencil-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-5 -21 26 26"><path d="M 0 0 L 1 -4 L 4 -1 z M 2 -5 L 10 -13 L 13 -10 L 5 -2 zM 11 -14 L 13 -16 L 14 -16 L 16 -14 L 16 -13 L 14 -11 z" fill="gray"/></svg>');
+	--preferences-gear-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M 5.78 -1.6 L 7.93 -0.94 L 7.93 0.94 L 5.78 1.6 L 4.85 3.53 L 5.68 5.61 L 4.21 6.78 L 2.36 5.52 L 0.27 5.99 L -0.85 7.94 L -2.68 7.52 L -2.84 5.28 L -4.52 3.95 L -6.73 4.28 L -7.55 2.59 L -5.9 1.07 L -5.9 -1.07 L -7.55 -2.59 L -6.73 -4.28 L -4.52 -3.95 L -2.84 -5.28 L -2.68 -7.52 L -0.85 -7.94 L 0.27 -5.99 L 2.36 -5.52 L 4.21 -6.78 L 5.68 -5.61 L 4.85 -3.53 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z" fill="gray"/></svg>');
+	--customize-dial-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"> \
+			<g transform="translate(0,1)" fill="gray"> \
+				<circle cx="0" cy="0" r="6.5" stroke="currentColor" stroke-width="1" fill="none"/> \
+				<rect x="-1" y="-5" width="2" height="4" transform="rotate(30)"/> \
+				<circle cx="-7.79" cy="4.5" r="0.75"/> \
+				<circle cx="-9" cy="0" r="0.75"/> \
+				<circle cx="-7.79" cy="-4.5" r="0.75"/> \
+				<circle cx="-4.5" cy="-7.79" r="0.75"/> \
+				<circle cx="0" cy="-9" r="0.75"/> \
+				<circle cx="4.5" cy="-7.79" r="0.75"/> \
+				<circle cx="7.79" cy="-4.5" r="0.75"/> \
+				<circle cx="9" cy="0" r="0.75"/> \
+				<circle cx="7.79" cy="4.5" r="0.75"/> \
+			</g> \
+		</svg>');
+	--export-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"/></svg>');
+	--close-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"/></svg>');
+	--checkmark-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"/></svg>');
+}
+
 .beepboxEditor {
 	display: flex;
 	position: relative;
@@ -35,11 +68,126 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 .beepboxEditor .tip:hover {
-	color: ${ColorConfig.linkAccent}
+	color: ${ColorConfig.linkAccent};
 	text-decoration: underline;
 }
 .beepboxEditor .tip:active {
 	color: ${ColorConfig.primaryText};
+}
+
+.beepboxEditor .volume-speaker {
+	flex-shrink: 0;
+	width: 2em;
+	height: 2em;
+	background: ${ColorConfig.secondaryText};
+	-webkit-mask-image: var(--volume-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--volume-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+
+.beepboxEditor .customize-instrument {
+	margin: 2px 0;
+}
+.beepboxEditor .customize-instrument::before {
+	content: "";
+	flex-shrink: 0;
+	position: absolute;
+	left: 0;
+	top: 50%;
+	margin-top: -1em;
+	pointer-events: none;
+	width: 2em;
+	height: 2em;
+	background: currentColor;
+	-webkit-mask-image: var(--customize-dial-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--customize-dial-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+
+.beepboxEditor .menu.file::before {
+	content: "";
+	flex-shrink: 0;
+	position: absolute;
+	left: 0;
+	top: 50%;
+	margin-top: -1em;
+	pointer-events: none;
+	width: 2em;
+	height: 2em;
+	background: currentColor;
+	-webkit-mask-image: var(--file-page-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--file-page-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+
+.beepboxEditor .menu.edit::before {
+	content: "";
+	flex-shrink: 0;
+	position: absolute;
+	left: 0;
+	top: 50%;
+	margin-top: -1em;
+	pointer-events: none;
+	width: 2em;
+	height: 2em;
+	background: currentColor;
+	-webkit-mask-image: var(--edit-pencil-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--edit-pencil-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+
+.beepboxEditor .menu.preferences::before {
+	content: "";
+	flex-shrink: 0;
+	position: absolute;
+	left: 0;
+	top: 50%;
+	margin-top: -1em;
+	pointer-events: none;
+	width: 2em;
+	height: 2em;
+	background: currentColor;
+	-webkit-mask-image: var(--preferences-gear-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--preferences-gear-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+
+.beepboxEditor .mute-button::before {
+	content: "";
+	pointer-events: none;
+	width: 100%;
+	height: 100%;
+	background: ${ColorConfig.primaryText};
+	display: inline-block;
+	-webkit-mask-image: var(--unmuted-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	-webkit-mask-size: contain;
+	mask-image: var(--unmuted-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	mask-size: contain;
+}
+
+.beepboxEditor .mute-button.muted::before {
+	background: ${ColorConfig.editorBackground};
+	-webkit-mask-image: var(--muted-symbol);
+	mask-image: var(--muted-symbol);
 }
 
 .beepboxEditor .promptContainer {
@@ -48,10 +196,21 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background: rgba(0,0,0,0.5);
 	display: flex;
 	justify-content: center;
 	align-items: center;
+}
+
+.beepboxEditor .promptContainer::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: ${ColorConfig.editorBackground};
+	opacity: 0.5;
+	display: flex;
 }
 
 .beepboxEditor .prompt {
@@ -65,6 +224,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	display: flex;
 	flex-direction: column;
 	position: relative;
+	box-shadow: 5px 5px 20px 10px rgba(0,0,0,0.5);
 }
 
 .beepboxEditor .prompt > *:not(:first-child):not(.cancelButton) {
@@ -82,42 +242,44 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	margin: 1em 0;
 }
 
-/* Use psuedo-elements to add cross-browser up & down arrows to select elements: */
 .beepboxEditor .selectContainer {
 	position: relative;
 }
-.beepboxEditor .selectContainer:not(.menu)::before {
-	content: "";
-	position: absolute;
-	right: 0.3em;
-	top: 0.4em;
-	border-bottom: 0.4em solid currentColor;
-	border-left: 0.3em solid transparent;
-	border-right: 0.3em solid transparent;
-	pointer-events: none;
-}
 .beepboxEditor .selectContainer:not(.menu)::after {
 	content: "";
+	flex-shrink: 0;
 	position: absolute;
-	right: 0.3em;
-	bottom: 0.4em;
-	border-top: 0.4em solid currentColor;
-	border-left: 0.3em solid transparent;
-	border-right: 0.3em solid transparent;
+	right: 0;
+	top: 50%;
+	margin-top: -1em;
 	pointer-events: none;
+	width: 1.1em;
+	height: 2em;
+	background: currentColor;
+	-webkit-mask-image: var(--select-arrows-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--select-arrows-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
 }
 .beepboxEditor .selectContainer.menu::after {
 	content: "";
+	flex-shrink: 0;
 	position: absolute;
-	right: 0.7em;
-	margin: auto;
-	top: 0;
-	bottom: 0;
-	height: 0;
-	border-top: 0.4em solid currentColor;
-	border-left: 0.3em solid transparent;
-	border-right: 0.3em solid transparent;
+	right: 0;
+	top: 50%;
+	margin-top: -1em;
 	pointer-events: none;
+	width: 2em;
+	height: 2em;
+	background: currentColor;
+	-webkit-mask-image: var(--menu-down-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--menu-down-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
 }
 .beepboxEditor select {
 	margin: 0;
@@ -131,6 +293,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	font-size: inherit;
 	cursor: pointer;
 	font-family: inherit;
+	font-weight: inherit;
 
 	-webkit-appearance:none;
 	-moz-appearance: none;
@@ -166,6 +329,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	color: inherit;
 	font-size: inherit;
 	font-family: inherit;
+	font-weight: inherit;
 	cursor: pointer;
 }
 .beepboxEditor button:focus {
@@ -186,86 +350,79 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 .beepboxEditor button.playButton::before {
 	content: "";
+	flex-shrink: 0;
 	position: absolute;
-	left: 0.7em;
+	left: 0;
 	top: 50%;
-	margin-top: -0.65em;
-	border-left: 1em solid currentColor;
-	border-top: 0.65em solid transparent;
-	border-bottom: 0.65em solid transparent;
+	margin-top: -1em;
 	pointer-events: none;
+	width: 2em;
+	height: 2em;
+	background: currentColor;
+	-webkit-mask-image: var(--play-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--play-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
 }
 .beepboxEditor button.pauseButton::before {
 	content: "";
+	flex-shrink: 0;
 	position: absolute;
-	left: 0.7em;
+	left: 0;
 	top: 50%;
-	margin-top: -0.65em;
-	width: 0.3em;
-	height: 1.3em;
-	background: currentColor;
+	margin-top: -1em;
 	pointer-events: none;
-}
-.beepboxEditor button.pauseButton::after {
-	content: "";
-	position: absolute;
-	left: 1.4em;
-	top: 50%;
-	margin-top: -0.65em;
-	width: 0.3em;
-	height: 1.3em;
+	width: 2em;
+	height: 2em;
 	background: currentColor;
-	pointer-events: none;
+	-webkit-mask-image: var(--pause-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--pause-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
 }
 
 .beepboxEditor button.prevBarButton::before {
 	content: "";
+	flex-shrink: 0;
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	margin-left: -0.5em;
-	margin-top: -0.5em;
-	width: 0.2em;
-	height: 1em;
+	margin-left: -1em;
+	margin-top: -1em;
+	pointer-events: none;
+	width: 2em;
+	height: 2em;
 	background: currentColor;
-	pointer-events: none;
-}
-.beepboxEditor button.prevBarButton::after {
-	content: "";
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	margin-left: -0.3em;
-	margin-top: -0.5em;
-	border-right: 0.8em solid currentColor;
-	border-top: 0.5em solid transparent;
-	border-bottom: 0.5em solid transparent;
-	pointer-events: none;
+	-webkit-mask-image: var(--prev-bar-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--prev-bar-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
 }
 
 .beepboxEditor button.nextBarButton::before {
 	content: "";
+	flex-shrink: 0;
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	margin-left: -0.5em;
-	margin-top: -0.5em;
-	border-left: 0.8em solid currentColor;
-	border-top: 0.5em solid transparent;
-	border-bottom: 0.5em solid transparent;
+	margin-left: -1em;
+	margin-top: -1em;
 	pointer-events: none;
-}
-.beepboxEditor button.nextBarButton::after {
-	content: "";
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	margin-left: 0.3em;
-	margin-top: -0.5em;
-	width: 0.2em;
-	height: 1em;
+	width: 2em;
+	height: 2em;
 	background: currentColor;
-	pointer-events: none;
+	-webkit-mask-image: var(--next-bar-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--next-bar-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
 }
 
 .beepboxEditor button.cancelButton::before {
@@ -276,8 +433,13 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	left: 0;
 	top: 0;
 	pointer-events: none;
-	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="${ColorConfig.primaryText}" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"></path></svg>');
-	background-repeat: no-repeat;
+	background: currentColor;
+	mask-image: var(--close-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--close-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
 }
 
 .beepboxEditor button.okayButton::before {
@@ -288,8 +450,13 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	left: 0;
 	top: 0;
 	pointer-events: none;
-	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="${ColorConfig.primaryText}" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"></path></svg>');
-	background-repeat: no-repeat;
+	background: currentColor;
+	-webkit-mask-image: var(--checkmark-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--checkmark-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
 }
 
 .beepboxEditor button.exportButton::before {
@@ -300,8 +467,13 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	left: 0;
 	top: 0;
 	pointer-events: none;
-	background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="${ColorConfig.primaryText}" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"></path></svg>');
-	background-repeat: no-repeat;
+	background: currentColor;
+	mask-image: var(--export-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--export-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
 }
 
 .beepboxEditor canvas {
@@ -404,14 +576,15 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 
 .beepboxEditor input[type=text], .beepboxEditor input[type=number] {
 	font-size: inherit;
+	font-weight: inherit;
+	font-family: inherit;
 	background: transparent;
 	border: 1px solid ${ColorConfig.uiWidgetFocus};
 	color: ${ColorConfig.primaryText};
 }
 
 .beepboxEditor input[type=text]::selection, .beepboxEditor input[type=number]::selection {
-	/*background: #7744ff; ugh browsers override the alpha. */
-	background-color: rgba(119,68,255,0.99);
+	background-color: ${ColorConfig.textSelection};
 	color: ${ColorConfig.primaryText};
 }
 
@@ -506,7 +679,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		flex-direction: row;
 	}
 	.beepboxEditor:focus-within {
-		outline: 3px solid #555;
+		outline: 3px solid ${ColorConfig.uiWidgetBackground};
 	}
 	.beepboxEditor .trackAndMuteContainer {
 		width: 512px;

@@ -1,8 +1,8 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/SynthConfig.ts" />
-/// <reference path="ColorConfig.ts" />
 /// <reference path="EditorConfig.ts" />
+/// <reference path="ColorConfig.ts" />
 /// <reference path="../synth/synth.ts" />
 /// <reference path="SongDocument.ts" />
 /// <reference path="html.ts" />
@@ -179,6 +179,7 @@ namespace beepbox {
 			option({value: "showScrollBar"}, "Octave Scroll Bar"),
 			option({value: "alwaysShowSettings"}, "Customize All Instruments"),
 			option({value: "enableChannelMuting"}, "Enable Channel Muting"),
+			option({value: "colorTheme"}, "Light Theme"),
 		);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale=>scale.name));
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select(), Config.keys.map(key=>key.name).reverse());
@@ -236,24 +237,8 @@ namespace beepbox {
 			this._feedbackAmplitudeSlider.input,
 			div({className: "selectContainer", style: "width: 5em; margin-left: .3em;"}, this._feedbackEnvelopeSelect),
 		);
-		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", style: "margin: 2px 0"},
+		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", class: "customize-instrument"},
 			"Customize Instrument",
-			// Dial icon
-			SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"},
-				SVG.g({transform: "translate(0,1)"},
-					SVG.circle({cx: "0", cy: "0", r: "6.5", stroke: "currentColor", "stroke-width": "1", fill: "none"}),
-					SVG.rect({x: "-1", y: "-5", width: "2", height: "4", fill: "currentColor", transform: "rotate(30)"}),
-					SVG.circle({cx: "-7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "-9", cy: "0", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "-7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "-4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "0", cy: "-9", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "9", cy: "0", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
-				),
-			),
 		);
 		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({className: "editor-controls"},
 			this._filterCutoffRow,
@@ -304,10 +289,7 @@ namespace beepbox {
 								this._nextBarButton,
 							),
 							div({className: "playback-volume-controls"},
-								// Volume speaker icon:
-								SVG.svg({style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26"},
-									SVG.path({d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: ColorConfig.secondaryText}),
-								),
+								span({class: "volume-speaker"}),
 								this._volumeSlider,
 							),
 						),
@@ -315,30 +297,18 @@ namespace beepbox {
 					div({className: "editor-settings"},
 						div({className: "editor-song-settings"},
 							div({className: "editor-menus"},
-								div({className: "selectContainer menu"},
+								div({className: "selectContainer menu file"},
 									this._fileMenu,
-									// Page icon:
-									SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"},
-										SVG.path({d: "M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z", fill: "currentColor"}),
-									),
 								),
-								div({className: "selectContainer menu"},
+								div({className: "selectContainer menu edit"},
 									this._editMenu,
-									// Edit icon:
-									SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26"},
-										SVG.path({d: "M 0 0 L 1 -4 L 4 -1 z M 2 -5 L 10 -13 L 13 -10 L 5 -2 zM 11 -14 L 13 -16 L 14 -16 L 16 -14 L 16 -13 L 14 -11 z", fill: "currentColor"}),
-									),
 								),
-								div({className: "selectContainer menu"},
+								div({className: "selectContainer menu preferences"},
 									this._optionsMenu,
-									// Gear icon:
-									SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"},
-										SVG.path({d: "M 5.78 -1.6 L 7.93 -0.94 L 7.93 0.94 L 5.78 1.6 L 4.85 3.53 L 5.68 5.61 L 4.21 6.78 L 2.36 5.52 L 0.27 5.99 L -0.85 7.94 L -2.68 7.52 L -2.84 5.28 L -4.52 3.95 L -6.73 4.28 L -7.55 2.59 L -5.9 1.07 L -5.9 -1.07 L -7.55 -2.59 L -6.73 -4.28 L -4.52 -3.95 L -2.84 -5.28 L -2.68 -7.52 L -0.85 -7.94 L 0.27 -5.99 L 2.36 -5.52 L 4.21 -6.78 L 5.68 -5.61 L 4.85 -3.53 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z", fill: "currentColor"}),
-									),
 								),
 							),
 							div({style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};`},
-								"Song Settings"
+								"Song Settings",
 							),
 							div({className: "selectRow"},
 								span({class: "tip", onclick: ()=>this._openPrompt("scale")}, "Scale: "),
@@ -584,6 +554,7 @@ namespace beepbox {
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
 				(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
 				(this._doc.enableChannelMuting ? "✓ " : "") + "Enable Channel Muting",
+				(this._doc.colorTheme == "light classic" ? "✓ " : "") + "Light Theme",
 			]
 			for (let i: number = 0; i < optionCommands.length; i++) {
 				const option: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.children[i + 1];
@@ -764,7 +735,7 @@ namespace beepbox {
 				buildOptions(this._instrumentSelect, instrumentList);
 			}
 			
-			this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+			this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote;
 			
 			this._filterCutoffSlider.updateValue(instrument.filterCutoff);
 			this._filterResonanceSlider.updateValue(instrument.filterResonance);
@@ -1268,6 +1239,10 @@ namespace beepbox {
 				case "enableChannelMuting":
 					this._doc.enableChannelMuting = !this._doc.enableChannelMuting;
 					for (const channel of this._doc.song.channels) channel.muted = false;
+					break;
+				case "colorTheme":
+					this._doc.colorTheme = this._doc.colorTheme == "light classic" ? "dark classic" : "light classic";
+					ColorConfig.setTheme(this._doc.colorTheme);
 					break;
 			}
 			this._optionsMenu.selectedIndex = 0;

@@ -60,7 +60,7 @@ namespace beepbox {
 			if (this._renderedDim != dim || this._renderedColor != color) {
 				this._renderedDim = dim;
 				if (selected) {
-					this._label.setAttribute("fill", ColorConfig.editorBackground);
+					this._label.setAttribute("fill", ColorConfig.invertedText);
 				} else {
 					this._label.setAttribute("fill", color);
 				}
@@ -70,7 +70,7 @@ namespace beepbox {
 				this._renderedSelected = selected;
 				if (selected) {
 					this._rect.setAttribute("fill", color);
-					this._label.setAttribute("fill", ColorConfig.editorBackground);
+					this._label.setAttribute("fill", ColorConfig.invertedText);
 				} else {
 					this._rect.setAttribute("fill", (this._renderedIndex == 0) ? ColorConfig.editorBackground : ColorConfig.uiWidgetBackground);
 					this._label.setAttribute("fill", color);
@@ -85,9 +85,9 @@ namespace beepbox {
 		private readonly _boxContainer: SVGGElement = SVG.g();
 		private readonly _playhead: SVGRectElement = SVG.rect({fill: ColorConfig.playhead, x: 0, y: 0, width: 4, height: 128});
 		private readonly _boxHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
-		private readonly _upHighlight: SVGPathElement = SVG.path({fill: ColorConfig.editorBackground, stroke: ColorConfig.editorBackground, "stroke-width": 1, "pointer-events": "none"});
-		private readonly _downHighlight: SVGPathElement = SVG.path({fill: ColorConfig.editorBackground, stroke: ColorConfig.editorBackground, "stroke-width": 1, "pointer-events": "none"});
-		private readonly _selectionRect: SVGRectElement = SVG.rect({fill: "rgba(255,255,255,0.2)", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "pointer-events": "none", visibility: "hidden", x: 1, y: 1, width: 62, height: 62});
+		private readonly _upHighlight: SVGPathElement = SVG.path({fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none"});
+		private readonly _downHighlight: SVGPathElement = SVG.path({fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none"});
+		private readonly _selectionRect: SVGRectElement = SVG.rect({fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "pointer-events": "none", visibility: "hidden", x: 1, y: 1, width: 62, height: 62});
 		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; position: absolute;`, height: 128},
 			this._boxContainer,
 			this._selectionRect,
@@ -815,8 +815,8 @@ namespace beepbox {
 				const tip: number = this._channelHeight * 0.4;
 				const width: number = this._channelHeight * 0.175;
 				
-				this._upHighlight.setAttribute("fill", up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.editorBackground);
-				this._downHighlight.setAttribute("fill", !up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.editorBackground);
+				this._upHighlight.setAttribute("fill", up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.invertedText);
+				this._downHighlight.setAttribute("fill", !up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.invertedText);
 				
 				this._upHighlight.setAttribute("d", `M ${center} ${middle - tip} L ${center + width} ${middle - base} L ${center - width} ${middle - base} z`);
 				this._downHighlight.setAttribute("d", `M ${center} ${middle + tip} L ${center + width} ${middle + base} L ${center - width} ${middle + base} z`);
@@ -829,6 +829,7 @@ namespace beepbox {
 			}
 			
 			this._select.style.left = (this._barWidth * this._doc.bar) + "px";
+			this._select.style.width = this._barWidth + "px";
 			this._select.style.top = (this._channelHeight * this._doc.channel) + "px";
 			this._select.style.height = this._channelHeight + "px";
 			
@@ -852,7 +853,7 @@ namespace beepbox {
 				for (let y: number = this._renderedChannelCount; y < this._doc.song.getChannelCount(); y++) {
 					this._grid[y] = [];
 					for (let x: number = 0; x < this._renderedBarCount; x++) {
-						const box: Box = new Box(y, x, y, ColorConfig.getChannelColor(this._doc.song, y).channelDim);
+						const box: Box = new Box(y, x, y, ColorConfig.getChannelColor(this._doc.song, y).secondaryChannel);
 						box.setSize(this._barWidth, this._channelHeight);
 						this._boxContainer.appendChild(box.container);
 						this._grid[y][x] = box;
@@ -872,7 +873,7 @@ namespace beepbox {
 			if (this._renderedBarCount != this._doc.song.barCount) {
 				for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
 					for (let x: number = this._renderedBarCount; x < this._doc.song.barCount; x++) {
-						const box: Box = new Box(y, x, y, ColorConfig.getChannelColor(this._doc.song, y).channelDim);
+						const box: Box = new Box(y, x, y, ColorConfig.getChannelColor(this._doc.song, y).secondaryChannel);
 						box.setSize(this._barWidth, this._channelHeight);
 						this._boxContainer.appendChild(box.container);
 						this._grid[y][x] = box;
@@ -920,7 +921,7 @@ namespace beepbox {
 					const box: Box = this._grid[j][i];
 					if (i < this._doc.song.barCount) {
 						const colors: ChannelColors = ColorConfig.getChannelColor(this._doc.song, j);
-						box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, dim && !selected ? colors.channelDim : colors.channelBright);
+						box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, dim && !selected ? colors.secondaryChannel : colors.primaryChannel);
 						box.container.style.visibility = "visible";
 					} else {
 						box.container.style.visibility = "hidden";

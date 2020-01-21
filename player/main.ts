@@ -413,7 +413,7 @@ namespace beepbox {
 					
 					for (const pitch of note.pitches) {
 						const d: string = drawNote(pitch, note.start, note.pins, (pitchHeight + 1) / 2, offsetX, offsetY, partWidth, pitchHeight);
-						const noteElement: SVGPathElement = path({d: d, fill: ColorConfig.getChannelColor(synth.song, channel).channelBright});
+						const noteElement: SVGPathElement = path({d: d, fill: ColorConfig.getChannelColor(synth.song, channel).primaryChannel});
 						if (isNoise) noteElement.style.opacity = String(0.6);
 						timeline.appendChild(noteElement);
 					}
