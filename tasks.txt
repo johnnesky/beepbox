@@ -345,19 +345,7 @@
 √ Panning/stereo
 √ Moved Snap to Scale, Snap to Rhythm, and Detect Key into submenus of scale, rhythm, and key.
 √ Added channel muting to preferences.
-
-MAJOR REMAINING FEATURES:
-- tutorial + music theory primer
-- audio worklet thread
-- live input when song is paused
-- live keyboard performance. (make sure piano can play while song is paused?)
-- MIDI live input, live output?
-- remember recent songs
-- distortion? (how would it affect polyphonic channels?)
-- "inspire me" random song generator.
-- link shortener
-- export mp3/ogg and audio buffer
-- translation
+√ Light color theme.
 
 
 TODO:
@@ -368,20 +356,16 @@ TODO:
 - Maybe make several tabs at the bottom for instructions, about, twitter, mastadon, etc, and save which tab was selected when reloading.
 - New pref: in paused mode, when editing a note, play it out loud.
 - Add some kind of warning if an error is thrown, it may prevent saving progress.
-- Make all colors controlled by CSS. Come up with themes.
 - New file command: export channels as wavs. (Maybe this should just be a checkbox in the export dialog?)
 - If I paste a pattern with the wrong number of beats, (or too many beats?) just stretch it?
 - The JSON export should include the scale flags, not just the name.
 - The piano key display accidental naming convention needs work. "C#" is a fine name for a minor scale but misnames F# as Gb, but the same key in major scale should be "Db" and the names of all the black keys should be flats instead of sharps.
 - The purple loop should have arrows at the ends to imply cyclical motion.
-- built-in link shortener?
 - Feature-detect audio worklets, use toString() to get synth code (and FFT, Deque) for worklet, maybe use pooling for Note, Pattern, Channel, Instrument to deal with frequently regenerating song from string when user edits in main thread.
 - Live input tones should still play when song is paused.
 - Live input tones should handle slide mode better.
 - recording performances via keyboard or even midi... If you record over an existing pattern, do you erase it? Does it depend on whether you actually perform any notes during that pattern?
-- Eventually, maybe even stop forcing the user to manually choose pattern counts, and just autopopulate patterns as needed. And also provide mobile-style context buttons above selected bar to facilitate sharing patterns across bars, sort of a paste-shared vs paste-unique, and selecting a range of bars, looping the selection over more bars... Basically making it easier to use on mobile and without needing to remember numbers.
-- random song generator!?
-- remember recent songs in local shared object.
+- remember recent songs in local shared object?
 - add a tutorial + music theory primer. exercise restraint choosing pitches, develop a rhythm first, explore intervals/pitch relationships. It would be cool to have mini beepbox editors with preloaded songs demonstrating concepts, with play, reset, clear, and "open in full editor" options. Mostly it would focus on the pattern editor, but may have one-off additions like a tempo slider to demonstrate tempo.
 - Oh shoot, if I hide the title options in the edit/prefs menus, mac chrome puts a checkmark next to the first displayed option instead, which confuses matters because I use checkmarks to indicate toggling prefs options. :(
 - Edit options to remove specific channels.
@@ -414,7 +398,6 @@ PLAYLIST EDITOR:
 - when starting at a bar where all tones are at the end of the bar, go ahead and skip the beginning of the bar, up to maybe one beat before the first tone.
 - put songs in browser history before/after pasting new songs.
 - offsite album/playlist player, with scrolling notes. hashbang urls, bot indexable. 
-- custom cover art, color schemes in playlists and embed player.
 
 MAYBE:
 - Can I use WebRTC to enable real-time collaboration? (How would I handle parallel edits since I got rid of Change history? Maybe record inputs like a video game somehow and use rewinding?)

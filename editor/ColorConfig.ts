@@ -30,6 +30,8 @@ namespace beepbox {
 					--pitch-background: #444;
 					--tonic: #864;
 					--fifth-note: #468;
+					--white-piano-key: #bbb;
+					--black-piano-key: #444;
 					--pitch1-secondary-channel: #0099a1;
 					--pitch1-primary-channel:   #25f3ff;
 					--pitch1-secondary-note:    #00bdc7;
@@ -87,6 +89,8 @@ namespace beepbox {
 					--pitch-background: #f7f7f7;
 					--tonic: #ffe7cf;
 					--fifth-note: #def;
+					--white-piano-key: #eee;
+					--black-piano-key: #666;
 					--pitch1-secondary-channel: #37D9E2;
 					--pitch1-primary-channel:   #00A0AB;
 					--pitch1-secondary-note:    #43CFD6;
@@ -143,6 +147,8 @@ namespace beepbox {
 		public static readonly pitchBackground: string = "var(--pitch-background, #444)";
 		public static readonly tonic: string = "var(--tonic, #864)";
 		public static readonly fifthNote: string = "var(--fifth-note, #468)";
+		public static readonly whitePianoKey: string = "var(--white-piano-key, #bbb)";
+		public static readonly blackPianoKey: string = "var(--black-piano-key, #444)";
 		
 		public static readonly pitchChannels: DictionaryArray<ChannelColors> = toNameMap([
 			{

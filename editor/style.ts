@@ -6,6 +6,7 @@ namespace beepbox {
 
 document.head.appendChild(HTML.style({type: "text/css"}, `
 
+/* Note: "#" symbols need to be encoded as "%23" in SVG data urls, otherwise they are interpreted as fragment identifiers! */
 :root {
 	--play-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -8 L -4 8 L 9 0 z" fill="gray"/></svg>');
 	--pause-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-4" y="-8" width="4" height="16" fill="gray"/><rect x="5" y="-8" width="4" height="16" fill="gray"/></svg>');
@@ -21,7 +22,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	--preferences-gear-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M 5.78 -1.6 L 7.93 -0.94 L 7.93 0.94 L 5.78 1.6 L 4.85 3.53 L 5.68 5.61 L 4.21 6.78 L 2.36 5.52 L 0.27 5.99 L -0.85 7.94 L -2.68 7.52 L -2.84 5.28 L -4.52 3.95 L -6.73 4.28 L -7.55 2.59 L -5.9 1.07 L -5.9 -1.07 L -7.55 -2.59 L -6.73 -4.28 L -4.52 -3.95 L -2.84 -5.28 L -2.68 -7.52 L -0.85 -7.94 L 0.27 -5.99 L 2.36 -5.52 L 4.21 -6.78 L 5.68 -5.61 L 4.85 -3.53 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z" fill="gray"/></svg>');
 	--customize-dial-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"> \
 			<g transform="translate(0,1)" fill="gray"> \
-				<circle cx="0" cy="0" r="6.5" stroke="currentColor" stroke-width="1" fill="none"/> \
+				<circle cx="0" cy="0" r="6.5" stroke="gray" stroke-width="1" fill="none"/> \
 				<rect x="-1" y="-5" width="2" height="4" transform="rotate(30)"/> \
 				<circle cx="-7.79" cy="4.5" r="0.75"/> \
 				<circle cx="-9" cy="0" r="0.75"/> \
@@ -37,6 +38,65 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	--export-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"/></svg>');
 	--close-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"/></svg>');
 	--checkmark-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"/></svg>');
+	--drum-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40"> \
+			<defs> \
+				<linearGradient id="gold1" x1="0%" y1="0%" x2="100%" y2="0%"> \
+					<stop offset="0%" stop-color="%237e3302"/> \
+					<stop offset="40%" stop-color="%23ffec6b"/> \
+					<stop offset="100%" stop-color="%237e3302"/> \
+				</linearGradient> \
+				<linearGradient id="gold2" x1="0%" y1="0%" x2="100%" y2="0%"> \
+					<stop offset="0%" stop-color="%23faaf7d"/> \
+					<stop offset="15%" stop-color="%23fffba9"/> \
+					<stop offset="40%" stop-color="%23ffffe3"/> \
+					<stop offset="65%" stop-color="%23fffba9"/> \
+					<stop offset="100%" stop-color="%23faaf7d"/> \
+				</linearGradient> \
+				<radialGradient id="gold3" cx="0%" cy="0%" r="100%"> \
+					<stop offset="0%" stop-color="%23ffffe3"/> \
+					<stop offset="50%" stop-color="%23ffec6b"/> \
+					<stop offset="100%" stop-color="%237e3302"/> \
+				</radialGradient> \
+				<linearGradient id="red" x1="0%" y1="0%" x2="100%" y2="0%"> \
+					<stop offset="0%" stop-color="%23641919"/> \
+					<stop offset="40%" stop-color="%23cd2c2c"/> \
+					<stop offset="100%" stop-color="%23641919"/> \
+				</linearGradient> \
+				<radialGradient id="membrane"> \
+					<stop offset="10%" stop-color="%23cccccc" /> \
+					<stop offset="90%" stop-color="%23f6f6f7" /> \
+					<stop offset="100%" stop-color="%23999" /> \
+				</radialGradient> \
+			</defs> \
+			<ellipse cx="16" cy="26" rx="16" ry="14" fill="rgba(0,0,0,0.5)"/> \
+			<ellipse cx="16" cy="25" rx="16" ry="14" fill="url(%23gold1)"/> \
+			<rect x="0" y="23" width="32" height="2" fill="url(%23gold1)"/> \
+			<ellipse cx="16" cy="23" rx="16" ry="14" fill="url(%23gold2)"/> \
+			<ellipse cx="16" cy="23" rx="15" ry="13" fill="url(%23red)"/> \
+			<rect x="1" y="17" width="30" height="6" fill="url(%23red)"/> \
+			<rect x="5" y="27" width="1" height="5" rx="0.5" fill="rgba(0,0,0,0.5)"/> \
+			<rect x="15" y="31" width="2" height="5" rx="1" fill="rgba(0,0,0,0.5)"/> \
+			<rect x="26" y="27" width="1" height="5" rx="0.5" fill="rgba(0,0,0,0.5)"/> \
+			<rect x="5" y="26" width="1" height="5" rx="0.5" fill="url(%23gold3)"/> \
+			<rect x="15" y="30" width="2" height="5" rx="1" fill="url(%23gold3)"/> \
+			<rect x="26" y="26" width="1" height="5" rx="0.5" fill="url(%23gold3)"/> \
+			<ellipse cx="16" cy="18" rx="15" ry="13" fill="rgba(0,0,0,0.5)"/> \
+			<ellipse cx="16" cy="16" rx="16" ry="14" fill="url(%23gold1)"/> \
+			<rect x="0" y="14" width="32" height="2" fill="url(%23gold1)"/> \
+			<ellipse cx="16" cy="14" rx="16" ry="14" fill="url(%23gold2)"/> \
+			<ellipse cx="16" cy="14" rx="15" ry="13" fill="url(%23membrane)"/> \
+		</svg>');
+	--piano-key-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="13" preserveAspectRatio="none" viewBox="0 0 32 13"> \
+			<defs> \
+				<linearGradient id="shadow" x1="0%" y1="0%" x2="100%" y2="0%"> \
+					<stop offset="0%" stop-color="rgba(0,0,0,0.5)"/> \
+					<stop offset="100%" stop-color="transparent"/> \
+				</linearGradient> \
+			</defs> \
+			<rect x="-1" y="1" width="31" height="1" rx="0.6" fill="rgba(255,255,255,0.4)"/> \
+			<path d="M -1 11 L 30 11 L 30 2 L 33 -1 L 33 14 L -1 14 z" fill="rgba(0,0,0,0.7)"/> \
+			<rect x="-1" y="-1" width="19" height="15" fill="url(%23shadow)"/> \
+		</svg>');
 }
 
 .beepboxEditor {
@@ -84,6 +144,50 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	-webkit-mask-repeat: no-repeat;
 	-webkit-mask-position: center;
 	mask-image: var(--volume-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+
+.beepboxEditor .drum-button {
+	flex: 1;
+	background-color: transparent;
+	background-image: var(--drum-symbol);
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+.beepboxEditor .piano-button {
+	flex: 1;
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+.beepboxEditor .piano-button::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	background-image: var(--piano-key-symbol);
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 100% 100%;
+}
+.beepboxEditor .piano-button.disabled::after {
+	content: "";
+	position: absolute;
+	right: 0;
+	top: 0;
+	width: 70%;
+	height: 100%;
+	pointer-events: none;
+	background: ${ColorConfig.editorBackground};
+	-webkit-mask-image: linear-gradient(90deg, transparent 0%, gray 70%, gray 100%);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: linear-gradient(90deg, transparent 0%, gray 70%, gray 100%);
 	mask-repeat: no-repeat;
 	mask-position: center;
 }
