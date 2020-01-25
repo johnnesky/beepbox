@@ -119,7 +119,7 @@ namespace beepbox {
 		for (const pitch of oldNote.pitches) {
 			newNote.pitches.push(pitch);
 		}
-
+		
 		for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
 			const pin: NotePin = oldNote.pins[pinIndex];
 			const newPinTime: number = pin.time + timeOffset;
@@ -139,11 +139,20 @@ namespace beepbox {
 				const prevPin: NotePin = oldNote.pins[pinIndex - 1];
 				const prevPinTime: number = prevPin.time + timeOffset;
 				if (prevPinTime < newNoteLength) {
-					// Insert an interpolated pin at the start of the new note.
+					// Insert an interpolated pin at the end of the new note.
 					const ratio: number = (newNoteLength - prevPinTime) / (newPinTime - prevPinTime);
 					newNote.pins.push(makeNotePin(Math.round(prevPin.interval + ratio * (pin.interval - prevPin.interval)), newNoteLength, Math.round(prevPin.volume + ratio * (pin.volume - prevPin.volume))));
 				}
 			}
+		}
+		
+		// Fix from Jummbus: Ensure the first pin's interval is zero, adjust pitches and pins to compensate.
+		const offsetInterval: number = newNote.pins[0].interval;
+		for (let pitchIdx: number = 0; pitchIdx < newNote.pitches.length; pitchIdx++) {
+			newNote.pitches[pitchIdx] += offsetInterval;
+		}
+		for (let pinIdx: number = 0; pinIdx < newNote.pins.length; pinIdx++) {
+			newNote.pins[pinIdx].interval -= offsetInterval;
 		}
 	}
 	
