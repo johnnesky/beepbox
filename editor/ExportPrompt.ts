@@ -227,8 +227,8 @@ namespace beepbox {
 			data.setUint16(index, wavChannelCount, true); index += 2; // channel count
 			data.setUint32(index, sampleRate, true); index += 4; // sample rate
 			data.setUint32(index, sampleRate * bytesPerSample * wavChannelCount, true); index += 4; // bytes per second
-			data.setUint16(index, bytesPerSample, true); index += 2; // sample rate
-			data.setUint16(index, bitsPerSample, true); index += 2; // sample rate
+			data.setUint16(index, bytesPerSample * wavChannelCount, true); index += 2; // block align
+			data.setUint16(index, bitsPerSample, true); index += 2; // bits per sample
 			data.setUint32(index, 0x64617461, false); index += 4;
 			data.setUint32(index, sampleCount * bytesPerSample, true); index += 4;
 			
