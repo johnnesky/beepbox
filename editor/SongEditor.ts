@@ -113,7 +113,9 @@ namespace beepbox {
 	export class SongEditor {
 		public prompt: Prompt | null = null;
 		
-		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
+		private readonly _patternEditorPrev: PatternEditor = new PatternEditor(this._doc, false, -1);
+		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc, true, 0);
+		private readonly _patternEditorNext: PatternEditor = new PatternEditor(this._doc, false, 1);
 		private readonly _muteEditor: MuteEditor = new MuteEditor(this._doc);
 		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc);
 		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
@@ -263,9 +265,14 @@ namespace beepbox {
 			this._customInstrumentSettingsGroup,
 		);
 		private readonly _promptContainer: HTMLDivElement = div({class: "promptContainer", style: "display: none;"});
+		private readonly _patternEditorRow: HTMLDivElement = div({style: "flex: 1; height: 100%; display: flex; overflow: hidden; justify-content: center;"},
+			this._patternEditorPrev.container,
+			this._patternEditor.container,
+			this._patternEditorNext.container,
+		);
 		private readonly _patternArea: HTMLDivElement = div({class: "pattern-area"},
 			this._piano.container,
-			this._patternEditor.container,
+			this._patternEditorRow,
 			this._octaveScrollBar.container,
 		);
 		private readonly _trackContainer: HTMLDivElement = div({class: "trackContainer"},
@@ -284,7 +291,7 @@ namespace beepbox {
 		
 		private readonly _settingsArea: HTMLDivElement = div({class: "settings-area noSelection"},
 			div({class: "version-area"},
-				div({style: `text-align: center; color: ${ColorConfig.secondaryText};`}, EditorConfig.versionDisplayName),
+				div({style: `text-align: center; margin: 3px 0; color: ${ColorConfig.secondaryText};`}, EditorConfig.versionDisplayName),
 			),
 			div({class: "play-pause-area"},
 				div({class: "playback-bar-controls"},
@@ -361,6 +368,7 @@ namespace beepbox {
 		
 		constructor(private _doc: SongDocument) {
 			this._doc.notifier.watch(this.whenUpdated);
+			window.addEventListener("resize", this.whenUpdated);
 			
 			if (!("share" in navigator)) {
 				this._fileMenu.removeChild(this._fileMenu.querySelector("[value='shareUrl']")!);
@@ -554,6 +562,39 @@ namespace beepbox {
 			this._barScrollBar.render();
 			this._muteEditor.render();
 			this._trackEditor.render();
+			if (this._doc.getFullScreen()) {
+				const patternRowBounds = this._patternEditorRow.getBoundingClientRect();
+				const semitoneHeight: number = patternRowBounds.height / Config.windowPitchCount;
+				const targetBeatWidth: number = semitoneHeight * 5;
+				const minBeatWidth: number = patternRowBounds.width / (this._doc.song.beatsPerBar * 3);
+				const maxBeatWidth: number = patternRowBounds.width / (this._doc.song.beatsPerBar + 2);
+				const beatWidth: number = Math.max(minBeatWidth, Math.min(maxBeatWidth, targetBeatWidth));
+				const patternEditorWidth: number = beatWidth * this._doc.song.beatsPerBar;
+				
+				this._patternEditorPrev.container.style.width = patternEditorWidth + "px";
+				this._patternEditor.container.style.width = patternEditorWidth + "px";
+				this._patternEditorNext.container.style.width = patternEditorWidth + "px";
+				this._patternEditorPrev.container.style.flexShrink = "0";
+				this._patternEditor.container.style.flexShrink = "0";
+				this._patternEditorNext.container.style.flexShrink = "0";
+				this._patternEditorPrev.container.style.display = "";
+				this._patternEditorNext.container.style.display = "";
+				this._patternEditorPrev.render();
+				this._patternEditorNext.render();
+			} else {
+				this._patternEditor.container.style.width = "";
+				this._patternEditor.container.style.flexShrink = "";
+				this._patternEditorPrev.container.style.display = "none";
+				this._patternEditorNext.container.style.display = "none";
+			}
+			this._patternEditor.render();
+			
+			/*
+			let patternWidth: number = 512;
+			if (this._doc.showLetters) patternWidth -= 32;
+			if (this._doc.showScrollBar) patternWidth -= 20;
+			this._patternEditor.container.style.width = String(patternWidth) + "px";
+			*/
 			
 			const optionCommands: ReadonlyArray<string> = [
 				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
@@ -763,11 +804,6 @@ namespace beepbox {
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
 			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
 			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
-			
-			let patternWidth: number = 512;
-			if (this._doc.showLetters) patternWidth -= 32;
-			if (this._doc.showScrollBar) patternWidth -= 20;
-			this._patternEditor.container.style.width = String(patternWidth) + "px";
 			
 			this._volumeSlider.value = String(this._doc.volume);
 			

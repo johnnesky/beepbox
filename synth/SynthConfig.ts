@@ -348,12 +348,13 @@ namespace beepbox {
 		public static readonly noiseChannelCountMin: number = 0;
 		public static readonly noiseChannelCountMax: number = 3;
 		public static readonly noiseInterval: number = 6;
+		public static readonly pitchesPerOctave: number = 12; // TODO: Use this for converting pitch to frequency.
 		public static readonly drumCount: number = 12;
 		public static readonly pitchOctaves: number = 7;
 		public static readonly windowOctaves: number = 3;
 		public static readonly scrollableOctaves: number = Config.pitchOctaves - Config.windowOctaves;
-		public static readonly windowPitchCount: number = Config.windowOctaves * 12 + 1;
-		public static readonly maxPitch: number = Config.pitchOctaves * 12;
+		public static readonly windowPitchCount: number = Config.windowOctaves * Config.pitchesPerOctave + 1;
+		public static readonly maxPitch: number = Config.pitchOctaves * Config.pitchesPerOctave;
 		public static readonly maximumTonesPerChannel: number = 8;
 		public static readonly sineWaveLength: number = 1 << 8; // 256
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;

@@ -2237,6 +2237,7 @@ namespace beepbox {
 		}
 		
 		public getPattern(channel: number, bar: number): Pattern | null {
+			if (bar < 0 || bar >= this.barCount) return null;
 			const patternIndex: number = this.channels[channel].bars[bar];
 			if (patternIndex == 0) return null;
 			return this.channels[channel].patterns[patternIndex - 1];

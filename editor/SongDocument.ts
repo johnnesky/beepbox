@@ -234,12 +234,12 @@ namespace beepbox {
 			return Math.min(1.0, Math.pow(this.volume / 50.0, 0.5)) * Math.pow(2.0, (this.volume - 75.0) / 25.0);
 		}
 		
-		public getCurrentPattern(): Pattern | null {
-			return this.song.getPattern(this.channel, this.bar);
+		public getCurrentPattern(barOffset: number = 0): Pattern | null {
+			return this.song.getPattern(this.channel, this.bar + barOffset);
 		}
 		
-		public getCurrentInstrument(): number {
-			const pattern: Pattern | null = this.getCurrentPattern();
+		public getCurrentInstrument(barOffset: number = 0): number {
+			const pattern: Pattern | null = this.getCurrentPattern(barOffset);
 			return pattern == null ? 0 : pattern.instrument;
 		}
 		
