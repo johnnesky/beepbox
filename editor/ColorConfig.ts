@@ -131,83 +131,83 @@ namespace beepbox {
 			`,
 		};
 		
-		public static readonly pageMargin: string = "var(--page-margin, black)";
-		public static readonly editorBackground: string = "var(--editor-background, black)";
-		public static readonly hoverPreview: string = "var(--hover-preview, white)";
-		public static readonly playhead: string = "var(--playhead, white)";
-		public static readonly primaryText: string = "var(--primary-text, white)";
-		public static readonly secondaryText: string = "var(--secondary-text, #999)";
-		public static readonly invertedText: string = "var(--inverted-text, black)";
-		public static readonly textSelection: string = "var(--text-selection, rgba(119,68,255,0.99))"; // #7744ff ugh browsers override the alpha.
-		public static readonly boxSelectionFill: string = "var(--box-selection-fill, rgba(255,255,255,0.2))";
-		public static readonly loopAccent: string = "var(--loop-accent, #74f)";
-		public static readonly linkAccent: string = "var(--link-accent, #98f)";
-		public static readonly uiWidgetBackground: string = "var(--ui-widget-background, #444)";
-		public static readonly uiWidgetFocus: string = "var(--ui-widget-focus, #777)";
-		public static readonly pitchBackground: string = "var(--pitch-background, #444)";
-		public static readonly tonic: string = "var(--tonic, #864)";
-		public static readonly fifthNote: string = "var(--fifth-note, #468)";
-		public static readonly whitePianoKey: string = "var(--white-piano-key, #bbb)";
-		public static readonly blackPianoKey: string = "var(--black-piano-key, #444)";
+		public static readonly pageMargin: string = "var(--page-margin)";
+		public static readonly editorBackground: string = "var(--editor-background)";
+		public static readonly hoverPreview: string = "var(--hover-preview)";
+		public static readonly playhead: string = "var(--playhead)";
+		public static readonly primaryText: string = "var(--primary-text)";
+		public static readonly secondaryText: string = "var(--secondary-text)";
+		public static readonly invertedText: string = "var(--inverted-text)";
+		public static readonly textSelection: string = "var(--text-selection)";
+		public static readonly boxSelectionFill: string = "var(--box-selection-fill)";
+		public static readonly loopAccent: string = "var(--loop-accent)";
+		public static readonly linkAccent: string = "var(--link-accent)";
+		public static readonly uiWidgetBackground: string = "var(--ui-widget-background)";
+		public static readonly uiWidgetFocus: string = "var(--ui-widget-focus)";
+		public static readonly pitchBackground: string = "var(--pitch-background)";
+		public static readonly tonic: string = "var(--tonic)";
+		public static readonly fifthNote: string = "var(--fifth-note)";
+		public static readonly whitePianoKey: string = "var(--white-piano-key)";
+		public static readonly blackPianoKey: string = "var(--black-piano-key)";
 		
 		public static readonly pitchChannels: DictionaryArray<ChannelColors> = toNameMap([
 			{
 				name: "pitch1", // cyan
-				secondaryChannel: "var(--pitch1-secondary-channel, #0099a1)",
-				primaryChannel:   "var(--pitch1-primary-channel,   #25f3ff)",
-				secondaryNote:    "var(--pitch1-secondary-note,    #00bdc7)",
-				primaryNote:      "var(--pitch1-primary-note,      #92f9ff)",
+				secondaryChannel: "var(--pitch1-secondary-channel)",
+				primaryChannel:   "var(--pitch1-primary-channel)",
+				secondaryNote:    "var(--pitch1-secondary-note)",
+				primaryNote:      "var(--pitch1-primary-note)",
 			}, {
 				name: "pitch2", // yellow
-				secondaryChannel: "var(--pitch2-secondary-channel, #a1a100)",
-				primaryChannel:   "var(--pitch2-primary-channel,   #ffff25)",
-				secondaryNote:    "var(--pitch2-secondary-note,    #c7c700)",
-				primaryNote:      "var(--pitch2-primary-note,      #ffff92)",
+				secondaryChannel: "var(--pitch2-secondary-channel)",
+				primaryChannel:   "var(--pitch2-primary-channel)",
+				secondaryNote:    "var(--pitch2-secondary-note)",
+				primaryNote:      "var(--pitch2-primary-note)",
 			}, {
 				name: "pitch3", // orange
-				secondaryChannel: "var(--pitch3-secondary-channel, #c75000)",
-				primaryChannel:   "var(--pitch3-primary-channel,   #ff9752)",
-				secondaryNote:    "var(--pitch3-secondary-note,    #ff771c)",
-				primaryNote:      "var(--pitch3-primary-note,      #ffcdab)",
+				secondaryChannel: "var(--pitch3-secondary-channel)",
+				primaryChannel:   "var(--pitch3-primary-channel)",
+				secondaryNote:    "var(--pitch3-secondary-note)",
+				primaryNote:      "var(--pitch3-primary-note)",
 			}, {
 				name: "pitch4", // green
-				secondaryChannel: "var(--pitch4-secondary-channel, #00a100)",
-				primaryChannel:   "var(--pitch4-primary-channel,   #50ff50)",
-				secondaryNote:    "var(--pitch4-secondary-note,    #00c700)",
-				primaryNote:      "var(--pitch4-primary-note,      #a0ffa0)",
+				secondaryChannel: "var(--pitch4-secondary-channel)",
+				primaryChannel:   "var(--pitch4-primary-channel)",
+				secondaryNote:    "var(--pitch4-secondary-note)",
+				primaryNote:      "var(--pitch4-primary-note)",
 			}, {
 				name: "pitch5", // purple
-				secondaryChannel: "var(--pitch5-secondary-channel, #d020d0)",
-				primaryChannel:   "var(--pitch5-primary-channel,   #ff90ff)",
-				secondaryNote:    "var(--pitch5-secondary-note,    #e040e0)",
-				primaryNote:      "var(--pitch5-primary-note,      #ffc0ff)",
+				secondaryChannel: "var(--pitch5-secondary-channel)",
+				primaryChannel:   "var(--pitch5-primary-channel)",
+				secondaryNote:    "var(--pitch5-secondary-note)",
+				primaryNote:      "var(--pitch5-primary-note)",
 			}, {
 				name: "pitch6", // blue
-				secondaryChannel: "var(--pitch6-secondary-channel, #7777b0)",
-				primaryChannel:   "var(--pitch6-primary-channel,   #a0a0ff)",
-				secondaryNote:    "var(--pitch6-secondary-note,    #8888d0)",
-				primaryNote:      "var(--pitch6-primary-note,      #d0d0ff)",
+				secondaryChannel: "var(--pitch6-secondary-channel)",
+				primaryChannel:   "var(--pitch6-primary-channel)",
+				secondaryNote:    "var(--pitch6-secondary-note)",
+				primaryNote:      "var(--pitch6-primary-note)",
 			},
 		]);
 		public static readonly noiseChannels: DictionaryArray<ChannelColors> = toNameMap([
 			{
 				name: "noise1", // gray
-				secondaryChannel: "var(--noise1-secondary-channel, #6f6f6f)",
-				primaryChannel:   "var(--noise1-primary-channel,   #aaaaaa)",
-				secondaryNote:    "var(--noise1-secondary-note,    #a7a7a7)",
-				primaryNote:      "var(--noise1-primary-note,      #e0e0e0)",
+				secondaryChannel: "var(--noise1-secondary-channel)",
+				primaryChannel:   "var(--noise1-primary-channel)",
+				secondaryNote:    "var(--noise1-secondary-note)",
+				primaryNote:      "var(--noise1-primary-note)",
 			}, {
 				name: "noise2", // brown
-				secondaryChannel: "var(--noise2-secondary-channel, #996633)",
-				primaryChannel:   "var(--noise2-primary-channel,   #ddaa77)",
-				secondaryNote:    "var(--noise2-secondary-note,    #cc9966)",
-				primaryNote:      "var(--noise2-primary-note,      #f0d0bb)",
+				secondaryChannel: "var(--noise2-secondary-channel)",
+				primaryChannel:   "var(--noise2-primary-channel)",
+				secondaryNote:    "var(--noise2-secondary-note)",
+				primaryNote:      "var(--noise2-primary-note)",
 			}, {
 				name: "noise3", // azure
-				secondaryChannel: "var(--noise3-secondary-channel, #4a6d8f)",
-				primaryChannel:   "var(--noise3-primary-channel,   #77aadd)",
-				secondaryNote:    "var(--noise3-secondary-note,    #6f9fcf)",
-				primaryNote:      "var(--noise3-primary-note,      #bbd7ff)",
+				secondaryChannel: "var(--noise3-secondary-channel)",
+				primaryChannel:   "var(--noise3-primary-channel)",
+				secondaryNote:    "var(--noise3-secondary-note)",
+				primaryNote:      "var(--noise3-primary-note)",
 			},
 		]);
 		

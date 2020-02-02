@@ -30,6 +30,7 @@ namespace beepbox {
 		public alwaysShowSettings: boolean;
 		public enableChannelMuting: boolean;
 		public colorTheme: string;
+		public fullScreen: boolean;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
@@ -55,9 +56,11 @@ namespace beepbox {
 			this.showScrollBar = localStorage.getItem("showScrollBar") == "true";
 			this.alwaysShowSettings = localStorage.getItem("alwaysShowSettings") == "true";
 			this.enableChannelMuting = localStorage.getItem("enableChannelMuting") == "true";
+			this.fullScreen = localStorage.getItem("fullScreen") == "true";
 			this.colorTheme = localStorage.getItem("colorTheme") || "dark classic";
 			
 			ColorConfig.setTheme(this.colorTheme);
+			Layout.setFullScreen(this.fullScreen);
 			
 			if (localStorage.getItem("volume") != null) this.volume = Math.min(<any>localStorage.getItem("volume") >>> 0, 75);
 			
@@ -216,6 +219,7 @@ namespace beepbox {
 			localStorage.setItem("showScrollBar", this.showScrollBar ? "true" : "false");
 			localStorage.setItem("alwaysShowSettings", this.alwaysShowSettings ? "true" : "false");
 			localStorage.setItem("enableChannelMuting", this.enableChannelMuting ? "true" : "false");
+			localStorage.setItem("fullScreen", this.fullScreen ? "true" : "false");
 			localStorage.setItem("colorTheme", this.colorTheme);
 			localStorage.setItem("volume", String(this.volume));
 		}
@@ -239,15 +243,21 @@ namespace beepbox {
 			return pattern == null ? 0 : pattern.instrument;
 		}
 		
+		public getMobileLayout(): boolean {
+			return window.innerWidth <= 700;
+		}
+		
 		public getBarWidth(): number {
-			const wideScreen: boolean = window.innerWidth > 700;
-			return (wideScreen && this.enableChannelMuting) ? 30 : 32;
+			return (!this.getMobileLayout() && this.enableChannelMuting && !this.getFullScreen()) ? 30 : 32;
 		}
 		
 		public getChannelHeight(): number {
-			const wideScreen: boolean = window.innerWidth > 700;
-			const squashed: boolean = !wideScreen || this.song.getChannelCount() > 4 || (this.song.barCount > this.trackVisibleBars && this.song.getChannelCount() > 3);
+			const squashed: boolean = this.getMobileLayout() || this.song.getChannelCount() > 4 || (this.song.barCount > this.trackVisibleBars && this.song.getChannelCount() > 3);
 			return squashed ? 27 : 32;
+		}
+		
+		public getFullScreen(): boolean {
+			return !this.getMobileLayout() && this.fullScreen;
 		}
 	}
 }

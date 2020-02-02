@@ -31,7 +31,7 @@ namespace beepbox {
 		
 		constructor(private _doc: SongDocument) {
 			for (let i: number = 0; i < Config.windowPitchCount; i++) {
-				const pianoLabel: HTMLDivElement = HTML.div({class: "piano-label", style: "font-weight: bold; font-size: 11px; font-family: sans-serif; position: absolute; padding-left: 15px;"});
+				const pianoLabel: HTMLDivElement = HTML.div({class: "piano-label", style: "font-weight: bold; -webkit-text-stroke-width: 0; font-size: 11px; font-family: sans-serif; position: absolute; padding-left: 15px;"});
 				const pianoKey: HTMLDivElement = HTML.div({class: "piano-button", style: "background: gray;"}, pianoLabel);
 				this._pianoContainer.appendChild(pianoKey);
 				this._pianoLabels.push(pianoLabel);

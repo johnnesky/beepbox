@@ -345,7 +345,8 @@
 √ Panning/stereo
 √ Moved Snap to Scale, Snap to Rhythm, and Detect Key into submenus of scale, rhythm, and key.
 √ Added channel muting to preferences.
-√ Light color theme.
+√ Added light color theme to preferences.
+√ Added full screen layout to preferences.
 
 
 TODO:

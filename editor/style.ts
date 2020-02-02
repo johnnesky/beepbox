@@ -4,6 +4,18 @@
 
 namespace beepbox {
 
+
+// Determine if the user's browser/OS adds scrollbars that occupy space.
+// See: https://www.filamentgroup.com/lab/scrollbars/
+const scrollBarTest: HTMLDivElement = document.body.appendChild(HTML.div({style: "width:30px; height:30px; overflow: auto;"}, 
+	HTML.div({style: "width:100%;height:40px"}),
+));
+if ((<any>scrollBarTest).firstChild.clientWidth < 30) {
+	document.documentElement.classList.add("obtrusive-scrollbars");
+}
+document.body.removeChild(scrollBarTest);
+
+
 document.head.appendChild(HTML.style({type: "text/css"}, `
 
 /* Note: "#" symbols need to be encoded as "%23" in SVG data urls, otherwise they are interpreted as fragment identifiers! */
@@ -86,7 +98,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 			<ellipse cx="16" cy="14" rx="16" ry="14" fill="url(%23gold2)"/> \
 			<ellipse cx="16" cy="14" rx="15" ry="13" fill="url(%23membrane)"/> \
 		</svg>');
-	--piano-key-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="13" preserveAspectRatio="none" viewBox="0 0 32 13"> \
+	--piano-key-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="15" preserveAspectRatio="none" viewBox="0 -1 32 15"> \
 			<defs> \
 				<linearGradient id="shadow" x1="0%" y1="0%" x2="100%" y2="0%"> \
 					<stop offset="0%" stop-color="rgba(0,0,0,0.5)"/> \
@@ -99,8 +111,30 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		</svg>');
 }
 
+
+.obtrusive-scrollbars, .obtrusive-scrollbars * {
+	scrollbar-width: thin;
+	scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
+}
+.obtrusive-scrollbars::-webkit-scrollbar, .obtrusive-scrollbars *::-webkit-scrollbar {
+	width: 12px;
+}
+.obtrusive-scrollbars::-webkit-scrollbar-track, .obtrusive-scrollbars *::-webkit-scrollbar-track {
+	background: ${ColorConfig.editorBackground};
+}
+.obtrusive-scrollbars::-webkit-scrollbar-thumb, .obtrusive-scrollbars *::-webkit-scrollbar-thumb {
+	background-color: ${ColorConfig.uiWidgetBackground};
+	border: 3px solid ${ColorConfig.editorBackground};
+}
+
+
 .beepboxEditor {
-	display: flex;
+	display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-rows: max-content minmax(0, 1fr);
+    grid-template-areas: "pattern-area settings-area" "track-area settings-area";
+	grid-column-gap: 6px;
+	grid-row-gap: 6px;
 	position: relative;
 	touch-action: manipulation;
 	cursor: default;
@@ -122,6 +156,32 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	margin: 0;
 	padding: 0;
 }
+
+.beepboxEditor .pattern-area {
+	grid-area: pattern-area;
+	height: 481px;
+	display: flex;
+	flex-direction: row;
+}
+
+.beepboxEditor .track-area {
+	grid-area: track-area;
+}
+
+.beepboxEditor .settings-area {
+	grid-area: settings-area;
+	display: grid;
+    grid-template-columns: auto;
+    grid-template-rows: min-content min-content min-content min-content min-content;
+    grid-template-areas: "version-area" "play-pause-area" "menu-area" "song-settings-area" "instrument-settings-area";
+	grid-column-gap: 6px;
+}
+
+.beepboxEditor .version-area{ grid-area: version-area; }
+.beepboxEditor .play-pause-area{ grid-area: play-pause-area; }
+.beepboxEditor .menu-area{ grid-area: menu-area; }
+.beepboxEditor .song-settings-area{ grid-area: song-settings-area; }
+.beepboxEditor .instrument-settings-area{ grid-area: instrument-settings-area; }
 
 .beepboxEditor .tip {
 	cursor: help;
@@ -173,7 +233,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	background-image: var(--piano-key-symbol);
 	background-repeat: no-repeat;
 	background-position: center;
-	background-size: 100% 100%;
+	background-size: 100% 115.38%;
 }
 .beepboxEditor .piano-button.disabled::after {
 	content: "";
@@ -414,8 +474,8 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	text-align: center;
 	text-align-last: center;
 }
-.beepboxEditor .editor-settings select {
-	width: 100%;
+.beepboxEditor .settings-area select {
+       width: 100%;
 }
 
 /* This makes it look better in firefox on my computer... What about others?
@@ -618,6 +678,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	color: ${ColorConfig.secondaryText};
 }
 
+.beepboxEditor .selectRow > :nth-child(2) {
+	width: 61.5%;
+}
+
 .beepboxEditor .operatorRow {
 	margin: 2px 0;
 	height: 2em;
@@ -631,45 +695,30 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	flex-shrink: 1;
 }
 
-.beepboxEditor .editor-widget-column {
+.beepboxEditor .menu-area {
 	display: flex;
 	flex-direction: column;
 }
+.beepboxEditor .menu-area > * {
+	margin: 2px 0;
+}
+.beepboxEditor .menu-area > button {
+	padding: 0 2em;
+	white-space: nowrap;
+}
 
-.beepboxEditor .editor-widgets {
+.beepboxEditor .song-settings-area {
 	display: flex;
 	flex-direction: column;
 }
 
 .beepboxEditor .editor-controls {
+	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
 }
 
-.beepboxEditor .editor-menus {
-	display: flex;
-	flex-direction: column;
-}
-.beepboxEditor .editor-menus > * {
-	flex-grow: 1;
-	margin: 2px 0;
-}
-.beepboxEditor .editor-menus > button {
-	padding: 0 2em;
-	white-space: nowrap;
-}
-
-.beepboxEditor .editor-settings {
-	display: flex;
-	flex-direction: column;
-}
-
-.beepboxEditor .editor-song-settings {
-	display: flex;
-	flex-direction: column;
-}
-
-.beepboxEditor .editor-instrument-settings {
+.beepboxEditor .instrument-settings-area {
 	display: flex;
 	flex-direction: column;
 }
@@ -788,7 +837,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	.beepboxEditor .trackAndMuteContainer {
 		width: 512px;
 	}
-	.beepboxEditor .playback-controls {
+	.beepboxEditor .play-pause-area {
 		display: flex;
 		flex-direction: column;
 	}
@@ -810,28 +859,34 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		flex-grow: 1;
 		margin-left: 10px;
 	}
-	.beepboxEditor .editor-widget-column {
-		margin-left: 6px;
+	.beepboxEditor .settings-area {
 		width: 14em;
-		flex-direction: column;
-	}
-	.beepboxEditor .editor-widgets {
-		flex-grow: 1;
-	}
-	.beepboxEditor .selectRow > :nth-child(2) {
-		width: 8.6em;
 	}
 }
 
 /* narrow screen */
 @media (max-width: 700px) {
 	.beepboxEditor {
-		flex-direction: column;
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: min-content 6px min-content min-content;
+		grid-template-areas: "pattern-area" "." "track-area" "settings-area";
+		grid-row-gap: 0;
+	}
+	.beepboxEditor .settings-area {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-rows: min-content min-content 1fr min-content;
+		grid-template-areas:
+			"play-pause-area play-pause-area"
+			"menu-area instrument-settings-area"
+			"song-settings-area instrument-settings-area"
+			"version-area version-area";
+		grid-column-gap: 8px;
+		margin: 0 4px;
 	}
 	.beepboxEditor:focus-within {
 		outline: none;
 	}
-	.beepboxEditor .editorBox {
+	.beepboxEditor .pattern-area {
 		max-height: 75vh;
 	}
 	.beepboxEditor .trackContainer {
@@ -840,7 +895,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	.beepboxEditor .barScrollBar {
 		display: none;
 	}
-	.beepboxEditor .playback-controls {
+	.beepboxEditor .play-pause-area {
 		display: flex;
 		flex-direction: row;
 		margin: 2px 0;
@@ -857,27 +912,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		flex-grow: 1;
 		margin: 0 2px;
 	}
-	.beepboxEditor .editor-widget-column {
-		flex-direction: column-reverse;
-	}
-	.beepboxEditor .editor-settings {
-		flex-direction: row;
-	}
 	.beepboxEditor .pauseButton, .beepboxEditor .playButton,
 	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
 		flex-grow: 1;
 		margin: 0 2px;
-	}
-	.beepboxEditor .editor-song-settings, .beepboxEditor .editor-instrument-settings {
-		flex-grow: 1;
-		flex-basis: 0;
-		margin: 0 4px;
-	}
-	.beepboxEditor .selectRow > :nth-child(2) {
-		width: 60%;
-	}
-	.fullWidthOnly {
-		display: none;
 	}
 }
 
