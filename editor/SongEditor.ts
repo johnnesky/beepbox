@@ -470,6 +470,7 @@ namespace beepbox {
 			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
 			
 			this._patternArea.addEventListener("mousedown", this._refocusStage);
+			this._trackArea.addEventListener("mousedown", this._refocusStage);
 			this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
