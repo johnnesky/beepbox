@@ -598,7 +598,7 @@ namespace beepbox {
 										for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
 											let nextPitch: number = note.pitches[toneIndex];
 											if (isDrumset) {
-												nextPitch += pitchOffset;
+												nextPitch += mainInterval;
 												const drumsetMap: number[] = [
 													36, // Bass Drum 1
 													41, // Low Floor Tom

@@ -56,8 +56,13 @@ namespace beepbox {
 			width: 12px;
 			height: 12px;
 			pointer-events: none;
-			background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="-6 -6 12 12"><path d="M 6 0 L -5 6 L -5 -6 z" fill="${ColorConfig.primaryText}"/></svg>');
-			background-repeat: no-repeat;
+			background: ${ColorConfig.primaryText};
+			-webkit-mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="-6 -6 12 12"><path d="M 6 0 L -5 6 L -5 -6 z" fill="gray"/></svg>');
+			-webkit-mask-repeat: no-repeat;
+			-webkit-mask-position: center;
+			mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="-6 -6 12 12"><path d="M 6 0 L -5 6 L -5 -6 z" fill="gray"/></svg>');
+			mask-repeat: no-repeat;
+			mask-position: center;
 		}
 		.pauseButton::before {
 			content: "";
@@ -68,8 +73,13 @@ namespace beepbox {
 			width: 12px;
 			height: 12px;
 			pointer-events: none;
-			background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="-6 -6 12 12"><rect x="-5" y="-6" width="3" height="12" fill="${ColorConfig.primaryText}"/><rect x="2"  y="-6" width="3" height="12" fill="${ColorConfig.primaryText}"/></svg>');
-			background-repeat: no-repeat;
+			background: ${ColorConfig.primaryText};
+			-webkit-mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="-6 -6 12 12"><rect x="-5" y="-6" width="3" height="12" fill="gray"/><rect x="2"  y="-6" width="3" height="12" fill="gray"/></svg>');
+			-webkit-mask-repeat: no-repeat;
+			-webkit-mask-position: center;
+			mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="-6 -6 12 12"><rect x="-5" y="-6" width="3" height="12" fill="gray"/><rect x="2"  y="-6" width="3" height="12" fill="gray"/></svg>');
+			mask-repeat: no-repeat;
+			mask-position: center;
 		}
 		
 		input[type=range] {
@@ -137,6 +147,8 @@ namespace beepbox {
 			cursor: pointer;
 		}
 	`));
+	
+	ColorConfig.setTheme("dark classic");
 	
 	let prevHash: string | null = null;
 	let id: string = ((Math.random() * 0xffffffff) >>> 0).toString(16);

@@ -786,9 +786,8 @@ namespace beepbox {
 			}
 			this._pattern = nextPattern;
 			
-			const editorBounds = this.container.getBoundingClientRect();
-			this._editorWidth = editorBounds.width;
-			this._editorHeight = editorBounds.height;
+			this._editorWidth = this.container.clientWidth;
+			this._editorHeight = this.container.clientHeight;
 			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * Config.partsPerBeat);
 			this._pitchCount = this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount : Config.windowPitchCount;
 			this._pitchHeight = this._editorHeight / this._pitchCount;

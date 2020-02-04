@@ -563,12 +563,16 @@ namespace beepbox {
 			this._barScrollBar.render();
 			this._muteEditor.render();
 			this._trackEditor.render();
+			
+			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
+			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
+			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
+			
 			if (this._doc.getFullScreen()) {
-				const patternRowBounds = this._patternEditorRow.getBoundingClientRect();
-				const semitoneHeight: number = patternRowBounds.height / Config.windowPitchCount;
+				const semitoneHeight: number = this._patternEditorRow.clientHeight / Config.windowPitchCount;
 				const targetBeatWidth: number = semitoneHeight * 5;
-				const minBeatWidth: number = patternRowBounds.width / (this._doc.song.beatsPerBar * 3);
-				const maxBeatWidth: number = patternRowBounds.width / (this._doc.song.beatsPerBar + 2);
+				const minBeatWidth: number = this._patternEditorRow.clientWidth / (this._doc.song.beatsPerBar * 3);
+				const maxBeatWidth: number = this._patternEditorRow.clientWidth / (this._doc.song.beatsPerBar + 2);
 				const beatWidth: number = Math.max(minBeatWidth, Math.min(maxBeatWidth, targetBeatWidth));
 				const patternEditorWidth: number = beatWidth * this._doc.song.beatsPerBar;
 				
@@ -589,13 +593,6 @@ namespace beepbox {
 				this._patternEditorNext.container.style.display = "none";
 			}
 			this._patternEditor.render();
-			
-			/*
-			let patternWidth: number = 512;
-			if (this._doc.showLetters) patternWidth -= 32;
-			if (this._doc.showScrollBar) patternWidth -= 20;
-			this._patternEditor.container.style.width = String(patternWidth) + "px";
-			*/
 			
 			const optionCommands: ReadonlyArray<string> = [
 				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
@@ -801,10 +798,6 @@ namespace beepbox {
 			this._instrumentVolumeSlider.updateValue(-instrument.volume);
 			this._panSlider.updateValue(instrument.pan);
 			setSelectedValue(this._instrumentSelect, instrumentIndex);
-			
-			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
-			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
-			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
 			
 			this._volumeSlider.value = String(this._doc.volume);
 			
