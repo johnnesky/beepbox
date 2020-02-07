@@ -14,6 +14,8 @@ namespace beepbox {
 		private readonly _instrumentsStepper: HTMLInputElement = input({ style: "width: 3em; margin-left: 1em;", type: "number", step: "1" });
 		private readonly _pitchChannelStepper: HTMLInputElement = input({ style: "width: 3em; margin-left: 1em;", type: "number", step: "1" });
 		private readonly _drumChannelStepper: HTMLInputElement = input({ style: "width: 3em; margin-left: 1em;", type: "number", step: "1" });
+		private readonly _modChannelStepper: HTMLInputElement = input({ style: "width: 3em; margin-left: 1em;", type: "number", step: "1" });
+
 		private readonly _cancelButton: HTMLButtonElement = button({ className: "cancelButton" });
 		private readonly _okayButton: HTMLButtonElement = button({ className: "okayButton", style: "width:45%;" }, "Okay");
 
@@ -26,6 +28,10 @@ namespace beepbox {
 			div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
 				"Drum channels:",
 				this._drumChannelStepper,
+			),
+			div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
+				"Mod channels:",
+				this._modChannelStepper,
 			),
 			div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
 				"Patterns per channel:",
@@ -58,6 +64,10 @@ namespace beepbox {
 			this._drumChannelStepper.min = Config.noiseChannelCountMin + "";
 			this._drumChannelStepper.max = Config.noiseChannelCountMax + "";
 
+			this._modChannelStepper.value = this._doc.song.modChannelCount + "";
+			this._modChannelStepper.min = Config.modChannelCountMin + "";
+			this._modChannelStepper.max = Config.modChannelCountMax + "";
+
 			this._pitchChannelStepper.select();
 			setTimeout(() => this._pitchChannelStepper.focus());
 
@@ -67,10 +77,12 @@ namespace beepbox {
 			this._instrumentsStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
 			this._pitchChannelStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
 			this._drumChannelStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._modChannelStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
 			this._patternsStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._instrumentsStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._pitchChannelStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._drumChannelStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this._modChannelStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this.container.addEventListener("keydown", this._whenKeyPressed);
 		}
 
@@ -85,10 +97,12 @@ namespace beepbox {
 			this._instrumentsStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
 			this._pitchChannelStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
 			this._drumChannelStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
+			this._modChannelStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
 			this._patternsStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._instrumentsStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._pitchChannelStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this._drumChannelStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
+			this._modChannelStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
 			this.container.removeEventListener("keydown", this._whenKeyPressed);
 		}
 
@@ -120,7 +134,7 @@ namespace beepbox {
 			const group: ChangeGroup = new ChangeGroup();
 			group.append(new ChangePatternsPerChannel(this._doc, ChannelSettingsPrompt._validate(this._patternsStepper)));
 			group.append(new ChangeInstrumentsPerChannel(this._doc, ChannelSettingsPrompt._validate(this._instrumentsStepper)));
-			group.append(new ChangeChannelCount(this._doc, ChannelSettingsPrompt._validate(this._pitchChannelStepper), ChannelSettingsPrompt._validate(this._drumChannelStepper)));
+			group.append(new ChangeChannelCount(this._doc, ChannelSettingsPrompt._validate(this._pitchChannelStepper), ChannelSettingsPrompt._validate(this._drumChannelStepper), ChannelSettingsPrompt._validate(this._modChannelStepper)));
 			this._doc.prompt = null;
 			this._doc.record(group, "replace");
 		}

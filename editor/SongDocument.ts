@@ -28,6 +28,7 @@ namespace beepbox {
 		public showChannels: boolean;
 		public showScrollBar: boolean;
 		public alwaysFineNoteVol: boolean = false;
+		public wideMode: boolean = false;
 		public alwaysShowSettings: boolean = true;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
@@ -45,7 +46,7 @@ namespace beepbox {
 			this.song = new Song(string);
 			if (string == "" || string == undefined) setDefaultInstruments(this.song);
 			this.synth = new Synth(this.song);
-
+			
 			this.autoPlay = localStorage.getItem("autoPlay") == "true";
 			this.autoFollow = localStorage.getItem("autoFollow") == "true";
 			this.showFifth = localStorage.getItem("showFifth") == "true";
@@ -53,6 +54,7 @@ namespace beepbox {
 			this.showChannels = localStorage.getItem("showChannels") == "true";
 			this.showScrollBar = localStorage.getItem("showScrollBar") == "true";
 			this.alwaysFineNoteVol = localStorage.getItem("alwaysFineNoteVol") == "true";
+			this.wideMode = localStorage.getItem("wideMode") == "true";
 			//this.alwaysShowSettings = localStorage.getItem("alwaysShowSettings") == "true";
 
 			if (localStorage.getItem("volume") != null) this.volume = Number(localStorage.getItem("volume"));
@@ -211,6 +213,7 @@ namespace beepbox {
 			localStorage.setItem("showChannels", this.showChannels ? "true" : "false");
 			localStorage.setItem("showScrollBar", this.showScrollBar ? "true" : "false");
 			localStorage.setItem("alwaysFineNoteVol", this.alwaysFineNoteVol ? "true" : "false");
+			localStorage.setItem("wideMode", this.wideMode ? "true" : "false");
 			//localStorage.setItem("alwaysShowSettings", this.alwaysShowSettings ? "true" : "false");
 			localStorage.setItem("volume", String(this.volume));
 		}

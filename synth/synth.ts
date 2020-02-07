@@ -14,6 +14,8 @@ namespace beepbox {
 	//let samplesAccumulated: number = 0;
 	//let samplePerformance: number = 0;
 
+	//let debugString: string = "";
+
 	const enum CharCode {
 		SPACE = 32,
 		HASH = 35,
@@ -120,6 +122,7 @@ namespace beepbox {
 		algorithm = CharCode.A,
 		feedbackAmplitude = CharCode.B,
 		chord = CharCode.C,
+		detune = CharCode.D,
 
 		operatorEnvelopes = CharCode.E,
 		feedbackType = CharCode.F,
@@ -546,7 +549,8 @@ namespace beepbox {
 		public chord: number = 1;
 		public volume: number = 0;
 		public pan: number = Config.panCenter;
-		public pulseWidth: number = Config.pulseWidthRange - 1;
+		public detune: number = 0;
+		public pulseWidth: number = Config.pulseWidthRange;
 		public pulseEnvelope: number = 1;
 		public algorithm: number = 0;
 		public feedbackType: number = 0;
@@ -559,8 +563,22 @@ namespace beepbox {
 		public readonly harmonicsWave: HarmonicsWave = new HarmonicsWave();
 		public readonly drumsetEnvelopes: number[] = [];
 		public readonly drumsetSpectrumWaves: SpectrumWave[] = [];
+		public modChannels: number[] = [];
+		public modStatuses: ModStatus[] = [];
+		public modInstruments: number[] = [];
+		public modSettings: ModSetting[] = [];
 
-		constructor(isNoiseChannel: boolean) {
+		constructor(isNoiseChannel: boolean, isModChannel: boolean) {
+
+			if (isModChannel) {
+				for (let mod: number = 0; mod < Config.modCount; mod++) {
+					this.modChannels.push(0);
+					this.modStatuses.push(ModStatus.msNone);
+					this.modInstruments.push(0);
+					this.modSettings.push(ModSetting.mstNone);
+				}
+			}
+
 			this.spectrumWave = new SpectrumWave(isNoiseChannel);
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				this.operators[i] = new Operator(i);
@@ -594,11 +612,14 @@ namespace beepbox {
 
 		}
 
-		public setTypeAndReset(type: InstrumentType, isNoiseChannel: boolean): void {
+		public setTypeAndReset(type: InstrumentType, isNoiseChannel: boolean, isModChannel: boolean): void {
+			// Mod channels are forced to one type.
+			if (isModChannel) type = InstrumentType.mod;
 			this.type = type;
 			this.preset = type;
 			this.volume = 0;
 			this.pan = Config.panCenter;
+			this.detune = 0;
 			switch (type) {
 				case InstrumentType.chip:
 					this.chipWave = 2;
@@ -680,6 +701,9 @@ namespace beepbox {
 					this.effects = 0;
 					for (let i: number = 0; i < Config.drumCount; i++) {
 						this.drumsetEnvelopes[i] = Config.envelopes.dictionary["twang 2"].index;
+						if (this.drumsetSpectrumWaves[i] == undefined) {
+							this.drumsetSpectrumWaves[i] = new SpectrumWave(true);
+						}
 						this.drumsetSpectrumWaves[i].reset(isNoiseChannel);
 					}
 					break;
@@ -703,8 +727,25 @@ namespace beepbox {
 					this.interval = 0;
 					this.effects = 1;
 					this.chord = 2;
-					this.pulseWidth = Config.pulseWidthRange - 1;
+					this.pulseWidth = Config.pulseWidthRange;
 					this.pulseEnvelope = Config.envelopes.dictionary["twang 2"].index;
+					break;
+				case InstrumentType.mod:
+					this.transition = 0;
+					this.vibrato = 0;
+					this.interval = 0;
+					this.effects = 0;
+					this.chord = 0;
+					this.modChannels = [];
+					this.modStatuses = [];
+					this.modInstruments = [];
+					this.modSettings = [];
+					for (let mod: number = 0; mod < Config.modCount; mod++) {
+						this.modChannels.push(0);
+						this.modStatuses.push(ModStatus.msNone);
+						this.modInstruments.push(0);
+						this.modSettings.push(ModSetting.mstNone);
+					}
 					break;
 				default:
 					throw new Error("Unrecognized instrument type: " + type);
@@ -716,6 +757,7 @@ namespace beepbox {
 				"type": Config.instrumentTypeNames[this.type],
 				"volume": this.volume,
 				"pan": (this.pan - Config.panCenter) * 100 / Config.panCenter,
+				"detune": this.detune,
 				"effects": Config.effectsNames[this.effects],
 			};
 
@@ -793,18 +835,29 @@ namespace beepbox {
 				instrumentObject["feedbackAmplitude"] = this.feedbackAmplitude;
 				instrumentObject["feedbackEnvelope"] = Config.envelopes[this.feedbackEnvelope].name;
 				instrumentObject["operators"] = operatorArray;
+			} else if (this.type == InstrumentType.mod) {
+				instrumentObject["modChannels"] = [];
+				instrumentObject["modInstruments"] = [];
+				instrumentObject["modSettings"] = [];
+				instrumentObject["modStatuses"] = [];
+				for (let mod: number = 0; mod < Config.modCount; mod++) {
+					instrumentObject["modChannels"][mod] = this.modChannels[mod];
+					instrumentObject["modInstruments"][mod] = this.modInstruments[mod];
+					instrumentObject["modSettings"][mod] = this.modSettings[mod];
+					instrumentObject["modStatuses"][mod] = this.modStatuses[mod];
+				}
 			} else {
 				throw new Error("Unrecognized instrument type");
 			}
 			return instrumentObject;
 		}
 
-		public fromJsonObject(instrumentObject: any, isNoiseChannel: boolean): void {
+		public fromJsonObject(instrumentObject: any, isNoiseChannel: boolean, isModChannel: boolean): void {
 			if (instrumentObject == undefined) instrumentObject = {};
 
 			let type: InstrumentType = Config.instrumentTypeNames.indexOf(instrumentObject["type"]);
-			if (type == -1) type = isNoiseChannel ? InstrumentType.noise : InstrumentType.chip;
-			this.setTypeAndReset(type, isNoiseChannel);
+			if (type == -1) type = isModChannel ? InstrumentType.mod : (isNoiseChannel ? InstrumentType.noise : InstrumentType.chip);
+			this.setTypeAndReset(type, isNoiseChannel, isModChannel);
 
 			if (instrumentObject["preset"] != undefined) {
 				this.preset = instrumentObject["preset"] >>> 0;
@@ -820,6 +873,13 @@ namespace beepbox {
 				this.pan = clamp(0, Config.panMax + 1, Math.round(Config.panCenter + (instrumentObject["pan"] | 0) * Config.panCenter / 100));
 			} else {
 				this.pan = Config.panCenter;
+			}
+
+			if (instrumentObject["detune"] != undefined) {
+				this.detune = clamp(Config.detuneMin, Config.detuneMax + 1, (instrumentObject["detune"] | 0));
+			}
+			else {
+				this.detune = 0;
 			}
 
 			const oldTransitionNames: Dictionary<number> = { "binary": 0, "sudden": 1, "smooth": 2 };
@@ -911,9 +971,9 @@ namespace beepbox {
 				if (this.chord == -1) this.chord = 0;
 			} else if (this.type == InstrumentType.pwm) {
 				if (instrumentObject["pulseWidth"] != undefined) {
-					this.pulseWidth = clamp(0, Config.pulseWidthRange, instrumentObject["pulseWidth"]);
+					this.pulseWidth = clamp(0, Config.pulseWidthRange + 1, instrumentObject["pulseWidth"]);
 				} else {
-					this.pulseWidth = Config.pulseWidthRange - 1;
+					this.pulseWidth = Config.pulseWidthRange;
 				}
 
 				if (instrumentObject["pulseEnvelope"] != undefined) {
@@ -1051,9 +1111,17 @@ namespace beepbox {
 
 					// 65th, last sample is for anti-aliasing
 					this.customChipWaveIntegral[64] = 0.0;
-
 				}
 
+			} else if (this.type == InstrumentType.mod) {
+				if (instrumentObject["modChannels"] != undefined) {
+					for (let mod: number = 0; mod < Config.modCount; mod++) {
+						this.modChannels[mod] = instrumentObject["modChannels"][mod];
+						this.modInstruments[mod] = instrumentObject["modInstruments"][mod];
+						this.modSettings[mod] = instrumentObject["modSettings"][mod];
+						this.modStatuses[mod] = instrumentObject["modStatuses"][mod];
+					}
+				}
 			} else {
 				throw new Error("Unrecognized instrument type.");
 			}
@@ -1128,6 +1196,33 @@ namespace beepbox {
 		}
 	}
 
+	export enum ModStatus {
+		msForPitch = 0,
+		msForNoise = 1,
+		msForSong = 2,
+		msNone = 3,
+	}
+
+	export enum ModSetting {
+		mstNone = 0,
+		mstSongVolume = 1,
+		mstTempo = 2,
+		mstReverb = 3,
+		mstNextBar = 4,
+		mstInsVolume = 5,
+		mstPan = 6,
+		mstFilterCut = 7,
+		mstFilterPeak = 8,
+		mstFMSlider1 = 9,
+		mstFMSlider2 = 10,
+		mstFMSlider3 = 11,
+		mstFMSlider4 = 12,
+		mstFMFeedback = 13,
+		mstPulseWidth = 14,
+		mstDetune = 15,
+		mstMaxValue = 16,
+	}
+
 	export class Channel {
 		public octave: number = 0;
 		public readonly instruments: Instrument[] = [];
@@ -1141,7 +1236,7 @@ namespace beepbox {
 		private static readonly _oldestBeepboxVersion: number = 2;
 		private static readonly _latestBeepboxVersion: number = 8;
 		private static readonly _oldestJummBoxVersion: number = 1;
-		private static readonly _latestJummBoxVersion: number = 1;
+		private static readonly _latestJummBoxVersion: number = 2;
 		// One-character variant detection at the start of URL to distinguish variants such as JummBox.
 		private static readonly _variant = 0x6A; //"j" ~ jummbox
 
@@ -1159,7 +1254,28 @@ namespace beepbox {
 		public loopLength: number;
 		public pitchChannelCount: number;
 		public noiseChannelCount: number;
+		public modChannelCount: number;
 		public readonly channels: Channel[] = [];
+
+		public mstMaxVols: Map<ModSetting, number> = new Map<ModSetting, number>([
+			[ModSetting.mstNone, 6],
+			[ModSetting.mstSongVolume, 100],
+			[ModSetting.mstTempo, Config.tempoMax - Config.tempoMin],
+			[ModSetting.mstReverb, Config.reverbRange - 1],
+			[ModSetting.mstNextBar, 1],
+			[ModSetting.mstInsVolume, Config.volumeRange],
+			[ModSetting.mstPan, Config.panMax],
+			[ModSetting.mstFilterCut, Config.filterCutoffRange - 1],
+			[ModSetting.mstFilterPeak, Config.filterResonanceRange - 1],
+			[ModSetting.mstFMSlider1, 15],
+			[ModSetting.mstFMSlider2, 15],
+			[ModSetting.mstFMSlider3, 15],
+			[ModSetting.mstFMSlider4, 15],
+			[ModSetting.mstFMFeedback, 15],
+			[ModSetting.mstPulseWidth, Config.pulseWidthRange],
+			[ModSetting.mstDetune, Config.detuneMax - Config.detuneMin],
+		]
+		);
 
 		constructor(string?: string) {
 			if (string != undefined) {
@@ -1169,12 +1285,116 @@ namespace beepbox {
 			}
 		}
 
+		public modValueToReal(value: number, setting: ModSetting): number {
+			switch (setting) {
+				case ModSetting.mstTempo:
+					value += Config.tempoMin;
+					break;
+				case ModSetting.mstInsVolume:
+					value -= Config.volumeRange / 2.0;
+					break;
+				case ModSetting.mstDetune:
+					value += Config.detuneMin;
+					break;
+				case ModSetting.mstFilterCut:
+				case ModSetting.mstFilterPeak:
+				case ModSetting.mstSongVolume:
+				case ModSetting.mstPan:
+				case ModSetting.mstReverb:
+				case ModSetting.mstNextBar:
+				case ModSetting.mstFMSlider1:
+				case ModSetting.mstFMSlider2:
+				case ModSetting.mstFMSlider3:
+				case ModSetting.mstFMSlider4:
+				case ModSetting.mstFMFeedback:
+				case ModSetting.mstPulseWidth:
+				case ModSetting.mstNone:
+				default:
+					break;
+			}
+			return value;
+		}
+
+		public isSettingForSong(setting: ModSetting): boolean {
+			switch (setting) {
+				case ModSetting.mstTempo:
+				case ModSetting.mstReverb:
+				case ModSetting.mstSongVolume:
+				case ModSetting.mstNextBar:
+					return true;
+				default:
+					return false;
+			}
+		}
+
+		public realToModValue(value: number, setting: ModSetting): number {
+			switch (setting) {
+				case ModSetting.mstTempo:
+					value -= Config.tempoMin;
+					break;
+				case ModSetting.mstInsVolume:
+					value += Config.volumeRange / 2.0;
+					break;
+				case ModSetting.mstDetune:
+					value -= Config.detuneMin;
+					break;
+				case ModSetting.mstFilterCut:
+				case ModSetting.mstFilterPeak:
+				case ModSetting.mstSongVolume:
+				case ModSetting.mstPan:
+				case ModSetting.mstReverb:
+				case ModSetting.mstNextBar:
+				case ModSetting.mstFMSlider1:
+				case ModSetting.mstFMSlider2:
+				case ModSetting.mstFMSlider3:
+				case ModSetting.mstFMSlider4:
+				case ModSetting.mstFMFeedback:
+				case ModSetting.mstPulseWidth:
+				case ModSetting.mstNone:
+				default:
+					break;
+			}
+			return value;
+		}
+
+
+		public getVolumeCap = (isMod: boolean, modChannel?: number, modInstrument?: number, modCount?: number): number => {
+			if (!isMod || modChannel == undefined || modInstrument == undefined || modCount == undefined)
+				return 6;
+			else {
+				// Sigh, the way pitches count up and the visual ordering in the UI are flipped.
+				modCount = Config.modCount - modCount - 1;
+
+				let cap: number | undefined = this.mstMaxVols.get(this.channels[modChannel].instruments[modInstrument].modSettings[modCount]);
+				if (cap != undefined)
+					return cap;
+				else
+					return 6;
+			}
+		}
+
+		public getVolumeCapForSetting = (isMod: boolean, modSetting: ModSetting): number => {
+			if (!isMod)
+				return 6;
+			else {
+				let cap: number | undefined = this.mstMaxVols.get(modSetting);
+				if (cap != undefined)
+					return cap;
+				else
+					return 6;
+			}
+		}
+
 		public getChannelCount(): number {
-			return this.pitchChannelCount + this.noiseChannelCount;
+			return this.pitchChannelCount + this.noiseChannelCount + this.modChannelCount;
 		}
 
 		public getChannelIsNoise(channel: number): boolean {
-			return (channel >= this.pitchChannelCount);
+			return (channel >= this.pitchChannelCount && channel < this.pitchChannelCount + this.noiseChannelCount);
+		}
+
+		public getChannelIsMod(channel: number): boolean {
+			return (channel >= this.pitchChannelCount + this.noiseChannelCount);
 		}
 
 		public initToDefault(andResetChannels: boolean = true): void {
@@ -1191,17 +1411,18 @@ namespace beepbox {
 			this.instrumentsPerChannel = 1;
 
 			this.title = "Unnamed";
-			document.title = "JummBox 1.3";
+			document.title = Config.versionDisplayName;
 
 			if (andResetChannels) {
 				this.pitchChannelCount = 3;
 				this.noiseChannelCount = 1;
+				this.modChannelCount = 0;
 				for (let channelIndex = 0; channelIndex < this.getChannelCount(); channelIndex++) {
 					if (this.channels.length <= channelIndex) {
 						this.channels[channelIndex] = new Channel();
 					}
 					const channel: Channel = this.channels[channelIndex];
-					channel.octave = 3 - channelIndex; // [3, 2, 1, 0]; Descending octaves with drums at zero in last channel.
+					channel.octave = Math.max(3 - channelIndex, 0); // [3, 2, 1, 0, 0, ...]; Descending octaves with drums at zero in last channel and onward.
 
 					for (let pattern = 0; pattern < this.patternsPerChannel; pattern++) {
 						if (channel.patterns.length <= pattern) {
@@ -1212,12 +1433,13 @@ namespace beepbox {
 					}
 					channel.patterns.length = this.patternsPerChannel;
 
-					const isNoiseChannel: boolean = channelIndex >= this.pitchChannelCount;
+					const isNoiseChannel: boolean = channelIndex >= this.pitchChannelCount && channelIndex < this.pitchChannelCount + this.noiseChannelCount;
+					const isModChannel: boolean = channelIndex >= this.pitchChannelCount + this.noiseChannelCount;
 					for (let instrument = 0; instrument < this.instrumentsPerChannel; instrument++) {
 						if (channel.instruments.length <= instrument) {
-							channel.instruments[instrument] = new Instrument(isNoiseChannel);
+							channel.instruments[instrument] = new Instrument(isNoiseChannel, isModChannel);
 						}
-						channel.instruments[instrument].setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel);
+						channel.instruments[instrument].setTypeAndReset(isModChannel ? InstrumentType.mod : (isNoiseChannel ? InstrumentType.noise : InstrumentType.chip), isNoiseChannel, isModChannel);
 					}
 					channel.instruments.length = this.instrumentsPerChannel;
 
@@ -1248,7 +1470,7 @@ namespace beepbox {
 				buffer.push(encodedSongTitle.charCodeAt(i));
 			}
 
-			buffer.push(SongTagCode.channelCount, base64IntToCharCode[this.pitchChannelCount], base64IntToCharCode[this.noiseChannelCount]);
+			buffer.push(SongTagCode.channelCount, base64IntToCharCode[this.pitchChannelCount], base64IntToCharCode[this.noiseChannelCount], base64IntToCharCode[this.modChannelCount]);
 			buffer.push(SongTagCode.scale, base64IntToCharCode[this.scale]);
 			buffer.push(SongTagCode.key, base64IntToCharCode[this.key]);
 			buffer.push(SongTagCode.loopStart, base64IntToCharCode[this.loopStart >> 6], base64IntToCharCode[this.loopStart & 0x3f]);
@@ -1272,6 +1494,7 @@ namespace beepbox {
 					buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
 					buffer.push(SongTagCode.volume, base64IntToCharCode[(instrument.volume + Config.volumeRange / 2) >> 6], base64IntToCharCode[(instrument.volume + Config.volumeRange / 2) & 0x3f]);
 					buffer.push(SongTagCode.panning, base64IntToCharCode[instrument.pan >> 6], base64IntToCharCode[instrument.pan & 0x3f]);
+					buffer.push(SongTagCode.detune, base64IntToCharCode[(instrument.detune - Config.detuneMin) >> 6], base64IntToCharCode[(instrument.detune - Config.detuneMin) & 0x3f]);
 					buffer.push(SongTagCode.preset, base64IntToCharCode[instrument.preset >> 6], base64IntToCharCode[instrument.preset & 63]);
 					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects]);
 
@@ -1353,7 +1576,10 @@ namespace beepbox {
 					} else if (instrument.type == InstrumentType.pwm) {
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth], base64IntToCharCode[instrument.pulseEnvelope]);
-					} else {
+					} else if (instrument.type == InstrumentType.mod) {
+						// Handled down below. Could be moved, but meh.
+					}
+					else {
 						throw new Error("Unknown instrument type.");
 					}
 				}
@@ -1373,11 +1599,43 @@ namespace beepbox {
 			let neededInstrumentBits: number = 0;
 			while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
+
 				const isNoiseChannel: boolean = this.getChannelIsNoise(channel);
-				const octaveOffset: number = isNoiseChannel ? 0 : this.channels[channel].octave * 12;
-				let lastPitch: number = (isNoiseChannel ? 4 : 12) + octaveOffset;
-				const recentPitches: number[] = isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0];
-				const recentShapes: string[] = [];
+				const isModChannel: boolean = this.getChannelIsMod(channel);
+
+				// Some info about modulator settings immediately follows in mod channels.
+				if (isModChannel) {
+					for (let instrumentIndex: number = 0; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
+
+						let instrument: Instrument = this.channels[channel].instruments[instrumentIndex];
+
+						for (let mod: number = 0; mod < Config.modCount; mod++) {
+							const modStatus: ModStatus = instrument.modStatuses[mod];
+							const modChannel: number = instrument.modChannels[mod];
+							const modInstrument: number = instrument.modInstruments[mod];
+							const modSetting: number = instrument.modSettings[mod];
+
+							bits.write(2, modStatus);
+
+							// Channel/Instrument is only used if the status isn't "song" or "none".
+							if (modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) {
+								bits.write(8, modChannel);
+								bits.write(neededInstrumentBits, modInstrument);
+							}
+
+							// Mod setting is only used if the status isn't "none".
+							if (modStatus != ModStatus.msNone) {
+								bits.write(6, modSetting);
+							}
+						}
+					}
+				}
+
+				const octaveOffset: number = (isNoiseChannel || isModChannel) ? 0 : this.channels[channel].octave * 12;
+				let lastPitch: number = ((isNoiseChannel || isModChannel) ? 4 : 12) + octaveOffset;
+				const recentPitches: number[] = isModChannel ? [0, 1, 2, 3, 4, 5] : (isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0]);
+				const recentShapes: any[] = [];
+
 				for (let i: number = 0; i < recentPitches.length; i++) {
 					recentPitches[i] += octaveOffset;
 				}
@@ -1389,8 +1647,17 @@ namespace beepbox {
 
 						let curPart: number = 0;
 						for (const note of pattern.notes) {
+
+							// For mod channels, a negative offset may be necessary.
+							if (note.start < curPart && isModChannel) {
+								bits.write(2, 0); // rest, then...
+								bits.write(1, 1); // negative offset
+								bits.writePartDuration(curPart - note.start);
+							}
+
 							if (note.start > curPart) {
-								bits.write(2, 0); // rest
+								bits.write(2, 0); // rest, then...
+								if (isModChannel) bits.write(1, 0); // positive offset, only needed for mod channels
 								bits.writePartDuration(note.start - curPart);
 							}
 
@@ -1402,7 +1669,12 @@ namespace beepbox {
 
 							shapeBits.writePinCount(note.pins.length - 1);
 
-							shapeBits.write(3, note.pins[0].volume); // volume
+							if (!isModChannel) {
+								shapeBits.write(3, note.pins[0].volume); // volume
+							}
+							else {
+								shapeBits.write(9, note.pins[0].volume); // Modulator value. 9 bits for now = 512 max mod value?
+							}
 
 							let shapePart: number = 0;
 							let startPitch: number = note.pitches[0];
@@ -1420,7 +1692,13 @@ namespace beepbox {
 								}
 								shapeBits.writePartDuration(pin.time - shapePart);
 								shapePart = pin.time;
-								shapeBits.write(3, pin.volume);
+
+								if (!isModChannel) {
+									shapeBits.write(3, pin.volume); // volume
+								}
+								else {
+									shapeBits.write(9, pin.volume); // Modulator value. 9 bits for now = 512 max mod value?
+								}
 							}
 
 							const shapeString: string = String.fromCharCode.apply(null, shapeBits.encodeBase64([]));
@@ -1473,13 +1751,15 @@ namespace beepbox {
 							curPart = note.end;
 						}
 
-						if (curPart < this.beatsPerBar * Config.partsPerBeat) {
-							bits.write(2, 0); // rest
-							bits.writePartDuration(this.beatsPerBar * Config.partsPerBeat - curPart);
+						if (curPart < this.beatsPerBar * Config.partsPerBeat + (+isModChannel)) {
+							bits.write(2, 0); // rest, then...
+							if (isModChannel) bits.write(1, 0); // positive offset
+							bits.writePartDuration(this.beatsPerBar * Config.partsPerBeat + (+isModChannel) - curPart);
 						}
 					} else {
 						bits.write(1, 0);
 					}
+
 				}
 			}
 			let stringLength: number = bits.lengthBase64();
@@ -1538,7 +1818,7 @@ namespace beepbox {
 			if (variant == "beepbox" && (version == -1 || version > Song._latestBeepboxVersion || version < Song._oldestBeepboxVersion)) return;
 			if (variant == "jummbox" && (version == -1 || version > Song._latestJummBoxVersion || version < Song._oldestJummBoxVersion)) return;
 
-			//const beforeTwo:   boolean = version < 2;
+			const beforeTwo: boolean = version < 2;
 			const beforeThree: boolean = version < 3;
 			const beforeFour: boolean = version < 4;
 			const beforeFive: boolean = version < 5;
@@ -1555,6 +1835,7 @@ namespace beepbox {
 
 			let instrumentChannelIterator: number = 0;
 			let instrumentIndexIterator: number = -1;
+			let toSetOctaves: number[] = [];
 
 			while (charIndex < compressed.length) {
 				const command: number = compressed.charCodeAt(charIndex++);
@@ -1563,14 +1844,22 @@ namespace beepbox {
 					// Length of song name string
 					var songNameLength = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.title = decodeURIComponent(compressed.substring(charIndex, charIndex + songNameLength));
-					document.title = this.title + " - JummBox 1.3";
+					document.title = this.title + " - " + Config.versionDisplayName;
 
 					charIndex += songNameLength;
 				} else if (command == SongTagCode.channelCount) {
 					this.pitchChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.noiseChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+					if (variant == "beepbox" || beforeTwo) {
+						// No mod channel support before jummbox v2
+						this.modChannelCount = 0;
+					}
+					else {
+						this.modChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+					}
 					this.pitchChannelCount = clamp(Config.pitchChannelCountMin, Config.pitchChannelCountMax + 1, this.pitchChannelCount);
 					this.noiseChannelCount = clamp(Config.noiseChannelCountMin, Config.noiseChannelCountMax + 1, this.noiseChannelCount);
+					this.modChannelCount = clamp(Config.modChannelCountMin, Config.modChannelCountMax + 1, this.modChannelCount);
 					for (let channelIndex = this.channels.length; channelIndex < this.getChannelCount(); channelIndex++) {
 						this.channels[channelIndex] = new Channel();
 					}
@@ -1649,14 +1938,15 @@ namespace beepbox {
 					this.instrumentsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					this.instrumentsPerChannel = Math.max(Config.instrumentsPerChannelMin, Math.min(Config.instrumentsPerChannelMax, this.instrumentsPerChannel));
 					for (let channel = 0; channel < this.getChannelCount(); channel++) {
-						const isNoiseChannel: boolean = channel >= this.pitchChannelCount;
+						const isNoiseChannel: boolean = channel >= this.pitchChannelCount && channel < this.pitchChannelCount + this.noiseChannelCount;
+						const isModChannel: boolean = channel >= this.pitchChannelCount + this.noiseChannelCount;
 						for (let instrumentIndex = this.channels[channel].instruments.length; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
-							this.channels[channel].instruments[instrumentIndex] = new Instrument(isNoiseChannel);
+							this.channels[channel].instruments[instrumentIndex] = new Instrument(isNoiseChannel, isModChannel);
 						}
 						this.channels[channel].instruments.length = this.instrumentsPerChannel;
 						if (beforeSix && variant == "beepbox") {
 							for (let instrumentIndex = 0; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
-								this.channels[channel].instruments[instrumentIndex].setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel);
+								this.channels[channel].instruments[instrumentIndex].setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel, isModChannel);
 							}
 						}
 					}
@@ -1665,10 +1955,14 @@ namespace beepbox {
 				} else if (command == SongTagCode.channelOctave) {
 					if (beforeThree && variant == "beepbox") {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channels[channel].octave = clamp(0, Config.scrollableOctaves + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						// Set octave properly after note values are calculated, for now clamp it to the max possible window
+						this.channels[channel].octave = clamp(0, Config.maxScrollableOctaves + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						toSetOctaves[channel] = clamp(0, Config.scrollableOctaves + 1, this.channels[channel].octave);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
-							this.channels[channel].octave = clamp(0, Config.scrollableOctaves + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							// Set octave properly after note values are calculated, for now clamp it to the max possible window
+							this.channels[channel].octave = clamp(0, Config.maxScrollableOctaves + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							toSetOctaves[channel] = clamp(0, Config.scrollableOctaves + 1, this.channels[channel].octave);
 						}
 					}
 				} else if (command == SongTagCode.startInstrument) {
@@ -1679,7 +1973,7 @@ namespace beepbox {
 					}
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 					const instrumentType: number = clamp(0, InstrumentType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					instrument.setTypeAndReset(instrumentType, instrumentChannelIterator >= this.pitchChannelCount);
+					instrument.setTypeAndReset(instrumentType, instrumentChannelIterator >= this.pitchChannelCount && instrumentChannelIterator < this.pitchChannelCount + this.noiseChannelCount, instrumentChannelIterator >= this.pitchChannelCount + this.noiseChannelCount);
 				} else if (command == SongTagCode.preset) {
 					const presetValue: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].preset = presetValue;
@@ -1890,11 +2184,16 @@ namespace beepbox {
 
 					if (variant == "beepbox") {
 						// Beepbox has a panMax of 8 (9 total positions), Jummbox has a panMax of 100 (101 total positions)
-						instrument.pan = clamp(0, Config.panMax + 1,Math.round( base64CharCodeToInt[compressed.charCodeAt(charIndex++)] * ((Config.panMax)/8.0) ));
+						instrument.pan = clamp(0, Config.panMax + 1, Math.round(base64CharCodeToInt[compressed.charCodeAt(charIndex++)] * ((Config.panMax) / 8.0)));
 					}
 					else {
 						instrument.pan = clamp(0, Config.panMax + 1, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
+				}
+				else if (command == SongTagCode.detune) {
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+
+					instrument.detune = clamp(Config.detuneMin, Config.detuneMax + 1, ((base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) + Config.detuneMin);
 				}
 				else if (command == SongTagCode.customChipWave) {
 					let instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -2034,12 +2333,44 @@ namespace beepbox {
 					while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
 					while (true) {
 						const isNoiseChannel: boolean = this.getChannelIsNoise(channel);
+						const isModChannel: boolean = this.getChannelIsMod(channel);
 
-						const octaveOffset: number = isNoiseChannel ? 0 : this.channels[channel].octave * 12;
+						// Some info about modulator settings immediately follows in mod channels.
+						if (isModChannel) {
+							for (let instrumentIndex: number = 0; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
+
+								let instrument: Instrument = this.channels[channel].instruments[instrumentIndex];
+
+								for (let mod: number = 0; mod < Config.modCount; mod++) {
+									instrument.modStatuses[mod] = bits.read(2);
+
+									// Channel/Instrument is only used if the status isn't "song" or "none".
+									if (instrument.modStatuses[mod] == ModStatus.msForPitch || instrument.modStatuses[mod] == ModStatus.msForNoise) {
+
+										// Clamp to pitch/noise max
+										if (instrument.modStatuses[mod] == ModStatus.msForPitch) {
+											instrument.modChannels[mod] = clamp(0, this.pitchChannelCount + 1, bits.read(8));
+										}
+										else {
+											instrument.modChannels[mod] = clamp(0, this.noiseChannelCount + 1, bits.read(8));
+										}
+
+										instrument.modInstruments[mod] = clamp(0, this.instrumentsPerChannel + 1, bits.read(neededInstrumentBits));
+									}
+
+									// Mod setting is only used if the status isn't "none".
+									if (instrument.modStatuses[mod] != ModStatus.msNone) {
+										instrument.modSettings[mod] = bits.read(6);
+									}
+								}
+							}
+						}
+
+						const octaveOffset: number = (isNoiseChannel || isModChannel) ? 0 : this.channels[channel].octave * 12;
 						let note: Note | null = null;
 						let pin: NotePin | null = null;
-						let lastPitch: number = (isNoiseChannel ? 4 : 12) + octaveOffset;
-						const recentPitches: number[] = isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0];
+						let lastPitch: number = ((isNoiseChannel || isModChannel) ? 4 : 12) + octaveOffset;
+						const recentPitches: number[] = isModChannel ? [0, 1, 2, 3, 4, 5] : (isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0]);
 						const recentShapes: any[] = [];
 						for (let i: number = 0; i < recentPitches.length; i++) {
 							recentPitches[i] += octaveOffset;
@@ -2053,7 +2384,8 @@ namespace beepbox {
 
 							let curPart: number = 0;
 							const newNotes: Note[] = newPattern.notes;
-							while (curPart < this.beatsPerBar * Config.partsPerBeat) {
+							// Due to arbitrary note positioning, mod channels don't end the count until curPart actually exceeds the max
+							while (curPart < this.beatsPerBar * Config.partsPerBeat + (+isModChannel)) {
 
 								const useOldShape: boolean = bits.read(1) == 1;
 								let newNote: boolean = false;
@@ -2065,10 +2397,23 @@ namespace beepbox {
 								}
 
 								if (!useOldShape && !newNote) {
-									const restLength: number = (beforeSeven && variant == "beepbox")
-										? bits.readLegacyPartDuration() * Config.partsPerBeat / Config.rhythms[this.rhythm].stepsPerBeat
-										: bits.readPartDuration();
-									curPart += restLength;
+									// For mod channels, check if you need to move backward too (notes can appear in any order and offset from each other).
+									if (isModChannel) {
+										const isBackwards: boolean = bits.read(1) == 1;
+										const restLength: number = bits.readPartDuration();
+										if (isBackwards) {
+											curPart -= restLength;
+										}
+										else {
+											curPart += restLength;
+										}
+									} else {
+										const restLength: number = (beforeSeven && variant == "beepbox")
+											? bits.readLegacyPartDuration() * Config.partsPerBeat / Config.rhythms[this.rhythm].stepsPerBeat
+											: bits.readPartDuration();
+										curPart += restLength;
+
+									}
 								} else {
 									let shape: any;
 									let pinObj: any;
@@ -2086,8 +2431,10 @@ namespace beepbox {
 
 										if (variant == "beepbox") {
 											shape.initialVolume = bits.read(2) * 2;
-										} else {
+										} else if (!isModChannel) {
 											shape.initialVolume = bits.read(3);
+										} else {
+											shape.initialVolume = bits.read(9);
 										}
 
 										shape.pins = [];
@@ -2104,8 +2451,11 @@ namespace beepbox {
 
 											if (variant == "beepbox") {
 												pinObj.volume = bits.read(2) * 2;
-											} else {
+											} else if (!isModChannel) {
 												pinObj.volume = bits.read(3);
+											}
+											else {
+												pinObj.volume = bits.read(9);
 											}
 											shape.pins.push(pinObj);
 										}
@@ -2163,6 +2513,7 @@ namespace beepbox {
 										note.pins.push(pin);
 									}
 									curPart = note.end;
+
 									newNotes.push(note);
 								}
 							}
@@ -2177,6 +2528,12 @@ namespace beepbox {
 					} // while (true)
 				}
 			}
+
+			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
+				if (toSetOctaves[channel] != null) {
+					this.channels[channel].octave = toSetOctaves[channel];
+				}
+			}
 		}
 
 		public toJsonObject(enableIntro: boolean = true, loopCount: number = 1, enableOutro: boolean = true): Object {
@@ -2184,6 +2541,7 @@ namespace beepbox {
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 				const instrumentArray: Object[] = [];
 				const isNoiseChannel: boolean = this.getChannelIsNoise(channel);
+				const isModChannel: boolean = this.getChannelIsMod(channel);
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					instrumentArray.push(this.channels[channel].instruments[i].toJsonObject());
 				}
@@ -2192,12 +2550,13 @@ namespace beepbox {
 				for (const pattern of this.channels[channel].patterns) {
 					const noteArray: Object[] = [];
 					for (const note of pattern.notes) {
+						let volumeCap: number = this.getVolumeCapForSetting(isModChannel, this.channels[channel].instruments[pattern.instrument].modSettings[Config.modCount - note.pitches[0] - 1]);
 						const pointArray: Object[] = [];
 						for (const pin of note.pins) {
 							pointArray.push({
 								"tick": (pin.time + note.start) * Config.rhythms[this.rhythm].stepsPerBeat / Config.partsPerBeat,
 								"pitchBend": pin.interval,
-								"volume": Math.round(pin.volume * 100 / 6),
+								"volume": Math.round(pin.volume * 100 / volumeCap),
 							});
 						}
 
@@ -2225,7 +2584,7 @@ namespace beepbox {
 				}
 
 				channelArray.push({
-					"type": isNoiseChannel ? "drum" : "pitch",
+					"type": isModChannel ? "mod" : (isNoiseChannel ? "drum" : "pitch"),
 					"octaveScrollBar": this.channels[channel].octave,
 					"instruments": instrumentArray,
 					"patterns": patternArray,
@@ -2234,6 +2593,7 @@ namespace beepbox {
 			}
 
 			return {
+				"name": this.title,
 				"format": Song._format,
 				"version": Song._latestJummBoxVersion,
 				"scale": Config.scales[this.scale].name,
@@ -2257,6 +2617,10 @@ namespace beepbox {
 
 			//const version: number = jsonObject["version"] | 0;
 			//if (version > Song._latestVersion) return; // Go ahead and try to parse something from the future I guess? JSON is pretty easy-going!
+
+			if (jsonObject["name"] != undefined) {
+				this.title = jsonObject["name"];
+			}
 
 			this.scale = 0; // default to free.
 			if (jsonObject["scale"] != undefined) {
@@ -2330,6 +2694,7 @@ namespace beepbox {
 
 			const newPitchChannels: Channel[] = [];
 			const newNoiseChannels: Channel[] = [];
+			const newModChannels: Channel[] = [];
 			if (jsonObject["channels"]) {
 				for (let channelIndex: number = 0; channelIndex < jsonObject["channels"].length; channelIndex++) {
 					let channelObject: any = jsonObject["channels"][channelIndex];
@@ -2337,15 +2702,20 @@ namespace beepbox {
 					const channel: Channel = new Channel();
 
 					let isNoiseChannel: boolean = false;
+					let isModChannel: boolean = false;
 					if (channelObject["type"] != undefined) {
 						isNoiseChannel = (channelObject["type"] == "drum");
+						isModChannel = (channelObject["type"] == "mod");
 					} else {
 						// for older files, assume drums are channel 3.
 						isNoiseChannel = (channelIndex >= 3);
 					}
 					if (isNoiseChannel) {
 						newNoiseChannels.push(channel);
-					} else {
+					} else if (isModChannel) {
+						newModChannels.push(channel);
+					}
+					else {
 						newPitchChannels.push(channel);
 					}
 
@@ -2354,7 +2724,7 @@ namespace beepbox {
 					}
 
 					for (let i: number = channel.instruments.length; i < this.instrumentsPerChannel; i++) {
-						channel.instruments[i] = new Instrument(isNoiseChannel);
+						channel.instruments[i] = new Instrument(isNoiseChannel, isModChannel);
 					}
 					channel.instruments.length = this.instrumentsPerChannel;
 
@@ -2370,7 +2740,7 @@ namespace beepbox {
 
 					for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 						const instrument: Instrument = channel.instruments[i];
-						instrument.fromJsonObject(channelObject["instruments"][i], isNoiseChannel);
+						instrument.fromJsonObject(channelObject["instruments"][i], isNoiseChannel, isModChannel);
 					}
 
 					for (let i: number = 0; i < this.patternsPerChannel; i++) {
@@ -2385,8 +2755,7 @@ namespace beepbox {
 						if (patternObject["notes"] && patternObject["notes"].length > 0) {
 							const maxNoteCount: number = Math.min(this.beatsPerBar * Config.partsPerBeat, patternObject["notes"].length >>> 0);
 
-							///@TODO: Consider supporting notes specified in any timing order, sorting them and truncating as necessary. 
-							let tickClock: number = 0;
+							//let tickClock: number = 0;
 							for (let j: number = 0; j < patternObject["notes"].length; j++) {
 								if (j >= maxNoteCount) break;
 
@@ -2407,7 +2776,7 @@ namespace beepbox {
 								}
 								if (note.pitches.length < 1) continue;
 
-								let noteClock: number = tickClock;
+								//let noteClock: number = tickClock;
 								let startInterval: number = 0;
 								for (let k: number = 0; k < noteObject["points"].length; k++) {
 									const pointObject: any = noteObject["points"][k];
@@ -2416,17 +2785,19 @@ namespace beepbox {
 
 									const time: number = Math.round((+pointObject["tick"]) * Config.partsPerBeat / importedPartsPerBeat);
 
-									const volume: number = (pointObject["volume"] == undefined) ? 6 : Math.max(0, Math.min(6, Math.round((pointObject["volume"] | 0) * 6 / 100)));
+									let volumeCap: number = this.getVolumeCapForSetting(isModChannel, channel.instruments[pattern.instrument].modSettings[Config.modCount - note.pitches[0] - 1]);
+
+									const volume: number = (pointObject["volume"] == undefined) ? volumeCap : Math.max(0, Math.min(volumeCap, Math.round((pointObject["volume"] | 0) * volumeCap / 100)));
 
 									if (time > this.beatsPerBar * Config.partsPerBeat) continue;
 									if (note.pins.length == 0) {
-										if (time < noteClock) continue;
+										//if (time < noteClock) continue;
 										note.start = time;
 										startInterval = interval;
 									} else {
-										if (time <= noteClock) continue;
+										//if (time <= noteClock) continue;
 									}
-									noteClock = time;
+									//noteClock = time;
 
 									note.pins.push(makeNotePin(interval - startInterval, time - note.start, volume));
 								}
@@ -2464,7 +2835,7 @@ namespace beepbox {
 								}
 
 								pattern.notes.push(note);
-								tickClock = note.end;
+								//tickClock = note.end;
 							}
 						}
 					}
@@ -2477,11 +2848,14 @@ namespace beepbox {
 
 			if (newPitchChannels.length > Config.pitchChannelCountMax) newPitchChannels.length = Config.pitchChannelCountMax;
 			if (newNoiseChannels.length > Config.noiseChannelCountMax) newNoiseChannels.length = Config.noiseChannelCountMax;
+			if (newModChannels.length > Config.modChannelCountMax) newModChannels.length = Config.modChannelCountMax;
 			this.pitchChannelCount = newPitchChannels.length;
 			this.noiseChannelCount = newNoiseChannels.length;
+			this.modChannelCount = newModChannels.length;
 			this.channels.length = 0;
 			Array.prototype.push.apply(this.channels, newPitchChannels);
 			Array.prototype.push.apply(this.channels, newNoiseChannels);
+			Array.prototype.push.apply(this.channels, newModChannels);
 		}
 
 		public getPattern(channel: number, bar: number): Pattern | null {
@@ -2498,6 +2872,7 @@ namespace beepbox {
 		public getBeatsPerMinute(): number {
 			return this.tempo;
 		}
+
 	}
 
 	class Tone {
@@ -2543,6 +2918,18 @@ namespace beepbox {
 		public feedbackOutputs: number[] = [];
 		public feedbackMult: number = 0.0;
 		public feedbackDelta: number = 0.0;
+		public stereoVolumeLStart: number = 0.0;
+		public stereoVolumeRStart: number = 0.0;
+		public stereoVolumeLDelta: number = 0.0;
+		public stereoVolumeRDelta: number = 0.0;
+		public stereoDelayStart: number = 0.0;
+		public stereoDelayEnd: number = 0.0;
+		public stereoDelayDelta: number = 0.0;
+		public customVolumeStart: number = 0.0;
+		public customVolumeEnd: number = 0.0;
+		public filterResonanceStart: number = 0.0;
+		public filterResonanceDelta: number = 0.0;
+		public isFirstOrder: boolean = false;
 
 		constructor() {
 			this.reset();
@@ -2558,18 +2945,73 @@ namespace beepbox {
 			this.filterSample1 = 0.0;
 			this.liveInputSamplesHeld = 0.0;
 		}
+
 	}
 
 	export class Synth {
+		//debugVal: number = 0;
 
-		private static warmUpSynthesizer(song: Song | null): void {
+		private warmUpSynthesizer(song: Song | null): void {
 			// Don't bother to generate the drum waves unless the song actually
 			// uses them, since they may require a lot of computation.
 			if (song != null) {
-				for (let j: number = 0; j < song.getChannelCount(); j++) {
-					for (let i: number = 0; i < song.instrumentsPerChannel; i++) {
-						Synth.getInstrumentSynthFunction(song.channels[j].instruments[i]);
-						song.channels[j].instruments[i].warmUp();
+				for (let channel: number = 0; channel < song.getChannelCount(); channel++) {
+					for (let instrument: number = 0; instrument < song.instrumentsPerChannel; instrument++) {
+						Synth.getInstrumentSynthFunction(song.channels[channel].instruments[instrument]);
+						song.channels[channel].instruments[instrument].warmUp();
+					}
+
+				}
+			}
+		}
+
+		public computeLatestModValues(song: Song | null): void {
+
+			if (this.song != null && this.song.modChannelCount > 0) {
+
+				// Clear all mod values
+				this.modValues = [];
+				this.nextModValues = [];
+				this.modInsValues = [];
+				this.nextModInsValues = [];
+				for (let channel: number = 0; channel < this.song.pitchChannelCount + this.song.noiseChannelCount; channel++) {
+					this.modInsValues[channel] = [];
+					this.nextModInsValues[channel] = [];
+					for (let instrument: number = 0; instrument < this.song.instrumentsPerChannel; instrument++) {
+						this.modInsValues[channel][instrument] = [];
+						this.nextModInsValues[channel][instrument] = [];
+					}
+				}
+
+				// For mod channels, calculate last set value for each mod
+				for (let channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; channel < this.song.getChannelCount(); channel++) {
+					if (!(song!.channels[channel].muted)) {
+
+						let pattern: Pattern | null;
+						for (let currentBar: number = this.bar - 1; currentBar >= 0; currentBar--) {
+							pattern = song!.getPattern(channel, currentBar);
+							let instrumentIdx: number = song!.getPatternInstrument(channel, currentBar);
+							let instrument: Instrument = song!.channels[channel].instruments[instrumentIdx];
+							if (pattern != null) {
+								let latestPinTicks: number[] = [];
+								let latestPinValues: number[] = [];
+
+								for (const note of pattern.notes) {
+									if (latestPinTicks[Config.modCount - 1 - note.pitches[0]] == null || note.end > latestPinTicks[Config.modCount - 1 - note.pitches[0]]) {
+										latestPinTicks[Config.modCount - 1 - note.pitches[0]] = note.end;
+										latestPinValues[Config.modCount - 1 - note.pitches[0]] = note.pins[note.pins.length - 1].volume;
+									}
+								}
+
+								// Set modulator value, if it wasn't set in another pattern already scanned
+								for (let mod: number = 0; mod < Config.modCount; mod++) {
+									if (latestPinTicks[mod] != null) {
+										if (!this.isModActive(instrument.modSettings[mod], (instrument.modStatuses[mod] == ModStatus.msForSong), instrument.modChannels[mod] + ((instrument.modStatuses[mod] == ModStatus.msForNoise) ? this.song!.pitchChannelCount : 0), instrument.modInstruments[mod]))
+											this.setModValue(latestPinValues[mod], latestPinValues[mod], mod, instrument, instrument.modSettings[mod]);
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -2595,9 +3037,15 @@ namespace beepbox {
 		private tick: number = 0;
 		private tickSampleCountdown: number = 0;
 		private paused: boolean = true;
+		private modValues: (number | null)[];
+		private modInsValues: (number | null)[][][];
+		private nextModValues: (number | null)[];
+		private nextModInsValues: (number | null)[][][];
 
 		private readonly tonePool: Deque<Tone> = new Deque<Tone>();
 		private readonly activeTones: Array<Deque<Tone>> = [];
+		private readonly activeModTones: Array<Array<Deque<Tone>>> = [];
+		//private readonly releasedModTones: Array<Array<Deque<Tone>>> = [];
 		private readonly releasedTones: Array<Deque<Tone>> = [];
 		private readonly liveInputTones: Deque<Tone> = new Deque<Tone>();
 
@@ -2655,6 +3103,158 @@ namespace beepbox {
 			return this.getSamplesPerTick() * Config.ticksPerPart * Config.partsPerBeat * this.song.beatsPerBar;
 		}
 
+		// Returns the total samples in the song
+		public getTotalSamples(enableIntro: boolean, enableOutro: boolean, loop: number): number {
+			if (this.song == null)
+				return -1;
+
+			// Compute the window to be checked (start bar to end bar)
+			let startBar: number = enableIntro ? 0 : this.song.loopStart;
+			let endBar: number = enableOutro ? this.song.barCount : (this.song.loopStart + this.song.loopLength);
+			let hasTempoMods: boolean = false;
+			let hasNextBarMods: boolean = false;
+
+			// Determine if any tempo or next bar mods happen anywhere in the window
+			for (let channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; channel < this.song.getChannelCount(); channel++) {
+				for (let bar: number = startBar; bar < endBar; bar++) {
+					let pattern: Pattern | null = this.song.getPattern(channel, bar);
+					if (pattern != null) {
+						let instrument: Instrument = this.song.channels[channel].instruments[pattern.instrument];
+						for (let mod: number = 0; mod < Config.modCount; mod++) {
+							if (instrument.modSettings[mod] == ModSetting.mstTempo && instrument.modStatuses[mod] == ModStatus.msForSong) {
+								hasTempoMods = true;
+							}
+							if (instrument.modSettings[mod] == ModSetting.mstNextBar && instrument.modStatuses[mod] == ModStatus.msForSong) {
+								hasNextBarMods = true;
+							}
+						}
+					}
+				}
+			}
+
+			if (hasTempoMods || hasNextBarMods) {
+				// Run from start bar to end bar and observe looping, computing average tempo across each bar
+				let bar: number = startBar;
+				let ended: boolean = false;
+				let prevTempo: number = this.song.tempo;
+				let totalSamples: number = 0;
+
+				while (!ended) {
+					// Compute the subsection of the pattern that will play
+					let partsInBar: number = Config.partsPerBeat * this.song.beatsPerBar;
+					let currentPart: number = 0;
+
+					if (hasNextBarMods) {
+						for (let channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; channel < this.song.getChannelCount(); channel++) {
+							let pattern: Pattern | null = this.song.getPattern(channel, bar);
+							if (pattern != null) {
+								let instrument: Instrument = this.song.channels[channel].instruments[pattern.instrument];
+								for (let mod: number = 0; mod < Config.modCount; mod++) {
+									if (instrument.modSettings[mod] == ModSetting.mstNextBar && instrument.modStatuses[mod] == ModStatus.msForSong) {
+										for (const note of pattern.notes) {
+											if (note.pitches[0] == (Config.modCount - 1 - mod)) {
+												// Find the earliest next bar note.
+												if (partsInBar > note.start)
+													partsInBar = note.start;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+
+					// Compute average tempo in this tick window, or use last tempo if nothing happened
+					if (hasTempoMods) {
+						let foundMod: boolean = false;
+						for (let channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; channel < this.song.getChannelCount(); channel++) {
+							if (foundMod == false) {
+								let pattern: Pattern | null = this.song.getPattern(channel, bar);
+								if (pattern != null) {
+									let instrument: Instrument = this.song.channels[channel].instruments[pattern.instrument];
+									for (let mod: number = 0; mod < Config.modCount; mod++) {
+										if (foundMod == false && instrument.modSettings[mod] == ModSetting.mstTempo && instrument.modStatuses[mod] == ModStatus.msForSong) {
+											// Only the first tempo mod instrument for this bar will be checked.
+											foundMod = true;
+											// Need to re-sort the notes by start time to make the next part much less painful.
+											pattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
+											for (const note of pattern.notes) {
+												if (note.pitches[0] == (Config.modCount - 1 - mod)) {
+													// Compute samples up to this note
+													totalSamples += (Math.min(partsInBar - currentPart, note.start - currentPart)) * Config.ticksPerPart * this.getSamplesPerTickSpecificBPM(prevTempo);
+
+													if (note.start < partsInBar) {
+														for (let pinIdx: number = 1; pinIdx < note.pins.length; pinIdx++) {
+															// Compute samples up to this pin
+															if (note.pins[pinIdx - 1].time + note.start <= partsInBar) {
+																const tickLength: number = Config.ticksPerPart * Math.min(partsInBar - (note.start + note.pins[pinIdx - 1].time), note.pins[pinIdx].time - note.pins[pinIdx - 1].time);
+																const prevPinTempo: number = this.song.modValueToReal(note.pins[pinIdx - 1].volume, ModSetting.mstTempo);
+																let currPinTempo: number = this.song.modValueToReal(note.pins[pinIdx].volume, ModSetting.mstTempo);
+																if (note.pins[pinIdx].time + note.start > partsInBar) {
+																	// Compute an intermediary tempo since bar changed over mid-pin. Maybe I'm deep in "what if" territory now!
+																	currPinTempo = this.song.modValueToReal(note.pins[pinIdx - 1].volume + (note.pins[pinIdx].volume - note.pins[pinIdx - 1].volume) * (partsInBar - (note.start + note.pins[pinIdx - 1].time)) / (note.pins[pinIdx].time - note.pins[pinIdx - 1].time), ModSetting.mstTempo);
+																}
+																let bpmScalar: number = Config.partsPerBeat * Config.ticksPerPart / 60;
+
+																if (currPinTempo != prevPinTempo) {
+
+																	// Definite integral of SamplesPerTick w/r/t beats to find total samples from start point to end point for a variable tempo
+																	// The starting formula is
+																	//	 SamplesPerTick = SamplesPerSec / ((PartsPerBeat * TicksPerPart) / SecPerMin) * BeatsPerMin )
+																	//
+																	// This is an expression of samples per tick "instantaneously", and it can be multiplied by a number of ticks to get a sample count.
+																	// But this isn't the full story. BeatsPerMin, e.g. tempo, changes throughout the interval so it has to be expressed in terms of ticks, "t"
+																	// ( Also from now on PartsPerBeat, TicksPerPart, and SecPerMin are compbined into one scalar, called "BPMScalar" )
+																	// Substituting BPM for a step variable that moves with respect to the current tick, we get
+																	//	 SamplesPerTick = SamplesPerSec / (BPMScalar * ( (EndTempo - StartTempo / TickLength) * t + StartTempo ) )
+																	//
+																	// When this equation is integrated from 0 to TickLength with respect to t, we get the following expression:
+																	//   Samples = - SamplesPerSec * TickLength * ( log( BPMScalar * EndTempo * TickLength ) - log( BPMScalar * StartTempo * TickLength ) ) / BPMScalar * ( StartTempo - EndTempo )
+
+																	totalSamples += - this.samplesPerSecond * tickLength * (Math.log(bpmScalar * currPinTempo * tickLength) - Math.log(bpmScalar * prevPinTempo * tickLength)) / (bpmScalar * (prevPinTempo - currPinTempo));
+
+																}
+																else {
+
+																	// No tempo change between the two pins.
+																	totalSamples += tickLength * this.getSamplesPerTickSpecificBPM(currPinTempo);
+
+																}
+																prevTempo = currPinTempo;
+															}
+															currentPart = Math.min(note.start + note.pins[pinIdx].time, partsInBar);
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+
+					// Compute samples for the rest of the bar
+					totalSamples += (partsInBar - currentPart) * Config.ticksPerPart * this.getSamplesPerTickSpecificBPM(prevTempo);
+
+					bar++;
+					if (loop != 0 && bar == this.song.loopStart + this.song.loopLength) {
+						bar = this.song.loopStart;
+						if (loop > 0) loop--;
+					}
+					if (bar >= endBar) {
+						ended = true;
+					}
+				}
+
+				return Math.ceil(totalSamples);
+			}
+			else {
+				// No tempo or next bar mods... phew! Just calculate normally.
+				return this.getSamplesPerBar() * this.getTotalBars(enableIntro, enableOutro);
+			}
+		}
+
 		public getTotalBars(enableIntro: boolean, enableOutro: boolean): number {
 			if (this.song == null) throw new Error();
 			let bars: number = this.song.loopLength * (this.loopRepeatCount + 1);
@@ -2679,7 +3279,9 @@ namespace beepbox {
 			if (!this.paused) return;
 			this.paused = false;
 
-			Synth.warmUpSynthesizer(this.song);
+			this.warmUpSynthesizer(this.song);
+
+			this.computeLatestModValues(this.song);
 
 			const contextClass = (window.AudioContext || window.webkitAudioContext);
 			this.audioCtx = this.audioCtx || new contextClass();
@@ -2690,6 +3292,9 @@ namespace beepbox {
 			this.scriptNode.connect(this.audioCtx.destination);
 
 			this.samplesPerSecond = this.audioCtx.sampleRate;
+
+			if (this.song == null) return;
+
 		}
 
 		public pause(): void {
@@ -2701,6 +3306,102 @@ namespace beepbox {
 			}
 			this.audioCtx = null;
 			this.scriptNode = null;
+			this.modValues = [];
+			this.modInsValues = [];
+			this.nextModValues = [];
+			this.nextModInsValues = [];
+		}
+
+		public setModValue(volumeStart: number, volumeEnd: number, mod: number, instrument: Instrument, setting: ModSetting): number {
+			let val: number;
+			let nextVal: number;
+			switch (setting) {
+				case ModSetting.mstSongVolume:
+				case ModSetting.mstReverb:
+				case ModSetting.mstTempo:
+					val = (this.song as Song).modValueToReal(volumeStart, setting);
+					nextVal = (this.song as Song).modValueToReal(volumeEnd, setting);
+					if (this.modValues[setting] == null || this.modValues[setting] != val || this.nextModValues[setting] != nextVal) {
+						this.modValues[setting] = val;
+						this.nextModValues[setting] = nextVal;
+					}
+					break;
+				case ModSetting.mstInsVolume:
+				case ModSetting.mstPan:
+				case ModSetting.mstPulseWidth:
+				case ModSetting.mstFilterCut:
+				case ModSetting.mstFilterPeak:
+				case ModSetting.mstFMSlider1:
+				case ModSetting.mstFMSlider2:
+				case ModSetting.mstFMSlider3:
+				case ModSetting.mstFMSlider4:
+				case ModSetting.mstFMFeedback:
+				case ModSetting.mstDetune:
+					val = this.song!.modValueToReal(volumeStart, setting);
+					nextVal = this.song!.modValueToReal(volumeEnd, setting);
+					let channelAdjust: number = instrument.modChannels[mod] + ((instrument.modStatuses[mod] == ModStatus.msForNoise) ? this.song!.pitchChannelCount : 0);
+
+					if (this.modInsValues[channelAdjust][instrument.modInstruments[mod]][setting] == null
+						|| this.modInsValues[channelAdjust][instrument.modInstruments[mod]][setting] != val
+						|| this.nextModInsValues[channelAdjust][instrument.modInstruments[mod]][setting] != nextVal) {
+						this.modInsValues[channelAdjust][instrument.modInstruments[mod]][setting] = val;
+						this.nextModInsValues[channelAdjust][instrument.modInstruments[mod]][setting] = nextVal;
+					}
+					break;
+				case ModSetting.mstNextBar:
+					val = (this.song as Song).modValueToReal(volumeStart, setting);
+					break;
+				case ModSetting.mstNone:
+				default:
+					val = -1;
+					break;
+			}
+
+			return val;
+		}
+
+		public getModValue(setting: ModSetting, forSong: boolean, channel?: number, instrument?: number, nextVal?: boolean): number {
+			if (forSong) {
+				if (this.modValues[setting] != null && this.nextModValues[setting] != null) {
+					return nextVal ? this.nextModValues[setting]! : this.modValues[setting]!;
+				}
+			} else if (channel != undefined && instrument != undefined) {
+				if (this.modInsValues[channel][instrument][setting] != null && this.nextModInsValues[channel][instrument][setting] != null) {
+					return nextVal ? this.nextModInsValues[channel][instrument][setting]! : this.modInsValues[channel][instrument][setting]!;
+				}
+			}
+			return -1;
+		}
+
+		// Checks if any mod is active for the given channel/instrument OR if any mod is active for the song scope. Could split the logic if needed later.
+		public isAnyModActive(channel: number, instrument: number): boolean {
+			for (let setting: number = 0; setting < ModSetting.mstMaxValue; setting++) {
+				if ((this.modValues != undefined && this.modValues[setting] != null)
+					|| (this.modInsValues != undefined && this.modInsValues[channel] != undefined && this.modInsValues[channel][instrument] != undefined && this.modInsValues[channel][instrument][setting] != null)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		public unsetMod(setting: ModSetting, channel?: number, instrument?: number) {
+			if (this.isModActive(setting, true) || (channel != undefined && instrument != undefined && this.isModActive(setting, false, channel, instrument))) {
+				this.modValues[setting] = null;
+				this.nextModValues[setting] = null;
+				if (channel != undefined && instrument != undefined) {
+					this.modInsValues[channel][instrument][setting] = null;
+					this.nextModInsValues[channel][instrument][setting] = null;
+				}
+			}
+		}
+
+		public isModActive(setting: ModSetting, forSong: boolean, channel?: number, instrument?: number): boolean {
+			if (forSong) {
+				return (this.modValues != undefined && this.modValues[setting] != null);
+			} else if (channel != undefined && instrument != undefined && this.modInsValues != undefined && this.modInsValues[channel] != null && this.modInsValues[channel][instrument] != null && this.modInsValues[channel][instrument][setting] != null) {
+				return (this.modInsValues[channel][instrument][setting] != null);
+			}
+			return false;
 		}
 
 		private resetBuffers(): void {
@@ -2741,6 +3442,9 @@ namespace beepbox {
 				const oldBar: number = this.bar;
 				this.bar = this.song.loopStart;
 				this.playheadInternal += this.bar - oldBar;
+
+				if (this.playing)
+					this.computeLatestModValues(this.song);
 			}
 		}
 
@@ -2752,6 +3456,25 @@ namespace beepbox {
 				this.bar = 0;
 			}
 			this.playheadInternal += this.bar - oldBar;
+			
+			if (this.playing)
+				this.computeLatestModValues(this.song);
+		}
+
+		public skipBar(): void {
+			if (!this.song) return;
+			const samplesPerTick: number = this.getSamplesPerTick();
+			this.bar++;
+			this.beat = 0;
+			this.part = 0;
+			this.tick = 0;
+			this.tickSampleCountdown = samplesPerTick;
+
+			if (this.loopRepeatCount != 0 && this.bar == this.song.loopStart + this.song.loopLength) {
+				this.bar = this.song.loopStart;
+				if (this.loopRepeatCount > 0) this.loopRepeatCount--;
+			}
+
 		}
 
 		public firstBar(): void {
@@ -2760,6 +3483,9 @@ namespace beepbox {
 			this.playheadInternal = 0;
 			this.beat = 0;
 			this.part = 0;
+
+			if (this.playing)
+			this.computeLatestModValues(this.song);
 		}
 
 		public jumpToEditingBar(bar: number): void {
@@ -2767,16 +3493,12 @@ namespace beepbox {
 
 			this.bar = bar;
 
-			//if (this.bar < this.song.loopStart) {
-			//  this.enableIntro = true;
-			//}
-			//if (this.bar >= this.song.loopStart + this.song.loopLength) {
-			//    this.enableOutro = true;
-			//}
-
 			this.playheadInternal = bar;
 			this.beat = 0;
 			this.part = 0;
+
+			if (this.playing)
+				this.computeLatestModValues(this.song);
 		}
 
 		public prevBar(): void {
@@ -2787,6 +3509,9 @@ namespace beepbox {
 				this.bar = this.song.barCount - 1;
 			}
 			this.playheadInternal += this.bar - oldBar;
+
+			if (this.playing)
+			this.computeLatestModValues(this.song);
 		}
 
 		private audioProcessCallback = (audioProcessingEvent: any): void => {
@@ -2812,7 +3537,8 @@ namespace beepbox {
 				return;
 			}
 
-			const channelCount: number = this.song.getChannelCount();
+			const channelCount: number = this.song.pitchChannelCount + this.song.noiseChannelCount;
+
 			for (let i: number = this.activeTones.length; i < channelCount; i++) {
 				this.activeTones[i] = new Deque<Tone>();
 				this.releasedTones[i] = new Deque<Tone>();
@@ -2820,7 +3546,20 @@ namespace beepbox {
 			this.activeTones.length = channelCount;
 			this.releasedTones.length = channelCount;
 
-			const samplesPerTick: number = this.getSamplesPerTick();
+			for (let i: number = this.activeModTones.length; i < this.song.modChannelCount; i++) {
+				this.activeModTones[i] = [];
+				//this.releasedModTones[i] = [];
+				for (let mod: number = 0; mod < Config.modCount; mod++) {
+					this.activeModTones[i][mod] = new Deque<Tone>();
+					//this.releasedModTones[i][mod] = new Deque<Tone>();
+				}
+				this.activeModTones[i].length = Config.modCount;
+				//this.releasedModTones[i].length = Config.modCount;
+			}
+			this.activeModTones.length = this.song.modChannelCount;
+			//this.releasedModTones.length = this.song.modChannelCount;
+
+			let samplesPerTick: number = this.getSamplesPerTick();
 			let bufferIndex: number = 0;
 			let ended: boolean = false;
 
@@ -2867,7 +3606,6 @@ namespace beepbox {
 			const samplesForChorus: Float32Array = this.samplesForChorus;
 			const samplesForChorusReverb: Float32Array = this.samplesForChorusReverb;
 
-			// Post processing parameters:
 			const volume: number = +this.volume;
 			const chorusDelayLine: Float32Array = this.chorusDelayLine;
 			const reverbDelayLine: Float32Array = this.reverbDelayLine;
@@ -2887,7 +3625,11 @@ namespace beepbox {
 			let reverbFeedback1: number = +this.reverbFeedback1;
 			let reverbFeedback2: number = +this.reverbFeedback2;
 			let reverbFeedback3: number = +this.reverbFeedback3;
-			const reverb: number = Math.pow(this.song.reverb / Config.reverbRange, 0.667) * 0.425;
+			let useReverb: number = this.song.reverb;
+			if (this.isModActive(ModSetting.mstReverb, true)) {
+				useReverb = this.getModValue(ModSetting.mstReverb, true);
+			}
+			const reverb: number = Math.pow(useReverb / Config.reverbRange, 0.667) * 0.425;
 			//const highpassFilter: number = Math.pow(0.5, 400 / this.samplesPerSecond);
 			const limitDecay: number = 1.0 - Math.pow(0.5, 4.0 / this.samplesPerSecond);
 			const limitRise: number = 1.0 - Math.pow(0.5, 4000.0 / this.samplesPerSecond);
@@ -2901,33 +3643,54 @@ namespace beepbox {
 				const runLength: number = (this.tickSampleCountdown <= samplesLeftInBuffer)
 					? this.tickSampleCountdown
 					: samplesLeftInBuffer;
-				for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
+
+				for (let modChannel: number = 0, channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; modChannel < this.song.modChannelCount; modChannel++ , channel++) {
+					// Also determines mod tones.
+					this.determineCurrentActiveTones(this.song, channel);
+
+					for (let mod: number = 0; mod < Config.modCount; mod++) {
+						for (let i: number = 0; i < this.activeModTones[modChannel][mod].count(); i++) {
+							const tone: Tone = this.activeModTones[modChannel][mod].get(i);
+
+							if (this.song.channels[channel].muted == false)
+								this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, false, false);
+						}
+					}
+					// Could do released mod tones here too, but that functionality is unused currently.
+					/* for (let i: number = 0; i < this.releasedModtones[channel].count(); i++) { ... */
+				}
+
+				for (let channel: number = 0; channel < this.song.pitchChannelCount + this.song.noiseChannelCount; channel++) {
 
 					if (channel == this.liveInputChannel) {
 						this.determineLiveInputTones(this.song);
 
 						for (let i: number = 0; i < this.liveInputTones.count(); i++) {
 							const tone: Tone = this.liveInputTones.get(i);
+							// Hmm. Will allow active input from a muted channel for now.
+							//if (this.song.channels[channel].muted == false)
 							this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, false, false);
 						}
 					}
 
-					this.determineCurrentActiveTones(this.song, channel);
-					for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
-						const tone: Tone = this.activeTones[channel].get(i);
-						this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, false, false);
-					}
-					for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
-						const tone: Tone = this.releasedTones[channel].get(i);
-						if (tone.ticksSinceReleased >= tone.instrument.getTransition().releaseTicks) {
-							this.freeReleasedTone(channel, i);
-							i--;
-							continue;
+					if (this.song.channels[channel].muted == false) {
+						this.determineCurrentActiveTones(this.song, channel);
+						for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
+							const tone: Tone = this.activeTones[channel].get(i);
+							this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, false, false);
 						}
+						for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
+							const tone: Tone = this.releasedTones[channel].get(i);
+							if (tone.ticksSinceReleased >= tone.instrument.getTransition().releaseTicks) {
+								this.freeReleasedTone(channel, i);
+								i--;
+								continue;
+							}
 
-						const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
+							const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
 
-						this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
+							this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
+						}
 					}
 				}
 
@@ -3054,7 +3817,7 @@ namespace beepbox {
 				if (this.tickSampleCountdown <= 0) {
 
 					// Track how long tones have been released, and free them if there are too many.
-					for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
+					for (let channel: number = 0; channel < this.song.pitchChannelCount + this.song.noiseChannelCount; channel++) {
 						for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
 							const tone: Tone = this.releasedTones[channel].get(i);
 							tone.ticksSinceReleased++;
@@ -3074,7 +3837,7 @@ namespace beepbox {
 						this.part++;
 
 						// Check if any active tones should be released.
-						for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
+						for (let channel: number = 0; channel < this.song.pitchChannelCount + this.song.noiseChannelCount; channel++) {
 							for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
 								const tone: Tone = this.activeTones[channel].get(i);
 								const transition: Transition = tone.instrument.getTransition();
@@ -3086,6 +3849,20 @@ namespace beepbox {
 									}
 									this.activeTones[channel].remove(i);
 									i--;
+								}
+							}
+						}
+
+						for (let channel: number = 0; channel < this.song.modChannelCount; channel++) {
+							for (let mod: number = 0; mod < Config.modCount; mod++) {
+								for (let i: number = 0; i < this.activeModTones[channel][mod].count(); i++) {
+									const tone: Tone = this.activeModTones[channel][mod].get(i);
+									const transition: Transition = tone.instrument.getTransition();
+									if (!transition.isSeamless && tone.note != null && tone.note.end == this.part + this.beat * Config.partsPerBeat) {
+										this.freeTone(tone);
+										this.activeModTones[channel][mod].remove(i);
+										i--;
+									}
 								}
 							}
 						}
@@ -3109,6 +3886,27 @@ namespace beepbox {
 										this.pause();
 									}
 								}
+							}
+						}
+					}
+				}
+
+				// Update mod values so that next values copy to current values
+				for (let setting: number = 0; setting < ModSetting.mstMaxValue; setting++) {
+					if (this.nextModValues != null && this.nextModValues[setting] != null)
+						this.modValues[setting] = this.nextModValues[setting];
+				}
+
+				// Set samples per tick if song tempo mods changed it
+				if (this.isModActive(ModSetting.mstTempo, true)) {
+					samplesPerTick = this.getSamplesPerTick();
+				}
+
+				for (let setting: number = 0; setting < ModSetting.mstMaxValue; setting++) {
+					for (let channel: number = 0; channel < channelCount; channel++) {
+						for (let instrument: number = 0; instrument < this.song.instrumentsPerChannel; instrument++) {
+							if (this.nextModInsValues != null && this.nextModInsValues[channel] != null && this.nextModInsValues[channel][instrument] != null && this.nextModInsValues[channel][instrument][setting] != null) {
+								this.modInsValues[channel][instrument][setting] = this.nextModInsValues[channel][instrument][setting];
 							}
 						}
 					}
@@ -3154,6 +3952,9 @@ namespace beepbox {
 				samplesAccumulated = 0;
 			}
 			*/
+
+			//this.debugVal += outputBufferLength;
+			//console.log(this.bar + " ~ " + this.debugVal);
 		}
 
 		private freeTone(tone: Tone): void {
@@ -3171,12 +3972,30 @@ namespace beepbox {
 		}
 
 		private releaseTone(channel: number, tone: Tone): void {
-			this.releasedTones[channel].pushFront(tone);
+			if (this.song == null || !this.song.getChannelIsMod(channel)) {
+				this.releasedTones[channel].pushFront(tone);
+			}
+			else {
+				/*
+				for (let mod = 0; mod < Config.modCount; mod++) {
+					this.releasedModTones[channel - (this.song.pitchChannelCount + this.song.noiseChannelCount)][mod].pushFront(tone);
+				}
+				*/
+			}
 		}
 
 		private freeReleasedTone(channel: number, toneIndex: number): void {
-			this.freeTone(this.releasedTones[channel].get(toneIndex));
-			this.releasedTones[channel].remove(toneIndex);
+			if (this.song == null || !this.song.getChannelIsMod(channel)) {
+				this.freeTone(this.releasedTones[channel].get(toneIndex));
+				this.releasedTones[channel].remove(toneIndex);
+			} else {
+				/*
+				for (let mod = 0; mod < Config.modCount; mod++) {
+					this.freeTone(this.releasedModTones[channel - (this.song.pitchChannelCount + this.song.noiseChannelCount)][mod].get(toneIndex));
+					this.releasedModTones[channel][mod].remove(toneIndex);
+				}
+				*/
+			}
 		}
 
 		public freeAllTones(): void {
@@ -3193,6 +4012,22 @@ namespace beepbox {
 					this.freeTone(this.releasedTones[i].popBack());
 				}
 			}
+			for (let i = 0; i < this.activeModTones.length; i++) {
+				for (let mod = 0; mod < this.activeModTones[i].length; mod++) {
+					while (this.activeModTones[i][mod].count() > 0) {
+						this.freeTone(this.activeModTones[i][mod].popBack());
+					}
+				}
+			}
+			/*
+			for (let i = 0; i < this.releasedModTones.length; i++) {
+				for (let mod = 0; mod < this.releasedModTones[i].length; mod++) {
+					while (this.releasedModTones[i][mod].count() > 0) {
+						this.freeTone(this.releasedModTones[i][mod].popBack());
+					}
+				}
+			}
+			*/
 		}
 
 		private determineLiveInputTones(song: Song): void {
@@ -3231,35 +4066,93 @@ namespace beepbox {
 			const instrument: Instrument = song.channels[channel].instruments[song.getPatternInstrument(channel, this.bar)];
 			const pattern: Pattern | null = song.getPattern(channel, this.bar);
 			const time: number = this.part + this.beat * Config.partsPerBeat;
-			let note: Note | null = null;
-			let prevNote: Note | null = null;
-			let nextNote: Note | null = null;
 
-			if (pattern != null) {
-				for (let i: number = 0; i < pattern.notes.length; i++) {
-					if (pattern.notes[i].end <= time) {
-						prevNote = pattern.notes[i];
-					} else if (pattern.notes[i].start <= time && pattern.notes[i].end > time) {
-						note = pattern.notes[i];
-					} else if (pattern.notes[i].start > time) {
-						nextNote = pattern.notes[i];
-						break;
+			if (this.song != null && song.getChannelIsMod(channel)) {
+				// Offset channel (first mod channel is 0 index in mod tone array)
+				let modChannelIdx = channel - (song.pitchChannelCount + song.noiseChannelCount);
+
+				// For mod channels, notes aren't strictly arranged chronologically. Also, each pitch value could play or not play at a given time. So... a bit more computation involved!
+				// The same transition logic should apply though, even though it isn't really used by mod channels.
+				let notes: (Note | null)[] = [];
+				let prevNotes: (Note | null)[] = [];
+				let nextNotes: (Note | null)[] = [];
+				let fillCount: number = Config.modCount;
+				while (fillCount--) {
+					notes.push(null);
+					prevNotes.push(null);
+					nextNotes.push(null);
+				}
+
+				if (pattern != null) {
+					for (let i: number = 0; i < pattern.notes.length; i++) {
+						if (pattern.notes[i].end <= time) {
+							// Actually need to check which note starts closer to the start of this note.
+							if (prevNotes[pattern.notes[i].pitches[0]] == null || pattern.notes[i].end > (prevNotes[pattern.notes[i].pitches[0]] as Note).start) {
+								prevNotes[pattern.notes[i].pitches[0]] = pattern.notes[i];
+							}
+						}
+						else if (pattern.notes[i].start <= time && pattern.notes[i].end > time) {
+							notes[pattern.notes[i].pitches[0]] = pattern.notes[i];
+						}
+						else if (pattern.notes[i].start > time) {
+							// Actually need to check which note starts closer to the end of this note.
+							if (nextNotes[pattern.notes[i].pitches[0]] == null || pattern.notes[i].start < (nextNotes[pattern.notes[i].pitches[0]] as Note).start) {
+								nextNotes[pattern.notes[i].pitches[0]] = pattern.notes[i];
+							}
+						}
+					}
+				}
+
+				for (let mod: number = 0; mod < Config.modCount; mod++) {
+					const toneList: Deque<Tone> = this.activeModTones[modChannelIdx][mod];
+					if (notes[mod] != null) {
+						if (prevNotes[mod] != null && (prevNotes[mod] as Note).end != (notes[mod] as Note).start) prevNotes[mod] = null;
+						if (nextNotes[mod] != null && (nextNotes[mod] as Note).start != (notes[mod] as Note).end) nextNotes[mod] = null;
+						this.syncTones(channel, toneList, instrument, (notes[mod] as Note).pitches, (notes[mod] as Note), (prevNotes[mod] as Note), (nextNotes[mod] as Note), time);
+					} else {
+						while (toneList.count() > 0) {
+							// Automatically free or release seamless tones if there's no new note to take over.
+							if (toneList.peakBack().instrument.getTransition().releases) {
+								this.releaseTone(channel, toneList.popBack());
+							} else {
+								this.freeTone(toneList.popBack());
+							}
+						}
 					}
 				}
 			}
+			else {
 
-			const toneList: Deque<Tone> = this.activeTones[channel];
-			if (note != null) {
-				if (prevNote != null && prevNote.end != note.start) prevNote = null;
-				if (nextNote != null && nextNote.start != note.end) nextNote = null;
-				this.syncTones(channel, toneList, instrument, note.pitches, note, prevNote, nextNote, time);
-			} else {
-				while (toneList.count() > 0) {
-					// Automatically free or release seamless tones if there's no new note to take over.
-					if (toneList.peakBack().instrument.getTransition().releases) {
-						this.releaseTone(channel, toneList.popBack());
-					} else {
-						this.freeTone(toneList.popBack());
+				let note: Note | null = null;
+				let prevNote: Note | null = null;
+				let nextNote: Note | null = null;
+
+				if (pattern != null) {
+					for (let i: number = 0; i < pattern.notes.length; i++) {
+						if (pattern.notes[i].end <= time) {
+							prevNote = pattern.notes[i];
+						} else if (pattern.notes[i].start <= time && pattern.notes[i].end > time) {
+							note = pattern.notes[i];
+						} else if (pattern.notes[i].start > time) {
+							nextNote = pattern.notes[i];
+							break;
+						}
+					}
+				}
+
+				const toneList: Deque<Tone> = this.activeTones[channel];
+				if (note != null) {
+					if (prevNote != null && prevNote.end != note.start) prevNote = null;
+					if (nextNote != null && nextNote.start != note.end) nextNote = null;
+					this.syncTones(channel, toneList, instrument, note.pitches, note, prevNote, nextNote, time);
+				} else {
+					while (toneList.count() > 0) {
+						// Automatically free or release seamless tones if there's no new note to take over.
+						if (toneList.peakBack().instrument.getTransition().releases) {
+							this.releaseTone(channel, toneList.popBack());
+						} else {
+							this.freeTone(toneList.popBack());
+						}
 					}
 				}
 			}
@@ -3359,8 +4252,7 @@ namespace beepbox {
 				default: throw new Error();
 			}
 			const synthesizer: Function = Synth.getInstrumentSynthFunction(tone.instrument);
-			if (song.channels[channel].muted == false)
-				synthesizer(this, synthBuffer, stereoBufferIndex, stereoBufferLength, runLength * 2, tone, tone.instrument);
+			synthesizer(this, synthBuffer, stereoBufferIndex, stereoBufferLength, runLength * 2, tone, tone.instrument);
 		}
 
 		private static computeEnvelope(envelope: Envelope, time: number, beats: number, customVolume: number): number {
@@ -3409,6 +4301,7 @@ namespace beepbox {
 			const partTimeTickEnd: number = (ticksIntoBar + 1) / Config.ticksPerPart;
 			const partTimeStart: number = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * startRatio;
 			const partTimeEnd: number = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * endRatio;
+			const instrumentIdx: number = (synth.song as Song).channels[channel].instruments.findIndex(i => i == instrument);
 
 			tone.phaseDeltaScale = 0.0;
 			tone.filter = 1.0;
@@ -3418,24 +4311,25 @@ namespace beepbox {
 			tone.intervalVolumeMult = 1.0;
 			tone.active = false;
 
-			const pan: number = (instrument.pan - Config.panCenter) / Config.panCenter;
-			const maxDelay: number = 0.00065 * synth.samplesPerSecond;
-			const delay: number = Math.round(-pan * maxDelay) * 2;
-			const volumeL: number = Math.cos((1 + pan) * Math.PI * 0.25) * 1.414;
-			const volumeR: number = Math.cos((1 - pan) * Math.PI * 0.25) * 1.414;
-			const delayL: number = Math.max(0.0, -delay);
-			const delayR: number = Math.max(0.0, delay);
-			if (delay >= 0) {
-				tone.stereoVolume1 = volumeL;
-				tone.stereoVolume2 = volumeR;
-				tone.stereoOffset = 0;
-				tone.stereoDelay = delayR + 1;
-			} else {
-				tone.stereoVolume1 = volumeR;
-				tone.stereoVolume2 = volumeL;
-				tone.stereoOffset = 1;
-				tone.stereoDelay = delayL - 1;
+			let startPan: number = instrument.pan;
+			let endPan: number = instrument.pan;
+			if (synth.isModActive(ModSetting.mstPan, false, channel, instrumentIdx)) {
+				startPan = synth.getModValue(ModSetting.mstPan, false, channel, instrumentIdx, false);
+				endPan = synth.getModValue(ModSetting.mstPan, false, channel, instrumentIdx, true);
 			}
+
+			const useStartPan: number = (startPan - Config.panCenter) / Config.panCenter;
+			const useEndPan: number = (endPan - Config.panCenter) / Config.panCenter;
+			const maxDelay: number = 0.0013 * synth.samplesPerSecond;
+			tone.stereoDelayStart = -useStartPan * maxDelay;
+			const delayEnd: number = -useEndPan * maxDelay;
+			tone.stereoDelayDelta = (delayEnd - tone.stereoDelayStart) / runLength;
+			tone.stereoVolumeLStart = Math.cos((1 + useStartPan) * Math.PI * 0.25) * 1.414;
+			tone.stereoVolumeRStart = Math.cos((1 - useStartPan) * Math.PI * 0.25) * 1.414;
+			const stereoVolumeLEnd: number = Math.cos((1 + useEndPan) * Math.PI * 0.25) * 1.414;
+			const stereoVolumeREnd: number = Math.cos((1 - useEndPan) * Math.PI * 0.25) * 1.414;
+			tone.stereoVolumeLDelta = (stereoVolumeLEnd - tone.stereoVolumeLStart) / runLength;
+			tone.stereoVolumeRDelta = (stereoVolumeREnd - tone.stereoVolumeRStart) / runLength;
 
 			let resetPhases: boolean = true;
 			let partsSinceStart: number = 0.0;
@@ -3494,6 +4388,11 @@ namespace beepbox {
 				baseVolume = 0.04725;
 				volumeReferencePitch = 16;
 				pitchDamping = 48;
+			} else if (instrument.type == InstrumentType.mod) {
+				baseVolume = 1.0;
+				volumeReferencePitch = 0;
+				pitchDamping = 1.0;
+				basePitch = 0;
 			} else {
 				throw new Error("Unknown instrument type in computeTone.");
 			}
@@ -3652,8 +4551,16 @@ namespace beepbox {
 
 				intervalStart = intervalTickStart + (intervalTickEnd - intervalTickStart) * startRatio;
 				intervalEnd = intervalTickStart + (intervalTickEnd - intervalTickStart) * endRatio;
-				customVolumeStart = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio);
-				customVolumeEnd = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
+				if (instrument.type != InstrumentType.mod) {
+					customVolumeStart = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio);
+					customVolumeEnd = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
+				} else {
+					customVolumeStart = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio;
+					customVolumeEnd = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio;
+					tone.customVolumeStart = customVolumeStart;
+					tone.customVolumeEnd = customVolumeEnd;
+
+				}
 				transitionVolumeStart = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * startRatio;
 				transitionVolumeEnd = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * endRatio;
 				chordVolumeStart = chordVolumeTickStart + (chordVolumeTickEnd - chordVolumeTickStart) * startRatio;
@@ -3694,24 +4601,78 @@ namespace beepbox {
 				tone.drumsetPitch = Math.max(0, Math.min(Config.drumCount - 1, tone.drumsetPitch));
 			}
 
-			const cutoffOctaves: number = instrument.getFilterCutoffOctaves();
+			let filterCutModStart: number = instrument.filterCutoff;
+			let filterCutModEnd: number = instrument.filterCutoff;
+			if (synth.isModActive(ModSetting.mstFilterCut, false, channel, instrumentIdx)) {
+				filterCutModStart = song.modValueToReal(synth.getModValue(ModSetting.mstFilterCut, false, channel, instrumentIdx, false), ModSetting.mstFilterCut);
+				filterCutModEnd = song.modValueToReal(synth.getModValue(ModSetting.mstFilterCut, false, channel, instrumentIdx, true), ModSetting.mstFilterCut);
+			}
+
+			let cutoffOctavesModStart: number;
+			let cutoffOctavesModEnd: number;
+			if (instrument.type == InstrumentType.drumset) {
+				cutoffOctavesModStart = 0;
+				cutoffOctavesModEnd = 0;
+			}
+			else {
+				cutoffOctavesModStart = (filterCutModStart - (Config.filterCutoffRange - 1)) * 0.5;
+				cutoffOctavesModEnd = (filterCutModEnd - (Config.filterCutoffRange - 1)) * 0.5;
+			}
+
 			const filterEnvelope: Envelope = (instrument.type == InstrumentType.drumset) ? instrument.getDrumsetEnvelope(tone.drumsetPitch) : instrument.getFilterEnvelope();
-			const filterCutoffHz: number = Config.filterCutoffMaxHz * Math.pow(2.0, cutoffOctaves);
-			const filterBase: number = 2.0 * Math.sin(Math.PI * filterCutoffHz / synth.samplesPerSecond);
+			const filterCutoffHzStart: number = Config.filterCutoffMaxHz * Math.pow(2.0, cutoffOctavesModStart);
+			const filterCutoffHzEnd: number = Config.filterCutoffMaxHz * Math.pow(2.0, cutoffOctavesModEnd);
+			const filterBaseStart: number = 2.0 * Math.sin(Math.PI * filterCutoffHzStart / synth.samplesPerSecond);
+			const filterBaseEnd: number = 2.0 * Math.sin(Math.PI * filterCutoffHzEnd / synth.samplesPerSecond);
 			const filterMin: number = 2.0 * Math.sin(Math.PI * Config.filterCutoffMinHz / synth.samplesPerSecond);
-			tone.filter = filterBase * Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
-			let endFilter: number = filterBase * Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
+			tone.filter = filterBaseStart * Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+			let endFilter: number = filterBaseEnd * Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
 			tone.filter = Math.min(Config.filterMax, Math.max(filterMin, tone.filter));
 			endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
 			tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
-			let filterVolume: number = Math.pow(0.5, cutoffOctaves * 0.35);
-			if (instrument.filterResonance > 0) {
-				filterVolume = Math.pow(filterVolume, 1.7) * Math.pow(0.5, 0.125 * (instrument.filterResonance - 1));
+
+			let filterVolumeStart: number = Math.pow(0.5, cutoffOctavesModStart * 0.35);
+			let filterVolumeEnd: number = Math.pow(0.5, cutoffOctavesModEnd * 0.35);
+
+			tone.filterResonanceStart = instrument.getFilterResonance();
+			tone.filterResonanceDelta = 0.0;
+
+			let useFilterResonanceStart: number = instrument.filterResonance;
+			let useFilterResonanceEnd: number = instrument.filterResonance;
+
+			tone.isFirstOrder = (instrument.type == InstrumentType.drumset) ? false : (useFilterResonanceStart == 0);
+
+			if (synth.isModActive(ModSetting.mstFilterPeak, false, channel, instrumentIdx)) {
+				// This flag is used to avoid the special casing when filter resonance == 0 without mods. So, it will sound a bit different,
+				// but the effect and ability to smoothly modulate will be preserved.
+				tone.isFirstOrder = false;
+
+				useFilterResonanceStart = song.modValueToReal(synth.getModValue(ModSetting.mstFilterPeak, false, channel, instrumentIdx, false), ModSetting.mstFilterPeak);
+				useFilterResonanceEnd = song.modValueToReal(synth.getModValue(ModSetting.mstFilterPeak, false, channel, instrumentIdx, true), ModSetting.mstFilterPeak);
+
+				// Also set cut in the tone.
+				tone.filterResonanceStart = Config.filterMaxResonance * Math.pow(Math.max(0, useFilterResonanceStart - 1) / (Config.filterResonanceRange - 2), 0.5);
+				const filterResonanceEnd: number = Config.filterMaxResonance * Math.pow(Math.max(0, useFilterResonanceEnd - 1) / (Config.filterResonanceRange - 2), 0.5);
+
+				// Just a linear delta. Could get messy since it's not an amazing approximation of sqrt?
+				tone.filterResonanceDelta = (filterResonanceEnd - tone.filterResonanceStart) / runLength;
+			}
+			else {
+				// Still need to compute this, mods or no. This calc is delegated to the tone level instead of the synth level, a notable difference from beepbox.
+				// No functional difference though.
+				tone.filterResonanceStart = Config.filterMaxResonance * Math.pow(Math.max(0, useFilterResonanceStart - 1) / (Config.filterResonanceRange - 2), 0.5);
+			}
+
+			if (tone.isFirstOrder == false) {
+				filterVolumeStart = Math.pow(filterVolumeStart, 1.7) * Math.pow(0.5, 0.125 * (useFilterResonanceStart - 1));
+				filterVolumeEnd = Math.pow(filterVolumeEnd, 1.7) * Math.pow(0.5, 0.125 * (useFilterResonanceEnd - 1));
 			}
 			if (filterEnvelope.type == EnvelopeType.decay) {
-				filterVolume *= (1.25 + .025 * filterEnvelope.speed);
+				filterVolumeStart *= (1.25 + .025 * filterEnvelope.speed);
+				filterVolumeEnd *= (1.25 + .025 * filterEnvelope.speed);
 			} else if (filterEnvelope.type == EnvelopeType.twang) {
-				filterVolume *= (1 + .02 * filterEnvelope.speed);
+				filterVolumeStart *= (1 + .02 * filterEnvelope.speed);
+				filterVolumeEnd *= (1 + .02 * filterEnvelope.speed);
 			}
 
 			if (resetPhases) {
@@ -3721,8 +4682,10 @@ namespace beepbox {
 			if (instrument.type == InstrumentType.fm) {
 				// phase modulation!
 
-				let sineVolumeBoost: number = 1.0;
-				let totalCarrierVolume: number = 0.0;
+				let sineVolumeBoostStart: number = 1.0;
+				let sineVolumeBoostEnd: number = 1.0;
+				let totalCarrierVolumeStart: number = 0.0;
+				let totalCarrierVolumeEnd: number = 0.0;
 
 				let arpeggioInterval: number = 0;
 				if (tone.pitchCount > 1 && !chord.harmonizes) {
@@ -3733,34 +4696,69 @@ namespace beepbox {
 
 				const carrierCount: number = Config.algorithms[instrument.algorithm].carrierCount;
 				for (let i: number = 0; i < Config.operatorCount; i++) {
+
+					let detuneStart: number = instrument.detune / 25;
+					let detuneEnd: number = instrument.detune / 25;
+					if (synth.isModActive(ModSetting.mstDetune, false, channel, instrumentIdx)) {
+						detuneStart = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, false) / 25;
+						detuneEnd = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, true) / 25;
+					}
+
 					const associatedCarrierIndex: number = Config.algorithms[instrument.algorithm].associatedCarrier[i] - 1;
 					const pitch: number = tone.pitches[!chord.harmonizes ? 0 : ((i < tone.pitchCount) ? i : ((associatedCarrierIndex < tone.pitchCount) ? associatedCarrierIndex : 0))];
 					const freqMult = Config.operatorFrequencies[instrument.operators[i].frequency].mult;
 					const interval = Config.operatorCarrierInterval[associatedCarrierIndex] + arpeggioInterval;
-					const startPitch: number = basePitch + (pitch + intervalStart) * intervalScale + interval;
+					const startPitch: number = basePitch + (pitch + intervalStart + detuneStart) * intervalScale + interval;
 					const startFreq: number = freqMult * (Instrument.frequencyFromPitch(startPitch)) + Config.operatorFrequencies[instrument.operators[i].frequency].hzOffset;
 
 					tone.phaseDeltas[i] = startFreq * sampleTime * Config.sineWaveLength;
 
-					const amplitudeCurve: number = Synth.operatorAmplitudeCurve(instrument.operators[i].amplitude);
-					const amplitudeMult: number = amplitudeCurve * Config.operatorFrequencies[instrument.operators[i].frequency].amplitudeSign;
-					let volumeStart: number = amplitudeMult;
-					let volumeEnd: number = amplitudeMult;
+					let amplitudeStart: number = instrument.operators[i].amplitude;
+					let amplitudeEnd: number = instrument.operators[i].amplitude;
+					if (synth.isModActive(ModSetting.mstFMSlider1 + i, false, channel, instrumentIdx)) {
+						amplitudeStart *= synth.getModValue(ModSetting.mstFMSlider1 + i, false, channel, instrumentIdx, false) / 15.0;
+						amplitudeEnd *= synth.getModValue(ModSetting.mstFMSlider1 + i, false, channel, instrumentIdx, true) / 15.0;
+					}
+
+					const amplitudeCurveStart: number = Synth.operatorAmplitudeCurve(amplitudeStart);
+					const amplitudeCurveEnd: number = Synth.operatorAmplitudeCurve(amplitudeEnd);
+					const amplitudeMultStart: number = amplitudeCurveStart * Config.operatorFrequencies[instrument.operators[i].frequency].amplitudeSign;
+					const amplitudeMultEnd: number = amplitudeCurveEnd * Config.operatorFrequencies[instrument.operators[i].frequency].amplitudeSign;
+					let volumeStart: number = amplitudeMultStart;
+					let volumeEnd: number = amplitudeMultEnd;
+
+					// Check for mod-related volume delta
+					if (synth.isModActive(ModSetting.mstInsVolume, false, channel, instrumentIdx)) {
+						// Linear falloff below 0, normal volume formula above 0. Seems to work best for scaling since the normal volume mult formula has a big gap from -25 to -24.
+						const startVal: number = synth.getModValue(ModSetting.mstInsVolume, false, channel, instrumentIdx, false);
+						const endVal: number = synth.getModValue(ModSetting.mstInsVolume, false, channel, instrumentIdx, true)
+						volumeStart *= ((startVal <= 0) ? ((startVal + Config.volumeRange / 2) / (Config.volumeRange / 2)) : this.instrumentVolumeToVolumeMult(startVal));
+						volumeEnd *= ((endVal <= 0) ? ((endVal + Config.volumeRange / 2) / (Config.volumeRange / 2)) : this.instrumentVolumeToVolumeMult(endVal));
+					}
+
+					// Check for SONG mod-related volume delta
+					if (synth.isModActive(ModSetting.mstSongVolume, true)) {
+						volumeStart *= (synth.getModValue(ModSetting.mstSongVolume, true, undefined, undefined, false)) / 100.0;
+						volumeEnd *= (synth.getModValue(ModSetting.mstSongVolume, true, undefined, undefined, true)) / 100.0;
+					}
+
 					if (i < carrierCount) {
 						// carrier
-						const endPitch: number = basePitch + (pitch + intervalEnd) * intervalScale + interval;
+						const endPitch: number = basePitch + (pitch + intervalEnd + detuneEnd) * intervalScale + interval;
 						const pitchVolumeStart: number = Math.pow(2.0, -(startPitch - volumeReferencePitch) / pitchDamping);
 						const pitchVolumeEnd: number = Math.pow(2.0, -(endPitch - volumeReferencePitch) / pitchDamping);
 						volumeStart *= pitchVolumeStart;
 						volumeEnd *= pitchVolumeEnd;
 
-						totalCarrierVolume += amplitudeCurve;
+						totalCarrierVolumeStart += amplitudeCurveStart;
+						totalCarrierVolumeEnd += amplitudeCurveEnd;
 					} else {
 						// modulator
 						volumeStart *= Config.sineWaveLength * 1.5;
 						volumeEnd *= Config.sineWaveLength * 1.5;
 
-						sineVolumeBoost *= 1.0 - Math.min(1.0, instrument.operators[i].amplitude / 15);
+						sineVolumeBoostStart *= 1.0 - Math.min(1.0, amplitudeStart / 15);
+						sineVolumeBoostEnd *= 1.0 - Math.min(1.0, amplitudeEnd / 15);
 					}
 					const operatorEnvelope: Envelope = Config.envelopes[instrument.operators[i].envelope];
 
@@ -3771,23 +4769,50 @@ namespace beepbox {
 					tone.volumeDeltas[i] = (volumeEnd - volumeStart) / runLength;
 				}
 
-				const feedbackAmplitude: number = Config.sineWaveLength * 0.3 * instrument.feedbackAmplitude / 15.0;
+				let useFeedbackAmplitudeStart: number = instrument.feedbackAmplitude;
+				let useFeedbackAmplitudeEnd: number = instrument.feedbackAmplitude;
+				if (synth.isModActive(ModSetting.mstFMFeedback, false, channel, instrumentIdx)) {
+					useFeedbackAmplitudeStart *= synth.getModValue(ModSetting.mstFMFeedback, false, channel, instrumentIdx, false) / 15.0;
+					useFeedbackAmplitudeEnd *= synth.getModValue(ModSetting.mstFMFeedback, false, channel, instrumentIdx, true) / 15.0;
+				}
+
+				const feedbackAmplitudeStart: number = Config.sineWaveLength * 0.3 * useFeedbackAmplitudeStart / 15.0;
+				const feedbackAmplitudeEnd: number = Config.sineWaveLength * 0.3 * useFeedbackAmplitudeEnd / 15.0;
 				const feedbackEnvelope: Envelope = Config.envelopes[instrument.feedbackEnvelope];
-				let feedbackStart: number = feedbackAmplitude * Synth.computeEnvelope(feedbackEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
-				let feedbackEnd: number = feedbackAmplitude * Synth.computeEnvelope(feedbackEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
+				let feedbackStart: number = feedbackAmplitudeStart * Synth.computeEnvelope(feedbackEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+				let feedbackEnd: number = feedbackAmplitudeEnd * Synth.computeEnvelope(feedbackEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
 				tone.feedbackMult = feedbackStart;
 				tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 
 				const volumeMult: number = baseVolume * instrumentVolumeMult;
-				tone.volumeStart = filterVolume * volumeMult * transitionVolumeStart * chordVolumeStart;
-				const volumeEnd: number = filterVolume * volumeMult * transitionVolumeEnd * chordVolumeEnd;
+				tone.volumeStart = filterVolumeStart * volumeMult * transitionVolumeStart * chordVolumeStart;
+				const volumeEnd: number = filterVolumeEnd * volumeMult * transitionVolumeEnd * chordVolumeEnd;
 				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
 
-				sineVolumeBoost *= (Math.pow(2.0, (2.0 - 1.4 * instrument.feedbackAmplitude / 15.0)) - 1.0) / 3.0;
-				sineVolumeBoost *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolume - 1) / 2.0);
-				tone.volumeStart *= 1.0 + sineVolumeBoost * 3.0;
-				tone.volumeDelta *= 1.0 + sineVolumeBoost * 3.0;
+				sineVolumeBoostStart *= (Math.pow(2.0, (2.0 - 1.4 * feedbackAmplitudeStart / 15.0)) - 1.0) / 3.0;
+				sineVolumeBoostEnd *= (Math.pow(2.0, (2.0 - 1.4 * feedbackAmplitudeEnd / 15.0)) - 1.0) / 3.0;
+				sineVolumeBoostStart *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolumeStart - 1) / 2.0);
+				sineVolumeBoostEnd *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolumeEnd - 1) / 2.0);
+				tone.volumeStart *= 1.0 + sineVolumeBoostStart * 3.0;
+				tone.volumeDelta *= 1.0 + (sineVolumeBoostStart + sineVolumeBoostEnd) * 1.5; // Volume boosts are averaged such that delta brings you to next target start boost.
+			} else if (instrument.type == InstrumentType.mod) {
+				// Modulator value is used for data, so don't actually compute audio nonsense for it.
+				tone.volumeStart = transitionVolumeStart;
+				let volumeEnd: number = transitionVolumeEnd;
+
+				tone.volumeStart *= customVolumeStart;
+				volumeEnd *= customVolumeEnd;
+
+				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
+
 			} else {
+				let detuneStart: number = instrument.detune / 25;
+				let detuneEnd: number = instrument.detune / 25;
+				if (synth.isModActive(ModSetting.mstDetune, false, channel, instrumentIdx)) {
+					detuneStart = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, false) / 25;
+					detuneEnd = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, true) / 25;
+				}
+
 				let pitch: number = tone.pitches[0];
 
 				if (tone.pitchCount > 1) {
@@ -3803,26 +4828,38 @@ namespace beepbox {
 					}
 				}
 
-				const startPitch: number = basePitch + (pitch + intervalStart) * intervalScale;
-				const endPitch: number = basePitch + (pitch + intervalEnd) * intervalScale;
+				const startPitch: number = basePitch + (pitch + intervalStart + detuneStart) * intervalScale;
+				const endPitch: number = basePitch + (pitch + intervalEnd + detuneEnd) * intervalScale;
 				const startFreq: number = Instrument.frequencyFromPitch(startPitch);
 				const pitchVolumeStart: number = Math.pow(2.0, -(startPitch - volumeReferencePitch) / pitchDamping);
 				const pitchVolumeEnd: number = Math.pow(2.0, -(endPitch - volumeReferencePitch) / pitchDamping);
-				let settingsVolumeMult: number = baseVolume * filterVolume;
+				let settingsVolumeMultStart: number = baseVolume * filterVolumeStart;
+				let settingsVolumeMultEnd: number = baseVolume * filterVolumeEnd;
 				if (instrument.type == InstrumentType.noise) {
-					settingsVolumeMult *= Config.chipNoises[instrument.chipNoise].volume;
+					settingsVolumeMultStart *= Config.chipNoises[instrument.chipNoise].volume;
+					settingsVolumeMultEnd *= Config.chipNoises[instrument.chipNoise].volume;
 				}
 				if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.customChipWave) {
-					settingsVolumeMult *= Config.chipWaves[instrument.chipWave].volume;
+					settingsVolumeMultStart *= Config.chipWaves[instrument.chipWave].volume;
+					settingsVolumeMultEnd *= Config.chipWaves[instrument.chipWave].volume;
 				}
 				if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.customChipWave) {
-					settingsVolumeMult *= Config.intervals[instrument.interval].volume;
+					settingsVolumeMultStart *= Config.intervals[instrument.interval].volume;
+					settingsVolumeMultEnd *= Config.intervals[instrument.interval].volume;
 				}
 				if (instrument.type == InstrumentType.pwm) {
+
+					// Check for PWM mods to this instrument
+					let pulseWidthModStart: number = instrument.pulseWidth / (Config.pulseWidthRange * 2);
+					let pulseWidthModEnd: number = instrument.pulseWidth / (Config.pulseWidthRange * 2);
+					if (synth.isModActive(ModSetting.mstPulseWidth, false, channel, instrumentIdx)) {
+						pulseWidthModStart = (synth.getModValue(ModSetting.mstPulseWidth, false, channel, instrumentIdx, false)) / (Config.pulseWidthRange * 2);
+						pulseWidthModEnd = (synth.getModValue(ModSetting.mstPulseWidth, false, channel, instrumentIdx, true)) / (Config.pulseWidthRange * 2);
+					}
+
 					const pulseEnvelope: Envelope = Config.envelopes[instrument.pulseEnvelope];
-					const basePulseWidth: number = instrument.pulseWidth / 100;
-					const pulseWidthStart: number = basePulseWidth * Synth.computeEnvelope(pulseEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
-					const pulseWidthEnd: number = basePulseWidth * Synth.computeEnvelope(pulseEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
+					const pulseWidthStart: number = pulseWidthModStart * Synth.computeEnvelope(pulseEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+					const pulseWidthEnd: number = pulseWidthModEnd * Synth.computeEnvelope(pulseEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
 
 					tone.pulseWidth = pulseWidthStart;
 					tone.pulseWidthDelta = (pulseWidthEnd - pulseWidthStart) / runLength;
@@ -3830,12 +4867,26 @@ namespace beepbox {
 
 				tone.phaseDeltas[0] = startFreq * sampleTime;
 
-				tone.volumeStart = transitionVolumeStart * chordVolumeStart * pitchVolumeStart * settingsVolumeMult * instrumentVolumeMult;
-				let volumeEnd: number = transitionVolumeEnd * chordVolumeEnd * pitchVolumeEnd * settingsVolumeMult * instrumentVolumeMult;
+				tone.volumeStart = transitionVolumeStart * chordVolumeStart * pitchVolumeStart * settingsVolumeMultStart * instrumentVolumeMult;
+				let volumeEnd: number = transitionVolumeEnd * chordVolumeEnd * pitchVolumeEnd * settingsVolumeMultEnd * instrumentVolumeMult;
 
 				if (filterEnvelope.type != EnvelopeType.custom && (instrument.type != InstrumentType.pwm || Config.envelopes[instrument.pulseEnvelope].type != EnvelopeType.custom)) {
 					tone.volumeStart *= customVolumeStart;
 					volumeEnd *= customVolumeEnd;
+				}
+
+				// Check for mod-related volume delta
+				if (synth.isModActive(ModSetting.mstInsVolume, false, channel, instrumentIdx)) {
+					// Linear falloff below 0, normal volume formula above 0. Seems to work best for scaling since the normal volume mult formula has a big gap from -25 to -24.
+					const startVal: number = synth.getModValue(ModSetting.mstInsVolume, false, channel, instrumentIdx, false);
+					const endVal: number = synth.getModValue(ModSetting.mstInsVolume, false, channel, instrumentIdx, true)
+					tone.volumeStart *= ((startVal <= 0) ? ((startVal + Config.volumeRange / 2) / (Config.volumeRange / 2)) : this.instrumentVolumeToVolumeMult(startVal));
+					volumeEnd *= ((endVal <= 0) ? ((endVal + Config.volumeRange / 2) / (Config.volumeRange / 2)) : this.instrumentVolumeToVolumeMult(endVal));
+				}
+				// Check for SONG mod-related volume delta
+				if (synth.isModActive(ModSetting.mstSongVolume, true)) {
+					tone.volumeStart *= (synth.getModValue(ModSetting.mstSongVolume, true, undefined, undefined, false)) / 100.0;
+					volumeEnd *= (synth.getModValue(ModSetting.mstSongVolume, true, undefined, undefined, true)) / 100.0;
 				}
 
 				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
@@ -3919,6 +4970,8 @@ namespace beepbox {
 				return Synth.spectrumSynth;
 			} else if (instrument.type == InstrumentType.drumset) {
 				return Synth.drumsetSynth;
+			} else if (instrument.type == InstrumentType.mod) {
+				return Synth.modSynth;
 			} else {
 				throw new Error("Unrecognized instrument type: " + instrument.type);
 			}
@@ -3955,11 +5008,13 @@ namespace beepbox {
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 
+			const isFirstOrder: boolean = tone.isFirstOrder;
 			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+			let filter2: number = isFirstOrder ? 1.0 : filter1;
 			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
+			const filterScale2: number = isFirstOrder ? 1.0 : filterScale1;
+			let filterResonance: number = tone.filterResonanceStart;
+			let filterResonanceDelta: number = tone.filterResonanceDelta;
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 
@@ -3976,9 +5031,17 @@ namespace beepbox {
 
 			const stopIndex: number = stereoBufferIndex + runLength;
 			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
+
+			let stereoVolumeL: number = tone.stereoVolumeLStart;
+			let stereoVolumeLDelta: number = tone.stereoVolumeLDelta;
+			let stereoVolumeR: number = tone.stereoVolumeRStart;
+			let stereoVolumeRDelta: number = tone.stereoVolumeRDelta;
+			let stereoDelay: number = tone.stereoDelayStart;
+			let stereoDelayDelta: number = tone.stereoDelayDelta;
+			let delays: number[];
+
+			//console.log("S: " + stereoBufferIndex + " P: " + stopIndex);
+
 			while (stereoBufferIndex < stopIndex) {
 
 				phaseA += phaseDeltaA;
@@ -4009,14 +5072,34 @@ namespace beepbox {
 				filter2 *= filterScale2;
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
+				filterResonance += filterResonanceDelta;
 
 				const output: number = filterSample1 * volume * volumeScale;
 				volume += volumeDelta;
 
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				//const absStereoDelay: number = Math.abs(stereoDelay);
+				//const fracStereoDelay: number = absStereoDelay % 1;
+				//const floorStereoDelay: number = absStereoDelay | 0;
+
+				//delays = stereoDelay < 0 ? [0, 0, floorStereoDelay * 2, fracStereoDelay] : [floorStereoDelay * 2, fracStereoDelay, 0, 0];
+
+				// Optimized ver: can remove the above three declarations, but muddier conceptually. Still has that conditional, too...
+				delays = stereoDelay < 0 ? [0, 0, ((-stereoDelay) | 0) * 2, (-stereoDelay) % 1] : [(stereoDelay | 0) * 2, stereoDelay % 1, 0, 0];
+
+				data[(stereoBufferIndex + delays[0]) % stereoBufferLength] += output * stereoVolumeL * (1 - delays[1]);
+				data[(stereoBufferIndex + delays[0] + 2) % stereoBufferLength] += output * stereoVolumeL * delays[1];
+				data[(stereoBufferIndex + delays[2] + 1) % stereoBufferLength] += output * stereoVolumeR * (1 - delays[3]);
+				data[(stereoBufferIndex + delays[2] + 3) % stereoBufferLength] += output * stereoVolumeR * delays[3];
+
+				stereoVolumeL += stereoVolumeLDelta;
+				stereoVolumeR += stereoVolumeRDelta;
+				stereoDelay += stereoDelayDelta;
+
 				stereoBufferIndex += 2;
 			}
+
+			//debugString += "," + data.subarray(stereoBufferIndex - runLength, stereoBufferIndex).toString();
+			//console.log(stereoBufferIndex);
 
 			tone.phases[0] = phaseA / waveLength;
 			tone.phases[1] = phaseB / waveLength;
@@ -4026,7 +5109,9 @@ namespace beepbox {
 			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
 			tone.filterSample0 = filterSample0;
 			tone.filterSample1 = filterSample1;
+
 		}
+
 
 		private static harmonicsSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			const wave: Float32Array = instrument.harmonicsWave.getCustomWave();
@@ -4045,11 +5130,13 @@ namespace beepbox {
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 
+			const isFirstOrder: boolean = tone.isFirstOrder;
 			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+			let filter2: number = isFirstOrder ? 1.0 : filter1;
 			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
+			const filterScale2: number = isFirstOrder ? 1.0 : filterScale1;
+			let filterResonance: number = tone.filterResonanceStart;
+			let filterResonanceDelta: number = tone.filterResonanceDelta;
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 
@@ -4066,9 +5153,14 @@ namespace beepbox {
 
 			const stopIndex: number = stereoBufferIndex + runLength;
 			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
+
+			let stereoVolumeL: number = tone.stereoVolumeLStart;
+			let stereoVolumeLDelta: number = tone.stereoVolumeLDelta;
+			let stereoVolumeR: number = tone.stereoVolumeRStart;
+			let stereoVolumeRDelta: number = tone.stereoVolumeRDelta;
+			let stereoDelay: number = tone.stereoDelayStart;
+			let stereoDelayDelta: number = tone.stereoDelayDelta;
+			let delays: number[];
 			while (stereoBufferIndex < stopIndex) {
 
 				phaseA += phaseDeltaA;
@@ -4100,12 +5192,29 @@ namespace beepbox {
 				filter2 *= filterScale2;
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
+				filterResonance += filterResonanceDelta;
 
 				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
 
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				//const absStereoDelay: number = Math.abs(stereoDelay);
+				//const fracStereoDelay: number = absStereoDelay % 1;
+				//const floorStereoDelay: number = absStereoDelay | 0;
+
+				//delays = stereoDelay < 0 ? [0, 0, floorStereoDelay * 2, fracStereoDelay] : [floorStereoDelay * 2, fracStereoDelay, 0, 0];
+
+				// Optimized ver: can remove the above three declarations, but muddier conceptually. Still has that conditional, too...
+				delays = stereoDelay < 0 ? [0, 0, ((-stereoDelay) | 0) * 2, (-stereoDelay) % 1] : [(stereoDelay | 0) * 2, stereoDelay % 1, 0, 0];
+
+				data[(stereoBufferIndex + delays[0]) % stereoBufferLength] += output * stereoVolumeL * (1 - delays[1]);
+				data[(stereoBufferIndex + delays[0] + 2) % stereoBufferLength] += output * stereoVolumeL * delays[1];
+				data[(stereoBufferIndex + delays[2] + 1) % stereoBufferLength] += output * stereoVolumeR * (1 - delays[3]);
+				data[(stereoBufferIndex + delays[2] + 3) % stereoBufferLength] += output * stereoVolumeR * delays[3];
+
+				stereoVolumeL += stereoVolumeLDelta;
+				stereoVolumeR += stereoVolumeRDelta;
+				stereoDelay += stereoDelayDelta;
+
 				stereoBufferIndex += 2;
 			}
 
@@ -4129,19 +5238,27 @@ namespace beepbox {
 			let pulseWidth: number = tone.pulseWidth;
 			const pulseWidthDelta: number = tone.pulseWidthDelta;
 
+			const isFirstOrder: boolean = tone.isFirstOrder;
 			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+			let filter2: number = isFirstOrder ? 1.0 : filter1;
 			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
+			const filterScale2: number = isFirstOrder ? 1.0 : filterScale1;
+			let filterResonance: number = tone.filterResonanceStart;
+			let filterResonanceDelta: number = tone.filterResonanceDelta;
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 
 			const stopIndex: number = stereoBufferIndex + runLength;
 			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
+
+			let stereoVolumeL: number = tone.stereoVolumeLStart;
+			let stereoVolumeLDelta: number = tone.stereoVolumeLDelta;
+			let stereoVolumeR: number = tone.stereoVolumeRStart;
+			let stereoVolumeRDelta: number = tone.stereoVolumeRDelta;
+			let stereoDelay: number = tone.stereoDelayStart;
+			let stereoDelayDelta: number = tone.stereoDelayDelta;
+			let delays: number[];
+
 			while (stereoBufferIndex < stopIndex) {
 
 				const sawPhaseA: number = phase % 1;
@@ -4175,19 +5292,36 @@ namespace beepbox {
 				phase += phaseDelta;
 				phaseDelta *= phaseDeltaScale;
 				pulseWidth += pulseWidthDelta;
+				filterResonance += filterResonanceDelta;
 
 				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
 
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				//const absStereoDelay: number = Math.abs(stereoDelay);
+				//const fracStereoDelay: number = absStereoDelay % 1;
+				//const floorStereoDelay: number = absStereoDelay | 0;
+
+				//delays = stereoDelay < 0 ? [0, 0, floorStereoDelay * 2, fracStereoDelay] : [floorStereoDelay * 2, fracStereoDelay, 0, 0];
+
+				// Optimized ver: can remove the above three declarations, but muddier conceptually. Still has that conditional, too...
+				delays = stereoDelay < 0 ? [0, 0, ((-stereoDelay) | 0) * 2, (-stereoDelay) % 1] : [(stereoDelay | 0) * 2, stereoDelay % 1, 0, 0];
+
+				data[(stereoBufferIndex + delays[0]) % stereoBufferLength] += output * stereoVolumeL * (1 - delays[1]);
+				data[(stereoBufferIndex + delays[0] + 2) % stereoBufferLength] += output * stereoVolumeL * delays[1];
+				data[(stereoBufferIndex + delays[2] + 1) % stereoBufferLength] += output * stereoVolumeR * (1 - delays[3]);
+				data[(stereoBufferIndex + delays[2] + 3) % stereoBufferLength] += output * stereoVolumeR * delays[3];
+
+				stereoVolumeL += stereoVolumeLDelta;
+				stereoVolumeR += stereoVolumeRDelta;
+				stereoDelay += stereoDelayDelta;
+
 				stereoBufferIndex += 2;
 			}
 
 			tone.phases[0] = phase;
 
 			const epsilon: number = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
+			if (- epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
 			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
 			tone.filterSample0 = filterSample0;
 			tone.filterSample1 = filterSample1;
@@ -4208,19 +5342,25 @@ namespace beepbox {
 			let volume = +tone.volumeStart;
 			const volumeDelta = +tone.volumeDelta;
 			
+			const isFirstOrder = tone.isFirstOrder;
 			let filter1 = +tone.filter;
-			let filter2 = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+			let filter2 = isFirstOrder ? 1.0 : filter1;
 			const filterScale1 = +tone.filterScale;
-			const filterScale2 = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = beepbox.Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (beepbox.Config.filterResonanceRange - 2), 0.5);
+			const filterScale2 = isFirstOrder ? 1.0 : filterScale1;
+			let filterResonance = tone.filterResonanceStart;
+			let filterResonanceDelta = tone.filterResonanceDelta;
 			let filterSample0 = +tone.filterSample0;
 			let filterSample1 = +tone.filterSample1;
 			
 			const stopIndex = stereoBufferIndex + runLength;
 			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1 = tone.stereoVolume1;
-			const stereoVolume2 = tone.stereoVolume2;
-			const stereoDelay = tone.stereoDelay;
+			let stereoVolumeL = tone.stereoVolumeLStart;
+			let stereoVolumeLDelta = tone.stereoVolumeLDelta;
+			let stereoVolumeR = tone.stereoVolumeRStart;
+			let stereoVolumeRDelta = tone.stereoVolumeRDelta;
+			let stereoDelay = tone.stereoDelayStart;
+			let stereoDelayDelta = tone.stereoDelayDelta;
+			let delays = [];
 			while (stereoBufferIndex < stopIndex) {
 				// INSERT OPERATOR COMPUTATION HERE
 				const fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
@@ -4235,12 +5375,29 @@ namespace beepbox {
 				operator#PhaseDelta *= phaseDeltaScale;
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
+				filterResonance += filterResonanceDelta;
 				
 				const output = filterSample1 * volume;
 				volume += volumeDelta;
-				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+
+				//const absStereoDelay: number = Math.abs(stereoDelay);
+				//const fracStereoDelay: number = absStereoDelay % 1;
+				//const floorStereoDelay: number = absStereoDelay | 0;
+
+				//delays = stereoDelay < 0 ? [0, 0, floorStereoDelay * 2, fracStereoDelay] : [floorStereoDelay * 2, fracStereoDelay, 0, 0];
+
+				// Optimized ver: can remove the above three declarations, but muddier conceptually. Still has that conditional, too...
+				delays = stereoDelay < 0 ? [0, 0, ((-stereoDelay) | 0) * 2, (-stereoDelay) % 1] : [(stereoDelay | 0) * 2, stereoDelay % 1, 0, 0];
+
+				data[(stereoBufferIndex + delays[0]) % stereoBufferLength] += output * stereoVolumeL * (1 - delays[1]);
+				data[(stereoBufferIndex + delays[0] + 2) % stereoBufferLength] += output * stereoVolumeL * delays[1];
+				data[(stereoBufferIndex + delays[2] + 1) % stereoBufferLength] += output * stereoVolumeR * (1 - delays[3]);
+				data[(stereoBufferIndex + delays[2] + 3) % stereoBufferLength] += output * stereoVolumeR * delays[3];
+
+				stereoVolumeL += stereoVolumeLDelta;
+				stereoVolumeR += stereoVolumeRDelta;
+				stereoDelay += stereoDelayDelta;
+
 				stereoBufferIndex += 2;
 			}
 			
@@ -4276,11 +5433,13 @@ namespace beepbox {
 			}
 			let sample: number = +tone.sample;
 
+			const isFirstOrder: boolean = tone.isFirstOrder;
 			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+			let filter2: number = isFirstOrder ? 1.0 : filter1;
 			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
+			const filterScale2: number = isFirstOrder ? 1.0 : filterScale1;
+			let filterResonance: number = tone.filterResonanceStart;
+			let filterResonanceDelta: number = tone.filterResonanceDelta;
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 
@@ -4288,9 +5447,13 @@ namespace beepbox {
 
 			const stopIndex: number = stereoBufferIndex + runLength;
 			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
+			let stereoVolumeL: number = tone.stereoVolumeLStart;
+			let stereoVolumeLDelta: number = tone.stereoVolumeLDelta;
+			let stereoVolumeR: number = tone.stereoVolumeRStart;
+			let stereoVolumeRDelta: number = tone.stereoVolumeRDelta;
+			let stereoDelay: number = tone.stereoDelayStart;
+			let stereoDelayDelta: number = tone.stereoDelayDelta;
+			let delays: number[];
 			while (stereoBufferIndex < stopIndex) {
 				const waveSample: number = wave[phase & 0x7fff];
 
@@ -4304,12 +5467,29 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
+				filterResonance += filterResonanceDelta;
 
 				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
 
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				//const absStereoDelay: number = Math.abs(stereoDelay);
+				//const fracStereoDelay: number = absStereoDelay % 1;
+				//const floorStereoDelay: number = absStereoDelay | 0;
+
+				//delays = stereoDelay < 0 ? [0, 0, floorStereoDelay * 2, fracStereoDelay] : [floorStereoDelay * 2, fracStereoDelay, 0, 0];
+
+				// Optimized ver: can remove the above three declarations, but muddier conceptually. Still has that conditional, too...
+				delays = stereoDelay < 0 ? [0, 0, ((-stereoDelay) | 0) * 2, (-stereoDelay) % 1] : [(stereoDelay | 0) * 2, stereoDelay % 1, 0, 0];
+
+				data[(stereoBufferIndex + delays[0]) % stereoBufferLength] += output * stereoVolumeL * (1 - delays[1]);
+				data[(stereoBufferIndex + delays[0] + 2) % stereoBufferLength] += output * stereoVolumeL * delays[1];
+				data[(stereoBufferIndex + delays[2] + 1) % stereoBufferLength] += output * stereoVolumeR * (1 - delays[3]);
+				data[(stereoBufferIndex + delays[2] + 3) % stereoBufferLength] += output * stereoVolumeR * delays[3];
+
+				stereoVolumeL += stereoVolumeLDelta;
+				stereoVolumeR += stereoVolumeRDelta;
+				stereoDelay += stereoDelayDelta;
+
 				stereoBufferIndex += 2;
 			}
 
@@ -4330,11 +5510,14 @@ namespace beepbox {
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
 			let sample: number = +tone.sample;
+
+			const isFirstOrder: boolean = tone.isFirstOrder;
 			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+			let filter2: number = isFirstOrder ? 1.0 : filter1;
 			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
+			const filterScale2: number = isFirstOrder ? 1.0 : filterScale1;
+			let filterResonance: number = tone.filterResonanceStart;
+			let filterResonanceDelta: number = tone.filterResonanceDelta;
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 
@@ -4346,9 +5529,15 @@ namespace beepbox {
 
 			const stopIndex: number = stereoBufferIndex + runLength;
 			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
+
+			let stereoVolumeL: number = tone.stereoVolumeLStart;
+			let stereoVolumeLDelta: number = tone.stereoVolumeLDelta;
+			let stereoVolumeR: number = tone.stereoVolumeRStart;
+			let stereoVolumeRDelta: number = tone.stereoVolumeRDelta;
+			let stereoDelay: number = tone.stereoDelayStart;
+			let stereoDelayDelta: number = tone.stereoDelayDelta;
+			let delays: number[];
+
 			while (stereoBufferIndex < stopIndex) {
 				const phaseInt: number = phase | 0;
 				const index: number = phaseInt & 0x7fff;
@@ -4366,12 +5555,29 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
+				filterResonance += filterResonanceDelta;
 
 				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
 
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				//const absStereoDelay: number = Math.abs(stereoDelay);
+				//const fracStereoDelay: number = absStereoDelay % 1;
+				//const floorStereoDelay: number = absStereoDelay | 0;
+
+				//delays = stereoDelay < 0 ? [0, 0, floorStereoDelay * 2, fracStereoDelay] : [floorStereoDelay * 2, fracStereoDelay, 0, 0];
+
+				// Optimized ver: can remove the above three declarations, but muddier conceptually. Still has that conditional, too...
+				delays = stereoDelay < 0 ? [0, 0, ((-stereoDelay) | 0) * 2, (-stereoDelay) % 1] : [(stereoDelay | 0) * 2, stereoDelay % 1, 0, 0];
+
+				data[(stereoBufferIndex + delays[0]) % stereoBufferLength] += output * stereoVolumeL * (1 - delays[1]);
+				data[(stereoBufferIndex + delays[0] + 2) % stereoBufferLength] += output * stereoVolumeL * delays[1];
+				data[(stereoBufferIndex + delays[2] + 1) % stereoBufferLength] += output * stereoVolumeR * (1 - delays[3]);
+				data[(stereoBufferIndex + delays[2] + 3) % stereoBufferLength] += output * stereoVolumeR * delays[3];
+
+				stereoVolumeL += stereoVolumeLDelta;
+				stereoVolumeR += stereoVolumeRDelta;
+				stereoDelay += stereoDelayDelta;
+
 				stereoBufferIndex += 2;
 			}
 
@@ -4379,7 +5585,7 @@ namespace beepbox {
 			tone.sample = sample;
 
 			const epsilon: number = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
+			if (- epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
 			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
 			tone.filterSample0 = filterSample0;
 			tone.filterSample1 = filterSample1;
@@ -4392,11 +5598,14 @@ namespace beepbox {
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
 			let sample: number = +tone.sample;
+
+			const isFirstOrder: boolean = tone.isFirstOrder;
 			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+			let filter2: number = isFirstOrder ? 1.0 : filter1;
 			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
+			const filterScale2: number = isFirstOrder ? 1.0 : filterScale1;
+			let filterResonance: number = tone.filterResonanceStart;
+			let filterResonanceDelta: number = tone.filterResonanceDelta;
 			let filterSample0: number = +tone.filterSample0;
 			let filterSample1: number = +tone.filterSample1;
 
@@ -4406,9 +5615,13 @@ namespace beepbox {
 
 			const stopIndex: number = stereoBufferIndex + runLength;
 			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
+			let stereoVolumeL: number = tone.stereoVolumeLStart;
+			let stereoVolumeLDelta: number = tone.stereoVolumeLDelta;
+			let stereoVolumeR: number = tone.stereoVolumeRStart;
+			let stereoVolumeRDelta: number = tone.stereoVolumeRDelta;
+			let stereoDelay: number = tone.stereoDelayStart;
+			let stereoDelayDelta: number = tone.stereoDelayDelta;
+			let delays: number[];
 			while (stereoBufferIndex < stopIndex) {
 				const phaseInt: number = phase | 0;
 				const index: number = phaseInt & 0x7fff;
@@ -4424,23 +5637,55 @@ namespace beepbox {
 				filter1 *= filterScale1;
 				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
+				filterResonance += filterResonanceDelta;
 
 				const output: number = filterSample1 * volume;
 				volume += volumeDelta;
 
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				//const absStereoDelay: number = Math.abs(stereoDelay);
+				//const fracStereoDelay: number = absStereoDelay % 1;
+				//const floorStereoDelay: number = absStereoDelay | 0;
+
+				//delays = stereoDelay < 0 ? [0, 0, floorStereoDelay * 2, fracStereoDelay] : [floorStereoDelay * 2, fracStereoDelay, 0, 0];
+
+				// Optimized ver: can remove the above three declarations, but muddier conceptually. Still has that conditional, too...
+				delays = stereoDelay < 0 ? [0, 0, ((-stereoDelay) | 0) * 2, (-stereoDelay) % 1] : [(stereoDelay | 0) * 2, stereoDelay % 1, 0, 0];
+
+				data[(stereoBufferIndex + delays[0]) % stereoBufferLength] += output * stereoVolumeL * (1 - delays[1]);
+				data[(stereoBufferIndex + delays[0] + 2) % stereoBufferLength] += output * stereoVolumeL * delays[1];
+				data[(stereoBufferIndex + delays[2] + 1) % stereoBufferLength] += output * stereoVolumeR * (1 - delays[3]);
+				data[(stereoBufferIndex + delays[2] + 3) % stereoBufferLength] += output * stereoVolumeR * delays[3];
+
+				stereoVolumeL += stereoVolumeLDelta;
+				stereoVolumeR += stereoVolumeRDelta;
+				stereoDelay += stereoDelayDelta;
+
 				stereoBufferIndex += 2;
 			}
-
 			tone.phases[0] = phase / Config.chipNoiseLength;
 			tone.sample = sample;
 
 			const epsilon: number = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
+			if (- epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
 			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
 			tone.filterSample0 = filterSample0;
 			tone.filterSample1 = filterSample1;
+		}
+
+		private static modSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
+			// Note: present modulator value is tone.volumeStart.
+
+			if (!synth.song) return;
+
+			let mod: number = Config.modCount - 1 - tone.pitches[0];
+			let setting: ModSetting = instrument.modSettings[mod];
+
+			synth.setModValue(tone.customVolumeStart, tone.customVolumeEnd, mod, instrument, setting);
+
+			// Check for mod value at 1.0 is a bit obtuse. How about just any value?
+			if (setting == ModSetting.mstNextBar) {
+				synth.skipBar();
+			}
 		}
 
 		private static findRandomZeroCrossing(wave: Float32Array): number {
@@ -4498,7 +5743,14 @@ namespace beepbox {
 
 		private getSamplesPerTick(): number {
 			if (this.song == null) return 0;
-			const beatsPerMinute: number = this.song.getBeatsPerMinute();
+			let beatsPerMinute: number = this.song.getBeatsPerMinute();
+			if (this.isModActive(ModSetting.mstTempo, true)) {
+				beatsPerMinute = this.getModValue(ModSetting.mstTempo, true);
+			}
+			return this.getSamplesPerTickSpecificBPM(beatsPerMinute);
+		}
+
+		private getSamplesPerTickSpecificBPM(beatsPerMinute: number): number {
 			const beatsPerSecond: number = beatsPerMinute / 60.0;
 			const partsPerSecond: number = beatsPerSecond * Config.partsPerBeat;
 			const tickPerSecond: number = partsPerSecond * Config.ticksPerPart;

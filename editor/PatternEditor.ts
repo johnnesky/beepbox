@@ -32,33 +32,42 @@ namespace beepbox {
 
 	export class PatternEditor {
 		public controlMode: boolean = false;
+		private readonly _editorHeight: number = Config.pitchEditorHeight;
 		private readonly _svgNoteBackground: SVGPatternElement = SVG.pattern({ id: "patternEditorNoteBackground", x: "0", y: "0", width: "64", height: "156", patternUnits: "userSpaceOnUse" });
 		private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({ id: "patternEditorDrumBackground", x: "0", y: "0", width: "64", height: "40", patternUnits: "userSpaceOnUse" });
-		private readonly _svgBackground: SVGRectElement = SVG.rect({ x: "0", y: "0", width: "512", height: "481", "pointer-events": "none", fill: "url(#patternEditorNoteBackground)" });
+		private readonly _svgModBackground: SVGPatternElement = SVG.pattern({ id: "patternEditorModBackground", x: "0", y: "0", width: "64", height: "80", patternUnits: "userSpaceOnUse" });
+		private readonly _svgBackground: SVGRectElement = SVG.rect({ x: "0", y: "0", width: "512", height: this._editorHeight + "px", "pointer-events": "none", fill: "url(#patternEditorNoteBackground)" });
 		private _svgNoteContainer: SVGSVGElement = SVG.svg();
-		private readonly _svgPlayhead: SVGRectElement = SVG.rect({ id: "", x: "0", y: "0", width: "4", height: "481", fill: "white", "pointer-events": "none" });
+		private readonly _svgPlayhead: SVGRectElement = SVG.rect({ id: "", x: "0", y: "0", width: "4", height: "" + this._editorHeight, fill: "white", "pointer-events": "none" });
 		private readonly _svgPreview: SVGPathElement = SVG.path({ fill: "none", stroke: "white", "stroke-width": "2", "pointer-events": "none" });
-		private readonly _svg: SVGSVGElement = SVG.svg({ style: "background-color: #040410; touch-action: none; position: absolute;", width: "100%", height: "100%", viewBox: "0 0 512 481", preserveAspectRatio: "none" },
+		private _svgModDragValueLabel: SVGTextElement = SVG.text({ width: "90", "text-anchor": "start", style: "display: flex, justify-content: center; align-items:center;", "dominant-baseline": "central", "pointer-events": "none" });
+
+		private readonly _svg: SVGSVGElement = SVG.svg({ style: "background-color: #040410; touch-action: none; position: absolute;", width: "100%", height: "100%", viewBox: "0 0 512 " + this._editorHeight, preserveAspectRatio: "none" },
 			SVG.defs(
 				this._svgNoteBackground,
 				this._svgDrumBackground,
+				this._svgModBackground,
 			),
 			this._svgBackground,
 			this._svgNoteContainer,
 			this._svgPreview,
 			this._svgPlayhead,
+			this._svgModDragValueLabel
 		);
 		public readonly container: HTMLDivElement = HTML.div({ style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1;" }, this._svg);
 
-		private readonly _defaultPitchHeight: number = 13;
+		private readonly _defaultPitchHeight: number = Config.pitchHeight;
 		private readonly _defaultDrumHeight: number = 40;
+		private readonly _defaultModHeight: number = 80;
+		private readonly _defaultModBorder: number = 34;
 		private readonly _backgroundPitchRows: SVGRectElement[] = [];
 		private readonly _backgroundDrumRow: SVGRectElement = SVG.rect();
+		private readonly _backgroundModRow: SVGRectElement = SVG.rect();
 
 		private _editorWidth: number;
-		private _editorHeight: number = 481;
 		private _partWidth: number;
 		private _pitchHeight: number;
+		private _pitchBorder: number;
 		private _pitchCount: number;
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;
@@ -77,6 +86,7 @@ namespace beepbox {
 		private _dragVisible: boolean = false;
 		private _dragChange: UndoableChange | null = null;
 		private _cursor: PatternCursor = new PatternCursor();
+		private _stashCursorPinVols: number[][] = [];
 		private _pattern: Pattern | null = null;
 		private _playheadX: number = 0.0;
 		private _octaveOffset: number = 0;
@@ -84,9 +94,11 @@ namespace beepbox {
 		private _renderedBeatWidth: number = -1;
 		private _renderedFifths: boolean = false;
 		private _renderedDrums: boolean = false;
+		private _renderedMod: boolean = false;
 		private _renderedRhythm: number = -1;
 		private _renderedPitchChannelCount: number = -1;
 		private _renderedNoiseChannelCount: number = -1;
+		private _renderedModChannelCount: number = -1;
 		private _followPlayheadBar: number = -1;
 
 		constructor(private _doc: SongDocument) {
@@ -106,6 +118,12 @@ namespace beepbox {
 			this._backgroundDrumRow.setAttribute("height", "" + (this._defaultDrumHeight - 2));
 			this._backgroundDrumRow.setAttribute("fill", "#393e4f");
 			this._svgDrumBackground.appendChild(this._backgroundDrumRow);
+
+			this._backgroundModRow.setAttribute("x", "1");
+			this._backgroundModRow.setAttribute("y", "" + (1 + this._defaultModBorder / 2));
+			this._backgroundModRow.setAttribute("height", "" + (this._defaultModHeight - this._defaultModBorder - 2));
+			this._backgroundModRow.setAttribute("fill", "#393e4f");
+			this._svgModBackground.appendChild(this._backgroundModRow);
 
 			this._doc.notifier.watch(this._documentChanged);
 			this._documentChanged();
@@ -164,23 +182,97 @@ namespace beepbox {
 					)
 					/ minDivision) * minDivision;
 
+			let foundNote: boolean = false;
+
 			if (this._pattern != null) {
+
+				if (this._doc.song.getChannelIsMod(this._doc.channel)) {
+					// Need to re-sort the notes by start time as they might change order if user drags them around.
+					this._pattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
+				}
+
 				for (const note of this._pattern.notes) {
 					if (note.end <= exactPart) {
-						this._cursor.prevNote = note;
-						this._cursor.curIndex++;
+						if (this._doc.song.getChannelIsMod(this._doc.channel)) {
+							if (note.pitches[0] == Math.floor(this._findMousePitch(this._mouseY))) {
+								this._cursor.prevNote = note;
+							}
+							if (!foundNote)
+								this._cursor.curIndex++;
+
+						} else {
+							this._cursor.prevNote = note;
+							this._cursor.curIndex++;
+						}
 					} else if (note.start <= exactPart && note.end > exactPart) {
-						this._cursor.curNote = note;
+						if (this._doc.song.getChannelIsMod(this._doc.channel)) {
+							if (note.pitches[0] == Math.floor(this._findMousePitch(this._mouseY))) {
+								this._cursor.curNote = note;
+								foundNote = true;
+							}
+							// Only increment index if the sought note has been found... or if this note truly starts before the other
+							else if (!foundNote || (this._cursor.curNote != null && note.start < this._cursor.curNote.start))
+								this._cursor.curIndex++;
+						}
+						else {
+							this._cursor.curNote = note;
+						}
 					} else if (note.start > exactPart) {
-						this._cursor.nextNote = note;
-						break;
+						if (this._doc.song.getChannelIsMod(this._doc.channel)) {
+							if (note.pitches[0] == Math.floor(this._findMousePitch(this._mouseY))) {
+								this._cursor.nextNote = note;
+								break;
+							}
+						} else {
+							this._cursor.nextNote = note;
+							break;
+						}
 					}
 				}
+
+				if (this._doc.song.getChannelIsMod(this._doc.channel)) {
+
+					if (this._pattern.notes[this._cursor.curIndex] != null && this._cursor.curNote != null) {
+
+						let pinIdx: number = 0;
+
+						while (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time < exactPart && pinIdx < this._cursor.curNote.pins.length) {
+							pinIdx++;
+						}
+						// Decide if the previous pin is closer
+						if (pinIdx > 0) {
+							if (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time - exactPart > exactPart - (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx - 1].time)) {
+								pinIdx--;
+							}
+						}
+
+						this._svgModDragValueLabel.setAttribute("fill", "#666688");
+						this._svgModDragValueLabel.setAttribute("visibility", "visible");
+
+						let presValue: number = this._doc.song.modValueToReal(this._cursor.curNote.pins[pinIdx].volume, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].modSettings[Config.modCount - 1 - this._cursor.curNote.pitches[0]]);
+
+						// This is me being too lazy to fiddle with the css to get it to align center.
+						let xOffset: number = (+(presValue >= 10.0)) + (+(presValue >= 100.0)) + (+(presValue < 0.0)) + (+(presValue <= -10.0));
+
+						this._svgModDragValueLabel.setAttribute("x", "" + prettyNumber(Math.max(Math.min(this._editorWidth - 8 - xOffset * 8, this._partWidth * (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time) - 4 - xOffset * 4), 2)));
+						this._svgModDragValueLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(this._cursor.curNote.pitches[0] - this._octaveOffset) - 30));
+						this._svgModDragValueLabel.textContent = "" + presValue;
+
+					}
+					else {
+						this._svgModDragValueLabel.setAttribute("visibility", "hidden");
+					}
+				}
+				else {
+					this._svgModDragValueLabel.setAttribute("visibility", "hidden");
+				}
 			}
+
 
 			let mousePitch: number = this._findMousePitch(this._mouseY);
 
 			if (this._cursor.curNote != null) {
+
 				this._cursor.start = this._cursor.curNote.start;
 				this._cursor.end = this._cursor.curNote.end;
 				this._cursor.pins = this._cursor.curNote.pins;
@@ -238,6 +330,8 @@ namespace beepbox {
 					}
 				}
 			} else {
+				//console.log("default");
+
 				this._cursor.pitch = this._snapToPitch(mousePitch, 0, Config.maxPitch);
 				const defaultLength: number = this._copiedPins[this._copiedPins.length - 1].time;
 				const fullBeats: number = Math.floor(this._cursor.part / Config.partsPerBeat);
@@ -297,9 +391,34 @@ namespace beepbox {
 						}
 					}
 				}
+
+				if (this._doc.song.getChannelIsMod(this._doc.channel)) {
+					// Return cursor to stashed cursor volumes (so pins aren't destroyed by moving the preview around several volume scales.)
+					if (this._stashCursorPinVols != null && this._stashCursorPinVols[this._doc.channel] != null) {
+						for (let pin: number = 0; pin < this._cursor.pins.length; pin++) {
+							this._cursor.pins[pin].volume = this._stashCursorPinVols[this._doc.channel][pin];
+						}
+					}
+
+					// Scale volume of copied pin to cap for this row
+					let maxHeight: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch);
+					let maxFoundHeight: number = 0;
+					for (const pin of this._cursor.pins) {
+						if (pin.volume > maxFoundHeight) {
+							maxFoundHeight = pin.volume;
+						}
+					}
+					// Apply scaling if the max height is below any pin setting.
+					if (maxFoundHeight > maxHeight) {
+						for (const pin of this._cursor.pins) {
+							pin.volume = Math.round(pin.volume * (maxHeight / maxFoundHeight));
+						}
+					}
+				}
 			}
 
 			this._cursor.valid = true;
+
 		}
 
 		private _findMousePitch(pixelY: number): number {
@@ -310,7 +429,7 @@ namespace beepbox {
 			if (guess < min) guess = min;
 			if (guess > max) guess = max;
 			const scale: ReadonlyArray<boolean> = Config.scales[this._doc.song.scale].flags;
-			if (scale[Math.floor(guess) % 12] || this._doc.song.getChannelIsNoise(this._doc.channel)) {
+			if (scale[Math.floor(guess) % 12] || this._doc.song.getChannelIsNoise(this._doc.channel) || this._doc.song.getChannelIsMod(this._doc.channel)) {
 				return Math.floor(guess);
 			} else {
 				let topPitch: number = Math.floor(guess) + 1;
@@ -356,16 +475,29 @@ namespace beepbox {
 				}
 			}
 			this._copiedPinChannels[this._doc.channel] = this._copiedPins;
+
+			this._stashCursorPinVols[this._doc.channel] = [];
+			for (let pin: number = 0; pin < this._copiedPins.length; pin++) {
+				this._stashCursorPinVols[this._doc.channel].push(this._copiedPins[pin].volume);
+			}
 		}
 
 		public resetCopiedPins = (): void => {
 			const maxDivision: number = this._getMaxDivision();
+			let cap: number = this._doc.song.getVolumeCap(false);
 			this._copiedPinChannels.length = this._doc.song.getChannelCount();
+			this._stashCursorPinVols.length = this._doc.song.getChannelCount();
 			for (let i: number = 0; i < this._doc.song.pitchChannelCount; i++) {
-				this._copiedPinChannels[i] = [makeNotePin(0, 0, 6), makeNotePin(0, maxDivision, 6)];
+				this._copiedPinChannels[i] = [makeNotePin(0, 0, cap), makeNotePin(0, maxDivision, cap)];
+				this._stashCursorPinVols[i] = [cap, cap];
 			}
-			for (let i: number = this._doc.song.pitchChannelCount; i < this._doc.song.getChannelCount(); i++) {
-				this._copiedPinChannels[i] = [makeNotePin(0, 0, 6), makeNotePin(0, maxDivision, 0)];
+			for (let i: number = this._doc.song.pitchChannelCount; i < this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount; i++) {
+				this._copiedPinChannels[i] = [makeNotePin(0, 0, cap), makeNotePin(0, maxDivision, 0)];
+				this._stashCursorPinVols[i] = [cap, 0];
+			}
+			for (let i: number = this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount; i < this._doc.song.getChannelCount(); i++) {
+				this._copiedPinChannels[i] = [makeNotePin(0, 0, cap), makeNotePin(0, maxDivision, 0)];
+				this._stashCursorPinVols[i] = [cap, 0];
 			}
 		}
 
@@ -491,6 +623,8 @@ namespace beepbox {
 
 					if (this._cursor.curNote == null) {
 
+						//console.log("this._cursor.curNote == null");
+
 						let backwards: boolean;
 						let directLength: number;
 						if (currentPart < this._cursor.start) {
@@ -565,12 +699,15 @@ namespace beepbox {
 							sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
 							const pattern: Pattern | null = this._doc.getCurrentPattern();
 							if (pattern == null) throw new Error();
-							sequence.append(new ChangeNoteTruncate(this._doc, pattern, start, end));
+							// Using parameter skipNote to force proper "collision" checking vis-a-vis pitch for mod channels.
+							sequence.append(new ChangeNoteTruncate(this._doc, pattern, start, end, new Note(this._cursor.pitch, 0, 0, 0)));
 							let i: number;
 							for (i = 0; i < pattern.notes.length; i++) {
 								if (pattern.notes[i].start >= end) break;
 							}
-							const theNote: Note = new Note(this._cursor.pitch, start, end, 6, this._doc.song.getChannelIsNoise(this._doc.channel));
+							const theNote: Note = new Note(this._cursor.pitch, start, end,
+								this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch),
+								this._doc.song.getChannelIsNoise(this._doc.channel));
 							sequence.append(new ChangeNoteAdded(this._doc, pattern, theNote, i));
 							this._copyPins(theNote);
 
@@ -582,6 +719,9 @@ namespace beepbox {
 
 						this._pattern = this._doc.getCurrentPattern();
 					} else if (this._mouseHorizontal) {
+
+						//console.log("this._mouseHorizontal");
+
 						const shift: number = (this._mouseX - this._mouseXStart) / this._partWidth;
 
 						const shiftedPin: NotePin = this._cursor.curNote.pins[this._cursor.nearPinIndex];
@@ -593,10 +733,12 @@ namespace beepbox {
 
 						if (shiftedTime <= this._cursor.curNote.start && this._cursor.nearPinIndex == this._cursor.curNote.pins.length - 1 ||
 							shiftedTime >= this._cursor.curNote.end && this._cursor.nearPinIndex == 0) {
+
 							sequence.append(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
 
 							this._dragVisible = false;
 						} else {
+
 							start = Math.min(this._cursor.curNote.start, shiftedTime);
 							end = Math.max(this._cursor.curNote.end, shiftedTime);
 
@@ -609,7 +751,10 @@ namespace beepbox {
 							sequence.append(new ChangePinTime(this._doc, this._cursor.curNote, this._cursor.nearPinIndex, shiftedTime));
 							this._copyPins(this._cursor.curNote);
 						}
-					} else if (this._cursor.pitchIndex == -1) {
+					} else if (this._cursor.pitchIndex == -1 || this._doc.song.getChannelIsMod(this._doc.channel)) {
+
+						//console.log("this._cursor.pitchIndex == -1");
+
 						const bendPart: number =
 							Math.max(this._cursor.curNote.start,
 								Math.min(this._cursor.curNote.end,
@@ -621,19 +766,27 @@ namespace beepbox {
 						let nextPin: NotePin = this._cursor.curNote.pins[0];
 						let bendVolume: number = 0;
 						let bendInterval: number = 0;
+						let cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch);
+
+						// Dragging gets a bit faster after difference in drag counts is >8.
+						let dragFactorSlow: number = 25.0 / Math.pow(cap, 0.4);
+						let dragFactorFast: number = 22.0 / Math.pow(cap, 0.5);
+						let dragSign: number = (this._mouseYStart > this._mouseY ? 1 : -1);
+						let dragCounts: number = Math.min(Math.abs(this._mouseYStart - this._mouseY) / dragFactorSlow, 8) + Math.max(0, Math.abs(this._mouseYStart - this._mouseY) / dragFactorFast - 8);
+
 						for (let i: number = 1; i < this._cursor.curNote.pins.length; i++) {
 							prevPin = nextPin;
 							nextPin = this._cursor.curNote.pins[i];
 							if (bendPart > nextPin.time) continue;
 							if (bendPart < prevPin.time) throw new Error();
 							const volumeRatio: number = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
-							bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((this._mouseYStart - this._mouseY) / 13.0));
+							bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + dragSign * dragCounts);
 							// If not in fine control mode, round to 0~2~4~6 (normal 4 settings)
-							if (this.controlMode == false && this._doc.alwaysFineNoteVol == false) {
+							if (this.controlMode == false && this._doc.alwaysFineNoteVol == false && !this._doc.song.getChannelIsMod(this._doc.channel)) {
 								bendVolume = Math.floor(bendVolume / 2) * 2;
 							}
 							if (bendVolume < 0) bendVolume = 0;
-							if (bendVolume > 6) bendVolume = 6;
+							if (bendVolume > cap) bendVolume = cap;
 							bendInterval = this._snapToPitch(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + this._cursor.curNote.pitches[0], 0, Config.maxPitch) - this._cursor.curNote.pitches[0];
 							break;
 						}
@@ -646,6 +799,9 @@ namespace beepbox {
 						sequence.append(new ChangeVolumeBend(this._doc, this._cursor.curNote, bendPart, bendVolume, bendInterval));
 						this._copyPins(this._cursor.curNote);
 					} else {
+						//console.log("final else");
+
+
 						this._dragVolume = this._cursor.curNote.pins[this._cursor.nearPinIndex].volume;
 
 						if (this._pattern == null) throw new Error();
@@ -676,12 +832,20 @@ namespace beepbox {
 						}
 						minPitch -= this._cursor.curNote.pitches[this._cursor.pitchIndex];
 						maxPitch -= this._cursor.curNote.pitches[this._cursor.pitchIndex];
-						const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, (this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount - 1 : Config.maxPitch) - maxPitch);
-						sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
+
+						if (!this._doc.song.getChannelIsMod(this._doc.channel)) {
+							const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, (this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount - 1 : Config.maxPitch) - maxPitch);
+							sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
+							this._dragPitch = bendTo;
+						}
+						else {
+							const bendTo: number = this._snapToPitch(this._dragPitch, -minPitch, Config.modCount - 1);
+							sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
+							this._dragPitch = bendTo;
+						}
 						this._copyPins(this._cursor.curNote);
 
 						this._dragTime = bendEnd;
-						this._dragPitch = bendTo;
 						this._dragVisible = true;
 					}
 				}
@@ -701,7 +865,8 @@ namespace beepbox {
 				}
 			} else if (this._mouseDown && continuousState) {
 				if (this._cursor.curNote == null) {
-					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 6, this._doc.song.getChannelIsNoise(this._doc.channel));
+					let cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch);
+					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, cap, this._doc.song.getChannelIsNoise(this._doc.channel));
 					note.pins = [];
 					for (const oldPin of this._cursor.pins) {
 						note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
@@ -710,13 +875,14 @@ namespace beepbox {
 					sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
 					const pattern: Pattern | null = this._doc.getCurrentPattern();
 					if (pattern == null) throw new Error();
+					//console.log("p2 - " + this._cursor.curIndex);
 					sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
 					this._doc.record(sequence);
 				} else {
 
 					if (this._pattern == null) throw new Error();
 
-					if (this._cursor.pitchIndex == -1) {
+					if (this._cursor.pitchIndex == -1 && !this._doc.song.getChannelIsMod(this._doc.channel)) {
 						const sequence: ChangeSequence = new ChangeSequence();
 						if (this._cursor.curNote.pitches.length == 4) {
 							sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.curNote.pitches[0], 0, true));
@@ -726,6 +892,7 @@ namespace beepbox {
 						this._copyPins(this._cursor.curNote);
 					} else {
 						if (this._cursor.curNote.pitches.length == 1) {
+							//console.log("p1 - " + this._cursor.curIndex);
 							this._doc.record(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
 						} else {
 							this._doc.record(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
@@ -736,6 +903,7 @@ namespace beepbox {
 
 			this._mouseDown = false;
 			this._mouseDragging = false;
+			this._svgModDragValueLabel.setAttribute("fill", "#666688");
 			this._updateCursorStatus();
 			this._updatePreview();
 		}
@@ -744,39 +912,42 @@ namespace beepbox {
 			if (this._usingTouch) {
 				if (!this._mouseDown || !this._cursor.valid || !this._mouseDragging || !this._dragVisible) {
 					this._svgPreview.setAttribute("visibility", "hidden");
+					this._svgModDragValueLabel.setAttribute("visibility", "hidden");
 				} else {
 					this._svgPreview.setAttribute("visibility", "visible");
 
 					const x: number = this._partWidth * this._dragTime;
 					const y: number = this._pitchToPixelHeight(this._dragPitch - this._octaveOffset);
-					const radius: number = this._pitchHeight / 2;
+					const radius: number = (this._pitchHeight - this._pitchBorder) / 2;
 					const width: number = 80;
 					const height: number = 60;
+					const cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch);
 					//this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 
 					let pathString: string = "";
 
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
-					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0) - height) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
-					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0) + height) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
-					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
-					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
-					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y - radius * (this._dragVolume / 6.0)) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
-					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y + radius * (this._dragVolume / 6.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / cap)) + " ";
+					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / cap) - height) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / cap)) + " ";
+					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / cap) + height) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / cap)) + " ";
+					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y - radius * (this._dragVolume / cap)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / cap)) + " ";
+					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y + radius * (this._dragVolume / cap)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / cap)) + " ";
+					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y - radius * (this._dragVolume / cap)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / cap)) + " ";
+					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y + radius * (this._dragVolume / cap)) + " ";
 
 					this._svgPreview.setAttribute("d", pathString);
 				}
 			} else {
 				if (!this._mouseOver || this._mouseDown || !this._cursor.valid) {
 					this._svgPreview.setAttribute("visibility", "hidden");
+					this._svgModDragValueLabel.setAttribute("visibility", "hidden");
 				} else {
 					this._svgPreview.setAttribute("visibility", "visible");
-					this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+					this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, (this._pitchHeight - this._pitchBorder) / 2 + 1, true, this._octaveOffset);
 				}
 			}
 		}
@@ -791,16 +962,52 @@ namespace beepbox {
 
 			this._editorWidth = this._doc.showLetters ? (this._doc.showScrollBar ? 460 : 480) : (this._doc.showScrollBar ? 492 : 512);
 			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * Config.partsPerBeat);
-			this._pitchHeight = this._doc.song.getChannelIsNoise(this._doc.channel) ? this._defaultDrumHeight : this._defaultPitchHeight;
-			this._pitchCount = this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount : Config.windowPitchCount;
+			if (this._doc.song.getChannelIsNoise(this._doc.channel)) {
+				this._pitchHeight = this._defaultDrumHeight;
+				this._pitchBorder = 0;
+				this._pitchCount = Config.drumCount;
+			}
+			else if (this._doc.song.getChannelIsMod(this._doc.channel)) {
+				this._pitchHeight = this._defaultModHeight;
+				this._pitchBorder = this._defaultModBorder;
+				this._pitchCount = Config.modCount;
+
+				if (this._pattern != null) {
+					// Force max height of mod channels to conform to settings.
+					for (const note of this._pattern.notes) {
+						let pitch = note.pitches[0]; // No pitch bend possible in mod channels.
+						let maxHeight: number = this._doc.song.getVolumeCap(true, this._doc.channel, this._doc.getCurrentInstrument(), pitch);
+						let maxFoundHeight: number = 0;
+						for (const pin of note.pins) {
+							if (pin.volume > maxFoundHeight) {
+								maxFoundHeight = pin.volume;
+							}
+						}
+						// Apply scaling if the max height is below any pin setting.
+						if (maxFoundHeight > maxHeight) {
+							for (const pin of note.pins) {
+								pin.volume = Math.round(pin.volume * (maxHeight / maxFoundHeight));
+							}
+						}
+					}
+				}
+			}
+			else {
+				this._pitchHeight = this._defaultPitchHeight;
+				this._pitchBorder = 0;
+				this._pitchCount = Config.windowPitchCount;
+			}
+
 			this._octaveOffset = this._doc.song.channels[this._doc.channel].octave * 12;
 
 			if (this._renderedRhythm != this._doc.song.rhythm ||
 				this._renderedPitchChannelCount != this._doc.song.pitchChannelCount ||
-				this._renderedNoiseChannelCount != this._doc.song.noiseChannelCount) {
+				this._renderedNoiseChannelCount != this._doc.song.noiseChannelCount ||
+				this._renderedModChannelCount != this._doc.song.modChannelCount) {
 				this._renderedRhythm = this._doc.song.rhythm;
 				this._renderedPitchChannelCount = this._doc.song.pitchChannelCount;
 				this._renderedNoiseChannelCount = this._doc.song.noiseChannelCount;
+				this._renderedModChannelCount = this._doc.song.modChannelCount;
 				this.resetCopiedPins();
 			}
 
@@ -809,7 +1016,7 @@ namespace beepbox {
 			if (this._renderedWidth != this._editorWidth) {
 				this._renderedWidth = this._editorWidth;
 				//this._svg.setAttribute("width", "" + this._editorWidth);
-				this._svg.setAttribute("viewBox", "0 0 " + this._editorWidth + " 481");
+				this._svg.setAttribute("viewBox", "0 0 " + this._editorWidth + " " + this._editorHeight);
 				this._svgBackground.setAttribute("width", "" + this._editorWidth);
 			}
 
@@ -818,7 +1025,9 @@ namespace beepbox {
 				this._renderedBeatWidth = beatWidth;
 				this._svgNoteBackground.setAttribute("width", "" + beatWidth);
 				this._svgDrumBackground.setAttribute("width", "" + beatWidth);
+				this._svgModBackground.setAttribute("width", "" + beatWidth);
 				this._backgroundDrumRow.setAttribute("width", "" + (beatWidth - 2));
+				this._backgroundModRow.setAttribute("width", "" + (beatWidth - 2));
 				for (let j: number = 0; j < 12; j++) {
 					this._backgroundPitchRows[j].setAttribute("width", "" + (beatWidth - 2));
 				}
@@ -844,13 +1053,23 @@ namespace beepbox {
 			if (this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				if (!this._renderedDrums) {
 					this._renderedDrums = true;
+					this._renderedMod = false;
 					this._svgBackground.setAttribute("fill", "url(#patternEditorDrumBackground)");
 					this._svgBackground.setAttribute("height", "" + (this._defaultDrumHeight * Config.drumCount));
 					//this._svg.setAttribute("height", "" + (this._defaultDrumHeight * Config.drumCount));
 				}
-			} else {
-				if (this._renderedDrums) {
+			} else if (this._doc.song.getChannelIsMod(this._doc.channel)) {
+				if (!this._renderedMod) {
 					this._renderedDrums = false;
+					this._renderedMod = true;
+					this._svgBackground.setAttribute("fill", "url(#patternEditorModBackground)");
+					this._svgBackground.setAttribute("height", "" + (this._defaultModHeight * Config.modCount));
+					//this._svg.setAttribute("height", "" + this._editorHeight);
+				}
+			} else {
+				if (this._renderedDrums || this._renderedMod) {
+					this._renderedDrums = false;
+					this._renderedMod = false;
 					this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground)");
 					this._svgBackground.setAttribute("height", "" + this._editorHeight);
 					//this._svg.setAttribute("height", "" + this._editorHeight);
@@ -858,19 +1077,21 @@ namespace beepbox {
 			}
 
 			if (this._doc.showChannels) {
-				for (let channel: number = this._doc.song.getChannelCount() - 1; channel >= 0; channel--) {
-					if (channel == this._doc.channel) continue;
-					if (this._doc.song.getChannelIsNoise(channel) != this._doc.song.getChannelIsNoise(this._doc.channel)) continue;
+				if (!this._doc.song.getChannelIsMod(this._doc.channel)) {
+					for (let channel: number = this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount - 1; channel >= 0; channel--) {
+						if (channel == this._doc.channel) continue;
+						if (this._doc.song.getChannelIsNoise(channel) != this._doc.song.getChannelIsNoise(this._doc.channel)) continue;
 
-					const pattern2: Pattern | null = this._doc.song.getPattern(channel, this._doc.bar);
-					if (pattern2 == null) continue;
-					for (const note of pattern2.notes) {
-						for (const pitch of note.pitches) {
-							const notePath: SVGPathElement = SVG.path();
-							notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, channel).noteDim);
-							notePath.setAttribute("pointer-events", "none");
-							this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channels[channel].octave * 12);
-							this._svgNoteContainer.appendChild(notePath);
+						const pattern2: Pattern | null = this._doc.song.getPattern(channel, this._doc.bar);
+						if (pattern2 == null) continue;
+						for (const note of pattern2.notes) {
+							for (const pitch of note.pitches) {
+								const notePath: SVGPathElement = SVG.path();
+								notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, channel).noteDim);
+								notePath.setAttribute("pointer-events", "none");
+								this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channels[channel].octave * 12);
+								this._svgNoteContainer.appendChild(notePath);
+							}
 						}
 					}
 				}
@@ -883,12 +1104,12 @@ namespace beepbox {
 						let notePath: SVGPathElement = SVG.path();
 						notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteDim);
 						notePath.setAttribute("pointer-events", "none");
-						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
+						this._drawNote(notePath, pitch, note.start, note.pins, (this._pitchHeight - this._pitchBorder) / 2 + 1, false, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
 						notePath = SVG.path();
 						notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright);
 						notePath.setAttribute("pointer-events", "none");
-						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+						this._drawNote(notePath, pitch, note.start, note.pins, (this._pitchHeight - this._pitchBorder) / 2 + 1, true, this._octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
 
 						if (note.pitches.length > 1) {
@@ -908,6 +1129,23 @@ namespace beepbox {
 							}
 						}
 					}
+
+
+					if (this._doc.song.getChannelIsMod(this._doc.channel) && this._mouseDragging && !this._mouseHorizontal && note == this._cursor.curNote) {
+
+						this._svgModDragValueLabel.setAttribute("visibility", "visible");
+						this._svgModDragValueLabel.setAttribute("fill", "#FFFFFF");
+
+						let presValue: number = this._doc.song.modValueToReal(this._dragVolume, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].modSettings[Config.modCount - 1 - note.pitches[0]]);
+
+						// This is me being too lazy to fiddle with the css to get it to align center.
+						let xOffset: number = (+(presValue >= 10.0)) + (+(presValue >= 100.0)) + (+(presValue < 0.0)) + (+(presValue <= -10.0));
+
+						this._svgModDragValueLabel.setAttribute("x", "" + prettyNumber(Math.max(Math.min(this._editorWidth - 8 - xOffset * 8, this._partWidth * this._dragTime - 4 - xOffset * 4), 2)));
+						this._svgModDragValueLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(note.pitches[0] - this._octaveOffset) - 30));
+						this._svgModDragValueLabel.textContent = "" + presValue;
+
+					}
 				}
 			}
 		}
@@ -918,7 +1156,10 @@ namespace beepbox {
 
 			let nextPin: NotePin = pins[0];
 
-			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + endOffset) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / 6.0 : 1.0)) + " ";
+			const cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), pitch);
+
+			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + endOffset) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / cap : 1.0)) + " ";
+
 			for (let i: number = 1; i < pins.length; i++) {
 				let prevPin: NotePin = nextPin;
 				nextPin = pins[i];
@@ -926,8 +1167,8 @@ namespace beepbox {
 				let nextSide: number = this._partWidth * (start + nextPin.time) - (i == pins.length - 1 ? endOffset : 0);
 				let prevHeight: number = this._pitchToPixelHeight(pitch + prevPin.interval - offset);
 				let nextHeight: number = this._pitchToPixelHeight(pitch + nextPin.interval - offset);
-				let prevVolume: number = showVolume ? prevPin.volume / 6.0 : 1.0;
-				let nextVolume: number = showVolume ? nextPin.volume / 6.0 : 1.0;
+				let prevVolume: number = showVolume ? prevPin.volume / cap : 1.0;
+				let nextVolume: number = showVolume ? nextPin.volume / cap : 1.0;
 				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
 				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(prevSide + 1) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
 				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(nextSide - 1) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
@@ -940,8 +1181,8 @@ namespace beepbox {
 				let nextSide: number = this._partWidth * (start + nextPin.time) + (i == 0 ? endOffset : 0);
 				let prevHeight: number = this._pitchToPixelHeight(pitch + prevPin.interval - offset);
 				let nextHeight: number = this._pitchToPixelHeight(pitch + nextPin.interval - offset);
-				let prevVolume: number = showVolume ? prevPin.volume / 6.0 : 1.0;
-				let nextVolume: number = showVolume ? nextPin.volume / 6.0 : 1.0;
+				let prevVolume: number = showVolume ? prevPin.volume / cap : 1.0;
+				let nextVolume: number = showVolume ? nextPin.volume / cap : 1.0;
 				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
 				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(prevSide - 1) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
 				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(nextSide + 1) + " " + prettyNumber(nextHeight + radius * nextVolume) + " ";

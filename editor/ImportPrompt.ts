@@ -387,6 +387,7 @@ namespace beepbox {
 			// Convert each midi channel into a BeepBox channel.
 			const pitchChannels: Channel[] = [];
 			const noiseChannels: Channel[] = [];
+			const modChannels: Channel[] = [];
 			for (let midiChannel: number = 0; midiChannel < 16; midiChannel++) {
 				if (noteEvents[midiChannel].length == 0) continue;
 
@@ -397,6 +398,7 @@ namespace beepbox {
 
 				const isDrumsetChannel: boolean = (midiChannel == 9);
 				const isNoiseChannel: boolean = isDrumsetChannel || (channelPreset != null && channelPreset.isNoise == true);
+				const isModChannel: boolean = (channelPreset != null && channelPreset.isMod == true);
 				const channelBasePitch: number = isNoiseChannel ? Config.spectrumBasePitch : Config.keys[key].basePitch;
 				const intervalScale: number = isNoiseChannel ? Config.noiseInterval : 1;
 				const midiIntervalScale: number = isNoiseChannel ? 0.5 : 1;
@@ -408,6 +410,8 @@ namespace beepbox {
 					} else {
 						noiseChannels.push(channel);
 					}
+				} else if (isModChannel) {
+					modChannels.push(channel);
 				} else {
 					pitchChannels.push(channel);
 				}
@@ -426,8 +430,8 @@ namespace beepbox {
 
 					const presetValue: number = EditorConfig.nameToPresetValue("standard drumset")!;
 					const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
-					const instrument: Instrument = new Instrument(false);
-					instrument.fromJsonObject(preset.settings, false);
+					const instrument: Instrument = new Instrument(false, false);
+					instrument.fromJsonObject(preset.settings, false, false);
 					instrument.preset = presetValue;
 					channel.instruments.push(instrument);
 
@@ -571,14 +575,14 @@ namespace beepbox {
 										// If this is the first time a note is trying to use a specific instrument
 										// program in this channel, create a new BeepBox instrument for it.
 										if (instrumentByProgram[currentProgram] == undefined) {
-											const instrument: Instrument = new Instrument(isNoiseChannel);
+											const instrument: Instrument = new Instrument(isNoiseChannel, isModChannel);
 											instrumentByProgram[currentProgram] = instrument;
 
 											if (presetValue != null && preset != null && (preset.isNoise == true) == isNoiseChannel) {
-												instrument.fromJsonObject(preset.settings, isNoiseChannel);
+												instrument.fromJsonObject(preset.settings, isNoiseChannel, isModChannel);
 												instrument.preset = presetValue;
 											} else {
-												instrument.setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel);
+												instrument.setTypeAndReset(isModChannel ? InstrumentType.mod : (isNoiseChannel ? InstrumentType.noise : InstrumentType.chip), isNoiseChannel, isModChannel);
 												instrument.chord = 0; // Midi instruments use polyphonic harmony by default.
 											}
 
@@ -772,7 +776,7 @@ namespace beepbox {
 					}
 
 					const averagePitch: number = pitchSum / pitchCount;
-					channel.octave = isNoiseChannel ? 0 : Math.max(0, Math.min(Config.scrollableOctaves, Math.round((averagePitch / 12) - 1.5)));
+					channel.octave = (isNoiseChannel || isModChannel) ? 0 : Math.max(0, Math.min(Config.scrollableOctaves, Math.round((averagePitch / 12) - 1.5)));
 				}
 
 				while (channel.bars.length < songTotalBars) {
@@ -834,6 +838,7 @@ namespace beepbox {
 
 			compactChannels(pitchChannels, Config.pitchChannelCountMax);
 			compactChannels(noiseChannels, Config.noiseChannelCountMax);
+			compactChannels(modChannels, Config.modChannelCountMax);
 
 			class ChangeImportMidi extends ChangeGroup {
 				constructor(doc: SongDocument) {
@@ -848,8 +853,9 @@ namespace beepbox {
 
 					removeDuplicatePatterns(pitchChannels);
 					removeDuplicatePatterns(noiseChannels);
+					removeDuplicatePatterns(modChannels);
 
-					this.append(new ChangeReplacePatterns(doc, pitchChannels, noiseChannels));
+					this.append(new ChangeReplacePatterns(doc, pitchChannels, noiseChannels, modChannels));
 					song.loopStart = 0;
 					song.loopLength = song.barCount;
 					this._didSomething();

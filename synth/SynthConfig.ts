@@ -50,6 +50,7 @@ namespace beepbox {
 		harmonics = 5,
 		pwm = 6,
 		customChipWave = 7,
+		mod = 8,
 		length,
 	}
 
@@ -146,7 +147,7 @@ namespace beepbox {
 		public static attackVal: number = 0;
 		public static releaseVal: number = 0.25;
 
-		public static readonly versionDisplayName: string = "JummBox 1.2";
+		public static readonly versionDisplayName: string = "JummBox 2.0";
 		public static readonly scales: DictionaryArray<Scale> = toNameMap([
 														              //   C     Db      D     Eb      E      F     F#      G     Ab      A     Bb      B      C
 			{ name: "Free", flags:              [ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true] }, // Free
@@ -204,7 +205,7 @@ namespace beepbox {
 			{ name: "freehand", stepsPerBeat: 24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null },
 		]);
 
-		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "custom chip"];
+		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "custom chip", "mod"];
 		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false, true];
 		public static readonly instrumentTypeHasChorus: ReadonlyArray<boolean> = [true, true, true, false, false, true, true, true];
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
@@ -282,6 +283,8 @@ namespace beepbox {
 		public static readonly volumeLogScale: number = 0.1428;
 		public static readonly panCenter: number = 50;
 		public static readonly panMax: number = Config.panCenter * 2;
+		public static readonly detuneMin: number = -50;
+		public static readonly detuneMax: number = 50;
 		public static readonly chords: DictionaryArray<Chord> = toNameMap([
 			{ name: "harmony", harmonizes: true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 0 },
 			{ name: "strum", harmonizes: true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 1 },
@@ -382,12 +385,18 @@ namespace beepbox {
 		public static readonly pitchChannelCountMax: number = 40;
 		public static readonly noiseChannelCountMin: number = 0;
 		public static readonly noiseChannelCountMax: number = 8;
+		public static readonly modChannelCountMin: number = 0;
+		public static readonly modChannelCountMax: number = 8;
 		public static readonly noiseInterval: number = 6;
 		public static readonly drumCount: number = 12;
-		public static readonly pitchOctaves: number = 7;
-		public static readonly windowOctaves: number = 3;
+		public static readonly modCount: number = 6;
+		public static readonly pitchOctaves: number = 8;
+		public static readonly windowOctaves: number = 3 + (+(localStorage.getItem("wideMode") == "true" && ( window.innerWidth > 700 ))); // 1 extra octave default in wide mode
+		public static readonly maxScrollableOctaves: number = 5; // Largest number possible with any config setting
 		public static readonly scrollableOctaves: number = Config.pitchOctaves - Config.windowOctaves;
 		public static readonly windowPitchCount: number = Config.windowOctaves * 12 + 1;
+		public static readonly pitchHeight: number = 13;
+		public static readonly pitchEditorHeight: number = Config.windowPitchCount * Config.pitchHeight;
 		public static readonly maxPitch: number = Config.pitchOctaves * 12;
 		public static readonly maximumTonesPerChannel: number = 8;
 		public static readonly sineWaveLength: number = 1 << 8; // 256

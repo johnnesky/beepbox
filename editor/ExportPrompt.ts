@@ -41,6 +41,7 @@ namespace beepbox {
 
 	export class ExportPrompt implements Prompt {
 		private readonly _fileName: HTMLInputElement = input({ type: "text", style: "width: 10em;", value: "BeepBox-Song", maxlength: 250, "autofocus": "autofocus" });
+		private readonly _computedSamplesLabel: HTMLDivElement = div({ style: "width: 10em;" }, new Text("0:00"));
 		private readonly _enableIntro: HTMLInputElement = input({ type: "checkbox" });
 		private readonly _loopDropDown: HTMLInputElement = input({ style: "width: 2em;", type: "number", min: "1", max: "4", step: "1" });
 		private readonly _enableOutro: HTMLInputElement = input({ type: "checkbox" });
@@ -87,6 +88,10 @@ namespace beepbox {
 			div({ style: "display: flex; flex-direction: row; align-items: center; justify-content: space-between;" },
 				"File name:",
 				this._fileName,
+			),
+			div({ style: "display: flex; flex-direction: row; align-items: center; justify-content: space-between;" },
+				"Length:",
+				this._computedSamplesLabel,
 			),
 			div({ style: "display: table; width: 100%;" },
 				div({ style: "display: table-row;" },
@@ -137,10 +142,23 @@ namespace beepbox {
 			this._loopDropDown.addEventListener("blur", ExportPrompt._validateNumber);
 			this._exportButton.addEventListener("click", this._export);
 			this._cancelButton.addEventListener("click", this._close);
+			this._enableOutro.addEventListener("click", () => { (this._computedSamplesLabel.firstChild as Text).textContent = this.samplesToTime( this._doc.synth.getTotalSamples(this._enableIntro.checked, this._enableOutro.checked, +this._loopDropDown.value - 1) ); });
+			this._enableIntro.addEventListener("click", () => { (this._computedSamplesLabel.firstChild as Text).textContent = this.samplesToTime( this._doc.synth.getTotalSamples(this._enableIntro.checked, this._enableOutro.checked, +this._loopDropDown.value - 1) ); });
+			this._loopDropDown.addEventListener("change", () => { (this._computedSamplesLabel.firstChild as Text).textContent = this.samplesToTime( this._doc.synth.getTotalSamples(this._enableIntro.checked, this._enableOutro.checked, +this._loopDropDown.value - 1) ); });
 			this.container.addEventListener("keydown", this._whenKeyPressed);
 
 			this._fileName.value = _doc.song.title;
 			ExportPrompt._validateFileName(null, this._fileName);
+
+			(this._computedSamplesLabel.firstChild as Text).textContent = this.samplesToTime( this._doc.synth.getTotalSamples(this._enableIntro.checked, this._enableOutro.checked, +this._loopDropDown.value - 1) );
+		}
+
+		// Could probably be moved to doc or synth. Fine here for now until needed by something else.
+		private samplesToTime(samples: number): string {
+			const rawSeconds: number = Math.round(samples / this._doc.synth.samplesPerSecond);
+			const seconds: number = rawSeconds % 60;
+			const minutes: number = Math.floor(rawSeconds / 60);
+			return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
 		}
 
 		private _close = (): void => {
@@ -216,7 +234,8 @@ namespace beepbox {
 					synth.nextBar();
 				}
 			}
-			const sampleFrames: number = synth.getSamplesPerBar() * synth.getTotalBars(this._enableIntro.checked, this._enableOutro.checked);
+			synth.computeLatestModValues(this._doc.song);
+			const sampleFrames: number = synth.getTotalSamples(this._enableIntro.checked, this._enableOutro.checked, synth.loopRepeatCount);
 			const recordedSamplesL: Float32Array = new Float32Array(sampleFrames);
 			const recordedSamplesR: Float32Array = new Float32Array(sampleFrames);
 			//const timer: number = performance.now();
@@ -243,7 +262,7 @@ namespace beepbox {
 			data.setUint16(index, wavChannelCount, true); index += 2; // channel count
 			data.setUint32(index, sampleRate, true); index += 4; // sample rate
 			data.setUint32(index, sampleRate * bytesPerSample * wavChannelCount, true); index += 4; // bytes per second
-			data.setUint16(index, bytesPerSample, true); index += 2; // sample rate
+			data.setUint16(index, bytesPerSample * wavChannelCount, true); index += 2; // sample rate
 			data.setUint16(index, bitsPerSample, true); index += 2; // sample rate
 			data.setUint32(index, 0x64617461, false); index += 4;
 			data.setUint32(index, sampleCount * bytesPerSample, true); index += 4;
@@ -313,7 +332,7 @@ namespace beepbox {
 			const tracks = [{ isMeta: true, channel: -1, midiChannel: -1, isNoise: false, isDrumset: false }];
 			let midiChannelCounter: number = 0;
 			let foundADrumset: boolean = false;
-			for (let channel: number = 0; channel < this._doc.song.getChannelCount(); channel++) {
+			for (let channel: number = 0; channel < this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount; channel++) {
 				if (!foundADrumset && this._doc.song.channels[channel].instruments[0].type == InstrumentType.drumset) {
 					tracks.push({ isMeta: false, channel: channel, midiChannel: 9, isNoise: true, isDrumset: true });
 					foundADrumset = true; // There can only be one drumset channel, and it's always channel 9 (seen as 10 in most UIs). :/

@@ -15,6 +15,7 @@ namespace beepbox {
 
 	interface ChannelCopy {
 		isNoise: boolean;
+		isMod: boolean;
 		patterns: Dictionary<PatternCopy>;
 		bars: number[];
 	}
@@ -52,7 +53,7 @@ namespace beepbox {
 			}
 		}
 
-		public setIndex(index: number, dim: boolean, selected: boolean, y: number, color: string, isNoise: boolean): void {
+		public setIndex(index: number, dim: boolean, selected: boolean, y: number, color: string, isNoise: boolean, isMod: boolean): void {
 			if (this._renderedIndex != index) {
 				if (!this._renderedSelected && ((index == 0) != (this._renderedIndex == 0))) {
 					if (index == 0) {
@@ -61,6 +62,8 @@ namespace beepbox {
 					else {
 						if (isNoise)
 							this._rect.setAttribute("fill", dim ? "#161313" : "#3d3535");
+						else if (isMod)
+							this._rect.setAttribute("fill", dim ? "#242d28" : "#4a4a4a");
 						else
 							this._rect.setAttribute("fill", dim ? "#1c1d28" : "#393e4f");
 
@@ -84,6 +87,8 @@ namespace beepbox {
 					else {
 						if (isNoise)
 							this._rect.setAttribute("fill", dim ? "#161313" : "#3d3535");
+						else if (isMod)
+							this._rect.setAttribute("fill", dim ? "#242d28" : "#4a4a4a");
 						else
 							this._rect.setAttribute("fill", dim ? "#1c1d28" : "#393e4f");
 					}
@@ -104,6 +109,8 @@ namespace beepbox {
 					else {
 						if (isNoise)
 							this._rect.setAttribute("fill", dim ? "#161313" : "#3d3535");
+						else if (isMod)
+							this._rect.setAttribute("fill", dim ? "#242d28" : "#4a4a4a");
 						else
 							this._rect.setAttribute("fill", dim ? "#1c1d28" : "#393e4f");
 					}
@@ -174,6 +181,7 @@ namespace beepbox {
 		private _touchMode: boolean = isMobile;
 		private _changeTranspose: ChangeGroup | null = null;
 		private _barDropDownBar: number = 0;
+    private _lastScrollTime: number = 0;
 
 		constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 			window.requestAnimationFrame(this._animatePlayhead);
@@ -480,6 +488,7 @@ namespace beepbox {
 
 				const channelCopy: ChannelCopy = {
 					"isNoise": this._doc.song.getChannelIsNoise(channel),
+					"isMod": this._doc.song.getChannelIsMod(channel),
 					"patterns": patterns,
 					"bars": bars,
 				};
@@ -513,10 +522,12 @@ namespace beepbox {
 				const channel: number = this._boxSelectionChannel + pasteChannel;
 
 				const isNoise: boolean = !!channelCopy["isNoise"];
+				const isMod: boolean = !!channelCopy["isMod"];
 				const patternCopies: Dictionary<PatternCopy> = channelCopy["patterns"] || {};
 				const copiedBars: number[] = channelCopy["bars"] || [];
 				if (copiedBars.length == 0) continue;
 				if (isNoise != this._doc.song.getChannelIsNoise(channel)) continue;
+				if (isMod != this._doc.song.getChannelIsMod(channel)) continue;
 
 				const pasteWidth: number = fillSelection ? this._boxSelectionWidth : Math.min(copiedBars.length, this._doc.song.barCount - this._boxSelectionBar);
 				if (!fillSelection && copiedBars.length == 1 && channelCopies.length == 1) {
@@ -528,7 +539,8 @@ namespace beepbox {
 					if (copiedPatternIndex == 0 && currentPatternIndex == 0) continue;
 
 					const patternCopy: PatternCopy = patternCopies[String(copiedPatternIndex)];
-					const instrumentCopy: number = Math.min(patternCopy["instrument"] >>> 0, this._doc.song.instrumentsPerChannel - 1);
+
+				  const instrumentCopy: number = Math.min(patternCopy["instrument"] >>> 0, this._doc.song.instrumentsPerChannel - 1);
 
 					if (currentPatternIndex == 0) {
 						const existingPattern: Pattern | undefined = this._doc.song.channels[channel].patterns[copiedPatternIndex - 1];
@@ -717,7 +729,7 @@ namespace beepbox {
 
 			const scaleFlags: boolean[] = [true, false, false, false, false, false, false, false, false, false, false, false];
 			for (const channel of this._eachSelectedChannel()) {
-				if (this._doc.song.getChannelIsNoise(channel)) continue;
+				if (this._doc.song.getChannelIsNoise(channel) || this._doc.song.getChannelIsMod(channel)) continue;
 				for (const pattern of this._eachSelectedPattern(channel)) {
 					unionOfUsedNotes(pattern, scaleFlags);
 				}
@@ -726,7 +738,7 @@ namespace beepbox {
 			const scaleMap: number[] = generateScaleMap(scaleFlags, this._doc.song.scale);
 
 			for (const channel of this._eachSelectedChannel()) {
-				if (this._doc.song.getChannelIsNoise(channel)) continue;
+				if (this._doc.song.getChannelIsNoise(channel) || this._doc.song.getChannelIsMod(channel)) continue;
 				for (const pattern of this._eachSelectedPattern(channel)) {
 					group.append(new ChangePatternScale(this._doc, pattern, scaleMap));
 				}
@@ -761,6 +773,18 @@ namespace beepbox {
 			this._doc.record(group);
 		}
 
+		public setModChannel(mod: number, text: string): void {
+			this._doc.record(new ChangeModChannel(this._doc, mod, text));
+		}
+
+		public setModInstrument(mod: number, instrument: number): void {			
+			this._doc.record(new ChangeModInstrument(this._doc, mod, instrument));
+		}
+
+		public setModSetting(mod: number, text: string): void {
+			this._doc.record(new ChangeModSetting(this._doc, mod, text));
+		}
+
 		private _nextDigit(digit: string, forInstrument: boolean): void {
 			if (forInstrument) {
 				this._instrumentDigits += digit;
@@ -792,7 +816,7 @@ namespace beepbox {
 				if (parsed <= this._doc.song.patternsPerChannel) {
 
 					this._setPattern(parsed);
-					
+
 					return;
 				}
 
@@ -923,48 +947,27 @@ namespace beepbox {
 			const selected: boolean = (bar == this._doc.bar && channel == this._doc.channel);
 			const overTrackEditor: boolean = (this._mouseY >= Config.barEditorHeight);
 
-			/*
-			if (((this._hasSelection && (this._selectionWidth > 0 || this._selectionHeight > 0)) || (this._selecting && overTrackEditor && (bar != this._selectionStartBar || channel != this._selectionStartChannel)))) {
-				this._selectionRect.style.display = "";
-		
-				if (this._selecting) {
-		
-					this._selectionLeft = Math.min(bar, this._selectionStartBar);
-					this._selectionWidth = Math.abs(bar - this._selectionStartBar);
-					this._selectionTop = Math.min(channel, this._selectionStartChannel);
-					this._selectionHeight = Math.abs(channel - this._selectionStartChannel);
-		
+			if (this._mouseDragging && this._mouseStartBar != this._mouseBar) {
+
 					// Handle auto-scroll in selection. Only @50ms or slower.
 					var timestamp: number = Date.now();
-		
+
 					if (timestamp - this._lastScrollTime >= 50) {
-		
+
 						if (bar > this._doc.barScrollPos + this._doc.trackVisibleBars - 1 && this._doc.barScrollPos < this._doc.song.barCount - this._doc.trackVisibleBars) {
-		
+
 							this._songEditor.changeBarScrollPos(1);
 						}
 						if (bar < this._doc.barScrollPos && this._doc.barScrollPos > 0) {
-		
+
 							this._songEditor.changeBarScrollPos(-1);
 						}
-		
+
 						this._lastScrollTime = timestamp;
-		
-					}
-		
+
 				}
-		
-				this._selectionRect.setAttribute("x", "" + (1 + this._barWidth * this._selectionLeft));
-				this._selectionRect.setAttribute("y", "" + (1 + Config.barEditorHeight + (this._channelHeight * this._selectionTop)));
-				this._selectionRect.setAttribute("width", "" + ((this._selectionWidth + 1) * this._barWidth - 2));
-				this._selectionRect.setAttribute("height", "" + ((this._selectionHeight + 1) * this._channelHeight - 2));
-		
-			} else {
-				this._selectionWidth = 0;
-				this._selectionHeight = 0;
-				this._selectionRect.style.display = "none";
+
 			}
-			*/
 
 			if (this._mouseOver && !this._mousePressed && !selected && overTrackEditor) {
 				this._boxHighlight.setAttribute("x", "" + (1 + this._barWidth * bar));
@@ -1025,7 +1028,7 @@ namespace beepbox {
 
 		public render(): void {
 			// Get channel height
-			const wideScreen: boolean = window.innerWidth > 700;
+			const wideScreen: boolean = ( window.innerWidth > 700  ||  this._doc.wideMode == true );
 			const squashed: boolean = !wideScreen || this._doc.song.getChannelCount() > 4 || (this._doc.song.barCount > this._doc.trackVisibleBars && this._doc.song.getChannelCount() > 3);
 			this._channelHeight = squashed ? 27 : 32;
 
@@ -1118,12 +1121,14 @@ namespace beepbox {
 					const box: Box = this._grid[j][i];
 					if (i < this._doc.song.barCount) {
 						const colors: ChannelColors = ColorConfig.getChannelColor(this._doc.song, j);
-						box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, j, dim && !selected ? colors.channelDim : colors.channelBright, j >= this._doc.song.pitchChannelCount);
+						box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, j, dim && !selected ? colors.channelDim : colors.channelBright, j >= this._doc.song.pitchChannelCount && j < this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount, j >= this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount);
 						box.container.style.visibility = "visible";
 					} else {
 						box.container.style.visibility = "hidden";
 					}
 				}
+
+				//TODO
 			}
 
 			this._select.style.display = this._touchMode ? "" : "none";

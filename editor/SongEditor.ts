@@ -64,6 +64,12 @@ namespace beepbox {
 			menu.appendChild(option({ value: InstrumentType.fm }, EditorConfig.valueToPreset(InstrumentType.fm)!.name));
 			menu.appendChild(option({ value: InstrumentType.customChipWave }, EditorConfig.valueToPreset(InstrumentType.customChipWave)!.name));
 		}
+		
+		const randomGroup: HTMLElement = optgroup({ label: "Randomize ▾" });
+		randomGroup.appendChild(option({ value: "randomPreset" }, "Random Preset"));
+		randomGroup.appendChild(option({ value: "randomGenerated" }, "Random Generated"));
+		menu.appendChild(randomGroup);
+
 
 		for (let categoryIndex: number = 1; categoryIndex < EditorConfig.presetCategories.length; categoryIndex++) {
 			const category: PresetCategory = EditorConfig.presetCategories[categoryIndex];
@@ -102,11 +108,6 @@ namespace beepbox {
 
 			if (foundAny) menu.appendChild(group);
 		}
-
-		const randomGroup: HTMLElement = optgroup({ label: "Randomize ▾" });
-		randomGroup.appendChild(option({ value: "randomPreset" }, "Random Preset"));
-		randomGroup.appendChild(option({ value: "randomGenerated" }, "Random Generated"));
-		menu.appendChild(randomGroup);
 
 		return menu;
 	}
@@ -315,8 +316,11 @@ namespace beepbox {
 		private _change: Change | null = null;
 		private _value: number = 0;
 		private _oldValue: number = 0;
+		public container: HTMLSpanElement;
 
-		constructor(public readonly input: HTMLInputElement, private readonly _doc: SongDocument, private readonly _getChange: (oldValue: number, newValue: number) => Change) {
+		constructor(public readonly input: HTMLInputElement, private readonly _doc: SongDocument, private readonly _getChange: ((oldValue: number, newValue: number) => Change) | null, midTick: boolean) {
+			// A container is created around the input to allow for spec-compliant pseudo css classes (e.g ::before and ::after, which must be added to containers, not the input itself)
+			this.container = (midTick) ? span({ className: "midTick", style: "position: sticky;" }, input) : span({ style: "position: sticky;" }, input);
 			input.addEventListener("input", this._whenInput);
 			input.addEventListener("change", this._whenChange);
 		}
@@ -329,13 +333,17 @@ namespace beepbox {
 		private _whenInput = (): void => {
 			const continuingProspectiveChange: boolean = this._doc.lastChangeWas(this._change);
 			if (!continuingProspectiveChange) this._oldValue = this._value;
-			this._change = this._getChange(this._oldValue, parseInt(this.input.value));
-			this._doc.setProspectiveChange(this._change);
+			if (this._getChange != null) {
+				this._change = this._getChange(this._oldValue, parseInt(this.input.value));
+				this._doc.setProspectiveChange(this._change);
+			}
 		};
 
 		private _whenChange = (): void => {
-			this._doc.record(this._change!);
-			this._change = null;
+			if (this._getChange != null) {
+				this._doc.record(this._change!);
+				this._change = null;
+			}
 		};
 	}
 
@@ -358,24 +366,26 @@ namespace beepbox {
 			this._trackContainer,
 		]);
 		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackContainer);
-		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
 		private readonly _piano: Piano = new Piano(this._doc);
-		private readonly _editorBox: HTMLDivElement = div(
-			div({ className: "editorBox noSelection", style: "height: 481px; display: flex; flex-direction: row; margin-bottom: 6px;" },
+		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc, this._piano);
+		private readonly _editorBox: HTMLDivElement = div({ id: "track-and-pattern-container" },
+			div({ className: "editorBox noSelection", id: "editor-box", style: "height: " + Config.pitchEditorHeight + "px; display: flex; flex-direction: row; margin-bottom: 6px;" },
 				this._piano.container,
 				this._patternEditor.container,
 				this._octaveScrollBar.container,
 			),
-			this._trackBar,
-			div({ style: "display:flex; flex-direction: row;" },
-				div({ style: "width: 32px; height: 32px" }, []),
-				this._barScrollBar.container,
+			div({ id: "track-and-scrollbar-container" },
+				this._trackBar,
+				div({ style: "display:flex; flex-direction: row;" },
+					div({ style: "width: 32px; height: 32px" }, []),
+					this._barScrollBar.container,
+				),
 			),
 		);
 		private readonly _playButton: HTMLButtonElement = button({ style: "width: 80px;", type: "button" });
 		private readonly _prevBarButton: HTMLButtonElement = button({ className: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)" });
 		private readonly _nextBarButton: HTMLButtonElement = button({ className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)" });
-		private readonly _volumeSlider: HTMLInputElement = input({ title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "100", value: "50", step: "1" });
+		private readonly _volumeSlider: Slider = new Slider(input({ title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "100", value: "50", step: "1" }), this._doc, null, false);
 		private readonly _fileMenu: HTMLSelectElement = select({ style: "width: 100%;" },
 			option({ selected: true, disabled: true, hidden: false }, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option({ value: "new" }, "+ New Blank Song"),
@@ -416,14 +426,15 @@ namespace beepbox {
 			option({ value: "showFifth" }, 'Highlight "Fifth" Notes'),
 			option({ value: "showChannels" }, "Show All Channels"),
 			option({ value: "showScrollBar" }, "Octave Scroll Bar"),
-			option({ value: "alwaysFineNoteVol" }, "Always Fine Note Vol.")
+			option({ value: "alwaysFineNoteVol" }, "Always Fine Note Vol."),
+			option({ value: "wideMode" }, "Wide Mode"),
 			//option({value: "alwaysShowSettings"}, "Customize All Instruments"),
 		);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale => scale.name));
 		private readonly _keySelect: HTMLSelectElement = buildOptions(select(), Config.keys.map(key => key.name).reverse());
-		private readonly _tempoSlider: Slider = new Slider(input({ style: "margin: 0; vertical-align: middle;", type: "range", min: "30", max: "320", value: "160", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue));
+		private readonly _tempoSlider: Slider = new Slider(input({ style: "margin: 0; vertical-align: middle;", type: "range", min: "30", max: "320", value: "160", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, newValue), false);
 		private readonly _tempoStepper: HTMLInputElement = input({ style: "width: 4em; font-size: 80%; margin-left: 0.4em; vertical-align: middle;", type: "number", step: "1" });
-		private readonly _reverbSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
+		private readonly _reverbSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue), false);
 		private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select(), Config.rhythms.map(rhythm => rhythm.name));
 		private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false, "pitchPresetSelect");
 		private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true, "drumPresetSelect");
@@ -431,21 +442,27 @@ namespace beepbox {
 		private readonly _algorithmSelectRow: HTMLDivElement = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("algorithm") }, "Algorithm: "), div({ className: "selectContainer" }, this._algorithmSelect));
 		private readonly _instrumentSelect: HTMLSelectElement = select();
 		private readonly _instrumentSelectRow: HTMLDivElement = div({ className: "selectRow", style: "display: none;" }, span({ class: "tip", onclick: () => this._openPrompt("instrumentIndex") }, "Instrument: "), div({ className: "selectContainer" }, this._instrumentSelect));
-		private readonly _instrumentVolumeSlider: Slider = new Slider(input({ style: "margin: 0; position: sticky;", className: "midTick", type: "range", min: Math.floor(-Config.volumeRange / 2), max: Math.floor(Config.volumeRange / 2), value: "0", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, newValue));
+		private readonly _instrumentVolumeSlider: Slider = new Slider(input({ style: "margin: 0; position: sticky;", type: "range", min: Math.floor(-Config.volumeRange / 2), max: Math.floor(Config.volumeRange / 2), value: "0", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, newValue), true);
 		private readonly _instrumentVolumeSliderInputBox: HTMLInputElement = input({ style: "width: 4em; font-size: 80%", id: "volumeSliderInputBox", type: "number", step: "1", min: Math.floor(-Config.volumeRange / 2), max: Math.floor(Config.volumeRange / 2), value: "0" });
 		private readonly _instrumentVolumeSliderTip: HTMLDivElement = div({ className: "selectRow", style: "height: 1em" }, span({ class: "tip", onclick: () => this._openPrompt("instrumentVolume") }, "Volume: "));
 
 		private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({ className: "selectRow" }, div({},
 			div({ style: "color: #999" }, span({}, this._instrumentVolumeSliderTip)),
 			div({ style: "color: #555" }, this._instrumentVolumeSliderInputBox),
-		), this._instrumentVolumeSlider.input);
-		private readonly _panSlider: Slider = new Slider(input({ style: "margin: 0;", position: "sticky;", className: "midTick", type: "range", min: "0", max: Config.panMax, value: Config.panCenter, step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangePan(this._doc, oldValue, newValue));
+		), this._instrumentVolumeSlider.container);
+		private readonly _panSlider: Slider = new Slider(input({ style: "margin: 0;", position: "sticky;", type: "range", min: "0", max: Config.panMax, value: Config.panCenter, step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangePan(this._doc, oldValue, newValue), true);
 		private readonly _panSliderInputBox: HTMLInputElement = input({ style: "width: 4em; font-size: 80%; ", id: "panSliderInputBox", type: "number", step: "1", min: "0", max: "100", value: "0" });
 		private readonly _panSliderRow: HTMLDivElement = div({ className: "selectRow" }, div({},
 			div({ class: "tip", style: "color: #999; height:1em;", onclick: () => this._openPrompt("pan") }, "Pan: "),
 			div({ style: "color: #555" }, this._panSliderInputBox),
-		), this._panSlider.input);
+		), this._panSlider.container);
 
+		private readonly _detuneSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: Config.detuneMin, max: Config.detuneMax, value: 0, step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeDetune(this._doc, oldValue, newValue), true);
+		private readonly _detuneSliderInputBox: HTMLInputElement = input({ style: "width: 4em; font-size: 80%; ", id: "detuneSliderInputBox", type: "number", step: "1", min: "" + Config.detuneMin, max: "" + Config.detuneMax, value: "0" });
+		private readonly _detuneSliderRow: HTMLDivElement = div({ className: "selectRow" }, div({},
+			div({ class: "tip", style: "color: #999; height:1em;", onclick: () => this._openPrompt("detune") }, "Detune: "),
+			div({ style: "color: #555" }, this._detuneSliderInputBox),
+		), this._detuneSlider.container);
 		private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select(), Config.chipWaves.map(wave => wave.name));
 		private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select(), Config.chipNoises.map(wave => wave.name));
 		private readonly _chipWaveSelectRow: HTMLDivElement = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("chipWave") }, "Wave: "), div({ className: "selectContainer" }, this._chipWaveSelect));
@@ -453,16 +470,16 @@ namespace beepbox {
 		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select(), Config.transitions.map(transition => transition.name));
 		private readonly _transitionRow: HTMLDivElement = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("transition") }, "Transition:"), div({ className: "selectContainer" }, this._transitionSelect));
 		private readonly _effectsSelect: HTMLSelectElement = buildOptions(select(), Config.effectsNames);
-		private readonly _filterCutoffSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue));
-		private _filterCutoffRow: HTMLDivElement = div({ className: "selectRow", title: "Low-pass Filter Cutoff Frequency" }, span({ class: "tip", onclick: () => this._openPrompt("filterCutoff") }, "Filter Cut:"), this._filterCutoffSlider.input);
-		private readonly _filterResonanceSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.filterResonanceRange - 1, value: "6", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeFilterResonance(this._doc, oldValue, newValue));
-		private _filterResonanceRow: HTMLDivElement = div({ className: "selectRow", title: "Low-pass Filter Peak Resonance" }, span({ class: "tip", onclick: () => this._openPrompt("filterResonance") }, "Filter Peak:"), this._filterResonanceSlider.input);
+		private readonly _filterCutoffSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue), false);
+		private _filterCutoffRow: HTMLDivElement = div({ className: "selectRow", title: "Low-pass Filter Cutoff Frequency" }, span({ class: "tip", onclick: () => this._openPrompt("filterCutoff") }, "Filter Cut:"), this._filterCutoffSlider.container);
+		private readonly _filterResonanceSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.filterResonanceRange - 1, value: "6", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeFilterResonance(this._doc, oldValue, newValue), false);
+		private _filterResonanceRow: HTMLDivElement = div({ className: "selectRow", title: "Low-pass Filter Peak Resonance" }, span({ class: "tip", onclick: () => this._openPrompt("filterResonance") }, "Filter Peak:"), this._filterResonanceSlider.container);
 		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope => envelope.name));
 		private _filterEnvelopeRow: HTMLDivElement = div({ className: "selectRow", title: "Low-pass Filter Envelope" }, span({ class: "tip", onclick: () => this._openPrompt("filterEnvelope") }, "Filter Env:"), div({ className: "selectContainer" }, this._filterEnvelopeSelect));
 		private readonly _pulseEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope => envelope.name));
 		private _pulseEnvelopeRow: HTMLDivElement = div({ className: "selectRow", title: "Pulse Width Modulator Envelope" }, span({ class: "tip", onclick: () => this._openPrompt("pulseEnvelope") }, "Pulse Env:"), div({ className: "selectContainer" }, this._pulseEnvelopeSelect));
-		private readonly _pulseWidthSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.pulseWidthRange - 1, value: "0", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangePulseWidth(this._doc, oldValue, newValue));
-		private _pulseWidthRow: HTMLDivElement = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("pulseWidth") }, "Pulse Width:"), this._pulseWidthSlider.input);
+		private readonly _pulseWidthSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "1", max: Config.pulseWidthRange, value: "0", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangePulseWidth(this._doc, oldValue, newValue), false);
+		private _pulseWidthRow: HTMLDivElement = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("pulseWidth") }, "Pulse Width:"), this._pulseWidthSlider.container);
 		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select(), Config.intervals.map(interval => interval.name));
 		private readonly _intervalSelectRow: HTMLElement = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("interval") }, "Interval:"), div({ className: "selectContainer" }, this._intervalSelect));
 		private readonly _chordSelect: HTMLSelectElement = buildOptions(select(), Config.chords.map(chord => chord.name));
@@ -477,7 +494,12 @@ namespace beepbox {
 		private readonly _harmonicsEditor: HarmonicsEditor = new HarmonicsEditor(this._doc);
 		private readonly _harmonicsRow: HTMLElement = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("harmonics") }, "Harmonics:"), this._harmonicsEditor.container);
 		private readonly _drumsetGroup: HTMLElement = div({ className: "editor-controls" });
-
+		private readonly _modulatorGroup: HTMLElement = div({ className: "editor-controls" });
+		private readonly _modNameRows: HTMLElement[];
+		private readonly _modChannelBoxes: HTMLSelectElement[];
+		private readonly _modInstrumentBoxes: HTMLSelectElement[];
+		private readonly _modSetRows: HTMLElement[];
+		private readonly _modSetBoxes: HTMLSelectElement[];
 
 		private readonly _instrumentCopyButton: HTMLButtonElement = button({ style: "max-width:86px;", className: "copyButton" }, [
 			"Copy",
@@ -505,15 +527,15 @@ namespace beepbox {
 			div({ style: "margin-top:5px; display:flex; justify-content:center;" }, [this._customWavePresetDrop]),
 		]);
 
-		private readonly _songTitleInputBox: InputBox = new InputBox(input({ style: "border:none; background-color:#040410; color:#FFFFFF; text-align:center", maxlength: "30", type: "text", value: "JummBox 1.3" }), this._doc, (oldValue: string, newValue: string) => new ChangeInputBoxText(this._doc, oldValue, newValue));
+		private readonly _songTitleInputBox: InputBox = new InputBox(input({ style: "border:none; background-color:#040410; color:#FFFFFF; text-align:center", maxlength: "30", type: "text", value: Config.versionDisplayName }), this._doc, (oldValue: string, newValue: string) => new ChangeInputBoxText(this._doc, oldValue, newValue));
 
 
-		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({ style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude" }), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
+		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({ style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude" }), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue), false);
 		private readonly _feedbackEnvelopeSelect: HTMLSelectElement = buildOptions(select({ style: "width: 100%;", title: "Feedback Envelope" }), Config.envelopes.map(envelope => envelope.name));
 		private readonly _feedbackRow2: HTMLDivElement = div({ className: "operatorRow" },
 			div({ style: "margin-right: .1em; visibility: hidden;" }, 1 + "."),
 			div({ style: "width: 3em; margin-right: .3em;" }),
-			this._feedbackAmplitudeSlider.input,
+			this._feedbackAmplitudeSlider.container,
 			div({ className: "selectContainer", style: "width: 5em; margin-left: .3em;" }, this._feedbackEnvelopeSelect),
 		);
 		/*
@@ -542,6 +564,7 @@ namespace beepbox {
 		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({ className: "editor-controls" },
 			this._chipWaveSelectRow,
 			this._chipNoiseSelectRow,
+			this._detuneSliderRow,
 			this._customWaveDraw,
 			this._filterCutoffRow,
 			this._filterResonanceRow,
@@ -590,11 +613,11 @@ namespace beepbox {
 		private readonly _promptContainer: HTMLDivElement = div({ className: "promptContainer", style: "display: none;" });
 		public readonly mainLayer: HTMLDivElement = div({ className: "beepboxEditor", tabIndex: "0" },
 			this._editorBox,
-			div({ className: "editor-widget-column noSelection" },
+			div({ className: "editor-widget-column noSelection", id: "editor-widget-column" },
 				div({ style: "text-align: center; color: #79B;" }, [this._songTitleInputBox.input]),
 				div({ className: "editor-widgets" },
 					div({ className: "editor-controls" },
-						div({ className: "playback-controls" },
+						div({ className: "playback-controls", id: "playback-controls" },
 							div({ className: "playback-bar-controls" },
 								this._playButton,
 								this._prevBarButton,
@@ -605,12 +628,12 @@ namespace beepbox {
 								SVG.svg({ style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26" },
 									SVG.path({ d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777" }),
 								),
-								this._volumeSlider,
+								this._volumeSlider.container,
 							),
 						),
 					),
-					div({ className: "editor-settings" },
-						div({ className: "editor-song-settings" },
+					div({ className: "editor-settings", id: "editor-settings" },
+						div({ className: "editor-song-settings", id: "editor-song-settings" },
 							div({ className: "editor-menus" },
 								div({ className: "selectContainer menu" },
 									this._fileMenu,
@@ -663,22 +686,23 @@ namespace beepbox {
 							div({ className: "selectRow" },
 								div({ style: "color: #999" }, span({}, div({ class: "tip", style: "color: #999; height:1em;", onclick: () => this._openPrompt("tempo") }, "Tempo: ")),
 									div({ style: "color: #555" }, this._tempoStepper),
-								), this._tempoSlider.input
+								), this._tempoSlider.container
 							),
 							div({ className: "selectRow" },
 								span({ class: "tip", onclick: () => this._openPrompt("reverb") }, "Reverb: "),
-								this._reverbSlider.input,
+								this._reverbSlider.container,
 							),
 							div({ className: "selectRow" },
 								span({ class: "tip", onclick: () => this._openPrompt("rhythm") }, "Rhythm: "),
 								div({ className: "selectContainer" }, this._rhythmSelect),
 							),
 						),
-						div({ className: "editor-instrument-settings" },
-							div({ style: "margin: 3px 0; text-align: center; color: #999;" },
+						div({ className: "editor-instrument-settings", id: "editor-instrument-settings" },
+							div({ id: "instrumentSettingsText", style: "margin: 3px 0; text-align: center; color: #999;" },
 								"Instrument Settings"
 							),
 							this._instrumentSettingsGroup,
+							this._modulatorGroup,
 							this._instrumentCopyGroup,
 						),
 					),
@@ -695,13 +719,21 @@ namespace beepbox {
 		private readonly _operatorFrequencySelects: HTMLSelectElement[] = []
 		private readonly _drumsetSpectrumEditors: SpectrumEditor[] = [];
 		private readonly _drumsetEnvelopeSelects: HTMLSelectElement[] = [];
+		private _showModSliders: boolean[] = [];
+		private _modSliderValues: number[] = [];
+		private _hasActiveModSliders: boolean = false;
+		private _wideMode: boolean = false;
 
 		constructor(private _doc: SongDocument) {
 			this._doc.notifier.watch(this.whenUpdated);
+			window.requestAnimationFrame(() => this._modSliderUpdate());
 
 			if (!("share" in navigator)) {
 				this._fileMenu.removeChild(this._fileMenu.querySelector("[value='shareUrl']")!);
 			}
+
+			this._showModSliders = new Array<boolean>(ModSetting.mstMaxValue);
+			this._modSliderValues = new Array<number>(ModSetting.mstMaxValue);
 
 			this._phaseModGroup.appendChild(div({ className: "operatorRow", style: "color: #999; height: 1em; margin-top: 0.5em;" },
 				div({ style: "margin-right: .1em; visibility: hidden;" }, 1 + "."),
@@ -713,12 +745,12 @@ namespace beepbox {
 				const operatorIndex: number = i;
 				const operatorNumber: HTMLDivElement = div({ style: "margin-right: .1em; color: #999;" }, i + 1 + ".");
 				const frequencySelect: HTMLSelectElement = buildOptions(select({ style: "width: 100%;", title: "Frequency" }), Config.operatorFrequencies.map(freq => freq.name));
-				const amplitudeSlider: Slider = new Slider(input({ style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Volume" }), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue));
+				const amplitudeSlider: Slider = new Slider(input({ style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Volume" }), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue), false);
 				const envelopeSelect: HTMLSelectElement = buildOptions(select({ style: "width: 100%;", title: "Envelope" }), Config.envelopes.map(envelope => envelope.name));
 				const row: HTMLDivElement = div({ className: "operatorRow" },
 					operatorNumber,
 					div({ className: "selectContainer", style: "width: 3em; margin-right: .3em;" }, frequencySelect),
-					amplitudeSlider.input,
+					amplitudeSlider.container,
 					div({ className: "selectContainer", style: "width: 5em; margin-left: .3em;" }, envelopeSelect),
 				);
 				this._phaseModGroup.appendChild(row);
@@ -760,6 +792,38 @@ namespace beepbox {
 				this._drumsetGroup.appendChild(row);
 			}
 
+			this._modNameRows = [];
+			this._modChannelBoxes = [];
+			this._modInstrumentBoxes = [];
+			this._modSetRows = [];
+			this._modSetBoxes = [];
+			for (let mod: number = 0; mod < Config.modCount; mod++) {
+
+				let modChannelBox: HTMLSelectElement = select({ style: "width: 100%; color: currentColor;" });
+				let modInstrumentBox: HTMLSelectElement = select({ style: "width: 100%; color: currentColor;" });
+
+				let modNameRow: HTMLDivElement = div({ className: "operatorRow", style: "height: 1em; margin-bottom: 0.65em;" },
+					div({ style: "width: 1em; max-width: 5.4em; color: #999;", id: "modChannelText" + mod, class: "tip", onclick: () => this._openPrompt("modChannel") }, "Ch:"),
+					div({ class: "selectContainer" }, modChannelBox),
+					div({ style: "width: 1.2em; margin-left: 0.8em; color: #999;", id: "modInstrumentText" + mod, class: "tip", onclick: () => this._openPrompt("modInstrument") }, "Ins:"),
+					div({ class: "selectContainer" }, modInstrumentBox),
+				);
+
+				let modSetBox: HTMLSelectElement = select();
+				let modSetRow: HTMLDivElement = div({ className: "selectRow", id: "modSettingText" + mod, style: "margin-bottom: 0.9em; color: currentColor;" }, span({ class: "tip", onclick: () => this._openPrompt("modSet") }, "Setting: "), div({ className: "selectContainer" }, modSetBox));
+
+				this._modNameRows.push(modNameRow);
+				this._modChannelBoxes.push(modChannelBox);
+				this._modInstrumentBoxes.push(modInstrumentBox);
+				this._modSetRows.push(modSetRow);
+				this._modSetBoxes.push(modSetBox);
+
+				this._modulatorGroup.appendChild(div({ style: "margin: 3px 0; margin-bottom: 0.7em; text-align: center; color: #8C99B0; background: #0A101A;" }, "Modulator " + (mod + 1)));
+				this._modulatorGroup.appendChild(modNameRow);
+				this._modulatorGroup.appendChild(modSetRow);
+
+			}
+
 			this._fileMenu.addEventListener("change", this._fileMenuHandler);
 			this._editMenu.addEventListener("change", this._editMenuHandler);
 			this._optionsMenu.addEventListener("change", this._optionsMenuHandler);
@@ -787,7 +851,27 @@ namespace beepbox {
 			this._playButton.addEventListener("click", this._togglePlay);
 			this._prevBarButton.addEventListener("click", this._whenPrevBarPressed);
 			this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
-			this._volumeSlider.addEventListener("input", this._setVolumeSlider);
+			this._volumeSlider.input.addEventListener("input", this._setVolumeSlider);
+
+			// The song volume slider is styled slightly different than the class' default.
+			this._volumeSlider.container.style.setProperty("flex-grow", "1");
+			this._volumeSlider.container.style.setProperty("display", "flex");
+
+			// Also, any slider with a multiplicative effect instead of a replacement effect gets a different mod color.
+			this._volumeSlider.container.style.setProperty("--mod-color", "#606c9f");
+			this._instrumentVolumeSlider.container.style.setProperty("--mod-color", "#606c9f");
+			this._feedbackAmplitudeSlider.container.style.setProperty("--mod-color", "#606c9f");
+			for (let i: number = 0; i < Config.operatorCount; i++) {
+				this._operatorAmplitudeSliders[i].container.style.setProperty("--mod-color", "#606c9f");
+			}
+
+
+			for (let mod: number = 0; mod < Config.modCount; mod++) {
+				let thisRef: SongEditor = this;
+				this._modChannelBoxes[mod].addEventListener("change", function () { thisRef._whenSetModChannel(mod); });
+				this._modInstrumentBoxes[mod].addEventListener("change", function () { thisRef._whenSetModInstrument(mod); });
+				this._modSetBoxes[mod].addEventListener("change", function () { thisRef._whenSetModSetting(mod); });
+			}
 
 			this._editorBox.addEventListener("mousedown", this._refocusStage);
 			this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
@@ -800,7 +884,7 @@ namespace beepbox {
 
 			this._instrumentVolumeSliderInputBox.addEventListener("input", () => { this._doc.record(new ChangeVolume(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].volume, Math.min(25.0, Math.max(-25.0, Math.round(+this._instrumentVolumeSliderInputBox.value))))) });
 			this._panSliderInputBox.addEventListener("input", () => { this._doc.record(new ChangePan(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].pan, Math.min(100.0, Math.max(0.0, Math.round(+this._panSliderInputBox.value))))) });
-
+			this._detuneSliderInputBox.addEventListener("input", () => { this._doc.record(new ChangeDetune(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].detune, Math.min(Config.detuneMax, Math.max(Config.detuneMin, Math.round(+this._detuneSliderInputBox.value))))) });
 			this._customWaveDraw.addEventListener("input", () => { this._doc.record(new ChangeCustomWave(this._doc, this._customWaveDrawCanvas.newArray)) });
 
 			this._promptContainer.addEventListener("click", (event) => {
@@ -813,6 +897,105 @@ namespace beepbox {
 				const autoPlayOption: HTMLOptionElement = <HTMLOptionElement>this._optionsMenu.children[1]
 				autoPlayOption.disabled = true;
 				autoPlayOption.setAttribute("hidden", "");
+			}
+
+		}
+
+		private _modSliderUpdate(): void {
+			let instrument: number = this._doc.getCurrentInstrument();
+			let newShowModSliders: boolean[] = new Array<boolean>(ModSetting.mstMaxValue);
+			const anyModActive: boolean = this._doc.synth.isAnyModActive(this._doc.channel, instrument);
+
+			// Check and update mod values on sliders
+			if (anyModActive) {
+
+				function updateModSlider(editor: SongEditor, slider: Slider, setting: ModSetting, channel: number, instrument: number): boolean {
+					const forSong: boolean = editor._doc.synth.song!.isSettingForSong(setting);
+					if (editor._doc.synth.isModActive(setting, forSong, channel, instrument)) {
+						let currentVal: number = editor._doc.synth.song!.realToModValue(editor._doc.synth.getModValue(setting, forSong, channel, instrument, false), setting) / editor._doc.song.mstMaxVols.get(setting)!;
+						if (currentVal != editor._modSliderValues[setting]) {
+							editor._modSliderValues[setting] = currentVal;
+							slider.container.style.setProperty("--mod-position", (currentVal * 96.0 + 2.0) + "%");
+						}
+						return true;
+					}
+					return false;
+				}
+
+				// Set mod sliders to present values
+				for (let setting: number = 0; setting < ModSetting.mstMaxValue; setting++) {
+					let slider: Slider | null = this._getSliderForModSetting(setting);
+					if (slider != null) {
+						newShowModSliders[setting] = updateModSlider(this, slider, setting, this._doc.channel, instrument);
+					}
+				}
+
+			}
+
+			// Class or unclass mod sliders based on present status
+			if (anyModActive || this._hasActiveModSliders) {
+				let anySliderActive: boolean = false;
+
+				for (let setting: number = 0; setting < ModSetting.mstMaxValue; setting++) {
+					if (newShowModSliders[setting] != this._showModSliders[setting]) {
+						this._showModSliders[setting] = newShowModSliders[setting];
+						let slider: Slider | null = this._getSliderForModSetting(setting);
+
+						if (slider != null) {
+
+							if (this._showModSliders[setting] == true) {
+								slider.container.classList.add("modSlider");
+							}
+							else {
+								slider.container.classList.remove("modSlider");
+							}
+
+						}
+					}
+
+					if (newShowModSliders[setting] == true)
+						anySliderActive = true;
+				}
+
+				this._hasActiveModSliders = anySliderActive;
+
+			}
+
+			window.requestAnimationFrame(() => this._modSliderUpdate());
+		}
+
+		private _getSliderForModSetting(setting: ModSetting): Slider | null {
+			switch (setting) {
+				case ModSetting.mstPan:
+					return this._panSlider;
+				case ModSetting.mstDetune:
+					return this._detuneSlider;
+				case ModSetting.mstFMSlider1:
+					return this._operatorAmplitudeSliders[0];
+				case ModSetting.mstFMSlider2:
+					return this._operatorAmplitudeSliders[1];
+				case ModSetting.mstFMSlider3:
+					return this._operatorAmplitudeSliders[2];
+				case ModSetting.mstFMSlider4:
+					return this._operatorAmplitudeSliders[3];
+				case ModSetting.mstFMFeedback:
+					return this._feedbackAmplitudeSlider;
+				case ModSetting.mstPulseWidth:
+					return this._pulseWidthSlider;
+				case ModSetting.mstFilterPeak:
+					return this._filterResonanceSlider;
+				case ModSetting.mstFilterCut:
+					return this._filterCutoffSlider;
+				case ModSetting.mstInsVolume:
+					return this._instrumentVolumeSlider;
+				case ModSetting.mstTempo:
+					return this._tempoSlider;
+				case ModSetting.mstReverb:
+					return this._reverbSlider;
+				case ModSetting.mstSongVolume:
+					return this._volumeSlider;
+				default:
+					return null;
 			}
 
 		}
@@ -902,6 +1085,7 @@ namespace beepbox {
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
 				(this._doc.alwaysFineNoteVol ? "✓ " : "") + "Always Fine Note Vol.",
+				(this._doc.wideMode ? "✓ " : "") + "Wide Mode"
 				//(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
 			]
 			for (let i: number = 0; i < optionCommands.length; i++) {
@@ -911,33 +1095,288 @@ namespace beepbox {
 
 			const channel: Channel = this._doc.song.channels[this._doc.channel];
 			const pattern: Pattern | null = this._doc.getCurrentPattern();
-			const instrumentIndex: number = this._doc.getCurrentInstrument();
-			const instrument: Instrument = channel.instruments[instrumentIndex];
 			const wasActive: boolean = this.mainLayer.contains(document.activeElement);
 			const activeElement: Element | null = document.activeElement;
 
 			setSelectedValue(this._scaleSelect, this._doc.song.scale);
 			setSelectedValue(this._keySelect, Config.keys.length - 1 - this._doc.song.key);
-			this._tempoSlider.updateValue(Math.max(0, this._doc.song.tempo));
-			this._tempoStepper.value = this._doc.song.tempo.toString();
+			this._tempoSlider.updateValue(Math.max(0, Math.round(this._doc.song.tempo)));
+			this._tempoStepper.value = Math.round(this._doc.song.tempo).toString();
 			this._songTitleInputBox.updateValue(this._doc.song.title);
 			this._reverbSlider.updateValue(this._doc.song.reverb);
 
-			// Check if current viewed pattern on channel is used anywhere
-			// + Check if current instrument on channel is used anywhere
-			var instrumentUsed = false;
-			var patternUsed = false;
+			setSelectedValue(this._rhythmSelect, this._doc.song.rhythm);
 
-			if (channel.bars[this._doc.bar] != 0) {
+			const instrumentIndex: number = this._doc.getCurrentInstrument();
+			const instrument: Instrument = channel.instruments[instrumentIndex];
 
-				for (let i: number = 0; i < this._doc.song.barCount; i++) {
-					// Check for this exact bar in another place, but only count it if it's not within the selection
-					if (channel.bars[i] == channel.bars[this._doc.bar] && i != this._doc.bar &&
-						(i < this._trackEditor._boxSelectionBar || i >= this._trackEditor._boxSelectionBar + this._trackEditor._boxSelectionWidth
-							|| this._doc.channel < this._trackEditor._boxSelectionChannel || this._doc.channel >= this._trackEditor._boxSelectionChannel + this._trackEditor._boxSelectionHeight)) {
+			if (!this._doc.song.getChannelIsMod(this._doc.channel)) {
 
-						patternUsed = true;
-						i = this._doc.song.barCount;
+				this._customInstrumentSettingsGroup.style.display = "";
+				this._panSliderRow.style.display = "";
+				this._detuneSliderRow.style.display = "";
+				this._instrumentVolumeSliderRow.style.display = "";
+				$("#typeSelectRow").css("display", "");
+				this._instrumentCopyButton.style.display = "";
+				this._instrumentPasteButton.style.display = "";
+				$("#instrumentSettingsText").get(0).innerText = "Instrument Settings";
+
+				this._modulatorGroup.style.display = "none";
+
+				// Check if current viewed pattern on channel is used anywhere
+				// + Check if current instrument on channel is used anywhere
+				var instrumentUsed = false;
+				var patternUsed = false;
+
+				if (channel.bars[this._doc.bar] != 0) {
+
+					for (let i: number = 0; i < this._doc.song.barCount; i++) {
+						// Check for this exact bar in another place, but only count it if it's not within the selection
+						if (channel.bars[i] == channel.bars[this._doc.bar] && i != this._doc.bar &&
+							(i < this._trackEditor._boxSelectionBar || i >= this._trackEditor._boxSelectionBar + this._trackEditor._boxSelectionWidth
+								|| this._doc.channel < this._trackEditor._boxSelectionChannel || this._doc.channel >= this._trackEditor._boxSelectionChannel + this._trackEditor._boxSelectionHeight)) {
+
+							patternUsed = true;
+							i = this._doc.song.barCount;
+						}
+					}
+
+					for (let i: number = 0; i < this._doc.song.barCount; i++) {
+						// Check for this exact instrument in another place, but only count it if it's not within the selection
+						if (channel.bars[i] != 0 && this._doc.song.getPatternInstrument(this._doc.channel, i) == instrumentIndex && i != this._doc.bar &&
+							(i < this._trackEditor._boxSelectionBar || i >= this._trackEditor._boxSelectionBar + this._trackEditor._boxSelectionWidth
+								|| this._doc.channel < this._trackEditor._boxSelectionChannel || this._doc.channel >= this._trackEditor._boxSelectionChannel + this._trackEditor._boxSelectionHeight)) {
+
+							instrumentUsed = true;
+							i = this._doc.song.barCount;
+						}
+					}
+
+				}
+
+				if (patternUsed) {
+					this._usedPatternIndicator.style.setProperty("fill", "#9c64f7");
+				}
+				else {
+					this._usedPatternIndicator.style.setProperty("fill", "#393e4f");
+				}
+				if (instrumentUsed) {
+					this._usedInstrumentIndicator.style.setProperty("fill", "#9c64f7");
+				}
+				else {
+					this._usedInstrumentIndicator.style.setProperty("fill", "#393e4f");
+				}
+
+
+				if (this._doc.song.getChannelIsNoise(this._doc.channel)) {
+					this._pitchedPresetSelect.style.display = "none";
+					this._drumPresetSelect.style.display = "";
+					// Also hide select2
+					$("#pitchPresetSelect").parent().hide();
+					$("#drumPresetSelect").parent().show();
+
+					setSelectedValue(this._drumPresetSelect, instrument.preset);
+				} else {
+					this._pitchedPresetSelect.style.display = "";
+					this._drumPresetSelect.style.display = "none";
+
+					// Also hide select2
+					$("#pitchPresetSelect").parent().show();
+					$("#drumPresetSelect").parent().hide();
+
+					setSelectedValue(this._pitchedPresetSelect, instrument.preset);
+				}
+
+				if (!this._doc.alwaysShowSettings && instrument.preset != instrument.type) {
+					//this._customizeInstrumentButton.style.display = "";
+					//this._customInstrumentSettingsGroup.style.display = "none";
+				} else {
+					//this._customizeInstrumentButton.style.display = "none";
+					//this._customInstrumentSettingsGroup.style.display = "";
+
+					if (instrument.type == InstrumentType.noise) {
+						this._chipNoiseSelectRow.style.display = "";
+						setSelectedValue(this._chipNoiseSelect, instrument.chipNoise);
+					} else {
+						this._chipNoiseSelectRow.style.display = "none";
+					}
+					if (instrument.type == InstrumentType.spectrum) {
+						this._chipWaveSelectRow.style.display = "none";
+						this._spectrumRow.style.display = "";
+						this._spectrumEditor.render();
+					} else {
+						this._spectrumRow.style.display = "none";
+					}
+					if (instrument.type == InstrumentType.harmonics) {
+						this._chipWaveSelectRow.style.display = "none";
+						this._harmonicsRow.style.display = "";
+						this._harmonicsEditor.render();
+					} else {
+						this._harmonicsRow.style.display = "none";
+					}
+					if (instrument.type == InstrumentType.drumset) {
+						this._chipWaveSelectRow.style.display = "none";
+						this._drumsetGroup.style.display = "";
+						this._transitionRow.style.display = "none";
+						this._chordSelectRow.style.display = "none";
+						this._filterCutoffRow.style.display = "none";
+						this._filterResonanceRow.style.display = "none";
+						this._filterEnvelopeRow.style.display = "none";
+						for (let i: number = 0; i < Config.drumCount; i++) {
+							setSelectedValue(this._drumsetEnvelopeSelects[i], instrument.drumsetEnvelopes[i]);
+							this._drumsetSpectrumEditors[i].render();
+						}
+					} else {
+						this._drumsetGroup.style.display = "none";
+						this._transitionRow.style.display = "";
+						this._chordSelectRow.style.display = "";
+						this._filterCutoffRow.style.display = "";
+						this._filterResonanceRow.style.display = "";
+						this._filterEnvelopeRow.style.display = "";
+					}
+					if (instrument.type == InstrumentType.chip) {
+						this._chipWaveSelectRow.style.display = "";
+						setSelectedValue(this._chipWaveSelect, instrument.chipWave);
+					}
+
+					if (instrument.type == InstrumentType.customChipWave) {
+						this._customWaveDraw.style.display = "";
+						this._chipWaveSelectRow.style.display = "none";
+					}
+					else {
+						this._customWaveDraw.style.display = "none";
+					}
+
+					if (instrument.type == InstrumentType.fm) {
+						this._chipWaveSelectRow.style.display = "none";
+						this._algorithmSelectRow.style.display = "";
+						this._phaseModGroup.style.display = "";
+						this._feedbackRow1.style.display = "";
+						this._feedbackRow2.style.display = "";
+						setSelectedValue(this._algorithmSelect, instrument.algorithm);
+						setSelectedValue(this._feedbackTypeSelect, instrument.feedbackType);
+						this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
+						setSelectedValue(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
+						this._feedbackEnvelopeSelect.parentElement!.style.color = (instrument.feedbackAmplitude > 0) ? "" : "#999";
+						for (let i: number = 0; i < Config.operatorCount; i++) {
+							const isCarrier: boolean = (i < Config.algorithms[instrument.algorithm].carrierCount);
+							this._operatorRows[i].style.color = isCarrier ? "white" : "";
+							setSelectedValue(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
+							this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
+							setSelectedValue(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
+							const operatorName: string = (isCarrier ? "Voice " : "Modulator ") + (i + 1);
+							this._operatorFrequencySelects[i].title = operatorName + " Frequency";
+							this._operatorAmplitudeSliders[i].input.title = operatorName + (isCarrier ? " Volume" : " Amplitude");
+							this._operatorEnvelopeSelects[i].title = operatorName + " Envelope";
+							this._operatorEnvelopeSelects[i].parentElement!.style.color = (instrument.operators[i].amplitude > 0) ? "" : "#999";
+						}
+					} else {
+						this._algorithmSelectRow.style.display = "none";
+						this._phaseModGroup.style.display = "none";
+						this._feedbackRow1.style.display = "none";
+						this._feedbackRow2.style.display = "none";
+					}
+					if (instrument.type == InstrumentType.pwm) {
+						this._chipWaveSelectRow.style.display = "none";
+						this._pulseEnvelopeRow.style.display = "";
+						this._pulseWidthRow.style.display = "";
+						this._pulseWidthSlider.input.title = prettyNumber(instrument.pulseWidth) + "%";
+						setSelectedValue(this._pulseEnvelopeSelect, instrument.pulseEnvelope);
+						this._pulseWidthSlider.updateValue(instrument.pulseWidth);
+					} else {
+						this._pulseEnvelopeRow.style.display = "none";
+						this._pulseWidthRow.style.display = "none";
+					}
+
+					if (instrument.type == InstrumentType.noise) {
+						this._chipWaveSelectRow.style.display = "none";
+						this._vibratoSelectRow.style.display = "none";
+						this._intervalSelectRow.style.display = "none";
+					} else if (instrument.type == InstrumentType.spectrum) {
+						this._vibratoSelectRow.style.display = "none";
+						this._intervalSelectRow.style.display = "none";
+					} else if (instrument.type == InstrumentType.drumset) {
+						this._vibratoSelectRow.style.display = "none";
+						this._intervalSelectRow.style.display = "none";
+					} else if (instrument.type == InstrumentType.chip) {
+						this._vibratoSelectRow.style.display = "";
+						this._intervalSelectRow.style.display = "";
+					} else if (instrument.type == InstrumentType.fm) {
+						this._vibratoSelectRow.style.display = "";
+						this._intervalSelectRow.style.display = "none";
+					} else if (instrument.type == InstrumentType.harmonics) {
+						this._vibratoSelectRow.style.display = "";
+						this._intervalSelectRow.style.display = "";
+					} else if (instrument.type == InstrumentType.pwm) {
+						this._vibratoSelectRow.style.display = "";
+						this._intervalSelectRow.style.display = "none";
+					} else if (instrument.type == InstrumentType.customChipWave) {
+						this._vibratoSelectRow.style.display = "";
+						this._intervalSelectRow.style.display = "";
+					} else {
+						throw new Error("Unrecognized instrument type: " + instrument.type);
+					}
+				}
+
+				for (let chordIndex: number = 0; chordIndex < Config.chords.length; chordIndex++) {
+					const hidden: boolean = !Config.instrumentTypeHasSpecialInterval[instrument.type] ? Config.chords[chordIndex].isCustomInterval : false;
+					const option: Element = this._chordSelect.children[chordIndex];
+					if (hidden) {
+						if (!option.hasAttribute("hidden")) {
+							option.setAttribute("hidden", "");
+						}
+					} else {
+						option.removeAttribute("hidden");
+					}
+				}
+
+				for (let effectsIndex: number = 0; effectsIndex < Config.effectsNames.length; effectsIndex++) {
+					const hidden: boolean = !Config.instrumentTypeHasChorus[instrument.type] ? Config.effectsNames[effectsIndex].indexOf("chorus") != -1 : false;
+					const option: Element = this._effectsSelect.children[effectsIndex];
+					if (hidden) {
+						if (!option.hasAttribute("hidden")) {
+							option.setAttribute("hidden", "");
+						}
+					} else {
+						option.removeAttribute("hidden");
+					}
+				}
+
+				this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+
+				this._filterCutoffSlider.updateValue(instrument.filterCutoff);
+				this._filterResonanceSlider.updateValue(instrument.filterResonance);
+				setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
+				setSelectedValue(this._transitionSelect, instrument.transition);
+				setSelectedValue(this._effectsSelect, instrument.effects);
+				setSelectedValue(this._vibratoSelect, instrument.vibrato);
+				setSelectedValue(this._intervalSelect, instrument.interval);
+				setSelectedValue(this._chordSelect, instrument.chord);
+				this._panSlider.updateValue(instrument.pan);
+				this._detuneSlider.updateValue(instrument.detune);
+				this._customWaveDrawCanvas.redrawCanvas();
+				this._panSliderInputBox.value = instrument.pan + "";
+				this._detuneSliderInputBox.value = instrument.detune + "";
+				this._instrumentVolumeSlider.updateValue(instrument.volume);
+				this._instrumentVolumeSliderInputBox.value = "" + (instrument.volume);
+
+			}
+			// Options for mod channel
+			else {
+				var patternUsed = false;
+				var instrumentUsed = false;
+
+				if (channel.bars[this._doc.bar] != 0) {
+
+					for (let i: number = 0; i < this._doc.song.barCount; i++) {
+						// Check for this exact bar in another place, but only count it if it's not within the selection
+						if (channel.bars[i] == channel.bars[this._doc.bar] && i != this._doc.bar &&
+							(i < this._trackEditor._boxSelectionBar || i >= this._trackEditor._boxSelectionBar + this._trackEditor._boxSelectionWidth
+								|| this._doc.channel < this._trackEditor._boxSelectionChannel || this._doc.channel >= this._trackEditor._boxSelectionChannel + this._trackEditor._boxSelectionHeight)) {
+
+							patternUsed = true;
+							i = this._doc.song.barCount;
+						}
 					}
 				}
 
@@ -952,195 +1391,326 @@ namespace beepbox {
 					}
 				}
 
-			}
-
-			if (patternUsed) {
-				this._usedPatternIndicator.style.setProperty("fill", "#9c64f7");
-			}
-			else {
-				this._usedPatternIndicator.style.setProperty("fill", "#393e4f");
-			}
-			if (instrumentUsed) {
-				this._usedInstrumentIndicator.style.setProperty("fill", "#9c64f7");
-			}
-			else {
-				this._usedInstrumentIndicator.style.setProperty("fill", "#393e4f");
-			}
-
-			setSelectedValue(this._rhythmSelect, this._doc.song.rhythm);
-
-			if (this._doc.song.getChannelIsNoise(this._doc.channel)) {
-				this._pitchedPresetSelect.style.display = "none";
-				this._drumPresetSelect.style.display = "";
-				// Also hide select2
-				$("#pitchPresetSelect").parent().hide();
-				$("#drumPresetSelect").parent().show();
-
-				setSelectedValue(this._drumPresetSelect, instrument.preset);
-			} else {
-				this._pitchedPresetSelect.style.display = "";
-				this._drumPresetSelect.style.display = "none";
-
-				// Also hide select2
-				$("#pitchPresetSelect").parent().show();
-				$("#drumPresetSelect").parent().hide();
-
-				setSelectedValue(this._pitchedPresetSelect, instrument.preset);
-			}
-
-			if (!this._doc.alwaysShowSettings && instrument.preset != instrument.type) {
-				//this._customizeInstrumentButton.style.display = "";
-				//this._customInstrumentSettingsGroup.style.display = "none";
-			} else {
-				//this._customizeInstrumentButton.style.display = "none";
-				//this._customInstrumentSettingsGroup.style.display = "";
-
-				if (instrument.type == InstrumentType.noise) {
-					this._chipNoiseSelectRow.style.display = "";
-					setSelectedValue(this._chipNoiseSelect, instrument.chipNoise);
-				} else {
-					this._chipNoiseSelectRow.style.display = "none";
-				}
-				if (instrument.type == InstrumentType.spectrum) {
-					this._chipWaveSelectRow.style.display = "none";
-					this._spectrumRow.style.display = "";
-					this._spectrumEditor.render();
-				} else {
-					this._spectrumRow.style.display = "none";
-				}
-				if (instrument.type == InstrumentType.harmonics) {
-					this._chipWaveSelectRow.style.display = "none";
-					this._harmonicsRow.style.display = "";
-					this._harmonicsEditor.render();
-				} else {
-					this._harmonicsRow.style.display = "none";
-				}
-				if (instrument.type == InstrumentType.drumset) {
-					this._chipWaveSelectRow.style.display = "none";
-					this._drumsetGroup.style.display = "";
-					this._transitionRow.style.display = "none";
-					this._chordSelectRow.style.display = "none";
-					this._filterCutoffRow.style.display = "none";
-					this._filterResonanceRow.style.display = "none";
-					this._filterEnvelopeRow.style.display = "none";
-					for (let i: number = 0; i < Config.drumCount; i++) {
-						setSelectedValue(this._drumsetEnvelopeSelects[i], instrument.drumsetEnvelopes[i]);
-						this._drumsetSpectrumEditors[i].render();
-					}
-				} else {
-					this._drumsetGroup.style.display = "none";
-					this._transitionRow.style.display = "";
-					this._chordSelectRow.style.display = "";
-					this._filterCutoffRow.style.display = "";
-					this._filterResonanceRow.style.display = "";
-					this._filterEnvelopeRow.style.display = "";
-				}
-				if (instrument.type == InstrumentType.chip) {
-					this._chipWaveSelectRow.style.display = "";
-					setSelectedValue(this._chipWaveSelect, instrument.chipWave);
-				}
-
-				if (instrument.type == InstrumentType.customChipWave) {
-					this._customWaveDraw.style.display = "";
-					this._chipWaveSelectRow.style.display = "none";
+				if (patternUsed) {
+					this._usedPatternIndicator.style.setProperty("fill", "#9c64f7");
 				}
 				else {
-					this._customWaveDraw.style.display = "none";
+					this._usedPatternIndicator.style.setProperty("fill", "#393e4f");
 				}
 
-				if (instrument.type == InstrumentType.fm) {
-					this._chipWaveSelectRow.style.display = "none";
-					this._algorithmSelectRow.style.display = "";
-					this._phaseModGroup.style.display = "";
-					this._feedbackRow1.style.display = "";
-					this._feedbackRow2.style.display = "";
-					setSelectedValue(this._algorithmSelect, instrument.algorithm);
-					setSelectedValue(this._feedbackTypeSelect, instrument.feedbackType);
-					this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
-					setSelectedValue(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
-					this._feedbackEnvelopeSelect.parentElement!.style.color = (instrument.feedbackAmplitude > 0) ? "" : "#999";
-					for (let i: number = 0; i < Config.operatorCount; i++) {
-						const isCarrier: boolean = (i < Config.algorithms[instrument.algorithm].carrierCount);
-						this._operatorRows[i].style.color = isCarrier ? "white" : "";
-						setSelectedValue(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
-						this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
-						setSelectedValue(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
-						const operatorName: string = (isCarrier ? "Voice " : "Modulator ") + (i + 1);
-						this._operatorFrequencySelects[i].title = operatorName + " Frequency";
-						this._operatorAmplitudeSliders[i].input.title = operatorName + (isCarrier ? " Volume" : " Amplitude");
-						this._operatorEnvelopeSelects[i].title = operatorName + " Envelope";
-						this._operatorEnvelopeSelects[i].parentElement!.style.color = (instrument.operators[i].amplitude > 0) ? "" : "#999";
+				if (instrumentUsed) {
+					this._usedInstrumentIndicator.style.setProperty("fill", "#9c64f7");
+				}
+				else {
+					this._usedInstrumentIndicator.style.setProperty("fill", "#393e4f");
+				}
+
+				this._pitchedPresetSelect.style.display = "none";
+				this._drumPresetSelect.style.display = "none";
+				$("#pitchPresetSelect").parent().hide();
+				$("#drumPresetSelect").parent().hide();
+				this._instrumentCopyButton.style.display = "";
+				this._instrumentPasteButton.style.display = "";
+				$("#instrumentSettingsText").get(0).innerText = "Modulator Settings";
+
+				this._chipNoiseSelectRow.style.display = "none";
+				this._chipWaveSelectRow.style.display = "none";
+				this._spectrumRow.style.display = "none";
+				this._harmonicsRow.style.display = "none";
+				this._transitionRow.style.display = "none";
+				this._chordSelectRow.style.display = "none";
+				this._filterCutoffRow.style.display = "none";
+				this._filterResonanceRow.style.display = "none";
+				this._filterEnvelopeRow.style.display = "none";
+				this._drumsetGroup.style.display = "none";
+				this._customWaveDraw.style.display = "none";
+				this._algorithmSelectRow.style.display = "none";
+				this._phaseModGroup.style.display = "none";
+				this._feedbackRow1.style.display = "none";
+				this._feedbackRow2.style.display = "none";
+				this._pulseEnvelopeRow.style.display = "none";
+				this._pulseWidthRow.style.display = "none";
+				this._vibratoSelectRow.style.display = "none";
+				this._intervalSelectRow.style.display = "none";
+				this._detuneSliderRow.style.display = "none";
+
+				this._modulatorGroup.style.display = "";
+				this._modulatorGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+
+				for (let mod: number = 0; mod < Config.modCount; mod++) {
+
+					let instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+					let modStatus: number = instrument.modStatuses[mod];
+					let modChannel: number = instrument.modChannels[mod] + ((modStatus == ModStatus.msForNoise) ? this._doc.song.pitchChannelCount : 0);
+					let modInstrument: number = instrument.modInstruments[mod];
+
+					// Boundary checking
+					if (modInstrument >= this._doc.song.instrumentsPerChannel) {
+						modInstrument = 0;
+						instrument.modInstruments[mod] = 0;
 					}
-				} else {
-					this._algorithmSelectRow.style.display = "none";
-					this._phaseModGroup.style.display = "none";
-					this._feedbackRow1.style.display = "none";
-					this._feedbackRow2.style.display = "none";
-				}
-				if (instrument.type == InstrumentType.pwm) {
-					this._chipWaveSelectRow.style.display = "none";
-					this._pulseEnvelopeRow.style.display = "";
-					this._pulseWidthRow.style.display = "";
-					this._pulseWidthSlider.input.title = prettyNumber(instrument.pulseWidth) + "%";
-					setSelectedValue(this._pulseEnvelopeSelect, instrument.pulseEnvelope);
-					this._pulseWidthSlider.updateValue(instrument.pulseWidth);
-				} else {
-					this._pulseEnvelopeRow.style.display = "none";
-					this._pulseWidthRow.style.display = "none";
+					if (modChannel >= this._doc.song.pitchChannelCount && (modStatus == ModStatus.msForPitch)) {
+						modStatus = ModStatus.msNone;
+						instrument.modStatuses[mod] = ModStatus.msNone;
+					}
+					if (modChannel >= this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount && (modStatus == ModStatus.msForNoise)) {
+						instrument.modStatuses[mod] = ModStatus.msNone;
+					}
+
+					// Build options for modulator channels (make sure it has the right number).
+					if (this._modChannelBoxes[mod].children.length != 2 + this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
+						while (this._modChannelBoxes[mod].firstChild) this._modChannelBoxes[mod].remove(0);
+						const channelList: string[] = [];
+						channelList.push("none");
+						channelList.push("song");
+						for (let i: number = 0; i < this._doc.song.pitchChannelCount; i++) {
+							channelList.push("pitch " + (i + 1));
+						}
+						for (let i: number = 0; i < this._doc.song.noiseChannelCount; i++) {
+							channelList.push("noise " + (i + 1));
+						}
+						buildOptions(this._modChannelBoxes[mod], channelList);
+					}
+
+					// Set selected index based on channel info.
+					if (instrument.modStatuses[mod] == ModStatus.msNone) {
+						this._modChannelBoxes[mod].selectedIndex = 0; // none
+					}
+					else if (instrument.modStatuses[mod] == ModStatus.msForSong) {
+						this._modChannelBoxes[mod].selectedIndex = 1; // song
+					}
+					else if (instrument.modStatuses[mod] == ModStatus.msForPitch) {
+						this._modChannelBoxes[mod].selectedIndex = instrument.modChannels[mod] + 2; // Offset to get to first pitch channel
+					}
+					else {
+						this._modChannelBoxes[mod].selectedIndex = instrument.modChannels[mod] + 2 + this._doc.song.pitchChannelCount; // Offset to get to first noise channel
+					}
+
+					// Build options for modulator instruments (make sure it has the right number).
+					if (this._modInstrumentBoxes[mod].children.length != this._doc.song.instrumentsPerChannel) {
+						while (this._modInstrumentBoxes[mod].firstChild) this._modInstrumentBoxes[mod].remove(0);
+						const instrumentList: number[] = [];
+						for (let i: number = 0; i < this._doc.song.instrumentsPerChannel; i++) {
+							instrumentList.push(i + 1);
+						}
+						buildOptions(this._modInstrumentBoxes[mod], instrumentList);
+					}
+
+					// Set selected index based on instrument info.
+					this._modInstrumentBoxes[mod].selectedIndex = instrument.modInstruments[mod];
+
+					// Build options for modulator settings (based on channel settings)
+
+					if (modStatus != ModStatus.msNone) {
+
+						let tgtInstrument: Instrument = this._doc.song.channels[modChannel].instruments[modInstrument];
+
+						while (this._modSetBoxes[mod].firstChild) this._modSetBoxes[mod].remove(0);
+						const settingList: string[] = [];
+						settingList.push("none");
+
+						// Populate mod setting options for the song scope.
+						if (this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent == "song") {
+							settingList.push("song volume");
+							settingList.push("tempo");
+							settingList.push("reverb");
+							settingList.push("next bar");
+						}
+						// Populate mod setting options for instrument scope.
+						else {
+
+							settingList.push("volume");
+							settingList.push("pan");
+							settingList.push("filter cut");
+							settingList.push("filter peak");
+							settingList.push("detune");
+							if (tgtInstrument.type == InstrumentType.pwm) {
+								settingList.push("pulse width");
+							}
+							else if (tgtInstrument.type == InstrumentType.fm) {
+								settingList.push("fm slider 1");
+								settingList.push("fm slider 2");
+								settingList.push("fm slider 3");
+								settingList.push("fm slider 4");
+								settingList.push("fm feedback");
+							}
+						}
+
+						buildOptions(this._modSetBoxes[mod], settingList);
+
+						let needReset: boolean = false;
+						let setIndex: number = 0;
+
+						// Set selected index based on instrument info. Based on how the list is built.
+						//Also has to check for a change in channel setting. Sigh...maybe it could be done better!
+						switch (instrument.modSettings[mod]) {
+							case ModSetting.mstSongVolume:
+								if (modStatus == ModStatus.msForSong)
+									setIndex = 1;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstTempo:
+								if (modStatus == ModStatus.msForSong)
+									setIndex = 2;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstReverb:
+								if (modStatus == ModStatus.msForSong)
+									setIndex = 3;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstNextBar:
+								if (modStatus == ModStatus.msForSong)
+									setIndex = 4;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstInsVolume:
+								if (modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise)
+									setIndex = 1;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstPan:
+								if (modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise)
+									setIndex = 2;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstDetune:
+								if (modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise)
+									setIndex = 5;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstFilterCut:
+								if (modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise)
+									setIndex = 3;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstFilterPeak:
+								if (modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise)
+									setIndex = 4;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstPulseWidth:
+								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.pwm)
+									setIndex = 6;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstFMSlider1:
+								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
+									setIndex = 6;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstFMSlider2:
+								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
+									setIndex = 7;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstFMSlider3:
+								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
+									setIndex = 8;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstFMSlider4:
+								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
+									setIndex = 9;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstFMFeedback:
+								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
+									setIndex = 10;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstNone:
+							default:
+								break;
+						}
+
+						// Catch instances where invalid set forced setting to "none"
+						if (needReset) {
+							this._modSetBoxes[mod].selectedIndex = 0;
+							instrument.modSettings[mod] = ModSetting.mstNone;
+							this._whenSetModSetting(mod);
+						}
+						else {
+							this._modSetBoxes[mod].selectedIndex = setIndex;
+						}
+
+					} else if (instrument.modSettings[mod] != ModSetting.mstNone) {
+						this._modSetBoxes[mod].selectedIndex = 0;
+						this._whenSetModSetting(mod);
+					}
+
+
+					//Hide instrument select if channel is "none" or "song"
+					if (this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent == "none"
+						|| this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent == "song") {
+						((this._modInstrumentBoxes[mod].parentElement) as HTMLDivElement).style.display = "none";
+						$("#modInstrumentText" + mod).get(0).style.display = "none";
+						$("#modChannelText" + mod).get(0).innerText = "Channel:";
+
+						//Hide setting select if channel is "none"
+						if (this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent == "none") {
+							$("#modSettingText" + mod).get(0).style.display = "none";
+							((this._modSetBoxes[mod].parentElement) as HTMLDivElement).style.display = "none";
+						}
+						else {
+							$("#modSettingText" + mod).get(0).style.display = "";
+							((this._modSetBoxes[mod].parentElement) as HTMLDivElement).style.display = "";
+						}
+					}
+					else {
+						((this._modInstrumentBoxes[mod].parentElement) as HTMLDivElement).style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";;
+						$("#modInstrumentText" + mod).get(0).style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";;
+						$("#modChannelText" + mod).get(0).innerText = (this._doc.song.instrumentsPerChannel > 1) ? "Ch:" : "Channel:";
+						$("#modSettingText" + mod).get(0).style.display = "";
+						((this._modSetBoxes[mod].parentElement) as HTMLDivElement).style.display = "";
+
+					}
 				}
 
-				if (instrument.type == InstrumentType.noise) {
-					this._chipWaveSelectRow.style.display = "none";
-					this._vibratoSelectRow.style.display = "none";
-					this._intervalSelectRow.style.display = "none";
-				} else if (instrument.type == InstrumentType.spectrum) {
-					this._vibratoSelectRow.style.display = "none";
-					this._intervalSelectRow.style.display = "none";
-				} else if (instrument.type == InstrumentType.drumset) {
-					this._vibratoSelectRow.style.display = "none";
-					this._intervalSelectRow.style.display = "none";
-				} else if (instrument.type == InstrumentType.chip) {
-					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "";
-				} else if (instrument.type == InstrumentType.fm) {
-					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "none";
-				} else if (instrument.type == InstrumentType.harmonics) {
-					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "";
-				} else if (instrument.type == InstrumentType.pwm) {
-					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "none";
-				} else if (instrument.type == InstrumentType.customChipWave) {
-					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "";
-				} else {
-					throw new Error("Unrecognized instrument type: " + instrument.type);
-				}
-			}
-
-			for (let chordIndex: number = 0; chordIndex < Config.chords.length; chordIndex++) {
-				const hidden: boolean = !Config.instrumentTypeHasSpecialInterval[instrument.type] ? Config.chords[chordIndex].isCustomInterval : false;
-				const option: Element = this._chordSelect.children[chordIndex];
-				if (hidden) {
+				for (let chordIndex: number = 0; chordIndex < Config.chords.length; chordIndex++) {
+					const option: Element = this._chordSelect.children[chordIndex];
 					if (!option.hasAttribute("hidden")) {
 						option.setAttribute("hidden", "");
 					}
-				} else {
-					option.removeAttribute("hidden");
-				}
-			}
 
-			for (let effectsIndex: number = 0; effectsIndex < Config.effectsNames.length; effectsIndex++) {
-				const hidden: boolean = !Config.instrumentTypeHasChorus[instrument.type] ? Config.effectsNames[effectsIndex].indexOf("chorus") != -1 : false;
-				const option: Element = this._effectsSelect.children[effectsIndex];
-				if (hidden) {
+				}
+
+				for (let effectsIndex: number = 0; effectsIndex < Config.effectsNames.length; effectsIndex++) {
+					const option: Element = this._effectsSelect.children[effectsIndex];
 					if (!option.hasAttribute("hidden")) {
 						option.setAttribute("hidden", "");
 					}
-				} else {
-					option.removeAttribute("hidden");
 				}
+
+				this._instrumentSelectRow.style.display = "none";
+
+				this._customInstrumentSettingsGroup.style.display = "none";
+				this._panSliderRow.style.display = "none";
+				this._instrumentVolumeSliderRow.style.display = "none";
+				$("#typeSelectRow").css("display", "none");
+
+				this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+
+				// Force piano to re-show, if channel is modulator
+				if (this._doc.channel >= this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
+					this._piano.forceRender();
+				}
+
 			}
 
 			this._instrumentSelectRow.style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";
@@ -1154,21 +1724,6 @@ namespace beepbox {
 				buildOptions(this._instrumentSelect, instrumentList);
 			}
 
-			this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
-
-			this._filterCutoffSlider.updateValue(instrument.filterCutoff);
-			this._filterResonanceSlider.updateValue(instrument.filterResonance);
-			setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
-			setSelectedValue(this._transitionSelect, instrument.transition);
-			setSelectedValue(this._effectsSelect, instrument.effects);
-			setSelectedValue(this._vibratoSelect, instrument.vibrato);
-			setSelectedValue(this._intervalSelect, instrument.interval);
-			setSelectedValue(this._chordSelect, instrument.chord);
-			this._panSlider.updateValue(instrument.pan);
-			this._customWaveDrawCanvas.redrawCanvas();
-			this._panSliderInputBox.value = instrument.pan + "";
-			this._instrumentVolumeSlider.updateValue(instrument.volume);
-			this._instrumentVolumeSliderInputBox.value = "" + (instrument.volume);
 			setSelectedValue(this._instrumentSelect, instrumentIndex);
 
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
@@ -1180,7 +1735,41 @@ namespace beepbox {
 			if (this._doc.showScrollBar) patternWidth -= 20;
 			this._patternEditor.container.style.width = String(patternWidth) + "px";
 
-			this._volumeSlider.value = String(this._doc.volume);
+			this._volumeSlider.input.value = String(this._doc.volume);
+
+			if (this._doc.wideMode != this._wideMode) {
+
+				if (this._wideMode == false && window.innerWidth > 700) {
+					$("#editor-widget-column").css("width", "29em");
+					this._songTitleInputBox.input.style.setProperty("width", "28em");
+					$("#playback-controls").css("width", "25em");
+					$("#playback-controls").css("align-self", "center");
+					$("#editor-settings").css("flex-direction", "row-reverse");
+					$("#editor-song-settings").css("width", "14em");
+					$("#editor-song-settings").css("padding-left", "0.8em");
+					$("#editor-instrument-settings").css("width", "14em");
+					$("#track-and-pattern-container").css("display", "flex");
+					$("#track-and-pattern-container").css("flex-direction", "row-reverse");
+					$("#editor-box").css("padding-left", "0.8em");
+					$("#track-and-scrollbar-container").css("display", "flex");
+					$("#track-and-scrollbar-container").css("flex-direction", "column");
+					document.body.style.setProperty("display", "flex");
+					document.body.style.setProperty("flex-direction", "column");
+					$("#beepboxEditorContainer").css("display", "table");
+					$("#beepboxEditorContainer").css("align-self", "center");
+
+				}
+				else {
+					// Currently this setting change is implemented with a document reload
+					// and the default settings are used for the non-wide mode option.
+					// If this ever changes, just make this portion undo any settings made
+					// by the above.
+				}
+
+				// Even if set failed due to bad innerWidth, wait for a reload before trying again
+				this._wideMode = this._doc.wideMode;
+
+			}
 
 			// If an interface element was selected, but becomes invisible (e.g. an instrument
 			// select menu) just select the editor container so keyboard commands still work.
@@ -1257,7 +1846,7 @@ namespace beepbox {
 			}
 
 			// Defer to actively editing volume/pan rows
-			if (document.activeElement == this._panSliderInputBox || document.activeElement == this._instrumentVolumeSliderInputBox) {
+			if (document.activeElement == this._panSliderInputBox || document.activeElement == this._detuneSliderInputBox || document.activeElement == this._instrumentVolumeSliderInputBox) {
 				// Enter/esc returns focus to form
 				if (event.keyCode == 13 || event.keyCode == 27) {
 					this.mainLayer.focus();
@@ -1396,14 +1985,19 @@ namespace beepbox {
 
 					var muteCondition = false;
 
-					for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
+					let channelLimit: number = this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount;
+					if (event.shiftKey) {
+						channelLimit = this._doc.song.getChannelCount();
+					}
+
+					for (let i: number = 0; i < channelLimit; i++) {
 						if (this._muteButtonEditor._muteButtons[i].getMuteState() == (i == this._doc.channel))
 							muteCondition = true;
 					}
 
 					// If this channel exactly is solo, unmute all
 					if (muteCondition == false) {
-						for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
+						for (let i: number = 0; i < channelLimit; i++) {
 							if (this._muteButtonEditor._muteButtons[i].getMuteState() == true)
 								this._muteButtonEditor._muteButtons[i].toggleMute();
 
@@ -1412,7 +2006,7 @@ namespace beepbox {
 					}
 					// Else, mute all except current channel
 					else {
-						for (let i: number = 0; i < this._muteButtonEditor._muteButtons.length; i++) {
+						for (let i: number = 0; i < channelLimit; i++) {
 
 							if (i == this._doc.channel && this._muteButtonEditor._muteButtons[i].getMuteState() == true)
 								this._muteButtonEditor._muteButtons[i].toggleMute();
@@ -1526,7 +2120,7 @@ namespace beepbox {
 		}
 
 		private _setVolumeSlider = (): void => {
-			this._doc.setVolume(Number(this._volumeSlider.value));
+			this._doc.setVolume(Number(this._volumeSlider.input.value));
 		}
 
 		/*
@@ -1663,6 +2257,41 @@ namespace beepbox {
 
 		private _whenSetInstrument = (): void => {
 			this._trackEditor.setInstrument(this._instrumentSelect.selectedIndex);
+
+			// Force piano to re-show, if channel is modulator
+			if (this._doc.channel >= this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
+				this._piano.forceRender();
+			}
+		}
+
+		private _whenSetModChannel = (mod: number): void => {
+			this._trackEditor.setModChannel(mod, this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent as string);
+
+			// Force piano to re-show
+			this._piano.forceRender();
+		}
+
+		private _whenSetModInstrument = (mod: number): void => {
+			this._trackEditor.setModInstrument(mod, this._modInstrumentBoxes[mod].selectedIndex);
+
+			// Force piano to re-show
+			this._piano.forceRender();
+		}
+
+		private _whenSetModSetting = (mod: number): void => {
+			//let prevSetting: number = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].modSettings[mod];
+
+			this._trackEditor.setModSetting(mod, this._modSetBoxes[mod].children[this._modSetBoxes[mod].selectedIndex].textContent as string);
+
+			/* Currently cut this as it would have to scale all patterns to make any sense, and I'm leery about the loss of information
+			 * inherent in scaling to and from a smaller note resolution.
+			// Cause pattern editor to scale note heights if necessary. Relies on above call to change this setting, of course.
+			this._patternEditor.scaleModNotes(mod, prevSetting, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].modSettings[mod]);
+			*/
+
+			// Force piano to re-show if channel is modulator, as text shown on it needs to update
+			this._piano.forceRender();
+
 		}
 
 		//private _whenCustomizePressed = (): void => {
@@ -1818,6 +2447,14 @@ namespace beepbox {
 					break;
 				case "alwaysFineNoteVol":
 					this._doc.alwaysFineNoteVol = !this._doc.alwaysFineNoteVol;
+					break;
+				case "wideMode":
+					this._doc.wideMode = !this._doc.wideMode;
+					this._optionsMenu.selectedIndex = 0;
+					this._doc.notifier.changed();
+					this._doc.savePreferences();
+					// Config.scrollableOctaves needs to be reset. Needs a reload for now
+					location.reload();
 					break;
 				//case "alwaysShowSettings":
 				//this._doc.alwaysShowSettings = !this._doc.alwaysShowSettings;

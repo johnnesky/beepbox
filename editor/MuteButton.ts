@@ -29,6 +29,7 @@ namespace beepbox {
 	const { div, select, option } = HTML;
 
 	export class MuteButton {
+		public fillColor: string;
 		private readonly _barWidth: number = 32;
 		private readonly _rect: SVGRectElement = SVG.rect({ width: 30, height: 30, x: 1, y: 1 });
 		private readonly _shape: SVGPolygonElement = SVG.polygon({ points: "7,10 14,10 24,4 24,28 14,22 7,22", fill: "#dda85d" });
@@ -36,11 +37,13 @@ namespace beepbox {
 		private readonly _muteLine: SVGLineElement = SVG.line({ x1: "17", y1: "16", x2: "25", y2: "24", stroke: "red", visibility: "hidden" });
 		public readonly container: SVGSVGElement = SVG.svg(undefined, [this._rect, this._shape, this._muteCircle, this._muteLine]);
 		private _muted = false;
-		constructor(channel: number, x: number, y: number) {
+		constructor(channel: number, x: number, y: number, fillColor: string) {
+			this.fillColor = fillColor;
 			this._muteCircle.setAttribute("stroke-width", "" + 2);
 			this._muteLine.setAttribute("stroke-width", "" + 3);
 			this.container.setAttribute("x", "" + (x * this._barWidth));
 			this.container.setAttribute("y", "" + (Config.barEditorHeight + y * 32));
+			this._shape.setAttribute("fill", this.fillColor);
 			this._rect.setAttribute("fill", "#040410");
 			//this._label.setAttribute("fill", color);
 		}
@@ -64,7 +67,7 @@ namespace beepbox {
 		public toggleMute() {
 			if (this._muted) {
 				this._muted = false;
-				this._shape.setAttribute("fill", "#dda85d");
+				this._shape.setAttribute("fill", this.fillColor);
 				this._muteCircle.setAttribute("visibility", "hidden");
 				this._muteLine.setAttribute("visibility", "hidden");
 			}
@@ -96,7 +99,6 @@ namespace beepbox {
 		private readonly _muteButtonContainer = SVG.g();
 
 		public readonly _muteButtons: MuteButton[] = [];
-		//private _mouseX: number = 0;
 		private _mouseY: number = 0;
 		private _mouseOver: boolean = false;
 		private _editorHeight: number = 128;
@@ -121,7 +123,7 @@ namespace beepbox {
 
 			if (this._barDropDown.value == "solo") {
 
-				for (let i: number = 0; i < this._muteButtons.length; i++) {
+				for (let i: number = 0; i < this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount; i++) {
 
 					if (i == this._doc.channel && this._muteButtons[i].getMuteState() == true)
 						this._muteButtons[i].toggleMute();
@@ -190,15 +192,14 @@ namespace beepbox {
 		//const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		//this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-
-		// Note: may need to add a preview box to increase feedback
+			
 		//this._updatePreview();
 		//}
 
 		public render(): void {
 
 			// Get channel height
-			const wideScreen: boolean = window.innerWidth > 700;
+			const wideScreen: boolean = ( window.innerWidth > 700 || this._doc.wideMode == true );
 			const squashed: boolean = !wideScreen || this._doc.song.getChannelCount() > 4 || (this._doc.song.barCount > this._doc.trackVisibleBars && this._doc.song.getChannelCount() > 3);
 			this._channelHeight = squashed ? 27 : 32;
 
@@ -209,7 +210,7 @@ namespace beepbox {
 				for (let y: number = this._renderedChannelCount; y < this._doc.song.getChannelCount(); y++) {
 
 					// Add new mute control box
-					const mute: MuteButton = new MuteButton(y, 0, y);
+					const mute: MuteButton = new MuteButton(y, 0, y, this._doc.song.getChannelIsMod(y) ? "#886eae" : "#dda85d");
 					this._muteButtons[y] = mute;
 					mute.setSquashed(squashed, y);
 					this._muteButtonContainer.appendChild(mute.container);
@@ -222,6 +223,14 @@ namespace beepbox {
 				}
 
 				this._muteButtons.length = this._doc.song.getChannelCount();
+				
+				// Update fill color of mute buttons
+				for (let y: number = 0; y < this._muteButtons.length; y++) {
+					this._muteButtons[y].fillColor = this._doc.song.getChannelIsMod(y) ? "#886eae" : "#dda85d";
+					// Reset fillcolor here without actually changing mute state
+					this._muteButtons[y].toggleMute();
+					this._muteButtons[y].toggleMute();
+				}
 			}
 
 			if (this._renderedSquashed != squashed) {
@@ -237,6 +246,12 @@ namespace beepbox {
 				this._editorHeight = Config.barEditorHeight + this._doc.song.getChannelCount() * this._channelHeight;
 				this._svg.setAttribute("height", "" + this._editorHeight);
 				this.container.style.height = this._editorHeight + "px";
+			}
+
+			// Sync mute buttons with channels
+			for (let channel: number = 0; channel < this._doc.song.getChannelCount(); channel++) {
+				if (this._doc.song.channels[channel].muted != this._muteButtons[channel].getMuteState())
+					this._muteButtons[channel].toggleMute();
 			}
 
 			//this._updatePreview();

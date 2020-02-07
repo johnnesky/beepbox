@@ -256,7 +256,7 @@ namespace beepbox {
 			timeline.appendChild(rect({ x: bar * barWidth - 1, y: 0, width: 2, height: timelineHeight, fill: color }));
 		}
 
-		for (let channel: number = synth.song.channels.length - 1; channel >= 0; channel--) {
+		for (let channel: number = synth.song.channels.length - 1 - synth.song.modChannelCount; channel >= 0; channel--) {
 			const isNoise: boolean = synth.song.getChannelIsNoise(channel);
 			const pitchHeight: number = isNoise ? drumPitchHeight : wavePitchHeight;
 

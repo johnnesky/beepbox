@@ -10,6 +10,7 @@ namespace beepbox {
 
 	export interface Preset extends BeepBoxOption {
 		readonly isNoise?: boolean;
+		readonly isMod?: boolean;
 		readonly generalMidi?: boolean;
 		readonly midiProgram?: number;
 		readonly midiSubharmonicOctaves?: number;
@@ -20,7 +21,7 @@ namespace beepbox {
 	export const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
 
 	export class EditorConfig {
-		public static readonly versionDisplayName: string = "Jummbox 1.3";
+		public static readonly versionDisplayName: string = Config.versionDisplayName;
 		public static readonly presetCategories: DictionaryArray<PresetCategory> = toNameMap([
 			{
 				name: "Custom Instruments", presets: <DictionaryArray<Preset>>toNameMap([

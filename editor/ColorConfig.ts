@@ -27,8 +27,7 @@ namespace beepbox {
 			{name: "azure",  channelDim: "#4a6d8f", channelBright: "#77aadd", noteDim: "#6f9fcf", noteBright: "#bbd7ff"},
 		]);
 		*/
-
-		// Merge note - may need to change more than just the first value. What are the others used for? @jummbus
+		
 		public static readonly pitchBackgroundColors: string[] = [
 			"#446688",
 			"#393e4f",
@@ -66,11 +65,22 @@ namespace beepbox {
 					return ColorConfig.colorLookup.get(channel) as ChannelColors;
 				}
 				// Drum channel color formula
-				else {
+				else if (channel < song.pitchChannelCount + song.noiseChannelCount) {
 					let newChannelDim: string = "hsl(" + ((channel - song.pitchChannelCount) * 2 / Config.noiseChannelCountMax) * 256 + ",25%,42%)";
 					let newChannelBright: string = "hsl(" + ((channel - song.pitchChannelCount) * 2 / Config.noiseChannelCountMax) * 256 + ",33%,63.5%)";
 					let newNoteDim: string = "hsl(" + ((channel - song.pitchChannelCount) * 2 / Config.noiseChannelCountMax) * 256 + ",33.5%,55%)";
 					let newNoteBright: string = "hsl(" + ((channel - song.pitchChannelCount) * 2 / Config.noiseChannelCountMax) * 256 + ",46.5%,74%)";
+
+					let newChannelColors = <ChannelColors>{ channelDim: newChannelDim, channelBright: newChannelBright, noteDim: newNoteDim, noteBright: newNoteBright };
+					ColorConfig.colorLookup.set(channel, newChannelColors);
+					return ColorConfig.colorLookup.get(channel) as ChannelColors;
+				}
+			  // Mod channel color formula
+				else {
+					let newChannelDim: string = "hsl(" + 128 + ( (channel - song.pitchChannelCount - song.noiseChannelCount) * 2 / Config.modChannelCountMax) * 256 + ",88%,50%)";
+					let newChannelBright: string = "hsl(" + 128 + ( (channel - song.pitchChannelCount - song.noiseChannelCount) * 2 / Config.modChannelCountMax) * 256 + ",96%,80%)";
+					let newNoteDim: string = "hsl(" + 128 + ( (channel - song.pitchChannelCount - song.noiseChannelCount) * 2 / Config.modChannelCountMax) * 256 + ",92%,55%)";
+					let newNoteBright: string = "hsl(" + 128 + ( (channel - song.pitchChannelCount - song.noiseChannelCount) * 2 / Config.modChannelCountMax) * 256 + ",96%,85%)";
 
 					let newChannelColors = <ChannelColors>{ channelDim: newChannelDim, channelBright: newChannelBright, noteDim: newNoteDim, noteBright: newNoteBright };
 					ColorConfig.colorLookup.set(channel, newChannelColors);

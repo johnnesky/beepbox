@@ -133,6 +133,7 @@ namespace beepbox {
 					// Insert an interpolated pin at the start of the new note.
 					const ratio: number = (-newPinTime) / (nextPinTime - newPinTime);
 					newNote.pins.push(makeNotePin(Math.round(pin.interval + ratio * (nextPin.interval - pin.interval)), 0, Math.round(pin.volume + ratio * (nextPin.volume - pin.volume))));
+
 				}
 			} else if (newPinTime <= newNoteLength) {
 				newNote.pins.push(makeNotePin(pin.interval, newPinTime, pin.volume));
@@ -147,6 +148,15 @@ namespace beepbox {
 				}
 			}
 		}
+
+		// Bugfix: adjust start pitch of note instead of setting first pin to a nonzero interval
+		const offsetInterval: number = newNote.pins[0].interval;
+		for (let pitchIdx: number = 0; pitchIdx < newNote.pitches.length; pitchIdx++) {
+			newNote.pitches[pitchIdx] += offsetInterval;
+		}
+		for (let pinIdx: number = 0; pinIdx < newNote.pins.length; pinIdx++) {
+			newNote.pins[pinIdx].interval -= offsetInterval;
+		}
 	}
 
 	export class ChangeMoveAndOverflowNotes extends ChangeGroup {
@@ -155,14 +165,18 @@ namespace beepbox {
 
 			const pitchChannels: Channel[] = [];
 			const noiseChannels: Channel[] = [];
+			const modChannels: Channel[] = []
 
 			for (let channelIndex: number = 0; channelIndex < doc.song.getChannelCount(); channelIndex++) {
 				const oldChannel: Channel = doc.song.channels[channelIndex];
 				const newChannel: Channel = new Channel();
 				if (channelIndex < doc.song.pitchChannelCount) {
 					pitchChannels.push(newChannel);
-				} else {
+				} else if (channelIndex < doc.song.pitchChannelCount + doc.song.noiseChannelCount) {
 					noiseChannels.push(newChannel);
+				}
+				else {
+					modChannels.push(newChannel);
 				}
 
 				newChannel.octave = oldChannel.octave;
@@ -192,8 +206,9 @@ namespace beepbox {
 								const noteEndPart: number = Math.min(newPartsPerBar, absoluteNoteEnd - barStartPart);
 
 								if (noteStartPart < noteEndPart) {
+
 									// Ensure a pattern exists for the current bar before inserting notes into it.
-									if (currentBar != bar || pattern == null) {
+									if (currentBar < bar || pattern == null) {
 										currentBar++;
 										while (currentBar < bar) {
 											newChannel.bars[currentBar] = 0;
@@ -205,6 +220,9 @@ namespace beepbox {
 										pattern.instrument = oldPattern.instrument;
 									}
 
+									// This is a consideration to allow arbitrary note sequencing, e.g. for mod channels (so the pattern being used can jump around)
+									pattern = newChannel.patterns[newChannel.bars[bar] - 1];
+
 									projectNoteIntoBar(oldNote, absoluteNoteStart - barStartPart - noteStartPart, noteStartPart, noteEndPart, pattern.notes);
 								}
 							}
@@ -215,7 +233,8 @@ namespace beepbox {
 
 			removeDuplicatePatterns(pitchChannels);
 			removeDuplicatePatterns(noiseChannels);
-			this.append(new ChangeReplacePatterns(doc, pitchChannels, noiseChannels));
+			removeDuplicatePatterns(modChannels);
+			this.append(new ChangeReplacePatterns(doc, pitchChannels, noiseChannels, modChannels));
 		}
 	}
 
@@ -364,7 +383,7 @@ namespace beepbox {
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
 						const tempPan: number = instrument.pan;
-						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel));
+						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel), doc.song.getChannelIsMod(doc.channel));
 						instrument.volume = tempVolume;
 						instrument.pan = tempPan;
 					}
@@ -881,12 +900,12 @@ namespace beepbox {
 	}
 
 	export class ChangeChannelCount extends Change {
-		constructor(doc: SongDocument, newPitchChannelCount: number, newNoiseChannelCount: number) {
+		constructor(doc: SongDocument, newPitchChannelCount: number, newNoiseChannelCount: number, newModChannelCount: number) {
 			super();
-			if (doc.song.pitchChannelCount != newPitchChannelCount || doc.song.noiseChannelCount != newNoiseChannelCount) {
+			if (doc.song.pitchChannelCount != newPitchChannelCount || doc.song.noiseChannelCount != newNoiseChannelCount || doc.song.modChannelCount != newModChannelCount) {
 				const newChannels: Channel[] = [];
 
-				function changeGroup(newCount: number, oldCount: number, newStart: number, oldStart: number, octave: number, isNoise: boolean): void {
+				function changeGroup(newCount: number, oldCount: number, newStart: number, oldStart: number, octave: number, isNoise: boolean, isMod: boolean): void {
 					for (let i: number = 0; i < newCount; i++) {
 						const channel = i + newStart;
 						const oldChannel = i + oldStart;
@@ -896,10 +915,10 @@ namespace beepbox {
 							newChannels[channel] = new Channel();
 							newChannels[channel].octave = octave;
 							for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) {
-								const instrument: Instrument = new Instrument(isNoise);
+								const instrument: Instrument = new Instrument(isNoise, isMod);
 								const presetValue: number = pickRandomPresetValue(isNoise);
 								const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
-								instrument.fromJsonObject(preset.settings, isNoise);
+								instrument.fromJsonObject(preset.settings, isNoise, isMod);
 								instrument.preset = presetValue;
 								newChannels[channel].instruments[j] = instrument;
 							}
@@ -913,17 +932,20 @@ namespace beepbox {
 					}
 				}
 
-				changeGroup(newPitchChannelCount, doc.song.pitchChannelCount, 0, 0, 2, false);
-				changeGroup(newNoiseChannelCount, doc.song.noiseChannelCount, newPitchChannelCount, doc.song.pitchChannelCount, 0, true);
+				changeGroup(newPitchChannelCount, doc.song.pitchChannelCount, 0, 0, 2, false, false);
+				changeGroup(newNoiseChannelCount, doc.song.noiseChannelCount, newPitchChannelCount, doc.song.pitchChannelCount, 0, true, false);
+				changeGroup(newModChannelCount, doc.song.modChannelCount, newNoiseChannelCount + newPitchChannelCount, doc.song.pitchChannelCount + doc.song.noiseChannelCount, 0, false, true);
 
 				doc.song.pitchChannelCount = newPitchChannelCount;
 				doc.song.noiseChannelCount = newNoiseChannelCount;
+				doc.song.modChannelCount = newModChannelCount;
+
 				for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
 					doc.song.channels[channel] = newChannels[channel];
 				}
 				doc.song.channels.length = doc.song.getChannelCount();
 
-				doc.channel = Math.min(doc.channel, newPitchChannelCount + newNoiseChannelCount - 1);
+				doc.channel = Math.min(doc.channel, newPitchChannelCount + newNoiseChannelCount + newModChannelCount - 1);
 				doc.notifier.changed();
 
 				ColorConfig.resetColors();
@@ -1045,6 +1067,7 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
 			this._instrument.pulseWidth = newValue;
+			doc.synth.unsetMod(ModSetting.mstPulseWidth, doc.channel, doc.getCurrentInstrument());
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -1068,6 +1091,7 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
 			this._instrument.filterCutoff = newValue;
+			doc.synth.unsetMod(ModSetting.mstFilterCut, doc.channel, doc.getCurrentInstrument());
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -1077,6 +1101,7 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
 			this._instrument.filterResonance = newValue;
+			doc.synth.unsetMod(ModSetting.mstFilterPeak, doc.channel, doc.getCurrentInstrument());
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -1170,6 +1195,8 @@ namespace beepbox {
 		constructor(doc: SongDocument, operatorIndex: number, oldValue: number, newValue: number) {
 			super(doc);
 			this._instrument.operators[operatorIndex].amplitude = newValue;
+			// Not used currently as mod is implemented as multiplicative
+			//doc.synth.unsetMod(ModSetting.mstFMSlider1 + operatorIndex, doc.channel, doc.getCurrentInstrument());
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -1179,6 +1206,8 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
 			this._instrument.feedbackAmplitude = newValue;
+			// Not used currently as mod is implemented as multiplicative
+			//doc.synth.unsetMod(ModSetting.mstFMFeedback, doc.channel, doc.getCurrentInstrument());
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -1192,12 +1221,12 @@ namespace beepbox {
 					const sampleInstrument: Instrument = doc.song.channels[channel].instruments[doc.song.instrumentsPerChannel - 1];
 					const sampleInstrumentJson: any = sampleInstrument.toJsonObject();
 					for (let j: number = doc.song.instrumentsPerChannel; j < newInstrumentsPerChannel; j++) {
-						const newInstrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channel));
+						const newInstrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channel), doc.song.getChannelIsMod(channel));
 						if (sampleInstrument.type == InstrumentType.drumset) {
 							// Drumsets are kinda expensive in terms of url length, so don't just copy them willy-nilly.
-							newInstrument.setTypeAndReset(InstrumentType.spectrum, true);
+							newInstrument.setTypeAndReset(InstrumentType.spectrum, true, false);
 						} else {
-							newInstrument.fromJsonObject(sampleInstrumentJson, doc.song.getChannelIsNoise(channel));
+							newInstrument.fromJsonObject(sampleInstrumentJson, doc.song.getChannelIsNoise(channel), doc.song.getChannelIsMod(channel));
 						}
 						doc.song.channels[channel].instruments[j] = newInstrument;
 					}
@@ -1315,7 +1344,7 @@ namespace beepbox {
 	export class ChangePasteInstrument extends ChangeGroup {
 		constructor(doc: SongDocument, instrument: Instrument, instrumentCopy: any) {
 			super();
-			instrument.fromJsonObject(instrumentCopy, instrumentCopy["isDrum"]);
+			instrument.fromJsonObject(instrumentCopy, instrumentCopy["isDrum"], instrumentCopy["isMod"]);
 			doc.notifier.changed();
 			this._didSomething();
 		}
@@ -1326,6 +1355,123 @@ namespace beepbox {
 			super();
 			if (pattern.instrument != newValue) {
 				pattern.instrument = newValue;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+
+	export class ChangeModChannel extends Change {
+		constructor(doc: SongDocument, mod: number, text: string) {
+			super();
+			// Figure out if this is a pitch or noise mod, or "song" or "none"
+			let stat: ModStatus = ModStatus.msNone;
+			let channel: number = 0;
+			let instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+
+			if (text == "song") {
+				stat = ModStatus.msForSong;
+			}
+			else if (text == "none") {
+				stat = ModStatus.msNone;
+			}
+			else if (text.substr(0, text.indexOf(' ')) == "pitch") {
+				stat = ModStatus.msForPitch;
+				channel = (+text.substr(text.indexOf(' ') + 1)) - 1;
+			}
+			else {
+				stat = ModStatus.msForNoise;
+				channel = (+text.substr(text.indexOf(' ') + 1)) - 1;
+			}
+
+			if (instrument.modStatuses[mod] != stat || instrument.modChannels[mod] != channel) {
+
+				instrument.modStatuses[mod] = stat;
+				instrument.modChannels[mod] = channel;
+
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+
+	export class ChangeModInstrument extends Change {
+		constructor(doc: SongDocument, mod: number, tgtInstrument: number) {
+			super();
+
+			let instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+
+			if (instrument.modInstruments[mod] != tgtInstrument) {
+				instrument.modInstruments[mod] = tgtInstrument;
+
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+
+	export class ChangeModSetting extends Change {
+		constructor(doc: SongDocument, mod: number, text: string) {
+			super();
+
+			let setting: ModSetting = ModSetting.mstNone;
+			let instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+
+			switch (text) {
+				case "song volume":
+					setting = ModSetting.mstSongVolume;
+					break;
+				case "tempo":
+					setting = ModSetting.mstTempo;
+					break;
+				case "reverb":
+					setting = ModSetting.mstReverb;
+					break;
+				case "next bar":
+					setting = ModSetting.mstNextBar;
+					break;
+				case "volume":
+					setting = ModSetting.mstInsVolume;
+					break;
+				case "pan":
+					setting = ModSetting.mstPan;
+					break;
+				case "filter cut":
+					setting = ModSetting.mstFilterCut;
+					break;
+				case "filter peak":
+					setting = ModSetting.mstFilterPeak;
+					break;
+				case "fm slider 1":
+					setting = ModSetting.mstFMSlider1;
+					break;
+				case "fm slider 2":
+					setting = ModSetting.mstFMSlider2;
+					break;
+				case "fm slider 3":
+					setting = ModSetting.mstFMSlider3;
+					break;
+				case "fm slider 4":
+					setting = ModSetting.mstFMSlider4;
+					break;
+				case "fm feedback":
+					setting = ModSetting.mstFMFeedback;
+					break;
+				case "pulse width":
+					setting = ModSetting.mstPulseWidth;
+					break;
+				case "detune":
+					setting = ModSetting.mstDetune;
+					break;
+				case "none":
+				default:
+					break;
+			}
+
+			if (instrument.modSettings[mod] != setting) {
+
+				instrument.modSettings[mod] = setting;
+
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -1803,9 +1949,10 @@ namespace beepbox {
 		for (let channelIndex: number = 0; channelIndex < song.channels.length; channelIndex++) {
 			for (const instrument of song.channels[channelIndex].instruments) {
 				const isNoise: boolean = song.getChannelIsNoise(channelIndex);
+				const isMod: boolean = song.getChannelIsMod(channelIndex);
 				const presetValue: number = (channelIndex == song.pitchChannelCount) ? EditorConfig.nameToPresetValue(Math.random() > 0.5 ? "chip noise" : "standard drumset")! : pickRandomPresetValue(isNoise);
 				const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
-				instrument.fromJsonObject(preset.settings, isNoise);
+				instrument.fromJsonObject(preset.settings, isNoise, isMod);
 				instrument.preset = presetValue;
 			}
 		}
@@ -1839,7 +1986,7 @@ namespace beepbox {
 	}
 
 	export class ChangeReplacePatterns extends ChangeGroup {
-		constructor(doc: SongDocument, pitchChannels: Channel[], noiseChannels: Channel[]) {
+		constructor(doc: SongDocument, pitchChannels: Channel[], noiseChannels: Channel[], modChannels: Channel[]) {
 			super();
 
 			const song: Song = doc.song;
@@ -1864,15 +2011,17 @@ namespace beepbox {
 
 			removeExtraSparseChannels(pitchChannels, Config.pitchChannelCountMax);
 			removeExtraSparseChannels(noiseChannels, Config.noiseChannelCountMax);
+			removeExtraSparseChannels(modChannels, Config.modChannelCountMax);
 
 			while (pitchChannels.length < Config.pitchChannelCountMin) pitchChannels.push(new Channel());
 			while (noiseChannels.length < Config.noiseChannelCountMin) noiseChannels.push(new Channel());
+			while (modChannels.length < Config.modChannelCountMin) modChannels.push(new Channel());
 
 			// Set minimum counts.
 			song.barCount = 1;
 			song.instrumentsPerChannel = 1;
 			song.patternsPerChannel = 8;
-			const combinedChannels: Channel[] = pitchChannels.concat(noiseChannels);
+			const combinedChannels: Channel[] = pitchChannels.concat(noiseChannels.concat(modChannels));
 			for (let channelIndex: number = 0; channelIndex < combinedChannels.length; channelIndex++) {
 				const channel: Channel = combinedChannels[channelIndex];
 				song.barCount = Math.max(song.barCount, channel.bars.length);
@@ -1883,6 +2032,7 @@ namespace beepbox {
 			song.channels.length = combinedChannels.length;
 			song.pitchChannelCount = pitchChannels.length;
 			song.noiseChannelCount = noiseChannels.length;
+			song.modChannelCount = modChannels.length;
 
 			song.barCount = Math.min(Config.barCountMax, song.barCount);
 			song.patternsPerChannel = Math.min(Config.barCountMax, song.patternsPerChannel);
@@ -1906,17 +2056,20 @@ namespace beepbox {
 					channel.patterns.push(new Pattern());
 				}
 				while (channel.instruments.length < song.instrumentsPerChannel) {
-					const instrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channelIndex));
+					const instrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channelIndex), doc.song.getChannelIsMod(channelIndex));
 					if (song.getChannelIsNoise(channelIndex)) {
-						instrument.setTypeAndReset(InstrumentType.noise, true);
+						instrument.setTypeAndReset(InstrumentType.noise, true, false);
+					} else if (song.getChannelIsMod(channelIndex)) {
+						instrument.setTypeAndReset(InstrumentType.mod, false, true);
 					} else {
-						instrument.setTypeAndReset(InstrumentType.chip, false);
+						instrument.setTypeAndReset(InstrumentType.chip, false, false);
 					}
 					channel.instruments.push(instrument);
 				}
+
+				channel.instruments.length = song.instrumentsPerChannel;
 				channel.bars.length = song.barCount;
 				channel.patterns.length = song.patternsPerChannel;
-				channel.instruments.length = song.instrumentsPerChannel;
 			}
 
 			song.loopStart = Math.max(0, Math.min(song.barCount - 1, song.loopStart));
@@ -1995,6 +2148,7 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.tempo = Math.max(Config.tempoMin, Math.min(Config.tempoMax, newValue));
+			doc.synth.unsetMod(ModSetting.mstTempo);
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -2004,6 +2158,7 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.reverb = newValue;
+			doc.synth.unsetMod(ModSetting.mstReverb);
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -2086,13 +2241,18 @@ namespace beepbox {
 				} else if (note.start >= end) {
 					break;
 				} else if (note.start < start) {
-					this.append(new ChangeNoteLength(doc, note, note.start, start));
+					if (!doc.song.getChannelIsMod(doc.channel) || (skipNote != undefined && note.pitches[0] == skipNote.pitches[0]))
+						this.append(new ChangeNoteLength(doc, note, note.start, start));
 					i++;
 				} else if (note.end > end) {
-					this.append(new ChangeNoteLength(doc, note, end, note.end));
+					if (!doc.song.getChannelIsMod(doc.channel) || (skipNote != undefined && note.pitches[0] == skipNote.pitches[0]))
+						this.append(new ChangeNoteLength(doc, note, end, note.end));
 					i++;
 				} else {
-					this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
+					if (!doc.song.getChannelIsMod(doc.channel) || (skipNote != undefined && note.pitches[0] == skipNote.pitches[0]))
+						this.append(new ChangeNoteAdded(doc, pattern, note, i, true));
+					else
+						i++;
 				}
 			}
 		}
@@ -2123,6 +2283,9 @@ namespace beepbox {
 			// channels at once.
 			const isNoise: boolean = doc.song.getChannelIsNoise(channel);
 			if (isNoise != doc.song.getChannelIsNoise(doc.channel)) return;
+
+			// Can't transpose mods
+			if (doc.song.getChannelIsMod(doc.channel)) return;
 
 			const maxPitch: number = (isNoise ? Config.drumCount - 1 : Config.maxPitch);
 
@@ -2300,6 +2463,8 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].volume = newValue;
+			// Not used currently as mod is implemented as multiplicative.
+			//doc.synth.unsetMod(ModSetting.mstInsVolume, doc.channel, doc.getCurrentInstrument());
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -2313,7 +2478,7 @@ namespace beepbox {
 			}
 
 			doc.song.title = newValue;
-			document.title = newValue + " - Jummbox 1.3";
+			document.title = newValue + " - " + Config.versionDisplayName;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -2323,6 +2488,17 @@ namespace beepbox {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].pan = newValue;
+			doc.synth.unsetMod(ModSetting.mstPan, doc.channel, doc.getCurrentInstrument());
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+
+	export class ChangeDetune extends Change {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super();
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].detune = newValue;
+			doc.synth.unsetMod(ModSetting.mstDetune, doc.channel, doc.getCurrentInstrument());
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}

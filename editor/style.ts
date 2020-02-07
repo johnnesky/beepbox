@@ -616,7 +616,7 @@ body {
 
 }
 
-.beepboxEditor input[type=range].midTick:after {
+.beepboxEditor span.midTick:after {
     content: "";
     display:inline-block;
     position: absolute;
@@ -624,8 +624,28 @@ body {
     width: 2%;
     left: 49%;
     height: 0.5em;
-    top: 37%;
+    top: 32%;
     z-index: 1;
+		pointer-events: none;
+}
+.beepboxEditor span.modSlider {
+	--mod-position: 20%;
+	--mod-color: #6850b5;
+}
+.beepboxEditor span.modSlider:before {
+		content: "";
+    display:inline-block;
+    position: absolute;
+    background: var(--mod-color);
+    width: 4%;
+    left: var(--mod-position);
+    height: 0.8em;
+    top: 28%;
+    z-index: 2;
+		transform: translate(-50%, 0%);
+		pointer-events: none;
+		border: 40%;
+		border-radius: 40%;
 }
 .beepboxEditor input[type=range]::-webkit-slider-thumb {
 	height: 2em;

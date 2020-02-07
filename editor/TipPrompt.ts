@@ -66,6 +66,13 @@ namespace beepbox {
 						p("As a rule of thumb, composers typically put lead melodies, drums, and basses in the center, and spread any other instruments to either side. If too many instruments seem like they're coming from the same place, it can feel crowded and harder to distinguish individual sounds, especially if they cover a similar pitch range."),
 					);
 				} break;
+				case "detune": {
+					message = div(
+						h2("Detune"),
+						p("This setting can be used to finely control the pitch of your instrument."),
+						p("Careful - you can quickly get very dissonant sounding songs by using this setting."),
+					);
+				} break;
 				case "instrumentType": {
 					message = div(
 						h2("Instrument Type"),
@@ -236,6 +243,29 @@ namespace beepbox {
 						p("This can be useful when you're not sure if you've used the pattern before and making edits carelessly could change other parts of the song."),
 					);
 				} break;
+				case "modChannel": {
+					message = div(
+						h2("Modulator Channel"),
+						p("Modulators can be used to change settings in your song automatically over time. This technique is also known as automation."),
+						p("This setting controls which channel the modulators will take effect for. If you choose 'Song', you can change song-wide settings too!"),
+					);
+				} break;
+				case "modInstrument": {
+					message = div(
+						h2("Modulator Instrument"),
+						p("Modulators can be used to change settings in your song automatically over time. This technique is also known as automation."),
+						p("This setting controls which instrument your modulator will apply to within the given channel you've chosen."),
+					);
+				} break;
+				case "modSet": {
+					message = div(
+						h2("Modulator Setting"),
+						p("This is the parameter that you want to change with this modulator. For example, if you set this to 'Tempo', you can speed up or slow down your song by laying notes in the pattern editor."),
+						p("Note that you'll see different options if your channel is set to 'Song' versus a channel number. With 'Song', you'll see song-wide settings such as tempo. With a channel, you'll see specific instrument settings."),
+						p("Most modulators behave as you'd expect and work just as if you were moving their associated slider. But with the special setting 'Next Bar', the first note you lay will cause the playhead to skip the rest of the bar and jump right to the next one."),
+					);
+				} break;
+				
 				default: throw new Error("Unhandled TipPrompt type: " + type);
 			}
 
