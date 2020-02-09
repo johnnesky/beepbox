@@ -17,7 +17,7 @@ namespace beepbox {
 				.beepboxEditor {
 					width: 100%;
 					min-height: 100vh;
-					grid-template-columns: minmax(0, 1fr) min-content;
+					grid-template-columns: minmax(0, 1fr) 30em; /* minmax(0, 1fr) min-content; Chrome 80 grid layout regression. https://bugs.chromium.org/p/chromium/issues/detail?id=1050307 */
 					grid-template-rows: minmax(481px, 1fr) min-content;
 					grid-template-areas: "pattern-area settings-area" "track-area track-area";
 				}

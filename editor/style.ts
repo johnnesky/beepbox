@@ -131,7 +131,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 .beepboxEditor {
 	display: grid;
     grid-template-columns: minmax(0, 1fr) max-content;
-    grid-template-rows: max-content minmax(0, 1fr);
+    grid-template-rows: max-content 1fr; /* max-content minmax(0, 1fr); Chrome 80 grid layout regression. https://bugs.chromium.org/p/chromium/issues/detail?id=1050307 */
     grid-template-areas: "pattern-area settings-area" "track-area settings-area";
 	grid-column-gap: 6px;
 	grid-row-gap: 6px;
