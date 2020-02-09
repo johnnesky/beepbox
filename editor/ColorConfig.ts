@@ -74,7 +74,7 @@ namespace beepbox {
 				:root {
 					-webkit-text-stroke-width: 0.5px;
 					--page-margin: #685d88;
-					--editor-background: #d6d3df;
+					--editor-background: white;
 					--hover-preview: black;
 					--playhead: rgba(0,0,0,0.5);
 					--primary-text: black;
@@ -84,49 +84,53 @@ namespace beepbox {
 					--box-selection-fill: rgba(0,0,0,0.1);
 					--loop-accent: #98f;
 					--link-accent: #74f;
-					--ui-widget-background: #fff;
+					--ui-widget-background: #ececec;
 					--ui-widget-focus: #eee;
-					--pitch-background: #f7f7f7;
-					--tonic: #ffe7cf;
-					--fifth-note: #def;
+					--pitch-background: #ececec;
+					--tonic: #f0d6b6;
+					--fifth-note: #bbddf0;
 					--white-piano-key: #eee;
 					--black-piano-key: #666;
-					--pitch1-secondary-channel: #5BD5EB;
+					--pitch1-secondary-channel: #6CD9ED;
 					--pitch1-primary-channel:   #00A0BD;
-					--pitch1-secondary-note:    #4BD1E9;
+					--pitch1-secondary-note:    #34C2DC;
 					--pitch1-primary-note:      #00758A;
 					--pitch2-secondary-channel: #E3C941;
 					--pitch2-primary-channel:   #B49700;
-					--pitch2-secondary-note:    #DDC43A;
+					--pitch2-secondary-note:    #D1B628;
 					--pitch2-primary-note:      #836E00;
-					--pitch3-secondary-channel: #FF924F;
+					--pitch3-secondary-channel: #FF9D61;
 					--pitch3-primary-channel:   #E14E00;
-					--pitch3-secondary-note:    #FF9156;
+					--pitch3-secondary-note:    #F67D3C;
 					--pitch3-primary-note:      #B64000;
-					--pitch4-secondary-channel: #37DF37;
+					--pitch4-secondary-channel: #4BE24B;
 					--pitch4-primary-channel:   #00A800;
-					--pitch4-secondary-note:    #41D641;
+					--pitch4-secondary-note:    #2DC82D;
 					--pitch4-primary-note:      #008000;
-					--pitch5-secondary-channel: #FF83FF;
+					--pitch5-secondary-channel: #FF90FF;
 					--pitch5-primary-channel:   #E12EDF;
-					--pitch5-secondary-note:    #F189F1;
+					--pitch5-secondary-note:    #EC6EEC;
 					--pitch5-primary-note:      #A600A5;
-					--pitch6-secondary-channel: #ADADFE;
+					--pitch6-secondary-channel: #B5B5FE;
 					--pitch6-primary-channel:   #6969FD;
-					--pitch6-secondary-note:    #A5A5FE;
+					--pitch6-secondary-note:    #9393FE;
 					--pitch6-primary-note:      #4A4AD7;
-					--noise1-secondary-channel: #BABABA;
+					--noise1-secondary-channel: #C1C1C1;
 					--noise1-primary-channel:   #898989;
-					--noise1-secondary-note:    #BDBDBD;
+					--noise1-secondary-note:    #ADADAD;
 					--noise1-primary-note:      #6C6C6C;
-					--noise2-secondary-channel: #E5B37F;
+					--noise2-secondary-channel: #E8BB8C;
 					--noise2-primary-channel:   #BD7D3A;
-					--noise2-secondary-note:    #D9B48D;
+					--noise2-secondary-note:    #D1A374;
 					--noise2-primary-note:      #836342;
-					--noise3-secondary-channel: #90BDE9;
+					--noise3-secondary-channel: #9BC4EB;
 					--noise3-primary-channel:   #4481BE;
-					--noise3-secondary-note:    #94B7DC;
+					--noise3-secondary-note:    #7CA7D3;
 					--noise3-primary-note:      #476685;
+				}
+				
+				.beepboxEditor button, .beepboxEditor select {
+					box-shadow: inset 0 0 0 1px var(--secondary-text);
 				}
 			`,
 		};
