@@ -96,7 +96,7 @@ namespace beepbox {
 			this._downHighlight,
 			this._playhead,
 		);
-		private readonly _select: HTMLSelectElement = HTML.select({className: "trackSelectBox", style: "background: none; border: none; appearance: none; color: transparent; position: absolute; touch-action: none;"});
+		private readonly _select: HTMLSelectElement = HTML.select({className: "trackSelectBox", style: "background: none; border: none; appearance: none; border-radius: initial; box-shadow: none; color: transparent; position: absolute; touch-action: none;"});
 		public readonly container: HTMLElement = HTML.div({class: "noSelection", style: "height: 128px; position: relative; overflow:hidden;"}, this._svg, this._select);
 		
 		
@@ -802,6 +802,7 @@ namespace beepbox {
 				this._boxHighlight.setAttribute("x", "" + (1 + this._barWidth * bar));
 				this._boxHighlight.setAttribute("y", "" + (1 + (this._channelHeight * channel)));
 				this._boxHighlight.setAttribute("height", "" + (this._channelHeight - 2));
+				this._boxHighlight.setAttribute("width", "" + (this._barWidth - 2));
 				this._boxHighlight.style.visibility = "visible";
 			} else {
 				this._boxHighlight.style.visibility = "hidden";

@@ -225,6 +225,11 @@ namespace beepbox {
 		
 		public static setTheme(name: string): void {
 			this._styleElement.textContent = this.themes[name];
+			
+			const themeColor = <HTMLMetaElement> document.querySelector("meta[name='theme-color']");
+			if (themeColor != null) {
+				themeColor.setAttribute("content", getComputedStyle(document.documentElement).getPropertyValue('--ui-widget-background'));
+			}
 		}
 	}
 }
