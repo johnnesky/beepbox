@@ -302,6 +302,7 @@ namespace beepbox {
 					tracks.push({isMeta: false, channel: channel, midiChannel: 9, isNoise: true, isDrumset: true});
 					foundADrumset = true; // There can only be one drumset channel, and it's always channel 9 (seen as 10 in most UIs). :/
 				} else {
+					if (midiChannelCounter >= 16) continue; // The MIDI standard only supports 16 channels.
 					tracks.push({isMeta: false, channel: channel, midiChannel: midiChannelCounter++, isNoise: this._doc.song.getChannelIsNoise(channel), isDrumset: false});
 					if (midiChannelCounter == 9) midiChannelCounter++; // skip midi drum channel.
 				}
