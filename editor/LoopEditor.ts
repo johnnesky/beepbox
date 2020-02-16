@@ -110,8 +110,8 @@ namespace beepbox {
 			event.preventDefault();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    //this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+			this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+			//this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updateCursorStatus();
 			this._updatePreview();
 			this._whenMouseMoved(event);
@@ -134,9 +134,9 @@ namespace beepbox {
 		
 		private _whenMouseMoved = (event: MouseEvent): void => {
 			const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-    		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		    //this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-		    this._whenCursorMoved();
+			this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
+			//this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+			this._whenCursorMoved();
 		}
 		
 		private _whenTouchMoved = (event: TouchEvent): void => {
@@ -153,10 +153,10 @@ namespace beepbox {
 				}
 			}
 			
-		    if (this._draggingHorizontally) {
+			if (this._draggingHorizontally) {
 				this._whenCursorMoved();
 				event.preventDefault();
-		    }
+			}
 		}
 		
 		private _whenCursorMoved(): void {
@@ -215,12 +215,13 @@ namespace beepbox {
 		
 		private _whenTouchReleased = (event: TouchEvent): void => {
 			event.preventDefault();
-		    if (!this._startedScrolling) {
+			if (!this._startedScrolling) {
 				this._whenCursorMoved();
 				this._mouseOver = false;
 				this._whenCursorReleased(event);
 				this._updatePreview();
-		    }
+			}
+			this._mouseDown = false;
 		}
 		
 		private _whenCursorReleased = (event: Event): void => {
