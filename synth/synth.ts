@@ -1788,7 +1788,7 @@ namespace beepbox {
 						bitStringLength += base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					} else {
 						channel = 0;
-						let bitStringLengthLength: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						let bitStringLengthLength: number = Math.min(4, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						while (bitStringLengthLength > 0) {
 							bitStringLength = bitStringLength << 6;
 							bitStringLength += base64CharCodeToInt[compressed.charCodeAt(charIndex++)];

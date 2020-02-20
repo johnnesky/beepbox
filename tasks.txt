@@ -348,6 +348,7 @@
 √ Added light color theme to preferences.
 √ Added full screen layout to preferences.
 √ Added previews of the next and previous patterns to full screen mode.
+√ Added Shift+Click and Shift+Arrows to extend track editor box selection.
 
 
 TODO:

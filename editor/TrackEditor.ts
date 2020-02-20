@@ -113,10 +113,10 @@ namespace beepbox {
 		private _digits: string = "";
 		private _barWidth: number = 32;
 		private _channelHeight: number = 32;
-		private _boxSelectionBar: number = 0;
-		private _boxSelectionChannel: number = 0;
-		private _boxSelectionWidth: number = 1;
-		private _boxSelectionHeight: number = 1;
+		private _boxSelectionX0: number = 0;
+		private _boxSelectionY0: number = 0;
+		private _boxSelectionX1: number = 0;
+		private _boxSelectionY1: number = 0;
 		private _renderedChannelCount: number = 0;
 		private _renderedBarCount: number = 0;
 		private _renderedPatternCount: number = 0;
@@ -176,6 +176,23 @@ namespace beepbox {
 			this._doc.forgetLastChange();
 		}
 		
+		private get _boxSelectionBar(): number {
+			return Math.min(this._boxSelectionX0, this._boxSelectionX1);
+		}
+		private get _boxSelectionChannel(): number {
+			return Math.min(this._boxSelectionY0, this._boxSelectionY1);
+		}
+		private get _boxSelectionWidth(): number {
+			return Math.abs(this._boxSelectionX0 - this._boxSelectionX1) + 1;
+		}
+		private get _boxSelectionHeight(): number {
+			return Math.abs(this._boxSelectionY0 - this._boxSelectionY1) + 1;
+		}
+		private _scrollToSelection(): void {
+			this._doc.barScrollPos = Math.min(this._doc.barScrollPos, this._boxSelectionX1);
+			this._doc.barScrollPos = Math.max(this._doc.barScrollPos, this._boxSelectionX1 - (this._doc.trackVisibleBars - 1));
+		}
+		
 		private _setChannelBar(channel: number, bar: number): void {
 			new ChangeChannelBar(this._doc, channel, bar);
 			this._selectionUpdated();
@@ -188,23 +205,45 @@ namespace beepbox {
 		public onKeyPressed(event: KeyboardEvent): void {
 			switch (event.keyCode) {
 				case 38: // up
-					this._setChannelBar((this._doc.channel - 1 + this._doc.song.getChannelCount()) % this._doc.song.getChannelCount(), this._doc.bar);
-					this._resetBoxSelection();
+					if (event.shiftKey) {
+						this._boxSelectionY1 = Math.max(0, this._boxSelectionY1 - 1);
+						this._selectionUpdated();
+					} else {
+						this._setChannelBar((this._doc.channel - 1 + this._doc.song.getChannelCount()) % this._doc.song.getChannelCount(), this._doc.bar);
+						this._resetBoxSelection();
+					}
 					event.preventDefault();
 					break;
 				case 40: // down
-					this._setChannelBar((this._doc.channel + 1) % this._doc.song.getChannelCount(), this._doc.bar);
-					this._resetBoxSelection();
+					if (event.shiftKey) {
+						this._boxSelectionY1 = Math.min(this._doc.song.getChannelCount() - 1, this._boxSelectionY1 + 1);
+						this._selectionUpdated();
+					} else {
+						this._setChannelBar((this._doc.channel + 1) % this._doc.song.getChannelCount(), this._doc.bar);
+						this._resetBoxSelection();
+					}
 					event.preventDefault();
 					break;
 				case 37: // left
-					this._setChannelBar(this._doc.channel, (this._doc.bar + this._doc.song.barCount - 1) % this._doc.song.barCount);
-					this._resetBoxSelection();
+					if (event.shiftKey) {
+						this._boxSelectionX1 = Math.max(0, this._boxSelectionX1 - 1);
+						this._scrollToSelection();
+						this._selectionUpdated();
+					} else {
+						this._setChannelBar(this._doc.channel, (this._doc.bar + this._doc.song.barCount - 1) % this._doc.song.barCount);
+						this._resetBoxSelection();
+					}
 					event.preventDefault();
 					break;
 				case 39: // right
-					this._setChannelBar(this._doc.channel, (this._doc.bar + 1) % this._doc.song.barCount);
-					this._resetBoxSelection();
+					if (event.shiftKey) {
+						this._boxSelectionX1 = Math.min(this._doc.song.barCount - 1, this._boxSelectionX1 + 1);
+						this._scrollToSelection();
+						this._selectionUpdated();
+					} else {
+						this._setChannelBar(this._doc.channel, (this._doc.bar + 1) % this._doc.song.barCount);
+						this._resetBoxSelection();
+					}
 					event.preventDefault();
 					break;
 				case 48: // 0
@@ -255,12 +294,16 @@ namespace beepbox {
 		
 		public insertBars(): void {
 			this._doc.record(new ChangeInsertBars(this._doc, this._boxSelectionBar + this._boxSelectionWidth, this._boxSelectionWidth), "jump");
-			this._boxSelectionBar += this._boxSelectionWidth;
+			const width: number = this._boxSelectionWidth;
+			this._boxSelectionX0 += width;
+			this._boxSelectionX1 += width;
 		}
 		
 		public deleteBars(): void {
 			this._doc.record(new ChangeDeleteBars(this._doc, this._boxSelectionBar, this._boxSelectionWidth), "jump");
-			this._boxSelectionBar = Math.max(0, this._boxSelectionBar - this._boxSelectionWidth);
+			const width: number = this._boxSelectionWidth;
+			this._boxSelectionX0 = Math.max(0, this._boxSelectionX0 - width);
+			this._boxSelectionX1 = Math.max(0, this._boxSelectionX1 - width);
 		}
 		
 		private *_eachSelectedChannel(): IterableIterator<number> {
@@ -489,10 +532,10 @@ namespace beepbox {
 			) {
 				this._resetBoxSelection();
 			} else {
-				this._boxSelectionBar = 0;
-				this._boxSelectionChannel = 0;
-				this._boxSelectionWidth = this._doc.song.barCount;
-				this._boxSelectionHeight = this._doc.song.getChannelCount();
+				this._boxSelectionX0 = 0;
+				this._boxSelectionY0 = 0;
+				this._boxSelectionX1 = this._doc.song.barCount - 1;
+				this._boxSelectionY1 = this._doc.song.getChannelCount() - 1;
 			}
 			this._selectionUpdated();
 		}
@@ -502,11 +545,10 @@ namespace beepbox {
 				this._boxSelectionBar == 0 &&
 				this._boxSelectionWidth == this._doc.song.barCount
 			) {
-				this._boxSelectionBar = this._doc.bar;
-				this._boxSelectionWidth = 1;
+				this._boxSelectionX0 = this._boxSelectionX1 = this._doc.bar;
 			} else {
-				this._boxSelectionBar = 0;
-				this._boxSelectionWidth = this._doc.song.barCount;
+				this._boxSelectionX0 = 0;
+				this._boxSelectionX1 = this._doc.song.barCount - 1;
 			}
 			this._selectionUpdated();
 		}
@@ -683,17 +725,13 @@ namespace beepbox {
 		}
 		
 		private _resetBoxSelection(): void {
-			this._boxSelectionBar = this._doc.bar;
-			this._boxSelectionChannel = this._doc.channel;
-			this._boxSelectionWidth = 1;
-			this._boxSelectionHeight = 1;
+			this._boxSelectionX0 = this._boxSelectionX1 = this._doc.bar;
+			this._boxSelectionY0 = this._boxSelectionY1 = this._doc.channel;
 		}
 		
 		private _dragBoxSelection(): void {
-			this._boxSelectionBar = Math.min(this._mouseStartBar, this._mouseBar);
-			this._boxSelectionChannel = Math.min(this._mouseStartChannel, this._mouseChannel);
-			this._boxSelectionWidth = Math.abs(this._mouseStartBar - this._mouseBar) + 1;
-			this._boxSelectionHeight = Math.abs(this._mouseStartChannel - this._mouseChannel) + 1;
+			this._boxSelectionX1 = this._mouseBar;
+			this._boxSelectionY1 = this._mouseChannel;
 			this._selectionUpdated();
 		}
 		
@@ -752,15 +790,22 @@ namespace beepbox {
 		private _whenMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
 			this._mousePressed = true;
-			this._mouseDragging = false;
 			this._updateMousePos(event);
 			this._mouseStartBar = this._mouseBar;
 			this._mouseStartChannel = this._mouseChannel;
-			if (this._doc.channel != this._mouseChannel || this._doc.bar != this._mouseBar) {
-				this._setChannelBar(this._mouseChannel, this._mouseBar);
+			if (event.shiftKey) {
 				this._mouseDragging = true;
+				this._boxSelectionX1 = this._mouseBar;
+				this._boxSelectionY1 = this._mouseChannel;
+				this._selectionUpdated();
+			} else {
+				this._mouseDragging = false;
+				if (this._doc.channel != this._mouseChannel || this._doc.bar != this._mouseBar) {
+					this._setChannelBar(this._mouseChannel, this._mouseBar);
+					this._mouseDragging = true;
+				}
+				this._resetBoxSelection();
 			}
-			this._resetBoxSelection();
 		}
 		
 		private _whenMouseMoved = (event: MouseEvent): void => {
