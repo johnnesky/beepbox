@@ -349,6 +349,7 @@
 √ Added full screen layout to preferences.
 √ Added previews of the next and previous patterns to full screen mode.
 √ Added Shift+Click and Shift+Arrows to extend track editor box selection.
+√ Added "realName" to scales, hover over scale select menu to see it.
 
 
 TODO:
@@ -356,35 +357,17 @@ TODO:
 - Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth or sixteenth note triplet symbol for rhythm. for the reverb cube, use 3 point perspective, use thin lines for the corners, use more foreshortening on the floor than the ceiling to show the camera is near the floor, make the floor solid color, add vaulted arch ceiling? honestly I don't have much fidelity to work with...
 - Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
 - If the page loses and regains focus, re-read preferences and update the interface? In case another tab changed preferences.
-- Maybe make several tabs at the bottom for instructions, about, twitter, mastadon, etc, and save which tab was selected when reloading.
-- New pref: in paused mode, when editing a note, play it out loud.
 - Add some kind of warning if an error is thrown, it may prevent saving progress.
 - New file command: export channels as wavs. (Maybe this should just be a checkbox in the export dialog?)
 - If I paste a pattern with the wrong number of beats, (or too many beats?) just stretch it?
 - The JSON export should include the scale flags, not just the name.
 - The piano key display accidental naming convention needs work. "C#" is a fine name for a minor scale but misnames F# as Gb, but the same key in major scale should be "Db" and the names of all the black keys should be flats instead of sharps.
-- The purple loop should have arrows at the ends to imply cyclical motion.
-- Feature-detect audio worklets, use toString() to get synth code (and FFT, Deque) for worklet, maybe use pooling for Note, Pattern, Channel, Instrument to deal with frequently regenerating song from string when user edits in main thread.
-- Live input tones should still play when song is paused.
-- Live input tones should handle slide mode better.
-- recording performances via keyboard or even midi... If you record over an existing pattern, do you erase it? Does it depend on whether you actually perform any notes during that pattern?
-- remember recent songs in local shared object?
 - add a tutorial + music theory primer. exercise restraint choosing pitches, develop a rhythm first, explore intervals/pitch relationships. It would be cool to have mini beepbox editors with preloaded songs demonstrating concepts, with play, reset, clear, and "open in full editor" options. Mostly it would focus on the pattern editor, but may have one-off additions like a tempo slider to demonstrate tempo.
 - Oh shoot, if I hide the title options in the edit/prefs menus, mac chrome puts a checkmark next to the first displayed option instead, which confuses matters because I use checkmarks to indicate toggling prefs options. :(
 - Edit options to remove specific channels.
 - Edit options for compacting and concatenating songs. I'm increasingly interested in the idea of allowing multiple songs, called sections, to be appended to each other. The song settings would apply to whichever section contains the currently selected pattern. But maybe this is just a hack, and it wouldn't make it any easier to gradually transition volume or tempo or stagger instrument changes. Being able to change reverb might be interesting. A more immediately plausible option is the ability to combine songs. I'm imagining a dialog box where you can paste in song urls and it concatenates the songs. you may need to select the beats per bar from a menu populated by the songs if they're not all the same, and the other songs would just get stretched? Use the validation/simplification to skip duplicate/unused patterns and also duplicate/unused instruments to avoid filling up all the slots quickly. Not sure how to handle different song keys, maybe a checkbox to transpose all songs to the first song's key.
-- asynchronous export. worker thread?
 - is it possible to get pitch slides and seamless transitions to detect notes across bars?
 - a way to pre-generate a javascript sound buffer.
 - in firefox, after selecting options, spacebar both reopens options and toggles play. Same problem with arrow keys, and even ctrl+brackets to change tabs. Apparently this is a known firefox bug. https://bugzilla.mozilla.org/show_bug.cgi?id=1019630
-- polyphonic fm midi export when there are multiple carriers. careful of overlapping note on/off events combined with slides...
-- It's probably okay if "parts" and "arpeggios" don't transition at exact sample boundaries, rather than fractional sample points. Maybe still keep beats aligned to sample boundaries, but you can have more precise BPM tempos by loosening up the alignment.
 - maybe command+S should do something useful?
 - wav export quality: CD (44100) vs Video (48000) standards, 1x, downsampled from 2x to 1x, downsampled from 4x to 2x. How does this affect FM feedback and noise volume?
-- maybe sum adjacent fm synth samples (at half volume) to cancel out inaudible feedback artifacts? for the carrier wave(s), try that integral thing to reduce the aliasing... or is that not really the problem here? (fortunately the integral of a sine wave is just an offset sinewave!) The FM feedback has been bugging me because it has a tendency to alternate between high and low values every other output sample. This is probably (?) inaudible, but is nevertheless an artifact. I could probably mitigate it by adding each FM sample to the previous sample before outputting (and cutting the volume in half to compensate). Does this help with more complicated structures? Note that this won't fix the audible FM aliasing, I'm not sure if there's anything besides super sampling that would fix that.
-- The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
-- divert www traffic to beepbox.co. Okay wow this is a lot more complicated than it ought to be... You can only get load balancing on most available web servers by using CNAME records to repeat the request with a different domain whose DNS records are managed by the web server provider, which will choose an appropriate IP address for your location. For naked domains, your dns records can only provide static hardcoded IP addresses, (assuming you don't rapidly manage the ip addresses yourself via the user interface!) which can be cycled to distribute the load but generally isn't smart enough to actually detect server availability. :/
-- snap to tone edges from other channels, to help making NES style harmonies. 
-- Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
-- Improve naming/documentation/api so it's clear how replaceState and prospectiveChange would interact if used together. prospectiveChange is only used for keeping track of oldValue while dragging to determine if a recorded change ultimately isNoop() and should be commmitted. replaceState is used when a change is overwriting the previously committed change, like transposing notes. However, prospective change erases information about previously *committed* change, making it unclear if replaceState should be used. Additionally, if multiple inputs are setting prospectiveChange simultaneously, it's unclear what the correct oldValue is and thus whether either change isNoop(). (I considered just committing prospective changes when a competing input is used, but that could result in frequent, useless commits while dragging two inputs simultaneously.)
-- document synth api

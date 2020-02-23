@@ -59,6 +59,7 @@ namespace beepbox {
 	
 	export interface Scale extends BeepBoxOption {
 		readonly flags: ReadonlyArray<boolean>;
+		readonly realName: string;
 	}
 	
 	export interface Key extends BeepBoxOption {
@@ -139,18 +140,18 @@ namespace beepbox {
 
 	export class Config {
 		public static readonly scales: DictionaryArray<Scale> = toNameMap([
-			{name: "easy :)",         flags: [ true, false,  true, false,  true, false, false,  true, false,  true, false, false]},
-			{name: "easy :(",         flags: [ true, false, false,  true, false,  true, false,  true, false, false,  true, false]},
-			{name: "island :)",       flags: [ true, false, false, false,  true,  true, false,  true, false, false, false,  true]},
-			{name: "island :(",       flags: [ true,  true, false,  true, false, false, false,  true,  true, false, false, false]},
-			{name: "blues :)",        flags: [ true, false,  true,  true,  true, false, false,  true, false,  true, false, false]},
-			{name: "blues :(",        flags: [ true, false, false,  true, false,  true,  true,  true, false, false,  true, false]},
-			{name: "normal :)",       flags: [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true]},
-			{name: "normal :(",       flags: [ true, false,  true,  true, false,  true, false,  true,  true, false,  true, false]},
-			{name: "dbl harmonic :)", flags: [ true,  true, false, false,  true,  true, false,  true,  true, false, false,  true]},
-			{name: "dbl harmonic :(", flags: [ true, false,  true,  true, false, false,  true,  true,  true, false, false,  true]},
-			{name: "enigma",          flags: [ true, false,  true, false,  true, false,  true, false,  true, false,  true, false]},
-			{name: "expert",          flags: [ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true]},
+			{name: "easy :)",         realName: "pentatonic major",      flags: [true, false,  true, false,  true, false, false,  true, false,  true, false, false]},
+			{name: "easy :(",         realName: "pentatonic minor",      flags: [true, false, false,  true, false,  true, false,  true, false, false,  true, false]},
+			{name: "island :)",       realName: "ryukyu",                flags: [true, false, false, false,  true,  true, false,  true, false, false, false,  true]},
+			{name: "island :(",       realName: "pelog selisir",         flags: [true,  true, false,  true, false, false, false,  true,  true, false, false, false]},
+			{name: "blues :)",        realName: "blues major",           flags: [true, false,  true,  true,  true, false, false,  true, false,  true, false, false]},
+			{name: "blues :(",        realName: "blues",                 flags: [true, false, false,  true, false,  true,  true,  true, false, false,  true, false]},
+			{name: "normal :)",       realName: "ionian",                flags: [true, false,  true, false,  true,  true, false,  true, false,  true, false,  true]},
+			{name: "normal :(",       realName: "aeolian",               flags: [true, false,  true,  true, false,  true, false,  true,  true, false,  true, false]},
+			{name: "dbl harmonic :)", realName: "double harmonic major", flags: [true,  true, false, false,  true,  true, false,  true,  true, false, false,  true]},
+			{name: "dbl harmonic :(", realName: "double harmonic minor", flags: [true, false,  true,  true, false, false,  true,  true,  true, false, false,  true]},
+			{name: "strange",         realName: "whole tone",            flags: [true, false,  true, false,  true, false,  true, false,  true, false,  true, false]},
+			{name: "expert",          realName: "chromatic",             flags: [true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true]},
 		]);
 		public static readonly keys: DictionaryArray<Key> = toNameMap([
 			{name: "C",  isWhiteKey:  true, basePitch: 12}, // C0 has index 12 on the MIDI scale. C7 is 96, and C9 is 120. C10 is barely in the audible range.
