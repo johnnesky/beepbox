@@ -327,9 +327,6 @@ namespace beepbox {
 						if (!Config.instrumentTypeHasSpecialInterval[instrument.type] && Config.chords[instrument.chord].isCustomInterval) {
 							instrument.chord = 0;
 						}
-						if (!Config.instrumentTypeHasChorus[instrument.type] && Config.effectsNames[instrument.effects].indexOf("chorus") != -1) {
-							instrument.effects -= 2;
-						}
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
 						const tempPan: number = instrument.pan;
@@ -522,8 +519,8 @@ namespace beepbox {
 				instrument.effects = Config.effectsNames.indexOf(selectWeightedRandom([
 					{item: "none"           , weight: 1},
 					{item: "reverb"         , weight: 10},
-					{item: "chorus"         , weight: Config.instrumentTypeHasChorus[type] ? 2 : 0},
-					{item: "chorus & reverb", weight: Config.instrumentTypeHasChorus[type] ? 2 : 0},
+					{item: "chorus"         , weight: 2},
+					{item: "chorus & reverb", weight: 2},
 				]));
 				instrument.chord = Config.chords.dictionary[selectWeightedRandom([
 					{item: "harmony" , weight: 7},

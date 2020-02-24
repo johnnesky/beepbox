@@ -763,18 +763,6 @@ namespace beepbox {
 				}
 			}
 			
-			for (let effectsIndex: number = 0; effectsIndex < Config.effectsNames.length; effectsIndex++) {
-				const hidden: boolean = !Config.instrumentTypeHasChorus[instrument.type] ? Config.effectsNames[effectsIndex].indexOf("chorus") != -1 : false;
-				const option: Element = this._effectsSelect.children[effectsIndex];
-				if (hidden) {
-					if (!option.hasAttribute("hidden")) {
-						option.setAttribute("hidden", "");
-					}
-				} else {
-					option.removeAttribute("hidden");
-				}
-			}
-			
 			this._instrumentSelectRow.style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";
 			this._instrumentSelectRow.style.visibility = (pattern == null) ? "hidden" : "";
 			if (this._instrumentSelect.children.length != this._doc.song.instrumentsPerChannel) {
