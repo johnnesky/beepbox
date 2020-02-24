@@ -715,7 +715,7 @@ namespace beepbox {
 					
 					if (this._cursor.pitchIndex == -1) {
 						const sequence: ChangeSequence = new ChangeSequence();
-						if (this._cursor.curNote.pitches.length == 4) {
+						if (this._cursor.curNote.pitches.length == Config.maxChordSize) {
 							sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.curNote.pitches[0], 0, true));
 						}
 						sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));

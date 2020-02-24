@@ -354,7 +354,6 @@
 
 TODO:
 - Why do prompts sometimes not go away until you move the mouse after importing a song? hmm maybe the problem is the delay between the user action and the navigation action crosses some safety threshold...
-- Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth or sixteenth note triplet symbol for rhythm. for the reverb cube, use 3 point perspective, use thin lines for the corners, use more foreshortening on the floor than the ceiling to show the camera is near the floor, make the floor solid color, add vaulted arch ceiling? honestly I don't have much fidelity to work with...
 - Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
 - If the page loses and regains focus, re-read preferences and update the interface? In case another tab changed preferences.
 - Add some kind of warning if an error is thrown, it may prevent saving progress.

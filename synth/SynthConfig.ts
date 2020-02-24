@@ -180,11 +180,11 @@ namespace beepbox {
 		public static readonly partsPerBeat: number = 24;
 		public static readonly ticksPerPart: number = 2;
 		public static readonly rhythms: DictionaryArray<Rhythm> = toNameMap([
-			{name: "÷3 (triplets)", stepsPerBeat: 3, ticksPerArpeggio: 4, arpeggioPatterns: [[0], [0, 0, 1, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: [/*0*/ 5, /*8*/ 12, /*16*/ 18 /*24*/]},
-			{name: "÷4 (standard)", stepsPerBeat: 4, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 0, 1, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: [/*0*/ 3, /*6*/ 9, /*12*/ 17, /*18*/ 21 /*24*/]},
-			{name: "÷6",            stepsPerBeat: 6, ticksPerArpeggio: 4, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null},
-			{name: "÷8",            stepsPerBeat: 8, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null},
-			{name: "freehand",      stepsPerBeat:24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null},
+			{name: "÷3 (triplets)", stepsPerBeat: 3, ticksPerArpeggio: 4, arpeggioPatterns: [[0], [0, 0, 1, 1], [0, 1, 2, 1]], roundUpThresholds: [/*0*/ 5, /*8*/ 12, /*16*/ 18 /*24*/]},
+			{name: "÷4 (standard)", stepsPerBeat: 4, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 0, 1, 1], [0, 1, 2, 1]], roundUpThresholds: [/*0*/ 3, /*6*/ 9, /*12*/ 17, /*18*/ 21 /*24*/]},
+			{name: "÷6",            stepsPerBeat: 6, ticksPerArpeggio: 4, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1]], roundUpThresholds: null},
+			{name: "÷8",            stepsPerBeat: 8, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1]], roundUpThresholds: null},
+			{name: "freehand",      stepsPerBeat:24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1]], roundUpThresholds: null},
 		]);
 		
 		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM"];
@@ -254,6 +254,7 @@ namespace beepbox {
 			{name: "arpeggio",        harmonizes: false, customInterval: false, arpeggiates:  true, isCustomInterval: false, strumParts: 0},
 			{name: "custom interval", harmonizes:  true, customInterval:  true, arpeggiates:  true, isCustomInterval:  true, strumParts: 0},
 		]);
+		public static readonly maxChordSize: number = 4;
 		public static readonly operatorCount: number = 4;
 		public static readonly algorithms: DictionaryArray<Algorithm> = toNameMap([
 			{name: "1←(2 3 4)",   carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3, 4], [],     [],  []]},
@@ -482,6 +483,15 @@ namespace beepbox {
 			wave[i] = Math.sin(i * Math.PI * 2.0 / Config.sineWaveLength);
 		}
 		return wave;
+	}
+	
+	export function getArpeggioPitchIndex(pitchCount: number, rhythm: number, arpeggio: number): number {
+		const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[rhythm].arpeggioPatterns[pitchCount - 1];
+		if (arpeggioPattern != null) {
+			return arpeggioPattern[arpeggio % arpeggioPattern.length];
+		} else {
+			return arpeggio % pitchCount;
+		}
 	}
 	
 	// Pardon the messy type casting. This allows accessing array members by numerical index or string name.

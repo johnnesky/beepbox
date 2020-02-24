@@ -1241,7 +1241,7 @@ namespace beepbox {
 							
 							// 0: 1 pitch, 10: 2 pitches, 110: 3 pitches, 111: 4 pitches
 							for (let i: number = 1; i < note.pitches.length; i++) shapeBits.write(1,1);
-							if (note.pitches.length < 4) shapeBits.write(1,0);
+							if (note.pitches.length < Config.maxChordSize) shapeBits.write(1,0);
 							
 							shapeBits.writePinCount(note.pins.length - 1);
 							
@@ -1849,7 +1849,7 @@ namespace beepbox {
 										shape = {};
 										
 										shape.pitchCount = 1;
-										while (shape.pitchCount < 4 && bits.read(1) == 1) shape.pitchCount++;
+										while (shape.pitchCount < Config.maxChordSize && bits.read(1) == 1) shape.pitchCount++;
 										
 										shape.pinCount = bits.readPinCount();
 										shape.initialVolume = bits.read(2);
@@ -2162,7 +2162,7 @@ namespace beepbox {
 									const pitch: number = noteObject["pitches"][k] | 0;
 									if (note.pitches.indexOf(pitch) != -1) continue;
 									note.pitches.push(pitch);
-									if (note.pitches.length >= 4) break;
+									if (note.pitches.length >= Config.maxChordSize) break;
 								}
 								if (note.pitches.length < 1) continue;
 							
@@ -3463,8 +3463,7 @@ namespace beepbox {
 				let arpeggioInterval: number = 0;
 				if (tone.pitchCount > 1 && !chord.harmonizes) {
 					const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.rhythms[song.rhythm].ticksPerArpeggio);
-					const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[song.rhythm].arpeggioPatterns[tone.pitchCount - 1];
-					arpeggioInterval = tone.pitches[arpeggioPattern[arpeggio % arpeggioPattern.length]] - tone.pitches[0];
+					arpeggioInterval = tone.pitches[getArpeggioPitchIndex(tone.pitchCount, song.rhythm, arpeggio)] - tone.pitches[0];
 				}
 				
 				const carrierCount: number = Config.algorithms[instrument.algorithm].carrierCount;
@@ -3529,13 +3528,11 @@ namespace beepbox {
 				if (tone.pitchCount > 1) {
 					const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.rhythms[song.rhythm].ticksPerArpeggio);
 					if (chord.harmonizes) {
-						const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[song.rhythm].arpeggioPatterns[tone.pitchCount - 2];
-						const intervalOffset: number = tone.pitches[1 + arpeggioPattern[arpeggio % arpeggioPattern.length]] - tone.pitches[0];
+						const intervalOffset: number = tone.pitches[1 + getArpeggioPitchIndex(tone.pitchCount - 1, song.rhythm, arpeggio)] - tone.pitches[0];
 						tone.intervalMult = Math.pow(2.0, intervalOffset / 12.0);
 						tone.intervalVolumeMult = Math.pow(2.0, -intervalOffset / pitchDamping);
 					} else {
-						const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[song.rhythm].arpeggioPatterns[tone.pitchCount - 1];
-						pitch = tone.pitches[arpeggioPattern[arpeggio % arpeggioPattern.length]];
+						pitch = tone.pitches[getArpeggioPitchIndex(tone.pitchCount, song.rhythm, arpeggio)];
 					}
 				}
 				
