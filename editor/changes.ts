@@ -549,6 +549,7 @@ namespace beepbox {
 						{item: "fifth"     , weight: 1},
 						{item: "octave"    , weight: 2},
 						{item: "bowed"     , weight: 2},
+						{item: "piano"     , weight: 5},
 					])].index;
 				}
 				function normalize(harmonics: number[]): void {

@@ -235,13 +235,14 @@ namespace beepbox {
 		]);
 		public static readonly intervals: DictionaryArray<Interval> = toNameMap([
 			{name: "union",      spread: 0.0,  offset: 0.0, volume: 0.7, sign: 1.0},
-			{name: "shimmer",    spread: 0.016,offset: 0.0, volume: 0.8, sign: 1.0},
+			{name: "shimmer",    spread: 0.018,offset: 0.0, volume: 0.8, sign: 1.0},
 			{name: "hum",        spread: 0.045,offset: 0.0, volume: 1.0, sign: 1.0},
 			{name: "honky tonk", spread: 0.09, offset: 0.0, volume: 1.0, sign: 1.0},
 			{name: "dissonant",  spread: 0.25, offset: 0.0, volume: 0.9, sign: 1.0},
 			{name: "fifth",      spread: 3.5,  offset: 3.5, volume: 0.9, sign: 1.0},
 			{name: "octave",     spread: 6.0,  offset: 6.0, volume: 0.8, sign: 1.0},
 			{name: "bowed",      spread: 0.02, offset: 0.0, volume: 1.0, sign:-1.0},
+			{name: "piano",      spread: 0.01, offset: 0.0, volume: 1.0, sign: 0.7},
 		]);
 		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
 		public static readonly volumeRange: number = 8;
