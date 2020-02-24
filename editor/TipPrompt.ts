@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="html.ts" />
 /// <reference path="Prompt.ts" />

@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
 /// <reference path="html.ts" />
@@ -24,7 +24,8 @@ namespace beepbox {
 				div({ style: "display: inline-block; text-align: right;" },
 					"Bars per song:",
 					br(),
-					span({ style: "font-size: smaller; color: #888888;" }, "(Multiples of 4 are recommended)"),
+					span({style: `font-size: smaller; color: ${ColorConfig.secondaryText};`}, "(Multiples of 4 are recommended)"),
+
 				),
 				this._barsStepper,
 			),
@@ -37,7 +38,7 @@ namespace beepbox {
 			this._cancelButton,
 		);
 
-		constructor(private _doc: SongDocument, private _trackEditor: TrackEditor) {
+		constructor(private _doc: SongDocument) {
 
 			this._barsStepper.value = this._doc.song.barCount + "";
 			this._barsStepper.min = Config.barCountMin + "";
@@ -97,7 +98,7 @@ namespace beepbox {
 		private _saveChanges = (): void => {
 			window.localStorage.setItem("barCountPosition", this._positionSelect.value);
 			const group: ChangeGroup = new ChangeGroup();
-			group.append(new ChangeBarCount(this._doc, this._trackEditor, SongDurationPrompt._validate(this._barsStepper), this._positionSelect.value == "beginning"));
+			group.append(new ChangeBarCount(this._doc, SongDurationPrompt._validate(this._barsStepper), this._positionSelect.value == "beginning"));
 			this._doc.prompt = null;
 			this._doc.record(group, "replace");
 		}

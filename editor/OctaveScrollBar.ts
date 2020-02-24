@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
 /// <reference path="SongDocument.ts" />
@@ -8,18 +8,17 @@
 namespace beepbox {
 	export class OctaveScrollBar {
 		private readonly _editorWidth: number = 20;
-		private readonly _editorHeight: number = Config.pitchEditorHeight;
+		private readonly _editorHeight: number = 481;
 		private readonly _notchHeight: number = 4.0;
 		private readonly _octaveCount: number = Config.pitchOctaves;
 		private readonly _octaveHeight: number = (this._editorHeight - this._notchHeight) / this._octaveCount;
-		private readonly _barHeight: number = (this._octaveHeight * Config.windowOctaves + this._notchHeight);
+		private _barHeight: number = (this._octaveHeight * this._doc.windowOctaves + this._notchHeight);
+		private readonly _handle: SVGRectElement = SVG.rect({ fill: ColorConfig.uiWidgetBackground, x: 2, y: 0, width: this._editorWidth - 4, height: this._barHeight });
+		private readonly _handleHighlight: SVGRectElement = SVG.rect({ fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight });
+		private readonly _upHighlight: SVGPathElement = SVG.path({ fill: ColorConfig.hoverPreview, "pointer-events": "none" });
+		private readonly _downHighlight: SVGPathElement = SVG.path({ fill: ColorConfig.hoverPreview, "pointer-events": "none" });
 
-		private readonly _handle: SVGRectElement = SVG.rect({ fill: "#393e4f", x: 2, y: 0, width: this._editorWidth - 4, height: this._barHeight });
-		private readonly _handleHighlight: SVGRectElement = SVG.rect({ fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight });
-		private readonly _upHighlight: SVGPathElement = SVG.path({ fill: "white", "pointer-events": "none" });
-		private readonly _downHighlight: SVGPathElement = SVG.path({ fill: "white", "pointer-events": "none" });
-
-		private readonly _svg: SVGSVGElement = SVG.svg({ style: "background-color: #040410; touch-action: pan-x; position: absolute;", width: this._editorWidth, height: "100%", viewBox: "0 0 20 " + this._editorHeight, preserveAspectRatio: "none" });
+		private readonly _svg: SVGSVGElement = SVG.svg({ style: "background-color: ${ColorConfig.editorBackground}; touch-action: pan-x; position: absolute;", width: this._editorWidth, height: "100%", viewBox: "0 0 20 " + this._editorHeight, preserveAspectRatio: "none" });
 		public readonly container: HTMLDivElement = HTML.div({ id: "octaveScrollBarContainer", style: "width: 20px; height: 100%; overflow: hidden; position: relative; flex-shrink: 0;" }, this._svg);
 
 		//private _mouseX: number = 0;
@@ -30,6 +29,7 @@ namespace beepbox {
 		private _dragStart: number;
 		private _barBottom: number;
 		private _renderedBarBottom: number = -1;
+		private _renderedBarHeight: number = -1;
 		private _change: ChangeOctave | null = null;
 
 		constructor(private _doc: SongDocument, private _piano: Piano) {
@@ -40,7 +40,7 @@ namespace beepbox {
 
 			// notches:
 			for (let i: number = 0; i <= this._octaveCount; i++) {
-				this._svg.appendChild(SVG.rect({ fill: "#725491", x: 0, y: i * this._octaveHeight, width: this._editorWidth, height: this._notchHeight }));
+				this._svg.appendChild(SVG.rect({ fill: ColorConfig.tonic, x: 0, y: i * this._octaveHeight, width: this._editorWidth, height: this._notchHeight }));
 			}
 
 			this._svg.appendChild(this._handleHighlight);
@@ -139,7 +139,7 @@ namespace beepbox {
 
 				let octave: number = currentOctave;
 				while (this._mouseY - this._dragStart < -this._octaveHeight * 0.5) {
-					if (octave < Config.scrollableOctaves) {
+					if (octave < this._doc.scrollableOctaves) {
 						octave++;
 						this._dragStart -= this._octaveHeight;
 					} else {
@@ -172,7 +172,7 @@ namespace beepbox {
 					const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
 
 					if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
-						if (currentOctave < Config.scrollableOctaves) {
+						if (currentOctave < this._doc.scrollableOctaves) {
 							this._change = new ChangeOctave(this._doc, oldValue, currentOctave + 1);
 							this._doc.record(this._change, canReplaceLastChange ? "replace" : "push");
 						}
@@ -216,9 +216,15 @@ namespace beepbox {
 		}
 
 		private _render(): void {
+			// Re-calculate bar height
+			this._barHeight = (this._octaveHeight * this._doc.windowOctaves + this._notchHeight);
+
 			this._svg.style.visibility = (this._doc.song.getChannelIsNoise(this._doc.channel) || this._doc.song.getChannelIsMod(this._doc.channel)) ? "hidden" : "visible";
-			if (this._renderedBarBottom != this._barBottom) {
+			if (this._renderedBarBottom != this._barBottom || this._renderedBarHeight != this._barHeight) {
 				this._renderedBarBottom = this._barBottom;
+				this._renderedBarHeight = this._barHeight;
+				this._handle.setAttribute("height", "" + this._barHeight);
+				this._handleHighlight.setAttribute("height", "" + this._barHeight);
 				this._handle.setAttribute("y", "" + (this._barBottom - this._barHeight));
 				this._handleHighlight.setAttribute("y", "" + (this._barBottom - this._barHeight));
 

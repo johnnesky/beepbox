@@ -343,19 +343,11 @@
 √ New commands to insert/delete bars.
 √ New commands select all and duplicate pattern, changed several existing commands to apply to the current box selection.
 √ Panning/stereo
-
-MAJOR REMAINING FEATURES:
-- tutorial + music theory primer
-- audio worklet thread
-- live input when song is paused
-- live keyboard performance. (make sure piano can play while song is paused?)
-- MIDI live input, live output?
-- remember recent songs
-- distortion? (how would it affect polyphonic channels?)
-- "inspire me" random song generator.
-- link shortener
-- export mp3/ogg and audio buffer
-- translation
+√ Moved Snap to Scale, Snap to Rhythm, and Detect Key into submenus of scale, rhythm, and key.
+√ Added channel muting to preferences.
+√ Added light color theme to preferences.
+√ Added full screen layout to preferences.
+√ Added previews of the next and previous patterns to full screen mode.
 
 
 TODO:
@@ -366,21 +358,16 @@ TODO:
 - Maybe make several tabs at the bottom for instructions, about, twitter, mastadon, etc, and save which tab was selected when reloading.
 - New pref: in paused mode, when editing a note, play it out loud.
 - Add some kind of warning if an error is thrown, it may prevent saving progress.
-- Make all colors controlled by CSS. Come up with themes.
-- Is there space between the instrument volume slider and label for a toggleable speaker/mute icon?
 - New file command: export channels as wavs. (Maybe this should just be a checkbox in the export dialog?)
 - If I paste a pattern with the wrong number of beats, (or too many beats?) just stretch it?
 - The JSON export should include the scale flags, not just the name.
 - The piano key display accidental naming convention needs work. "C#" is a fine name for a minor scale but misnames F# as Gb, but the same key in major scale should be "Db" and the names of all the black keys should be flats instead of sharps.
 - The purple loop should have arrows at the ends to imply cyclical motion.
-- built-in link shortener?
 - Feature-detect audio worklets, use toString() to get synth code (and FFT, Deque) for worklet, maybe use pooling for Note, Pattern, Channel, Instrument to deal with frequently regenerating song from string when user edits in main thread.
 - Live input tones should still play when song is paused.
 - Live input tones should handle slide mode better.
 - recording performances via keyboard or even midi... If you record over an existing pattern, do you erase it? Does it depend on whether you actually perform any notes during that pattern?
-- Eventually, maybe even stop forcing the user to manually choose pattern counts, and just autopopulate patterns as needed. And also provide mobile-style context buttons above selected bar to facilitate sharing patterns across bars, sort of a paste-shared vs paste-unique, and selecting a range of bars, looping the selection over more bars... Basically making it easier to use on mobile and without needing to remember numbers.
-- random song generator!?
-- remember recent songs in local shared object.
+- remember recent songs in local shared object?
 - add a tutorial + music theory primer. exercise restraint choosing pitches, develop a rhythm first, explore intervals/pitch relationships. It would be cool to have mini beepbox editors with preloaded songs demonstrating concepts, with play, reset, clear, and "open in full editor" options. Mostly it would focus on the pattern editor, but may have one-off additions like a tempo slider to demonstrate tempo.
 - Oh shoot, if I hide the title options in the edit/prefs menus, mac chrome puts a checkmark next to the first displayed option instead, which confuses matters because I use checkmarks to indicate toggling prefs options. :(
 - Edit options to remove specific channels.
@@ -396,50 +383,7 @@ TODO:
 - maybe sum adjacent fm synth samples (at half volume) to cancel out inaudible feedback artifacts? for the carrier wave(s), try that integral thing to reduce the aliasing... or is that not really the problem here? (fortunately the integral of a sine wave is just an offset sinewave!) The FM feedback has been bugging me because it has a tendency to alternate between high and low values every other output sample. This is probably (?) inaudible, but is nevertheless an artifact. I could probably mitigate it by adding each FM sample to the previous sample before outputting (and cutting the volume in half to compensate). Does this help with more complicated structures? Note that this won't fix the audible FM aliasing, I'm not sure if there's anything besides super sampling that would fix that.
 - The parts of computeTone inside "if (pitches != null)" could actually be in the synth function instead! I guess bits that are shared between instrument types could be in helper functions.
 - divert www traffic to beepbox.co. Okay wow this is a lot more complicated than it ought to be... You can only get load balancing on most available web servers by using CNAME records to repeat the request with a different domain whose DNS records are managed by the web server provider, which will choose an appropriate IP address for your location. For naked domains, your dns records can only provide static hardcoded IP addresses, (assuming you don't rapidly manage the ip addresses yourself via the user interface!) which can be cycled to distribute the load but generally isn't smart enough to actually detect server availability. :/
-- export mp3 and ogg?
 - snap to tone edges from other channels, to help making NES style harmonies. 
-- translation/localization
 - Bring beepbox and openscores coding styles closer together. See html functions, Synth-vs-SongPlayer
 - Improve naming/documentation/api so it's clear how replaceState and prospectiveChange would interact if used together. prospectiveChange is only used for keeping track of oldValue while dragging to determine if a recorded change ultimately isNoop() and should be commmitted. replaceState is used when a change is overwriting the previously committed change, like transposing notes. However, prospective change erases information about previously *committed* change, making it unclear if replaceState should be used. Additionally, if multiple inputs are setting prospectiveChange simultaneously, it's unclear what the correct oldValue is and thus whether either change isNoop(). (I considered just committing prospective changes when a competing input is used, but that could result in frequent, useless commits while dragging two inputs simultaneously.)
 - document synth api
-
-PLAYLIST EDITOR:
-- button to add more songs to list extracted from urls
-- update embed player to show all songs
-- song rearranging
-- song loop count
-- song fade-in/out
-- example songs on the website. Mario overworld? Tetris is basically public domain...
-- when starting at a bar where all tones are at the end of the bar, go ahead and skip the beginning of the bar, up to maybe one beat before the first tone.
-- put songs in browser history before/after pasting new songs.
-- offsite album/playlist player, with scrolling notes. hashbang urls, bot indexable. 
-- custom cover art, color schemes in playlists and embed player.
-
-MAYBE:
-- Can I use WebRTC to enable real-time collaboration? (How would I handle parallel edits since I got rid of Change history? Maybe record inputs like a video game somehow and use rewinding?)
-- Social media cards? Sadly only Twitter seems to support embedded javascript in an iframe, and even at that I'd need a server able to handle song links without hashmarks.
-- Make a page with a recording of my voice explaining how sound works, along with some musical samples. Visualize the audio in several different ways, including timespace amplitude, timespace spectrogram, and frequency-synced amplitude to easily follow the shapes of semi-periodic waves. Make a script that checks the progress of the audio track and transitions between the visualizations as appropriate. Make a few non-live slides comparing different sounds and frequencies and showing how the periodic waves are composed out of sums of sine waves. 
-- Should I add echo and/or flanger as a delay effect? Should Echo have feedback? Can you configure the echo delay length? (If no feedback, you could configure the delay length by changing how far into the future to write the samples.) Also flanger. Maybe just have one LFO controlling flanger, like how there's one LFO for vibrato. But maybe flanger's not worth it, especially when there's already the old chorus setting which is similar.
-- when importing json, console.log stuff that doesn't parse correctly?
-- Custom scale designer. There are six rows, one for each role (e.g. second, third, seventh... excluding root which is required), with checkboxes to enable each. Next to the checkbox is a menu to choose whether the role is "high second", "low second" or both. The options for the third are "major third :)" and "minor third :(" or both. The fifth has no menu, and the options for the fourth are "fourth", "tritone D:", and both. Maybe instead of checkboxes just have "none" or "off" in the menu. There's a visualization of the scale as pitches, to the right of the menus, sharing the same rows. You can also click the pitches on the scale to toggle them, and the checkboxes and menu update accordingly. There's also a visualization of the available major and minor chords with roman numerals, a column for each available chord highlighting the associate pitches. There's also a circular visualization of the circle of fifths, also with highlighted keys at the roots of chords, color-coded the same as the roman numeral visualization. Ooh, and a button to rotate through the available "modes" of the scale. And a menu at the top to use an existing scale as a template.
-- maybe noise waves should be a separate property from chip waves?
-- Record the "type" of channels (separately from instruments). Can be pitch or drum. Use instead of getChannelIsDrum. When exporting base64, write the pitch channels first even if they were somehow rearranged, but JSON could theoretically have channels in any order.
-- maybe drums can have their own phase modulation mode, with different fractions for frequency? can modulator pitches bend at different rates? maybe the "envelopes" are basically the same except instead of controlling modulation they control pitch?
-- can I improve the interaction for volume envelope dragging and pitch dragging? illustrate volume envelope dragging to make it less confusing. 
-- I could parse the algorithm name, pull out the arrows and parens, rotate them 90 degrees and put them between the numbers. That's... diabolical. Wait that doesn't work for a single example: 1<3 2<4 because the numbers are out of order! >:( (What about feedback arrows?)
-- Guitar distortion applying to some channels? new song setting: distortion, nonlinear mixing of channels... can't handle a range of volumes?
-- on mobile, should move the new/edit/prefs/export/import etc buttons to the bottom, just above beepbox 2.X, but keep the play/volume controls between the track editor and the song/instrument settings.
-- If adding new note and mouse drags at least two beats closer to start than previous max, then enter precise mode where you can have any length. If flipping to backwards or <= doc.parts, reset out of precise mode. 
-- Get in touch with ludum dare about linking to beepbox: http://www.ludumdare.com/compo/tools/
-- get in touch with http://youcanmakevideogames.com/resources/music
-- multitouch?
-- replace piano/drums canvas with svg
-- on firefox and linux chrome, select drop downs use same background color as select element, it's a bit too bright when focused.
-- export fade in/out checkboxes
-- circle of fifths display
-- Dim the column occupied by a tone to communicate mono voice?
-- visual feedback when a note is played
-- when hovering at the same pitch as a tone in an adjacent part, and you're really close to it, and you drag horizontally, go ahead and drag that adjacent tone instead of creating a new one.
-- phoneme filter option, imitate vowels and voiced consonants with IIR filters, fall back on noise channel for S, T, CH, SH, etc. 
-- preload some common tone shapes into the recentShape list. increment format number.
-- Make a bunch of asserts, that the tones don't overlap, that the pins have the same duration as the tones, that the pins are in order, etc. And trace out the arguments to every change constructor and maybe even trace out the entire bar document data after every step. 

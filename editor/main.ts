@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="SongEditor.ts" />
 
@@ -11,14 +11,13 @@ namespace beepbox {
 
 	// Fade-in transitions
 	editor.mainLayer.className += " load";
-	editor.mainLayer.getElementsByClassName("editorBox")[0].className += " load";
-	editor.mainLayer.getElementsByClassName("playback-controls")[0].className += " load";
+	editor.mainLayer.getElementsByClassName("pattern-area")[0].className += " load";
+	editor.mainLayer.getElementsByClassName("settings-area")[0].className += " load";
 	editor.mainLayer.getElementsByClassName("editor-song-settings")[0].className += " load";
-	editor.mainLayer.getElementsByClassName("editor-song-settings")[1].className += " load";
-	editor.mainLayer.getElementsByClassName("editor-instrument-settings")[0].className += " load";
-	editor.mainLayer.getElementsByClassName("trackBar")[0].className += " load";
+	editor.mainLayer.getElementsByClassName("instrument-settings-area")[0].className += " load";
+	editor.mainLayer.getElementsByClassName("trackAndMuteContainer")[0].className += " load";
 	editor.mainLayer.getElementsByClassName("barScrollBar")[0].className += " load";
-
+	
 	// Give select2 class to these
 	$('#pitchPresetSelect').select2({ dropdownAutoWidth: true });
 	$('#drumPresetSelect').select2({ dropdownAutoWidth: true });
@@ -39,10 +38,10 @@ namespace beepbox {
 
 			$.each(groups, (index, v) => {
 				$(v).siblings().hide();
-				$(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).noteBright + ";");
+				$(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).primaryNote + ";");
 			})
 			$.each(options, (index, v) => {
-				$(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).noteBright + ";");
+				$(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).primaryNote + ";");
 			})
 
 			$('.select2-dropdown--below').css('opacity', 1);
@@ -60,10 +59,10 @@ namespace beepbox {
 
 			$.each(groups, (index, v) => {
 				$(v).siblings().hide();
-				$(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).noteBright + ";");
+				$(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).primaryNote + ";");
 			})
 			$.each(options, (index, v) => {
-				$(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).noteBright + ";");
+				$(v)[0].setAttribute("style", "color: " + ColorConfig.getChannelColor(doc.song, doc.channel).primaryNote + ";");
 			})
 
 			$('.select2-dropdown--below').css('opacity', 1);

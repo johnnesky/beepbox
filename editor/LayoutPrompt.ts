@@ -5,31 +5,31 @@
 /// <reference path="SongDocument.ts" />
 /// <reference path="Prompt.ts" />
 /// <reference path="changes.ts" />
+/// <reference path="Layout.ts" />
 
 namespace beepbox {
-	const { button, div, span, h2, input, br, select, option } = HTML;
+	const { button, div, h2, input, select, option } = HTML;
 
-	export class MoveNotesSidewaysPrompt implements Prompt {
-		private readonly _beatsStepper: HTMLInputElement = input({ style: "width: 3em; margin-left: 1em;", type: "number", step: "0.01", value: "0" });
-		private readonly _conversionStrategySelect: HTMLSelectElement = select({ style: "width: 100%;" },
-			option({ value: "overflow" }, "Overflow notes across bars."),
-			option({ value: "wrapAround" }, "Wrap notes around within bars."),
+	export class LayoutPrompt implements Prompt {
+		private readonly _octaveStepper: HTMLInputElement = input({ style: "width: 3em; margin-left: 1em;", type: "number", step: "1", value: "0" });
+		private readonly _layoutSelect: HTMLSelectElement = select({ style: "width: 100%;" },
+			option({ value: "normal" }, "Normal Layout"),
+			option({ value: "fullscreen" }, "Full-screen Layout"),
+			option({ value: "widefullscreen" }, "Wide Full-screen Layout"),
 		);
 		private readonly _cancelButton: HTMLButtonElement = button({ className: "cancelButton" });
 		private readonly _okayButton: HTMLButtonElement = button({ className: "okayButton", style: "width:45%;" }, "Okay");
 
 		public readonly container: HTMLDivElement = div({ className: "prompt noSelection", style: "width: 250px;" },
-			h2("Move Notes Sideways"),
+			h2("Set Layout"),
 			div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
 				div({ style: "text-align: right;" },
-					"Beats to move:",
-					br(),
-					span({style: `font-size: smaller; color: ${ColorConfig.secondaryText};`}, "(Negative is left, positive is right)"),
+					"Extra View Octaves:",
 				),
-				this._beatsStepper,
+				this._octaveStepper,
 			),
 			div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
-				div({ className: "selectContainer", style: "width: 100%;" }, this._conversionStrategySelect),
+				div({ className: "selectContainer", style: "width: 100%;" }, this._layoutSelect),
 			),
 			div({ style: "display: flex; flex-direction: row-reverse; justify-content: space-between;" },
 				this._okayButton,
@@ -38,20 +38,24 @@ namespace beepbox {
 		);
 
 		constructor(private _doc: SongDocument) {
-			this._beatsStepper.min = (-this._doc.song.beatsPerBar) + "";
-			this._beatsStepper.max = this._doc.song.beatsPerBar + "";
-
-			const lastStrategy: string | null = window.localStorage.getItem("moveNotesSidewaysStrategy");
-			if (lastStrategy != null) {
-				this._conversionStrategySelect.value = lastStrategy;
+			this._octaveStepper.min = "0";
+			this._octaveStepper.max = "2";
+			const lastOctaves: string | null = window.localStorage.getItem("extraOctaves");
+			if (lastOctaves != null ) {
+				this._octaveStepper.value = lastOctaves;
 			}
 
-			this._beatsStepper.select();
-			setTimeout(() => this._beatsStepper.focus());
+			const lastLayout: string | null = window.localStorage.getItem("fullScreen");
+			if (lastLayout != null) {
+				this._layoutSelect.value = lastLayout;
+			}
+
+			this._octaveStepper.select();
+			setTimeout(() => this._octaveStepper.focus());
 
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);
-			this._beatsStepper.addEventListener("blur", MoveNotesSidewaysPrompt._validateNumber);
+			this._octaveStepper.addEventListener("blur", LayoutPrompt._validateNumber);
 			this.container.addEventListener("keydown", this._whenKeyPressed);
 		}
 
@@ -62,7 +66,7 @@ namespace beepbox {
 		public cleanUp = (): void => {
 			this._okayButton.removeEventListener("click", this._saveChanges);
 			this._cancelButton.removeEventListener("click", this._close);
-			this._beatsStepper.removeEventListener("blur", MoveNotesSidewaysPrompt._validateNumber);
+			this._octaveStepper.removeEventListener("blur", LayoutPrompt._validateNumber);
 			this.container.removeEventListener("keydown", this._whenKeyPressed);
 		}
 
@@ -75,15 +79,19 @@ namespace beepbox {
 		private static _validateNumber(event: Event): void {
 			const input: HTMLInputElement = <HTMLInputElement>event.target;
 			let value: number = +input.value;
-			value = Math.round(value * Config.partsPerBeat) / Config.partsPerBeat;
-			value = Math.round(value * 100) / 100;
 			input.value = Math.max(+input.min, Math.min(+input.max, value)) + "";
 		}
 
 		private _saveChanges = (): void => {
-			window.localStorage.setItem("moveNotesSidewaysStrategy", this._conversionStrategySelect.value);
+			window.localStorage.setItem("fullScreen", this._layoutSelect.value);
+			window.localStorage.setItem("extraOctaves", this._octaveStepper.value);
 			this._doc.prompt = null;
-			this._doc.record(new ChangeMoveNotesSideways(this._doc, +this._beatsStepper.value, this._conversionStrategySelect.value), "replace");
+			this._doc.fullScreen = this._layoutSelect.value;
+			Layout.setFullScreen(this._doc.fullScreen);
+			this._doc.windowOctaves = 3 + (+(window.localStorage.getItem("extraOctaves") || "0"));
+			this._doc.scrollableOctaves = Config.pitchOctaves - this._doc.windowOctaves;
+		  this._doc.windowPitchCount = this._doc.windowOctaves * Config.pitchesPerOctave + 1;
+			this._doc.undo();
 		}
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
 /// <reference path="EditorConfig.ts" />
@@ -776,7 +776,7 @@ namespace beepbox {
 					}
 
 					const averagePitch: number = pitchSum / pitchCount;
-					channel.octave = (isNoiseChannel || isModChannel) ? 0 : Math.max(0, Math.min(Config.scrollableOctaves, Math.round((averagePitch / 12) - 1.5)));
+					channel.octave = (isNoiseChannel || isModChannel) ? 0 : Math.max(0, Math.min(this._doc.scrollableOctaves, Math.round((averagePitch / 12) - 1.5)));
 				}
 
 				while (channel.bars.length < songTotalBars) {
@@ -863,6 +863,7 @@ namespace beepbox {
 				}
 			}
 			this._doc.goBackToStart();
+			for (const channel of this._doc.song.channels) channel.muted = false;
 			this._doc.prompt = null;
 			this._doc.record(new ChangeImportMidi(this._doc), "replace");
 		}

@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
 /// <reference path="SongDocument.ts" />
@@ -8,12 +8,12 @@ namespace beepbox {
 	export class SpectrumEditor {
 		private readonly _editorWidth: number = 112;
 		private readonly _editorHeight: number = 26;
-		private readonly _fill: SVGPathElement = SVG.path({ fill: "#444444", "pointer-events": "none" });
-		private readonly _octaves: SVGSVGElement = SVG.svg({ "pointer-events": "none" });
-		private readonly _fifths: SVGSVGElement = SVG.svg({ "pointer-events": "none" });
-		private readonly _curve: SVGPathElement = SVG.path({ fill: "none", stroke: "currentColor", "stroke-width": 2, "pointer-events": "none" });
-		private readonly _arrow: SVGPathElement = SVG.path({ fill: "currentColor", "pointer-events": "none" });
-		private readonly _svg: SVGSVGElement = SVG.svg({ style: "background-color: #040410; touch-action: none; cursor: crosshair;", width: "100%", height: "100%", viewBox: "0 0 " + this._editorWidth + " " + this._editorHeight, preserveAspectRatio: "none" },
+		private readonly _fill: SVGPathElement = SVG.path({fill: ColorConfig.uiWidgetBackground, "pointer-events": "none"});
+		private readonly _octaves: SVGSVGElement = SVG.svg({"pointer-events": "none"});
+		private readonly _fifths: SVGSVGElement = SVG.svg({"pointer-events": "none"});
+		private readonly _curve: SVGPathElement = SVG.path({fill: "none", stroke: "currentColor", "stroke-width": 2, "pointer-events": "none"});
+		private readonly _arrow: SVGPathElement = SVG.path({fill: "currentColor", "pointer-events": "none"});
+		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; cursor: crosshair;`, width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"},
 			this._fill,
 			this._octaves,
 			this._fifths,
@@ -34,10 +34,10 @@ namespace beepbox {
 
 		constructor(private _doc: SongDocument, private _spectrumIndex: number | null) {
 			for (let i: number = 0; i < Config.spectrumControlPoints; i += Config.spectrumControlPointsPerOctave) {
-				this._octaves.appendChild(SVG.rect({ fill: "#886644", x: (i + 1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight }));
+				this._octaves.appendChild(SVG.rect({fill: ColorConfig.tonic, x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
 			}
 			for (let i: number = 4; i <= Config.spectrumControlPoints; i += Config.spectrumControlPointsPerOctave) {
-				this._fifths.appendChild(SVG.rect({ fill: "#446688", x: (i + 1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight }));
+				this._fifths.appendChild(SVG.rect({fill: ColorConfig.fifthNote, x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
 			}
 
 			this.container.addEventListener("mousedown", this._whenMousePressed);

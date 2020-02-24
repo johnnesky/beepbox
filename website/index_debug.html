@@ -9,37 +9,44 @@
 	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 	<meta name="theme-color" content="#444" />
 	<meta name="format-detection" content="telephone=no" />
-	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" rel="stylesheet" media="none" onload="if (this.media != 'all') this.media='all';" /> <!-- this is a trick to load CSS asynchronously. -->
-	<meta name="robots" content="noindex, nofollow" />
+	<link href="https://fonts.googleapis.com/css?family=B612" rel="stylesheet" rel="stylesheet" media="none" onload="if (this.media != 'all') this.media='all';" /> <!-- this is a trick to load CSS asynchronously. -->
 	<style type="text/css">
+		html {
+			background: var(--page-margin, black);
+			overflow-x: hidden;
+			font-size: large;
+			font-family: 'B612', sans-serif;
+			line-height: 1.3;
+			color: var(--primary-text, white);
+		}
 		body {
 			margin: auto;
-			background: #000;
-			font-family: 'Roboto', sans-serif;
-			font-size: large;
-			line-height: 1.3;
-			color: #fff;
-		}
-		h1 {
-			font-size: 30px;
-			text-align: center;
-		}
-		.centerDiv {
-			margin: 0px auto;
-		}
-		a {
-			color: #98f;
+			overflow-x: hidden;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			align-content: center;
 		}
 		#beepboxEditorContainer {
 			min-height: 645px;
+			overflow: auto;
+			background: var(--editor-background, black);
+			width: 100%;
+			max-width: 700px;
+			padding-left: 30px;
+			padding-right: 30px;
 		}
 		
 		/* wide screen */
 		@media (min-width: 701px) {
+			html {
+				width: 100%;
+			}
 			body {
-				width: 700px;
+				width: 100%;
 			}
 			.column-container {
+				width: 700px;
 				display: flex;
 				justify-content: space-between;
 			}
@@ -54,7 +61,10 @@
 		/* narrow screen */
 		@media (max-width: 700px) {
 			body {
-				width: 100vw;
+				width: 100%;
+			}
+			p, .donation {
+				margin: 1em 0.5em;
 			}
 			.column-container {
 				display: flex;

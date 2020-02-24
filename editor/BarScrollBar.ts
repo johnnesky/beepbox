@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
 /// <reference path="SongDocument.ts" />
@@ -7,17 +7,16 @@
 namespace beepbox {
 	export class BarScrollBar {
 		private readonly _editorWidth: number = 512;
-		private readonly _editorHeight: number = 20;
-
-		private readonly _playhead: SVGRectElement = SVG.rect("rect", { fill: "white", x: 0, y: 0, width: 2, height: this._editorHeight });
-		private readonly _notches: SVGSVGElement = SVG.svg({ "pointer-events": "none" });
-		private readonly _handle: SVGRectElement = SVG.rect({ fill: "#393e4f", x: 0, y: 2, width: 10, height: this._editorHeight - 4 });
-		private readonly _handleHighlight: SVGRectElement = SVG.rect({ fill: "none", stroke: "white", "stroke-width": 2, "pointer-events": "none", x: 0, y: 1, width: 10, height: this._editorHeight - 2 });
-		private readonly _leftHighlight: SVGPathElement = SVG.path({ fill: "white", "pointer-events": "none" });
-		private readonly _rightHighlight: SVGPathElement = SVG.path({ fill: "white", "pointer-events": "none" });
+		private readonly _editorHeight: number = 20;		
+		private readonly _playhead: SVGRectElement = SVG.rect("rect", { fill: ColorConfig.playhead, x: 0, y: 0, width: 2, height: this._editorHeight });
+		private readonly _notches: SVGSVGElement = SVG.svg({"pointer-events": "none"});
+		private readonly _handle: SVGRectElement = SVG.rect({fill: ColorConfig.uiWidgetBackground, x: 0, y: 2, width: 10, height: this._editorHeight - 4});
+		private readonly _handleHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 0, y: 1, width: 10, height: this._editorHeight - 2});
+		private readonly _leftHighlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
+		private readonly _rightHighlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
 		private _renderedPlayhead: number = -1;
-
-		private readonly _svg: SVGSVGElement = SVG.svg({ style: "background-color: #040410; touch-action: pan-y; position: absolute;", width: this._editorWidth, height: this._editorHeight },
+		
+		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: pan-y; position: absolute;`, width: this._editorWidth, height: this._editorHeight},
 			this._notches,
 			this._handle,
 			this._handleHighlight,
@@ -33,7 +32,7 @@ namespace beepbox {
 		private _mouseOver: boolean = false;
 		private _dragging: boolean = false;
 		private _dragStart: number;
-		private _barWidth: number;
+		private _notchSpace: number;
 		private _renderedNotchCount: number = -1;
 		private _renderedBarPos: number = -1;
 
@@ -64,7 +63,7 @@ namespace beepbox {
 		}
 
 		private _animatePlayhead = (timestamp: number): void => {
-			const playhead = Math.min(512, Math.max(0, (this._barWidth * this._doc.synth.playhead - 2)));
+			const playhead = Math.min(512, Math.max(0, (this._notchSpace * this._doc.synth.playhead - 2)));
 			if (this._renderedPlayhead != playhead) {
 				this._renderedPlayhead = playhead;
 				this._playhead.setAttribute("x", "" + playhead);
@@ -73,7 +72,7 @@ namespace beepbox {
 		}
 
 		private _onScroll = (event: Event): void => {
-			this._doc.barScrollPos = (this._trackContainer.scrollLeft / 32);
+			this._doc.barScrollPos = (this._trackContainer.scrollLeft / this._doc.getBarWidth());
 		}
 
 		private _whenMouseOver = (event: MouseEvent): void => {
@@ -95,7 +94,7 @@ namespace beepbox {
 			this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 			//this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 			this._updatePreview();
-			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._barWidth) {
+			if (this._mouseX >= this._doc.barScrollPos * this._notchSpace && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._notchSpace) {
 				this._dragging = true;
 				this._dragStart = this._mouseX;
 			}
@@ -108,7 +107,7 @@ namespace beepbox {
 			this._mouseX = event.touches[0].clientX - boundingRect.left;
 			//this._mouseY = event.touches[0].clientY - boundingRect.top;
 			this._updatePreview();
-			if (this._mouseX >= this._doc.barScrollPos * this._barWidth && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._barWidth) {
+			if (this._mouseX >= this._doc.barScrollPos * this._notchSpace && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._notchSpace) {
 				this._dragging = true;
 				this._dragStart = this._mouseX;
 			}
@@ -132,19 +131,19 @@ namespace beepbox {
 
 		private _whenCursorMoved(): void {
 			if (this._dragging) {
-				while (this._mouseX - this._dragStart < -this._barWidth * 0.5) {
+				while (this._mouseX - this._dragStart < -this._notchSpace * 0.5) {
 					if (this._doc.barScrollPos > 0) {
 						this._doc.barScrollPos--;
-						this._dragStart -= this._barWidth;
+						this._dragStart -= this._notchSpace;
 						this._doc.notifier.changed();
 					} else {
 						break;
 					}
 				}
-				while (this._mouseX - this._dragStart > this._barWidth * 0.5) {
+				while (this._mouseX - this._dragStart > this._notchSpace * 0.5) {
 					if (this._doc.barScrollPos < this._doc.song.barCount - this._doc.trackVisibleBars) {
 						this._doc.barScrollPos++;
-						this._dragStart += this._barWidth;
+						this._dragStart += this._notchSpace;
 						this._doc.notifier.changed();
 					} else {
 						break;
@@ -160,14 +159,14 @@ namespace beepbox {
 				if (offset < 0) {
 					if (this._doc.barScrollPos > 0) {
 						this._doc.barScrollPos--;
-						this._dragStart += this._barWidth;
+						this._dragStart += this._notchSpace;
 						this._doc.notifier.changed();
 					}
 				}
 				else {
 					if (this._doc.barScrollPos < this._doc.song.barCount - this._doc.trackVisibleBars) {
 						this._doc.barScrollPos++;
-						this._dragStart += this._barWidth;
+						this._dragStart += this._notchSpace;
 						this._doc.notifier.changed();
 					}
 				}
@@ -179,7 +178,7 @@ namespace beepbox {
 
 		private _whenCursorReleased = (event: Event): void => {
 			if (!this._dragging && this._mouseDown) {
-				if (this._mouseX < (this._doc.barScrollPos + 8) * this._barWidth) {
+				if (this._mouseX < (this._doc.barScrollPos + 8) * this._notchSpace) {
 					if (this._doc.barScrollPos > 0) this._doc.barScrollPos--;
 					this._doc.notifier.changed();
 				} else {
@@ -199,9 +198,9 @@ namespace beepbox {
 			let showHandleHighlight: boolean = false;
 
 			if (showHighlight) {
-				if (this._mouseX < this._doc.barScrollPos * this._barWidth) {
+				if (this._mouseX < this._doc.barScrollPos * this._notchSpace) {
 					showleftHighlight = true;
-				} else if (this._mouseX > (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._barWidth) {
+				} else if (this._mouseX > (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._notchSpace) {
 					showRightHighlight = true;
 				} else {
 					showHandleHighlight = true;
@@ -214,7 +213,7 @@ namespace beepbox {
 		}
 
 		public render(): void {
-			this._barWidth = (this._editorWidth - 1) / Math.max(this._doc.trackVisibleBars, this._doc.song.barCount);
+			this._notchSpace = (this._editorWidth-1) / Math.max(this._doc.trackVisibleBars, this._doc.song.barCount);
 
 			const resized: boolean = this._renderedNotchCount != this._doc.song.barCount;
 			if (resized) {
@@ -224,21 +223,20 @@ namespace beepbox {
 
 				for (let i: number = 0; i <= this._doc.song.barCount; i++) {
 					const lineHeight: number = (i % 16 == 0) ? 0 : ((i % 4 == 0) ? this._editorHeight / 8 : this._editorHeight / 3);
-					this._notches.appendChild(SVG.rect({ fill: "#393e4f", x: i * this._barWidth - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2 }));
+					this._notches.appendChild(SVG.rect({fill: ColorConfig.uiWidgetBackground, x: i * this._notchSpace - 1, y: lineHeight, width: 2, height: this._editorHeight - lineHeight * 2}));
 				}
 			}
 
 			if (resized || this._renderedBarPos != this._doc.barScrollPos) {
 				this._renderedBarPos = this._doc.barScrollPos;
-				this._handle.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
-				this._handle.setAttribute("width", "" + (this._barWidth * this._doc.trackVisibleBars));
-				this._handleHighlight.setAttribute("x", "" + (this._barWidth * this._doc.barScrollPos));
-				this._handleHighlight.setAttribute("width", "" + (this._barWidth * this._doc.trackVisibleBars));
+				this._handle.setAttribute("x", "" + (this._notchSpace * this._doc.barScrollPos));
+				this._handle.setAttribute("width", "" + (this._notchSpace * this._doc.trackVisibleBars));
+				this._handleHighlight.setAttribute("x", "" + (this._notchSpace * this._doc.barScrollPos));
+				this._handleHighlight.setAttribute("width", "" + (this._notchSpace * this._doc.trackVisibleBars));
 			}
 
 			this._updatePreview();
-
-			this._trackContainer.scrollLeft = this._doc.barScrollPos * 32;
+			this._trackContainer.scrollLeft = this._doc.barScrollPos * this._doc.getBarWidth();
 		}
 	}
 }

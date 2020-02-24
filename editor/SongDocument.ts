@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
 /// <reference path="EditorConfig.ts" />
@@ -28,12 +28,17 @@ namespace beepbox {
 		public showChannels: boolean;
 		public showScrollBar: boolean;
 		public alwaysFineNoteVol: boolean = false;
-		public wideMode: boolean = false;
+		public fullScreen: string;
+		public enableChannelMuting: boolean;
+		public colorTheme: string;
 		public alwaysShowSettings: boolean = true;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
 		public prompt: string | null = null;
+		public windowOctaves: number = 3 + (+(window.localStorage.getItem("extraOctaves") || "0" ));
+		public scrollableOctaves: number = Config.pitchOctaves - this.windowOctaves;
+		public windowPitchCount: number = this.windowOctaves * Config.pitchesPerOctave + 1;
 
 		private _recentChange: Change | null = null;
 		private _sequenceNumber: number = 0;
@@ -54,11 +59,15 @@ namespace beepbox {
 			this.showChannels = localStorage.getItem("showChannels") == "true";
 			this.showScrollBar = localStorage.getItem("showScrollBar") == "true";
 			this.alwaysFineNoteVol = localStorage.getItem("alwaysFineNoteVol") == "true";
-			this.wideMode = localStorage.getItem("wideMode") == "true";
-			//this.alwaysShowSettings = localStorage.getItem("alwaysShowSettings") == "true";
-
-			if (localStorage.getItem("volume") != null) this.volume = Number(localStorage.getItem("volume"));
-
+			this.enableChannelMuting = localStorage.getItem("enableChannelMuting") == "true";
+			this.fullScreen = localStorage.getItem("fullScreen") || "normal";
+			this.colorTheme = localStorage.getItem("colorTheme") || "jummbox classic";
+			
+			ColorConfig.setTheme(this.colorTheme);
+			Layout.setFullScreen(this.fullScreen);
+			
+			if (localStorage.getItem("volume") != null) this.volume = Math.min(<any>localStorage.getItem("volume") >>> 0, 75);
+			
 			this.synth.volume = this._calcVolume();
 
 			let state: HistoryState | null = window.history.state;
@@ -213,8 +222,9 @@ namespace beepbox {
 			localStorage.setItem("showChannels", this.showChannels ? "true" : "false");
 			localStorage.setItem("showScrollBar", this.showScrollBar ? "true" : "false");
 			localStorage.setItem("alwaysFineNoteVol", this.alwaysFineNoteVol ? "true" : "false");
-			localStorage.setItem("wideMode", this.wideMode ? "true" : "false");
-			//localStorage.setItem("alwaysShowSettings", this.alwaysShowSettings ? "true" : "false");
+			localStorage.setItem("enableChannelMuting", this.enableChannelMuting ? "true" : "false");
+			localStorage.setItem("fullScreen", this.fullScreen);
+			localStorage.setItem("colorTheme", this.colorTheme);
 			localStorage.setItem("volume", String(this.volume));
 		}
 
@@ -227,14 +237,33 @@ namespace beepbox {
 		private _calcVolume(): number {
 			return Math.min(1.0, Math.pow(this.volume / 50.0, 0.5)) * Math.pow(2.0, (this.volume - 75.0) / 25.0);
 		}
-
-		public getCurrentPattern(): Pattern | null {
-			return this.song.getPattern(this.channel, this.bar);
+		
+		public getCurrentPattern(barOffset: number = 0): Pattern | null {
+			return this.song.getPattern(this.channel, this.bar + barOffset);
 		}
-
-		public getCurrentInstrument(): number {
-			const pattern: Pattern | null = this.getCurrentPattern();
+		
+		public getCurrentInstrument(barOffset: number = 0): number {
+			const pattern: Pattern | null = this.getCurrentPattern(barOffset);
 			return pattern == null ? 0 : pattern.instrument;
+		}
+		
+		public getMobileLayout(): boolean {
+			return window.innerWidth <= 700;
+		}
+		
+		public getBarWidth(): number {
+			return (!this.getMobileLayout() && this.enableChannelMuting && !this.getFullScreen()) ? 30 : 32;
+		}
+		
+		public getChannelHeight(): number {
+			const squashed: boolean = this.getMobileLayout() || this.song.getChannelCount() > 4 || (this.song.barCount > this.trackVisibleBars && this.song.getChannelCount() > 3);
+			// TODO: Jummbox widescreen should allow more channels before squashing or megasquashing
+			const megaSquashed: boolean = !this.getMobileLayout() && (((this.fullScreen != "widefullscreen") && this.song.getChannelCount() > 11) || this.song.getChannelCount() > 22 );
+			return megaSquashed ? 23 : ( squashed ? 27 : 32 );
+		}
+		
+		public getFullScreen(): boolean {
+			return !this.getMobileLayout() && (this.fullScreen != "normal");
 		}
 	}
 }

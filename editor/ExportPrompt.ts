@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
 /// <reference path="ColorConfig.ts" />
@@ -262,8 +262,8 @@ namespace beepbox {
 			data.setUint16(index, wavChannelCount, true); index += 2; // channel count
 			data.setUint32(index, sampleRate, true); index += 4; // sample rate
 			data.setUint32(index, sampleRate * bytesPerSample * wavChannelCount, true); index += 4; // bytes per second
-			data.setUint16(index, bytesPerSample * wavChannelCount, true); index += 2; // sample rate
-			data.setUint16(index, bitsPerSample, true); index += 2; // sample rate
+			data.setUint16(index, bytesPerSample * wavChannelCount, true); index += 2; // block align
+			data.setUint16(index, bitsPerSample, true); index += 2; // bits per sample
 			data.setUint32(index, 0x64617461, false); index += 4;
 			data.setUint32(index, sampleCount * bytesPerSample, true); index += 4;
 
@@ -635,7 +635,7 @@ namespace beepbox {
 										for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
 											let nextPitch: number = note.pitches[toneIndex];
 											if (isDrumset) {
-												nextPitch += pitchOffset;
+												nextPitch += mainInterval;
 												const drumsetMap: number[] = [
 													36, // Bass Drum 1
 													41, // Low Floor Tom

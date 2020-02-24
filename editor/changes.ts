@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
 /// <reference path="EditorConfig.ts" />
@@ -121,7 +121,7 @@ namespace beepbox {
 		for (const pitch of oldNote.pitches) {
 			newNote.pitches.push(pitch);
 		}
-
+		
 		for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
 			const pin: NotePin = oldNote.pins[pinIndex];
 			const newPinTime: number = pin.time + timeOffset;
@@ -142,14 +142,14 @@ namespace beepbox {
 				const prevPin: NotePin = oldNote.pins[pinIndex - 1];
 				const prevPinTime: number = prevPin.time + timeOffset;
 				if (prevPinTime < newNoteLength) {
-					// Insert an interpolated pin at the start of the new note.
+					// Insert an interpolated pin at the end of the new note.
 					const ratio: number = (newNoteLength - prevPinTime) / (newPinTime - prevPinTime);
 					newNote.pins.push(makeNotePin(Math.round(prevPin.interval + ratio * (pin.interval - prevPin.interval)), newNoteLength, Math.round(prevPin.volume + ratio * (pin.volume - prevPin.volume))));
 				}
 			}
 		}
-
-		// Bugfix: adjust start pitch of note instead of setting first pin to a nonzero interval
+		
+		// Fix from Jummbus: Ensure the first pin's interval is zero, adjust pitches and pins to compensate.
 		const offsetInterval: number = newNote.pins[0].interval;
 		for (let pitchIdx: number = 0; pitchIdx < newNote.pitches.length; pitchIdx++) {
 			newNote.pitches[pitchIdx] += offsetInterval;
@@ -178,7 +178,8 @@ namespace beepbox {
 				else {
 					modChannels.push(newChannel);
 				}
-
+				
+				newChannel.muted = oldChannel.muted;
 				newChannel.octave = oldChannel.octave;
 				for (const instrument of oldChannel.instruments) {
 					newChannel.instruments.push(instrument);
@@ -807,7 +808,7 @@ namespace beepbox {
 	}
 
 	export class ChangeBarCount extends Change {
-		constructor(doc: SongDocument, trackEditor: TrackEditor, newValue: number, atBeginning: boolean) {
+		constructor(doc: SongDocument, newValue: number, atBeginning: boolean) {
 			super();
 			if (doc.song.barCount != newValue) {
 				for (const channel of doc.song.channels) {
@@ -840,7 +841,6 @@ namespace beepbox {
 				doc.song.loopStart = Math.min(newValue - doc.song.loopLength, doc.song.loopStart);
 				doc.song.barCount = newValue;
 				doc.notifier.changed();
-				//trackEditor._resetBoxSelection();
 
 				this._didSomething();
 			}
@@ -926,7 +926,7 @@ namespace beepbox {
 								newChannels[channel].patterns[j] = new Pattern();
 							}
 							for (let j: number = 0; j < doc.song.barCount; j++) {
-								newChannels[channel].bars[j] = (j < 4) ? 1 : 0;
+								newChannels[channel].bars[j] = 0;
 							}
 						}
 					}
@@ -1904,7 +1904,7 @@ namespace beepbox {
 			let bestKeyWeight: number = 0;
 			for (let key: number = 0; key < 12; key++) {
 				// Look for the root of the most prominent major or minor chord.
-				const keyWeight: number = keyWeights[key] + 0.6 * keyWeights[(key + 7) % 12] + 0.2 * keyWeights[(key + 4) % 12] + 0.2 * keyWeights[(key + 3) % 12];
+				const keyWeight: number = keyWeights[key] * (3 * keyWeights[(key + 7) % 12] + keyWeights[(key + 4) % 12] + keyWeights[(key + 3) % 12]);
 				if (bestKeyWeight < keyWeight) {
 					bestKeyWeight = keyWeight;
 					bestKey = key;

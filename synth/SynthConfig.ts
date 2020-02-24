@@ -1,5 +1,5 @@
 /*!
-Copyright (C) 2019 John Nesky
+Copyright (C) 2020 John Nesky
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the "Software"), to deal in 
@@ -388,16 +388,12 @@ namespace beepbox {
 		public static readonly modChannelCountMin: number = 0;
 		public static readonly modChannelCountMax: number = 8;
 		public static readonly noiseInterval: number = 6;
+		public static readonly pitchesPerOctave: number = 12; // TODO: Use this for converting pitch to frequency.
 		public static readonly drumCount: number = 12;
 		public static readonly modCount: number = 6;
 		public static readonly pitchOctaves: number = 8;
-		public static readonly windowOctaves: number = 3 + (+(localStorage.getItem("wideMode") == "true" && ( window.innerWidth > 700 ))); // 1 extra octave default in wide mode
 		public static readonly maxScrollableOctaves: number = 5; // Largest number possible with any config setting
-		public static readonly scrollableOctaves: number = Config.pitchOctaves - Config.windowOctaves;
-		public static readonly windowPitchCount: number = Config.windowOctaves * 12 + 1;
-		public static readonly pitchHeight: number = 13;
-		public static readonly pitchEditorHeight: number = Config.windowPitchCount * Config.pitchHeight;
-		public static readonly maxPitch: number = Config.pitchOctaves * 12;
+		public static readonly maxPitch: number = Config.pitchOctaves * Config.pitchesPerOctave;
 		public static readonly maximumTonesPerChannel: number = 8;
 		public static readonly sineWaveLength: number = 1 << 8; // 256
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;

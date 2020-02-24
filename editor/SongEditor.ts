@@ -1,15 +1,18 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/SynthConfig.ts" />
-/// <reference path="ColorConfig.ts" />
 /// <reference path="EditorConfig.ts" />
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
+/// <reference path="ColorConfig.ts" />
 /// <reference path="html.ts" />
 /// <reference path="style.ts" />
+/// <reference path="ColorConfig.ts" />
+/// <reference path="Layout.ts" />
+/// <reference path="../synth/synth.ts" />
+/// <reference path="SongDocument.ts" />
 /// <reference path="Prompt.ts" />
 /// <reference path="TipPrompt.ts" />
 /// <reference path="PatternEditor.ts" />
+/// <reference path="MuteEditor.ts" />
 /// <reference path="TrackEditor.ts" />
 /// <reference path="LoopEditor.ts" />
 /// <reference path="SpectrumEditor.ts" />
@@ -24,9 +27,11 @@
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
 /// <reference path="MuteButton.ts" />
+/// <reference path="ThemePrompt.ts" />
+/// <reference path="LayoutPrompt.ts" />
 
 namespace beepbox {
-	const { button, div, span, select, option, optgroup, input, canvas } = HTML;
+	const { button, div, input, select, span, optgroup, option, canvas } = HTML;
 
 	function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
 		for (let index: number = 0; index < items.length; index++) {
@@ -155,20 +160,20 @@ namespace beepbox {
 			var ctx = this.canvas.getContext("2d") as CanvasRenderingContext2D;
 
 			// Black BG
-			ctx.fillStyle = "#040410";
+			ctx.fillStyle = ColorConfig.getComputed("--editor-background");
 			ctx.fillRect(0, 0, 128, 52);
 
 			// Mid-bar
-			ctx.fillStyle = "#393e4f";
+			ctx.fillStyle = ColorConfig.getComputed("--ui-widget-background");
 			ctx.fillRect(0, 25, 128, 2);
 
 			// 25-75 bars
-			ctx.fillStyle = "#1c1d28";
+			ctx.fillStyle = ColorConfig.getComputed("--track-editor-bg-pitch-dim");
 			ctx.fillRect(0, 13, 128, 1);
 			ctx.fillRect(0, 39, 128, 1);
 
 			// Waveform
-			ctx.fillStyle = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+			ctx.fillStyle = ColorConfig.getComputedChannelColor(this._doc.song, this._doc.channel).primaryNote;
 
 			for (let x: number = 0; x < 64; x++) {
 				var y: number = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].customChipWave[x] + 26;
@@ -201,14 +206,14 @@ namespace beepbox {
 							: ((i - lowerBound) / (upperBound - lowerBound))) : 0.0;
 						var j = Math.round(y + (this.lastY - y) * progress);
 
-						ctx.fillStyle = "#040410";
+						ctx.fillStyle = ColorConfig.getComputed("--editor-background");
 						ctx.fillRect(Math.floor(i / 2) * 2, 0, 2, 53);
-						ctx.fillStyle = "#393e4f";
+						ctx.fillStyle = ColorConfig.getComputed("--ui-widget-background");
 						ctx.fillRect(Math.floor(i / 2) * 2, 25, 2, 2);
-						ctx.fillStyle = "#1c1d28";
+						ctx.fillStyle = ColorConfig.getComputed("--track-editor-bg-pitch-dim");
 						ctx.fillRect(Math.floor(i / 2) * 2, 13, 2, 1);
 						ctx.fillRect(Math.floor(i / 2) * 2, 39, 2, 1);
-						ctx.fillStyle = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+						ctx.fillStyle = ColorConfig.getComputedChannelColor(this._doc.song, this._doc.channel).primaryNote;
 						ctx.fillRect(Math.floor(i / 2) * 2, j - 2, 2, 4);
 
 						// Actually update current instrument's custom waveform
@@ -218,14 +223,14 @@ namespace beepbox {
 				}
 				else {
 
-					ctx.fillStyle = "#040410";
+					ctx.fillStyle = ColorConfig.getComputed("--editor-background");
 					ctx.fillRect(Math.floor(x / 2) * 2, 0, 2, 52);
-					ctx.fillStyle = "#393e4f";
+					ctx.fillStyle = ColorConfig.getComputed("--ui-widget-background");
 					ctx.fillRect(Math.floor(x / 2) * 2, 25, 2, 2);
-					ctx.fillStyle = "#1c1d28";
+					ctx.fillStyle = ColorConfig.getComputed("--track-editor-bg-pitch-dim");
 					ctx.fillRect(Math.floor(x / 2) * 2, 13, 2, 1);
 					ctx.fillRect(Math.floor(x / 2) * 2, 39, 2, 1);
-					ctx.fillStyle = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+					ctx.fillStyle = ColorConfig.getComputedChannelColor(this._doc.song, this._doc.channel).primaryNote;
 					ctx.fillRect(Math.floor(x / 2) * 2, y - 2, 2, 4);
 
 					// Actually update current instrument's custom waveform
@@ -350,38 +355,14 @@ namespace beepbox {
 	export class SongEditor {
 		public prompt: Prompt | null = null;
 
-		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc);
+		private readonly _patternEditorPrev: PatternEditor = new PatternEditor(this._doc, false, -1);
+		private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc, true, 0);
+		private readonly _patternEditorNext: PatternEditor = new PatternEditor(this._doc, false, 1);
+		private readonly _muteEditor: MuteEditor = new MuteEditor(this._doc);
 		private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
 		private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
-		private readonly _muteButtonEditor: MuteButtonEditor = new MuteButtonEditor(this._doc);
-		private readonly _trackOptionsEditor: HTMLDivElement = div({ className: "trackEditorOptions", style: "width: 32px; display: flex; flex-direction: row" }, [
-			this._muteButtonEditor.container,
-		]);
-		private readonly _trackContainer: HTMLDivElement = div({ className: "trackContainer", tabindex: "1" }, [
-			this._trackEditor.container,
-			this._loopEditor.container,
-		]);
-		private readonly _trackBar: HTMLDivElement = div({ className: "trackBar", style: "display: flex; flex-direction: row;" }, [
-			this._trackOptionsEditor,
-			this._trackContainer,
-		]);
-		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackContainer);
 		private readonly _piano: Piano = new Piano(this._doc);
 		private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc, this._piano);
-		private readonly _editorBox: HTMLDivElement = div({ id: "track-and-pattern-container" },
-			div({ className: "editorBox noSelection", id: "editor-box", style: "height: " + Config.pitchEditorHeight + "px; display: flex; flex-direction: row; margin-bottom: 6px;" },
-				this._piano.container,
-				this._patternEditor.container,
-				this._octaveScrollBar.container,
-			),
-			div({ id: "track-and-scrollbar-container" },
-				this._trackBar,
-				div({ style: "display:flex; flex-direction: row;" },
-					div({ style: "width: 32px; height: 32px" }, []),
-					this._barScrollBar.container,
-				),
-			),
-		);
 		private readonly _playButton: HTMLButtonElement = button({ style: "width: 80px;", type: "button" });
 		private readonly _prevBarButton: HTMLButtonElement = button({ className: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)" });
 		private readonly _nextBarButton: HTMLButtonElement = button({ className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)" });
@@ -410,13 +391,10 @@ namespace beepbox {
 			option({ value: "duplicatePatterns" }, "Duplicate Reused Patterns (D)"),
 			option({ value: "transposeUp" }, "Move Notes Up (+)"),
 			option({ value: "transposeDown" }, "Move Notes Down (-)"),
-			option({ value: "forceScale" }, "Snap Notes To Scale"),
-			option({ value: "forceRhythm" }, "Snap Notes To Rhythm"),
 			option({ value: "moveNotesSideways" }, "Move All Notes Sideways..."),
 			option({ value: "beatsPerBar" }, "Change Beats Per Bar..."),
 			option({ value: "barCount" }, "Change Song Length..."),
 			option({ value: "channelSettings" }, "Channel Settings..."),
-			option({ value: "detectKey" }, "Detect Key"),
 		);
 		private readonly _optionsMenu: HTMLSelectElement = select({ style: "width: 100%;" },
 			option({ selected: true, disabled: true, hidden: false }, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -427,7 +405,9 @@ namespace beepbox {
 			option({ value: "showChannels" }, "Show All Channels"),
 			option({ value: "showScrollBar" }, "Octave Scroll Bar"),
 			option({ value: "alwaysFineNoteVol" }, "Always Fine Note Vol."),
-			option({ value: "wideMode" }, "Wide Mode"),
+			option({ value: "enableChannelMuting" }, "Enable Channel Muting"),
+			option({ value: "fullScreen" }, "Full-Screen Layout"),
+			option({ value: "colorTheme"}, "Set Theme..."),
 			//option({value: "alwaysShowSettings"}, "Customize All Instruments"),
 		);
 		private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale => scale.name));
@@ -517,8 +497,8 @@ namespace beepbox {
 			]),
 		]);
 
-		private readonly _customWaveDrawCanvas: Canvas = new Canvas(canvas({ width: 128, height: 52, style: "border:2px solid #393e4f;", id: "customWaveDrawCanvas" }), this._doc, (newArray: Float64Array) => new ChangeCustomWave(this._doc, newArray));
-		private readonly _customWavePresetDrop: HTMLSelectElement = buildHeaderedOptions("Load Preset", select({ style: "height:1.5em; text-align: center; text-align-last: center;" }),
+		private readonly _customWaveDrawCanvas: Canvas = new Canvas(canvas({ width: 128, height: 52, style: "border:2px solid " + ColorConfig.uiWidgetBackground, id: "customWaveDrawCanvas" }), this._doc, (newArray: Float64Array) => new ChangeCustomWave(this._doc, newArray));
+		private readonly _customWavePresetDrop: HTMLSelectElement = buildHeaderedOptions("Load Preset", select({ style: "width: 50%; height:1.5em; text-align: center; text-align-last: center;" }),
 			Config.chipWaves.map(wave => wave.name)
 		);
 
@@ -527,7 +507,7 @@ namespace beepbox {
 			div({ style: "margin-top:5px; display:flex; justify-content:center;" }, [this._customWavePresetDrop]),
 		]);
 
-		private readonly _songTitleInputBox: InputBox = new InputBox(input({ style: "border:none; background-color:#040410; color:#FFFFFF; text-align:center", maxlength: "30", type: "text", value: Config.versionDisplayName }), this._doc, (oldValue: string, newValue: string) => new ChangeInputBoxText(this._doc, oldValue, newValue));
+		private readonly _songTitleInputBox: InputBox = new InputBox(input({ style: "font-weight:bold; border:none; width: 100%; background-color:${ColorConfig.editorBackground}; color:${ColorConfig.primaryText}; text-align:center", maxlength: "30", type: "text", value: Config.versionDisplayName }), this._doc, (oldValue: string, newValue: string) => new ChangeInputBoxText(this._doc, oldValue, newValue));
 
 
 		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({ style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude" }), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue), false);
@@ -542,26 +522,11 @@ namespace beepbox {
      	* @jummbus - my very real, valid reason for cutting this button: I don't like it.
      	* 
 		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", style: "margin: 2px 0"},
+
 			"Customize Instrument",
-			// Dial icon
-			SVG.svg({style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26"},
-				SVG.g({transform: "translate(0,1)"},
-					SVG.circle({cx: "0", cy: "0", r: "6.5", stroke: "currentColor", "stroke-width": "1", fill: "none"}),
-					SVG.rect({x: "-1", y: "-5", width: "2", height: "4", fill: "currentColor", transform: "rotate(30)"}),
-					SVG.circle({cx: "-7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "-9", cy: "0", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "-7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "-4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "0", cy: "-9", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "4.5", cy: "-7.79", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "7.79", cy: "-4.5", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "9", cy: "0", r: "0.75", fill: "currentColor"}),
-					SVG.circle({cx: "7.79", cy: "4.5", r: "0.75", fill: "currentColor"}),
-				),
-			),
 		);
 	    */
-		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({ className: "editor-controls" },
+		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({ class: "editor-controls" },
 			this._chipWaveSelectRow,
 			this._chipNoiseSelectRow,
 			this._detuneSliderRow,
@@ -570,9 +535,10 @@ namespace beepbox {
 			this._filterResonanceRow,
 			this._filterEnvelopeRow,
 			this._transitionRow,
-			div({ className: "selectRow" },
-				span({ class: "tip", onclick: () => this._openPrompt("effects") }, "Effects:"),
-				div({ className: "selectContainer" }, this._effectsSelect),
+
+			div({class: "selectRow"},
+				span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects:"),
+				div({class: "selectContainer"}, this._effectsSelect),
 			),
 			this._chordSelectRow,
 			this._vibratoSelectRow,
@@ -587,13 +553,17 @@ namespace beepbox {
 			this._pulseEnvelopeRow,
 			this._pulseWidthRow,
 		);
-		private readonly _instrumentCopyGroup: HTMLDivElement = div({},
+		private readonly _instrumentCopyGroup: HTMLDivElement = div({ className: "editor-controls"},
 			div({ className: "selectRow" },
 				this._instrumentCopyButton,
 				this._instrumentPasteButton,
 			),
 		);
-		private readonly _instrumentSettingsGroup: HTMLDivElement = div({ className: "editor-controls" },
+		private readonly _instrumentSettingsTextRow: HTMLDivElement = div({ id: "instrumentSettingsText", style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};` },
+			"Instrument Settings"
+		);
+		private readonly _instrumentSettingsGroup: HTMLDivElement = div({className: "editor-controls"},
+			this._instrumentSettingsTextRow,
 			this._instrumentSelectRow,
 			div({ className: "selectRow", id: "typeSelectRow" },
 				span({ class: "tip", onclick: () => this._openPrompt("instrumentType") }, "Type: "),
@@ -607,107 +577,112 @@ namespace beepbox {
 			//this._customizeInstrumentButton,
 			this._customInstrumentSettingsGroup,
 		);
-		private readonly _usedPatternIndicator: SVGElement = SVG.path({ d: "M -6 -6 H 6 V 6 H -6 V -6 M -2 -3 L -2 -3 L -1 -4 H 1 V 4 H -1 V -1.2 L -1.2 -1 H -2 V -3 z", fill: "#393e4f", "fill-rule": "evenodd" });
-		private readonly _usedInstrumentIndicator: SVGElement = SVG.path({ d: "M -6 -0.8 H -3.8 V -6 H 0.8 V 4.4 H 2.2 V -0.8 H 6 V 0.8 H 3.8 V 6 H -0.8 V -4.4 H -2.2 V 0.8 H -6 z", fill: "#393e4f" });
+		private readonly _usedPatternIndicator: SVGElement = SVG.path({ d: "M -6 -6 H 6 V 6 H -6 V -6 M -2 -3 L -2 -3 L -1 -4 H 1 V 4 H -1 V -1.2 L -1.2 -1 H -2 V -3 z", fill: ColorConfig.indicatorSecondary, "fill-rule": "evenodd" });
+		private readonly _usedInstrumentIndicator: SVGElement = SVG.path({ d: "M -6 -0.8 H -3.8 V -6 H 0.8 V 4.4 H 2.2 V -0.8 H 6 V 0.8 H 3.8 V 6 H -0.8 V -4.4 H -2.2 V 0.8 H -6 z", fill: ColorConfig.indicatorSecondary });
 
 		private readonly _promptContainer: HTMLDivElement = div({ className: "promptContainer", style: "display: none;" });
-		public readonly mainLayer: HTMLDivElement = div({ className: "beepboxEditor", tabIndex: "0" },
-			this._editorBox,
-			div({ className: "editor-widget-column noSelection", id: "editor-widget-column" },
-				div({ style: "text-align: center; color: #79B;" }, [this._songTitleInputBox.input]),
-				div({ className: "editor-widgets" },
-					div({ className: "editor-controls" },
-						div({ className: "playback-controls", id: "playback-controls" },
-							div({ className: "playback-bar-controls" },
-								this._playButton,
-								this._prevBarButton,
-								this._nextBarButton,
-							),
-							div({ className: "playback-volume-controls" },
-								// Volume speaker icon:
-								SVG.svg({ style: "flex-shrink: 0;", width: "2em", height: "2em", viewBox: "0 0 26 26" },
-									SVG.path({ d: "M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z", fill: "#777" }),
+		private readonly _patternEditorRow: HTMLDivElement = div({style: "flex: 1; height: 100%; display: flex; overflow: hidden; justify-content: center;"},
+			this._patternEditorPrev.container,
+			this._patternEditor.container,
+			this._patternEditorNext.container,
+		);
+		private readonly _patternArea: HTMLDivElement = div({class: "pattern-area"},
+			this._piano.container,
+			this._patternEditorRow,
+			this._octaveScrollBar.container,
+		);
+		private readonly _trackContainer: HTMLDivElement = div({class: "trackContainer"},
+			this._trackEditor.container,
+			this._loopEditor.container,
+		);
+		private readonly _trackAndMuteContainer: HTMLDivElement = div({class: "trackAndMuteContainer"},
+			this._muteEditor.container,
+			this._trackContainer,
+		);
+		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackContainer);
+		private readonly _trackArea: HTMLDivElement = div({class: "track-area"},
+			this._trackAndMuteContainer,
+			this._barScrollBar.container,
+		);
+		
+		public readonly _settingsArea: HTMLDivElement = div({ className: "settings-area noSelection" },
+			div({class: "version-area"},
+				div({ style: "text-align: center; color: ${ColorConfig.secondaryText};" }, [this._songTitleInputBox.input]),
+			),
+			div({class: "play-pause-area"},
+				div({class: "playback-bar-controls"},
+					this._playButton,
+					this._prevBarButton,
+					this._nextBarButton,
+				),
+				div({class: "playback-volume-controls"},
+					span({class: "volume-speaker"}),
+					this._volumeSlider.container,
+				),
+			),
+			div({class: "menu-area"},
+				div({class: "selectContainer menu file"},
+					this._fileMenu,
+				),
+				div({class: "selectContainer menu edit"},
+					this._editMenu,
+				),
+				div({class: "selectContainer menu preferences"},
+					this._optionsMenu,
+				),
+			),
+			div({class: "song-settings-area"},
+				div({class: "editor-controls"},
+					div({ className: "editor-song-settings" },
+						div({ style: "margin: 3px 0; position: relative; text-align: center; color: ${ColorConfig.secondaryText};" },
+							div({ class: "tip", style: "flex-shrink: 0; position:absolute; left: 0; top: 0; width: 12px; height: 12px", onclick: () => this._openPrompt("usedPattern") },
+								SVG.svg({ style: "flex-shrink: 0; position: absolute; left: 0; top: 0; pointer-events: none;", width: "12px", height: "12px", "margin-right": "0.5em", viewBox: "-6 -6 12 12" },
+									this._usedPatternIndicator,
 								),
-								this._volumeSlider.container,
 							),
+							div({ class: "tip", style: "flex-shrink: 0; position: absolute; left: 14px; top: 0; width: 12px; height: 12px", onclick: () => this._openPrompt("usedInstrument") },
+								SVG.svg({ style: "flex-shrink: 0; position: absolute; left: 0; top: 0; pointer-events: none;", width: "12px", height: "12px", "margin-right": "1em", viewBox: "-6 -6 12 12" },
+									this._usedInstrumentIndicator,
+								),
+							),
+							"Song Settings"
 						),
 					),
-					div({ className: "editor-settings", id: "editor-settings" },
-						div({ className: "editor-song-settings", id: "editor-song-settings" },
-							div({ className: "editor-menus" },
-								div({ className: "selectContainer menu" },
-									this._fileMenu,
-									// Page icon:
-									SVG.svg({ style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26" },
-										SVG.path({ d: "M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z", fill: "currentColor" }),
-									),
-								),
-								div({ className: "selectContainer menu" },
-									this._editMenu,
-									// Edit icon:
-									SVG.svg({ style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-5 -21 26 26" },
-										SVG.path({ d: "M 0 0 L 1 -4 L 4 -1 z M 2 -5 L 10 -13 L 13 -10 L 5 -2 zM 11 -14 L 13 -16 L 14 -16 L 16 -14 L 16 -13 L 14 -11 z", fill: "currentColor" }),
-									),
-								),
-								div({ className: "selectContainer menu" },
-									this._optionsMenu,
-									// Gear icon:
-									SVG.svg({ style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26" },
-										SVG.path({ d: "M 5.78 -1.6 L 7.93 -0.94 L 7.93 0.94 L 5.78 1.6 L 4.85 3.53 L 5.68 5.61 L 4.21 6.78 L 2.36 5.52 L 0.27 5.99 L -0.85 7.94 L -2.68 7.52 L -2.84 5.28 L -4.52 3.95 L -6.73 4.28 L -7.55 2.59 L -5.9 1.07 L -5.9 -1.07 L -7.55 -2.59 L -6.73 -4.28 L -4.52 -3.95 L -2.84 -5.28 L -2.68 -7.52 L -0.85 -7.94 L 0.27 -5.99 L 2.36 -5.52 L 4.21 -6.78 L 5.68 -5.61 L 4.85 -3.53 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z", fill: "currentColor" }),
-									),
-								),
-							),
-							div({ className: "editor-settings" },
-								div({ className: "editor-song-settings" },
-									div({ style: "margin: 3px 0; position: relative; text-align: center; color: #999;" },
-										div({ class: "tip", style: "flex-shrink: 0; position:absolute; left: 0; top: 0; width: 12px; height: 12px", onclick: () => this._openPrompt("usedPattern") },
-											SVG.svg({ style: "flex-shrink: 0; position: absolute; left: 0; top: 0; pointer-events: none;", width: "12px", height: "12px", "margin-right": "0.5em", viewBox: "-6 -6 12 12" },
-												this._usedPatternIndicator,
-											),
-										),
-										div({ class: "tip", style: "flex-shrink: 0; position: absolute; left: 14px; top: 0; width: 12px; height: 12px", onclick: () => this._openPrompt("usedInstrument") },
-											SVG.svg({ style: "flex-shrink: 0; position: absolute; left: 0; top: 0; pointer-events: none;", width: "12px", height: "12px", "margin-right": "1em", viewBox: "-6 -6 12 12" },
-												this._usedInstrumentIndicator,
-											),
-										),
-										"Song Settings"
-									),
-								),
-							),
-							div({ className: "selectRow" },
-								span({ class: "tip", onclick: () => this._openPrompt("scale") }, "Scale: "),
-								div({ className: "selectContainer" }, this._scaleSelect),
-							),
-							div({ className: "selectRow" },
-								span({ class: "tip", onclick: () => this._openPrompt("key") }, "Key: "),
-								div({ className: "selectContainer" }, this._keySelect),
-							),
-
-							div({ className: "selectRow" },
-								div({ style: "color: #999" }, span({}, div({ class: "tip", style: "color: #999; height:1em;", onclick: () => this._openPrompt("tempo") }, "Tempo: ")),
-									div({ style: "color: #555" }, this._tempoStepper),
-								), this._tempoSlider.container
-							),
-							div({ className: "selectRow" },
-								span({ class: "tip", onclick: () => this._openPrompt("reverb") }, "Reverb: "),
-								this._reverbSlider.container,
-							),
-							div({ className: "selectRow" },
-								span({ class: "tip", onclick: () => this._openPrompt("rhythm") }, "Rhythm: "),
-								div({ className: "selectContainer" }, this._rhythmSelect),
-							),
+					div({class: "selectRow"},
+						span({class: "tip", onclick: ()=>this._openPrompt("scale")}, "Scale: "),
+						div({class: "selectContainer"}, this._scaleSelect),
+					),
+					div({class: "selectRow"},
+						span({class: "tip", onclick: ()=>this._openPrompt("key")}, "Key: "),
+						div({class: "selectContainer"}, this._keySelect),
+					),
+					div({class: "selectRow"},
+						span({class: "tip", onclick: ()=>this._openPrompt("tempo")}, "Tempo: "),
+						span({style: "display: flex;"},
+							this._tempoSlider.input,
+							this._tempoStepper,
 						),
-						div({ className: "editor-instrument-settings", id: "editor-instrument-settings" },
-							div({ id: "instrumentSettingsText", style: "margin: 3px 0; text-align: center; color: #999;" },
-								"Instrument Settings"
-							),
-							this._instrumentSettingsGroup,
-							this._modulatorGroup,
-							this._instrumentCopyGroup,
-						),
+					),
+					div({class: "selectRow"},
+						span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb: "),
+						this._reverbSlider.input,
+					),
+					div({class: "selectRow"},
+						span({class: "tip", onclick: ()=>this._openPrompt("rhythm")}, "Rhythm: "),
+						div({class: "selectContainer"}, this._rhythmSelect),
 					),
 				),
 			),
+			div({class: "instrument-settings-area"},
+				this._instrumentSettingsGroup,
+				this._modulatorGroup,
+			),
+		);
+		
+		public readonly mainLayer: HTMLDivElement = div({class: "beepboxEditor", tabIndex: "0"},
+			this._patternArea,
+			this._trackArea,
+			this._settingsArea,
 			this._promptContainer,
 		);
 
@@ -722,20 +697,31 @@ namespace beepbox {
 		private _showModSliders: boolean[] = [];
 		private _modSliderValues: number[] = [];
 		private _hasActiveModSliders: boolean = false;
-		private _wideMode: boolean = false;
 
 		constructor(private _doc: SongDocument) {
 			this._doc.notifier.watch(this.whenUpdated);
+			window.addEventListener("resize", this.whenUpdated);
 			window.requestAnimationFrame(() => this._modSliderUpdate());
 
 			if (!("share" in navigator)) {
 				this._fileMenu.removeChild(this._fileMenu.querySelector("[value='shareUrl']")!);
 			}
+			
+			this._scaleSelect.appendChild(optgroup({label: "Edit"},
+				option({value: "forceScale"}, "Snap Notes To Scale"),
+			));
+			this._keySelect.appendChild(optgroup({label: "Edit"},
+				option({value: "detectKey"}, "Detect Key"),
+			));
+			this._rhythmSelect.appendChild(optgroup({label: "Edit"},
+				option({value: "forceRhythm"}, "Snap Notes To Rhythm"),
+			));
+			
 
 			this._showModSliders = new Array<boolean>(ModSetting.mstMaxValue);
 			this._modSliderValues = new Array<number>(ModSetting.mstMaxValue);
 
-			this._phaseModGroup.appendChild(div({ className: "operatorRow", style: "color: #999; height: 1em; margin-top: 0.5em;" },
+			this._phaseModGroup.appendChild(div({ className: "operatorRow", style: "color: ${ColorConfig.secondaryText}; height: 1em; margin-top: 0.5em;" },
 				div({ style: "margin-right: .1em; visibility: hidden;" }, 1 + "."),
 				div({ style: "width: 3em; margin-right: .3em;", class: "tip", onclick: () => this._openPrompt("operatorFrequency") }, "Freq:"),
 				div({ style: "width: 4em; margin: 0;", class: "tip", onclick: () => this._openPrompt("operatorVolume") }, "Volume:"),
@@ -768,9 +754,9 @@ namespace beepbox {
 			}
 
 			this._drumsetGroup.appendChild(
-				div({ className: "selectRow" },
-					span({ class: "tip", onclick: () => this._openPrompt("drumsetEnvelope") }, "Envelope:"),
-					span({ class: "tip", onclick: () => this._openPrompt("drumsetSpectrum") }, "Spectrum:"),
+				div({class: "selectRow"},
+					span({class: "tip", onclick: ()=>this._openPrompt("drumsetEnvelope")}, "Envelope:"),
+					span({class: "tip", onclick: ()=>this._openPrompt("drumsetSpectrum")}, "Spectrum:"),
 				),
 			);
 			for (let i: number = Config.drumCount - 1; i >= 0; i--) {
@@ -784,9 +770,9 @@ namespace beepbox {
 				envelopeSelect.addEventListener("change", () => {
 					this._doc.record(new ChangeDrumsetEnvelope(this._doc, drumIndex, envelopeSelect.selectedIndex));
 				});
-
-				const row: HTMLDivElement = div({ className: "selectRow" },
-					div({ className: "selectContainer", style: "width: 5em; margin-right: .3em;" }, envelopeSelect),
+				
+				const row: HTMLDivElement = div({class: "selectRow"},
+					div({class: "selectContainer", style: "width: 5em; margin-right: .3em;"}, envelopeSelect),
 					this._drumsetSpectrumEditors[i].container,
 				);
 				this._drumsetGroup.appendChild(row);
@@ -818,7 +804,7 @@ namespace beepbox {
 				this._modSetRows.push(modSetRow);
 				this._modSetBoxes.push(modSetBox);
 
-				this._modulatorGroup.appendChild(div({ style: "margin: 3px 0; margin-bottom: 0.7em; text-align: center; color: #8C99B0; background: #0A101A;" }, "Modulator " + (mod + 1)));
+				this._modulatorGroup.appendChild(div({ style: "margin: 3px 0; font-weight: bold; margin-bottom: 0.7em; text-align: center; color: " + ColorConfig.secondaryText + "; background: " + ColorConfig.uiWidgetBackground + ";" }, "Modulator " + (mod + 1)));
 				this._modulatorGroup.appendChild(modNameRow);
 				this._modulatorGroup.appendChild(modSetRow);
 
@@ -853,16 +839,19 @@ namespace beepbox {
 			this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
 			this._volumeSlider.input.addEventListener("input", this._setVolumeSlider);
 
+			this._patternArea.addEventListener("mousedown", this._refocusStage);
+			this._trackArea.addEventListener("mousedown", this._refocusStage);
+			
 			// The song volume slider is styled slightly different than the class' default.
 			this._volumeSlider.container.style.setProperty("flex-grow", "1");
 			this._volumeSlider.container.style.setProperty("display", "flex");
-
+			
 			// Also, any slider with a multiplicative effect instead of a replacement effect gets a different mod color.
-			this._volumeSlider.container.style.setProperty("--mod-color", "#606c9f");
-			this._instrumentVolumeSlider.container.style.setProperty("--mod-color", "#606c9f");
-			this._feedbackAmplitudeSlider.container.style.setProperty("--mod-color", "#606c9f");
+			this._volumeSlider.container.style.setProperty("--mod-color", ColorConfig.multiplicativeModSlider);
+			this._instrumentVolumeSlider.container.style.setProperty("--mod-color", ColorConfig.multiplicativeModSlider);
+			this._feedbackAmplitudeSlider.container.style.setProperty("--mod-color", ColorConfig.multiplicativeModSlider);
 			for (let i: number = 0; i < Config.operatorCount; i++) {
-				this._operatorAmplitudeSliders[i].container.style.setProperty("--mod-color", "#606c9f");
+				this._operatorAmplitudeSliders[i].container.style.setProperty("--mod-color", ColorConfig.multiplicativeModSlider);
 			}
 
 
@@ -873,7 +862,7 @@ namespace beepbox {
 				this._modSetBoxes[mod].addEventListener("change", function () { thisRef._whenSetModSetting(mod); });
 			}
 
-			this._editorBox.addEventListener("mousedown", this._refocusStage);
+			this._patternArea.addEventListener("mousedown", this._refocusStage);
 			this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
@@ -894,11 +883,16 @@ namespace beepbox {
 			});
 
 			if (isMobile) {
-				const autoPlayOption: HTMLOptionElement = <HTMLOptionElement>this._optionsMenu.children[1]
+				const autoPlayOption: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.querySelector("[value=autoPlay]");
 				autoPlayOption.disabled = true;
 				autoPlayOption.setAttribute("hidden", "");
 			}
-
+			
+			if (window.screen.availWidth < 700 || window.screen.availHeight < 700) {
+				const fullScreenOption: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.querySelector("[value=fullScreen]");
+				fullScreenOption.disabled = true;
+				fullScreenOption.setAttribute("hidden", "");
+			}
 		}
 
 		private _modSliderUpdate(): void {
@@ -1035,7 +1029,7 @@ namespace beepbox {
 						this.prompt = new ImportPrompt(this._doc);
 						break;
 					case "barCount":
-						this.prompt = new SongDurationPrompt(this._doc, this._trackEditor);
+						this.prompt = new SongDurationPrompt(this._doc);
 						break;
 					case "beatsPerBar":
 						this.prompt = new BeatsPerBarPrompt(this._doc);
@@ -1045,6 +1039,12 @@ namespace beepbox {
 						break;
 					case "channelSettings":
 						this.prompt = new ChannelSettingsPrompt(this._doc);
+						break;
+					case "theme":
+						this.prompt = new ThemePrompt(this._doc);
+						break;
+					case "layout":
+						this.prompt = new LayoutPrompt(this._doc);
 						break;
 					default:
 						this.prompt = new TipPrompt(this._doc, promptName);
@@ -1071,12 +1071,43 @@ namespace beepbox {
 		}
 
 		public whenUpdated = (): void => {
+			this._muteEditor.container.style.display = this._doc.enableChannelMuting ? "" : "none";
 			const trackBounds = this._trackContainer.getBoundingClientRect();
-			this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left) / 32);
-			this._trackEditor.render();
+			this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left) / this._doc.getBarWidth());
 			this._barScrollBar.render();
-			this._muteButtonEditor.render();
-
+			this._muteEditor.render();
+			this._trackEditor.render();
+			
+			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
+			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
+			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
+			
+			if (this._doc.getFullScreen()) {
+				const semitoneHeight: number = this._patternEditorRow.clientHeight / this._doc.windowPitchCount;
+				const targetBeatWidth: number = semitoneHeight * 5;
+				const minBeatWidth: number = this._patternEditorRow.clientWidth / (this._doc.song.beatsPerBar * 3);
+				const maxBeatWidth: number = this._patternEditorRow.clientWidth / (this._doc.song.beatsPerBar + 2);
+				const beatWidth: number = Math.max(minBeatWidth, Math.min(maxBeatWidth, targetBeatWidth));
+				const patternEditorWidth: number = beatWidth * this._doc.song.beatsPerBar;
+				
+				this._patternEditorPrev.container.style.width = patternEditorWidth + "px";
+				this._patternEditor.container.style.width = patternEditorWidth + "px";
+				this._patternEditorNext.container.style.width = patternEditorWidth + "px";
+				this._patternEditorPrev.container.style.flexShrink = "0";
+				this._patternEditor.container.style.flexShrink = "0";
+				this._patternEditorNext.container.style.flexShrink = "0";
+				this._patternEditorPrev.container.style.display = "";
+				this._patternEditorNext.container.style.display = "";
+				this._patternEditorPrev.render();
+				this._patternEditorNext.render();
+			} else {
+				this._patternEditor.container.style.width = "";
+				this._patternEditor.container.style.flexShrink = "";
+				this._patternEditorPrev.container.style.display = "none";
+				this._patternEditorNext.container.style.display = "none";
+			}
+			this._patternEditor.render();
+			
 			const optionCommands: ReadonlyArray<string> = [
 				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
 				(this._doc.autoFollow ? "✓ " : "") + "Auto Follow Track",
@@ -1085,7 +1116,9 @@ namespace beepbox {
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
 				(this._doc.alwaysFineNoteVol ? "✓ " : "") + "Always Fine Note Vol.",
-				(this._doc.wideMode ? "✓ " : "") + "Wide Mode"
+				(this._doc.enableChannelMuting ? "✓ " : "") + "Enable Channel Muting",
+				"Set Layout...",
+				"Set Theme...",
 				//(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
 			]
 			for (let i: number = 0; i < optionCommands.length; i++) {
@@ -1095,6 +1128,8 @@ namespace beepbox {
 
 			const channel: Channel = this._doc.song.channels[this._doc.channel];
 			const pattern: Pattern | null = this._doc.getCurrentPattern();
+			const instrumentIndex: number = this._doc.getCurrentInstrument();
+			const instrument: Instrument = channel.instruments[instrumentIndex];
 			const wasActive: boolean = this.mainLayer.contains(document.activeElement);
 			const activeElement: Element | null = document.activeElement;
 
@@ -1107,9 +1142,6 @@ namespace beepbox {
 
 			setSelectedValue(this._rhythmSelect, this._doc.song.rhythm);
 
-			const instrumentIndex: number = this._doc.getCurrentInstrument();
-			const instrument: Instrument = channel.instruments[instrumentIndex];
-
 			if (!this._doc.song.getChannelIsMod(this._doc.channel)) {
 
 				this._customInstrumentSettingsGroup.style.display = "";
@@ -1117,9 +1149,10 @@ namespace beepbox {
 				this._detuneSliderRow.style.display = "";
 				this._instrumentVolumeSliderRow.style.display = "";
 				$("#typeSelectRow").css("display", "");
-				this._instrumentCopyButton.style.display = "";
-				this._instrumentPasteButton.style.display = "";
-				$("#instrumentSettingsText").get(0).innerText = "Instrument Settings";
+				this._instrumentSettingsGroup.appendChild(this._instrumentCopyGroup);
+				this._instrumentSettingsGroup.insertBefore(this._instrumentSelectRow, this._instrumentSettingsGroup.firstChild);
+				this._instrumentSettingsGroup.insertBefore(this._instrumentSettingsTextRow, this._instrumentSettingsGroup.firstChild);
+				this._instrumentSettingsTextRow.textContent = "Instrument Settings";
 
 				this._modulatorGroup.style.display = "none";
 
@@ -1155,18 +1188,17 @@ namespace beepbox {
 				}
 
 				if (patternUsed) {
-					this._usedPatternIndicator.style.setProperty("fill", "#9c64f7");
+					this._usedPatternIndicator.style.setProperty("fill", ColorConfig.indicatorPrimary);
 				}
 				else {
-					this._usedPatternIndicator.style.setProperty("fill", "#393e4f");
+					this._usedPatternIndicator.style.setProperty("fill", ColorConfig.indicatorSecondary);
 				}
 				if (instrumentUsed) {
-					this._usedInstrumentIndicator.style.setProperty("fill", "#9c64f7");
+					this._usedInstrumentIndicator.style.setProperty("fill", ColorConfig.indicatorPrimary);
 				}
 				else {
-					this._usedInstrumentIndicator.style.setProperty("fill", "#393e4f");
+					this._usedInstrumentIndicator.style.setProperty("fill", ColorConfig.indicatorSecondary);
 				}
-
 
 				if (this._doc.song.getChannelIsNoise(this._doc.channel)) {
 					this._pitchedPresetSelect.style.display = "none";
@@ -1247,35 +1279,6 @@ namespace beepbox {
 						this._customWaveDraw.style.display = "none";
 					}
 
-					if (instrument.type == InstrumentType.fm) {
-						this._chipWaveSelectRow.style.display = "none";
-						this._algorithmSelectRow.style.display = "";
-						this._phaseModGroup.style.display = "";
-						this._feedbackRow1.style.display = "";
-						this._feedbackRow2.style.display = "";
-						setSelectedValue(this._algorithmSelect, instrument.algorithm);
-						setSelectedValue(this._feedbackTypeSelect, instrument.feedbackType);
-						this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
-						setSelectedValue(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
-						this._feedbackEnvelopeSelect.parentElement!.style.color = (instrument.feedbackAmplitude > 0) ? "" : "#999";
-						for (let i: number = 0; i < Config.operatorCount; i++) {
-							const isCarrier: boolean = (i < Config.algorithms[instrument.algorithm].carrierCount);
-							this._operatorRows[i].style.color = isCarrier ? "white" : "";
-							setSelectedValue(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
-							this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
-							setSelectedValue(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
-							const operatorName: string = (isCarrier ? "Voice " : "Modulator ") + (i + 1);
-							this._operatorFrequencySelects[i].title = operatorName + " Frequency";
-							this._operatorAmplitudeSliders[i].input.title = operatorName + (isCarrier ? " Volume" : " Amplitude");
-							this._operatorEnvelopeSelects[i].title = operatorName + " Envelope";
-							this._operatorEnvelopeSelects[i].parentElement!.style.color = (instrument.operators[i].amplitude > 0) ? "" : "#999";
-						}
-					} else {
-						this._algorithmSelectRow.style.display = "none";
-						this._phaseModGroup.style.display = "none";
-						this._feedbackRow1.style.display = "none";
-						this._feedbackRow2.style.display = "none";
-					}
 					if (instrument.type == InstrumentType.pwm) {
 						this._chipWaveSelectRow.style.display = "none";
 						this._pulseEnvelopeRow.style.display = "";
@@ -1286,6 +1289,37 @@ namespace beepbox {
 					} else {
 						this._pulseEnvelopeRow.style.display = "none";
 						this._pulseWidthRow.style.display = "none";
+					}
+
+
+					if (instrument.type == InstrumentType.fm) {
+						this._algorithmSelectRow.style.display = "";
+						this._phaseModGroup.style.display = "";
+						this._feedbackRow1.style.display = "";
+						this._feedbackRow2.style.display = "";
+						setSelectedValue(this._algorithmSelect, instrument.algorithm);
+						setSelectedValue(this._feedbackTypeSelect, instrument.feedbackType);
+						this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
+						setSelectedValue(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
+						this._feedbackEnvelopeSelect.parentElement!.style.color = (instrument.feedbackAmplitude > 0) ? "" : ColorConfig.secondaryText;
+						for (let i: number = 0; i < Config.operatorCount; i++) {
+							const isCarrier: boolean = (i < Config.algorithms[instrument.algorithm].carrierCount);
+							this._operatorRows[i].style.color = isCarrier ? ColorConfig.primaryText : "";
+							setSelectedValue(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
+							this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
+							setSelectedValue(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
+							const operatorName: string = (isCarrier ? "Voice " : "Modulator ") + (i + 1);
+							this._operatorFrequencySelects[i].title = operatorName + " Frequency";
+							this._operatorAmplitudeSliders[i].input.title = operatorName + (isCarrier ? " Volume" : " Amplitude");
+							this._operatorEnvelopeSelects[i].title = operatorName + " Envelope";
+							this._operatorEnvelopeSelects[i].parentElement!.style.color = (instrument.operators[i].amplitude > 0) ? "" : ColorConfig.secondaryText;
+						}
+					}
+					else {
+						this._algorithmSelectRow.style.display = "none";
+						this._phaseModGroup.style.display = "none";
+						this._feedbackRow1.style.display = "none";
+						this._feedbackRow2.style.display = "none";
 					}
 
 					if (instrument.type == InstrumentType.noise) {
@@ -1342,7 +1376,7 @@ namespace beepbox {
 					}
 				}
 
-				this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+				this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote;
 
 				this._filterCutoffSlider.updateValue(instrument.filterCutoff);
 				this._filterResonanceSlider.updateValue(instrument.filterResonance);
@@ -1352,13 +1386,11 @@ namespace beepbox {
 				setSelectedValue(this._vibratoSelect, instrument.vibrato);
 				setSelectedValue(this._intervalSelect, instrument.interval);
 				setSelectedValue(this._chordSelect, instrument.chord);
-				this._panSlider.updateValue(instrument.pan);
-				this._detuneSlider.updateValue(instrument.detune);
-				this._customWaveDrawCanvas.redrawCanvas();
 				this._panSliderInputBox.value = instrument.pan + "";
 				this._detuneSliderInputBox.value = instrument.detune + "";
 				this._instrumentVolumeSlider.updateValue(instrument.volume);
 				this._instrumentVolumeSliderInputBox.value = "" + (instrument.volume);
+				this._customWaveDrawCanvas.redrawCanvas();
 
 			}
 			// Options for mod channel
@@ -1379,7 +1411,6 @@ namespace beepbox {
 						}
 					}
 				}
-
 				for (let i: number = 0; i < this._doc.song.barCount; i++) {
 					// Check for this exact instrument in another place, but only count it if it's not within the selection
 					if (channel.bars[i] != 0 && this._doc.song.getPatternInstrument(this._doc.channel, i) == instrumentIndex && i != this._doc.bar &&
@@ -1392,26 +1423,27 @@ namespace beepbox {
 				}
 
 				if (patternUsed) {
-					this._usedPatternIndicator.style.setProperty("fill", "#9c64f7");
+					this._usedPatternIndicator.style.setProperty("fill", ColorConfig.indicatorPrimary);
 				}
 				else {
-					this._usedPatternIndicator.style.setProperty("fill", "#393e4f");
+					this._usedPatternIndicator.style.setProperty("fill", ColorConfig.indicatorSecondary);
 				}
 
 				if (instrumentUsed) {
-					this._usedInstrumentIndicator.style.setProperty("fill", "#9c64f7");
+					this._usedInstrumentIndicator.style.setProperty("fill", ColorConfig.indicatorPrimary);
 				}
 				else {
-					this._usedInstrumentIndicator.style.setProperty("fill", "#393e4f");
+					this._usedInstrumentIndicator.style.setProperty("fill", ColorConfig.indicatorSecondary);
 				}
 
 				this._pitchedPresetSelect.style.display = "none";
 				this._drumPresetSelect.style.display = "none";
 				$("#pitchPresetSelect").parent().hide();
 				$("#drumPresetSelect").parent().hide();
-				this._instrumentCopyButton.style.display = "";
-				this._instrumentPasteButton.style.display = "";
-				$("#instrumentSettingsText").get(0).innerText = "Modulator Settings";
+				this._modulatorGroup.appendChild(this._instrumentCopyGroup);
+				this._modulatorGroup.insertBefore(this._instrumentSelectRow, this._modulatorGroup.firstChild);
+				this._modulatorGroup.insertBefore(this._instrumentSettingsTextRow, this._modulatorGroup.firstChild);
+				this._instrumentSettingsTextRow.textContent = "Modulator Settings";
 
 				this._chipNoiseSelectRow.style.display = "none";
 				this._chipWaveSelectRow.style.display = "none";
@@ -1435,7 +1467,7 @@ namespace beepbox {
 				this._detuneSliderRow.style.display = "none";
 
 				this._modulatorGroup.style.display = "";
-				this._modulatorGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+				this._modulatorGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote;
 
 				for (let mod: number = 0; mod < Config.modCount; mod++) {
 
@@ -1704,7 +1736,7 @@ namespace beepbox {
 				this._instrumentVolumeSliderRow.style.display = "none";
 				$("#typeSelectRow").css("display", "none");
 
-				this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).noteBright;
+				this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote;
 
 				// Force piano to re-show, if channel is modulator
 				if (this._doc.channel >= this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
@@ -1724,52 +1756,21 @@ namespace beepbox {
 				buildOptions(this._instrumentSelect, instrumentList);
 			}
 
+			this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote;
+			
+			this._filterCutoffSlider.updateValue(instrument.filterCutoff);
+			this._filterResonanceSlider.updateValue(instrument.filterResonance);
+			setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
+			setSelectedValue(this._transitionSelect, instrument.transition);
+			setSelectedValue(this._effectsSelect, instrument.effects);
+			setSelectedValue(this._vibratoSelect, instrument.vibrato);
+			setSelectedValue(this._intervalSelect, instrument.interval);
+			setSelectedValue(this._chordSelect, instrument.chord);
+			this._instrumentVolumeSlider.updateValue(instrument.volume);
+			this._panSlider.updateValue(instrument.pan);
 			setSelectedValue(this._instrumentSelect, instrumentIndex);
-
-			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
-			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
-			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
-
-			let patternWidth: number = 512;
-			if (this._doc.showLetters) patternWidth -= 32;
-			if (this._doc.showScrollBar) patternWidth -= 20;
-			this._patternEditor.container.style.width = String(patternWidth) + "px";
-
-			this._volumeSlider.input.value = String(this._doc.volume);
-
-			if (this._doc.wideMode != this._wideMode) {
-
-				if (this._wideMode == false && window.innerWidth > 700) {
-					$("#editor-widget-column").css("width", "29em");
-					this._songTitleInputBox.input.style.setProperty("width", "28em");
-					$("#playback-controls").css("width", "25em");
-					$("#playback-controls").css("align-self", "center");
-					$("#editor-settings").css("flex-direction", "row-reverse");
-					$("#editor-song-settings").css("width", "14em");
-					$("#editor-song-settings").css("padding-left", "0.8em");
-					$("#editor-instrument-settings").css("width", "14em");
-					$("#track-and-pattern-container").css("display", "flex");
-					$("#track-and-pattern-container").css("flex-direction", "row-reverse");
-					$("#editor-box").css("padding-left", "0.8em");
-					$("#track-and-scrollbar-container").css("display", "flex");
-					$("#track-and-scrollbar-container").css("flex-direction", "column");
-					document.body.style.setProperty("display", "flex");
-					document.body.style.setProperty("flex-direction", "column");
-					$("#beepboxEditorContainer").css("display", "table");
-					$("#beepboxEditorContainer").css("align-self", "center");
-
-				}
-				else {
-					// Currently this setting change is implemented with a document reload
-					// and the default settings are used for the non-wide mode option.
-					// If this ever changes, just make this portion undo any settings made
-					// by the above.
-				}
-
-				// Even if set failed due to bad innerWidth, wait for a reload before trying again
-				this._wideMode = this._doc.wideMode;
-
-			}
+			
+			this._volumeSlider.updateValue(this._doc.volume);
 
 			// If an interface element was selected, but becomes invisible (e.g. an instrument
 			// select menu) just select the editor container so keyboard commands still work.
@@ -1947,79 +1948,20 @@ namespace beepbox {
 					event.preventDefault();
 					break;
 				case 77: // m
-					if (event.shiftKey) {
-						var muteCondition = true;
-
-						for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
-							if (this._muteButtonEditor._muteButtons[i].getMuteState() == true)
-								muteCondition = false;
-						}
-
-						// If any channel is muted, unmute all
-						if (muteCondition == false) {
-							for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
-								if (this._muteButtonEditor._muteButtons[i].getMuteState() == true)
-									this._muteButtonEditor._muteButtons[i].toggleMute();
-
-								this._doc.song.channels[i].muted = this._muteButtonEditor._muteButtons[i].getMuteState();
-							}
-						}
-						// Else, mute all
-						else {
-							for (let i: number = 0; i < this._doc.song.getChannelCount(); i++) {
-								if (this._muteButtonEditor._muteButtons[i].getMuteState() == false)
-									this._muteButtonEditor._muteButtons[i].toggleMute();
-
-								this._doc.song.channels[i].muted = this._muteButtonEditor._muteButtons[i].getMuteState();
-							}
-						}
-						event.preventDefault();
-					}
-					else {
-						this._muteButtonEditor._muteButtons[this._doc.channel].toggleMute();
-						this._doc.song.channels[this._doc.channel].muted = this._muteButtonEditor._muteButtons[this._doc.channel].getMuteState();
+					if (this._doc.enableChannelMuting) {
+						this._trackEditor.muteChannels(event.shiftKey);
 						event.preventDefault();
 					}
 					break;
 				case 83: // s
-
-					var muteCondition = false;
-
-					let channelLimit: number = this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount;
-					if (event.shiftKey) {
-						channelLimit = this._doc.song.getChannelCount();
-					}
-
-					for (let i: number = 0; i < channelLimit; i++) {
-						if (this._muteButtonEditor._muteButtons[i].getMuteState() == (i == this._doc.channel))
-							muteCondition = true;
-					}
-
-					// If this channel exactly is solo, unmute all
-					if (muteCondition == false) {
-						for (let i: number = 0; i < channelLimit; i++) {
-							if (this._muteButtonEditor._muteButtons[i].getMuteState() == true)
-								this._muteButtonEditor._muteButtons[i].toggleMute();
-
-							this._doc.song.channels[i].muted = this._muteButtonEditor._muteButtons[i].getMuteState();
+					if (this._doc.enableChannelMuting) {
+						if (event.shiftKey) {
+							this._trackEditor.muteChannels(false);
+						} else {
+							this._trackEditor.soloChannels();
 						}
+						event.preventDefault();
 					}
-					// Else, mute all except current channel
-					else {
-						for (let i: number = 0; i < channelLimit; i++) {
-
-							if (i == this._doc.channel && this._muteButtonEditor._muteButtons[i].getMuteState() == true)
-								this._muteButtonEditor._muteButtons[i].toggleMute();
-							else if (i != this._doc.channel && this._muteButtonEditor._muteButtons[i].getMuteState() == false)
-								this._muteButtonEditor._muteButtons[i].toggleMute();
-
-							this._doc.song.channels[i].muted = this._muteButtonEditor._muteButtons[i].getMuteState();
-
-						}
-
-
-					}
-					event.preventDefault();
 					break;
 				case 86: // v
 					if (event.shiftKey) {
@@ -2123,47 +2065,6 @@ namespace beepbox {
 			this._doc.setVolume(Number(this._volumeSlider.input.value));
 		}
 
-		/*
-		private multiPatternZero(): void {
-
-				var patternArray: (PatternCopy | null)[][] = [];
-				var indexArray: number[][] = [];
-	
-				for (let bar: number = 0; bar <= this._trackEditor._selectionWidth; bar++) {
-	
-						for (let channel: number = 0; channel <= this._trackEditor._selectionHeight; channel++) {
-	
-								const pattern: Pattern | null = this._doc.song.getPattern(channel + this._trackEditor._selectionTop, bar + this._trackEditor._selectionLeft);
-	
-								if (pattern == null) {
-										patternArray[bar][channel] = null;
-								}
-								else {
-										const patternCopy: PatternCopy = {
-										notes: pattern.notes,
-										beatsPerBar: this._doc.song.beatsPerBar,
-									drums: this._doc.song.getChannelIsNoise(channel + this._trackEditor._selectionTop),
-								};
-	
-								patternArray[bar][channel] = patternCopy;
-	
-						}
-	
-						indexArray[bar][channel] = this._doc.song.channels[channel + this._trackEditor._selectionTop].bars[bar + this._trackEditor._selectionLeft];
-				}
-			}
-
-			var storageArray: any[] = [this._trackEditor._selectionWidth, this._trackEditor._selectionHeight, patternArray, indexArray];
-
-			window.localStorage.setItem("patternCopyMulti", JSON.stringify(storageArray));
-			window.localStorage.setItem("patternCopy", "{}");
-
-			this._trackEditor.clearSelection();
-			this._trackEditor.render();
-
-	}
-	*/
-
 		private _copyInstrument(): void {
 			const channel: Channel = this._doc.song.channels[this._doc.channel];
 			const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
@@ -2196,15 +2097,42 @@ namespace beepbox {
 		}
 
 		private _whenSetScale = (): void => {
-			this._doc.record(new ChangeScale(this._doc, this._scaleSelect.selectedIndex));
+			if (isNaN(<number> <unknown> this._scaleSelect.value)) {
+				switch (this._scaleSelect.value) {
+					case "forceScale":
+						this._trackEditor.forceScale();
+						break;
+				}
+				this._doc.notifier.changed();
+			} else {
+				this._doc.record(new ChangeScale(this._doc, this._scaleSelect.selectedIndex));
+			}
 		}
 
 		private _whenSetKey = (): void => {
-			this._doc.record(new ChangeKey(this._doc, Config.keys.length - 1 - this._keySelect.selectedIndex));
+			if (isNaN(<number> <unknown> this._keySelect.value)) {
+				switch (this._keySelect.value) {
+					case "detectKey":
+						this._doc.record(new ChangeDetectKey(this._doc));
+						break;
+				}
+				this._doc.notifier.changed();
+			} else {
+				this._doc.record(new ChangeKey(this._doc, Config.keys.length - 1 - this._keySelect.selectedIndex));
+			}
 		}
 
 		private _whenSetRhythm = (): void => {
-			this._doc.record(new ChangeRhythm(this._doc, this._rhythmSelect.selectedIndex));
+			if (isNaN(<number> <unknown> this._rhythmSelect.value)) {
+				switch (this._rhythmSelect.value) {
+					case "forceRhythm":
+						this._trackEditor.forceRhythm();
+						break;
+				}
+				this._doc.notifier.changed();
+			} else {
+				this._doc.record(new ChangeRhythm(this._doc, this._rhythmSelect.selectedIndex));
+			}
 		}
 
 		public _refocus = (): void => {
@@ -2338,6 +2266,7 @@ namespace beepbox {
 			switch (this._fileMenu.value) {
 				case "new":
 					this._doc.goBackToStart();
+					for (const channel of this._doc.song.channels) channel.muted = false;
 					this._doc.record(new ChangeSong(this._doc, ""));
 					break;
 				case "export":
@@ -2400,15 +2329,6 @@ namespace beepbox {
 				case "duplicatePatterns":
 					this._trackEditor.duplicatePatterns();
 					break;
-				case "detectKey":
-					this._doc.record(new ChangeDetectKey(this._doc));
-					break;
-				case "forceScale":
-					this._trackEditor.forceScale();
-					break;
-				case "forceRhythm":
-					this._trackEditor.forceRhythm();
-					break;
 				case "barCount":
 					this._openPrompt("barCount");
 					break;
@@ -2448,17 +2368,16 @@ namespace beepbox {
 				case "alwaysFineNoteVol":
 					this._doc.alwaysFineNoteVol = !this._doc.alwaysFineNoteVol;
 					break;
-				case "wideMode":
-					this._doc.wideMode = !this._doc.wideMode;
-					this._optionsMenu.selectedIndex = 0;
-					this._doc.notifier.changed();
-					this._doc.savePreferences();
-					// Config.scrollableOctaves needs to be reset. Needs a reload for now
-					location.reload();
+				case "enableChannelMuting":
+					this._doc.enableChannelMuting = !this._doc.enableChannelMuting;
+					for (const channel of this._doc.song.channels) channel.muted = false;
 					break;
-				//case "alwaysShowSettings":
-				//this._doc.alwaysShowSettings = !this._doc.alwaysShowSettings;
-				//break;
+				case "fullScreen":
+					this._openPrompt("layout");
+					break;
+				case "colorTheme":
+					this._openPrompt("theme");
+					break;
 			}
 			this._optionsMenu.selectedIndex = 0;
 			this._doc.notifier.changed();

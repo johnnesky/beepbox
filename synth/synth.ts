@@ -1,4 +1,4 @@
-// Copyright (C) 2019 John Nesky, distributed under the MIT license.
+// Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="SynthConfig.ts" />
 /// <reference path="FFT.ts" />
@@ -1957,12 +1957,12 @@ namespace beepbox {
 						channel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						// Set octave properly after note values are calculated, for now clamp it to the max possible window
 						this.channels[channel].octave = clamp(0, Config.maxScrollableOctaves + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						toSetOctaves[channel] = clamp(0, Config.scrollableOctaves + 1, this.channels[channel].octave);
+						toSetOctaves[channel] = clamp(0, Config.maxScrollableOctaves - (+(window.localStorage.getItem("extraOctaves") || "0")) + 1, this.channels[channel].octave);
 					} else {
 						for (channel = 0; channel < this.getChannelCount(); channel++) {
 							// Set octave properly after note values are calculated, for now clamp it to the max possible window
 							this.channels[channel].octave = clamp(0, Config.maxScrollableOctaves + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-							toSetOctaves[channel] = clamp(0, Config.scrollableOctaves + 1, this.channels[channel].octave);
+							toSetOctaves[channel] = clamp(0, Config.maxScrollableOctaves - (+(window.localStorage.getItem("extraOctaves") || "0")) + 1, this.channels[channel].octave);
 						}
 					}
 				} else if (command == SongTagCode.startInstrument) {
@@ -2720,7 +2720,7 @@ namespace beepbox {
 					}
 
 					if (channelObject["octaveScrollBar"] != undefined) {
-						channel.octave = clamp(0, Config.scrollableOctaves + 1, channelObject["octaveScrollBar"] | 0);
+						channel.octave = clamp(0, Config.maxScrollableOctaves - (+(window.localStorage.getItem("extraOctaves") || "0")) + 1, channelObject["octaveScrollBar"] | 0);
 					}
 
 					for (let i: number = channel.instruments.length; i < this.instrumentsPerChannel; i++) {
@@ -2859,6 +2859,7 @@ namespace beepbox {
 		}
 
 		public getPattern(channel: number, bar: number): Pattern | null {
+			if (bar < 0 || bar >= this.barCount) return null;
 			const patternIndex: number = this.channels[channel].bars[bar];
 			if (patternIndex == 0) return null;
 			return this.channels[channel].patterns[patternIndex - 1];
@@ -3997,7 +3998,7 @@ namespace beepbox {
 				*/
 			}
 		}
-
+		
 		public freeAllTones(): void {
 			while (this.liveInputTones.count() > 0) {
 				this.freeTone(this.liveInputTones.popBack());
@@ -4029,7 +4030,7 @@ namespace beepbox {
 			}
 			*/
 		}
-
+		
 		private determineLiveInputTones(song: Song): void {
 			if (this.liveInputPressed) {
 				// TODO: Support multiple live pitches correctly. Distinguish between arpeggio and harmony behavior like with song notes.
@@ -4066,7 +4067,7 @@ namespace beepbox {
 			const instrument: Instrument = song.channels[channel].instruments[song.getPatternInstrument(channel, this.bar)];
 			const pattern: Pattern | null = song.getPattern(channel, this.bar);
 			const time: number = this.part + this.beat * Config.partsPerBeat;
-
+			
 			if (this.song != null && song.getChannelIsMod(channel)) {
 				// Offset channel (first mod channel is 0 index in mod tone array)
 				let modChannelIdx = channel - (song.pitchChannelCount + song.noiseChannelCount);
@@ -4127,7 +4128,7 @@ namespace beepbox {
 				let prevNote: Note | null = null;
 				let nextNote: Note | null = null;
 
-				if (pattern != null) {
+				if (pattern != null && !song.channels[channel].muted) {
 					for (let i: number = 0; i < pattern.notes.length; i++) {
 						if (pattern.notes[i].end <= time) {
 							prevNote = pattern.notes[i];
@@ -4157,7 +4158,7 @@ namespace beepbox {
 				}
 			}
 		}
-
+		
 		private syncTones(channel: number, toneList: Deque<Tone>, instrument: Instrument, pitches: number[], note: Note, prevNote: Note | null, nextNote: Note | null, currentPart: number): void {
 			let toneCount: number = 0;
 			if (instrument.getChord().arpeggiates) {
@@ -4240,7 +4241,7 @@ namespace beepbox {
 				}
 			}
 		}
-
+		
 		private playTone(song: Song, stereoBufferIndex: number, stereoBufferLength: number, channel: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
 			Synth.computeTone(this, song, channel, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
 			let synthBuffer: Float32Array;
