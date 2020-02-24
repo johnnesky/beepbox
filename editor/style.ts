@@ -919,7 +919,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	justify-content: space-between;
 }
 
-.beepboxEditor .selectRow > span:first-child {
+.beepboxEditor .tip {
 	color: ${ColorConfig.secondaryText};
 }
 

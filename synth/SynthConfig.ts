@@ -61,6 +61,7 @@ namespace beepbox {
 
 	export interface Scale extends BeepBoxOption {
 		readonly flags: ReadonlyArray<boolean>;
+		readonly realName: string;
 	}
 
 	export interface Key extends BeepBoxOption {
@@ -149,27 +150,30 @@ namespace beepbox {
 
 		public static readonly versionDisplayName: string = "JummBox 2.0";
 		public static readonly scales: DictionaryArray<Scale> = toNameMap([
+
 														              //   C     Db      D     Eb      E      F     F#      G     Ab      A     Bb      B      C
-			{ name: "Free", flags:              [ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true] }, // Free
-			{ name: "Major", flags:             [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true] }, // Major
-			{ name: "Minor", flags:             [ true, false,  true,  true, false,  true, false,  true,  true, false,  true, false] }, // Minor
-			{ name: "Mixolydian", flags:        [ true, false,  true, false,  true,  true, false,  true, false,  true,  true, false] }, // Mixolydian
-			{ name: "Lydian", flags:            [ true, false,  true, false,  true, false,  true,  true, false,  true, false,  true] }, // Lydian
-			{ name: "Dorian", flags:            [ true, false,  true,  true, false,  true, false,  true, false,  true,  true, false] }, // Dorian
-			{ name: "Phrygian", flags:          [ true,  true, false,  true, false,  true, false,  true,  true, false,  true, false] }, // Phrygian
-			{ name: "Locrian", flags:           [ true,  true, false,  true, false,  true,  true, false,  true, false,  true, false] }, // Locrian
-			{ name: "Lydian Dominant", flags:   [ true, false,  true, false,  true, false,  true,  true, false,  true,  true, false] }, // Lydian Dominant
-			{ name: "Phrygian Dominant", flags: [ true,  true, false, false,  true,  true, false,  true,  true, false,  true, false] }, // Phrygian Dominant
-			{ name: "Harmonic Major", flags:    [ true, false,  true, false,  true,  true, false,  true,  true, false, false,  true] }, // Harmonic Major
-			{ name: "Harmonic Minor", flags:    [ true, false,  true,  true, false,  true, false,  true,  true, false, false,  true] }, // Harmonic Minor
-			{ name: "Melodic Minor", flags:     [ true, false,  true,  true, false,  true, false,  true, false,  true, false,  true] }, // Melodic Minor
-			{ name: "Blues", flags:             [ true, false, false,  true, false,  true,  true,  true, false, false,  true, false] }, // Blues
-			{ name: "Altered", flags:           [ true,  true, false,  true,  true, false,  true, false,  true, false,  true, false] }, // Altered
-			{ name: "Major Pentatonic", flags:  [ true, false,  true, false,  true, false, false,  true, false,  true, false, false] }, // Major Pentatonic
-			{ name: "Minor Pentatonic", flags:  [ true, false, false,  true, false,  true, false,  true, false, false,  true, false] }, // Minor Pentatonic
-			{ name: "Whole Tone", flags:        [ true, false,  true, false,  true, false,  true, false,  true, false,  true, false] }, // Whole Tone
-			{ name: "Octatonic", flags:         [ true, false,  true,  true, false,  true,  true, false,  true,  true, false,  true] }, // Octatonic
-			{ name: "Hexatonic", flags:         [ true, false, false,  true,  true, false, false,  true,  true, false, false,  true] }, // Hexatonic
+			{ name: "Free", realName: "chromatic",  flags:              [ true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true] }, // Free
+			{ name: "Major", realName: "ionian",  flags:             [ true, false,  true, false,  true,  true, false,  true, false,  true, false,  true] }, // Major
+			{ name: "Minor", realName: "aeolian", flags:             [ true, false,  true,  true, false,  true, false,  true,  true, false,  true, false] }, // Minor
+			{ name: "Mixolydian", realName: "mixolydian", flags:        [ true, false,  true, false,  true,  true, false,  true, false,  true,  true, false] }, // Mixolydian
+			{ name: "Lydian", realName: "lydian", flags:            [ true, false,  true, false,  true, false,  true,  true, false,  true, false,  true] }, // Lydian
+			{ name: "Dorian", realName: "dorian", flags:            [ true, false,  true,  true, false,  true, false,  true, false,  true,  true, false] }, // Dorian
+			{ name: "Phrygian", realName: "phrygian", flags:          [ true,  true, false,  true, false,  true, false,  true,  true, false,  true, false] }, // Phrygian
+			{ name: "Locrian", realName: "locrian",  flags:           [ true,  true, false,  true, false,  true,  true, false,  true, false,  true, false] }, // Locrian
+			{ name: "Lydian Dominant", realName: "lydian dominant", flags:   [ true, false,  true, false,  true, false,  true,  true, false,  true,  true, false] }, // Lydian Dominant
+			{ name: "Phrygian Dominant", realName: "phrygian dominant",  flags: [ true,  true, false, false,  true,  true, false,  true,  true, false,  true, false] }, // Phrygian Dominant
+			{ name: "Harmonic Major", realName: "harmonic major",  flags:    [ true, false,  true, false,  true,  true, false,  true,  true, false, false,  true] }, // Harmonic Major
+			{ name: "Harmonic Minor", realName: "harmonic minor", flags:    [ true, false,  true,  true, false,  true, false,  true,  true, false, false,  true] }, // Harmonic Minor
+			{ name: "Melodic Minor", realName: "melodic minor", flags:     [ true, false,  true,  true, false,  true, false,  true, false,  true, false,  true] }, // Melodic Minor
+			{ name: "Blues", realName: "blues", flags:             [ true, false, false,  true, false,  true,  true,  true, false, false,  true, false] }, // Blues
+			{ name: "Altered", realName: "altered", flags:           [ true,  true, false,  true,  true, false,  true, false,  true, false,  true, false] }, // Altered
+			{ name: "Major Pentatonic", realName: "major pentatonic", flags:  [ true, false,  true, false,  true, false, false,  true, false,  true, false, false] }, // Major Pentatonic
+			{ name: "Minor Pentatonic", realName: "minor pentatonic", flags:  [ true, false, false,  true, false,  true, false,  true, false, false,  true, false] }, // Minor Pentatonic
+			{ name: "Whole Tone", realName: "whole tone", flags:        [ true, false,  true, false,  true, false,  true, false,  true, false,  true, false] }, // Whole Tone
+			{ name: "Octatonic", realName: "octatonic", flags:         [ true, false,  true,  true, false,  true,  true, false,  true,  true, false,  true] }, // Octatonic
+			{ name: "Hexatonic", realName: "hexatonic", flags:         [ true, false, false,  true,  true, false, false,  true,  true, false, false,  true] }, // Hexatonic
+
+
 		]);
 		public static readonly keys: DictionaryArray<Key> = toNameMap([
 			{ name: "C", isWhiteKey: true, basePitch: 12 }, // C0 has index 12 on the MIDI scale. C7 is 96, and C9 is 120. C10 is barely in the audible range.

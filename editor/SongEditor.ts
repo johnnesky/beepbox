@@ -1134,6 +1134,7 @@ namespace beepbox {
 			const activeElement: Element | null = document.activeElement;
 
 			setSelectedValue(this._scaleSelect, this._doc.song.scale);
+			this._scaleSelect.title = Config.scales[this._doc.song.scale].realName;
 			setSelectedValue(this._keySelect, Config.keys.length - 1 - this._doc.song.key);
 			this._tempoSlider.updateValue(Math.max(0, Math.round(this._doc.song.tempo)));
 			this._tempoStepper.value = Math.round(this._doc.song.tempo).toString();

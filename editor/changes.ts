@@ -862,7 +862,7 @@ namespace beepbox {
 			}
 			doc.song.barCount = newLength;
 
-			doc.bar = start;
+			doc.bar += count;
 			doc.barScrollPos = Math.min(newLength - doc.trackVisibleBars, doc.barScrollPos + count);
 			if (doc.song.loopStart >= start) {
 				doc.song.loopStart += count;
@@ -885,7 +885,8 @@ namespace beepbox {
 			}
 			doc.song.barCount = Math.max(1, doc.song.barCount - count);
 
-			doc.bar = Math.max(0, start - count);
+			doc.bar = Math.max(0, doc.bar - count);
+			
 			doc.barScrollPos = Math.max(0, doc.barScrollPos - count);
 			if (doc.song.loopStart >= start) {
 				doc.song.loopStart = Math.max(0, doc.song.loopStart - count);

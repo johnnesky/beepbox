@@ -105,7 +105,7 @@ namespace beepbox {
 					--noise4-primary-channel:   #AF82D2;
 					--noise4-secondary-note:    #9E71C1;
 					--noise4-primary-note:      #D4C1EA;
-          --mod1-secondary-channel:   #339955;
+          			--mod1-secondary-channel:   #339955;
 					--mod1-primary-channel:     #77fc55;
 					--mod1-secondary-note:      #77ff8a;
 					--mod1-primary-note:        #cdffee;
@@ -218,7 +218,7 @@ namespace beepbox {
 					--noise4-primary-channel:   #AF82D2;
 					--noise4-secondary-note:    #9E71C1;
 					--noise4-primary-note:      #D4C1EA;
-          --mod1-secondary-channel:   #339955;
+          			--mod1-secondary-channel:   #339955;
 					--mod1-primary-channel:     #77fc55;
 					--mod1-secondary-note:      #77ff8a;
 					--mod1-primary-note:        #cdffee;
@@ -882,6 +882,11 @@ namespace beepbox {
 
 		public static setTheme(name: string): void {
 			this._styleElement.textContent = this.themes[name];
+			const themeColor = <HTMLMetaElement> document.querySelector("meta[name='theme-color']");
+			if (themeColor != null) {
+				themeColor.setAttribute("content", getComputedStyle(document.documentElement).getPropertyValue('--ui-widget-background'));
+			}
+			
 			this.resetColors();
 		}
 

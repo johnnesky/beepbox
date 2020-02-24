@@ -14,8 +14,6 @@ namespace beepbox {
 	//let samplesAccumulated: number = 0;
 	//let samplePerformance: number = 0;
 
-	//let debugString: string = "";
-
 	const enum CharCode {
 		SPACE = 32,
 		HASH = 35,
@@ -211,12 +209,17 @@ namespace beepbox {
 	}
 
 	class BitFieldWriter {
+		private _index: number = 0;
 		private _bits: number[] = [];
-
+		
+		public clear() {
+			this._index = 0;
+		}
+		
 		public write(bitCount: number, value: number): void {
 			bitCount--;
 			while (bitCount >= 0) {
-				this._bits.push((value >>> bitCount) & 1);
+				this._bits[this._index++] = (value >>> bitCount) & 1;
 				bitCount--;
 			}
 		}
@@ -226,14 +229,14 @@ namespace beepbox {
 			value -= minValue;
 			let numBits: number = minBits;
 			while (value >= (1 << numBits)) {
-				this._bits.push(1);
+				this._bits[this._index++] = 1;
 				value -= 1 << numBits;
 				numBits++;
 			}
-			this._bits.push(0);
+			this._bits[this._index++] = 0;
 			while (numBits > 0) {
 				numBits--;
-				this._bits.push((value >>> numBits) & 1);
+				this._bits[this._index++] = (value >>> numBits) & 1;
 			}
 		}
 
@@ -256,19 +259,22 @@ namespace beepbox {
 		}
 
 		public concat(other: BitFieldWriter): void {
-			this._bits = this._bits.concat(other._bits);
+			for (let i: number = 0; i < other._index; i++) {
+				this._bits[this._index++] = other._bits[i];
+			}
 		}
 
 		public encodeBase64(buffer: number[]): number[] {
-			for (let i: number = 0; i < this._bits.length; i += 6) {
-				const value: number = (this._bits[i] << 5) | (this._bits[i + 1] << 4) | (this._bits[i + 2] << 3) | (this._bits[i + 3] << 2) | (this._bits[i + 4] << 1) | this._bits[i + 5];
+
+			for (let i: number = 0; i < this._index; i += 6) {
+				const value: number = (this._bits[i] << 5) | (this._bits[i+1] << 4) | (this._bits[i+2] << 3) | (this._bits[i+3] << 2) | (this._bits[i+4] << 1) | this._bits[i+5];
 				buffer.push(base64IntToCharCode[value]);
 			}
 			return buffer;
 		}
 
 		public lengthBase64(): number {
-			return Math.ceil(this._bits.length / 6);
+			return Math.ceil(this._index / 6);
 		}
 	}
 
@@ -1596,6 +1602,7 @@ namespace beepbox {
 
 			buffer.push(SongTagCode.patterns);
 			bits = new BitFieldWriter();
+			const shapeBits: BitFieldWriter = new BitFieldWriter();
 			let neededInstrumentBits: number = 0;
 			while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
@@ -1660,9 +1667,9 @@ namespace beepbox {
 								if (isModChannel) bits.write(1, 0); // positive offset, only needed for mod channels
 								bits.writePartDuration(note.start - curPart);
 							}
-
-							const shapeBits: BitFieldWriter = new BitFieldWriter();
-
+							
+							shapeBits.clear();
+							
 							// 0: 1 pitch, 10: 2 pitches, 110: 3 pitches, 111: 4 pitches
 							for (let i: number = 1; i < note.pitches.length; i++) shapeBits.write(1, 1);
 							if (note.pitches.length < 4) shapeBits.write(1, 0);
@@ -2318,7 +2325,7 @@ namespace beepbox {
 						bitStringLength += base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					} else {
 						channel = 0;
-						let bitStringLengthLength: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						let bitStringLengthLength: number = Math.min(4, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						while (bitStringLengthLength > 0) {
 							bitStringLength = bitStringLength << 6;
 							bitStringLength += base64CharCodeToInt[compressed.charCodeAt(charIndex++)];

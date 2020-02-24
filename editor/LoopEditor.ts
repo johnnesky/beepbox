@@ -221,6 +221,8 @@ namespace beepbox {
 				this._whenCursorReleased(event);
 				this._updatePreview();
 			}
+
+			this._mouseDown = false;
 		}
 
 		private _whenCursorReleased = (event: Event): void => {
