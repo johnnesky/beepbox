@@ -17,19 +17,20 @@ handlers:
 - url: /synth_example\.html
   static_files: synth_example.html
   upload: synth_example\.html
+  mime_type: text/html; charset=UTF-8
 
 - url: /beepbox_offline\.html
   static_files: beepbox_offline.html
   upload: beepbox_offline\.html
+  mime_type: text/html; charset=UTF-8
   http_headers:
-    Content-Type: text/html
     Content-Disposition: "attachment; filename=beepbox_offline.html"
 
 - url: /2_3/beepbox_offline\.html
   static_files: 2_3/beepbox_offline.html
   upload: 2_3/beepbox_offline\.html
+  mime_type: text/html; charset=UTF-8
   http_headers:
-    Content-Type: text/html
     Content-Disposition: "attachment; filename=beepbox_offline.html"
 
 - url: /manifest\.webmanifest
@@ -49,10 +50,12 @@ handlers:
 - url: /(.*\.js)
   static_files: \1
   upload: (.*\.js)
+  mime_type: application/javascript; charset=utf-8
 
 - url: /
   static_files: index.html
   upload: index\.html
+  mime_type: text/html; charset=UTF-8
   secure: always
   redirect_http_response_code: 301
   http_headers:
@@ -61,5 +64,6 @@ handlers:
 - url: /(.+/)*
   static_files: \1index.html
   upload: (.+/)*index\.html
+  mime_type: text/html; charset=UTF-8
   secure: always
   redirect_http_response_code: 301
