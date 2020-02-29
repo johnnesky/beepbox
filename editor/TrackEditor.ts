@@ -967,8 +967,6 @@ namespace beepbox {
 					}
 					this._resetBoxSelection();
 				}
-			} else {
-				this._mouseDragging = false;
 			}
 		}
 

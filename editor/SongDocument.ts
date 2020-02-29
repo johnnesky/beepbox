@@ -248,7 +248,7 @@ namespace beepbox {
 		}
 		
 		public getMobileLayout(): boolean {
-			return window.innerWidth <= 700;
+			return (this.fullScreen == "widefullscreen" ) ? window.innerWidth <= 1000 : window.innerWidth <= 700;
 		}
 		
 		public getBarWidth(): number {

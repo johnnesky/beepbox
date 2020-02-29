@@ -3259,13 +3259,13 @@ namespace beepbox {
 			}
 			else {
 				// No tempo or next bar mods... phew! Just calculate normally.
-				return this.getSamplesPerBar() * this.getTotalBars(enableIntro, enableOutro);
+				return this.getSamplesPerBar() * this.getTotalBars(enableIntro, enableOutro, loop);
 			}
 		}
 
-		public getTotalBars(enableIntro: boolean, enableOutro: boolean): number {
+		public getTotalBars(enableIntro: boolean, enableOutro: boolean, useLoopCount: number = this.loopRepeatCount): number {
 			if (this.song == null) throw new Error();
-			let bars: number = this.song.loopLength * (this.loopRepeatCount + 1);
+			let bars: number = this.song.loopLength * (useLoopCount + 1);
 			if (enableIntro) bars += this.song.loopStart;
 			if (enableOutro) bars += this.song.barCount - (this.song.loopStart + this.song.loopLength);
 			return bars;

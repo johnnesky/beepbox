@@ -1223,7 +1223,10 @@ namespace beepbox {
 					const sampleInstrumentJson: any = sampleInstrument.toJsonObject();
 					for (let j: number = doc.song.instrumentsPerChannel; j < newInstrumentsPerChannel; j++) {
 						const newInstrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channel), doc.song.getChannelIsMod(channel));
-						if (sampleInstrument.type == InstrumentType.drumset) {
+						if (sampleInstrument.type == InstrumentType.mod) {
+							// Doesn't really make sense to have two mod instruments with the same settings. Better to zero them out.
+							newInstrument.setTypeAndReset(InstrumentType.mod, false, true);
+						} else if (sampleInstrument.type == InstrumentType.drumset) {
 							// Drumsets are kinda expensive in terms of url length, so don't just copy them willy-nilly.
 							newInstrument.setTypeAndReset(InstrumentType.spectrum, true, false);
 						} else {

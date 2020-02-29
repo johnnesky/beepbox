@@ -9,7 +9,7 @@ namespace beepbox {
 
 		private static readonly _wideFullScreenLayout: string = `
 			/* wide full screen (jummbox) */
-			@media (min-width: 701px) {
+			@media (min-width: 1001px) {
 				#beepboxEditorContainer {
 					max-width: initial;
 					height: 100vh;
@@ -127,7 +127,7 @@ namespace beepbox {
 					heiht: 2em;
 				}
 				.beepboxEditor .trackAndMuteContainer {
-					max-height: 476px;
+					max-height: 446px;
 				}
 
 				.beepboxEditor .trackContainer {

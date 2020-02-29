@@ -242,13 +242,13 @@ namespace beepbox {
 						this._svgModDragValueLabel.setAttribute("fill", "#666688");
 						this._svgModDragValueLabel.setAttribute("visibility", "visible");
 
-						let presValue: number = this._doc.song.modValueToReal(this._cursor.curNote.pins[pinIdx].volume, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].modSettings[Config.modCount - 1 - this._cursor.curNote.pitches[0]]);
+						let presValue: number = this._doc.song.modValueToReal(this._cursor.curNote.pins[pinIdx].volume, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument(this._barOffset)].modSettings[Config.modCount - 1 - this._cursor.curNote.pitches[0]]);
 
 						// This is me being too lazy to fiddle with the css to get it to align center.
 						let xOffset: number = (+(presValue >= 10.0)) + (+(presValue >= 100.0)) + (+(presValue < 0.0)) + (+(presValue <= -10.0));
 
 						this._svgModDragValueLabel.setAttribute("x", "" + prettyNumber(Math.max(Math.min(this._editorWidth - 8 - xOffset * 8, this._partWidth * (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time) - 4 - xOffset * 4), 2)));
-						this._svgModDragValueLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(this._cursor.curNote.pitches[0] - this._octaveOffset) - 10 - ( this._pitchHeight - this._pitchBorder ) / 2));
+						this._svgModDragValueLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(this._cursor.curNote.pitches[0] - this._octaveOffset) - 10 - (this._pitchHeight - this._pitchBorder) / 2));
 						this._svgModDragValueLabel.textContent = "" + presValue;
 
 					}
@@ -260,7 +260,9 @@ namespace beepbox {
 					this._svgModDragValueLabel.setAttribute("visibility", "hidden");
 				}
 			}
-
+			else {
+				this._svgModDragValueLabel.setAttribute("visibility", "hidden");
+			}
 
 			let mousePitch: number = this._findMousePitch(this._mouseY);
 
@@ -394,7 +396,7 @@ namespace beepbox {
 					}
 
 					// Scale volume of copied pin to cap for this row
-					let maxHeight: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch);
+					let maxHeight: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), this._cursor.pitch);
 					let maxFoundHeight: number = 0;
 					for (const pin of this._cursor.pins) {
 						if (pin.volume > maxFoundHeight) {
@@ -700,7 +702,7 @@ namespace beepbox {
 								if (pattern.notes[i].start >= end) break;
 							}
 							const theNote: Note = new Note(this._cursor.pitch, start, end,
-								this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch),
+								this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), this._cursor.pitch),
 								this._doc.song.getChannelIsNoise(this._doc.channel));
 							sequence.append(new ChangeNoteAdded(this._doc, pattern, theNote, i));
 							this._copyPins(theNote);
@@ -761,7 +763,7 @@ namespace beepbox {
 						let nextPin: NotePin = this._cursor.curNote.pins[0];
 						let bendVolume: number = 0;
 						let bendInterval: number = 0;
-						let cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch);
+						let cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), this._cursor.pitch);
 
 						// Dragging gets a bit faster after difference in drag counts is >8.
 						let dragFactorSlow: number = 25.0 / Math.pow(cap, 0.4);
@@ -860,7 +862,7 @@ namespace beepbox {
 				}
 			} else if (this._mouseDown && continuousState) {
 				if (this._cursor.curNote == null) {
-					let cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch);
+					let cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), this._cursor.pitch);
 					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, cap, this._doc.song.getChannelIsNoise(this._doc.channel));
 					note.pins = [];
 					for (const oldPin of this._cursor.pins) {
@@ -916,7 +918,7 @@ namespace beepbox {
 					const radius: number = (this._pitchHeight - this._pitchBorder) / 2;
 					const width: number = 80;
 					const height: number = 60;
-					const cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), this._cursor.pitch);
+					const cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), this._cursor.pitch);
 					//this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 
 					let pathString: string = "";
@@ -973,7 +975,7 @@ namespace beepbox {
 					// Force max height of mod channels to conform to settings.
 					for (const note of this._pattern.notes) {
 						let pitch = note.pitches[0]; // No pitch bend possible in mod channels.
-						let maxHeight: number = this._doc.song.getVolumeCap(true, this._doc.channel, this._doc.getCurrentInstrument(), pitch);
+						let maxHeight: number = this._doc.song.getVolumeCap(true, this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), pitch);
 						let maxFoundHeight: number = 0;
 						for (const pin of note.pins) {
 							if (pin.volume > maxFoundHeight) {
@@ -1034,6 +1036,8 @@ namespace beepbox {
 					this._backgroundModRow.setAttribute("width", "" + (beatWidth - 2));
 					this._backgroundModRow.setAttribute("height", "" + (this._pitchHeight - this._pitchBorder));
 				}
+				
+				
 				
 				for (let j: number = 0; j < Config.pitchesPerOctave; j++) {
 					const rectangle: SVGRectElement = this._backgroundPitchRows[j];
@@ -1118,7 +1122,7 @@ namespace beepbox {
 						this._svgNoteContainer.appendChild(notePath);
 
 						if (note.pitches.length > 1) {
-							const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+							const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument(this._barOffset)];
 							const chord: Chord = instrument.getChord();
 							if (!chord.harmonizes || chord.arpeggiates || chord.strumParts > 0) {
 								let oscillatorLabel: SVGTextElement = SVG.text();
@@ -1141,7 +1145,7 @@ namespace beepbox {
 						this._svgModDragValueLabel.setAttribute("visibility", "visible");
 						this._svgModDragValueLabel.setAttribute("fill", "#FFFFFF");
 
-						let presValue: number = this._doc.song.modValueToReal(this._dragVolume, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].modSettings[Config.modCount - 1 - note.pitches[0]]);
+						let presValue: number = this._doc.song.modValueToReal(this._dragVolume, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument(this._barOffset)].modSettings[Config.modCount - 1 - note.pitches[0]]);
 
 						// This is me being too lazy to fiddle with the css to get it to align center.
 						let xOffset: number = (+(presValue >= 10.0)) + (+(presValue >= 100.0)) + (+(presValue < 0.0)) + (+(presValue <= -10.0));
@@ -1161,7 +1165,7 @@ namespace beepbox {
 
 			let nextPin: NotePin = pins[0];
 
-			const cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(), pitch);
+			const cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), pitch);
 
 			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + endOffset) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / cap : 1.0)) + " ";
 

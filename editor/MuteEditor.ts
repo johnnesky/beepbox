@@ -91,7 +91,7 @@ namespace beepbox {
 				}
 			}
 
-			if (this._renderedChannelHeight != channelHeight) {
+			if (this._renderedChannelHeight != channelHeight || this._renderedChannelCount != this._doc.song.getChannelCount()) {
 				for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
 					this._buttons[y].style.marginTop = ((channelHeight - 20) / 2) + "px";
 					this._buttons[y].style.marginBottom = ((channelHeight - 20) / 2) + "px";

@@ -322,13 +322,15 @@ namespace beepbox {
 				let useSecondColor: string = ColorConfig.modLabelSecondaryText;
 				let channelVal: number;
 				let instrumentVal: number;
-				let usingMod: boolean = true;
 				for (let j: number = 0; j < Config.modCount; j++) {
+
+					let usingSecondRow: boolean = true;
+					let usingMod: boolean = true;
 
 					switch (instrument.modStatuses[Config.modCount - j - 1]) {
 						case ModStatus.msNone:
 							firstRow = "Mod"
-							secondRow = "Not set";
+							usingSecondRow = false;
 							useSecondColor = ColorConfig.modLabelSecondaryText;
 							usingMod = false;
 							break;
@@ -375,7 +377,7 @@ namespace beepbox {
 					}
 
 					// When unused, show name of mod on second row
-					if (secondRow == "") {
+					if (usingSecondRow) {
 						switch (instrument.modSettings[Config.modCount - j - 1]) {
 							case ModSetting.mstNone:
 								useSecondColor = ColorConfig.modLabelSecondaryText;
@@ -437,7 +439,7 @@ namespace beepbox {
 					firstLabel.style.fill = useFirstColor;
 					firstLabel.textContent = firstRow;
 					secondLabel.style.fill = useSecondColor;
-					secondLabel.textContent = secondRow;
+					secondLabel.textContent = usingSecondRow ? secondRow : "Not set";
 					modCountLabel.textContent = "" + (Config.modCount - j);
 					modCountRect.style.fill = usingMod ? ColorConfig.indicatorPrimary : ColorConfig.modLabelSecondaryText;
 				}
