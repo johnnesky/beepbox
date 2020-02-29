@@ -158,6 +158,7 @@ namespace beepbox {
 			option({selected: true, disabled: true, hidden: false}, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option({value: "autoPlay"}, "Auto Play On Load"),
 			option({value: "autoFollow"}, "Auto Follow Track"),
+			option({value: "enableNotePreview"}, "Preview Added Notes"),
 			option({value: "showLetters"}, "Show Piano Keys"),
 			option({value: "showFifth"}, 'Highlight "Fifth" Notes'),
 			option({value: "showChannels"}, "Show All Channels"),
@@ -597,6 +598,7 @@ namespace beepbox {
 			const optionCommands: ReadonlyArray<string> = [
 				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
 				(this._doc.autoFollow ? "✓ " : "") + "Auto Follow Track",
+				(this._doc.enableNotePreview ? "✓ " : "") + "Preview Added Notes",
 				(this._doc.showLetters ? "✓ " : "") + "Show Piano Keys",
 				(this._doc.showFifth ? "✓ " : "") + 'Highlight "Fifth" Notes',
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
@@ -799,7 +801,7 @@ namespace beepbox {
 			this._setPrompt(this._doc.prompt);
 			
 			if (this._doc.autoFollow && !this._doc.synth.playing) {
-				this._doc.synth.snapToBar(this._doc.bar);
+				this._doc.synth.goToBar(this._doc.bar);
 			}
 		}
 		
@@ -982,6 +984,7 @@ namespace beepbox {
 			if (this._doc.synth.playing) {
 				this._pause();
 			} else {
+				this._doc.synth.snapToBar();
 				this._play();
 			}
 		}
@@ -993,11 +996,11 @@ namespace beepbox {
 		
 		private _pause(): void {
 			this._doc.synth.pause();
+			this._doc.synth.resetEffects();
 			if (this._doc.autoFollow) {
-				this._doc.synth.snapToBar(this._doc.bar);
-			} else {
-				this._doc.synth.snapToBar();
+				this._doc.synth.goToBar(this._doc.bar);
 			}
+			this._doc.synth.snapToBar();
 			this.updatePlayButton();
 		}
 		
@@ -1250,6 +1253,9 @@ namespace beepbox {
 					break;
 				case "autoFollow":
 					this._doc.autoFollow = !this._doc.autoFollow;
+					break;
+				case "enableNotePreview":
+					this._doc.enableNotePreview = !this._doc.enableNotePreview;
 					break;
 				case "showLetters":
 					this._doc.showLetters = !this._doc.showLetters;

@@ -2343,8 +2343,9 @@ namespace beepbox {
 		public samplesPerSecond: number = 44100;
 		
 		public song: Song | null = null;
-		public liveInputPressed: boolean = false;
-		public liveInputPitches: number[] = [0];
+		public liveInputDuration: number = 0;
+		public liveInputStarted: boolean = false;
+		public liveInputPitches: number[] = [];
 		public liveInputChannel: number = 0;
 		public loopRepeatCount: number = -1;
 		public volume: number = 1.0;
@@ -2355,7 +2356,8 @@ namespace beepbox {
 		private part: number = 0;
 		private tick: number = 0;
 		private tickSampleCountdown: number = 0;
-		private paused: boolean = true;
+		private isPlayingSong: boolean = false;
+		private liveInputEndTime: number = 0.0;
 		
 		private readonly tonePool: Deque<Tone> = new Deque<Tone>();
 		private readonly activeTones: Array<Deque<Tone>> = [];
@@ -2387,7 +2389,7 @@ namespace beepbox {
 		private scriptNode: any | null = null;
 		
 		public get playing(): boolean {
-			return !this.paused;
+			return this.isPlayingSong;
 		}
 		
 		public get playhead(): number {
@@ -2436,41 +2438,43 @@ namespace beepbox {
 			}
 		}
 		
+		private activateAudio(): void {
+			if (this.audioCtx == null || this.scriptNode == null) {
+				this.audioCtx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+				this.samplesPerSecond = this.audioCtx.sampleRate;
+				this.scriptNode = this.audioCtx.createScriptProcessor ? this.audioCtx.createScriptProcessor(2048, 0, 2) : this.audioCtx.createJavaScriptNode(2048, 0, 2); // 2048, 0 input channels, 2 output channels
+				this.scriptNode.onaudioprocess = this.audioProcessCallback;
+				this.scriptNode.channelCountMode = 'explicit';
+				this.scriptNode.channelInterpretation = 'speakers';
+				this.scriptNode.connect(this.audioCtx.destination);
+			}
+			this.audioCtx.resume();
+		}
+		
+		private deactivateAudio(): void {
+			if (this.audioCtx != null && this.scriptNode != null) {
+				this.scriptNode.disconnect(this.audioCtx.destination);
+				this.scriptNode = null;
+				if (this.audioCtx.close) this.audioCtx.close(); // firefox is missing this function?
+				this.audioCtx = null;
+			}
+		}
+		
+		public maintainLiveInput(): void {
+			this.activateAudio();
+			this.liveInputEndTime = performance.now() + 10000.0;
+		}
+		
 		public play(): void {
-			if (!this.paused) return;
-			this.paused = false;
-			
+			if (this.isPlayingSong) return;
+			this.isPlayingSong = true;
 			Synth.warmUpSynthesizer(this.song);
-			
-			const contextClass = (window.AudioContext || window.webkitAudioContext);
-			this.audioCtx = this.audioCtx || new contextClass();
-			this.scriptNode = this.audioCtx.createScriptProcessor ? this.audioCtx.createScriptProcessor(2048, 0, 2) : this.audioCtx.createJavaScriptNode(2048, 0, 2); // 2048, 0 input channels, 2 output channels
-			this.scriptNode.onaudioprocess = this.audioProcessCallback;
-			this.scriptNode.channelCountMode = 'explicit';
-			this.scriptNode.channelInterpretation = 'speakers';
-			this.scriptNode.connect(this.audioCtx.destination);
-			
-			this.samplesPerSecond = this.audioCtx.sampleRate;
+			this.activateAudio();
 		}
 		
 		public pause(): void {
-			if (this.paused) return;
-			this.paused = true;
-			this.scriptNode.disconnect(this.audioCtx.destination);
-			if (this.audioCtx.close) {
-				this.audioCtx.close(); // firefox is missing this function?
-			}
-			this.audioCtx = null;
-			this.scriptNode = null;
-		}
-		
-		private resetBuffers(): void {
-			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
-			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
-			if (this.samplesForNone != null) for (let i: number = 0; i < this.samplesForNone.length; i++) this.samplesForNone[i] = 0.0;
-			if (this.samplesForReverb != null) for (let i: number = 0; i < this.samplesForReverb.length; i++) this.samplesForReverb[i] = 0.0;
-			if (this.samplesForChorus != null) for (let i: number = 0; i < this.samplesForChorus.length; i++) this.samplesForChorus[i] = 0.0;
-			if (this.samplesForChorusReverb != null) for (let i: number = 0; i < this.samplesForChorusReverb.length; i++) this.samplesForChorusReverb[i] = 0.0;
+			if (!this.isPlayingSong) return;
+			this.isPlayingSong = false;
 		}
 		
 		public snapToStart(): void {
@@ -2478,13 +2482,20 @@ namespace beepbox {
 			this.snapToBar();
 		}
 		
-		public snapToBar(bar?: number): void {
-			if (bar !== undefined) this.bar = bar;
+		public goToBar(bar: number): void {
+			this.bar = bar;
+			this.playheadInternal = this.bar;
+		}
+		
+		public snapToBar(): void {
 			this.playheadInternal = this.bar;
 			this.beat = 0;
 			this.part = 0;
 			this.tick = 0;
 			this.tickSampleCountdown = 0;
+		}
+		
+		public resetEffects(): void {
 			this.reverbDelayPos = 0;
 			this.reverbFeedback0 = 0.0;
 			this.reverbFeedback1 = 0.0;
@@ -2493,7 +2504,12 @@ namespace beepbox {
 			//this.highpassInput = 0.0;
 			//this.highpassOutput = 0.0;
 			this.freeAllTones();
-			this.resetBuffers();
+			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
+			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
+			if (this.samplesForNone != null) for (let i: number = 0; i < this.samplesForNone.length; i++) this.samplesForNone[i] = 0.0;
+			if (this.samplesForReverb != null) for (let i: number = 0; i < this.samplesForReverb.length; i++) this.samplesForReverb[i] = 0.0;
+			if (this.samplesForChorus != null) for (let i: number = 0; i < this.samplesForChorus.length; i++) this.samplesForChorus[i] = 0.0;
+			if (this.samplesForChorusReverb != null) for (let i: number = 0; i < this.samplesForChorusReverb.length; i++) this.samplesForChorusReverb[i] = 0.0;
 		}
 		
 		public jumpIntoLoop(): void {
@@ -2529,22 +2545,18 @@ namespace beepbox {
 			const outputBuffer = audioProcessingEvent.outputBuffer;
 			const outputDataL: Float32Array = outputBuffer.getChannelData(0);
 			const outputDataR: Float32Array = outputBuffer.getChannelData(1);
-			if (this.paused) {
-				for (let i: number = 0; i < outputBuffer.length; i++) {
-					outputDataL[i] = 0.0;
-					outputDataR[i] = 0.0;
-				}
-			} else {
-				this.synthesize(outputDataL, outputDataR, outputBuffer.length);
-			}
+			this.synthesize(outputDataL, outputDataR, outputBuffer.length);
 		}
 		
 		public synthesize(outputDataL: Float32Array, outputDataR: Float32Array, outputBufferLength: number): void {
-			if (this.song == null) {
+			const isPlayingLiveTones = performance.now() < this.liveInputEndTime;
+			
+			if ((!isPlayingLiveTones && !this.isPlayingSong) || this.song == null) {
 				for (let i: number = 0; i < outputBufferLength; i++) {
 					outputDataL[i] = 0.0;
 					outputDataR[i] = 0.0;
 				}
+				this.deactivateAudio();
 				return;
 			}
 			
@@ -2564,25 +2576,27 @@ namespace beepbox {
 			if (this.tickSampleCountdown == 0 || this.tickSampleCountdown > samplesPerTick) {
 				this.tickSampleCountdown = samplesPerTick;
 			}
-			if (this.beat >= this.song.beatsPerBar) {
-				this.bar++;
-				this.beat = 0;
-				this.part = 0;
-				this.tick = 0;
-				this.tickSampleCountdown = samplesPerTick;
+			if (this.isPlayingSong) {
+				if (this.beat >= this.song.beatsPerBar) {
+					this.bar++;
+					this.beat = 0;
+					this.part = 0;
+					this.tick = 0;
+					this.tickSampleCountdown = samplesPerTick;
 				
-				if (this.loopRepeatCount != 0 && this.bar == this.song.loopStart + this.song.loopLength) {
-					this.bar = this.song.loopStart;
-					if (this.loopRepeatCount > 0) this.loopRepeatCount--;
+					if (this.loopRepeatCount != 0 && this.bar == this.song.loopStart + this.song.loopLength) {
+						this.bar = this.song.loopStart;
+						if (this.loopRepeatCount > 0) this.loopRepeatCount--;
+					}
+				}
+				if (this.bar >= this.song.barCount) {
+					this.bar = 0;
+					if (this.loopRepeatCount != -1) {
+						ended = true;
+						this.pause();
+					}
 				}
 			}
-			if (this.bar >= this.song.barCount) {
-				this.bar = 0;
-				if (this.loopRepeatCount != -1) {
-					ended = true;
-					this.pause();
-				}
- 			}
 			
 			//const synthStartTime: number = performance.now();
 			
@@ -2809,6 +2823,7 @@ namespace beepbox {
 					if (this.tick == Config.ticksPerPart) {
 						this.tick = 0;
 						this.part++;
+						this.liveInputDuration--;
 						
 						// Check if any active tones should be released.
 						for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
@@ -2829,21 +2844,24 @@ namespace beepbox {
 						
 						if (this.part == Config.partsPerBeat) {
 							this.part = 0;
-							this.beat++;
-							if (this.beat == this.song.beatsPerBar) {
-								// bar changed, reset for next bar:
-								this.beat = 0;
-								this.bar++;
-								if (this.loopRepeatCount != 0 && this.bar == this.song.loopStart + this.song.loopLength) {
-									this.bar = this.song.loopStart;
-									if (this.loopRepeatCount > 0) this.loopRepeatCount--;
-								}
-								if (this.bar >= this.song.barCount) {
-									this.bar = 0;
-									if (this.loopRepeatCount != -1) {
-										ended = true;
-										this.resetBuffers();
-										this.pause();
+							
+							if (this.isPlayingSong) {
+								this.beat++;
+								if (this.beat == this.song.beatsPerBar) {
+									// bar changed, reset for next bar:
+									this.beat = 0;
+									this.bar++;
+									if (this.loopRepeatCount != 0 && this.bar == this.song.loopStart + this.song.loopLength) {
+										this.bar = this.song.loopStart;
+										if (this.loopRepeatCount > 0) this.loopRepeatCount--;
+									}
+									if (this.bar >= this.song.barCount) {
+										this.bar = 0;
+										if (this.loopRepeatCount != -1) {
+											ended = true;
+											this.resetEffects();
+											this.pause();
+										}
 									}
 								}
 							}
@@ -2874,7 +2892,9 @@ namespace beepbox {
 			//this.highpassOutput = highpassOutput;
 			this.limit = limit;
 			
-			this.playheadInternal = (((this.tick + 1.0 - this.tickSampleCountdown / samplesPerTick) / 2.0 + this.part) / Config.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
+			if (this.isPlayingSong) {
+				this.playheadInternal = (((this.tick + 1.0 - this.tickSampleCountdown / samplesPerTick) / 2.0 + this.part) / Config.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
+			}
 			
 			/*
 			const synthDuration: number = performance.now() - synthStartTime;
@@ -2920,12 +2940,12 @@ namespace beepbox {
 			while (this.liveInputTones.count() > 0) {
 				this.freeTone(this.liveInputTones.popBack());
 			}
-			for (let i = 0; i < this.activeTones.length; i++) {
+			for (let i: number = 0; i < this.activeTones.length; i++) {
 				while (this.activeTones[i].count() > 0) {
 					this.freeTone(this.activeTones[i].popBack());
 				}
 			}
-			for (let i = 0; i < this.releasedTones.length; i++) {
+			for (let i: number = 0; i < this.releasedTones.length; i++) {
 				while (this.releasedTones[i].count() > 0) {
 					this.freeTone(this.releasedTones[i].popBack());
 				}
@@ -2933,35 +2953,65 @@ namespace beepbox {
 		}
 		
 		private determineLiveInputTones(song: Song): void {
-			if (this.liveInputPressed) {
-				// TODO: Support multiple live pitches correctly. Distinguish between arpeggio and harmony behavior like with song notes.
+			const toneList: Deque<Tone> = this.liveInputTones;
+			const pitches: number[] = this.liveInputPitches;
+			let toneCount: number = 0;
+			if (this.liveInputDuration > 0) {
 				const instrument: Instrument = song.channels[this.liveInputChannel].instruments[song.getPatternInstrument(this.liveInputChannel, this.bar)];
 				
-				let tone: Tone;
-				if (this.liveInputTones.count() == 0) {
-					tone = this.newTone();
-					this.liveInputTones.pushBack(tone);
-				} else if (!instrument.getTransition().isSeamless && this.liveInputTones.peakFront().pitches[0] != this.liveInputPitches[0]) {
-					// pitches[0] changed, start a new tone.
-					this.releaseTone(this.liveInputChannel, this.liveInputTones.popFront());
-					tone = this.newTone();
-					this.liveInputTones.pushBack(tone);
-				} else {
-					tone = this.liveInputTones.get(0);
-				}
+				if (instrument.getChord().arpeggiates) {
+					let tone: Tone;
+					if (toneList.count() == 0) {
+						tone = this.newTone();
+						toneList.pushBack(tone);
+					} else if (!instrument.getTransition().isSeamless && this.liveInputStarted) {
+						this.releaseTone(this.liveInputChannel, toneList.popFront());
+						tone = this.newTone();
+						toneList.pushBack(tone);
+					} else {
+						tone = toneList.get(0);
+					}
+					toneCount = 1;
 				
-				for (let i: number = 0; i < this.liveInputPitches.length; i++) {
-					tone.pitches[i] = this.liveInputPitches[i];
-				}
-				tone.pitchCount = this.liveInputPitches.length;
-				tone.chordSize = 1;
-				tone.instrument = instrument;
-				tone.note = tone.prevNote = tone.nextNote = null;
-			} else {
-				while (this.liveInputTones.count() > 0) {
-					this.releaseTone(this.liveInputChannel, this.liveInputTones.popBack());
+					for (let i: number = 0; i < pitches.length; i++) {
+						tone.pitches[i] = pitches[i];
+					}
+					tone.pitchCount = pitches.length;
+					tone.chordSize = 1;
+					tone.instrument = instrument;
+					tone.note = tone.prevNote = tone.nextNote = null;
+				} else {
+					//const transition: Transition = instrument.getTransition();
+					for (let i: number = 0; i < pitches.length; i++) {
+						//const strumOffsetParts: number = i * instrument.getChord().strumParts;
+
+						let tone: Tone;
+						if (toneList.count() <= i) {
+							tone = this.newTone();
+							toneList.pushBack(tone);
+						} else if (!instrument.getTransition().isSeamless && this.liveInputStarted) {
+							this.releaseTone(this.liveInputChannel, toneList.get(i));
+							tone = this.newTone();
+							toneList.set(i, tone);
+						} else {
+							tone = toneList.get(i);
+						}
+						toneCount++;
+
+						tone.pitches[0] = pitches[i];
+						tone.pitchCount = 1;
+						tone.chordSize = pitches.length;
+						tone.instrument = instrument;
+						tone.note = tone.prevNote = tone.nextNote = null;
+					}
 				}
 			}
+			
+			while (toneList.count() > toneCount) {
+				this.releaseTone(this.liveInputChannel, toneList.popBack());
+			}
+			
+			this.liveInputStarted = false;
 		}
 		
 		private determineCurrentActiveTones(song: Song, channel: number): void {
@@ -2972,7 +3022,7 @@ namespace beepbox {
 			let prevNote: Note | null = null;
 			let nextNote: Note | null = null;
 			
-			if (pattern != null && !song.channels[channel].muted) {
+			if (this.isPlayingSong && pattern != null && !song.channels[channel].muted) {
 				for (let i: number = 0; i < pattern.notes.length; i++) {
 					if (pattern.notes[i].end <= time) {
 						prevNote = pattern.notes[i];
@@ -3014,7 +3064,7 @@ namespace beepbox {
 				}
 				toneCount = 1;
 
-				for (let i = 0; i < pitches.length; i++) {
+				for (let i: number = 0; i < pitches.length; i++) {
 					tone.pitches[i] = pitches[i];
 				}
 				tone.pitchCount = pitches.length;
@@ -3054,11 +3104,11 @@ namespace beepbox {
 					}
 
 					let tone: Tone;
-					if (toneList.count() > i) {
-						tone = toneList.get(i);
-					} else {
+					if (toneList.count() <= i) {
 						tone = this.newTone();
 						toneList.pushBack(tone);
+					} else {
+						tone = toneList.get(i);
 					}
 					toneCount++;
 

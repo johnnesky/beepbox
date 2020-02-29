@@ -25,6 +25,7 @@ namespace beepbox {
 		private _mouseDown: boolean = false;
 		private _mouseOver: boolean = false;
 		private _cursorPitch: number;
+		private _playedPitch: number = -1;
 		private _renderedScale: number = -1;
 		private _renderedDrums: boolean = false;
 		private _renderedKey: number = -1;
@@ -85,6 +86,20 @@ namespace beepbox {
 			}
 		}
 		
+		private _playLiveInput(): void {
+			const currentPitch: number = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
+			if (this._playedPitch == currentPitch) return;
+			this._playedPitch = currentPitch;
+			this._doc.synth.liveInputDuration = Number.MAX_SAFE_INTEGER;
+			this._doc.synth.liveInputPitches = [this._playedPitch];
+			this._doc.synth.liveInputStarted = true;
+		}
+		
+		private _releaseLiveInput(): void {
+			this._playedPitch = -1;
+			this._doc.synth.liveInputDuration = 0;
+		}
+		
 		private _whenMouseOver = (event: MouseEvent): void => {
 			if (this._mouseOver) return;
 			this._mouseOver = true;
@@ -99,56 +114,59 @@ namespace beepbox {
 		
 		private _whenMousePressed = (event: MouseEvent): void => {
 			event.preventDefault();
+			this._doc.synth.maintainLiveInput();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this.container.getBoundingClientRect();
     		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
-			this._doc.synth.liveInputPressed = true;
+			this._playLiveInput();
 			this._updatePreview();
 		}
 		
 		private _whenMouseMoved = (event: MouseEvent): void => {
+			if (this._mouseDown || this._mouseOver) this._doc.synth.maintainLiveInput();
 			const boundingRect: ClientRect = this.container.getBoundingClientRect();
     		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		    this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._updateCursorPitch();
-			this._doc.synth.liveInputPitches[0] = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
+			if (this._mouseDown) this._playLiveInput();
 			this._updatePreview();
 		}
 		
 		private _whenMouseReleased = (event: MouseEvent): void => {
+			if (this._mouseDown) this._releaseLiveInput();
 			this._mouseDown = false;
-			this._doc.synth.liveInputPressed = false;
 			this._updatePreview();
 		}
 		
 		private _whenTouchPressed = (event: TouchEvent): void => {
 			event.preventDefault();
+			this._doc.synth.maintainLiveInput();
 			this._mouseDown = true;
 			const boundingRect: ClientRect = this.container.getBoundingClientRect();
 			//this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._updateCursorPitch();
-			this._doc.synth.liveInputPressed = true;
-			this._doc.synth.liveInputPitches[0] = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
+			this._playLiveInput();
 		}
 		
 		private _whenTouchMoved = (event: TouchEvent): void => {
 			event.preventDefault();
+			this._doc.synth.maintainLiveInput();
 			const boundingRect: ClientRect = this.container.getBoundingClientRect();
 			//this._mouseX = event.touches[0].clientX - boundingRect.left;
 			this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._updateCursorPitch();
-			this._doc.synth.liveInputPitches[0] = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
+			if (this._mouseDown) this._playLiveInput();
 		}
 		
 		private _whenTouchReleased = (event: TouchEvent): void => {
 			event.preventDefault();
-			this._doc.synth.liveInputPressed = false;
+			this._releaseLiveInput();
 		}
 		
 		private _updatePreview(): void {
@@ -168,7 +186,7 @@ namespace beepbox {
 			this._pitchHeight = isDrum ? 40 : 13;
 			this._pitchCount = isDrum ? Config.drumCount : Config.windowPitchCount;
 			this._updateCursorPitch();
-			this._doc.synth.liveInputPitches[0] = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
+			if (this._mouseDown) this._playLiveInput();
 			this._doc.synth.liveInputChannel = this._doc.channel;
 			this._render();
 		}

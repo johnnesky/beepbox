@@ -19,7 +19,8 @@ namespace beepbox {
 	export const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
 	
 	export class EditorConfig {
-		public static readonly versionDisplayName: string = "BeepBox 3.0.7";
+		public static readonly version: string = "3.0.8";
+		public static readonly versionDisplayName: string = "BeepBox " + EditorConfig.version;
 		public static readonly presetCategories: DictionaryArray<PresetCategory> = toNameMap([
 			{name: "Custom Instruments", presets: <DictionaryArray<Preset>> toNameMap([
 				{name: "chip wave",        customType: InstrumentType.chip},

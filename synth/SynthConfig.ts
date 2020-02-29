@@ -357,7 +357,7 @@ namespace beepbox {
 		public static readonly scrollableOctaves: number = Config.pitchOctaves - Config.windowOctaves;
 		public static readonly windowPitchCount: number = Config.windowOctaves * Config.pitchesPerOctave + 1;
 		public static readonly maxPitch: number = Config.pitchOctaves * Config.pitchesPerOctave;
-		public static readonly maximumTonesPerChannel: number = 8;
+		public static readonly maximumTonesPerChannel: number = Config.maxChordSize * 2;
 		public static readonly sineWaveLength: number = 1 << 8; // 256
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
 		public static readonly sineWave: Float64Array = generateSineWave();
