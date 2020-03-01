@@ -36,7 +36,7 @@ namespace beepbox {
 
 			const view_source = new ViewClass(source, nextOffset, (leftBytes / wordSize) | 0);
 			const view_dest = new ViewClass(dest, nextOffset, (leftBytes / wordSize) | 0);
-			for (let i = 0; i < view_dest.length; i++) {
+			for (let i: number = 0; i < view_dest.length; i++) {
 				view_dest[i] = view_source[i];
 			}
 			return {

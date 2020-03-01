@@ -154,7 +154,7 @@ namespace beepbox {
 
 			let lastValue: number = 0;
 			let path: string = "M 0 " + prettyNumber(this._editorHeight) + " ";
-			for (let i = 0; i < Config.spectrumControlPoints; i++) {
+			for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
 				let nextValue: number = spectrumWave.spectrum[i];
 				if (lastValue != 0 || nextValue != 0) {
 					path += "L ";

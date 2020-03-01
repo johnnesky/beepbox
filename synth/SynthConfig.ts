@@ -211,7 +211,6 @@ namespace beepbox {
 
 		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "custom chip", "mod"];
 		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false, true];
-		public static readonly instrumentTypeHasChorus: ReadonlyArray<boolean> = [true, true, true, false, false, true, true, true];
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
 			{ name: "rounded", volume: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]) },
 			{ name: "triangle", volume: 1.0, samples: centerWave([1.0 / 15.0, 3.0 / 15.0, 5.0 / 15.0, 7.0 / 15.0, 9.0 / 15.0, 11.0 / 15.0, 13.0 / 15.0, 15.0 / 15.0, 15.0 / 15.0, 13.0 / 15.0, 11.0 / 15.0, 9.0 / 15.0, 7.0 / 15.0, 5.0 / 15.0, 3.0 / 15.0, 1.0 / 15.0, -1.0 / 15.0, -3.0 / 15.0, -5.0 / 15.0, -7.0 / 15.0, -9.0 / 15.0, -11.0 / 15.0, -13.0 / 15.0, -15.0 / 15.0, -15.0 / 15.0, -13.0 / 15.0, -11.0 / 15.0, -9.0 / 15.0, -7.0 / 15.0, -5.0 / 15.0, -3.0 / 15.0, -1.0 / 15.0]) },
@@ -271,14 +270,15 @@ namespace beepbox {
 			{ name: "shaky", amplitude: 0.1, periodsSeconds: [0.11, 1.618 * 0.11, 3 * 0.11], delayParts: 0 },
 		]);
 		public static readonly intervals: DictionaryArray<Interval> = toNameMap([
-			{ name: "union", spread: 0.0, offset: 0.0, volume: 0.7, sign: 1.0 },
-			{ name: "shimmer", spread: 0.016, offset: 0.0, volume: 0.8, sign: 1.0 },
-			{ name: "hum", spread: 0.045, offset: 0.0, volume: 1.0, sign: 1.0 },
-			{ name: "honky tonk", spread: 0.09, offset: 0.0, volume: 1.0, sign: 1.0 },
-			{ name: "dissonant", spread: 0.25, offset: 0.0, volume: 0.9, sign: 1.0 },
-			{ name: "fifth", spread: 3.5, offset: 3.5, volume: 0.9, sign: 1.0 },
-			{ name: "octave", spread: 6.0, offset: 6.0, volume: 0.8, sign: 1.0 },
-			{ name: "bowed", spread: 0.02, offset: 0.0, volume: 1.0, sign: -1.0 },
+			{name: "union",      spread: 0.0,  offset: 0.0, volume: 0.7, sign: 1.0},
+			{name: "shimmer",    spread: 0.018,offset: 0.0, volume: 0.8, sign: 1.0},
+			{name: "hum",        spread: 0.045,offset: 0.0, volume: 1.0, sign: 1.0},
+			{name: "honky tonk", spread: 0.09, offset: 0.0, volume: 1.0, sign: 1.0},
+			{name: "dissonant",  spread: 0.25, offset: 0.0, volume: 0.9, sign: 1.0},
+			{name: "fifth",      spread: 3.5,  offset: 3.5, volume: 0.9, sign: 1.0},
+			{name: "octave",     spread: 6.0,  offset: 6.0, volume: 0.8, sign: 1.0},
+			{name: "bowed",      spread: 0.02, offset: 0.0, volume: 1.0, sign:-1.0},
+			{name: "piano",      spread: 0.01, offset: 0.0, volume: 1.0, sign: 0.7},
 		]);
 		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
 		public static readonly volumeRange: number = 50;
@@ -295,6 +295,7 @@ namespace beepbox {
 			{ name: "arpeggio", harmonizes: false, customInterval: false, arpeggiates: true, isCustomInterval: false, strumParts: 0 },
 			{ name: "custom interval", harmonizes: true, customInterval: true, arpeggiates: true, isCustomInterval: true, strumParts: 0 },
 		]);
+		public static readonly maxChordSize: number = 4;
 		public static readonly operatorCount: number = 4;
 		public static readonly algorithms: DictionaryArray<Algorithm> = toNameMap([
 			{ name: "1←(2 3 4)", carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3, 4], [], [], []] },
@@ -398,7 +399,7 @@ namespace beepbox {
 		public static readonly pitchOctaves: number = 8;
 		public static readonly maxScrollableOctaves: number = 5; // Largest number possible with any config setting
 		public static readonly maxPitch: number = Config.pitchOctaves * Config.pitchesPerOctave;
-		public static readonly maximumTonesPerChannel: number = 8;
+		public static readonly maximumTonesPerChannel: number = Config.maxChordSize * 2;
 		public static readonly sineWaveLength: number = 1 << 8; // 256
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
 		public static readonly sineWave: Float64Array = generateSineWave();
@@ -592,7 +593,16 @@ namespace beepbox {
 		}
 		return wave;
 	}
-
+	
+	export function getArpeggioPitchIndex(pitchCount: number, rhythm: number, arpeggio: number): number {
+		const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[rhythm].arpeggioPatterns[pitchCount - 1];
+		if (arpeggioPattern != null) {
+			return arpeggioPattern[arpeggio % arpeggioPattern.length];
+		} else {
+			return arpeggio % pitchCount;
+		}
+	}
+	
 	// Pardon the messy type casting. This allows accessing array members by numerical index or string name.
 	export function toNameMap<T extends BeepBoxOption>(array: Array<Pick<T, Exclude<keyof T, "index">>>): DictionaryArray<T> {
 		const dictionary: Dictionary<T> = {};

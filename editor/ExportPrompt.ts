@@ -234,7 +234,7 @@ namespace beepbox {
 					synth.nextBar();
 				}
 			}
-			synth.computeLatestModValues(this._doc.song);
+			synth.computeLatestModValues();
 			const sampleFrames: number = synth.getTotalSamples(this._enableIntro.checked, this._enableOutro.checked, synth.loopRepeatCount);
 			const recordedSamplesL: Float32Array = new Float32Array(sampleFrames);
 			const recordedSamplesR: Float32Array = new Float32Array(sampleFrames);
@@ -542,13 +542,13 @@ namespace beepbox {
 									if (instrument.type == InstrumentType.chip) {
 										polyphony = 2;
 									} else if (instrument.type == InstrumentType.fm) {
-										polyphony = 4;
+										polyphony = Config.operatorCount;
 									} else {
 										console.error("Unrecognized instrument type for harmonizing arpeggio: " + instrument.type);
 									}
 								}
 							} else {
-								polyphony = 4;
+								polyphony = Config.maxChordSize;
 							}
 
 							for (let noteIndex: number = 0; noteIndex < pattern.notes.length; noteIndex++) {
@@ -605,15 +605,6 @@ namespace beepbox {
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, midiTick / length);
 
 										const interval: number = linearInterval * intervalScale - pitchOffset;
-
-										/*
-										// Vibrato. Currently disabled on export.
-										const effectCurve: number = Synth.getLFOAmplitude(instrument, (midiTickTime - barStartTime) * secondsPerMidiTick);
-										if (midiTickTime - noteStartTime >= midiTicksPerPart * Config.vibratoDelays[instrument.vibrato]) {
-											interval += effectVibrato * effectCurve;
-										}
-										*/
-
 										const pitchBend: number = Math.max(0, Math.min(0x3fff, Math.round(0x2000 * (1.0 + interval / pitchBendRange))));
 
 										const expression: number = Math.min(0x7f, Math.round(volumeMultToMidiExpression(Synth.expressionToVolumeMult(linearVolume))));
@@ -658,8 +649,7 @@ namespace beepbox {
 													const midiTicksSinceBeat = (midiTickTime - barStartTime) % midiTicksPerBeat;
 													const midiTicksPerArpeggio = Config.rhythms[song.rhythm].ticksPerArpeggio * midiTicksPerPart / Config.ticksPerPart;
 													const arpeggio: number = Math.floor(midiTicksSinceBeat / midiTicksPerArpeggio);
-													const arpeggioPattern: ReadonlyArray<number> = Config.rhythms[song.rhythm].arpeggioPatterns[note.pitches.length - 1 - toneIndex];
-													nextPitch = note.pitches[toneIndex + arpeggioPattern[arpeggio % arpeggioPattern.length]];
+													nextPitch = note.pitches[toneIndex + getArpeggioPitchIndex(note.pitches.length - toneIndex, song.rhythm, arpeggio)];
 												}
 												nextPitch = channelRoot + nextPitch * intervalScale + pitchOffset;
 												if (preset != null && preset.midiSubharmonicOctaves != undefined) {

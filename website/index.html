@@ -282,7 +282,7 @@
                         Neither Jummbus nor Jummbox assume responsibility for any copyrighted material played on JummBox. No songs are ever received, recorded, or distributed by JummBox's servers. All song data is contained in the URL after the hash (#) mark, and JummBox running inside your browser converts that data into sound waves.
                     </p>
                     <!-- Hmm, maybe offline some day.
-                    <p>
+                    <p id="offline-instructions">
                         You can download <a download="beepbox_offline.html" href="beepbox_offline.html">an offline version of JummBox</a> to use when you don't have access to the internet. The features are otherwise the same.
                     </p>
                     -->
@@ -337,6 +337,7 @@
             document.getElementById("introduction").innerHTML = "JummBox is an online tool for sketching and sharing chiptune melodies. Make sure that your volume is turned up, then press the play button!";
             document.getElementById("keyboard-instructions").style.display = "none";
             document.getElementById("bar-editing").innerHTML = "Tap the other boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
+			//document.getElementById("offline-instructions").innerHTML = 'You can use BeepBox when your device is offline if you put a shortcut to BeepBox on your home screen. <ul><li>Chrome: find the "Add to Home Screen" option in the ⋮ menu.</li><li>Firefox: find the "Add Page Shortcut" option in the ⋮ menu.</li><li>Safari: find the "Add to Home Screen" option in the bookmark menu.</li></ul>';
         }
 
         function browserHasRequiredFeatures() {

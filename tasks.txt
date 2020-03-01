@@ -350,24 +350,4 @@
 √ Added previews of the next and previous patterns to full screen mode.
 √ Added Shift+Click and Shift+Arrows to extend track editor box selection.
 √ Added "realName" to scales, hover over scale select menu to see it.
-
-
-TODO:
-- Why do prompts sometimes not go away until you move the mouse after importing a song? hmm maybe the problem is the delay between the user action and the navigation action crosses some safety threshold...
-- Song settings icons: piano keys for scale, tuning fork for key, metronome for tempo, isometric cube-shaped empty room with tiny door/windows on walls and thicker border emphasizing the floor for reverb, classic eighth or sixteenth note triplet symbol for rhythm. for the reverb cube, use 3 point perspective, use thin lines for the corners, use more foreshortening on the floor than the ceiling to show the camera is near the floor, make the floor solid color, add vaulted arch ceiling? honestly I don't have much fidelity to work with...
-- Export prompt wav file export should tell the synth what sample rate to use instead of assuming 44100. const sampleRate: number = 44100; // synth.samplesPerSecond?
-- If the page loses and regains focus, re-read preferences and update the interface? In case another tab changed preferences.
-- Add some kind of warning if an error is thrown, it may prevent saving progress.
-- New file command: export channels as wavs. (Maybe this should just be a checkbox in the export dialog?)
-- If I paste a pattern with the wrong number of beats, (or too many beats?) just stretch it?
-- The JSON export should include the scale flags, not just the name.
-- The piano key display accidental naming convention needs work. "C#" is a fine name for a minor scale but misnames F# as Gb, but the same key in major scale should be "Db" and the names of all the black keys should be flats instead of sharps.
-- add a tutorial + music theory primer. exercise restraint choosing pitches, develop a rhythm first, explore intervals/pitch relationships. It would be cool to have mini beepbox editors with preloaded songs demonstrating concepts, with play, reset, clear, and "open in full editor" options. Mostly it would focus on the pattern editor, but may have one-off additions like a tempo slider to demonstrate tempo.
-- Oh shoot, if I hide the title options in the edit/prefs menus, mac chrome puts a checkmark next to the first displayed option instead, which confuses matters because I use checkmarks to indicate toggling prefs options. :(
-- Edit options to remove specific channels.
-- Edit options for compacting and concatenating songs. I'm increasingly interested in the idea of allowing multiple songs, called sections, to be appended to each other. The song settings would apply to whichever section contains the currently selected pattern. But maybe this is just a hack, and it wouldn't make it any easier to gradually transition volume or tempo or stagger instrument changes. Being able to change reverb might be interesting. A more immediately plausible option is the ability to combine songs. I'm imagining a dialog box where you can paste in song urls and it concatenates the songs. you may need to select the beats per bar from a menu populated by the songs if they're not all the same, and the other songs would just get stretched? Use the validation/simplification to skip duplicate/unused patterns and also duplicate/unused instruments to avoid filling up all the slots quickly. Not sure how to handle different song keys, maybe a checkbox to transpose all songs to the first song's key.
-- is it possible to get pitch slides and seamless transitions to detect notes across bars?
-- a way to pre-generate a javascript sound buffer.
-- in firefox, after selecting options, spacebar both reopens options and toggles play. Same problem with arrow keys, and even ctrl+brackets to change tabs. Apparently this is a known firefox bug. https://bugzilla.mozilla.org/show_bug.cgi?id=1019630
-- maybe command+S should do something useful?
-- wav export quality: CD (44100) vs Video (48000) standards, 1x, downsampled from 2x to 1x, downsampled from 4x to 2x. How does this affect FM feedback and noise volume?
+√ Allow playing piano while song is paused, added preference to preview added notes while paused.

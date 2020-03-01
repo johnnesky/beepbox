@@ -555,6 +555,7 @@ namespace beepbox {
 		}
 
 		private _whenCursorPressed(): void {
+			if (this._doc.enableNotePreview) this._doc.synth.maintainLiveInput();
 			this._mouseDown = true;
 			this._mouseXStart = this._mouseX;
 			this._mouseYStart = this._mouseY;
@@ -562,6 +563,13 @@ namespace beepbox {
 			this._updatePreview();
 			this._dragChange = new ChangeSequence();
 			this._doc.setProspectiveChange(this._dragChange);
+			
+			if (this._doc.enableNotePreview && !this._doc.synth.playing && this._cursor.valid && this._cursor.curNote == null) {
+				const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
+				this._doc.synth.liveInputDuration = duration;
+				this._doc.synth.liveInputPitches = [this._cursor.pitch];
+				this._doc.synth.liveInputStarted = true;
+			}
 		}
 
 		private _whenMouseMoved = (event: MouseEvent): void => {
@@ -586,6 +594,8 @@ namespace beepbox {
 		}
 
 		private _whenCursorMoved(): void {
+			if (this._doc.enableNotePreview && this._mouseOver) this._doc.synth.maintainLiveInput();
+			
 			let start: number;
 			let end: number;
 
@@ -881,12 +891,19 @@ namespace beepbox {
 
 					if (this._cursor.pitchIndex == -1 && !this._doc.song.getChannelIsMod(this._doc.channel)) {
 						const sequence: ChangeSequence = new ChangeSequence();
-						if (this._cursor.curNote.pitches.length == 4) {
+						if (this._cursor.curNote.pitches.length == Config.maxChordSize) {
 							sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.curNote.pitches[0], 0, true));
 						}
 						sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));
 						this._doc.record(sequence);
 						this._copyPins(this._cursor.curNote);
+						
+						if (this._doc.enableNotePreview && !this._doc.synth.playing) {
+							const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
+							this._doc.synth.liveInputDuration = duration;
+							this._doc.synth.liveInputPitches = this._cursor.curNote.pitches.concat();
+							this._doc.synth.liveInputStarted = true;
+						}
 					} else {
 						if (this._cursor.curNote.pitches.length == 1) {
 							//console.log("p1 - " + this._cursor.curIndex);

@@ -158,7 +158,7 @@ namespace beepbox {
 
 			let bottom: string = prettyNumber(this._editorHeight);
 			let path: string = "";
-			for (let i = 0; i < Config.harmonicsControlPoints - 1; i++) {
+			for (let i: number = 0; i < Config.harmonicsControlPoints - 1; i++) {
 				if (harmonicsWave.harmonics[i] == 0) continue;
 				let xPos: string = prettyNumber((i + 0.5) * (this._editorWidth - 8) / (Config.harmonicsControlPoints - 1));
 				path += "M " + xPos + " " + bottom + " ";

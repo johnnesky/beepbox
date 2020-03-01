@@ -485,8 +485,8 @@ namespace beepbox {
 							const note: Note = new Note(-1, noteStartPart, noteEndPart, expression, true);
 
 							note.pitches.length = 0;
-							for (let pitchIndex: number = 0; pitchIndex < Math.min(4, drumFreqs.length); pitchIndex++) {
-								const heldPitch: number = drumFreqs[pitchIndex + Math.max(0, drumFreqs.length - 4)];
+							for (let pitchIndex: number = 0; pitchIndex < Math.min(Config.maxChordSize, drumFreqs.length); pitchIndex++) {
+								const heldPitch: number = drumFreqs[pitchIndex + Math.max(0, drumFreqs.length - Config.maxChordSize)];
 								if (note.pitches.indexOf(heldPitch) == -1) {
 									note.pitches.push(heldPitch);
 								}
@@ -741,8 +741,8 @@ namespace beepbox {
 
 									// Build the note chord out of the current pitches, shifted into BeepBox channelBasePitch relative values.
 									note.pitches.length = 0;
-									for (let pitchIndex: number = 0; pitchIndex < Math.min(4, heldPitches.length); pitchIndex++) {
-										let heldPitch: number = heldPitches[pitchIndex + Math.max(0, heldPitches.length - 4)] * midiIntervalScale;
+									for (let pitchIndex: number = 0; pitchIndex < Math.min(Config.maxChordSize, heldPitches.length); pitchIndex++) {
+										let heldPitch: number = heldPitches[pitchIndex + Math.max(0, heldPitches.length - Config.maxChordSize)] * midiIntervalScale;
 										if (preset != null && preset.midiSubharmonicOctaves != undefined) {
 											heldPitch -= 12 * preset.midiSubharmonicOctaves;
 										}

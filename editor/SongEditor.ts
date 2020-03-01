@@ -400,6 +400,7 @@ namespace beepbox {
 			option({ selected: true, disabled: true, hidden: false }, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option({ value: "autoPlay" }, "Auto Play On Load"),
 			option({ value: "autoFollow" }, "Auto Follow Track"),
+			option({value: "enableNotePreview"}, "Preview Added Notes"),
 			option({ value: "showLetters" }, "Show Piano Keys"),
 			option({ value: "showFifth" }, 'Highlight "Fifth" Notes'),
 			option({ value: "showChannels" }, "Show All Channels"),
@@ -847,12 +848,16 @@ namespace beepbox {
 			this._volumeSlider.container.style.setProperty("flex-grow", "1");
 			this._volumeSlider.container.style.setProperty("display", "flex");
 
-			// Also, any slider with a multiplicative effect instead of a replacement effect gets a different mod color.
+			// Also, any slider with a multiplicative effect instead of a replacement effect gets a different mod color, and a round slider.
 			this._volumeSlider.container.style.setProperty("--mod-color", ColorConfig.multiplicativeModSlider);
+			this._volumeSlider.container.style.setProperty("--mod-border-radius", "50%");
 			this._instrumentVolumeSlider.container.style.setProperty("--mod-color", ColorConfig.multiplicativeModSlider);
+			this._instrumentVolumeSlider.container.style.setProperty("--mod-border-radius","50%");
 			this._feedbackAmplitudeSlider.container.style.setProperty("--mod-color", ColorConfig.multiplicativeModSlider);
+			this._feedbackAmplitudeSlider.container.style.setProperty("--mod-border-radius", "50%");
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				this._operatorAmplitudeSliders[i].container.style.setProperty("--mod-color", ColorConfig.multiplicativeModSlider);
+				this._operatorAmplitudeSliders[i].container.style.setProperty("--mod-border-radius", "50%");
 			}
 
 
@@ -1146,6 +1151,7 @@ namespace beepbox {
 			const optionCommands: ReadonlyArray<string> = [
 				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
 				(this._doc.autoFollow ? "✓ " : "") + "Auto Follow Track",
+				(this._doc.enableNotePreview ? "✓ " : "") + "Preview Added Notes",
 				(this._doc.showLetters ? "✓ " : "") + "Show Piano Keys",
 				(this._doc.showFifth ? "✓ " : "") + 'Highlight "Fifth" Notes',
 				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
@@ -1394,18 +1400,6 @@ namespace beepbox {
 				for (let chordIndex: number = 0; chordIndex < Config.chords.length; chordIndex++) {
 					const hidden: boolean = !Config.instrumentTypeHasSpecialInterval[instrument.type] ? Config.chords[chordIndex].isCustomInterval : false;
 					const option: Element = this._chordSelect.children[chordIndex];
-					if (hidden) {
-						if (!option.hasAttribute("hidden")) {
-							option.setAttribute("hidden", "");
-						}
-					} else {
-						option.removeAttribute("hidden");
-					}
-				}
-
-				for (let effectsIndex: number = 0; effectsIndex < Config.effectsNames.length; effectsIndex++) {
-					const hidden: boolean = !Config.instrumentTypeHasChorus[instrument.type] ? Config.effectsNames[effectsIndex].indexOf("chorus") != -1 : false;
-					const option: Element = this._effectsSelect.children[effectsIndex];
 					if (hidden) {
 						if (!option.hasAttribute("hidden")) {
 							option.setAttribute("hidden", "");
@@ -1824,7 +1818,7 @@ namespace beepbox {
 			this._setPrompt(this._doc.prompt);
 
 			if (this._doc.autoFollow && !this._doc.synth.playing) {
-				this._doc.synth.snapToBar(this._doc.bar);
+				this._doc.synth.goToBar(this._doc.bar);
 			}
 		}
 
@@ -2085,6 +2079,7 @@ namespace beepbox {
 			if (this._doc.synth.playing) {
 				this._pause();
 			} else {
+				this._doc.synth.snapToBar();
 				this._play();
 			}
 		}
@@ -2097,11 +2092,11 @@ namespace beepbox {
 
 		private _pause(): void {
 			this._doc.synth.pause();
+			this._doc.synth.resetEffects();
 			if (this._doc.autoFollow) {
-				this._doc.synth.snapToBar(this._doc.bar);
-			} else {
-				this._doc.synth.snapToBar();
+				this._doc.synth.goToBar(this._doc.bar);
 			}
+			this._doc.synth.snapToBar();
 			this.updatePlayButton();
 			window.clearInterval(this._modSliderHandle);
 			// Need to update mods once more to clear the slider display
@@ -2399,6 +2394,9 @@ namespace beepbox {
 					break;
 				case "autoFollow":
 					this._doc.autoFollow = !this._doc.autoFollow;
+					break;
+				case "enableNotePreview":
+					this._doc.enableNotePreview = !this._doc.enableNotePreview;
 					break;
 				case "showLetters":
 					this._doc.showLetters = !this._doc.showLetters;

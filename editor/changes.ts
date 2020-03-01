@@ -378,9 +378,6 @@ namespace beepbox {
 						if (!Config.instrumentTypeHasSpecialInterval[instrument.type] && Config.chords[instrument.chord].isCustomInterval) {
 							instrument.chord = 0;
 						}
-						if (!Config.instrumentTypeHasChorus[instrument.type] && Config.effectsNames[instrument.effects].indexOf("chorus") != -1) {
-							instrument.effects -= 2;
-						}
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
 						const tempPan: number = instrument.pan;
@@ -481,7 +478,7 @@ namespace beepbox {
 					for (const value of harmonics) {
 						if (value > max) max = value;
 					}
-					for (let i = 0; i < harmonics.length; i++) {
+					for (let i: number = 0; i < harmonics.length; i++) {
 						harmonics[i] = Config.harmonicsMax * harmonics[i] / max;
 					}
 				}
@@ -493,7 +490,7 @@ namespace beepbox {
 						const spectrumGenerators: Function[] = [
 							(): number[] => {
 								const spectrum: number[] = [];
-								for (let i = 0; i < Config.spectrumControlPoints; i++) {
+								for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
 									spectrum[i] = (Math.random() < 0.5) ? Math.random() : 0.0;
 								}
 								return spectrum;
@@ -520,7 +517,7 @@ namespace beepbox {
 						const generator = spectrumGenerators[(Math.random() * spectrumGenerators.length) | 0];
 						const spectrum: number[] = generator();
 						normalize(spectrum);
-						for (let i = 0; i < Config.spectrumControlPoints; i++) {
+						for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
 							instrument.spectrumWave.spectrum[i] = Math.round(spectrum[i]);
 						}
 						instrument.spectrumWave.markCustomWaveDirty();
@@ -573,8 +570,8 @@ namespace beepbox {
 				instrument.effects = Config.effectsNames.indexOf(selectWeightedRandom([
 					{ item: "none", weight: 1 },
 					{ item: "reverb", weight: 10 },
-					{ item: "chorus", weight: Config.instrumentTypeHasChorus[type] ? 2 : 0 },
-					{ item: "chorus & reverb", weight: Config.instrumentTypeHasChorus[type] ? 2 : 0 },
+					{ item: "chorus", weight: 2 },
+					{ item: "chorus & reverb", weight: 2 },
 				]));
 				instrument.chord = Config.chords.dictionary[selectWeightedRandom([
 					{ item: "harmony", weight: 7 },
@@ -600,6 +597,7 @@ namespace beepbox {
 						{ item: "fifth", weight: 1 },
 						{ item: "octave", weight: 2 },
 						{ item: "bowed", weight: 2 },
+						{item: "piano", weight: 5},
 					])].index;
 				}
 				function normalize(harmonics: number[]): void {
@@ -607,7 +605,7 @@ namespace beepbox {
 					for (const value of harmonics) {
 						if (value > max) max = value;
 					}
-					for (let i = 0; i < harmonics.length; i++) {
+					for (let i: number = 0; i < harmonics.length; i++) {
 						harmonics[i] = Config.harmonicsMax * harmonics[i] / max;
 					}
 				}
@@ -644,7 +642,7 @@ namespace beepbox {
 						const harmonicGenerators: Function[] = [
 							(): number[] => {
 								const harmonics: number[] = [];
-								for (let i = 0; i < Config.harmonicsControlPoints; i++) {
+								for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
 									harmonics[i] = (Math.random() < 0.4) ? Math.random() : 0.0;
 								}
 								harmonics[(Math.random() * 8) | 0] = Math.pow(Math.random(), 0.25);
@@ -672,14 +670,14 @@ namespace beepbox {
 						const generator = harmonicGenerators[(Math.random() * harmonicGenerators.length) | 0];
 						const harmonics: number[] = generator();
 						normalize(harmonics);
-						for (let i = 0; i < Config.harmonicsControlPoints; i++) {
+						for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
 							instrument.harmonicsWave.harmonics[i] = Math.round(harmonics[i]);
 						}
 						instrument.harmonicsWave.markCustomWaveDirty();
 					} break;
 					case InstrumentType.spectrum: {
 						const spectrum: number[] = [];
-						for (let i = 0; i < Config.spectrumControlPoints; i++) {
+						for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
 							const isHarmonic: boolean = i == 0 || i == 7 || i == 11 || i == 14 || i == 16 || i == 18 || i == 21;
 							if (isHarmonic) {
 								spectrum[i] = Math.pow(Math.random(), 0.25);
@@ -688,7 +686,7 @@ namespace beepbox {
 							}
 						}
 						normalize(spectrum);
-						for (let i = 0; i < Config.spectrumControlPoints; i++) {
+						for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
 							instrument.spectrumWave.spectrum[i] = Math.round(spectrum[i]);
 						}
 						instrument.spectrumWave.markCustomWaveDirty();

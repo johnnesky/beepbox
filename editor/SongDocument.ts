@@ -23,6 +23,7 @@ namespace beepbox {
 		public bar: number = 0;
 		public autoPlay: boolean;
 		public autoFollow: boolean;
+		public enableNotePreview: boolean;
 		public showFifth: boolean;
 		public showLetters: boolean;
 		public showChannels: boolean;
@@ -54,6 +55,7 @@ namespace beepbox {
 			
 			this.autoPlay = localStorage.getItem("autoPlay") == "true";
 			this.autoFollow = localStorage.getItem("autoFollow") == "true";
+			this.enableNotePreview = localStorage.getItem("enableNotePreview") != "false";
 			this.showFifth = localStorage.getItem("showFifth") == "true";
 			this.showLetters = localStorage.getItem("showLetters") == "true";
 			this.showChannels = localStorage.getItem("showChannels") == "true";
@@ -217,6 +219,7 @@ namespace beepbox {
 		public savePreferences(): void {
 			localStorage.setItem("autoPlay", this.autoPlay ? "true" : "false");
 			localStorage.setItem("autoFollow", this.autoFollow ? "true" : "false");
+			localStorage.setItem("enableNotePreview", this.enableNotePreview ? "true" : "false");
 			localStorage.setItem("showFifth", this.showFifth ? "true" : "false");
 			localStorage.setItem("showLetters", this.showLetters ? "true" : "false");
 			localStorage.setItem("showChannels", this.showChannels ? "true" : "false");
