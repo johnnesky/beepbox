@@ -3570,13 +3570,21 @@ namespace beepbox {
 			const outputBuffer = audioProcessingEvent.outputBuffer;
 			const outputDataL: Float32Array = outputBuffer.getChannelData(0);
 			const outputDataR: Float32Array = outputBuffer.getChannelData(1);
-			this.synthesize(outputDataL, outputDataR, outputBuffer.length);
-		}
-
-		public synthesize(outputDataL: Float32Array, outputDataR: Float32Array, outputBufferLength: number): void {
-			const isPlayingLiveTones = performance.now() < this.liveInputEndTime;
 			
-			if ((!isPlayingLiveTones && !this.isPlayingSong) || this.song == null) {
+			const isPlayingLiveTones = performance.now() < this.liveInputEndTime;
+			if (!isPlayingLiveTones && !this.isPlayingSong) {
+				for (let i: number = 0; i < outputBuffer.length; i++) {
+					outputDataL[i] = 0.0;
+					outputDataR[i] = 0.0;
+				}
+				this.deactivateAudio();
+			} else {
+				this.synthesize(outputDataL, outputDataR, outputBuffer.length, this.isPlayingSong);
+			}
+		}
+		
+		public synthesize(outputDataL: Float32Array, outputDataR: Float32Array, outputBufferLength: number, playSong: boolean = true): void {
+			if (this.song == null) {
 				for (let i: number = 0; i < outputBufferLength; i++) {
 					outputDataL[i] = 0.0;
 					outputDataR[i] = 0.0;
@@ -3615,7 +3623,7 @@ namespace beepbox {
 			if (this.tickSampleCountdown == 0 || this.tickSampleCountdown > samplesPerTick) {
 				this.tickSampleCountdown = samplesPerTick;
 			}
-			if (this.isPlayingSong) {
+			if (playSong) {
 				if (this.beat >= this.song.beatsPerBar) {
 					this.bar++;
 					this.beat = 0;
@@ -3698,7 +3706,7 @@ namespace beepbox {
 
 				for (let modChannel: number = 0, channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; modChannel < this.song.modChannelCount; modChannel++ , channel++) {
 					// Also determines mod tones.
-					this.determineCurrentActiveTones(this.song, channel);
+					this.determineCurrentActiveTones(this.song, channel, playSong);
 
 					for (let mod: number = 0; mod < Config.modCount; mod++) {
 						for (let i: number = 0; i < this.activeModTones[modChannel][mod].count(); i++) {
@@ -3725,11 +3733,18 @@ namespace beepbox {
 						}
 					}
 
-					if (this.song.channels[channel].muted == false) {
-						this.determineCurrentActiveTones(this.song, channel);
-						for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
-							const tone: Tone = this.activeTones[channel].get(i);
-							this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, false, false);
+
+					this.determineCurrentActiveTones(this.song, channel, playSong);
+					for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
+						const tone: Tone = this.activeTones[channel].get(i);
+						this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, false, false);
+					}
+					for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
+						const tone: Tone = this.releasedTones[channel].get(i);
+						if (tone.ticksSinceReleased >= tone.instrument.getTransition().releaseTicks) {
+							this.freeReleasedTone(channel, i);
+							i--;
+							continue;
 						}
 						for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
 							const tone: Tone = this.releasedTones[channel].get(i);
@@ -3922,7 +3937,7 @@ namespace beepbox {
 						if (this.part == Config.partsPerBeat) {
 							this.part = 0;
 							
-							if (this.isPlayingSong) {
+							if (playSong) {
 								this.beat++;
 								if (this.beat == this.song.beatsPerBar) {
 									// bar changed, reset for next bar:
@@ -3990,7 +4005,7 @@ namespace beepbox {
 			//this.highpassOutput = highpassOutput;
 			this.limit = limit;
 			
-			if (this.isPlayingSong) {
+			if (playSong) {
 				this.playheadInternal = (((this.tick + 1.0 - this.tickSampleCountdown / samplesPerTick) / 2.0 + this.part) / Config.partsPerBeat + this.beat) / this.song.beatsPerBar + this.bar;
 			}
 			
@@ -4145,13 +4160,13 @@ namespace beepbox {
 			
 			this.liveInputStarted = false;
 		}
-
-		private determineCurrentActiveTones(song: Song, channel: number): void {
+		
+		private determineCurrentActiveTones(song: Song, channel: number, playSong: boolean): void {
 			const instrument: Instrument = song.channels[channel].instruments[song.getPatternInstrument(channel, this.bar)];
 			const pattern: Pattern | null = song.getPattern(channel, this.bar);
 			const time: number = this.part + this.beat * Config.partsPerBeat;
 
-			if (this.song != null && song.getChannelIsMod(channel) && this.isPlayingSong) {
+			if (playSong && song.getChannelIsMod(channel) && !song.channels[channel].muted) {
 				// Offset channel (first mod channel is 0 index in mod tone array)
 				let modChannelIdx = channel - (song.pitchChannelCount + song.noiseChannelCount);
 
@@ -4211,7 +4226,7 @@ namespace beepbox {
 				let prevNote: Note | null = null;
 				let nextNote: Note | null = null;
 
-				if (this.isPlayingSong && pattern != null && !song.channels[channel].muted) {
+				if (playSong && pattern != null && !song.channels[channel].muted) {
 					for (let i: number = 0; i < pattern.notes.length; i++) {
 						if (pattern.notes[i].end <= time) {
 							prevNote = pattern.notes[i];
