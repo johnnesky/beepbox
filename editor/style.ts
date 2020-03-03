@@ -1028,6 +1028,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 .beepboxEditor span.modSlider {
 	--mod-position: 20%;
 	--mod-color: ${ColorConfig.overwritingModSlider};
+  --mod-border-radius: 0%;
 }
 .beepboxEditor span.modSlider:before {
 	content: "";
@@ -1042,7 +1043,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		transform: translate(-50%, 0%);
 		pointer-events: none;
 		border: 40%;
-		border-radius: 40%;
+		border-radius: var(--mod-border-radius);
 }
 .beepboxEditor input[type=range]::-webkit-slider-thumb {
 	height: 2em;

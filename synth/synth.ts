@@ -3733,7 +3733,7 @@ namespace beepbox {
 						}
 					}
 
-
+		
 					this.determineCurrentActiveTones(this.song, channel, playSong);
 					for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
 						const tone: Tone = this.activeTones[channel].get(i);
@@ -3746,20 +3746,12 @@ namespace beepbox {
 							i--;
 							continue;
 						}
-						for (let i: number = 0; i < this.releasedTones[channel].count(); i++) {
-							const tone: Tone = this.releasedTones[channel].get(i);
-							if (tone.ticksSinceReleased >= tone.instrument.getTransition().releaseTicks) {
-								this.freeReleasedTone(channel, i);
-								i--;
-								continue;
-							}
 
 							const shouldFadeOutFast: boolean = (i + this.activeTones[channel].count() >= Config.maximumTonesPerChannel);
 
 							this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
 						}
 					}
-				}
 
 				// Post processing:
 				let chorusTap0Index: number = chorusDelayPos + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);

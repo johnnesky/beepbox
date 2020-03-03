@@ -1758,13 +1758,6 @@ namespace beepbox {
 
 				}
 
-				for (let effectsIndex: number = 0; effectsIndex < Config.effectsNames.length; effectsIndex++) {
-					const option: Element = this._effectsSelect.children[effectsIndex];
-					if (!option.hasAttribute("hidden")) {
-						option.setAttribute("hidden", "");
-					}
-				}
-
 				this._instrumentSelectRow.style.display = "none";
 
 				this._customInstrumentSettingsGroup.style.display = "none";

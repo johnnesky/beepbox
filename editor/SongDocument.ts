@@ -55,7 +55,7 @@ namespace beepbox {
 			
 			this.autoPlay = localStorage.getItem("autoPlay") == "true";
 			this.autoFollow = localStorage.getItem("autoFollow") == "true";
-			this.enableNotePreview = localStorage.getItem("enableNotePreview") != "false";
+			this.enableNotePreview = localStorage.getItem("enableNotePreview") == "true";
 			this.showFifth = localStorage.getItem("showFifth") == "true";
 			this.showLetters = localStorage.getItem("showLetters") == "true";
 			this.showChannels = localStorage.getItem("showChannels") == "true";
