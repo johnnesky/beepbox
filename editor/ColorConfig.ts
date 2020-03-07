@@ -463,7 +463,7 @@ namespace beepbox {
 					--mod-secondary-note-hue-scale: 1.5;
 					--mod-secondary-note-sat: 92;
 					--mod-secondary-note-sat-scale: 0;
-					--mod-secondary-note-lum: 55;
+					--mod-secondary-note-lum: 45;
 					--mod-secondary-note-lum-scale: 0;
 					--mod-primary-note-hue: 192;
 					--mod-primary-note-hue-scale: 1.5;

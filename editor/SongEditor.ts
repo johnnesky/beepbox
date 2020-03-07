@@ -1342,6 +1342,7 @@ namespace beepbox {
 						this._phaseModGroup.style.display = "";
 						this._feedbackRow1.style.display = "";
 						this._feedbackRow2.style.display = "";
+						this._chipWaveSelectRow.style.display = "none";
 						setSelectedValue(this._algorithmSelect, instrument.algorithm);
 						setSelectedValue(this._feedbackTypeSelect, instrument.feedbackType);
 						this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);

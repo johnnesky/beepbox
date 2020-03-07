@@ -328,6 +328,7 @@ namespace beepbox {
 		if (draggingPlayhead && synth.song != null) {
 			const boundingRect: ClientRect = visualizationContainer.getBoundingClientRect();
 			synth.playhead = synth.song.barCount * (mouseX - boundingRect.left) / (boundingRect.right - boundingRect.left);
+			synth.computeLatestModValues();
 			renderPlayhead();
 		}
 	}

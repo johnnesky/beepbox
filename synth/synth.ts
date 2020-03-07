@@ -2991,9 +2991,7 @@ namespace beepbox {
 				}
 
 				// Find out where we're at in the fraction of the current bar.
-				let currentTick: number = this.beat * Config.partsPerBeat * Config.ticksPerPart
-					+ this.part * Config.ticksPerPart
-					+ this.tick;
+				let currentPart: number = this.beat * Config.partsPerBeat + this.part;
 
 				// For mod channels, calculate last set value for each mod
 				for (let channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; channel < this.song.getChannelCount(); channel++) {
@@ -3007,26 +3005,26 @@ namespace beepbox {
 							if (pattern != null) {
 								let instrumentIdx: number = this.song.getPatternInstrument(channel, currentBar);
 								let instrument: Instrument = this.song.channels[channel].instruments[instrumentIdx];
-								let latestPinTicks: number[] = [];
+								let latestPinParts: number[] = [];
 								let latestPinValues: number[] = [];
 
-								let ticksInBar: number = (currentBar == this.bar)
-									? currentTick
-									: this.findTicksInBar(currentBar);
+								let partsInBar: number = (currentBar == this.bar)
+									? currentPart
+									: this.findPartsInBar(currentBar);
 
 								for (const note of pattern.notes) {
-									if (note.start < ticksInBar && (latestPinTicks[Config.modCount - 1 - note.pitches[0]] == null || note.end > latestPinTicks[Config.modCount - 1 - note.pitches[0]])) {
-										if (note.end <= ticksInBar) {
-											latestPinTicks[Config.modCount - 1 - note.pitches[0]] = note.end;
+									if (note.start < partsInBar && (latestPinParts[Config.modCount - 1 - note.pitches[0]] == null || note.end > latestPinParts[Config.modCount - 1 - note.pitches[0]])) {
+										if (note.end <= partsInBar) {
+											latestPinParts[Config.modCount - 1 - note.pitches[0]] = note.end;
 											latestPinValues[Config.modCount - 1 - note.pitches[0]] = note.pins[note.pins.length - 1].volume;
 										}
 										else {
-											latestPinTicks[Config.modCount - 1 - note.pitches[0]] = ticksInBar;
+											latestPinParts[Config.modCount - 1 - note.pitches[0]] = partsInBar;
 											// Find the pin where bar change happens, and compute where pin volume would be at that time
 											for (let pinIdx = 0; pinIdx < note.pins.length; pinIdx++ ) {
-												if (note.pins[pinIdx].time + note.start > ticksInBar) {
+												if (note.pins[pinIdx].time + note.start > partsInBar) {
 													const transitionLength: number = note.pins[pinIdx].time - note.pins[pinIdx - 1].time;
-													const toNextBarLength: number = ticksInBar - note.pins[pinIdx - 1].time;
+													const toNextBarLength: number = partsInBar - note.pins[pinIdx - 1].time;
 													const deltaVolume: number = note.pins[pinIdx].volume - note.pins[pinIdx - 1].volume;
 
 													latestPinValues[Config.modCount - 1 - note.pitches[0]] = Math.round( note.pins[pinIdx - 1].volume + deltaVolume * toNextBarLength / transitionLength );
@@ -3038,7 +3036,7 @@ namespace beepbox {
 
 								// Set modulator value, if it wasn't set in another pattern already scanned
 								for (let mod: number = 0; mod < Config.modCount; mod++) {
-									if (latestPinTicks[mod] != null) {
+									if (latestPinParts[mod] != null) {
 										if (!this.isModActive(instrument.modSettings[mod], (instrument.modStatuses[mod] == ModStatus.msForSong), instrument.modChannels[mod] + ((instrument.modStatuses[mod] == ModStatus.msForNoise) ? this.song!.pitchChannelCount : 0), instrument.modInstruments[mod]))
 											this.setModValue(latestPinValues[mod], latestPinValues[mod], mod, instrument, instrument.modSettings[mod]);
 									}
@@ -3137,10 +3135,10 @@ namespace beepbox {
 			return this.getSamplesPerTick() * Config.ticksPerPart * Config.partsPerBeat * this.song.beatsPerBar;
 		}
 
-		// Calculate the total number of ticks that will be played in the current bar before any next bar mods trigger.
-		private findTicksInBar(bar: number): number {
+		// Calculate the total number of parts that will be played in the current bar before any next bar mods trigger.
+		private findPartsInBar(bar: number): number {
 			if (this.song == null) return 0;
-			let ticksInBar: number = Config.ticksPerPart * Config.partsPerBeat * this.song.beatsPerBar;
+			let partsInBar: number = Config.partsPerBeat * this.song.beatsPerBar;
 			for (let channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; channel < this.song.getChannelCount(); channel++) {
 				let pattern: Pattern | null = this.song.getPattern(channel, bar);
 				if (pattern != null) {
@@ -3150,15 +3148,15 @@ namespace beepbox {
 							for (const note of pattern.notes) {
 								if (note.pitches[0] == (Config.modCount - 1 - mod)) {
 									// Find the earliest next bar note.
-									if (ticksInBar > note.start)
-										ticksInBar = note.start;
+									if (partsInBar > note.start)
+										partsInBar = note.start;
 								}
 							}
 						}
 					}
 				}
 			}
-			return ticksInBar;
+			return partsInBar;
 		}
 
 		// Returns the total samples in the song
@@ -3203,7 +3201,7 @@ namespace beepbox {
 					let currentPart: number = 0;
 
 					if (hasNextBarMods) {
-						partsInBar = this.findTicksInBar(bar) / Config.ticksPerPart;
+						partsInBar = this.findPartsInBar(bar);
 					}
 
 					// Compute average tempo in this tick window, or use last tempo if nothing happened
@@ -4518,7 +4516,7 @@ namespace beepbox {
 				transitionVolumeStart = transitionVolumeEnd = 1;
 				customVolumeStart = customVolumeEnd = 1;
 				tone.lastInterval = 0;
-				tone.lastVolume = 3;
+				tone.lastVolume = 6;
 				tone.ticksSinceReleased = 0;
 				resetPhases = false;
 
@@ -4879,8 +4877,8 @@ namespace beepbox {
 				const volumeEnd: number = filterVolumeEnd * volumeMult * transitionVolumeEnd * chordVolumeEnd;
 				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
 
-				sineVolumeBoostStart *= (Math.pow(2.0, (2.0 - 1.4 * feedbackAmplitudeStart / 15.0)) - 1.0) / 3.0;
-				sineVolumeBoostEnd *= (Math.pow(2.0, (2.0 - 1.4 * feedbackAmplitudeEnd / 15.0)) - 1.0) / 3.0;
+				sineVolumeBoostStart *= (Math.pow(2.0, (2.0 - 1.4 * useFeedbackAmplitudeStart / 15.0)) - 1.0) / 3.0;
+				sineVolumeBoostEnd *= (Math.pow(2.0, (2.0 - 1.4 * useFeedbackAmplitudeEnd / 15.0)) - 1.0) / 3.0;
 				sineVolumeBoostStart *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolumeStart - 1) / 2.0);
 				sineVolumeBoostEnd *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierVolumeEnd - 1) / 2.0);
 				tone.volumeStart *= 1.0 + sineVolumeBoostStart * 3.0;

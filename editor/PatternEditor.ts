@@ -32,15 +32,15 @@ namespace beepbox {
 
 	export class PatternEditor {
 		public controlMode: boolean = false;
-		private readonly _svgNoteBackground: SVGPatternElement = SVG.pattern({id: "patternEditorNoteBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse"});
-		private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({id: "patternEditorDrumBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse"});
+		private readonly _svgNoteBackground: SVGPatternElement = SVG.pattern({ id: "patternEditorNoteBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse" });
+		private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({ id: "patternEditorDrumBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse" });
 		private readonly _svgModBackground: SVGPatternElement = SVG.pattern({ id: "patternEditorModBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse" });
-		private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", "pointer-events": "none", fill: "url(#patternEditorNoteBackground" + this._barOffset + ")"});
+		private readonly _svgBackground: SVGRectElement = SVG.rect({ x: "0", y: "0", "pointer-events": "none", fill: "url(#patternEditorNoteBackground" + this._barOffset + ")" });
 		private _svgNoteContainer: SVGSVGElement = SVG.svg();
-		private readonly _svgPlayhead: SVGRectElement = SVG.rect({id: "", x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none"});
-		private readonly _svgPreview: SVGPathElement = SVG.path({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": "2", "pointer-events": "none"});
+		private readonly _svgPlayhead: SVGRectElement = SVG.rect({ id: "", x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none" });
+		private readonly _svgPreview: SVGPathElement = SVG.path({ fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": "2", "pointer-events": "none" });
 		private _svgModDragValueLabel: SVGTextElement = SVG.text({ width: "90", "text-anchor": "start", style: "display: flex, justify-content: center; align-items:center;", "dominant-baseline": "central", "pointer-events": "none" });
-		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; position: absolute;`, width: "100%", height: "100%"},
+		private readonly _svg: SVGSVGElement = SVG.svg({ style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; position: absolute;`, width: "100%", height: "100%" },
 			SVG.defs(
 				this._svgNoteBackground,
 				this._svgDrumBackground,
@@ -52,7 +52,7 @@ namespace beepbox {
 			this._svgPlayhead,
 			this._svgModDragValueLabel
 		);
-		public readonly container: HTMLDivElement = HTML.div({style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1;"}, this._svg);
+		public readonly container: HTMLDivElement = HTML.div({ style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1;" }, this._svg);
 
 		private readonly _defaultModBorder: number = 34;
 		private readonly _backgroundPitchRows: SVGRectElement[] = [];
@@ -99,7 +99,7 @@ namespace beepbox {
 		private _renderedNoiseChannelCount: number = -1;
 		private _renderedModChannelCount: number = -1;
 		private _followPlayheadBar: number = -1;
-		
+
 		constructor(private _doc: SongDocument, private _interactive: boolean, private _barOffset: number) {
 			for (let i: number = 0; i < Config.pitchesPerOctave; i++) {
 				const rectangle: SVGRectElement = SVG.rect();
@@ -125,16 +125,16 @@ namespace beepbox {
 				document.addEventListener("mouseup", this._whenCursorReleased);
 				this._svg.addEventListener("mouseover", this._whenMouseOver);
 				this._svg.addEventListener("mouseout", this._whenMouseOut);
-			
+
 				this._svg.addEventListener("touchstart", this._whenTouchPressed);
 				this._svg.addEventListener("touchmove", this._whenTouchMoved);
 				this._svg.addEventListener("touchend", this._whenCursorReleased);
 				this._svg.addEventListener("touchcancel", this._whenCursorReleased);
 			} else {
 				this._svgPlayhead.style.display = "none";
-				this._svg.appendChild(SVG.rect({x: 0, y: 0, width: 10000, height: 10000, fill: ColorConfig.editorBackground, style: "opacity: 0.5;"}));
+				this._svg.appendChild(SVG.rect({ x: 0, y: 0, width: 10000, height: 10000, fill: ColorConfig.editorBackground, style: "opacity: 0.5;" }));
 			}
-			
+
 			this.resetCopiedPins();
 		}
 
@@ -165,7 +165,7 @@ namespace beepbox {
 		private _updateCursorStatus(): void {
 			this._cursor = new PatternCursor();
 			if (this._mouseX < 0 || this._mouseX > this._editorWidth || this._mouseY < 0 || this._mouseY > this._editorHeight || this._pitchHeight <= 0) return;
-			
+
 			const minDivision: number = this._getMinDivision();
 			const exactPart: number = this._mouseX / this._partWidth;
 			this._cursor.part =
@@ -178,12 +178,6 @@ namespace beepbox {
 			let foundNote: boolean = false;
 
 			if (this._pattern != null) {
-
-				if (this._doc.song.getChannelIsMod(this._doc.channel)) {
-					// Need to re-sort the notes by start time as they might change order if user drags them around.
-					this._pattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
-				}
-
 				for (const note of this._pattern.notes) {
 					if (note.end <= exactPart) {
 						if (this._doc.song.getChannelIsMod(this._doc.channel)) {
@@ -373,6 +367,7 @@ namespace beepbox {
 				}
 
 				if (this._cursor.end - this._cursor.start == defaultLength) {
+					this._copiedPins = this._copiedPinChannels[this._doc.channel];
 					this._cursor.pins = this._copiedPins;
 				} else {
 					this._cursor.pins = [];
@@ -410,6 +405,7 @@ namespace beepbox {
 						}
 					}
 				}
+				
 			}
 
 			this._cursor.valid = true;
@@ -499,7 +495,7 @@ namespace beepbox {
 
 		private _animatePlayhead = (timestamp: number): void => {
 			const playheadBar: number = Math.floor(this._doc.synth.playhead);
-			
+
 			if (this._doc.synth.playing && ((this._pattern != null && this._doc.song.getPattern(this._doc.channel, Math.floor(this._doc.synth.playhead)) == this._pattern) || Math.floor(this._doc.synth.playhead) == this._doc.bar + this._barOffset)) {
 				this._svgPlayhead.setAttribute("visibility", "visible");
 				const modPlayhead: number = this._doc.synth.playhead - playheadBar;
@@ -563,7 +559,7 @@ namespace beepbox {
 			this._updatePreview();
 			this._dragChange = new ChangeSequence();
 			this._doc.setProspectiveChange(this._dragChange);
-			
+
 			if (this._doc.enableNotePreview && !this._doc.synth.playing && this._cursor.valid && this._cursor.curNote == null) {
 				const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
 				this._doc.synth.liveInputDuration = duration;
@@ -595,7 +591,7 @@ namespace beepbox {
 
 		private _whenCursorMoved(): void {
 			if (this._doc.enableNotePreview && this._mouseOver) this._doc.synth.maintainLiveInput();
-			
+
 			let start: number;
 			let end: number;
 
@@ -722,9 +718,16 @@ namespace beepbox {
 							this._dragVolume = theNote.pins[backwards ? 0 : 1].volume;
 							this._dragVisible = true;
 						}
-						
+
+						let prevPattern: Pattern | null = this._pattern;
+
 						this._pattern = this._doc.getCurrentPattern(this._barOffset);
-						
+
+						if (this._pattern != null && this._doc.song.getChannelIsMod(this._doc.channel) && this._interactive && prevPattern != this._pattern) {
+							// Need to re-sort the notes by start time as they might change order if user drags them around.
+							this._pattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
+						}
+
 					} else if (this._mouseHorizontal) {
 
 						//console.log("this._mouseHorizontal");
@@ -897,7 +900,7 @@ namespace beepbox {
 						sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));
 						this._doc.record(sequence);
 						this._copyPins(this._cursor.curNote);
-						
+
 						if (this._doc.enableNotePreview && !this._doc.synth.playing) {
 							const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
 							this._doc.synth.liveInputDuration = duration;
@@ -965,11 +968,15 @@ namespace beepbox {
 				}
 			}
 		}
-		
+
 		public render(): void {
 			const nextPattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
-			
+
 			if (this._pattern != nextPattern) {
+				if (this._doc.song.getChannelIsMod(this._doc.channel) && this._interactive && nextPattern != null) {
+					// Need to re-sort the notes by start time as they might change order if user drags them around.
+					nextPattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
+				}
 				this._whenCursorReleased(null);
 				this._dragChange = null;
 			}
@@ -979,7 +986,7 @@ namespace beepbox {
 			this._editorHeight = this.container.clientHeight;
 			this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * Config.partsPerBeat);
 			this._octaveOffset = this._doc.song.channels[this._doc.channel].octave * Config.pitchesPerOctave;
-			
+
 			if (this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				this._pitchBorder = 0;
 				this._pitchCount = Config.drumCount;
@@ -1012,9 +1019,9 @@ namespace beepbox {
 				this._pitchBorder = 0;
 				this._pitchCount = this._doc.windowPitchCount;
 			}
-			
+
 			this._pitchHeight = this._editorHeight / this._pitchCount;
-			
+
 			if (this._renderedRhythm != this._doc.song.rhythm ||
 				this._renderedPitchChannelCount != this._doc.song.pitchChannelCount ||
 				this._renderedNoiseChannelCount != this._doc.song.noiseChannelCount ||
@@ -1027,7 +1034,7 @@ namespace beepbox {
 			}
 
 			this._copiedPins = this._copiedPinChannels[this._doc.channel];
-			
+
 			if (this._renderedWidth != this._editorWidth || this._renderedHeight != this._editorHeight) {
 				this._renderedWidth = this._editorWidth;
 				this._renderedHeight = this._editorHeight;
@@ -1045,7 +1052,7 @@ namespace beepbox {
 				this._svgDrumBackground.setAttribute("width", "" + beatWidth);
 				this._svgDrumBackground.setAttribute("height", "" + this._pitchHeight);
 				this._svgModBackground.setAttribute("width", "" + beatWidth);
-				this._svgModBackground.setAttribute("height", "" + (this._pitchHeight));		
+				this._svgModBackground.setAttribute("height", "" + (this._pitchHeight));
 				this._svgModBackground.setAttribute("y", "" + (this._pitchBorder / 2));
 				this._backgroundDrumRow.setAttribute("width", "" + (beatWidth - 2));
 				this._backgroundDrumRow.setAttribute("height", "" + (this._pitchHeight - 2));
@@ -1053,9 +1060,9 @@ namespace beepbox {
 					this._backgroundModRow.setAttribute("width", "" + (beatWidth - 2));
 					this._backgroundModRow.setAttribute("height", "" + (this._pitchHeight - this._pitchBorder));
 				}
-				
-				
-				
+
+
+
 				for (let j: number = 0; j < Config.pitchesPerOctave; j++) {
 					const rectangle: SVGRectElement = this._backgroundPitchRows[j];
 					const y: number = (Config.pitchesPerOctave - j) % Config.pitchesPerOctave;
