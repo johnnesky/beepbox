@@ -2019,8 +2019,13 @@ namespace beepbox {
 			
 			this.scale = 11; // default to expert.
 			if (jsonObject["scale"] != undefined) {
-				const oldScaleNames: Dictionary<number> = {"romani :)": 8, "romani :(": 9};
-				const scale: number = oldScaleNames[jsonObject["scale"]] != undefined ? oldScaleNames[jsonObject["scale"]] : Config.scales.findIndex(scale=>scale.name==jsonObject["scale"]);
+				const oldScaleNames: Dictionary<string> = {
+					"romani :)": "dbl harmonic :)",
+					"romani :(": "dbl harmonic :(",
+					"enigma": "strange",
+				};
+				const scaleName: string = (oldScaleNames[jsonObject["scale"]] != undefined) ? oldScaleNames[jsonObject["scale"]] : jsonObject["scale"];
+				const scale: number = Config.scales.findIndex(scale => scale.name == scaleName);
 				if (scale != -1) this.scale = scale;
 			}
 			
