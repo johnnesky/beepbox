@@ -109,11 +109,11 @@ namespace beepbox {
 		
 		private static _validateNumber(event: Event): void {
 			const input: HTMLInputElement = <HTMLInputElement>event.target;
-			input.value = Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value)))) + "";
+			input.value = String(this._validate(input));
 		}
 		
 		private static _validate(input: HTMLInputElement): number {
-			return Math.floor(Number(input.value));
+			return Math.floor(Math.max(Number(input.min), Math.min(Number(input.max), Number(input.value))));
 		}
 		
 		private _saveChanges = (): void => {

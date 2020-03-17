@@ -2081,9 +2081,9 @@ namespace beepbox {
 				}
 			}
 			
-			this.instrumentsPerChannel = maxInstruments;
-			this.patternsPerChannel = maxPatterns;
-			this.barCount = maxBars;
+			this.instrumentsPerChannel = Math.min(maxInstruments, Config.instrumentsPerChannelMax);
+			this.patternsPerChannel = Math.min(maxPatterns, Config.barCountMax);
+			this.barCount = Math.min(maxBars, Config.barCountMax);
 			
 			if (jsonObject["introBars"] != undefined) {
 				this.loopStart = clamp(0, this.barCount, jsonObject["introBars"] | 0);
