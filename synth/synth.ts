@@ -1178,7 +1178,8 @@ namespace beepbox {
 		}
 
 		public getTransition(): Transition {
-			return this.type == InstrumentType.drumset ? Config.transitions.dictionary["hard fade"] : Config.transitions[this.transition];
+			return this.type == InstrumentType.drumset ? Config.transitions.dictionary["hard fade"] :
+				this.type == InstrumentType.mod ? Config.transitions.dictionary["seamless"] : Config.transitions[this.transition];
 		}
 		public getChord(): Chord {
 			return this.type == InstrumentType.drumset ? Config.chords.dictionary["harmony"] : Config.chords[this.chord];
@@ -1871,7 +1872,7 @@ namespace beepbox {
 						this.channels[channelIndex] = new Channel();
 					}
 					this.channels.length = this.getChannelCount();
-					ColorConfig.resetColors();
+
 				} else if (command == SongTagCode.scale) {
 					this.scale = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					// All the scales were jumbled around by Jummbox. Just convert to free.
@@ -3213,8 +3214,9 @@ namespace beepbox {
 								if (pattern != null) {
 									let instrument: Instrument = this.song.channels[channel].instruments[pattern.instrument];
 									for (let mod: number = 0; mod < Config.modCount; mod++) {
-										if (foundMod == false && instrument.modSettings[mod] == ModSetting.mstTempo && instrument.modStatuses[mod] == ModStatus.msForSong) {
-											// Only the first tempo mod instrument for this bar will be checked.
+										if (foundMod == false && instrument.modSettings[mod] == ModSetting.mstTempo && instrument.modStatuses[mod] == ModStatus.msForSong
+											&& pattern.notes.find(n => n.pitches[0] == (Config.modCount - 1 - mod))) {
+											// Only the first tempo mod instrument for this bar will be checked (well, the first with a note in this bar).
 											foundMod = true;
 											// Need to re-sort the notes by start time to make the next part much less painful.
 											pattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });

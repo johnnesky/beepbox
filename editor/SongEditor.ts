@@ -841,7 +841,7 @@ namespace beepbox {
 			this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
 			this._volumeSlider.input.addEventListener("input", this._setVolumeSlider);
 
-			this._patternArea.addEventListener("mousedown", this._refocusStage);
+			this._patternArea.addEventListener("mousedown", this._refocusStageNotEditing);
 			this._trackArea.addEventListener("mousedown", this._refocusStage);
 
 			// The song volume slider is styled slightly different than the class' default.
@@ -1106,6 +1106,12 @@ namespace beepbox {
 			this.mainLayer.focus();
 		}
 
+		// Refocus stage if a sub-element that needs focus isn't being edited.
+		private _refocusStageNotEditing = (): void => {
+			if (!this._patternEditor.editingModLabel)
+				this.mainLayer.focus();
+		}
+
 		public changeBarScrollPos(offset: number) {
 			this._barScrollBar.changePos(offset);
 		}
@@ -1117,6 +1123,10 @@ namespace beepbox {
 			this._barScrollBar.render();
 			this._muteEditor.render();
 			this._trackEditor.render();
+
+			if (document.activeElement != this._patternEditor.modDragValueLabel && this._patternEditor.editingModLabel) {
+				this._patternEditor.stopEditingModLabel(false);
+			}
 
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
 			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
@@ -1867,11 +1877,12 @@ namespace beepbox {
 				return;
 			}
 
-			// Defer to actively editing song title
-			if (document.activeElement == this._songTitleInputBox.input) {
+			// Defer to actively editing song title or mod label
+			if (document.activeElement == this._songTitleInputBox.input || this._patternEditor.editingModLabel) {
 				// Enter/esc returns focus to form
 				if (event.keyCode == 13 || event.keyCode == 27) {
 					this.mainLayer.focus();
+					this._patternEditor.stopEditingModLabel(event.keyCode == 27);
 				}
 
 				return;

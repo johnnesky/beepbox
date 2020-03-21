@@ -1963,7 +1963,13 @@ namespace beepbox {
 	export class ChangeSong extends ChangeGroup {
 		constructor(doc: SongDocument, newHash: string) {
 			super();
+			let pitchChannelCount = doc.song.pitchChannelCount;
+			let noiseChannelCount = doc.song.noiseChannelCount;
+			let modChannelCount = doc.song.modChannelCount;
 			doc.song.fromBase64String(newHash);
+			if (pitchChannelCount != doc.song.pitchChannelCount || noiseChannelCount != doc.song.noiseChannelCount || modChannelCount != doc.song.modChannelCount) {
+				ColorConfig.resetColors();
+			}
 			this.append(new ChangeValidateDoc(doc));
 			if (newHash == "") setDefaultInstruments(doc.song);
 			doc.notifier.changed();

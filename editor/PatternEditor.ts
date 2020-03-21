@@ -39,7 +39,7 @@ namespace beepbox {
 		private _svgNoteContainer: SVGSVGElement = SVG.svg();
 		private readonly _svgPlayhead: SVGRectElement = SVG.rect({ id: "", x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none" });
 		private readonly _svgPreview: SVGPathElement = SVG.path({ fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": "2", "pointer-events": "none" });
-		private _svgModDragValueLabel: SVGTextElement = SVG.text({ width: "90", "text-anchor": "start", style: "display: flex, justify-content: center; align-items:center;", "dominant-baseline": "central", "pointer-events": "none" });
+		public modDragValueLabel: HTMLDivElement = HTML.div({ width: "90", "text-anchor": "start", contenteditable: "true", style: "display: flex, justify-content: center; align-items:center; position:absolute; pointer-events: none;", "dominant-baseline": "central", });
 		private readonly _svg: SVGSVGElement = SVG.svg({ style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; position: absolute;`, width: "100%", height: "100%" },
 			SVG.defs(
 				this._svgNoteBackground,
@@ -50,9 +50,8 @@ namespace beepbox {
 			this._svgNoteContainer,
 			this._svgPreview,
 			this._svgPlayhead,
-			this._svgModDragValueLabel
 		);
-		public readonly container: HTMLDivElement = HTML.div({ style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1;" }, this._svg);
+		public readonly container: HTMLDivElement = HTML.div({ style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1;" }, this._svg, this.modDragValueLabel);
 
 		private readonly _defaultModBorder: number = 34;
 		private readonly _backgroundPitchRows: SVGRectElement[] = [];
@@ -60,6 +59,17 @@ namespace beepbox {
 		private readonly _backgroundModRow: SVGRectElement = SVG.rect();
 
 		private _editorWidth: number;
+
+		private _modDragValueLabelLeft: number = 0;
+		private _modDragValueLabelTop: number = 0;
+		private _modDragValueLabelWidth: number = 0;
+		public editingModLabel: boolean = false;
+		private _modDragStartValue: number = 0;
+		private _modDragPin: NotePin;
+		private _modDragNote: Note;
+		private _modDragSetting: ModSetting;
+		private _modDragLowerBound: number = 0;
+		private _modDragUpperBound: number = 6;
 
 		private _editorHeight: number;
 		private _partWidth: number;
@@ -130,12 +140,41 @@ namespace beepbox {
 				this._svg.addEventListener("touchmove", this._whenTouchMoved);
 				this._svg.addEventListener("touchend", this._whenCursorReleased);
 				this._svg.addEventListener("touchcancel", this._whenCursorReleased);
+
+				this.modDragValueLabel.addEventListener("input", this._validateModDragLabelInput);
 			} else {
 				this._svgPlayhead.style.display = "none";
 				this._svg.appendChild(SVG.rect({ x: 0, y: 0, width: 10000, height: 10000, fill: ColorConfig.editorBackground, style: "opacity: 0.5;" }));
 			}
 
 			this.resetCopiedPins();
+		}
+
+		private _validateModDragLabelInput = (event: Event): void => {
+			const label: HTMLDivElement = <HTMLDivElement>event.target;
+
+			// One special case - allow "" e.g. the empty string and a single negative sign, but don't do anything about it.
+			if (label.innerText != "" && label.innerText != "-") {
+				// Force NaN results to be 0
+				if (isNaN(Number(label.innerText)))
+					label.innerText = "0";
+
+				let presValue: number = Math.floor(Math.max(Number(this._modDragLowerBound), Math.min(Number(this._modDragUpperBound), Number(label.innerText))));
+				if (label.innerText != presValue + "")
+					label.innerText = presValue + "";
+
+				// This is me being too lazy to fiddle with the css to get it to align center.
+				let xOffset: number = (+(presValue >= 10.0)) + (+(presValue >= 100.0)) + (+(presValue < 0.0)) + (+(presValue <= -10.0));
+				this._modDragValueLabelLeft = +prettyNumber(Math.max(Math.min(this._editorWidth - 10 - xOffset * 8, this._partWidth * (this._modDragNote.start + this._modDragPin.time) - 4 - xOffset * 4), 2));
+				this.modDragValueLabel.style.setProperty("left", "" + this._modDragValueLabelLeft + "px");
+
+				const sequence: ChangeSequence = new ChangeSequence();
+				this._dragChange = sequence;
+				this._doc.setProspectiveChange(this._dragChange);
+
+				sequence.append(new ChangeVolumeBend(this._doc, this._modDragNote, this._modDragPin.time, this._doc.song.realToModValue(presValue, this._modDragSetting), this._modDragPin.interval));
+
+			}
 		}
 
 		private _getMaxDivision(): number {
@@ -217,7 +256,7 @@ namespace beepbox {
 					}
 				}
 
-				if (this._doc.song.getChannelIsMod(this._doc.channel)) {
+				if (this._doc.song.getChannelIsMod(this._doc.channel) && !this.editingModLabel) {
 
 					if (this._pattern.notes[this._cursor.curIndex] != null && this._cursor.curNote != null) {
 
@@ -233,29 +272,48 @@ namespace beepbox {
 							}
 						}
 
-						this._svgModDragValueLabel.setAttribute("fill", "#666688");
-						this._svgModDragValueLabel.setAttribute("visibility", "visible");
+						this.modDragValueLabel.style.setProperty("color", "#666688");
+						this.modDragValueLabel.style.setProperty("display", "");
 
-						let presValue: number = this._doc.song.modValueToReal(this._cursor.curNote.pins[pinIdx].volume, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument(this._barOffset)].modSettings[Config.modCount - 1 - this._cursor.curNote.pitches[0]]);
+						let setting: ModSetting = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument(this._barOffset)].modSettings[Config.modCount - 1 - this._cursor.curNote.pitches[0]];
+
+						let presValue: number = this._doc.song.modValueToReal(this._cursor.curNote.pins[pinIdx].volume, setting);
 
 						// This is me being too lazy to fiddle with the css to get it to align center.
 						let xOffset: number = (+(presValue >= 10.0)) + (+(presValue >= 100.0)) + (+(presValue < 0.0)) + (+(presValue <= -10.0));
 
-						this._svgModDragValueLabel.setAttribute("x", "" + prettyNumber(Math.max(Math.min(this._editorWidth - 8 - xOffset * 8, this._partWidth * (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time) - 4 - xOffset * 4), 2)));
-						this._svgModDragValueLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(this._cursor.curNote.pitches[0] - this._octaveOffset) - 10 - (this._pitchHeight - this._pitchBorder) / 2));
-						this._svgModDragValueLabel.textContent = "" + presValue;
+						this._modDragValueLabelWidth = 8 + xOffset * 8;
+						this._modDragValueLabelLeft = +prettyNumber(Math.max(Math.min(this._editorWidth - 10 - xOffset * 8, this._partWidth * (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time) - 4 - xOffset * 4), 2));
+						this._modDragValueLabelTop = +prettyNumber(this._pitchToPixelHeight(this._cursor.curNote.pitches[0] - this._octaveOffset) - 17 - (this._pitchHeight - this._pitchBorder) / 2);
+
+						this._modDragStartValue = this._cursor.curNote.pins[pinIdx].volume;
+						this._modDragNote = this._cursor.curNote;
+						this._modDragPin = this._cursor.curNote.pins[pinIdx];
+						this._modDragLowerBound = this._doc.song.modValueToReal(0, setting);
+						this._modDragUpperBound = this._doc.song.modValueToReal(this._doc.song.mstMaxVols.get(setting) as number, setting);
+						this._modDragSetting = setting;
+
+						this.modDragValueLabel.style.setProperty("left", "" + this._modDragValueLabelLeft + "px");
+						this.modDragValueLabel.style.setProperty("top", "" + this._modDragValueLabelTop + "px");
+						this.modDragValueLabel.textContent = "" + presValue;
 
 					}
 					else {
-						this._svgModDragValueLabel.setAttribute("visibility", "hidden");
+						this.modDragValueLabel.style.setProperty("display", "none");
+						this.modDragValueLabel.style.setProperty("pointer-events", "none");
+						this.modDragValueLabel.setAttribute("contenteditable", "false");
 					}
 				}
-				else {
-					this._svgModDragValueLabel.setAttribute("visibility", "hidden");
+				else if (!this.editingModLabel) {
+					this.modDragValueLabel.style.setProperty("display", "none");
+					this.modDragValueLabel.style.setProperty("pointer-events", "none");
+					this.modDragValueLabel.setAttribute("contenteditable", "false");
 				}
 			}
 			else {
-				this._svgModDragValueLabel.setAttribute("visibility", "hidden");
+				this.modDragValueLabel.style.setProperty("display", "none");
+				this.modDragValueLabel.style.setProperty("pointer-events", "none");
+				this.modDragValueLabel.setAttribute("contenteditable", "false");
 			}
 
 			let mousePitch: number = this._findMousePitch(this._mouseY);
@@ -405,7 +463,7 @@ namespace beepbox {
 						}
 					}
 				}
-				
+
 			}
 
 			this._cursor.valid = true;
@@ -550,21 +608,73 @@ namespace beepbox {
 			this._whenCursorPressed();
 		}
 
-		private _whenCursorPressed(): void {
-			if (this._doc.enableNotePreview) this._doc.synth.maintainLiveInput();
-			this._mouseDown = true;
-			this._mouseXStart = this._mouseX;
-			this._mouseYStart = this._mouseY;
-			this._updateCursorStatus();
-			this._updatePreview();
-			this._dragChange = new ChangeSequence();
-			this._doc.setProspectiveChange(this._dragChange);
+		public stopEditingModLabel(discardChanges: boolean) {
+			if (this.editingModLabel) {
+				this.editingModLabel = false;
+				this.modDragValueLabel.style.setProperty("pointer-events", "none");
 
-			if (this._doc.enableNotePreview && !this._doc.synth.playing && this._cursor.valid && this._cursor.curNote == null) {
-				const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
-				this._doc.synth.liveInputDuration = duration;
-				this._doc.synth.liveInputPitches = [this._cursor.pitch];
-				this._doc.synth.liveInputStarted = true;
+				if (window.getSelection) { window.getSelection().removeAllRanges(); }
+
+				// Return pin to its state before text editing
+				if (discardChanges) {
+					this._modDragPin.volume = this._modDragStartValue;
+
+					let presValue: number = this._doc.song.modValueToReal(this._modDragStartValue, this._modDragSetting);
+
+					// This is me being too lazy to fiddle with the css to get it to align center.
+					let xOffset: number = (+(presValue >= 10.0)) + (+(presValue >= 100.0)) + (+(presValue < 0.0)) + (+(presValue <= -10.0));
+					this._modDragValueLabelLeft = +prettyNumber(Math.max(Math.min(this._editorWidth - 10 - xOffset * 8, this._partWidth * (this._modDragNote.start + this._modDragPin.time) - 4 - xOffset * 4), 2));
+					this.modDragValueLabel.style.setProperty("left", "" + this._modDragValueLabelLeft + "px");
+
+					const sequence: ChangeSequence = new ChangeSequence();
+					this._dragChange = sequence;
+					this._doc.setProspectiveChange(this._dragChange);
+
+					sequence.append(new ChangeVolumeBend(this._doc, this._modDragNote, this._modDragPin.time, this._modDragStartValue, this._modDragPin.interval));
+
+					this._dragChange = null;
+				}
+
+				const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
+				if (continuousState) {
+					if (this._dragChange != null) {
+						this._doc.record(this._dragChange);
+						this._dragChange = null;
+					}
+				}
+			}
+		}
+
+		private _whenCursorPressed(): void {
+			// Check for click on mod value label
+			if (this._doc.song.getChannelIsMod(this._doc.channel) && this.modDragValueLabel.style.getPropertyValue("display") != "none" &&
+				this._mouseX > +this._modDragValueLabelLeft - 6 &&
+				this._mouseX < +this._modDragValueLabelLeft + this._modDragValueLabelWidth + 6 &&
+				this._mouseY > +this._modDragValueLabelTop - 8 &&
+				this._mouseY < +this._modDragValueLabelTop + 11) {
+				// Mod value label clicked, select it
+				this.modDragValueLabel.style.setProperty("pointer-events", "fill");
+				this.modDragValueLabel.setAttribute("contenteditable", "true");
+				window.getSelection().selectAllChildren(this.modDragValueLabel);
+				window.setTimeout(() => { this.modDragValueLabel.focus(); });
+				this.editingModLabel = true;
+			} else {
+				this.stopEditingModLabel(false);
+				if (this._doc.enableNotePreview) this._doc.synth.maintainLiveInput();
+				this._mouseDown = true;
+				this._mouseXStart = this._mouseX;
+				this._mouseYStart = this._mouseY;
+				this._updateCursorStatus();
+				this._updatePreview();
+				this._dragChange = new ChangeSequence();
+				this._doc.setProspectiveChange(this._dragChange);
+
+				if (this._doc.enableNotePreview && !this._doc.synth.playing && this._cursor.valid && this._cursor.curNote == null) {
+					const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
+					this._doc.synth.liveInputDuration = duration;
+					this._doc.synth.liveInputPitches = [this._cursor.pitch];
+					this._doc.synth.liveInputStarted = true;
+				}
 			}
 		}
 
@@ -872,6 +982,8 @@ namespace beepbox {
 				if (this._dragChange != null) {
 					this._doc.record(this._dragChange);
 					this._dragChange = null;
+					// Need to re-sort the notes by start time as they might change order if user drags them around.
+					if (this._pattern != null && this._doc.song.getChannelIsMod(this._doc.channel)) this._pattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
 				}
 			} else if (this._mouseDown && continuousState) {
 				if (this._cursor.curNote == null) {
@@ -887,6 +999,8 @@ namespace beepbox {
 					if (pattern == null) throw new Error();
 					//console.log("p2 - " + this._cursor.curIndex);
 					sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
+					// Need to re-sort the notes by start time as they might change order if user drags them around.
+					if (this._pattern != null && this._doc.song.getChannelIsMod(this._doc.channel)) this._pattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
 					this._doc.record(sequence);
 				} else {
 
@@ -920,7 +1034,7 @@ namespace beepbox {
 
 			this._mouseDown = false;
 			this._mouseDragging = false;
-			this._svgModDragValueLabel.setAttribute("fill", ColorConfig.secondaryText);
+			this.modDragValueLabel.setAttribute("fill", ColorConfig.secondaryText);
 			this._updateCursorStatus();
 			this._updatePreview();
 		}
@@ -929,7 +1043,13 @@ namespace beepbox {
 			if (this._usingTouch) {
 				if (!this._mouseDown || !this._cursor.valid || !this._mouseDragging || !this._dragVisible) {
 					this._svgPreview.setAttribute("visibility", "hidden");
-					this._svgModDragValueLabel.setAttribute("visibility", "hidden");
+
+					if (!this.editingModLabel) {
+						this.modDragValueLabel.style.setProperty("display", "none");
+						this.modDragValueLabel.style.setProperty("pointer-events", "none");
+						this.modDragValueLabel.setAttribute("contenteditable", "false");
+					}
+
 				} else {
 					this._svgPreview.setAttribute("visibility", "visible");
 
@@ -961,7 +1081,11 @@ namespace beepbox {
 			} else {
 				if (!this._mouseOver || this._mouseDown || !this._cursor.valid) {
 					this._svgPreview.setAttribute("visibility", "hidden");
-					this._svgModDragValueLabel.setAttribute("visibility", "hidden");
+					if (!this.editingModLabel) {
+						this.modDragValueLabel.style.setProperty("display", "none");
+						this.modDragValueLabel.style.setProperty("pointer-events", "none");
+						this.modDragValueLabel.setAttribute("contenteditable", "false");
+					}
 				} else {
 					this._svgPreview.setAttribute("visibility", "visible");
 					this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, (this._pitchHeight - this._pitchBorder) / 2 + 1, true, this._octaveOffset);
@@ -1166,17 +1290,23 @@ namespace beepbox {
 
 					if (this._doc.song.getChannelIsMod(this._doc.channel) && this._mouseDragging && !this._mouseHorizontal && note == this._cursor.curNote) {
 
-						this._svgModDragValueLabel.setAttribute("visibility", "visible");
-						this._svgModDragValueLabel.setAttribute("fill", "#FFFFFF");
+						this.modDragValueLabel.style.setProperty("display", "");
+						this.modDragValueLabel.style.setProperty("pointer-events", "none");
+						this.modDragValueLabel.setAttribute("contenteditable", "false");
+						this.modDragValueLabel.style.setProperty("color", "#FFFFFF");
 
 						let presValue: number = this._doc.song.modValueToReal(this._dragVolume, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument(this._barOffset)].modSettings[Config.modCount - 1 - note.pitches[0]]);
 
 						// This is me being too lazy to fiddle with the css to get it to align center.
 						let xOffset: number = (+(presValue >= 10.0)) + (+(presValue >= 100.0)) + (+(presValue < 0.0)) + (+(presValue <= -10.0));
 
-						this._svgModDragValueLabel.setAttribute("x", "" + prettyNumber(Math.max(Math.min(this._editorWidth - 8 - xOffset * 8, this._partWidth * this._dragTime - 4 - xOffset * 4), 2)));
-						this._svgModDragValueLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(note.pitches[0] - this._octaveOffset) - 10 - (this._pitchHeight - this._pitchBorder) / 2));
-						this._svgModDragValueLabel.textContent = "" + presValue;
+						this._modDragValueLabelWidth = 8 + xOffset * 8;
+						this._modDragValueLabelLeft = +prettyNumber(Math.max(Math.min(this._editorWidth - 10 - xOffset * 8, this._partWidth * this._dragTime - 4 - xOffset * 4), 2));
+						this._modDragValueLabelTop = +prettyNumber(this._pitchToPixelHeight(note.pitches[0] - this._octaveOffset) - 17 - (this._pitchHeight - this._pitchBorder) / 2);
+
+						this.modDragValueLabel.style.setProperty("left", "" + this._modDragValueLabelLeft + "px");
+						this.modDragValueLabel.style.setProperty("top", "" + this._modDragValueLabelTop + "px");
+						this.modDragValueLabel.textContent = "" + presValue;
 
 					}
 				}

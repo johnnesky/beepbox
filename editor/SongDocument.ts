@@ -255,7 +255,8 @@ namespace beepbox {
 		}
 		
 		public getBarWidth(): number {
-			return (!this.getMobileLayout() && this.enableChannelMuting && !this.getFullScreen()) ? 30 : 32;
+			// Bugfix: In wide fullscreen, the 32 pixel display doesn't work as the trackEditor is still horizontally constrained
+			return (!this.getMobileLayout() && this.enableChannelMuting && (!this.getFullScreen() || this.fullScreen == "widefullscreen")) ? 30 : 32;
 		}
 		
 		public getChannelHeight(): number {
