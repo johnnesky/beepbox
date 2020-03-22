@@ -3,7 +3,7 @@
 /// <reference path="SongEditor.ts" />
 
 namespace beepbox {
-	const doc: SongDocument = new SongDocument(location.hash);
+	const doc: SongDocument = new SongDocument();
 	const editor: SongEditor = new SongEditor(doc);
 	const beepboxEditorContainer: HTMLElement = document.getElementById("beepboxEditorContainer")!;
 	beepboxEditorContainer.appendChild(editor.mainLayer);

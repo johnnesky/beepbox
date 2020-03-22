@@ -165,6 +165,7 @@ namespace beepbox {
 			option({value: "showScrollBar"}, "Octave Scroll Bar"),
 			option({value: "alwaysShowSettings"}, "Customize All Instruments"),
 			option({value: "enableChannelMuting"}, "Enable Channel Muting"),
+			option({value: "displayBrowserUrl"}, "Display Song Data in URL"),
 			option({value: "fullScreen"}, "Full-Screen Layout"),
 			option({value: "colorTheme"}, "Light Theme"),
 		);
@@ -514,7 +515,7 @@ namespace beepbox {
 				this._promptContainer.removeChild(this.prompt.container);
 				this.prompt.cleanUp();
 				this.prompt = null;
-				this.mainLayer.focus();
+				this._refocusStage();
 			}
 			
 			if (promptName) {
@@ -554,7 +555,7 @@ namespace beepbox {
 		}
 		
 		private _refocusStage = (): void => {
-			this.mainLayer.focus();
+			this.mainLayer.focus({preventScroll: true});
 		}
 		
 		public whenUpdated = (): void => {
@@ -605,6 +606,7 @@ namespace beepbox {
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
 				(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
 				(this._doc.enableChannelMuting ? "✓ " : "") + "Enable Channel Muting",
+				(this._doc.displayBrowserUrl ? "✓ " : "") + "Display Song Data in URL",
 				(this._doc.fullScreen ? "✓ " : "") + "Full-Screen Layout",
 				(this._doc.colorTheme == "light classic" ? "✓ " : "") + "Light Theme",
 			]
@@ -846,7 +848,7 @@ namespace beepbox {
 			if (this.prompt) {
 				if (event.keyCode == 27) { // ESC key
 					// close prompt.
-					window.history.back();
+					this._doc.undo();
 				}
 				return;
 			}
@@ -1177,10 +1179,10 @@ namespace beepbox {
 					this._openPrompt("import");
 					break;
 				case "copyUrl": {
-					this._copyTextToClipboard(location.href);
+					this._copyTextToClipboard(new URL("#" + this._doc.song.toBase64String(), location.href).href);
 				} break;
 				case "shareUrl":
-					(<any>navigator).share({ url: location.href });
+					(<any>navigator).share({ url: new URL("#" + this._doc.song.toBase64String(), location.href).href });
 					break;
 				case "viewPlayer":
 					location.href = "player/#song=" + this._doc.song.toBase64String();
@@ -1275,6 +1277,9 @@ namespace beepbox {
 				case "enableChannelMuting":
 					this._doc.enableChannelMuting = !this._doc.enableChannelMuting;
 					for (const channel of this._doc.song.channels) channel.muted = false;
+					break;
+				case "displayBrowserUrl":
+					this._doc.toggleDisplayBrowserUrl();
 					break;
 				case "fullScreen":
 					this._doc.fullScreen = !this._doc.fullScreen;

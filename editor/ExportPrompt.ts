@@ -193,7 +193,7 @@ namespace beepbox {
 		
 		private _exportToWav(): void {
 			
-			const synth: Synth = new Synth(this._doc.song)
+			const synth: Synth = new Synth(this._doc.song);
 			synth.loopRepeatCount = Number(this._loopDropDown.value) - 1;
 			if (!this._enableIntro.checked) {
 				for (let introIter: number = 0; introIter < this._doc.song.loopStart; introIter++) {
