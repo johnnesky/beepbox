@@ -437,6 +437,12 @@ namespace beepbox {
 							case ModSetting.mstDetune:
 								secondRow = "Detune";
 								break;
+							case ModSetting.mstVibratoDepth:
+								secondRow = "Vibrato Depth";
+								break;
+							//case ModSetting.mstVibratoSpeed:
+								//secondRow = "Vibrato Speed";
+								//break;
 							case ModSetting.mstPulseWidth:
 								secondRow = "Pulse Width";
 								break;

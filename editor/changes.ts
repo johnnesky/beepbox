@@ -1465,6 +1465,12 @@ namespace beepbox {
 				case "detune":
 					setting = ModSetting.mstDetune;
 					break;
+				case "vibrato depth":
+					setting = ModSetting.mstVibratoDepth;
+					break;
+				//case "vibrato speed":
+				//	setting = ModSetting.mstVibratoSpeed;
+				//	break;
 				case "none":
 				default:
 					break;

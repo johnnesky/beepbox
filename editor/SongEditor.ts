@@ -1603,6 +1603,10 @@ namespace beepbox {
 							settingList.push("filter cut");
 							settingList.push("filter peak");
 							settingList.push("detune");
+							if (tgtInstrument.type == InstrumentType.chip || tgtInstrument.type == InstrumentType.fm || tgtInstrument.type == InstrumentType.harmonics || tgtInstrument.type == InstrumentType.pwm || tgtInstrument.type == InstrumentType.customChipWave) {
+								settingList.push("vibrato depth");
+							}
+							//settingList.push("vibrato speed");
 							if (tgtInstrument.type == InstrumentType.pwm) {
 								settingList.push("pulse width");
 							}
@@ -1665,6 +1669,18 @@ namespace beepbox {
 								else
 									needReset = true;
 								break;
+							case ModSetting.mstVibratoDepth:
+								if (modStatus == ModStatus.msForPitch)
+									setIndex = 6;
+								else
+									needReset = true;
+								break;
+							//case ModSetting.mstVibratoSpeed:
+								//if (modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise)
+								//	setIndex = 7;
+								//else
+								//	needReset = true;
+								break;
 							case ModSetting.mstFilterCut:
 								if (modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise)
 									setIndex = 3;
@@ -1679,37 +1695,37 @@ namespace beepbox {
 								break;
 							case ModSetting.mstPulseWidth:
 								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.pwm)
-									setIndex = 6;
+									setIndex = 7;
 								else
 									needReset = true;
 								break;
 							case ModSetting.mstFMSlider1:
 								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
-									setIndex = 6;
+									setIndex = 7;
 								else
 									needReset = true;
 								break;
 							case ModSetting.mstFMSlider2:
 								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
-									setIndex = 7;
+									setIndex = 8;
 								else
 									needReset = true;
 								break;
 							case ModSetting.mstFMSlider3:
 								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
-									setIndex = 8;
+									setIndex = 9;
 								else
 									needReset = true;
 								break;
 							case ModSetting.mstFMSlider4:
 								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
-									setIndex = 9;
+									setIndex = 10;
 								else
 									needReset = true;
 								break;
 							case ModSetting.mstFMFeedback:
 								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
-									setIndex = 10;
+									setIndex = 11;
 								else
 									needReset = true;
 								break;

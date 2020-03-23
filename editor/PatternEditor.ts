@@ -153,13 +153,18 @@ namespace beepbox {
 		private _validateModDragLabelInput = (event: Event): void => {
 			const label: HTMLDivElement = <HTMLDivElement>event.target;
 
-			// One special case - allow "" e.g. the empty string and a single negative sign, but don't do anything about it.
+			// Special case - when user is typing a number between zero and min, allow it (the alternative is quite annoying, when min is nonzero)
+			let converted: number = Number(label.innerText);
+			if (!isNaN(converted) && converted >= 0 && converted < this._modDragLowerBound)
+				return;
+
+			// Another special case - allow "" e.g. the empty string and a single negative sign, but don't do anything about it.
 			if (label.innerText != "" && label.innerText != "-") {
 				// Force NaN results to be 0
-				if (isNaN(Number(label.innerText)))
+				if (isNaN(converted))
 					label.innerText = "0";
 
-				let presValue: number = Math.floor(Math.max(Number(this._modDragLowerBound), Math.min(Number(this._modDragUpperBound), Number(label.innerText))));
+				let presValue: number = Math.floor(Math.max(Number(this._modDragLowerBound), Math.min(Number(this._modDragUpperBound), converted)));
 				if (label.innerText != presValue + "")
 					label.innerText = presValue + "";
 

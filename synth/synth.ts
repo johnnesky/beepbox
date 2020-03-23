@@ -1227,7 +1227,9 @@ namespace beepbox {
 		mstFMFeedback = 13,
 		mstPulseWidth = 14,
 		mstDetune = 15,
-		mstMaxValue = 16,
+		mstVibratoDepth = 16,
+		//mstVibratoSpeed = 17,
+		mstMaxValue = 17,
 	}
 
 	export class Channel {
@@ -1281,6 +1283,8 @@ namespace beepbox {
 			[ModSetting.mstFMFeedback, 15],
 			[ModSetting.mstPulseWidth, Config.pulseWidthRange],
 			[ModSetting.mstDetune, Config.detuneMax - Config.detuneMin],
+			[ModSetting.mstVibratoDepth, 50],
+			//[ModSetting.mstVibratoSpeed, 100],
 		]
 		);
 
@@ -1315,6 +1319,8 @@ namespace beepbox {
 				case ModSetting.mstFMSlider4:
 				case ModSetting.mstFMFeedback:
 				case ModSetting.mstPulseWidth:
+				case ModSetting.mstVibratoDepth:
+				//case ModSetting.mstVibratoSpeed:
 				case ModSetting.mstNone:
 				default:
 					break;
@@ -1357,6 +1363,8 @@ namespace beepbox {
 				case ModSetting.mstFMSlider4:
 				case ModSetting.mstFMFeedback:
 				case ModSetting.mstPulseWidth:
+				case ModSetting.mstVibratoDepth:
+				//case ModSetting.mstVibratoSpeed:
 				case ModSetting.mstNone:
 				default:
 					break;
@@ -3341,6 +3349,8 @@ namespace beepbox {
 				case ModSetting.mstFMSlider3:
 				case ModSetting.mstFMSlider4:
 				case ModSetting.mstFMFeedback:
+				case ModSetting.mstVibratoDepth:
+				//case ModSetting.mstVibratoSpeed:
 				case ModSetting.mstDetune:
 					val = this.song!.modValueToReal(volumeStart, setting);
 					nextVal = this.song!.modValueToReal(volumeEnd, setting);
@@ -4664,11 +4674,23 @@ namespace beepbox {
 			tone.active = true;
 
 			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.customChipWave) {
+
 				const lfoEffectStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeStart);
 				const lfoEffectEnd: number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeEnd);
-				const vibratoScale: number = (partsSinceStart < Config.vibratos[instrument.vibrato].delayParts) ? 0.0 : Config.vibratos[instrument.vibrato].amplitude;
-				const vibratoStart: number = vibratoScale * lfoEffectStart;
-				const vibratoEnd: number = vibratoScale * lfoEffectEnd;
+
+				let useVibratoStart: number = Config.vibratos[instrument.vibrato].amplitude;
+				let useVibratoEnd: number = Config.vibratos[instrument.vibrato].amplitude;
+
+				if (synth.isModActive(ModSetting.mstVibratoDepth, false, channel, instrumentIdx)) {
+					useVibratoStart = synth.getModValue(ModSetting.mstVibratoDepth, false, channel, instrumentIdx, false) / 25;
+					useVibratoEnd = synth.getModValue(ModSetting.mstVibratoDepth, false, channel, instrumentIdx, true) / 25;
+				}
+
+				const vibratoScaleStart: number = (partsSinceStart < Config.vibratos[instrument.vibrato].delayParts) ? 0.0 : useVibratoStart;
+				const vibratoScaleEnd: number = (partsSinceStart < Config.vibratos[instrument.vibrato].delayParts) ? 0.0 : useVibratoEnd;
+
+				const vibratoStart: number = vibratoScaleStart * lfoEffectStart;
+				const vibratoEnd: number = vibratoScaleEnd * lfoEffectEnd;
 				intervalStart += vibratoStart;
 				intervalEnd += vibratoEnd;
 			}
