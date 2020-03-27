@@ -352,3 +352,4 @@
 √ Added "realName" to scales, hover over scale select menu to see it.
 √ Allow playing piano while song is paused, added preference to preview added notes while paused.
 √ Added preference to control whether to display song data in url.
+√ Added song recovery feature to file menu.

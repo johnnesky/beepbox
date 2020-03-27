@@ -25,6 +25,7 @@
 /// <reference path="ChannelSettingsPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
+/// <reference path="SongRecoveryPrompt.ts" />
 
 namespace beepbox {
 	const {button, div, input, select, span, optgroup, option} = HTML;
@@ -134,6 +135,7 @@ namespace beepbox {
 			option({value: "shareUrl"}, "⤳ Share Song URL"),
 			option({value: "viewPlayer"}, "▶ View in Song Player"),
 			option({value: "copyEmbed"}, "⎘ Copy HTML Embed Code"),
+			option({value: "songRecovery"}, "⚠ Recover Recent Song..."),
 		);
 		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"},
 			option({selected: true, disabled: true, hidden: false}, "Edit"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -525,6 +527,9 @@ namespace beepbox {
 						break;
 					case "import":
 						this.prompt = new ImportPrompt(this._doc);
+						break;
+					case "songRecovery":
+						this.prompt = new SongRecoveryPrompt(this._doc);
 						break;
 					case "barCount":
 						this.prompt = new SongDurationPrompt(this._doc);
@@ -1170,7 +1175,7 @@ namespace beepbox {
 				case "new":
 					this._doc.goBackToStart();
 					for (const channel of this._doc.song.channels) channel.muted = false;
-					this._doc.record(new ChangeSong(this._doc, ""));
+					this._doc.record(new ChangeSong(this._doc, ""), StateChangeType.push, true);
 					break;
 				case "export":
 					this._openPrompt("export");
@@ -1178,9 +1183,9 @@ namespace beepbox {
 				case "import":
 					this._openPrompt("import");
 					break;
-				case "copyUrl": {
+				case "copyUrl":
 					this._copyTextToClipboard(new URL("#" + this._doc.song.toBase64String(), location.href).href);
-				} break;
+					break;
 				case "shareUrl":
 					(<any>navigator).share({ url: new URL("#" + this._doc.song.toBase64String(), location.href).href });
 					break;
@@ -1189,6 +1194,9 @@ namespace beepbox {
 					break;
 				case "copyEmbed":
 					this._copyTextToClipboard(`<iframe width="384" height="60" style="border: none;" src="${new URL("player/#song=" + this._doc.song.toBase64String(), location.href).href}"></iframe>`);
+					break;
+				case "songRecovery":
+					this._openPrompt("songRecovery");
 					break;
 			}
 			this._fileMenu.selectedIndex = 0;

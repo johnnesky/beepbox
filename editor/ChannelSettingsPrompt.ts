@@ -109,7 +109,7 @@ namespace beepbox {
 		
 		private static _validateNumber(event: Event): void {
 			const input: HTMLInputElement = <HTMLInputElement>event.target;
-			input.value = String(this._validate(input));
+			input.value = String(ChannelSettingsPrompt._validate(input));
 		}
 		
 		private static _validate(input: HTMLInputElement): number {
@@ -122,7 +122,7 @@ namespace beepbox {
 			group.append(new ChangeInstrumentsPerChannel(this._doc, ChannelSettingsPrompt._validate(this._instrumentsStepper)));
 			group.append(new ChangeChannelCount(this._doc, ChannelSettingsPrompt._validate(this._pitchChannelStepper), ChannelSettingsPrompt._validate(this._drumChannelStepper)));
 			this._doc.prompt = null;
-			this._doc.record(group, "replace");
+			this._doc.record(group, StateChangeType.replace);
 		}
 	}
 }

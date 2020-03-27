@@ -293,14 +293,14 @@ namespace beepbox {
 		}
 		
 		public insertBars(): void {
-			this._doc.record(new ChangeInsertBars(this._doc, this._boxSelectionBar + this._boxSelectionWidth, this._boxSelectionWidth), "jump");
+			this._doc.record(new ChangeInsertBars(this._doc, this._boxSelectionBar + this._boxSelectionWidth, this._boxSelectionWidth), StateChangeType.jump);
 			const width: number = this._boxSelectionWidth;
 			this._boxSelectionX0 += width;
 			this._boxSelectionX1 += width;
 		}
 		
 		public deleteBars(): void {
-			this._doc.record(new ChangeDeleteBars(this._doc, this._boxSelectionBar, this._boxSelectionWidth), "jump");
+			this._doc.record(new ChangeDeleteBars(this._doc, this._boxSelectionBar, this._boxSelectionWidth), StateChangeType.jump);
 			const width: number = this._boxSelectionWidth;
 			this._boxSelectionX0 = Math.max(0, this._boxSelectionX0 - width);
 			this._boxSelectionX1 = Math.max(0, this._boxSelectionX1 - width);
@@ -691,7 +691,7 @@ namespace beepbox {
 				}
 			}
 			
-			this._doc.record(group, canReplaceLastChange ? "replace" : "push");
+			this._doc.record(group, canReplaceLastChange ? StateChangeType.replace : StateChangeType.push);
 		}
 		
 		public setInstrument(instrument: number): void {

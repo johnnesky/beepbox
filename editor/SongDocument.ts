@@ -1,6 +1,7 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 /// <reference path="../synth/synth.ts" />
+/// <reference path="SongRecovery.ts" />
 /// <reference path="EditorConfig.ts" />
 /// <reference path="ChangeNotifier.ts" />
 
@@ -10,10 +11,16 @@ namespace beepbox {
 		sequenceNumber: number;
 		bar: number;
 		channel: number;
+		recoveryUid: string;
 		prompt: string | null;
 	}
 	
-	type StateChangeType = "replace" | "push" | "jump";
+	export const enum StateChangeType {
+		replace = 0,
+		push,
+		jump,
+		length,
+	}
 	
 	export class SongDocument {
 		public song: Song;
@@ -39,9 +46,12 @@ namespace beepbox {
 		public prompt: string | null = null;
 		
 		private static readonly _maximumUndoHistory: number = 100;
+		private _recovery: SongRecovery = new SongRecovery();
+		private _recoveryUid: string;
 		private _recentChange: Change | null = null;
 		private _sequenceNumber: number = 0;
-		private _stateChangeType: StateChangeType = "replace";
+		private _stateChangeType: StateChangeType = StateChangeType.replace;
+		private _recordedNewSong: boolean = false;
 		private _barFromCurrentState: number = 0;
 		private _channelFromCurrentState: number = 0;
 		private _waitingToUpdateState: boolean = false;
@@ -86,16 +96,18 @@ namespace beepbox {
 			let state: HistoryState | null = this._getHistoryState();
 			if (state == null) {
 				// When the page is first loaded, indicate that undo is NOT possible.
-				state = {canUndo: false, sequenceNumber: 0, bar: 0, channel: 0, prompt: null};
+				state = {canUndo: false, sequenceNumber: 0, bar: 0, channel: 0, recoveryUid: generateUid(), prompt: null};
 			}
+			if (state.recoveryUid == undefined) state.recoveryUid = generateUid();
 			this._replaceState(state, songString);
-			window.addEventListener("hashchange", this._whenUrlHashChanged);
+			window.addEventListener("hashchange", this._whenHistoryStateChanged);
 			window.addEventListener("popstate", this._whenHistoryStateChanged);
 			
 			this.bar = state.bar;
 			this.channel = state.channel;
 			this._barFromCurrentState = state.bar;
 			this._channelFromCurrentState = state.channel;
+			this._recoveryUid = state.recoveryUid;
 			this.barScrollPos = Math.max(0, this.bar - (this.trackVisibleBars - 6));
 			this.prompt = state.prompt;
 			
@@ -187,12 +199,14 @@ namespace beepbox {
 			}
 		}
 		
-		private _whenUrlHashChanged = (): void => {
+		private _whenHistoryStateChanged = (): void => {
 			if (window.history.state == null && window.location.hash != "") {
 				// The user changed the hash directly.
 				this._sequenceNumber++;
-				const state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
+				this._resetSongRecoveryUid();
+				const state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: null};
 				new ChangeSong(this, window.location.hash);
+				this.prompt = state.prompt;
 				if (this.displayBrowserUrl) {
 					this._replaceState(state, this.song.toBase64String());
 				} else {
@@ -200,14 +214,12 @@ namespace beepbox {
 				}
 				this.forgetLastChange();
 				this.notifier.notifyWatchers();
+				return;
 			}
-		}
-		
-		private _whenHistoryStateChanged = (): void => {
+			
 			const state: HistoryState | null = this._getHistoryState();
 			if (state == null) throw new Error("History state is null.");
 			
-			// We're listening for both hashchanged and popstate, which often fire together.
 			// Abort if we've already handled the current state. 
 			if (state.sequenceNumber == this._sequenceNumber) return;
 			
@@ -226,6 +238,7 @@ namespace beepbox {
 			
 			this._barFromCurrentState = state.bar;
 			this._channelFromCurrentState = state.channel;
+			this._recoveryUid = state.recoveryUid;
 			
 			//this.barScrollPos = Math.min(this.bar, Math.max(this.bar - (this.trackVisibleBars - 1), this.barScrollPos));
 			
@@ -240,48 +253,58 @@ namespace beepbox {
 		private _updateHistoryState = (): void => {
 			this._waitingToUpdateState = false;
 			const hash: string = this.song.toBase64String();
-			if (this._stateChangeType == "push") {
+			if (this._stateChangeType == StateChangeType.push) {
 				this._sequenceNumber++;
-			} else if (this._stateChangeType == "jump") {
+			} else if (this._stateChangeType >= StateChangeType.jump) {
 				this._sequenceNumber += 2;
 			}
-			let state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
-			if (this._stateChangeType == "push" || this._stateChangeType == "jump") {
-				this._pushState(state, hash);
+			if (this._recordedNewSong) {
+				this._resetSongRecoveryUid();
 			} else {
+				this._recovery.saveVersion(this._recoveryUid, hash);
+			}
+			let state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: this.prompt};
+			if (this._stateChangeType == StateChangeType.replace) {
 				this._replaceState(state, hash);
+			} else {
+				this._pushState(state, hash);
 			}
 			this._barFromCurrentState = state.bar;
 			this._channelFromCurrentState = state.channel;
-			this._stateChangeType = "replace";
+			this._stateChangeType = StateChangeType.replace;
+			this._recordedNewSong = false;
 		}
 		
-		public record(change: Change, stateChangeType: StateChangeType = "push"): void {
+		public record(change: Change, stateChangeType: StateChangeType = StateChangeType.push, newSong: boolean = false): void {
 			if (change.isNoop()) {
 				this._recentChange = null;
-				if (stateChangeType == "replace") {
+				if (stateChangeType == StateChangeType.replace) {
 					this._back();
 				}
 			} else {
 				change.commit();
 				this._recentChange = change;
-				if (stateChangeType == "push" && this._stateChangeType == "replace") {
-					this._stateChangeType = stateChangeType;
-				} else if (stateChangeType == "jump") {
-					this._stateChangeType = stateChangeType;
-				}
+				if (this._stateChangeType < stateChangeType) this._stateChangeType = stateChangeType;
+				this._recordedNewSong = this._recordedNewSong || newSong;
 				if (!this._waitingToUpdateState) {
+					// Defer updating the url/history until all sequenced changes have
+					// committed and the interface has rendered the latest changes to
+					// improve perceived responsiveness.
 					window.requestAnimationFrame(this._updateHistoryState);
 					this._waitingToUpdateState = true;
 				}
 			}
 		}
 		
+		private _resetSongRecoveryUid(): void {
+			this._recoveryUid = generateUid();
+		}
+		
 		public openPrompt(prompt: string): void {
 			this.prompt = prompt;
 			const hash: string = this.song.toBase64String();
 			this._sequenceNumber++;
-			const state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, prompt: this.prompt};
+			const state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: this.prompt};
 			this._pushState(state, hash);
 		}
 		
