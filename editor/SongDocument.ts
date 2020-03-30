@@ -40,7 +40,7 @@ namespace beepbox {
 		public fullScreen: string;
 		public enableChannelMuting: boolean;
 		public colorTheme: string;
-		public displayBrowserUrl: boolean;
+		public displayBrowserUrl: boolean = true;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
