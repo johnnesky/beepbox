@@ -29,6 +29,7 @@
 /// <reference path="MuteButton.ts" />
 /// <reference path="ThemePrompt.ts" />
 /// <reference path="LayoutPrompt.ts" />
+/// <reference path="SongRecoveryPrompt.ts" />
 
 namespace beepbox {
 	const { button, div, input, select, span, optgroup, option, canvas } = HTML;
@@ -376,6 +377,7 @@ namespace beepbox {
 			option({ value: "shareUrl" }, "⤳ Share Song URL"),
 			option({ value: "viewPlayer" }, "▶ View in Song Player"),
 			option({ value: "copyEmbed" }, "⎘ Copy HTML Embed Code"),
+			option({value: "songRecovery"}, "⚠ Recover Recent Song..."),
 		);
 		private readonly _editMenu: HTMLSelectElement = select({ style: "width: 100%;" },
 			option({ selected: true, disabled: true, hidden: false }, "Edit"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -407,6 +409,7 @@ namespace beepbox {
 			option({ value: "showScrollBar" }, "Octave Scroll Bar"),
 			option({ value: "alwaysFineNoteVol" }, "Always Fine Note Vol."),
 			option({ value: "enableChannelMuting" }, "Enable Channel Muting"),
+			option({value: "displayBrowserUrl"}, "Display Song Data in URL"),
 			option({ value: "fullScreen" }, "Full-Screen Layout"),
 			option({ value: "colorTheme" }, "Set Theme..."),
 			//option({value: "alwaysShowSettings"}, "Customize All Instruments"),
@@ -1057,7 +1060,7 @@ namespace beepbox {
 				this._promptContainer.removeChild(this.prompt.container);
 				this.prompt.cleanUp();
 				this.prompt = null;
-				this.mainLayer.focus();
+				this._refocusStage();
 			}
 
 			if (promptName) {
@@ -1067,6 +1070,9 @@ namespace beepbox {
 						break;
 					case "import":
 						this.prompt = new ImportPrompt(this._doc);
+						break;
+					case "songRecovery":
+						this.prompt = new SongRecoveryPrompt(this._doc);
 						break;
 					case "barCount":
 						this.prompt = new SongDurationPrompt(this._doc);
@@ -1103,7 +1109,7 @@ namespace beepbox {
 		}
 
 		private _refocusStage = (): void => {
-			this.mainLayer.focus();
+			this.mainLayer.focus({preventScroll: true});
 		}
 
 		// Refocus stage if a sub-element that needs focus isn't being edited.
@@ -1168,6 +1174,7 @@ namespace beepbox {
 				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
 				(this._doc.alwaysFineNoteVol ? "✓ " : "") + "Always Fine Note Vol.",
 				(this._doc.enableChannelMuting ? "✓ " : "") + "Enable Channel Muting",
+				(this._doc.displayBrowserUrl ? "✓ " : "") + "Display Song Data in URL",
 				"Set Layout...",
 				"Set Theme...",
 				//(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
@@ -1888,7 +1895,7 @@ namespace beepbox {
 			if (this.prompt) {
 				if (event.keyCode == 27) { // ESC key
 					// close prompt.
-					window.history.back();
+					this._doc.undo();
 				}
 				return;
 			}
@@ -2330,7 +2337,7 @@ namespace beepbox {
 				case "new":
 					this._doc.goBackToStart();
 					for (const channel of this._doc.song.channels) channel.muted = false;
-					this._doc.record(new ChangeSong(this._doc, ""));
+					this._doc.record(new ChangeSong(this._doc, ""), StateChangeType.push, true);
 					break;
 				case "export":
 					this._openPrompt("export");
@@ -2338,17 +2345,20 @@ namespace beepbox {
 				case "import":
 					this._openPrompt("import");
 					break;
-				case "copyUrl": {
-					this._copyTextToClipboard(location.href);
-				} break;
+				case "copyUrl":
+					this._copyTextToClipboard(new URL("#" + this._doc.song.toBase64String(), location.href).href);
+					break;
 				case "shareUrl":
-					(<any>navigator).share({ url: location.href });
+					(<any>navigator).share({ url: new URL("#" + this._doc.song.toBase64String(), location.href).href });
 					break;
 				case "viewPlayer":
 					location.href = "player/#song=" + this._doc.song.toBase64String();
 					break;
 				case "copyEmbed":
 					this._copyTextToClipboard(`<iframe width="384" height="60" style="border: none;" src="${new URL("player/#song=" + this._doc.song.toBase64String(), location.href).href}"></iframe>`);
+					break;
+				case "songRecovery":
+					this._openPrompt("songRecovery");
 					break;
 			}
 			this._fileMenu.selectedIndex = 0;
@@ -2437,6 +2447,9 @@ namespace beepbox {
 				case "enableChannelMuting":
 					this._doc.enableChannelMuting = !this._doc.enableChannelMuting;
 					for (const channel of this._doc.song.channels) channel.muted = false;
+					break;
+				case "displayBrowserUrl":
+					this._doc.toggleDisplayBrowserUrl();
 					break;
 				case "fullScreen":
 					this._openPrompt("layout");

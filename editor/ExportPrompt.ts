@@ -226,8 +226,7 @@ namespace beepbox {
 		}
 
 		private _exportToWav(): void {
-
-			const synth: Synth = new Synth(this._doc.song)
+			const synth: Synth = new Synth(this._doc.song);
 			synth.loopRepeatCount = Number(this._loopDropDown.value) - 1;
 			if (!this._enableIntro.checked) {
 				for (let introIter: number = 0; introIter < this._doc.song.loopStart; introIter++) {
@@ -380,7 +379,7 @@ namespace beepbox {
 					writeEventTime(0);
 					writer.writeUint8(MidiEventType.meta);
 					writer.writeMidi7Bits(MidiMetaEventMessage.text);
-					writer.writeMidiAscii("Composed with beepbox.co");
+					writer.writeMidiAscii("Composed with jummbus.bitbucket.io");
 
 					writeEventTime(0);
 					writer.writeUint8(MidiEventType.meta);
@@ -487,6 +486,8 @@ namespace beepbox {
 										instrumentProgram = instrumentDecays ? 0x19 : 81; // steel guitar : sawtooth
 									} else if (instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics) {
 										instrumentProgram = instrumentDecays ? 2 : 81; // electric grand : sawtooth
+									} else if (instrument.type == InstrumentType.customChipWave) {
+										instrumentProgram = instrumentDecays ? 0x19 : 81; // steel guitar : sawtooth
 									} else {
 										throw new Error("Unrecognized instrument type.");
 									}
@@ -561,7 +562,7 @@ namespace beepbox {
 								const prevPitches: number[] = [-1, -1, -1, -1];
 								const nextPitches: number[] = [-1, -1, -1, -1];
 								const toneCount: number = Math.min(polyphony, note.pitches.length);
-								const velocity: number = isDrumset ? Math.max(1, Math.round(defaultNoteVelocity * note.pins[0].volume / 3)) : defaultNoteVelocity;
+								const velocity: number = isDrumset ? Math.max(1, Math.round(defaultNoteVelocity * note.pins[0].volume / 6)) : defaultNoteVelocity;
 
 								// The maximum midi pitch bend range is +/- 24 semitones from the base pitch. 
 								// To make the most of this, choose a base pitch that is within 24 semitones from as much of the note as possible.

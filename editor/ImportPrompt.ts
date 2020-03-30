@@ -55,7 +55,7 @@ namespace beepbox {
 				reader.addEventListener("load", (event: Event): void => {
 					this._doc.prompt = null;
 					this._doc.goBackToStart();
-					this._doc.record(new ChangeSong(this._doc, <string>reader.result), "replace");
+					this._doc.record(new ChangeSong(this._doc, <string>reader.result), StateChangeType.replace, true);
 				});
 				reader.readAsText(file);
 			} else if (extension == "midi" || extension == "mid") {
@@ -367,9 +367,8 @@ namespace beepbox {
 			}
 
 			// Now the MIDI file is fully parsed. Next, constuct BeepBox channels out of the data.
-
 			const microsecondsPerMinute: number = 60 * 1000 * 1000;
-			const beatsPerMinute: number = microsecondsPerMinute / microsecondsPerBeat;
+			const beatsPerMinute: number = Math.max(Config.tempoMin, Math.min(Config.tempoMax, Math.round(microsecondsPerMinute / microsecondsPerBeat)));
 			const midiTicksPerPart: number = midiTicksPerBeat / Config.partsPerBeat;
 			const partsPerBar: number = Config.partsPerBeat * beatsPerBar;
 			const songTotalBars: number = Math.ceil(currentMidiTick / midiTicksPerPart / partsPerBar);
@@ -844,7 +843,7 @@ namespace beepbox {
 				constructor(doc: SongDocument) {
 					super();
 					const song: Song = doc.song;
-					song.tempo = Math.max(Config.tempoMin, Math.min(Config.tempoMax, beatsPerMinute));
+					song.tempo = beatsPerMinute;
 					song.beatsPerBar = beatsPerBar;
 					song.key = key;
 					song.scale = 11;
@@ -865,7 +864,7 @@ namespace beepbox {
 			this._doc.goBackToStart();
 			for (const channel of this._doc.song.channels) channel.muted = false;
 			this._doc.prompt = null;
-			this._doc.record(new ChangeImportMidi(this._doc), "replace");
+			this._doc.record(new ChangeImportMidi(this._doc), StateChangeType.replace, true);
 		}
 	}
 }

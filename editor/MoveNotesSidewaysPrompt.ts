@@ -83,7 +83,7 @@ namespace beepbox {
 		private _saveChanges = (): void => {
 			window.localStorage.setItem("moveNotesSidewaysStrategy", this._conversionStrategySelect.value);
 			this._doc.prompt = null;
-			this._doc.record(new ChangeMoveNotesSideways(this._doc, +this._beatsStepper.value, this._conversionStrategySelect.value), "replace");
+			this._doc.record(new ChangeMoveNotesSideways(this._doc, +this._beatsStepper.value, this._conversionStrategySelect.value), StateChangeType.replace);
 		}
 	}
 }

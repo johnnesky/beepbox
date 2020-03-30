@@ -100,7 +100,7 @@ namespace beepbox {
 			const group: ChangeGroup = new ChangeGroup();
 			group.append(new ChangeBarCount(this._doc, SongDurationPrompt._validate(this._barsStepper), this._positionSelect.value == "beginning"));
 			this._doc.prompt = null;
-			this._doc.record(group, "replace");
+			this._doc.record(group, StateChangeType.replace);
 		}
 	}
 }
