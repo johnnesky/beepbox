@@ -40,7 +40,7 @@ namespace beepbox {
 		public fullScreen: string;
 		public enableChannelMuting: boolean;
 		public colorTheme: string;
-		public displayBrowserUrl: boolean = true;
+		public displayBrowserUrl: boolean;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
@@ -69,6 +69,7 @@ namespace beepbox {
 			this.showScrollBar = window.localStorage.getItem("showScrollBar") == "true";
 			this.alwaysFineNoteVol = window.localStorage.getItem("alwaysFineNoteVol") == "true";
 			this.enableChannelMuting = window.localStorage.getItem("enableChannelMuting") == "true";
+			this.displayBrowserUrl = window.localStorage.getItem("displayBrowserUrl") != "false";
 			this.fullScreen = window.localStorage.getItem("fullScreen") || "normal";
 			this.colorTheme = window.localStorage.getItem("colorTheme") || "jummbox classic";
 			
