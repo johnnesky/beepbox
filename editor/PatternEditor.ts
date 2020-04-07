@@ -161,8 +161,10 @@ namespace beepbox {
 			// Another special case - allow "" e.g. the empty string and a single negative sign, but don't do anything about it.
 			if (label.innerText != "" && label.innerText != "-") {
 				// Force NaN results to be 0
-				if (isNaN(converted))
-					label.innerText = "0";
+				if (isNaN(converted)) {
+					converted = this._modDragLowerBound;
+					label.innerText = "" + this._modDragLowerBound;
+				}
 
 				let presValue: number = Math.floor(Math.max(Number(this._modDragLowerBound), Math.min(Number(this._modDragUpperBound), converted)));
 				if (label.innerText != presValue + "")

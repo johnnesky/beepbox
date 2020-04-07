@@ -3036,17 +3036,21 @@ namespace beepbox {
 
 			if (this.song != null && this.song.modChannelCount > 0) {
 
-				// Clear all mod values
+				// Clear all mod values, and set up temp variables for the time a mod would be set at.
+				let latestModTimes : (number|null)[] = [];
+				let latestModInsTimes : (number|null)[][][] = [];
 				this.modValues = [];
 				this.nextModValues = [];
 				this.modInsValues = [];
 				this.nextModInsValues = [];
 				for (let channel: number = 0; channel < this.song.pitchChannelCount + this.song.noiseChannelCount; channel++) {
+					latestModInsTimes[channel] = [];
 					this.modInsValues[channel] = [];
 					this.nextModInsValues[channel] = [];
 					for (let instrument: number = 0; instrument < this.song.instrumentsPerChannel; instrument++) {
 						this.modInsValues[channel][instrument] = [];
 						this.nextModInsValues[channel][instrument] = [];
+						latestModInsTimes[channel][instrument] = [];
 					}
 				}
 
@@ -3097,8 +3101,16 @@ namespace beepbox {
 								// Set modulator value, if it wasn't set in another pattern already scanned
 								for (let mod: number = 0; mod < Config.modCount; mod++) {
 									if (latestPinParts[mod] != null) {
-										if (!this.isModActive(instrument.modSettings[mod], (instrument.modStatuses[mod] == ModStatus.msForSong), instrument.modChannels[mod] + ((instrument.modStatuses[mod] == ModStatus.msForNoise) ? this.song!.pitchChannelCount : 0), instrument.modInstruments[mod]))
-											this.setModValue(latestPinValues[mod], latestPinValues[mod], mod, instrument, instrument.modSettings[mod]);
+										if (instrument.modStatuses[mod] == ModStatus.msForSong) {
+											if (latestModTimes[instrument.modSettings[mod]] == null || currentBar * Config.partsPerBeat * this.song.beatsPerBar + latestPinParts[mod] > (latestModTimes[instrument.modSettings[mod]] as number)) {
+												this.setModValue(latestPinValues[mod], latestPinValues[mod], mod, instrument, instrument.modSettings[mod]);
+												latestModTimes[instrument.modSettings[mod]] = currentBar * Config.partsPerBeat * this.song.beatsPerBar + latestPinParts[mod];
+											}
+										}
+										else if (latestModInsTimes[instrument.modChannels[mod]][instrument.modInstruments[mod]][instrument.modSettings[mod]] == null || currentBar * Config.partsPerBeat * this.song.beatsPerBar + latestPinParts[mod] > (latestModInsTimes[instrument.modChannels[mod]][instrument.modInstruments[mod]][instrument.modSettings[mod]] as number)) {
+												this.setModValue(latestPinValues[mod], latestPinValues[mod], mod, instrument, instrument.modSettings[mod]);
+												latestModInsTimes[instrument.modChannels[mod]][instrument.modInstruments[mod]][instrument.modSettings[mod]] = currentBar * Config.partsPerBeat * this.song.beatsPerBar + latestPinParts[mod];
+										}
 									}
 								}
 							}
