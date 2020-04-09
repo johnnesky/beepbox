@@ -3762,7 +3762,7 @@ namespace beepbox {
 			if (this.isModActive(ModSetting.mstReverb, true)) {
 				useReverb = this.getModValue(ModSetting.mstReverb, true);
 			}
-			const reverb: number = Math.pow(useReverb / Config.reverbRange, 0.667) * 0.425;
+			let reverb: number = Math.pow(useReverb / Config.reverbRange, 0.667) * 0.425;
 			//const highpassFilter: number = Math.pow(0.5, 400 / this.samplesPerSecond);
 			const limitDecay: number = 1.0 - Math.pow(0.5, 4.0 / this.samplesPerSecond);
 			const limitRise: number = 1.0 - Math.pow(0.5, 4000.0 / this.samplesPerSecond);
@@ -3806,6 +3806,9 @@ namespace beepbox {
 						}
 					}
 
+					if (this.isModActive(ModSetting.mstReverb, true)) {
+						reverb = Math.pow(this.getModValue(ModSetting.mstReverb, true) / Config.reverbRange, 0.667) * 0.425;
+					}
 		
 					this.determineCurrentActiveTones(this.song, channel, playSong);
 					for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
