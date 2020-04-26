@@ -367,7 +367,7 @@ namespace beepbox {
 		private readonly _playButton: HTMLButtonElement = button({ style: "width: 80px;", type: "button" });
 		private readonly _prevBarButton: HTMLButtonElement = button({ className: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)" });
 		private readonly _nextBarButton: HTMLButtonElement = button({ className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)" });
-		private readonly _volumeSlider: Slider = new Slider(input({ title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "100", value: "50", step: "1" }), this._doc, null, false);
+		private readonly _volumeSlider: Slider = new Slider(input({ title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "75", value: "50", step: "1" }), this._doc, null, false);
 		private readonly _fileMenu: HTMLSelectElement = select({ style: "width: 100%;" },
 			option({ selected: true, disabled: true, hidden: false }, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option({ value: "new" }, "+ New Blank Song"),
@@ -1601,6 +1601,7 @@ namespace beepbox {
 							settingList.push("tempo");
 							settingList.push("reverb");
 							settingList.push("next bar");
+							settingList.push("song detune");
 						}
 						// Populate mod setting options for instrument scope.
 						else {
@@ -1733,6 +1734,12 @@ namespace beepbox {
 							case ModSetting.mstFMFeedback:
 								if ((modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise) && tgtInstrument.type == InstrumentType.fm)
 									setIndex = 11;
+								else
+									needReset = true;
+								break;
+							case ModSetting.mstSongDetune:
+								if (modStatus == ModStatus.msForSong)
+									setIndex = 5;
 								else
 									needReset = true;
 								break;
@@ -1984,31 +1991,53 @@ namespace beepbox {
 					// Find lowest-index unused pattern for current channel
 					// Shift+n - lowest-index completely empty pattern
 
+					const group: ChangeGroup = new ChangeGroup();
+
 					if (event.shiftKey || event.ctrlKey) {
 						let nextEmpty: number = 0;
-						while (this._doc.song.channels[this._doc.channel].patterns[nextEmpty].notes.length > 0
-							&& nextEmpty <= this._doc.song.patternsPerChannel)
+						while (nextEmpty < this._doc.song.patternsPerChannel && this._doc.song.channels[this._doc.channel].patterns[nextEmpty].notes.length > 0)
 							nextEmpty++;
 
-						if (nextEmpty <= this._doc.song.patternsPerChannel) {
-							this._doc.song.channels[this._doc.channel].bars[this._doc.bar] = nextEmpty + 1;
+						nextEmpty++; // The next empty pattern is actually the one after the found one
 
-							this._doc.notifier.changed();
+						// Can't set anything if we're at the absolute limit.
+						if (nextEmpty <= Config.barCountMax) {
+
+							if (nextEmpty > this._doc.song.patternsPerChannel) {
+
+								// Add extra empty pattern, if all the rest have something in them.
+								group.append(new ChangePatternsPerChannel(this._doc, nextEmpty));
+							}
+							
+							// Change pattern number to lowest-index unused
+							group.append(new ChangePatternNumbers(this._doc, nextEmpty, this._doc.bar, this._doc.channel, 1, 1));
+							
+
 						}
-
 					}
 					else {
 						let nextUnused: number = 1;
 						while (this._doc.song.channels[this._doc.channel].bars.indexOf(nextUnused) != -1
 							&& nextUnused <= this._doc.song.patternsPerChannel)
 							nextUnused++;
+						
+						// Can't set anything if we're at the absolute limit.
+						if (nextUnused <= Config.barCountMax) {
 
-						if (nextUnused <= this._doc.song.patternsPerChannel) {
-							this._doc.song.channels[this._doc.channel].bars[this._doc.bar] = nextUnused;
+							if (nextUnused > this._doc.song.patternsPerChannel) {
 
-							this._doc.notifier.changed();
+								// Add extra empty pattern, if all the rest are used.
+								group.append(new ChangePatternsPerChannel(this._doc, nextUnused));
+							}
+
+							// Change pattern number to lowest-index unused
+							group.append(new ChangePatternNumbers(this._doc, nextUnused, this._doc.bar, this._doc.channel, 1, 1));
+							
+
 						}
 					}
+
+					this._doc.record(group);
 
 					event.preventDefault();
 					break;
@@ -2141,6 +2170,7 @@ namespace beepbox {
 			const instrumentCopy: any = instrument.toJsonObject();
 			instrumentCopy["isDrum"] = this._doc.song.getChannelIsNoise(this._doc.channel);
 			window.localStorage.setItem("instrumentCopy", JSON.stringify(instrumentCopy));
+			this._refocusStage();
 		}
 
 		private _pasteInstrument(): void {
@@ -2150,6 +2180,7 @@ namespace beepbox {
 			if (instrumentCopy != null && instrumentCopy["isDrum"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
 				this._doc.record(new ChangePasteInstrument(this._doc, instrument, instrumentCopy));
 			}
+			this._refocusStage();
 		}
 
 		private _randomPreset(): void {

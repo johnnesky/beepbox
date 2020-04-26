@@ -1471,6 +1471,9 @@ namespace beepbox {
 				//case "vibrato speed":
 				//	setting = ModSetting.mstVibratoSpeed;
 				//	break;
+				case "song detune":
+					setting = ModSetting.mstSongDetune;
+					break;
 				case "none":
 				default:
 					break;

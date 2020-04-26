@@ -289,6 +289,8 @@ namespace beepbox {
 		public static readonly panMax: number = Config.panCenter * 2;
 		public static readonly detuneMin: number = -50;
 		public static readonly detuneMax: number = 50;
+		public static readonly songDetuneMin: number = -250;
+		public static readonly songDetuneMax: number = 250;
 		public static readonly chords: DictionaryArray<Chord> = toNameMap([
 			{ name: "harmony", harmonizes: true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 0 },
 			{ name: "strum", harmonizes: true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 1 },

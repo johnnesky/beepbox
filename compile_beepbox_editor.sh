@@ -14,5 +14,5 @@ uglifyjs \
 # Combine the html and js into a single file for the offline version
 sed \
 	-e '/INSERT_BEEPBOX_SOURCE_HERE/{r website/beepbox_editor.min.js' -e 'd' -e '}' \
-	website/beepbox_offline_template.html \
-	> website/beepbox_offline.html
+	website/jummbox_offline_template.html \
+	> website/jummbox_offline.html

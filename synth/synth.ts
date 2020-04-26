@@ -1234,7 +1234,8 @@ namespace beepbox {
 		mstDetune = 15,
 		mstVibratoDepth = 16,
 		//mstVibratoSpeed = 17,
-		mstMaxValue = 17,
+		mstSongDetune = 17,
+		mstMaxValue = 18,
 	}
 
 	export class Channel {
@@ -1289,6 +1290,7 @@ namespace beepbox {
 			[ModSetting.mstPulseWidth, Config.pulseWidthRange],
 			[ModSetting.mstDetune, Config.detuneMax - Config.detuneMin],
 			[ModSetting.mstVibratoDepth, 50],
+			[ModSetting.mstSongDetune, Config.songDetuneMax - Config.songDetuneMin],
 			//[ModSetting.mstVibratoSpeed, 100],
 		]
 		);
@@ -1311,6 +1313,9 @@ namespace beepbox {
 					break;
 				case ModSetting.mstDetune:
 					value += Config.detuneMin;
+					break;
+				case ModSetting.mstSongDetune:
+					value += Config.songDetuneMin;
 					break;
 				case ModSetting.mstFilterCut:
 				case ModSetting.mstFilterPeak:
@@ -1355,6 +1360,9 @@ namespace beepbox {
 					break;
 				case ModSetting.mstDetune:
 					value -= Config.detuneMin;
+					break;
+				case ModSetting.mstSongDetune:
+					value -= Config.songDetuneMin;
 					break;
 				case ModSetting.mstFilterCut:
 				case ModSetting.mstFilterPeak:
@@ -3395,6 +3403,7 @@ namespace beepbox {
 				case ModSetting.mstSongVolume:
 				case ModSetting.mstReverb:
 				case ModSetting.mstTempo:
+				case ModSetting.mstSongDetune:
 					val = (this.song as Song).modValueToReal(volumeStart, setting);
 					nextVal = (this.song as Song).modValueToReal(volumeEnd, setting);
 					if (this.modValues[setting] == null || this.modValues[setting] != val || this.nextModValues[setting] != nextVal) {
@@ -3438,7 +3447,7 @@ namespace beepbox {
 			return val;
 		}
 
-		public getModValue(setting: ModSetting, forSong: boolean, channel?: number, instrument?: number, nextVal?: boolean): number {
+		public getModValue(setting: ModSetting, forSong: boolean, channel?: number | null, instrument?: number | null, nextVal?: boolean): number {
 			if (forSong) {
 				if (this.modValues[setting] != null && this.nextModValues[setting] != null) {
 					return nextVal ? this.nextModValues[setting]! : this.modValues[setting]!;
@@ -4872,15 +4881,20 @@ namespace beepbox {
 					arpeggioInterval = tone.pitches[getArpeggioPitchIndex(tone.pitchCount, song.rhythm, arpeggio)] - tone.pitches[0];
 				}
 
+				let detuneStart: number = instrument.detune / 25;
+				let detuneEnd: number = instrument.detune / 25;
+				if (synth.isModActive(ModSetting.mstDetune, false, channel, instrumentIdx)) {
+					detuneStart = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, false) / 25;
+					detuneEnd = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, true) / 25;
+				}
+
+				if (synth.isModActive(ModSetting.mstSongDetune, true)) {
+					detuneStart += synth.getModValue(ModSetting.mstSongDetune, true, null, null, false) / 25;
+					detuneEnd += synth.getModValue(ModSetting.mstSongDetune, true, null, null, true) / 25;
+				}
+
 				const carrierCount: number = Config.algorithms[instrument.algorithm].carrierCount;
 				for (let i: number = 0; i < Config.operatorCount; i++) {
-
-					let detuneStart: number = instrument.detune / 25;
-					let detuneEnd: number = instrument.detune / 25;
-					if (synth.isModActive(ModSetting.mstDetune, false, channel, instrumentIdx)) {
-						detuneStart = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, false) / 25;
-						detuneEnd = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, true) / 25;
-					}
 
 					const associatedCarrierIndex: number = Config.algorithms[instrument.algorithm].associatedCarrier[i] - 1;
 					const pitch: number = tone.pitches[!chord.harmonizes ? 0 : ((i < tone.pitchCount) ? i : ((associatedCarrierIndex < tone.pitchCount) ? associatedCarrierIndex : 0))];
@@ -4989,6 +5003,11 @@ namespace beepbox {
 				if (synth.isModActive(ModSetting.mstDetune, false, channel, instrumentIdx)) {
 					detuneStart = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, false) / 25;
 					detuneEnd = synth.getModValue(ModSetting.mstDetune, false, channel, instrumentIdx, true) / 25;
+				}
+
+				if (synth.isModActive(ModSetting.mstSongDetune, true)) {
+					detuneStart += synth.getModValue(ModSetting.mstSongDetune, true, null, null, false) / 25;
+					detuneEnd += synth.getModValue(ModSetting.mstSongDetune, true, null, null, true) / 25;
 				}
 
 				let pitch: number = tone.pitches[0];

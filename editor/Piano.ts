@@ -455,6 +455,9 @@ namespace beepbox {
 							case ModSetting.mstTempo:
 								secondRow = "Tempo";
 								break;
+							case ModSetting.mstSongDetune:
+								secondRow = "Detune";
+								break;
 						}
 					}
 
