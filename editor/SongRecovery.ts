@@ -33,7 +33,7 @@ namespace beepbox {
 	
 	export function generateUid(): string {
 		// Not especially robust, but simple and effective!
-		return ("00000"+(Math.random()*(-1>>>0)>>>0).toString(32)).slice(-6);
+		return ((Math.random() * (-1 >>> 0)) >>> 0).toString(32);
 	}
 	
 	function compareSongs(a: RecoveredSong, b: RecoveredSong): number {
