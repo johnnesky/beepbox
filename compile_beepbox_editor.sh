@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Compile editor/main.ts into website/beepbox_editor.js
-tsc
+$TSC
 
 # Minify website/beepbox_editor.js into website/beepbox_editor.min.js
-uglifyjs \
+$UGLIFYJS \
 	--compress \
 	--mangle \
 	--mangle-props regex="/^_.+/;" \

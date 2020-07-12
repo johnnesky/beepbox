@@ -1,0 +1,22 @@
+{
+  "name": "beepbox",
+  "version": "3.0.9",
+  "description": "Tool for sketching and sharing instrumental melodies",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnnesky/beepbox.git"
+  },
+  "keywords": [
+    "music"
+  ],
+  "author": "John Nesky",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/johnnesky/beepbox/issues"
+  },
+  "homepage": "https://github.com/johnnesky/beepbox#readme",
+  "devDependencies": {
+    "typescript": "^3.9.6",
+    "uglify-js": "^3.10.0"
+  }
+}
