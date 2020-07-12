@@ -553,7 +553,7 @@ namespace beepbox {
 						this._wasPlaying = this._doc.synth.playing;
 						this._pause();
 					}
-					this._promptContainer.style.display = null;
+					this._promptContainer.style.display = "";
 					this._promptContainer.appendChild(this.prompt.container);
 				}
 			}
