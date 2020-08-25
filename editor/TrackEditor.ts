@@ -127,7 +127,7 @@ namespace beepbox {
 	}
 
 	export class TrackEditor {
-		public readonly _barDropDown: HTMLSelectElement = HTML.select({ style: "width: 32px; height: " + Config.barEditorHeight + "px; position:absolute; opacity:0" },
+		public readonly _barDropDown: HTMLSelectElement = HTML.select({ style: "width: 32px; height: " + Config.barEditorHeight + "px; top: 0px; position: absolute; opacity: 0" },
 
 			HTML.option({ value: "barBefore" }, "Insert Bar Before"),
 			HTML.option({ value: "barAfter" }, "Insert Bar After"),
@@ -138,8 +138,8 @@ namespace beepbox {
 		private readonly _boxHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
 		private readonly _upHighlight: SVGPathElement = SVG.path({fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none"});
 		private readonly _downHighlight: SVGPathElement = SVG.path({fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none"});
-		private readonly _barEditorPath = <SVGPathElement>SVG.path({ fill: ColorConfig.uiWidgetBackground, stroke: ColorConfig.uiWidgetBackground, "stroke-width": 1, "pointer-events": "none" });
-		private readonly _selectionRect: SVGRectElement = SVG.rect({ class: "dashed-line dash-move", fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "fill-opacity": "0.4", "pointer-events": "none", visibility: "hidden", x: 1, y: 1, width: 62, height: 62});
+		private readonly _barEditorPath: SVGPathElement = SVG.path({ fill: ColorConfig.uiWidgetBackground, stroke: ColorConfig.uiWidgetBackground, "stroke-width": 1, "pointer-events": "none" });
+		private readonly _selectionRect: SVGRectElement = SVG.rect({ class: "dashed-line dash-move", fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "fill-opacity": "0.4", "pointer-events": "none", visibility: "hidden", x: 1, y: 1, width: 62, height: 62 });
 		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; position: absolute;`, height: 128},
 			this._boxContainer,
 			this._barEditorPath,
@@ -243,8 +243,10 @@ namespace beepbox {
 				// this._doc.bar = prevBar + ((prevBar < this._barDropDownBar + moveBarOffset) ? 0 : 1);
 
 				// Adjust song playhead
-				if (this._doc.synth.playhead >= this._barDropDownBar + moveBarOffset)
+				if (this._doc.synth.playhead >= this._barDropDownBar + moveBarOffset) {
 					this._doc.synth.playhead++;
+					this._songEditor._barScrollBar.animatePlayhead();
+				}
 
 			}
 			else if (this._barDropDown.value == "deleteBar") {
@@ -260,8 +262,10 @@ namespace beepbox {
 				// this._doc.bar = prevBar - ((prevBar <= this._barDropDownBar) ? 0 : 1);
 
 				// Adjust song playhead
-				if (this._doc.synth.playhead > this._barDropDownBar)
+				if (this._doc.synth.playhead > this._barDropDownBar) {
 					this._doc.synth.playhead--;
+					this._songEditor._barScrollBar.animatePlayhead();
+				}
 
 			}
 
@@ -419,6 +423,7 @@ namespace beepbox {
 			const width: number = this._boxSelectionWidth;
 			this._boxSelectionX0 += width;
 			this._boxSelectionX1 += width;
+			this._songEditor._barScrollBar.animatePlayhead();
 		}
 
 		public deleteBars(): void {
@@ -426,6 +431,7 @@ namespace beepbox {
 			const width: number = this._boxSelectionWidth;
 			this._boxSelectionX0 = Math.max(0, this._boxSelectionX0 - width);
 			this._boxSelectionX1 = Math.max(0, this._boxSelectionX1 - width);
+			this._songEditor._barScrollBar.animatePlayhead();
 		}
 
 		private * _eachSelectedChannel(): IterableIterator<number> {
@@ -613,6 +619,12 @@ namespace beepbox {
 			}
 
 			this._doc.record(group);
+		}
+
+		public movePlayheadToMouse(): void {
+			if (this._mouseOver) {
+				this._doc.synth.playhead = this._mouseBar + (this._mouseX % this._barWidth ) / this._barWidth;
+			}
 		}
 
 		public pasteNumbers(): void {
@@ -1073,7 +1085,6 @@ namespace beepbox {
 			this._select.style.height = this._channelHeight + "px";
 
 			this._barDropDown.style.left = (this._barWidth * bar) + "px";
-			this._barDropDown.style.top = "0px";
 
 			const patternCount: number = this._doc.song.patternsPerChannel + 1;
 			for (let i: number = this._renderedPatternCount; i < patternCount; i++) {

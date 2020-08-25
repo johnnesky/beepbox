@@ -148,7 +148,7 @@ namespace beepbox {
 		public static attackVal: number = 0;
 		public static releaseVal: number = 0.25;
 
-		public static readonly versionDisplayName: string = "JummBox 2.0";
+		public static readonly versionDisplayName: string = "JummBox 2.1";
 		public static readonly scales: DictionaryArray<Scale> = toNameMap([
 
 														              //   C     Db      D     Eb      E      F     F#      G     Ab      A     Bb      B      C

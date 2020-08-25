@@ -27,6 +27,7 @@ namespace beepbox {
 		public synth: Synth;
 		public notifier: ChangeNotifier = new ChangeNotifier();
 		public channel: number = 0;
+		public muteEditorChannel: number = 0;
 		public bar: number = 0;
 		public autoPlay: boolean;
 		public autoFollow: boolean;
@@ -41,6 +42,7 @@ namespace beepbox {
 		public enableChannelMuting: boolean;
 		public colorTheme: string;
 		public displayBrowserUrl: boolean;
+		public displayVolumeBar: boolean = true;
 		public volume: number = 75;
 		public trackVisibleBars: number = 16;
 		public barScrollPos: number = 0;
@@ -70,6 +72,7 @@ namespace beepbox {
 			this.alwaysFineNoteVol = window.localStorage.getItem("alwaysFineNoteVol") == "true";
 			this.enableChannelMuting = window.localStorage.getItem("enableChannelMuting") == "true";
 			this.displayBrowserUrl = window.localStorage.getItem("displayBrowserUrl") != "false";
+			this.displayVolumeBar = window.localStorage.getItem("displayVolumeBar") != "false";
 			this.fullScreen = window.localStorage.getItem("fullScreen") || "normal";
 			this.colorTheme = window.localStorage.getItem("colorTheme") || "jummbox classic";
 			
@@ -264,7 +267,7 @@ namespace beepbox {
 			if (this._recordedNewSong) {
 				this._resetSongRecoveryUid();
 			} else {
-				this._recovery.saveVersion(this._recoveryUid, hash);
+				this._recovery.saveVersion(this._recoveryUid, this.song.title, hash);
 			}
 			let state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: this.prompt};
 			if (this._stateChangeType == StateChangeType.replace) {

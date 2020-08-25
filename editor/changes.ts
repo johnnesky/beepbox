@@ -898,6 +898,56 @@ namespace beepbox {
 		}
 	}
 
+	export class ChangeLimiterSettings extends Change {
+		constructor(doc: SongDocument, limitRatio: number, compressionRatio: number, limitThreshold: number, compressionThreshold: number, limitRise: number, limitDecay: number, masterGain: number) {
+			super();
+
+			// This check causes issues with the state change handler because it gets superceded by whenupdated when the limiter prompt closes for some reason, causing the state to revert. I think it's because the notifier change needs to happen right as the prompt closes.
+			//if (limitRatio != doc.song.limitRatio || compressionRatio != doc.song.compressionRatio || limitThreshold != doc.song.limitThreshold || compressionThreshold != doc.song.compressionThreshold || limitRise != doc.song.limitRise || limitDecay != doc.song.limitDecay) {
+
+				doc.song.limitRatio = limitRatio;
+				doc.song.compressionRatio = compressionRatio;
+				doc.song.limitThreshold = limitThreshold;
+				doc.song.compressionThreshold = compressionThreshold;
+				doc.song.limitRise = limitRise;
+				doc.song.limitDecay = limitDecay;
+				doc.song.masterGain = masterGain;
+
+				doc.notifier.changed();
+				this._didSomething();
+			//}
+		}
+	}
+
+	export class ChangeChannelOrder extends Change {
+		constructor(doc: SongDocument, firstChannelIdx: number, secondChannelIdx: number) {
+			super();
+			// Change the order of two channels by swapping.
+			let toSwap = doc.song.channels[firstChannelIdx];
+			doc.song.channels[firstChannelIdx] = doc.song.channels[secondChannelIdx];
+			doc.song.channels[secondChannelIdx] = toSwap;
+
+			// Update mods for each channel
+			for (let channel: number = doc.song.pitchChannelCount + doc.song.noiseChannelCount; channel < doc.song.getChannelCount(); channel++) {
+				for (let instrumentIdx: number = 0; instrumentIdx < doc.song.instrumentsPerChannel; instrumentIdx++) {
+					let instrument: Instrument = doc.song.channels[channel].instruments[instrumentIdx];
+					for (let i: number = 0; i < Config.modCount; i++) {
+						if (instrument.modChannels[i] == firstChannelIdx) {
+							instrument.modChannels[i] = secondChannelIdx;
+						}
+						else if (instrument.modChannels[i] == secondChannelIdx) {
+							instrument.modChannels[i] = firstChannelIdx;
+						}
+					}
+				}
+			}
+
+			doc.notifier.changed();
+			this._didSomething();
+
+		}
+	}
+
 	export class ChangeChannelCount extends Change {
 		constructor(doc: SongDocument, newPitchChannelCount: number, newNoiseChannelCount: number, newModChannelCount: number) {
 			super();
@@ -2487,7 +2537,7 @@ namespace beepbox {
 		}
 	}
 
-	export class ChangeInputBoxText extends Change {
+	export class ChangeSongTitle extends Change {
 		constructor(doc: SongDocument, oldValue: string, newValue: string) {
 			super();
 			if (newValue.length > 30) {
@@ -2496,6 +2546,20 @@ namespace beepbox {
 
 			doc.song.title = newValue;
 			document.title = newValue + " - " + Config.versionDisplayName;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+
+	export class ChangeChannelName extends Change {
+		constructor(doc: SongDocument, oldValue: string, newValue: string) {
+			super();
+			if (newValue.length > 15) {
+				newValue = newValue.substring(0, 15);
+			}
+
+			doc.song.channels[doc.muteEditorChannel].name = newValue;
+
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}

@@ -47,7 +47,7 @@ namespace beepbox {
 			}
 
 			this._beatsStepper.select();
-			setTimeout(() => this._beatsStepper.focus());
+			setTimeout(() => this._beatsStepper.focus(), 100); // Add 100ms because the key macro (W) gets captured by the stepper...
 
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._cancelButton.addEventListener("click", this._close);

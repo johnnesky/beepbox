@@ -539,6 +539,12 @@ namespace beepbox {
 			}
 		}
 
+		public movePlayheadToMouse(): void {
+			if (this._mouseOver) {
+				this._doc.synth.playhead = this._doc.bar + this._barOffset + (this._mouseX / this._editorWidth);
+			}
+		}
+
 		public resetCopiedPins = (): void => {
 			const maxDivision: number = this._getMaxDivision();
 			let cap: number = this._doc.song.getVolumeCap(false);
@@ -620,8 +626,11 @@ namespace beepbox {
 				this.editingModLabel = false;
 				this.modDragValueLabel.style.setProperty("pointer-events", "none");
 
-				if (window.getSelection) { window.getSelection().removeAllRanges(); }
-
+				if (window.getSelection) {
+					let sel: Selection | null = window.getSelection();
+					if (sel != null)
+						sel.removeAllRanges();
+				}
 				// Return pin to its state before text editing
 				if (discardChanges) {
 					this._modDragPin.volume = this._modDragStartValue;
@@ -662,7 +671,12 @@ namespace beepbox {
 				// Mod value label clicked, select it
 				this.modDragValueLabel.style.setProperty("pointer-events", "fill");
 				this.modDragValueLabel.setAttribute("contenteditable", "true");
-				window.getSelection().selectAllChildren(this.modDragValueLabel);
+				if (window.getSelection) {
+					let sel: Selection | null = window.getSelection();
+					if (sel != null)
+						sel.selectAllChildren(this.modDragValueLabel);
+				}
+
 				window.setTimeout(() => { this.modDragValueLabel.focus(); });
 				this.editingModLabel = true;
 			} else {

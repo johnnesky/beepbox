@@ -156,6 +156,8 @@ namespace beepbox {
 	let animationRequest: number | null;
 	let zoomEnabled: boolean = false;
 	let timelineWidth: number = 1;
+	let outVolumeHistoricTimer: number = 0;
+	let outVolumeHistoricCap: number = 0;
 
 	const synth: Synth = new Synth();
 	let titleText: HTMLHeadingElement = h1({ style: "flex-grow: 1; margin: 0 1px; margin-left: 10px; overflow: hidden;" }, "");
@@ -191,7 +193,22 @@ namespace beepbox {
 	const playhead: HTMLDivElement = div({style: `position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: ${ColorConfig.playhead}; pointer-events: none;`});
 	const timelineContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; position: relative;"}, timeline, playhead);
 	const visualizationContainer: HTMLDivElement = div({style: "display: flex; flex-grow: 1; flex-shrink: 1; height: 0; position: relative; align-items: center; overflow: hidden;"}, timelineContainer);
-	
+
+	const outVolumeBarBg: SVGRectElement = SVG.rect({ "pointer-events": "none", width: "90%", height: "50%", x: "5%", y: "25%", fill: ColorConfig.uiWidgetBackground });
+	const outVolumeBar: SVGRectElement = SVG.rect({ "pointer-events": "none", height: "50%", width: "0%", x: "5%", y: "25%", fill: "url('#volumeGrad2')" });
+	const outVolumeCap: SVGRectElement = SVG.rect({ "pointer-events": "none", width: "2px", height: "50%", x: "5%", y: "25%", fill: ColorConfig.uiWidgetFocus });
+	const stop1: SVGStopElement = SVG.stop({ "stop-color": "lime", offset: "60%" });
+  const stop2: SVGStopElement = SVG.stop({ "stop-color": "orange", offset: "90%" });
+	const stop3: SVGStopElement = SVG.stop({ "stop-color": "red", offset: "100%" });
+	const gradient: SVGGradientElement = SVG.linearGradient({ id: "volumeGrad2", gradientUnits: "userSpaceOnUse" }, stop1, stop2, stop3);
+	const defs: SVGDefsElement = SVG.defs({}, gradient);
+	const volumeBarContainer: SVGSVGElement = SVG.svg({ style: `touch-action: none; overflow: hidden; margin: auto;`, width: "160px", height: "10px", preserveAspectRatio: "none" },
+		defs,
+		outVolumeBarBg,
+		outVolumeBar,
+		outVolumeCap,
+	);
+
 	document.body.appendChild(visualizationContainer);
 	document.body.appendChild(
 		div({ style: `flex-shrink: 0; height: 20vh; min-height: 22px; max-height: 70px; display: flex; align-items: center;` },
@@ -200,6 +217,7 @@ namespace beepbox {
 			volumeIcon,
 			volumeSlider,
 			zoomButton,
+			volumeBarContainer,
 			titleText,
 			editLink,
 			copyLink,
@@ -263,11 +281,42 @@ namespace beepbox {
 				onTogglePlay();
 			}
 			renderPlayhead();
+
+			volumeUpdate();
 		}
 
 		if (pauseButtonDisplayed != synth.playing) {
 			renderPlayButton();
 		}
+
+	}
+
+	function volumeUpdate(): void {
+		if (synth.song == null) {
+			outVolumeCap.setAttribute("x", "5%");
+			outVolumeBar.setAttribute("width", "0%");
+			return;
+		}
+		outVolumeHistoricTimer--;
+		if (outVolumeHistoricTimer <= 0) {
+			outVolumeHistoricCap -= 0.03;
+		}
+		if (synth.song.outVolumeCap > outVolumeHistoricCap) {
+			outVolumeHistoricCap = synth.song.outVolumeCap;
+			outVolumeHistoricTimer = 50;
+		}
+
+		animateVolume(synth.song.outVolumeCap, outVolumeHistoricCap);
+
+		if (!synth.playing) {
+			outVolumeCap.setAttribute("x", "5%");
+			outVolumeBar.setAttribute("width", "0%");
+		}
+	}
+
+	function animateVolume(useOutVolumeCap: number, historicOutCap: number): void {
+		outVolumeBar.setAttribute("width", "" + Math.min(144, useOutVolumeCap * 144));
+		outVolumeCap.setAttribute("x", "" + (8 + Math.min(144, historicOutCap * 144)));
 	}
 
 	function onTogglePlay(): void {
@@ -276,6 +325,7 @@ namespace beepbox {
 			animationRequest = null;
 			if (synth.playing) {
 				synth.pause();
+				volumeUpdate();
 			} else {
 				synth.play();
 				localStorage.setItem("playerId", id);

@@ -121,7 +121,6 @@ namespace beepbox {
 		feedbackAmplitude = CharCode.B,
 		chord = CharCode.C,
 		detune = CharCode.D,
-
 		operatorEnvelopes = CharCode.E,
 		feedbackType = CharCode.F,
 
@@ -131,13 +130,13 @@ namespace beepbox {
 		panning = CharCode.L,
 		customChipWave = CharCode.M,
 		songTitle = CharCode.N,
-
+		limiterSettings = CharCode.O,
 		operatorAmplitudes = CharCode.P,
 		operatorFrequencies = CharCode.Q,
 
 		spectrum = CharCode.S,
 		startInstrument = CharCode.T,
-
+		channelNames = CharCode.U,
 		feedbackEnvelope = CharCode.V,
 		pulseWidth = CharCode.W,
 	}
@@ -1244,6 +1243,7 @@ namespace beepbox {
 		public readonly patterns: Pattern[] = [];
 		public readonly bars: number[] = [];
 		public muted: boolean = false;
+		public name: string = "";
 	}
 
 	export class Song {
@@ -1271,6 +1271,15 @@ namespace beepbox {
 		public noiseChannelCount: number;
 		public modChannelCount: number;
 		public readonly channels: Channel[] = [];
+		public limitDecay: number = 4.0;
+		public limitRise: number = 4000.0;
+		public compressionThreshold: number = 1.0;
+		public limitThreshold: number =  1.0;
+		public compressionRatio: number = 1.0;
+		public limitRatio: number = 1.0;
+		public masterGain: number = 1.0;
+		public inVolumeCap: number = 0.0;
+		public outVolumeCap: number = 0.0;
 
 		public mstMaxVols: Map<ModSetting, number> = new Map<ModSetting, number>([
 			[ModSetting.mstNone, 6],
@@ -1510,6 +1519,33 @@ namespace beepbox {
 			buffer.push(SongTagCode.patternCount, base64IntToCharCode[(this.patternsPerChannel - 1) >> 6], base64IntToCharCode[(this.patternsPerChannel - 1) & 0x3f]);
 			buffer.push(SongTagCode.instrumentCount, base64IntToCharCode[this.instrumentsPerChannel - 1]);
 			buffer.push(SongTagCode.rhythm, base64IntToCharCode[this.rhythm]);
+
+			// Push limiter settings, but only if they aren't the default!
+			buffer.push(SongTagCode.limiterSettings);
+			if (this.compressionRatio != 1.0 || this.limitRatio != 1.0 || this.limitRise != 4000.0 || this.limitDecay != 4.0 || this.limitThreshold != 1.0 || this.compressionThreshold != 1.0 || this.masterGain != 1.0) {
+				buffer.push(base64IntToCharCode[Math.round(this.compressionRatio < 1 ? this.compressionRatio * 10 : 10 + (this.compressionRatio - 1) * 60)]); // 0 ~ 1.15 uneven, mapped to 0 ~ 20
+				buffer.push(base64IntToCharCode[Math.round(this.limitRatio < 1 ? this.limitRatio * 10 : 9 + this.limitRatio)]); // 0 ~ 10 uneven, mapped to 0 ~ 20
+				buffer.push(base64IntToCharCode[this.limitDecay]); // directly 1 ~ 30
+				buffer.push(base64IntToCharCode[Math.round((this.limitRise - 2000.0) / 250.0)]); // 2000 ~ 10000 by 250, mapped to 0 ~ 32
+				buffer.push(base64IntToCharCode[Math.round(this.compressionThreshold * 20)]); // 0 ~ 1.1 by 0.05, mapped to 0 ~ 22
+				buffer.push(base64IntToCharCode[Math.round(this.limitThreshold * 20)]); // 0 ~ 2 by 0.05, mapped to 0 ~ 40
+				buffer.push(base64IntToCharCode[Math.round(this.masterGain * 50) >> 6], base64IntToCharCode[Math.round(this.masterGain * 50) & 0x3f]); // 0 ~ 5 by 0.02, mapped to 0 ~ 250
+			}
+			else {
+				buffer.push(base64IntToCharCode[0x3f]); // Not using limiter
+			}
+
+			buffer.push(SongTagCode.channelNames);
+			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
+				// Length of the channel name string
+				var encodedChannelName: string = encodeURIComponent(this.channels[channel].name);
+				buffer.push(base64IntToCharCode[encodedChannelName.length]);
+
+				// Actual encoded string follows
+				for (let i: number = 0; i < encodedChannelName.length; i++) {
+					buffer.push(encodedChannelName.charCodeAt(i));
+				}
+			}
 
 			buffer.push(SongTagCode.channelOctave);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
@@ -2277,6 +2313,41 @@ namespace beepbox {
 					// 65th, last sample is for anti-aliasing
 					instrument.customChipWaveIntegral[64] = 0.0;
 
+				} break;
+				case SongTagCode.limiterSettings: {
+					let nextValue: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+
+					// Check if limiter settings are used... if not, restore to default
+					if (nextValue == 0x3f) {
+						// Limiter isn't used
+						this.compressionRatio = 1.0;
+						this.limitRatio = 1.0;
+						this.limitRise = 4000.0;
+						this.limitDecay = 4.0;
+						this.limitThreshold = 1.0;
+						this.compressionThreshold = 1.0;
+						this.masterGain = 1.0;
+					}
+					else {
+						// Limiter is used, grab values
+						this.compressionRatio = (nextValue < 10 ? nextValue / 10 : (1 + (nextValue - 10) / 60));
+						nextValue = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						this.limitRatio = (nextValue < 10 ? nextValue / 10 : (nextValue - 9));
+						this.limitDecay = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						this.limitRise = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] * 250.0) + 2000.0;
+						this.compressionThreshold = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] / 20.0;
+						this.limitThreshold = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] / 20.0;
+						this.masterGain = ( ( base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6 ) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] ) / 50.0;
+					}
+				} break;
+				case SongTagCode.channelNames: {
+					for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
+						// Length of channel name string
+						var channelNameLength = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].name = decodeURIComponent(compressed.substring(charIndex, charIndex + channelNameLength));
+
+						charIndex += channelNameLength;
+					}
 				} break;
 				case SongTagCode.algorithm: {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].algorithm = clamp(0, Config.algorithms.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -3529,6 +3600,10 @@ namespace beepbox {
 		public pause(): void {
 			if (!this.isPlayingSong) return;
 			this.isPlayingSong = false;
+			if (this.song != null) {
+				this.song.inVolumeCap = 0.0;
+				this.song.outVolumeCap = 0.0;
+			}
 			this.modValues = [];
 			this.modInsValues = [];
 			this.nextModValues = [];
@@ -3675,6 +3750,9 @@ namespace beepbox {
 				return;
 			}
 
+			this.song.inVolumeCap = 0.0; // Reset volume cap for this run
+			this.song.outVolumeCap = 0.0;
+
 			const channelCount: number = this.song.pitchChannelCount + this.song.noiseChannelCount;
 
 			for (let i: number = this.activeTones.length; i < channelCount; i++) {
@@ -3773,8 +3851,13 @@ namespace beepbox {
 			}
 			let reverb: number = Math.pow(useReverb / Config.reverbRange, 0.667) * 0.425;
 			//const highpassFilter: number = Math.pow(0.5, 400 / this.samplesPerSecond);
-			const limitDecay: number = 1.0 - Math.pow(0.5, 4.0 / this.samplesPerSecond);
-			const limitRise: number = 1.0 - Math.pow(0.5, 4000.0 / this.samplesPerSecond);
+			const limitDecay: number = 1.0 - Math.pow(0.5, this.song.limitDecay / this.samplesPerSecond); // Default 4.0
+			const limitRise: number = 1.0 - Math.pow(0.5, this.song.limitRise / this.samplesPerSecond); // Default 4000.0;
+			const compressionThreshold: number = this.song.compressionThreshold; // Default 1
+			const limitThreshold: number = this.song.limitThreshold; // Default 1
+			const compressionRatio: number = this.song.compressionRatio; // Default 1
+			const limitRatio: number = this.song.limitRatio; // Default 1
+			const masterGain: number = this.song.masterGain; // Default 1
 			//let highpassInput: number = +this.highpassInput;
 			//let highpassOutput: number = +this.highpassOutput;
 			let limit: number = +this.limit;
@@ -3936,8 +4019,9 @@ namespace beepbox {
 					reverbDelayLine[reverbDelayPos] = reverbFeedback3;
 					reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
 
-					const sampleL = sampleForNoneL + chorusSampleL + sampleForReverbL + reverbSample1 + reverbSample2 + reverbSample3;
-					const sampleR = sampleForNoneR + chorusSampleR + sampleForReverbR + reverbSample0 + reverbSample2 - reverbSample3;
+					// Apply master pre-gain to the sound, before limiting. Master gain slider is 0-5, but it's squared for more range (0-25).
+					const sampleL = masterGain * masterGain * (sampleForNoneL + chorusSampleL + sampleForReverbL + reverbSample1 + reverbSample2 + reverbSample3);
+					const sampleR = masterGain * masterGain * (sampleForNoneR + chorusSampleR + sampleForReverbR + reverbSample0 + reverbSample2 - reverbSample3);
 
 					/*
 					highpassOutput = highpassOutput * highpassFilter + sample - highpassInput;
@@ -3949,10 +4033,21 @@ namespace beepbox {
 					const absL: number = sampleL < 0.0 ? -sampleL : sampleL;
 					const absR: number = sampleR < 0.0 ? -sampleR : sampleR;
 					const abs: number = absL > absR ? absL : absR;
-					limit += (abs - limit) * (limit < abs ? limitRise : limitDecay);
+					this.song.inVolumeCap = (this.song.inVolumeCap > abs ? this.song.inVolumeCap : abs); // Analytics, spit out raw input volume
+					// Determines which formula to use. 0 when volume is between [0, compressionThreshold], 1 when between (compressionThreshold, limitThreshold], 2 above
+					const limitRange: number = (+(abs > compressionThreshold)) + (+(abs > limitThreshold));
+					// Determine the target amplification based on the range of the curve
+					const limitTarget: number =
+						  (+(limitRange == 0)) * (((abs + 1 - compressionThreshold) * 0.8 + 0.25) * compressionRatio + 1.05 * (1 - compressionRatio))
+						+ (+(limitRange == 1)) * (1.05)
+						+ (+(limitRange == 2)) * ( 1.05 * ((abs + 1 - limitThreshold) * limitRatio + ( 1 - limitThreshold )));
+					// Move the limit towards the target
+					limit += ((limitTarget - limit) * (limit < limitTarget ? limitRise :limitDecay));
 					const limitedVolume = volume / (limit >= 1 ? limit * 1.05 : limit * 0.8 + 0.25);
 					outputDataL[i] = sampleL * limitedVolume;
 					outputDataR[i] = sampleR * limitedVolume;
+
+					this.song.outVolumeCap = (this.song.outVolumeCap > abs * limitedVolume ? this.song.outVolumeCap : abs * limitedVolume); // Analytics, spit out limited output volume
 				}
 
 				bufferIndex += runLength;

@@ -36,7 +36,7 @@ namespace beepbox {
 				const versionMenu: HTMLSelectElement = select({style: "width: 100%;"});
 				
 				for (const version of song.versions) {
-					versionMenu.appendChild(option({value: version.time}, new Date(version.time).toLocaleString()));
+					versionMenu.appendChild(option({value: version.time}, version.name + ": " + new Date(version.time).toLocaleString()));
 				}
 				
 				const player: HTMLIFrameElement = iframe({style: "width: 100%; height: 60px; border: none; display: block;"});

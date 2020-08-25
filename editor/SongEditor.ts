@@ -24,6 +24,7 @@
 /// <reference path="MoveNotesSidewaysPrompt.ts" />
 /// <reference path="SongDurationPrompt.ts" />
 /// <reference path="ChannelSettingsPrompt.ts" />
+/// <reference path="LimiterPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
 /// <reference path="MuteButton.ts" />
@@ -290,7 +291,7 @@ namespace beepbox {
 
 	}
 
-	class InputBox {
+	export class InputBox {
 		private _change: Change | null = null;
 		private _value: string = "";
 		private _oldValue: string = "";
@@ -318,7 +319,7 @@ namespace beepbox {
 		};
 	}
 
-	class Slider {
+	export class Slider {
 		private _change: Change | null = null;
 		private _value: number = 0;
 		private _oldValue: number = 0;
@@ -368,6 +369,23 @@ namespace beepbox {
 		private readonly _prevBarButton: HTMLButtonElement = button({ className: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)" });
 		private readonly _nextBarButton: HTMLButtonElement = button({ className: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)" });
 		private readonly _volumeSlider: Slider = new Slider(input({ title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "75", value: "50", step: "1" }), this._doc, null, false);
+		private readonly _outVolumeBarBg: SVGRectElement = SVG.rect({ "pointer-events": "none", width: "90%", height: "50%", x: "5%", y: "25%", fill: ColorConfig.uiWidgetBackground });
+		private readonly _outVolumeBar: SVGRectElement = SVG.rect({ "pointer-events": "none", height: "50%", width: "0%", x: "5%", y: "25%", fill: "url('#volumeGrad2')" });
+		private readonly _outVolumeCap: SVGRectElement = SVG.rect({ "pointer-events": "none", width: "2px", height: "50%", x: "5%", y: "25%", fill: ColorConfig.uiWidgetFocus });
+		private readonly _stop1: SVGStopElement = SVG.stop({ "stop-color": "lime", offset: "60%" });
+		private readonly _stop2: SVGStopElement = SVG.stop({ "stop-color": "orange", offset: "90%" });
+		private readonly _stop3: SVGStopElement = SVG.stop({ "stop-color": "red", offset: "100%" });
+		private readonly _gradient: SVGGradientElement = SVG.linearGradient({ id: "volumeGrad2", gradientUnits: "userSpaceOnUse" }, this._stop1, this._stop2, this._stop3);
+		private readonly _defs: SVGDefsElement = SVG.defs({}, this._gradient);
+		private readonly _volumeBarContainer: SVGSVGElement = SVG.svg({ style: `touch-action: none; overflow: visible; margin: auto;`, width: "160px", height: "100%", preserveAspectRatio: "none" },
+			this._defs,
+			this._outVolumeBarBg,
+			this._outVolumeBar,
+			this._outVolumeCap,
+		);
+		private readonly _volumeBarBox: HTMLDivElement = div({ class: "playback-volume-bar", style: "height: 12px; align-self: center;" },
+			this._volumeBarContainer,
+		);
 		private readonly _fileMenu: HTMLSelectElement = select({ style: "width: 100%;" },
 			option({ selected: true, disabled: true, hidden: false }, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
 			option({ value: "new" }, "+ New Blank Song"),
@@ -393,10 +411,11 @@ namespace beepbox {
 			option({ value: "duplicatePatterns" }, "Duplicate Reused Patterns (D)"),
 			option({ value: "transposeUp" }, "Move Notes Up (+)"),
 			option({ value: "transposeDown" }, "Move Notes Down (-)"),
-			option({ value: "moveNotesSideways" }, "Move All Notes Sideways..."),
+			option({ value: "moveNotesSideways" }, "Move All Notes Sideways... (W)"),
 			option({ value: "beatsPerBar" }, "Change Beats Per Bar..."),
-			option({ value: "barCount" }, "Change Song Length..."),
-			option({ value: "channelSettings" }, "Channel Settings..."),
+			option({ value: "barCount" }, "Change Song Length... (L)"),
+			option({ value: "channelSettings" }, "Channel Settings... (Q)"),
+			option({ value: "limiterSettings" }, "Limiter Settings... (⇧L)"),
 		);
 		private readonly _optionsMenu: HTMLSelectElement = select({ style: "width: 100%;" },
 			option({ selected: true, disabled: true, hidden: false }, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
@@ -410,7 +429,8 @@ namespace beepbox {
 			option({ value: "alwaysFineNoteVol" }, "Always Fine Note Vol."),
 			option({ value: "enableChannelMuting" }, "Enable Channel Muting"),
 			option({value: "displayBrowserUrl"}, "Display Song Data in URL"),
-			option({ value: "fullScreen" }, "Full-Screen Layout"),
+			option({ value: "displayVolumeBar" }, "Show Playback Volume"),
+			option({ value: "fullScreen" }, "Set Layout..."),
 			option({ value: "colorTheme" }, "Set Theme..."),
 			//option({value: "alwaysShowSettings"}, "Customize All Instruments"),
 		);
@@ -511,7 +531,7 @@ namespace beepbox {
 			div({ style: "margin-top:5px; display:flex; justify-content:center;" }, [this._customWavePresetDrop]),
 		]);
 
-		private readonly _songTitleInputBox: InputBox = new InputBox(input({ style: "font-weight:bold; border:none; width: 100%; background-color:${ColorConfig.editorBackground}; color:${ColorConfig.primaryText}; text-align:center", maxlength: "30", type: "text", value: Config.versionDisplayName }), this._doc, (oldValue: string, newValue: string) => new ChangeInputBoxText(this._doc, oldValue, newValue));
+		private readonly _songTitleInputBox: InputBox = new InputBox(input({ style: "font-weight:bold; border:none; width: 100%; background-color:${ColorConfig.editorBackground}; color:${ColorConfig.primaryText}; text-align:center", maxlength: "30", type: "text", value: Config.versionDisplayName }), this._doc, (oldValue: string, newValue: string) => new ChangeSongTitle(this._doc, oldValue, newValue));
 
 
 		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({ style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude" }), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue), false);
@@ -603,7 +623,7 @@ namespace beepbox {
 			this._muteEditor.container,
 			this._trackContainer,
 		);
-		private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackContainer);
+		public readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackContainer);
 		private readonly _trackArea: HTMLDivElement = div({ class: "track-area" },
 			this._trackAndMuteContainer,
 			this._barScrollBar.container,
@@ -614,6 +634,7 @@ namespace beepbox {
 				div({ style: "text-align: center; color: ${ColorConfig.secondaryText};" }, [this._songTitleInputBox.input]),
 			),
 			div({ class: "play-pause-area" },
+				this._volumeBarBox,
 				div({ class: "playback-bar-controls" },
 					this._playButton,
 					this._prevBarButton,
@@ -703,6 +724,12 @@ namespace beepbox {
 		private _modSliderValues: number[] = [];
 		private _hasActiveModSliders: boolean = false;
 		private _modSliderHandle: number = 0;
+		private _volumeHandle: number = 0;
+		private _barScrollbarHandle: number = 0;
+
+		private outVolumeHistoricTimer: number = 0;
+		private outVolumeHistoricCap: number = 0;
+		private lastOutVolumeCap: number = 0;
 
 		constructor(private _doc: SongDocument) {
 			this._doc.notifier.watch(this.whenUpdated);
@@ -850,6 +877,9 @@ namespace beepbox {
 			// The song volume slider is styled slightly different than the class' default.
 			this._volumeSlider.container.style.setProperty("flex-grow", "1");
 			this._volumeSlider.container.style.setProperty("display", "flex");
+
+			this._volumeBarContainer.style.setProperty("flex-grow", "1");
+			this._volumeBarContainer.style.setProperty("display", "flex");
 
 			// Also, any slider with a multiplicative effect instead of a replacement effect gets a different mod color, and a round slider.
 			this._volumeSlider.container.style.setProperty("--mod-color", ColorConfig.multiplicativeModSlider);
@@ -1086,6 +1116,9 @@ namespace beepbox {
 					case "channelSettings":
 						this.prompt = new ChannelSettingsPrompt(this._doc);
 						break;
+					case "limiterSettings":
+						this.prompt = new LimiterPrompt(this._doc, this);
+						break
 					case "theme":
 						this.prompt = new ThemePrompt(this._doc);
 						break;
@@ -1098,7 +1131,7 @@ namespace beepbox {
 				}
 
 				if (this.prompt) {
-					if (!(this.prompt instanceof TipPrompt)) {
+					if (!(this.prompt instanceof TipPrompt || this.prompt instanceof LimiterPrompt)) {
 						this._wasPlaying = this._doc.synth.playing;
 						this._pause();
 					}
@@ -1137,6 +1170,7 @@ namespace beepbox {
 			this._piano.container.style.display = this._doc.showLetters ? "" : "none";
 			this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
 			this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
+			this._volumeBarBox.style.display = this._doc.displayVolumeBar ? "" : "none";
 
 			if (this._doc.getFullScreen()) {
 				const semitoneHeight: number = this._patternEditorRow.clientHeight / this._doc.windowPitchCount;
@@ -1175,6 +1209,7 @@ namespace beepbox {
 				(this._doc.alwaysFineNoteVol ? "✓ " : "") + "Always Fine Note Vol.",
 				(this._doc.enableChannelMuting ? "✓ " : "") + "Enable Channel Muting",
 				(this._doc.displayBrowserUrl ? "✓ " : "") + "Display Song Data in URL",
+				(this._doc.displayVolumeBar ? "✓ " : "") + "Show Playback Volume",
 				"Set Layout...",
 				"Set Theme...",
 				//(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
@@ -1688,7 +1723,7 @@ namespace beepbox {
 								//	setIndex = 7;
 								//else
 								//	needReset = true;
-								break;
+								//break;
 							case ModSetting.mstFilterCut:
 								if (modStatus == ModStatus.msForPitch || modStatus == ModStatus.msForNoise)
 									setIndex = 3;
@@ -1871,8 +1906,10 @@ namespace beepbox {
 		}
 
 		private _whenKeyUp = (event: KeyboardEvent): void => {
-			if (event.keyCode == 17)
+			this._muteEditor.onKeyUp(event);
+			if (event.keyCode == 17) {
 				this._patternEditor.controlMode = false;
+			}
 		}
 
 		private _tempoStepperCaptureNumberKeys = (event: KeyboardEvent): void => {
@@ -1907,8 +1944,8 @@ namespace beepbox {
 				return;
 			}
 
-			// Defer to actively editing song title or mod label
-			if (document.activeElement == this._songTitleInputBox.input || this._patternEditor.editingModLabel) {
+			// Defer to actively editing song title, channel name, or mod label
+			if (document.activeElement == this._songTitleInputBox.input || this._patternEditor.editingModLabel || document.activeElement == this._muteEditor._channelNameInput.input) {
 				// Enter/esc returns focus to form
 				if (event.keyCode == 13 || event.keyCode == 27) {
 					this.mainLayer.focus();
@@ -1934,7 +1971,17 @@ namespace beepbox {
 					this._patternEditor.controlMode = true;
 					break;
 				case 32: // space
-					this._togglePlay();
+					// Jump to mouse
+					if (event.ctrlKey || event.shiftKey) {
+						if (!this._doc.synth.playing) {
+							this._togglePlay();
+						}
+						this._trackEditor.movePlayheadToMouse();
+						this._patternEditor.movePlayheadToMouse();
+					}
+					else {
+						this._togglePlay();
+					}
 					event.preventDefault();
 					break;
 				case 90: // z
@@ -1961,6 +2008,7 @@ namespace beepbox {
 					break;
 				case 8: // backspace/delete
 					this._trackEditor.deleteBars();
+					this._barScrollBar.animatePlayhead();
 					event.preventDefault();
 					break;
 				case 65: // a
@@ -1977,6 +2025,7 @@ namespace beepbox {
 					break;
 				case 70: // f
 					this._doc.synth.firstBar();
+					this._barScrollBar.animatePlayhead();
 					if (this._doc.autoFollow) {
 						new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
 					}
@@ -1984,8 +2033,23 @@ namespace beepbox {
 					break;
 				case 72: // h
 					this._doc.synth.jumpToEditingBar(this._doc.bar);
+					this._barScrollBar.animatePlayhead();
 					new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
 					event.preventDefault();
+					break;
+				case 76: // l
+					if (event.shiftKey) {
+						this._openPrompt("limiterSettings");
+					}
+					else {
+						this._openPrompt("barCount");
+					}
+						break;
+				case 77: // m
+					if (this._doc.enableChannelMuting) {
+						this._trackEditor.muteChannels(event.shiftKey);
+						event.preventDefault();
+					}
 					break;
 				case 78: // n
 					// Find lowest-index unused pattern for current channel
@@ -2041,11 +2105,8 @@ namespace beepbox {
 
 					event.preventDefault();
 					break;
-				case 77: // m
-					if (this._doc.enableChannelMuting) {
-						this._trackEditor.muteChannels(event.shiftKey);
-						event.preventDefault();
-					}
+				case 81: // q
+					this._openPrompt("channelSettings");
 					break;
 				case 83: // s
 					if (this._doc.enableChannelMuting) {
@@ -2065,6 +2126,9 @@ namespace beepbox {
 					}
 					event.preventDefault();
 					break;
+				case 87: // w
+					this._openPrompt("moveNotesSideways");
+				break;
 				case 73: // i
 					if (event.shiftKey) {
 						const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
@@ -2081,6 +2145,7 @@ namespace beepbox {
 					if (this._doc.autoFollow) {
 						new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
 					}
+					this._barScrollBar.animatePlayhead();
 					event.preventDefault();
 					break;
 				case 221: // right brace
@@ -2088,6 +2153,7 @@ namespace beepbox {
 					if (this._doc.autoFollow) {
 						new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
 					}
+					this._barScrollBar.animatePlayhead();
 					event.preventDefault();
 					break;
 				case 189: // -
@@ -2126,10 +2192,12 @@ namespace beepbox {
 
 		private _whenPrevBarPressed = (): void => {
 			this._doc.synth.prevBar();
+			this._barScrollBar.animatePlayhead();
 		}
 
 		private _whenNextBarPressed = (): void => {
 			this._doc.synth.nextBar();
+			this._barScrollBar.animatePlayhead();
 		}
 
 		private _togglePlay = (): void => {
@@ -2141,13 +2209,13 @@ namespace beepbox {
 			}
 		}
 
-		private _play(): void {
+		public _play(): void {
 			this._doc.synth.play();
 			this.updatePlayButton();
-			this._modSliderHandle = window.setInterval(() => this._modSliderUpdate(), 30);
+			window.requestAnimationFrame(this._animate);
 		}
 
-		private _pause(): void {
+		public _pause(): void {
 			this._doc.synth.pause();
 			this._doc.synth.resetEffects();
 			if (this._doc.autoFollow) {
@@ -2156,8 +2224,44 @@ namespace beepbox {
 			this._doc.synth.snapToBar();
 			this.updatePlayButton();
 			window.clearInterval(this._modSliderHandle);
+			window.clearInterval(this._volumeHandle);
+			window.clearInterval(this._barScrollbarHandle);
+			window.requestAnimationFrame(this._animate);
+			this.outVolumeHistoricCap = 0;
+		}
+
+		public _animate = (): void => {
 			// Need to update mods once more to clear the slider display
-			window.setTimeout(() => this._modSliderUpdate(), 20);
+			this._modSliderUpdate();
+			// Same for volume display
+			if (this._doc.displayVolumeBar) {
+				this._volumeUpdate();
+			}
+			// ...and barscrollbar playhead
+			this._barScrollBar.animatePlayhead();
+
+			window.requestAnimationFrame(this._animate);
+		}
+
+		public _volumeUpdate = (): void => {
+			this.outVolumeHistoricTimer--;
+			if (this.outVolumeHistoricTimer <= 0) {
+				this.outVolumeHistoricCap -= 0.03;
+			}
+			if (this._doc.song.outVolumeCap > this.outVolumeHistoricCap) {
+				this.outVolumeHistoricCap = this._doc.song.outVolumeCap;
+				this.outVolumeHistoricTimer = 50;
+			}
+
+			if (this._doc.song.outVolumeCap != this.lastOutVolumeCap) {
+				this.lastOutVolumeCap = this._doc.song.outVolumeCap;
+				this._animateVolume(this._doc.song.outVolumeCap, this.outVolumeHistoricCap);
+			}
+		}
+
+		private _animateVolume(outVolumeCap: number, historicOutCap: number): void {
+			this._outVolumeBar.setAttribute("width", "" + Math.min(144, outVolumeCap * 144));
+			this._outVolumeCap.setAttribute("x", "" + (8 + Math.min(144, historicOutCap * 144)));
 		}
 
 		private _setVolumeSlider = (): void => {
@@ -2445,6 +2549,9 @@ namespace beepbox {
 				case "channelSettings":
 					this._openPrompt("channelSettings");
 					break;
+				case "limiterSettings":
+					this._openPrompt("limiterSettings");
+					break;
 			}
 			this._editMenu.selectedIndex = 0;
 		}
@@ -2481,6 +2588,9 @@ namespace beepbox {
 					break;
 				case "displayBrowserUrl":
 					this._doc.toggleDisplayBrowserUrl();
+					break;
+				case "displayVolumeBar":
+					this._doc.displayVolumeBar = !this._doc.displayVolumeBar;
 					break;
 				case "fullScreen":
 					this._openPrompt("layout");

@@ -479,6 +479,7 @@ namespace beepbox {
 					--editor-background: #010c03;
 					--hover-preview: #efe;
 					--playhead: rgba(232, 255, 232, 0.9);
+					--primary-text: #efe;
 					--secondary-text: #70A070;
 					--inverted-text: #280228;
 					--text-selection: rgba(255,68,199,0.99);

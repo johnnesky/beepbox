@@ -55,20 +55,17 @@ namespace beepbox {
 			this.container.addEventListener("touchend", this._whenCursorReleased);
 			this.container.addEventListener("touchcancel", this._whenCursorReleased);
 
-			window.requestAnimationFrame(this._animatePlayhead);
-
 			// Sorry, bypassing typescript type safety on this function because I want to use the new "passive" option.
 			//this._trackContainer.addEventListener("scroll", this._onScroll, {capture: false, passive: true});
 			(<Function>this._trackContainer.addEventListener)("scroll", this._onScroll, { capture: false, passive: true });
 		}
 
-		private _animatePlayhead = (timestamp: number): void => {
+		public animatePlayhead = (): void => {
 			const playhead = Math.min(512, Math.max(0, (this._notchSpace * this._doc.synth.playhead - 2)));
 			if (this._renderedPlayhead != playhead) {
 				this._renderedPlayhead = playhead;
 				this._playhead.setAttribute("x", "" + playhead);
 			}
-			window.requestAnimationFrame(this._animatePlayhead);
 		}
 
 		private _onScroll = (event: Event): void => {

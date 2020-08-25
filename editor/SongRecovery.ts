@@ -7,6 +7,7 @@ namespace beepbox {
 	export interface RecoveredVersion {
 		uid: string;
 		time: number;
+		name: string;
 		work: number;
 	}
 	
@@ -72,7 +73,8 @@ namespace beepbox {
 			return songs;
 		}
 		
-		public saveVersion(uid: string, songData: string): void {
+		public saveVersion(uid: string, name: string, songData: string): void {
+			const newName: string = name;
 			const newTime: number = Math.round(Date.now());
 			
 			clearTimeout(this._saveVersionTimeoutHandle);
@@ -105,7 +107,7 @@ namespace beepbox {
 					newWork = mostRecentWork + Math.min(maximumWorkPerVersion, newTime - mostRecentTime);
 				}
 				
-				const newVersion: RecoveredVersion = {uid: uid, time: newTime, work: newWork};
+				const newVersion: RecoveredVersion = {uid: uid, name: newName, time: newTime, work: newWork};
 				const newKey: string = versionToKey(newVersion);
 				versions.unshift(newVersion);
 				localStorage.setItem(newKey, songData);
