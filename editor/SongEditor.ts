@@ -25,6 +25,7 @@
 /// <reference path="SongDurationPrompt.ts" />
 /// <reference path="ChannelSettingsPrompt.ts" />
 /// <reference path="LimiterPrompt.ts" />
+/// <reference path="CustomChipPrompt.ts" />
 /// <reference path="ExportPrompt.ts" />
 /// <reference path="ImportPrompt.ts" />
 /// <reference path="MuteButton.ts" />
@@ -129,7 +130,7 @@ namespace beepbox {
 		}
 	}
 
-	class Canvas {
+	class CustomChipCanvas {
 		private mouseDown: boolean;
 		private continuousEdit: boolean;
 		private lastX: number;
@@ -521,14 +522,15 @@ namespace beepbox {
 			]),
 		]);
 
-		private readonly _customWaveDrawCanvas: Canvas = new Canvas(canvas({ width: 128, height: 52, style: "border:2px solid " + ColorConfig.uiWidgetBackground, id: "customWaveDrawCanvas" }), this._doc, (newArray: Float64Array) => new ChangeCustomWave(this._doc, newArray));
+		private readonly _customWaveDrawCanvas: CustomChipCanvas = new CustomChipCanvas(canvas({ width: 128, height: 52, style: "border:2px solid " + ColorConfig.uiWidgetBackground, id: "customWaveDrawCanvas" }), this._doc, (newArray: Float64Array) => new ChangeCustomWave(this._doc, newArray));
 		private readonly _customWavePresetDrop: HTMLSelectElement = buildHeaderedOptions("Load Preset", select({ style: "width: 50%; height:1.5em; text-align: center; text-align-last: center;" }),
 			Config.chipWaves.map(wave => wave.name)
 		);
+		private readonly _customWaveZoom: HTMLButtonElement = button({ style: "margin-left:0.5em; height:1.5em; max-width: 20px;", onclick: () => this._openPrompt("customChipSettings") }, "+");
 
 		private readonly _customWaveDraw: HTMLDivElement = div({ style: "height:80px; margin-top:10px; margin-bottom:5px" }, [
 			div({ style: "height:54px; display:flex; justify-content:center;" }, [this._customWaveDrawCanvas.canvas]),
-			div({ style: "margin-top:5px; display:flex; justify-content:center;" }, [this._customWavePresetDrop]),
+			div({ style: "margin-top:5px; display:flex; justify-content:center;" }, [this._customWavePresetDrop, this._customWaveZoom]),
 		]);
 
 		private readonly _songTitleInputBox: InputBox = new InputBox(input({ style: "font-weight:bold; border:none; width: 100%; background-color:${ColorConfig.editorBackground}; color:${ColorConfig.primaryText}; text-align:center", maxlength: "30", type: "text", value: Config.versionDisplayName }), this._doc, (oldValue: string, newValue: string) => new ChangeSongTitle(this._doc, oldValue, newValue));
@@ -1082,7 +1084,7 @@ namespace beepbox {
 			this._currentPromptName = promptName;
 
 			if (this.prompt) {
-				if (this._wasPlaying && !(this.prompt instanceof TipPrompt)) {
+				if (this._wasPlaying && !(this.prompt instanceof TipPrompt || this.prompt instanceof LimiterPrompt || this.prompt instanceof CustomChipPrompt)) {
 					this._play();
 				}
 				this._wasPlaying = false;
@@ -1118,7 +1120,10 @@ namespace beepbox {
 						break;
 					case "limiterSettings":
 						this.prompt = new LimiterPrompt(this._doc, this);
-						break
+						break;
+					case "customChipSettings":
+						this.prompt = new CustomChipPrompt(this._doc, this);
+						break;
 					case "theme":
 						this.prompt = new ThemePrompt(this._doc);
 						break;
@@ -1131,7 +1136,7 @@ namespace beepbox {
 				}
 
 				if (this.prompt) {
-					if (!(this.prompt instanceof TipPrompt || this.prompt instanceof LimiterPrompt)) {
+					if (!(this.prompt instanceof TipPrompt || this.prompt instanceof LimiterPrompt || this.prompt instanceof CustomChipPrompt)) {
 						this._wasPlaying = this._doc.synth.playing;
 						this._pause();
 					}
@@ -1476,7 +1481,13 @@ namespace beepbox {
 				this._detuneSliderInputBox.value = instrument.detune + "";
 				this._instrumentVolumeSlider.updateValue(instrument.volume);
 				this._instrumentVolumeSliderInputBox.value = "" + (instrument.volume);
-				this._customWaveDrawCanvas.redrawCanvas();
+				if (instrument.type == InstrumentType.customChipWave) {
+					this._customWaveDrawCanvas.redrawCanvas();
+
+					if (this.prompt instanceof CustomChipPrompt) {
+						this.prompt.customChipCanvas.render();
+					}
+				}
 
 			}
 			// Options for mod channel
@@ -1937,6 +1948,9 @@ namespace beepbox {
 
 		private _whenKeyPressed = (event: KeyboardEvent): void => {
 			if (this.prompt) {
+				if (this.prompt instanceof CustomChipPrompt || this.prompt instanceof LimiterPrompt) {
+					this.prompt.whenKeyPressed(event);
+				}
 				if (event.keyCode == 27) { // ESC key
 					// close prompt.
 					this._doc.undo();
@@ -2647,7 +2661,7 @@ namespace beepbox {
 			//this._instrumentVolumeSlider.input.value = "" + Math.round(Config.waveVolumes[index] * 50.0 - 50.0);
 
 			this._doc.record(new ChangeCustomWave(this._doc, customWaveArray))
-			this._doc.record(new ChangeVolume(this._doc, +this._instrumentVolumeSlider.input.value, -Config.volumeRange / 2 + Math.round(Config.chipWaves[index].volume * Config.volumeRange / 2)));
+			this._doc.record(new ChangeVolume(this._doc, +this._instrumentVolumeSlider.input.value, -Config.volumeRange / 2 + Math.round(Math.sqrt(Config.chipWaves[index].volume) * Config.volumeRange / 2)));
 
 			this._customWavePresetDrop.selectedIndex = 0;
 			this._doc.notifier.changed();

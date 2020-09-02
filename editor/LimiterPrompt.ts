@@ -175,13 +175,6 @@ namespace beepbox {
 
 	export class LimiterPrompt implements Prompt {
 
-		//public limitDecay: number = 4.0;
-		//public limitRise: number = 4000.0;
-		//public compressionThreshold: number = 1.0;
-		//public limitThreshold: number =  1.0;
-		//public compressionRatio: number = 1.0;
-		//public limitRatio: number = 1.0;
-
 		private limiterCanvas: LimiterCanvas = new LimiterCanvas(this);
 
 		public readonly _playButton: HTMLButtonElement = button({ style: "width: 55%;", type: "button" });
@@ -283,7 +276,7 @@ namespace beepbox {
 			this._okayButton.addEventListener("click", this._saveChanges);
 			this._resetButton.addEventListener("click", this._resetDefaults);
 			this._cancelButton.addEventListener("click", this._close);
-			this.container.addEventListener("keydown", this._whenKeyPressed);
+			this.container.addEventListener("keydown", this.whenKeyPressed);
 
 			this.limitRatioSlider.input.value = "" + (this._doc.song.limitRatio < 1 ? this._doc.song.limitRatio * 10 : 9 + this._doc.song.limitRatio);
 			this.compressionRatioSlider.input.value = "" + (this._doc.song.compressionRatio < 1 ? this._doc.song.compressionRatio * 10 : 10 + (this._doc.song.compressionRatio - 1) * 60);
@@ -406,7 +399,7 @@ namespace beepbox {
 			this._okayButton.removeEventListener("click", this._saveChanges);
 			this._resetButton.removeEventListener("click", this._resetDefaults);
 			this._cancelButton.removeEventListener("click", this._close);
-			this.container.removeEventListener("keydown", this._whenKeyPressed);
+			this.container.removeEventListener("keydown", this.whenKeyPressed);
 			this.limitDecaySlider.input.removeEventListener("input", this._whenInput);
 			this.limitRiseSlider.input.removeEventListener("input", this._whenInput);
 			this.limitThresholdSlider.input.removeEventListener("input", this._whenInputFavorLimitThreshold);
@@ -418,7 +411,7 @@ namespace beepbox {
 			this._playButton.removeEventListener("click", this._togglePlay);
 		}
 
-		private _whenKeyPressed = (event: KeyboardEvent): void => {
+		public whenKeyPressed = (event: KeyboardEvent): void => {
 			if ((<Element>event.target).tagName != "BUTTON" && event.keyCode == 13) { // Enter key
 				this._saveChanges();
 			}
