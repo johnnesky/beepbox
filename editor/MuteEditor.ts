@@ -171,7 +171,7 @@ namespace beepbox {
 
 			const index = this._buttons.indexOf(<HTMLDivElement>event.target);
 			if (index == -1) return;
-			let xPos: number = event.clientX - this._buttons[0].getBoundingClientRect().x;
+			let xPos: number = event.clientX - this._buttons[0].getBoundingClientRect().left;
 			if (xPos < 21.0) {
 				this._doc.song.channels[index].muted = !this._doc.song.channels[index].muted;
 			}
@@ -188,7 +188,7 @@ namespace beepbox {
 				}
 				return;
 			}
-			let xPos: number = event.clientX - this._buttons[0].getBoundingClientRect().x;
+			let xPos: number = event.clientX - this._buttons[0].getBoundingClientRect().left;
 			if (xPos >= 21.0) {
 				if (!this._channelDropDownOpen) {
 					// Mouse over chn. number
