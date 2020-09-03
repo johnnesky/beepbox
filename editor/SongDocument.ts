@@ -355,6 +355,7 @@ namespace beepbox {
 			window.localStorage.setItem("alwaysFineNoteVol", this.alwaysFineNoteVol ? "true" : "false");
 			window.localStorage.setItem("enableChannelMuting", this.enableChannelMuting ? "true" : "false");
 			window.localStorage.setItem("displayBrowserUrl", this.displayBrowserUrl ? "true" : "false");
+			window.localStorage.setItem("displayVolumeBar", this.displayVolumeBar ? "true" : "false");
 			window.localStorage.setItem("fullScreen", this.fullScreen);
 			window.localStorage.setItem("colorTheme", this.colorTheme);
 			window.localStorage.setItem("volume", String(this.volume));
