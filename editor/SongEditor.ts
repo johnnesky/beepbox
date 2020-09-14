@@ -378,7 +378,7 @@ namespace beepbox {
 		private readonly _stop3: SVGStopElement = SVG.stop({ "stop-color": "red", offset: "100%" });
 		private readonly _gradient: SVGGradientElement = SVG.linearGradient({ id: "volumeGrad2", gradientUnits: "userSpaceOnUse" }, this._stop1, this._stop2, this._stop3);
 		private readonly _defs: SVGDefsElement = SVG.defs({}, this._gradient);
-		private readonly _volumeBarContainer: SVGSVGElement = SVG.svg({ style: `touch-action: none; overflow: visible; margin: auto;`, width: "160px", height: "100%", preserveAspectRatio: "none" },
+		private readonly _volumeBarContainer: SVGSVGElement = SVG.svg({ style: `touch-action: none; overflow: visible; margin: auto; max-width: 20vw;`, width: "160px", height: "100%", preserveAspectRatio: "none", viewBox: "0 0 160 12" },
 			this._defs,
 			this._outVolumeBarBg,
 			this._outVolumeBar,
