@@ -819,11 +819,11 @@ namespace beepbox {
 			this._modSetBoxes = [];
 			for (let mod: number = 0; mod < Config.modCount; mod++) {
 
-				let modChannelBox: HTMLSelectElement = select({ style: "width: 100%; color: currentColor;" });
+				let modChannelBox: HTMLSelectElement = select({ style: "width: 100%; color: currentColor; text-overflow:ellipsis;" });
 				let modInstrumentBox: HTMLSelectElement = select({ style: "width: 100%; color: currentColor;" });
 
 				let modNameRow: HTMLDivElement = div({ className: "operatorRow", style: "height: 1em; margin-bottom: 0.65em;" },
-					div({ class: "tip", style: "width: 1em; max-width: 5.4em;", id: "modChannelText" + mod, onclick: () => this._openPrompt("modChannel") }, "Ch:"),
+					div({ class: "tip", style: "width: 1em; max-width: 5.4em; min-width: 5.4em;", id: "modChannelText" + mod, onclick: () => this._openPrompt("modChannel") }, "Ch:"),
 					div({ class: "selectContainer" }, modChannelBox),
 					div({ class: "tip", style: "width: 1.2em; margin-left: 0.8em;", id: "modInstrumentText" + mod, onclick: () => this._openPrompt("modInstrument") }, "Ins:"),
 					div({ class: "selectContainer" }, modInstrumentBox),
@@ -1580,26 +1580,39 @@ namespace beepbox {
 					if (modInstrument >= this._doc.song.instrumentsPerChannel) {
 						modInstrument = 0;
 						instrument.modInstruments[mod] = 0;
+						instrument.modSettings[mod] = 0;
 					}
 					if (modChannel >= this._doc.song.pitchChannelCount && (modStatus == ModStatus.msForPitch)) {
 						modStatus = ModStatus.msNone;
 						instrument.modStatuses[mod] = ModStatus.msNone;
+						instrument.modSettings[mod] = ModSetting.mstNone;
 					}
 					if (modChannel >= this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount && (modStatus == ModStatus.msForNoise)) {
 						instrument.modStatuses[mod] = ModStatus.msNone;
+						instrument.modSettings[mod] = ModSetting.mstNone;
 					}
 
 					// Build options for modulator channels (make sure it has the right number).
-					if (this._modChannelBoxes[mod].children.length != 2 + this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
+					if (this._doc.recalcChannelNames || this._modChannelBoxes[mod].children.length != 2 + this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
 						while (this._modChannelBoxes[mod].firstChild) this._modChannelBoxes[mod].remove(0);
 						const channelList: string[] = [];
 						channelList.push("none");
 						channelList.push("song");
 						for (let i: number = 0; i < this._doc.song.pitchChannelCount; i++) {
-							channelList.push("pitch " + (i + 1));
+							if (this._doc.song.channels[i].name == "") {
+								channelList.push("pitch " + (i + 1));
+							}
+							else {
+								channelList.push(this._doc.song.channels[i].name);
+							}
 						}
 						for (let i: number = 0; i < this._doc.song.noiseChannelCount; i++) {
-							channelList.push("noise " + (i + 1));
+							if (this._doc.song.channels[i + this._doc.song.pitchChannelCount].name == "") {
+								channelList.push("noise " + (i + 1));
+							}
+							else {
+								channelList.push(this._doc.song.channels[i + this._doc.song.pitchChannelCount].name);
+							}
 						}
 						buildOptions(this._modChannelBoxes[mod], channelList);
 					}
@@ -1642,7 +1655,7 @@ namespace beepbox {
 						settingList.push("none");
 
 						// Populate mod setting options for the song scope.
-						if (this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent == "song") {
+						if (this._modChannelBoxes[mod].selectedIndex == 1) {
 							settingList.push("song volume");
 							settingList.push("tempo");
 							settingList.push("reverb");
@@ -1811,14 +1824,13 @@ namespace beepbox {
 
 
 					//Hide instrument select if channel is "none" or "song"
-					if (this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent == "none"
-						|| this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent == "song") {
+					if (this._modChannelBoxes[mod].selectedIndex <= 1) {
 						((this._modInstrumentBoxes[mod].parentElement) as HTMLDivElement).style.display = "none";
 						$("#modInstrumentText" + mod).get(0).style.display = "none";
 						$("#modChannelText" + mod).get(0).innerText = "Channel:";
 
 						//Hide setting select if channel is "none"
-						if (this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent == "none") {
+						if (this._modChannelBoxes[mod].selectedIndex == 0) {
 							$("#modSettingText" + mod).get(0).style.display = "none";
 							((this._modSetBoxes[mod].parentElement) as HTMLDivElement).style.display = "none";
 						}
@@ -1828,14 +1840,16 @@ namespace beepbox {
 						}
 					}
 					else {
-						((this._modInstrumentBoxes[mod].parentElement) as HTMLDivElement).style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";;
-						$("#modInstrumentText" + mod).get(0).style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";;
+						((this._modInstrumentBoxes[mod].parentElement) as HTMLDivElement).style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";
+						$("#modInstrumentText" + mod).get(0).style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";
 						$("#modChannelText" + mod).get(0).innerText = (this._doc.song.instrumentsPerChannel > 1) ? "Ch:" : "Channel:";
 						$("#modSettingText" + mod).get(0).style.display = "";
 						((this._modSetBoxes[mod].parentElement) as HTMLDivElement).style.display = "";
 
 					}
 				}
+
+				this._doc.recalcChannelNames = false;
 
 				for (let chordIndex: number = 0; chordIndex < Config.chords.length; chordIndex++) {
 					const option: Element = this._chordSelect.children[chordIndex];
@@ -2412,7 +2426,7 @@ namespace beepbox {
 		}
 
 		private _whenSetModChannel = (mod: number): void => {
-			this._trackEditor.setModChannel(mod, this._modChannelBoxes[mod].children[this._modChannelBoxes[mod].selectedIndex].textContent as string);
+			this._trackEditor.setModChannel(mod, this._modChannelBoxes[mod].selectedIndex);
 
 			// Force piano to re-show
 			this._piano.forceRender();

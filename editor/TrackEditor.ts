@@ -841,8 +841,8 @@ namespace beepbox {
 			this._doc.record(group);
 		}
 
-		public setModChannel(mod: number, text: string): void {
-			this._doc.record(new ChangeModChannel(this._doc, mod, text));
+		public setModChannel(mod: number, index: number): void {
+			this._doc.record(new ChangeModChannel(this._doc, mod, index));
 		}
 
 		public setModInstrument(mod: number, instrument: number): void {			

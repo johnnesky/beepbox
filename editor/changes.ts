@@ -932,11 +932,12 @@ namespace beepbox {
 				for (let instrumentIdx: number = 0; instrumentIdx < doc.song.instrumentsPerChannel; instrumentIdx++) {
 					let instrument: Instrument = doc.song.channels[channel].instruments[instrumentIdx];
 					for (let i: number = 0; i < Config.modCount; i++) {
-						if (instrument.modChannels[i] == firstChannelIdx) {
-							instrument.modChannels[i] = secondChannelIdx;
+						let channelOffset: number = (instrument.modStatuses[i] == ModStatus.msForNoise ? doc.song.pitchChannelCount : 0); 
+						if (instrument.modChannels[i] + channelOffset == firstChannelIdx) {
+							instrument.modChannels[i] = secondChannelIdx - channelOffset;
 						}
-						else if (instrument.modChannels[i] == secondChannelIdx) {
-							instrument.modChannels[i] = firstChannelIdx;
+						else if (instrument.modChannels[i] + channelOffset == secondChannelIdx) {
+							instrument.modChannels[i] = firstChannelIdx - channelOffset;
 						}
 					}
 				}
@@ -995,6 +996,31 @@ namespace beepbox {
 				doc.song.channels.length = doc.song.getChannelCount();
 
 				doc.channel = Math.min(doc.channel, newPitchChannelCount + newNoiseChannelCount + newModChannelCount - 1);
+
+				// Determine if any mod instruments now refer to an invalid channel. Unset them if so
+				for (let channel: number = doc.song.pitchChannelCount + doc.song.noiseChannelCount; channel < doc.song.getChannelCount(); channel++) {
+					for (let instrumentIdx: number = 0; instrumentIdx < doc.song.instrumentsPerChannel; instrumentIdx++) {
+						for (let mod: number = 0; mod < Config.modCount; mod++) {
+
+							let instrument: Instrument = doc.song.channels[channel].instruments[instrumentIdx];
+							let modStatus: number = instrument.modStatuses[mod];
+							let modChannel: number = instrument.modChannels[mod] + ((modStatus == ModStatus.msForNoise) ? doc.song.pitchChannelCount : 0);
+
+							// Boundary checking
+							if (modChannel >= doc.song.pitchChannelCount && (modStatus == ModStatus.msForPitch)) {
+								modStatus = ModStatus.msNone;
+								instrument.modStatuses[mod] = ModStatus.msNone;
+								instrument.modSettings[mod] = ModSetting.mstNone;
+							}
+							if (modChannel >= doc.song.pitchChannelCount + doc.song.noiseChannelCount && (modStatus == ModStatus.msForNoise)) {
+								instrument.modStatuses[mod] = ModStatus.msNone;
+								instrument.modSettings[mod] = ModSetting.mstNone;
+							}
+
+						}
+					}
+				}
+
 				doc.notifier.changed();
 
 				ColorConfig.resetColors();
@@ -1289,7 +1315,27 @@ namespace beepbox {
 						}
 					}
 				}
+
 				doc.song.instrumentsPerChannel = newInstrumentsPerChannel;
+
+				// Determine if any mod instruments now refer to an invalid instrument number. Unset them if so
+				for (let channel: number = doc.song.pitchChannelCount + doc.song.noiseChannelCount; channel < doc.song.getChannelCount(); channel++) {
+					for (let instrumentIdx: number = 0; instrumentIdx < doc.song.instrumentsPerChannel; instrumentIdx++) {
+						for (let mod: number = 0; mod < Config.modCount; mod++) {
+
+							let instrument: Instrument = doc.song.channels[channel].instruments[instrumentIdx];
+							let modInstrument: number = instrument.modInstruments[mod];
+
+							// Boundary checking
+							if (modInstrument >= doc.song.instrumentsPerChannel) {
+								instrument.modInstruments[mod] = 0;
+								instrument.modSettings[mod] = 0;
+							}
+
+						}
+					}
+				}
+
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -1414,26 +1460,26 @@ namespace beepbox {
 	}
 
 	export class ChangeModChannel extends Change {
-		constructor(doc: SongDocument, mod: number, text: string) {
+		constructor(doc: SongDocument, mod: number, index: number) {
 			super();
 			// Figure out if this is a pitch or noise mod, or "song" or "none"
 			let stat: ModStatus = ModStatus.msNone;
 			let channel: number = 0;
 			let instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
 
-			if (text == "song") {
+			if (index == 1) { // song
 				stat = ModStatus.msForSong;
 			}
-			else if (text == "none") {
+			else if (index == 0) { // none
 				stat = ModStatus.msNone;
 			}
-			else if (text.substr(0, text.indexOf(' ')) == "pitch") {
+			else if (index < 2 + doc.song.pitchChannelCount) {
 				stat = ModStatus.msForPitch;
-				channel = (+text.substr(text.indexOf(' ') + 1)) - 1;
+				channel = index - 2;
 			}
 			else {
 				stat = ModStatus.msForNoise;
-				channel = (+text.substr(text.indexOf(' ') + 1)) - 1;
+				channel = index - doc.song.pitchChannelCount - 2;
 			}
 
 			if (instrument.modStatuses[mod] != stat || instrument.modChannels[mod] != channel) {
@@ -2559,6 +2605,7 @@ namespace beepbox {
 			}
 
 			doc.song.channels[doc.muteEditorChannel].name = newValue;
+			doc.recalcChannelNames = true;
 
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();

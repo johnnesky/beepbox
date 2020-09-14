@@ -67,7 +67,7 @@ namespace beepbox {
 				const countText: SVGTextElement = SVG.text({ class: "modulator-inverse-label", fill: ColorConfig.modLabelPrimary, style: "font-weight: bold; align-self: flex-start; transform-origin: center; transform: rotate(-90deg) translate(4px, 13px); font-size: 11px; font-family: sans-serif;" });
 				const countRect: SVGRectElement = SVG.rect({ width: "12px", height: "9px", fill: ColorConfig.indicatorPrimary, style: "pointer-events: none; transform: translate(4px, 4px);" });
 
-				const firstRowSVG: SVGSVGElement = SVG.svg({ viewBox: "0 0 16 66", width: "16px", style: "pointer-events: none;" }, [
+				const firstRowSVG: SVGSVGElement = SVG.svg({ viewBox: "0 0 16 66", width: "16px", style: "pointer-events: none; flex-grow: 1;" }, [
 					firstRowText,
 				]);
 				const countSVG: SVGSVGElement = SVG.svg({ viewBox: "0 0 16 14", width: "16px", style: "pointer-events: none;" }, [
@@ -341,11 +341,11 @@ namespace beepbox {
 				let useFirstColor: string = ColorConfig.modLabelPrimaryText;
 				let useSecondColor: string = ColorConfig.modLabelSecondaryText;
 				let channelVal: number;
-				let instrumentVal: number;
 				for (let j: number = 0; j < Config.modCount; j++) {
 
 					let usingSecondRow: boolean = true;
 					let usingMod: boolean = true;
+					let instrumentVal: number = instrument.modInstruments[Config.modCount - j - 1] + 1;
 
 					switch (instrument.modStatuses[Config.modCount - j - 1]) {
 						case ModStatus.msNone:
@@ -358,37 +358,64 @@ namespace beepbox {
 							channelVal = instrument.modChannels[Config.modCount - j - 1] + 1;
 							instrumentVal = instrument.modInstruments[Config.modCount - j - 1] + 1;
 
-							if (this._doc.song.instrumentsPerChannel > 1) {
-								if (channelVal >= 10 || instrumentVal >= 10) {
-									firstRow = "P" + channelVal;
-									firstRow += " I" + instrumentVal;
+							if (this._doc.song.channels[channelVal-1].name == "") {
+
+								if (this._doc.song.instrumentsPerChannel > 1) {
+									if (channelVal >= 10 || instrumentVal >= 10) {
+										firstRow = "P" + channelVal;
+										firstRow += " I" + instrumentVal;
+									}
+									else {
+										firstRow = "Pitch" + channelVal;
+										firstRow += " Ins" + instrumentVal;
+									}
 								}
 								else {
-									firstRow = "Pitch" + channelVal;
-									firstRow += " Ins" + instrumentVal;
+									firstRow = "Pitch " + channelVal;
 								}
-							}
-							else {
-								firstRow = "Pitch " + channelVal;
+
+							} else {
+
+								// Channel name display
+								if (this._doc.song.instrumentsPerChannel > 1) {
+									firstRow = "P" + channelVal + " " + this._doc.song.channels[channelVal-1].name + " I" + instrumentVal;
+								}
+								else {
+									firstRow = "P" + channelVal + " " + this._doc.song.channels[channelVal-1].name;
+								}
+
 							}
 							break;
 						case ModStatus.msForNoise:
 							channelVal = instrument.modChannels[Config.modCount - j - 1] + 1;
 							instrumentVal = instrument.modInstruments[Config.modCount - j - 1] + 1;
 
-							if (this._doc.song.instrumentsPerChannel > 1) {
+							if (this._doc.song.channels[channelVal - 1].name == "") {
 
-								if (channelVal >= 10 || instrumentVal >= 10) {
-									firstRow = "N" + channelVal;
-									firstRow += " I" + instrumentVal;
+								if (this._doc.song.instrumentsPerChannel > 1) {
+
+									if (channelVal >= 10 || instrumentVal >= 10) {
+										firstRow = "N" + channelVal;
+										firstRow += " I" + instrumentVal;
+									}
+									else {
+										firstRow = "Noise" + channelVal;
+										firstRow += " Ins" + instrumentVal;
+									}
 								}
 								else {
-									firstRow = "Noise" + channelVal;
-									firstRow += " Ins" + instrumentVal;
+									firstRow = "Noise " + channelVal;
 								}
-							}
-							else {
-								firstRow = "Noise " + channelVal;
+							} else {
+
+								// Channel name display
+								if (this._doc.song.instrumentsPerChannel > 1) {
+									firstRow = "N" + channelVal + " " + this._doc.song.channels[channelVal - 1].name + " I" + instrumentVal;
+								}
+								else {
+									firstRow = "N" + channelVal + " " + this._doc.song.channels[channelVal - 1].name;
+								}
+
 							}
 							break;
 						case ModStatus.msForSong:
@@ -471,6 +498,32 @@ namespace beepbox {
 					secondLabel.textContent = usingSecondRow ? secondRow : "Not set";
 					modCountLabel.textContent = "" + (Config.modCount - j);
 					modCountRect.style.fill = usingMod ? ColorConfig.indicatorPrimary : ColorConfig.modLabelSecondaryText;
+
+					// Check if text is too long, if name is set
+					if (this._doc.song.channels[instrument.modChannels[Config.modCount - j - 1]].name != "") {
+						let scaleFactor: string = "1";
+						let height: number = firstLabel.parentElement!.parentElement!.getBoundingClientRect().height;
+						let length: number = firstLabel.getComputedTextLength();
+						let squeeze: number = 0;
+						if (length > height - 8) {
+							scaleFactor = "0.65";
+							squeeze = 2;
+						}
+						else if ( length > height - 24) {
+							scaleFactor = "0.8";
+							squeeze = 1;
+						}
+						firstLabel.style.transform = "rotate(-90deg) translate(" + (-20 - squeeze - Math.round(Math.max(0, (height - 80) / 2))) + "px, 39px) scale(" + scaleFactor + ", 1)";
+						// Truncate end of string if it's too long, but keep instrument num
+						while (scaleFactor == "0.65" && firstLabel.getComputedTextLength() > height + 8 ) {
+							var offset = 4 + (instrumentVal >= 10 ? 1 : 0);
+							firstLabel.textContent = firstLabel.textContent.substr(0, firstLabel.textContent.length - offset) + firstLabel.textContent.substr(firstLabel.textContent.length - offset + 1);
+						}
+					}
+					else {
+						let height: number = firstLabel.parentElement!.parentElement!.getBoundingClientRect().height;
+						firstLabel.style.transform = "rotate(-90deg) translate(" + (-20 - Math.round(Math.max(0, (height - 80) / 2))) + "px, 39px) scale(1, 1)";
+					}
 				}
 			}
 			this._updatePreview();

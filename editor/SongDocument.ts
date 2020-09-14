@@ -29,6 +29,7 @@ namespace beepbox {
 		public channel: number = 0;
 		public muteEditorChannel: number = 0;
 		public bar: number = 0;
+		public recalcChannelNames: boolean;
 		public autoPlay: boolean;
 		public autoFollow: boolean;
 		public enableNotePreview: boolean;

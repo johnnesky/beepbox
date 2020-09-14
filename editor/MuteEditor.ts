@@ -83,6 +83,7 @@ namespace beepbox {
 			this._channelDropDownLastState = this._channelDropDownOpen;
 
 			this._channelDropDownChannel = Math.floor(Math.min(this._renderedChannelCount, Math.max(0, parseInt(this._channelDropDown.style.getPropertyValue("top")) / this._renderedChannelHeight)));
+			this._doc.muteEditorChannel = this._channelDropDownChannel;
 
 			this._channelNameDisplay.style.setProperty("display", "");
 
@@ -194,7 +195,6 @@ namespace beepbox {
 					// Mouse over chn. number
 					this._channelDropDown.style.setProperty("display", "");
 					var height = this._doc.getChannelHeight();
-					this._doc.muteEditorChannel = index;
 					this._channelNameDisplay.style.setProperty("transform", "translate(20px, " + (height / 4 + height * index) + "px)");
 					
 					if (this._doc.song.channels[index].name != "") {
