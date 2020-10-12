@@ -1,11 +1,12 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
-/// <reference path="changes.ts" />
+import {Config} from "../synth/SynthConfig";
+import {SongDocument, StateChangeType} from "./SongDocument";
+import {HTML, SVG} from "./html";
+import {ChangeOctave} from "./changes";
+import {ColorConfig} from "./ColorConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	export class OctaveScrollBar {
 		private readonly _editorWidth: number = 20;
 		private readonly _editorHeight: number = 481;
@@ -225,4 +226,4 @@ namespace beepbox {
 			this._updatePreview();
 		}
 	}
-}
+//}

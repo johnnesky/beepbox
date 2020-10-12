@@ -1,12 +1,13 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="changes.ts" />
+import {Config} from "../synth/SynthConfig";
+import {HTML} from "./html";
+import {SongDocument, StateChangeType} from "./SongDocument";
+import {Prompt} from "./Prompt";
+import {ChangeBeatsPerBar} from "./changes";
+import {ColorConfig} from "./ColorConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	const {button, div, span, h2, input, br, select, option} = HTML;
 	
 	export class BeatsPerBarPrompt implements Prompt {
@@ -100,4 +101,4 @@ namespace beepbox {
 			this._doc.record(new ChangeBeatsPerBar(this._doc, BeatsPerBarPrompt._validate(this._beatsStepper), this._conversionStrategySelect.value), StateChangeType.replace);
 		}
 	}
-}
+//}

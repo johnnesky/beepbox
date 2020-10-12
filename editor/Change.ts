@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-namespace beepbox {
+//namespace beepbox {
 	export class Change {
 		private _noop: boolean = true;
 		
@@ -101,4 +101,4 @@ namespace beepbox {
 			}
 		}
 	}
-}
+//}

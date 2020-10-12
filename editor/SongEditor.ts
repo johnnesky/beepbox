@@ -1,33 +1,34 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/SynthConfig.ts" />
-/// <reference path="EditorConfig.ts" />
-/// <reference path="html.ts" />
-/// <reference path="style.ts" />
-/// <reference path="ColorConfig.ts" />
-/// <reference path="Layout.ts" />
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="TipPrompt.ts" />
-/// <reference path="PatternEditor.ts" />
-/// <reference path="MuteEditor.ts" />
-/// <reference path="TrackEditor.ts" />
-/// <reference path="LoopEditor.ts" />
-/// <reference path="SpectrumEditor.ts" />
-/// <reference path="HarmonicsEditor.ts" />
-/// <reference path="BarScrollBar.ts" />
-/// <reference path="OctaveScrollBar.ts" />
-/// <reference path="Piano.ts" />
-/// <reference path="BeatsPerBarPrompt.ts" />
-/// <reference path="MoveNotesSidewaysPrompt.ts" />
-/// <reference path="SongDurationPrompt.ts" />
-/// <reference path="ChannelSettingsPrompt.ts" />
-/// <reference path="ExportPrompt.ts" />
-/// <reference path="ImportPrompt.ts" />
-/// <reference path="SongRecoveryPrompt.ts" />
+import {InstrumentType, Config} from "../synth/SynthConfig";
+import {Preset, PresetCategory, EditorConfig, isMobile} from "./EditorConfig";
+import {ColorConfig} from "./ColorConfig";
+import {Layout} from "./Layout";
+import {Pattern, Instrument, Channel} from "../synth/synth";
+import {HTML, prettyNumber} from "./html";
+import {SongDocument, StateChangeType} from "./SongDocument";
+import {Prompt} from "./Prompt";
+import {TipPrompt} from "./TipPrompt";
+import {PatternEditor} from "./PatternEditor";
+import {MuteEditor} from "./MuteEditor";
+import {TrackEditor} from "./TrackEditor";
+import {LoopEditor} from "./LoopEditor";
+import {SpectrumEditor} from "./SpectrumEditor";
+import {HarmonicsEditor} from "./HarmonicsEditor";
+import {BarScrollBar} from "./BarScrollBar";
+import {OctaveScrollBar} from "./OctaveScrollBar";
+import {Piano} from "./Piano";
+import {BeatsPerBarPrompt} from "./BeatsPerBarPrompt";
+import {MoveNotesSidewaysPrompt} from "./MoveNotesSidewaysPrompt";
+import {SongDurationPrompt} from "./SongDurationPrompt";
+import {ChannelSettingsPrompt} from "./ChannelSettingsPrompt";
+import {ExportPrompt} from "./ExportPrompt";
+import {ImportPrompt} from "./ImportPrompt";
+import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
+import {Change} from "./Change";
+import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, ChangeFilterResonance, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeFilterEnvelope, ChangePulseEnvelope, ChangeTransition, ChangeEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong} from "./changes";
 
-namespace beepbox {
+//namespace beepbox {
 	const {button, div, input, select, span, optgroup, option} = HTML;
 	
 	function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
@@ -1303,4 +1304,4 @@ namespace beepbox {
 			this._doc.savePreferences();
 		}
 	}
-}
+//}

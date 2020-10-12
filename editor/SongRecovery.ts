@@ -1,8 +1,9 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
+import {Dictionary} from "../synth/SynthConfig";
+import {Song} from "../synth/synth";
 
-namespace beepbox {
+//namespace beepbox {
 	
 	export interface RecoveredVersion {
 		uid: string;
@@ -165,4 +166,4 @@ namespace beepbox {
 			}, 750); // Wait 3/4 of a second before saving a version.
 		}
 	}
-}
+//}

@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 	
-namespace beepbox {
+//namespace beepbox {
 	export interface Dictionary<T> {
 		[K: string]: T;
 	}
@@ -506,13 +506,10 @@ namespace beepbox {
 		result.dictionary = dictionary;
 		return result;
 	}
-}
-/*
-namespace beepbox {
+	
 	// These will be defined in FFT.ts, but I want SynthConfig.ts to be at the
 	// top of the compiled JS so I won't directly depend on FFT here.
 	// synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
 	declare function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
 	declare function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
-}
-*/
+//}

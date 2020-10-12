@@ -1,8 +1,8 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/SynthConfig.ts" />
+import {DictionaryArray, BeepBoxOption, InstrumentType, toNameMap} from "../synth/SynthConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	export interface PresetCategory extends BeepBoxOption {
 		readonly presets: DictionaryArray<Preset>;
 	}
@@ -264,4 +264,4 @@ namespace beepbox {
 			return null;
 		}
 	}
-}
+//}

@@ -1,11 +1,11 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/SynthConfig.ts" />
-/// <reference path="../editor/ColorConfig.ts" />
-/// <reference path="../synth/synth.ts" />
-/// <reference path="../editor/html.ts" />
+import {Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config} from "../synth/SynthConfig";
+import {ColorConfig} from "../editor/ColorConfig";
+import {NotePin, Note, Pattern, Instrument, Channel, Synth} from "../synth/synth";
+import {HTML, SVG} from "../editor/html";
 
-namespace beepbox {
+//namespace beepbox {
 	const {a, button, div, h1, input} = HTML;
 	const {svg, circle, rect, path} = SVG;
 	
@@ -555,4 +555,7 @@ namespace beepbox {
 	renderLoopIcon();
 	renderZoomIcon();
 	renderPlayButton();
-}
+	
+	// When compiling synth.ts as a standalone module named "beepbox", expose these classes as members to JavaScript:
+	export {Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config, NotePin, Note, Pattern, Instrument, Channel, Synth};
+//}
