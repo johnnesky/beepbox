@@ -1,8 +1,7 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="ColorConfig.ts" />
-
-namespace beepbox {
+import {ColorConfig} from "./ColorConfig";
+import {HTML} from "./html";
 
 
 // Determine if the user's browser/OS adds scrollbars that occupy space.
@@ -920,5 +919,3 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 `));
-	
-}

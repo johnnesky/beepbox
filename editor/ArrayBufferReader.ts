@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-namespace beepbox {
+//namespace beepbox {
 	// Note: All methods are big endian.
 	export class ArrayBufferReader {
 		private _readIndex: number = 0;
@@ -86,4 +86,4 @@ namespace beepbox {
 			return result;
 		}
 	}
-}
+//}

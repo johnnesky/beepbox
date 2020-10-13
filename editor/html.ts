@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-namespace beepbox {
+//namespace beepbox {
 	const classAttributeNames: Record<string, boolean> = {"class": true, "classList": true, "className": true};
 	
 	function applyElementArgs(elem: any, args: ReadonlyArray<any>): any {
@@ -279,4 +279,4 @@ namespace beepbox {
 	export function prettyNumber(value: number): string {
 		return value.toFixed(2).replace(/\.?0*$/, "");
 	}
-}
+//}

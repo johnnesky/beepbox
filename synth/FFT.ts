@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-namespace beepbox {
+//namespace beepbox {
 	// interface shared by number[], Float32Array, and other typed arrays in JavaScript.
 	interface NumberArray {
 		length: number;
@@ -48,8 +48,6 @@ namespace beepbox {
 		}
 	}
 	
-	/* Commented out functions that BeepBox doesn't use...
-	
 	// Provided for educational purposes. Easier to read than
 	// fastFourierTransform(), but computes the same result.
 	// Takes two parallel arrays representing the real and imaginary elements,
@@ -83,8 +81,8 @@ namespace beepbox {
 		if (fullArrayLength < 4) throw new Error("FFT array length must be at least 4.");
 		if (fullArrayLength != imagArray.length) throw new Error("FFT arrays must be the same length.");
 		
-		reverseIndexBits(realArray);
-		reverseIndexBits(imagArray);
+		reverseIndexBits(realArray, fullArrayLength);
+		reverseIndexBits(imagArray, fullArrayLength);
 		
 		// First two passes, with strides of 2 and 4, can be combined and optimized.
 		for (let startIndex: number = 0; startIndex < fullArrayLength; startIndex += 4) {
@@ -160,7 +158,7 @@ namespace beepbox {
 		const totalPasses: number = countBits(fullArrayLength);
 		if (fullArrayLength < 4) throw new Error("FFT array length must be at least 4.");
 		
-		reverseIndexBits(array);
+		reverseIndexBits(array, fullArrayLength);
 		
 		// First and second pass.
 		for (let index: number = 0; index < fullArrayLength; index += 4) {
@@ -250,7 +248,6 @@ namespace beepbox {
 			}
 		}
 	}
-	*/
 	
 	// Computes the inverse Fourier transform from a specially formatted array of
 	// scalar values. Elements 0 through N/2 are expected to be the real values of
@@ -364,4 +361,4 @@ namespace beepbox {
 		
 		reverseIndexBits(array, fullArrayLength);
 	}
-}
+//}

@@ -1,8 +1,10 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../editor/html.ts" />
+import {BeepBoxOption, DictionaryArray, toNameMap} from "../synth/SynthConfig";
+import {Song} from "../synth/synth";
+import {HTML} from "./html";
 
-namespace beepbox {
+//namespace beepbox {
 	export interface ChannelColors extends BeepBoxOption {
 		readonly secondaryChannel: string;
 		readonly primaryChannel:   string;
@@ -232,4 +234,4 @@ namespace beepbox {
 			}
 		}
 	}
-}
+//}

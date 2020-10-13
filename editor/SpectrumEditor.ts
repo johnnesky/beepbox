@@ -1,10 +1,13 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
+import {Config} from "../synth/SynthConfig";
+import {SpectrumWave, Instrument} from "../synth/synth";
+import {SongDocument} from "./SongDocument";
+import {HTML, SVG, prettyNumber} from "./html";
+import {ColorConfig} from "./ColorConfig";
+import {ChangeSpectrum} from "./changes";
 
-namespace beepbox {
+//namespace beepbox {
 	export class SpectrumEditor {
 		private readonly _editorWidth: number = 112;
 		private readonly _editorHeight: number = 26;
@@ -184,4 +187,4 @@ namespace beepbox {
 			}
 		}
 	}
-}
+//}

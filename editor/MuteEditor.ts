@@ -1,12 +1,9 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="ColorConfig.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongEditor.ts" />
+import {SongDocument} from "./SongDocument";
+import {HTML} from "./html";
 
-namespace beepbox {
+//namespace beepbox {
 	export class MuteEditor {
 		public readonly container: HTMLElement = HTML.div({class: "muteEditor"});
 		
@@ -24,16 +21,6 @@ namespace beepbox {
 			if (index == -1) return;
 			this._doc.song.channels[index].muted = !this._doc.song.channels[index].muted;
 			this._doc.notifier.changed();
-		}
-		
-		public onKeyPressed(event: KeyboardEvent): void {
-			switch (event.keyCode) {
-				case 38: // up
-					//event.preventDefault();
-					break;
-				default:
-					break;
-			}
 		}
 		
 		public render(): void {
@@ -77,4 +64,4 @@ namespace beepbox {
 			}
 		}
 	}
-}
+//}

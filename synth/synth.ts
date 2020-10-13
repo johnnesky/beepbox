@@ -1,15 +1,17 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="SynthConfig.ts" />
-/// <reference path="FFT.ts" />
-/// <reference path="Deque.ts" />
+import {Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex} from "./SynthConfig";
+import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
+import {Deque} from "./Deque";
 
-interface Window {
-	AudioContext: any;
-	webkitAudioContext: any;
+declare global {
+	interface Window {
+		AudioContext: any;
+		webkitAudioContext: any;
+	}
 }
 
-namespace beepbox {
+//namespace beepbox {
 	// For performance debugging:
 	//let samplesAccumulated: number = 0;
 	//let samplePerformance: number = 0;
@@ -952,7 +954,7 @@ namespace beepbox {
 		
 		public warmUp(): void {
 			if (this.type == InstrumentType.noise) {
-				getDrumWave(this.chipNoise);
+				getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
 			} else if (this.type == InstrumentType.harmonics) {
 				this.harmonicsWave.getCustomWave();
 			} else if (this.type == InstrumentType.spectrum) {
@@ -966,7 +968,7 @@ namespace beepbox {
 		
 		public getDrumWave(): Float32Array {
 			if (this.type == InstrumentType.noise) {
-				return getDrumWave(this.chipNoise);
+				return getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
 			} else if (this.type == InstrumentType.spectrum) {
 				return this.spectrumWave.getCustomWave(8);
 			} else {
@@ -4331,4 +4333,7 @@ namespace beepbox {
 			return Math.floor(this.samplesPerSecond / tickPerSecond);
 		}
 	}
-}
+	
+	// When compiling synth.ts as a standalone module named "beepbox", expose these classes as members to JavaScript:
+	export {Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config};
+//}

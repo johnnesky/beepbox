@@ -3,3 +3,5 @@
 /website/**/beepbox*.js
 /website/**/beepbox*.js.map
 /website/beepbox_offline.html
+/build
+/node_modules

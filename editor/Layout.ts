@@ -1,8 +1,9 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../editor/html.ts" />
+import {HTML} from "./html";
+import {ColorConfig} from "./ColorConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	export class Layout {
 		private static readonly _normalLayout: string = `
 		`;
@@ -86,4 +87,4 @@ namespace beepbox {
 			this._styleElement.textContent = enabled ? this._fullScreenLayout : this._normalLayout;
 		}
 	}
-}
+//}
