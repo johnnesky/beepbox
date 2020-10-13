@@ -19,7 +19,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 SOFTWARE.
 */
-	
+
 //namespace beepbox {
 	export interface Dictionary<T> {
 		[K: string]: T;
@@ -383,7 +383,12 @@ SOFTWARE.
 		return new Float64Array(wave);
 	}
 	
-	export function getDrumWave(index: number): Float32Array {
+	// The function arguments will be defined in FFT.ts, but I want
+	// SynthConfig.ts to be at the top of the compiled JS so I won't directly
+	// depend on FFT here. synth.ts will take care of importing FFT.ts.
+	//function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
+	//function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
+	export function getDrumWave(index: number, inverseRealFourierTransform: Function | null = null, scaleElementsByFactor: Function | null = null): Float32Array {
 		let wave: Float32Array | null = Config.chipNoises[index].samples;
 		if (wave == null) {
 			wave = new Float32Array(Config.chipNoiseLength + 1);
@@ -431,8 +436,8 @@ SOFTWARE.
 				// "hollow" drums, designed in frequency space and then converted via FFT:
 				drawNoiseSpectrum(wave, 10, 11, 1, 1, 0);
 				drawNoiseSpectrum(wave, 11, 14, .6578, .6578, 0);
-				inverseRealFourierTransform(wave, Config.chipNoiseLength);
-				scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
+				inverseRealFourierTransform!(wave, Config.chipNoiseLength);
+				scaleElementsByFactor!(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
 			} else {
 				throw new Error("Unrecognized drum index: " + index);
 			}
@@ -506,10 +511,4 @@ SOFTWARE.
 		result.dictionary = dictionary;
 		return result;
 	}
-	
-	// These will be defined in FFT.ts, but I want SynthConfig.ts to be at the
-	// top of the compiled JS so I won't directly depend on FFT here.
-	// synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
-	declare function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
-	declare function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
 //}

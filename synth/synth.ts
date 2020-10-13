@@ -954,7 +954,7 @@ declare global {
 		
 		public warmUp(): void {
 			if (this.type == InstrumentType.noise) {
-				getDrumWave(this.chipNoise);
+				getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
 			} else if (this.type == InstrumentType.harmonics) {
 				this.harmonicsWave.getCustomWave();
 			} else if (this.type == InstrumentType.spectrum) {
@@ -968,7 +968,7 @@ declare global {
 		
 		public getDrumWave(): Float32Array {
 			if (this.type == InstrumentType.noise) {
-				return getDrumWave(this.chipNoise);
+				return getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
 			} else if (this.type == InstrumentType.spectrum) {
 				return this.spectrumWave.getCustomWave(8);
 			} else {
