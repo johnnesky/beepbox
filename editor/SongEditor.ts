@@ -456,9 +456,11 @@ namespace beepbox {
 			div({ style: "color: " + ColorConfig.secondaryText + "; margin-top: -3px;" }, this._instrumentVolumeSliderInputBox),
 		), this._instrumentVolumeSlider.container);
 		private readonly _panSlider: Slider = new Slider(input({ style: "margin: 0;", position: "sticky;", type: "range", min: "0", max: Config.panMax, value: Config.panCenter, step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangePan(this._doc, oldValue, newValue), true);
+		private readonly _panDelayBox: HTMLInputElement = input({ type: "checkbox", style: "width: 0.5em; padding: 0; margin: 0; transform: translate(3px, 2px);" });
 		private readonly _panSliderInputBox: HTMLInputElement = input({ style: "width: 4em; font-size: 80%; ", id: "panSliderInputBox", type: "number", step: "1", min: "0", max: "100", value: "0" });
 		private readonly _panSliderRow: HTMLDivElement = div({ className: "selectRow" }, div({},
-			span({ class: "tip", style: "height:1em; font-size: smaller;", onclick: () => this._openPrompt("pan") }, "Pan: "),
+			span({ class: "tip", tabindex: "0", style: "height:1em; font-size: smaller;", onclick: () => this._openPrompt("pan") }, "Pan: "),
+			this._panDelayBox,
 			div({ style: "color: " + ColorConfig.secondaryText + "; margin-top: -3px;" }, this._panSliderInputBox),
 		), this._panSlider.container);
 
@@ -914,6 +916,7 @@ namespace beepbox {
 
 			this._instrumentVolumeSliderInputBox.addEventListener("input", () => { this._doc.record(new ChangeVolume(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].volume, Math.min(25.0, Math.max(-25.0, Math.round(+this._instrumentVolumeSliderInputBox.value))))) });
 			this._panSliderInputBox.addEventListener("input", () => { this._doc.record(new ChangePan(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].pan, Math.min(100.0, Math.max(0.0, Math.round(+this._panSliderInputBox.value))))) });
+			this._panDelayBox.addEventListener("input", () => { this._doc.record(new ChangePanDelay(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].usePanDelay, this._panDelayBox.checked)) });
 			this._detuneSliderInputBox.addEventListener("input", () => { this._doc.record(new ChangeDetune(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].detune, Math.min(Config.detuneMax, Math.max(Config.detuneMin, Math.round(+this._detuneSliderInputBox.value))))) });
 			this._customWaveDraw.addEventListener("input", () => { this._doc.record(new ChangeCustomWave(this._doc, this._customWaveDrawCanvas.newArray)) });
 
@@ -1478,6 +1481,7 @@ namespace beepbox {
 				setSelectedValue(this._intervalSelect, instrument.interval);
 				setSelectedValue(this._chordSelect, instrument.chord);
 				this._panSliderInputBox.value = instrument.pan + "";
+				this._panDelayBox.checked = instrument.usePanDelay;
 				this._detuneSliderInputBox.value = instrument.detune + "";
 				this._instrumentVolumeSlider.updateValue(instrument.volume);
 				this._instrumentVolumeSliderInputBox.value = "" + (instrument.volume);
@@ -1898,6 +1902,7 @@ namespace beepbox {
 			setSelectedValue(this._chordSelect, instrument.chord);
 			this._instrumentVolumeSlider.updateValue(instrument.volume);
 			this._panSlider.updateValue(instrument.pan);
+			this._panDelayBox.checked = instrument.usePanDelay ? true : false;
 			this._detuneSlider.updateValue(instrument.detune);
 			setSelectedValue(this._instrumentSelect, instrumentIndex);
 

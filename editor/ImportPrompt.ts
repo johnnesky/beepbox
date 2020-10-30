@@ -461,6 +461,7 @@ namespace beepbox {
 							if (!setInstrumentVolume || instrument.volume > currentInstrumentVolume) {
 								instrument.volume = currentInstrumentVolume;
 								instrument.pan = currentInstrumentPan;
+								instrument.usePanDelay = true;
 								setInstrumentVolume = true;
 							}
 
@@ -587,6 +588,7 @@ namespace beepbox {
 
 											instrument.volume = currentInstrumentVolume;
 											instrument.pan = currentInstrumentPan;
+											instrument.usePanDelay = true;
 
 											channel.instruments.push(instrument);
 										}

@@ -381,9 +381,11 @@ namespace beepbox {
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
 						const tempPan: number = instrument.pan;
+						const tempPanDelay: boolean = instrument.usePanDelay;
 						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel), doc.song.getChannelIsMod(doc.channel));
 						instrument.volume = tempVolume;
 						instrument.pan = tempPan;
+						instrument.usePanDelay = tempPanDelay;
 					}
 				}
 				instrument.preset = newValue;
@@ -1579,6 +1581,23 @@ namespace beepbox {
 
 				instrument.modSettings[mod] = setting;
 
+				// Go through each pattern where this instrument is set, and clean up any notes that are out of bounds
+				let cap: number = doc.song.mstMaxVols.get(setting)!;
+
+				for (let i: number = 0; i < doc.song.patternsPerChannel; i++) {
+					const pattern: Pattern = doc.song.channels[doc.channel].patterns[i];
+					for (let j: number = 0; j < pattern.notes.length; j++) {
+						const note: Note = pattern.notes[j];
+						if (note.pitches[0] == Config.modCount - mod - 1) {
+							for (let k: number = 0; k < note.pins.length; k++) {
+								const pin: NotePin = note.pins[k];
+								if (pin.volume > cap)
+									pin.volume = cap;
+							}
+						}
+					}
+				}
+
 				doc.notifier.changed();
 				this._didSomething();
 			}
@@ -2617,6 +2636,15 @@ namespace beepbox {
 			super();
 			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].pan = newValue;
 			doc.synth.unsetMod(ModSetting.mstPan, doc.channel, doc.getCurrentInstrument());
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+
+	export class ChangePanDelay extends Change {
+		constructor(doc: SongDocument, oldValue: boolean, newValue: boolean) {
+			super();
+			doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()].usePanDelay = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}

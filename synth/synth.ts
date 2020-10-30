@@ -133,7 +133,7 @@ namespace beepbox {
 		limiterSettings = CharCode.O,
 		operatorAmplitudes = CharCode.P,
 		operatorFrequencies = CharCode.Q,
-
+		panDelay = CharCode.R,
 		spectrum = CharCode.S,
 		startInstrument = CharCode.T,
 		channelNames = CharCode.U,
@@ -559,6 +559,7 @@ namespace beepbox {
 		public chord: number = 1;
 		public volume: number = 0;
 		public pan: number = Config.panCenter;
+		public usePanDelay: boolean = true;
 		public detune: number = 0;
 		public pulseWidth: number = Config.pulseWidthRange;
 		public pulseEnvelope: number = 1;
@@ -629,6 +630,7 @@ namespace beepbox {
 			this.preset = type;
 			this.volume = 0;
 			this.pan = Config.panCenter;
+			this.usePanDelay = true;
 			this.detune = 0;
 			switch (type) {
 				case InstrumentType.chip:
@@ -767,6 +769,7 @@ namespace beepbox {
 				"type": Config.instrumentTypeNames[this.type],
 				"volume": this.volume,
 				"pan": (this.pan - Config.panCenter) * 100 / Config.panCenter,
+				"panDelay": this.usePanDelay,
 				"detune": this.detune,
 				"effects": Config.effectsNames[this.effects],
 			};
@@ -883,6 +886,12 @@ namespace beepbox {
 				this.pan = clamp(0, Config.panMax + 1, Math.round(Config.panCenter + (instrumentObject["pan"] | 0) * Config.panCenter / 100));
 			} else {
 				this.pan = Config.panCenter;
+			}
+
+			if (instrumentObject["usePanDelay"] != undefined) {
+				this.usePanDelay = (instrumentObject["usePanDelay"] | 0) ? true : false;
+			} else {
+				this.usePanDelay = true;
 			}
 
 			if (instrumentObject["detune"] != undefined) {
@@ -1301,6 +1310,7 @@ namespace beepbox {
 			[ModSetting.mstVibratoDepth, 50],
 			[ModSetting.mstSongDetune, Config.songDetuneMax - Config.songDetuneMin],
 			//[ModSetting.mstVibratoSpeed, 100],
+			[ModSetting.mstMaxValue, 6],
 		]
 		);
 
@@ -1558,6 +1568,7 @@ namespace beepbox {
 					buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
 					buffer.push(SongTagCode.volume, base64IntToCharCode[(instrument.volume + Config.volumeRange / 2) >> 6], base64IntToCharCode[(instrument.volume + Config.volumeRange / 2) & 0x3f]);
 					buffer.push(SongTagCode.panning, base64IntToCharCode[instrument.pan >> 6], base64IntToCharCode[instrument.pan & 0x3f]);
+					buffer.push(SongTagCode.panDelay, base64IntToCharCode[+instrument.usePanDelay]);
 					buffer.push(SongTagCode.detune, base64IntToCharCode[(instrument.detune - Config.detuneMin) >> 6], base64IntToCharCode[(instrument.detune - Config.detuneMin) & 0x3f]);
 					buffer.push(SongTagCode.preset, base64IntToCharCode[instrument.preset >> 6], base64IntToCharCode[instrument.preset & 63]);
 					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects]);
@@ -2281,6 +2292,10 @@ namespace beepbox {
 					else {
 						instrument.pan = clamp(0, Config.panMax + 1, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
+				} break;
+				case SongTagCode.panDelay: {
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					instrument.usePanDelay = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] ? true : false;
 				} break;
 				case SongTagCode.detune: {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -4591,7 +4606,7 @@ namespace beepbox {
 
 			const useStartPan: number = (startPan - Config.panCenter) / Config.panCenter;
 			const useEndPan: number = (endPan - Config.panCenter) / Config.panCenter;
-			const maxDelay: number = 0.0013 * synth.samplesPerSecond;
+			const maxDelay: number = (+instrument.usePanDelay) * 0.0013 * synth.samplesPerSecond;
 			tone.stereoDelayStart = -useStartPan * maxDelay;
 			const delayEnd: number = -useEndPan * maxDelay;
 			tone.stereoDelayDelta = (delayEnd - tone.stereoDelayStart) / runLength;
