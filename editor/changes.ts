@@ -1,13 +1,13 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="EditorConfig.ts" />
-/// <reference path="../synth/SynthConfig.ts" />
-/// <reference path="Change.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="MuteButton.ts" />
+import {InstrumentType, Algorithm, Config} from "../synth/SynthConfig";
+import {NotePin, Note, makeNotePin, Pattern, SpectrumWave, HarmonicsWave, Instrument, Channel, Song, ModStatus, ModSetting} from "../synth/synth";
+import {Preset, PresetCategory, EditorConfig} from "./EditorConfig";
+import {Change, ChangeGroup, ChangeSequence, UndoableChange} from "./Change";
+import { SongDocument } from "./SongDocument";
+import { ColorConfig } from "./ColorConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	export function unionOfUsedNotes(pattern: Pattern, flags: boolean[]): void {
 		for (const note of pattern.notes) {
 			for (const pitch of note.pitches) {
@@ -2740,4 +2740,4 @@ namespace beepbox {
 			}
 		}
 	}
-}
+//}

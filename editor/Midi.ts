@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-namespace beepbox {
+//namespace beepbox {
 	export const defaultMidiExpression: number = 0x7F;
 	export const defaultMidiPitchBend: number = 0x2000;
 
@@ -167,4 +167,4 @@ namespace beepbox {
 	export function volumeMultToMidiExpression(volumeMult: number): number {
 		return Math.pow(volumeMult, 0.25) * 127;
 	}
-}
+//}

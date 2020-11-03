@@ -1,11 +1,15 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongRecovery.ts" />
-/// <reference path="EditorConfig.ts" />
-/// <reference path="ChangeNotifier.ts" />
+import {Pattern, Song, Synth} from "../synth/synth";
+import {SongRecovery, generateUid} from "./SongRecovery";
+import {ColorConfig} from "./ColorConfig";
+import {Layout} from "./Layout";
+import {Change} from "./Change";
+import {ChangeNotifier} from "./ChangeNotifier";
+import { ChangeSong, setDefaultInstruments } from "./changes";
+import { Config } from "../synth/SynthConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	interface HistoryState {
 		canUndo: boolean;
 		sequenceNumber: number;
@@ -401,4 +405,4 @@ namespace beepbox {
 			return !this.getMobileLayout() && (this.fullScreen != "normal");
 		}
 	}
-}
+//}

@@ -1,11 +1,11 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
-/// <reference path="changes.ts" />
+import {SongDocument} from "./SongDocument";
+import {HTML, SVG} from "./html";
+import {ChangeLoop, ChangeChannelBar} from "./changes";
+import {ColorConfig} from "./ColorConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	interface Cursor {
 		startBar: number;
 		mode: number;
@@ -298,4 +298,4 @@ namespace beepbox {
 			this._updatePreview();
 		}
 	}
-}
+//}

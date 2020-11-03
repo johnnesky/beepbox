@@ -1,12 +1,16 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="ColorConfig.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongEditor.ts" />
+import {Dictionary, Config} from "../synth/SynthConfig";
+import {Note, Pattern} from "../synth/synth";
+import {ColorConfig, ChannelColors} from "./ColorConfig";
+import {isMobile} from "./EditorConfig";
+import {SongDocument, StateChangeType} from "./SongDocument";
+import {HTML, SVG} from "./html";
+import {ChangeGroup} from "./Change";
+import {ChangeChannelBar, ChangePatternNumbers, ChangeInsertBars, ChangeDeleteBars, ChangeEnsurePatternExists, ChangePaste, ChangePatternInstrument, ChangePatternsPerChannel, ChangePatternRhythm, ChangePatternScale, ChangeTranspose, comparePatternNotes, unionOfUsedNotes, generateScaleMap, ChangeModChannel, ChangeModInstrument, ChangeModSetting} from "./changes";
+import { SongEditor } from "./SongEditor";
 
-namespace beepbox {
+//namespace beepbox {
 
 	interface PatternCopy {
 		instrument: number;
@@ -1236,4 +1240,4 @@ namespace beepbox {
 			this._updatePreview();
 		}
 	}
-}
+//}

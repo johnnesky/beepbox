@@ -1,13 +1,13 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="SongEditor.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="changes.ts" />
+import { HTML, SVG } from "./html";
+import { Prompt } from "./Prompt";
+import { SongDocument, StateChangeType } from "./SongDocument";
+import { ColorConfig } from "./ColorConfig";
+import { ChangeCustomWave } from "./changes";
+import { SongEditor } from "./SongEditor";
 
-namespace beepbox {
+//namespace beepbox {
 	const { button, div, h2 } = HTML;
 
 	export class CustomChipPromptCanvas {
@@ -344,4 +344,4 @@ namespace beepbox {
 			this._doc.record(new ChangeCustomWave(this._doc, this.customChipCanvas.chipData), StateChangeType.replace);
 		}
 	}
-}
+//}

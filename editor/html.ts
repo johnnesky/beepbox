@@ -1,8 +1,8 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-namespace beepbox {
-	const classAttributeNames: Record<string, boolean> = { "class": true, "classList": true, "className": true };
-
+//namespace beepbox {
+	const classAttributeNames: Record<string, boolean> = {"class": true, "classList": true, "className": true};
+	
 	function applyElementArgs(elem: any, args: ReadonlyArray<any>): any {
 		// TODO: In general, it would be nice to test more assumptions about all the arguments and print helpful warnings if those assumptions are violated.
 		for (const arg of args) {
@@ -279,4 +279,4 @@ namespace beepbox {
 	export function prettyNumber(value: number): string {
 		return value.toFixed(2).replace(/\.?0*$/, "");
 	}
-}
+//}

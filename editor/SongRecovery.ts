@@ -1,8 +1,9 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
+import {Dictionary} from "../synth/SynthConfig";
+import {Song} from "../synth/synth";
 
-namespace beepbox {
+//namespace beepbox {
 	
 	export interface RecoveredVersion {
 		uid: string;
@@ -34,7 +35,7 @@ namespace beepbox {
 	
 	export function generateUid(): string {
 		// Not especially robust, but simple and effective!
-		return ("00000"+(Math.random()*(-1>>>0)>>>0).toString(32)).slice(-6);
+		return ((Math.random() * (-1 >>> 0)) >>> 0).toString(32);
 	}
 	
 	function compareSongs(a: RecoveredSong, b: RecoveredSong): number {
@@ -167,4 +168,4 @@ namespace beepbox {
 			}, 750); // Wait 3/4 of a second before saving a version.
 		}
 	}
-}
+//}

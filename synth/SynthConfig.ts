@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-namespace beepbox {
+//namespace beepbox {
 	export interface Dictionary<T> {
 		[K: string]: T;
 	}
@@ -455,7 +455,12 @@ namespace beepbox {
 	}
 
 
-	export function getDrumWave(index: number): Float32Array {
+	// The function arguments will be defined in FFT.ts, but I want
+	// SynthConfig.ts to be at the top of the compiled JS so I won't directly
+	// depend on FFT here. synth.ts will take care of importing FFT.ts.
+	//function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
+	//function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
+	export function getDrumWave(index: number, inverseRealFourierTransform: Function | null = null, scaleElementsByFactor: Function | null = null): Float32Array {
 		let wave: Float32Array | null = Config.chipNoises[index].samples;
 		if (wave == null) {
 			wave = new Float32Array(Config.chipNoiseLength + 1);
@@ -503,8 +508,8 @@ namespace beepbox {
 				// "hollow" drums, designed in frequency space and then converted via FFT:
 				drawNoiseSpectrum(wave, 10, 11, 1, 1, 0);
 				drawNoiseSpectrum(wave, 11, 14, .6578, .6578, 0);
-				inverseRealFourierTransform(wave, Config.chipNoiseLength);
-				scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
+				inverseRealFourierTransform!(wave, Config.chipNoiseLength);
+				scaleElementsByFactor!(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
 			} else if (index == 5) {
 				// "Shine" drums from modbox!
 				var drumBuffer = 1;
@@ -520,8 +525,8 @@ namespace beepbox {
 				// "Deep" drums from modbox!
 				drawNoiseSpectrum(wave, 1, 10, 1, 1, 0);
 				drawNoiseSpectrum(wave, 20, 14, -2, -2, 0);
-				inverseRealFourierTransform(wave, Config.chipNoiseLength);
-				scaleElementsByFactor(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
+				inverseRealFourierTransform!(wave, Config.chipNoiseLength);
+				scaleElementsByFactor!(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
 			} else if (index == 7) {
 				// "Cutter" drums from modbox!
 				var drumBuffer = 1;
@@ -617,13 +622,4 @@ namespace beepbox {
 		result.dictionary = dictionary;
 		return result;
 	}
-}
-/*
-namespace beepbox {
-	// These will be defined in FFT.ts, but I want SynthConfig.ts to be at the
-	// top of the compiled JS so I won't directly depend on FFT here.
-	// synth.ts will take care of importing FFT.ts. ¯\_(ツ)_/¯
-	declare function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
-	declare function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
-}
-*/
+//}

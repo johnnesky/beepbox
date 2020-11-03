@@ -1,10 +1,10 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
+import {SongDocument} from "./SongDocument";
+import {HTML, SVG} from "./html";
+import {ColorConfig} from "./ColorConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	export class BarScrollBar {
 		private readonly _editorWidth: number = 512;
 		private readonly _editorHeight: number = 20;		
@@ -236,4 +236,4 @@ namespace beepbox {
 			this._trackContainer.scrollLeft = this._doc.barScrollPos * this._doc.getBarWidth();
 		}
 	}
-}
+//}

@@ -1,17 +1,18 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="ColorConfig.ts" />
-/// <reference path="EditorConfig.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="html.ts" />
-/// <reference path="ArrayBufferWriter.ts" />
-/// <reference path="Midi.ts" />
+import {InstrumentType, EnvelopeType, Config, getArpeggioPitchIndex} from "../synth/SynthConfig";
+import {Instrument, Pattern, Note, Song, Synth} from "../synth/synth";
+//import {ColorConfig} from "./ColorConfig";
+import {Preset, EditorConfig} from "./EditorConfig";
+import {SongDocument} from "./SongDocument";
+import {Prompt} from "./Prompt";
+import {HTML} from "./html";
+import {ArrayBufferWriter} from "./ArrayBufferWriter";
+import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, volumeMultToMidiVolume, volumeMultToMidiExpression, defaultMidiPitchBend, defaultMidiExpression} from "./Midi";
 
-namespace beepbox {
-	const { button, div, h2, input, select, option } = HTML;
-
+//namespace beepbox {
+	const {button, div, h2, input, select, option} = HTML;
+	
 	function lerp(low: number, high: number, t: number): number {
 		return low + t * (high - low);
 	}
@@ -749,4 +750,4 @@ namespace beepbox {
 			this._close();
 		}
 	}
-}
+//}

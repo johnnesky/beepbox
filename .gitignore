@@ -13,3 +13,4 @@
 /synth/*.js.map
 /**/*.ts.bak
 /**/*.html.bak
+/build

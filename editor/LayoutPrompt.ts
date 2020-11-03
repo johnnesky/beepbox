@@ -1,13 +1,12 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="changes.ts" />
-/// <reference path="Layout.ts" />
+import { HTML } from "./html";
+import { Layout } from "./Layout";
+import { Prompt } from "./Prompt";
+import { SongDocument } from "./SongDocument";
+import { Config } from "../synth/SynthConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	const { button, div, h2, input, select, option } = HTML;
 
 	export class LayoutPrompt implements Prompt {
@@ -94,4 +93,4 @@ namespace beepbox {
 			this._doc.undo();
 		}
 	}
-}
+//}

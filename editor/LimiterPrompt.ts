@@ -1,13 +1,13 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="SongEditor.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="changes.ts" />
+import { HTML, SVG, prettyNumber } from "./html";
+import { Prompt } from "./Prompt";
+import { SongDocument, StateChangeType } from "./SongDocument";
+import { ColorConfig } from "./ColorConfig";
+import { ChangeLimiterSettings } from "./changes";
+import { SongEditor } from "./SongEditor";
 
-namespace beepbox {
+//namespace beepbox {
 	const { button, div, h2, input } = HTML;
 
 	export class LimiterCanvas {
@@ -99,12 +99,12 @@ namespace beepbox {
 			let subPaths: string[] = ["", "", ""];
 			for (let i: number = 0; i < 64; i++) {
 				// Calculate next value based on limiter settings
-				let limiterRatio: number = +this._limiterPrompt.limitRatioSlider.input.value;
+				let limiterRatio: number = +this._limiterPrompt.limitRatioSlider.value;
 				limiterRatio = (limiterRatio < 10 ? limiterRatio / 10 : (limiterRatio - 9));
-				let compressorRatio: number = +this._limiterPrompt.compressionRatioSlider.input.value;
+				let compressorRatio: number = +this._limiterPrompt.compressionRatioSlider.value;
 				compressorRatio = (compressorRatio < 10 ? compressorRatio / 10 : (1 + (compressorRatio - 10) / 60));
-				let limiterThreshold: number = +this._limiterPrompt.limitThresholdSlider.input.value;
-				let compressorThreshold: number = +this._limiterPrompt.compressionThresholdSlider.input.value;
+				let limiterThreshold: number = +this._limiterPrompt.limitThresholdSlider.value;
+				let compressorThreshold: number = +this._limiterPrompt.compressionThresholdSlider.value;
 				let useVol: number = i * 2.0 / 64.0; // Scale from 0~2
 				let nextValue: number = 1 / 1.05;
 				if (useVol >= limiterThreshold) {
@@ -179,13 +179,13 @@ namespace beepbox {
 
 		public readonly _playButton: HTMLButtonElement = button({ style: "width: 55%;", type: "button" });
 
-		public readonly limitDecaySlider: Slider = new Slider(input({ title: "limit decay", style: `width: 5em; flex-grow: 1; margin: 0;`, type: "range", min: "1", max: "30", value: "4", step: "1" }), this._doc, null, false);
-		public readonly limitRiseSlider: Slider = new Slider(input({ title: "limit rise", style: `width: 5em; flex-grow: 1; margin: 0;`, type: "range", min: "2000", max: "10000", value: "4000", step: "250" }), this._doc, null, false);
-		public readonly compressionThresholdSlider: Slider = new Slider(input({ title: "compressor threshold", style: `width: 100%; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "1.1", value: "1", step: "0.05" }), this._doc, null, false);
-		public readonly limitThresholdSlider: Slider = new Slider(input({ title: "limiter threshold", style: `width: 100%; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "2", value: "1", step: "0.05" }), this._doc, null, false);
-		public readonly compressionRatioSlider: Slider = new Slider(input({ title: "compressor ratio", style: `width: 100%; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "20", value: "10", step: "1" }), this._doc, null, false);
-		public readonly limitRatioSlider: Slider = new Slider(input({ title: "limiter ratio", style: `width: 100%; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "20", value: "10", step: "1" }), this._doc, null, false);
-		public readonly masterGainSlider: Slider = new Slider(input({ title: "master gain", style: `width: 5em; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "5", value: "1", step: "0.02" }), this._doc, null, false);
+		public readonly limitDecaySlider: HTMLInputElement = input({ title: "limit decay", style: `width: 5em; flex-grow: 1; margin: 0;`, type: "range", min: "1", max: "30", value: "4", step: "1" });
+		public readonly limitRiseSlider: HTMLInputElement = input({ title: "limit rise", style: `width: 5em; flex-grow: 1; margin: 0;`, type: "range", min: "2000", max: "10000", value: "4000", step: "250" });
+		public readonly compressionThresholdSlider: HTMLInputElement = input({ title: "compressor threshold", style: `width: 100%; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "1.1", value: "1", step: "0.05" });
+		public readonly limitThresholdSlider: HTMLInputElement = input({ title: "limiter threshold", style: `width: 100%; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "2", value: "1", step: "0.05" });
+		public readonly compressionRatioSlider: HTMLInputElement = input({ title: "compressor ratio", style: `width: 100%; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "20", value: "10", step: "1" });
+		public readonly limitRatioSlider: HTMLInputElement = input({ title: "limiter ratio", style: `width: 100%; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "20", value: "10", step: "1" });
+		public readonly masterGainSlider: HTMLInputElement = input({ title: "master gain", style: `width: 5em; flex-grow: 1; margin: 0;`, type: "range", min: "0", max: "5", value: "1", step: "0.02" });
 
 		private startingLimitDecay: number;
 		private startingLimitRise: number;
@@ -228,10 +228,10 @@ namespace beepbox {
 					"Threshold:"
 				),
 				div({ style: `width: 33%; margin-right: 4.5%;` },
-					this.compressionThresholdSlider.input,
+					this.compressionThresholdSlider,
 				),
 				div({ style: `width: 33%; margin-right: 0%;` },
-					this.limitThresholdSlider.input,
+					this.limitThresholdSlider,
 				),
 
 			),
@@ -240,29 +240,29 @@ namespace beepbox {
 					"Ratio:"
 				),
 				div({ style: `width: 33%; margin-right: 4.5%;` },
-					this.compressionRatioSlider.input,
+					this.compressionRatioSlider,
 				),
 				div({ style: `width: 33%; margin-right: 0%;` },
-					this.limitRatioSlider.input,
+					this.limitRatioSlider,
 				),
 			),
 			div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
 				div({ style: `text-align: right; width: 8.5em; margin-right: 1em; color: ${ColorConfig.primaryText};` },
 					"Limit Decay:"
 				),
-				this.limitDecaySlider.input,
+				this.limitDecaySlider,
 			),
 			div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
 				div({ style: `text-align: right; width: 8.5em; margin-right: 1em; color: ${ColorConfig.primaryText};` },
 					"Limit Rise:"
 				),
-				this.limitRiseSlider.input,
+				this.limitRiseSlider,
 			),
 			div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
 				div({ style: `text-align: right; width: 8.5em; margin-right: 1em; color: ${ColorConfig.primaryText};` },
 					"Master Gain:"
 				),
-				this.masterGainSlider.input,
+				this.masterGainSlider,
 			),
 			div({ style: "display: flex; flex-direction: row-reverse; justify-content: space-between;" },
 				this._okayButton,
@@ -278,29 +278,29 @@ namespace beepbox {
 			this._cancelButton.addEventListener("click", this._close);
 			this.container.addEventListener("keydown", this.whenKeyPressed);
 
-			this.limitRatioSlider.input.value = "" + (this._doc.song.limitRatio < 1 ? this._doc.song.limitRatio * 10 : 9 + this._doc.song.limitRatio);
-			this.compressionRatioSlider.input.value = "" + (this._doc.song.compressionRatio < 1 ? this._doc.song.compressionRatio * 10 : 10 + (this._doc.song.compressionRatio - 1) * 60);
-			this.limitThresholdSlider.input.value = "" + this._doc.song.limitThreshold;
-			this.compressionThresholdSlider.input.value = "" + this._doc.song.compressionThreshold;
-			this.limitDecaySlider.input.value = "" + this._doc.song.limitDecay;
-			this.limitRiseSlider.input.value = "" + this._doc.song.limitRise;
-			this.masterGainSlider.input.value = "" + this._doc.song.masterGain;
+			this.limitRatioSlider.value = "" + (this._doc.song.limitRatio < 1 ? this._doc.song.limitRatio * 10 : 9 + this._doc.song.limitRatio);
+			this.compressionRatioSlider.value = "" + (this._doc.song.compressionRatio < 1 ? this._doc.song.compressionRatio * 10 : 10 + (this._doc.song.compressionRatio - 1) * 60);
+			this.limitThresholdSlider.value = "" + this._doc.song.limitThreshold;
+			this.compressionThresholdSlider.value = "" + this._doc.song.compressionThreshold;
+			this.limitDecaySlider.value = "" + this._doc.song.limitDecay;
+			this.limitRiseSlider.value = "" + this._doc.song.limitRise;
+			this.masterGainSlider.value = "" + this._doc.song.masterGain;
 
-			this.startingLimitRatio = +this.limitRatioSlider.input.value;
-			this.startingCompressionRatio = +this.compressionRatioSlider.input.value;
-			this.startingLimitThreshold = +this.limitThresholdSlider.input.value;
-			this.startingCompressionThreshold = +this.compressionThresholdSlider.input.value;
-			this.startingLimitDecay = +this.limitDecaySlider.input.value;
-			this.startingLimitRise = +this.limitRiseSlider.input.value;
-			this.startingMasterGain = +this.masterGainSlider.input.value;
+			this.startingLimitRatio = +this.limitRatioSlider.value;
+			this.startingCompressionRatio = +this.compressionRatioSlider.value;
+			this.startingLimitThreshold = +this.limitThresholdSlider.value;
+			this.startingCompressionThreshold = +this.compressionThresholdSlider.value;
+			this.startingLimitDecay = +this.limitDecaySlider.value;
+			this.startingLimitRise = +this.limitRiseSlider.value;
+			this.startingMasterGain = +this.masterGainSlider.value;
 
-			this.limitDecaySlider.input.addEventListener("input", this._whenInput);
-			this.limitRiseSlider.input.addEventListener("input", this._whenInput);
-			this.limitRatioSlider.input.addEventListener("input", this._whenInput);
-			this.limitThresholdSlider.input.addEventListener("input", this._whenInputFavorLimitThreshold);
-			this.compressionRatioSlider.input.addEventListener("input", this._whenInput);
-			this.compressionThresholdSlider.input.addEventListener("input", this._whenInput);
-			this.masterGainSlider.input.addEventListener("input", this._whenInput);
+			this.limitDecaySlider.addEventListener("input", this._whenInput);
+			this.limitRiseSlider.addEventListener("input", this._whenInput);
+			this.limitRatioSlider.addEventListener("input", this._whenInput);
+			this.limitThresholdSlider.addEventListener("input", this._whenInputFavorLimitThreshold);
+			this.compressionRatioSlider.addEventListener("input", this._whenInput);
+			this.compressionThresholdSlider.addEventListener("input", this._whenInput);
+			this.masterGainSlider.addEventListener("input", this._whenInput);
 
 			this._playButton.addEventListener("click", this._togglePlay);
 
@@ -361,10 +361,10 @@ namespace beepbox {
 		}
 
 		private _whenInput = (): void => {
-			if (+this.limitThresholdSlider.input.value < +this.compressionThresholdSlider.input.value) {
-				this.limitThresholdSlider.input.removeEventListener("input", this._whenInputFavorLimitThreshold);
-				this.limitThresholdSlider.input.value = this.compressionThresholdSlider.input.value;
-				this.limitThresholdSlider.input.addEventListener("input", this._whenInputFavorLimitThreshold);
+			if (+this.limitThresholdSlider.value < +this.compressionThresholdSlider.value) {
+				this.limitThresholdSlider.removeEventListener("input", this._whenInputFavorLimitThreshold);
+				this.limitThresholdSlider.value = this.compressionThresholdSlider.value;
+				this.limitThresholdSlider.addEventListener("input", this._whenInputFavorLimitThreshold);
 			}
 			this.limiterCanvas.render();
 			this._updateLimiter();
@@ -372,10 +372,10 @@ namespace beepbox {
 
 		// Same as above, but for conflicts between limiter threshold and compressor threshold, favor the limiter
 		private _whenInputFavorLimitThreshold = (): void => {
-			if (+this.limitThresholdSlider.input.value < +this.compressionThresholdSlider.input.value) {
-				this.compressionThresholdSlider.input.removeEventListener("input", this._whenInput);
-				this.compressionThresholdSlider.input.value = this.limitThresholdSlider.input.value;
-				this.compressionThresholdSlider.input.addEventListener("input", this._whenInput);
+			if (+this.limitThresholdSlider.value < +this.compressionThresholdSlider.value) {
+				this.compressionThresholdSlider.removeEventListener("input", this._whenInput);
+				this.compressionThresholdSlider.value = this.limitThresholdSlider.value;
+				this.compressionThresholdSlider.addEventListener("input", this._whenInput);
 			}
 			this.limiterCanvas.render();
 			this._updateLimiter();
@@ -383,13 +383,13 @@ namespace beepbox {
 
 		private _close = (): void => {
 			// Reset all sliders to starting values
-			this.limitRatioSlider.input.value = "" + this.startingLimitRatio;
-			this.compressionRatioSlider.input.value = "" + this.startingCompressionRatio;
-			this.limitThresholdSlider.input.value = "" + this.startingLimitThreshold;
-			this.compressionThresholdSlider.input.value = "" + this.startingCompressionThreshold;
-			this.limitDecaySlider.input.value = "" + this.startingLimitDecay;
-			this.limitRiseSlider.input.value = "" + this.startingLimitRise;
-			this.masterGainSlider.input.value = "" + this.startingMasterGain;
+			this.limitRatioSlider.value = "" + this.startingLimitRatio;
+			this.compressionRatioSlider.value = "" + this.startingCompressionRatio;
+			this.limitThresholdSlider.value = "" + this.startingLimitThreshold;
+			this.compressionThresholdSlider.value = "" + this.startingCompressionThreshold;
+			this.limitDecaySlider.value = "" + this.startingLimitDecay;
+			this.limitRiseSlider.value = "" + this.startingLimitRise;
+			this.masterGainSlider.value = "" + this.startingMasterGain;
 
 			this._updateLimiter();
 			this._doc.prompt = null;
@@ -400,13 +400,13 @@ namespace beepbox {
 			this._resetButton.removeEventListener("click", this._resetDefaults);
 			this._cancelButton.removeEventListener("click", this._close);
 			this.container.removeEventListener("keydown", this.whenKeyPressed);
-			this.limitDecaySlider.input.removeEventListener("input", this._whenInput);
-			this.limitRiseSlider.input.removeEventListener("input", this._whenInput);
-			this.limitThresholdSlider.input.removeEventListener("input", this._whenInputFavorLimitThreshold);
-			this.limitRatioSlider.input.removeEventListener("input", this._whenInput);
-			this.compressionRatioSlider.input.removeEventListener("input", this._whenInput);
-			this.compressionThresholdSlider.input.removeEventListener("input", this._whenInput);
-			this.masterGainSlider.input.removeEventListener("input", this._whenInput);
+			this.limitDecaySlider.removeEventListener("input", this._whenInput);
+			this.limitRiseSlider.removeEventListener("input", this._whenInput);
+			this.limitThresholdSlider.removeEventListener("input", this._whenInputFavorLimitThreshold);
+			this.limitRatioSlider.removeEventListener("input", this._whenInput);
+			this.compressionRatioSlider.removeEventListener("input", this._whenInput);
+			this.compressionThresholdSlider.removeEventListener("input", this._whenInput);
+			this.masterGainSlider.removeEventListener("input", this._whenInput);
 
 			this._playButton.removeEventListener("click", this._togglePlay);
 		}
@@ -423,15 +423,15 @@ namespace beepbox {
 
 		private _resetDefaults = (): void => {
 			// Set song limiter settings to their default
-			if (this.limitRatioSlider.input.value != "10" || this.limitRiseSlider.input.value != "4000" || this.limitDecaySlider.input.value != "4" || this.limitThresholdSlider.input.value != "1" || this.compressionRatioSlider.input.value != "10" || this.compressionThresholdSlider.input.value != "1" || this.masterGainSlider.input.value != "1") {
+			if (this.limitRatioSlider.value != "10" || this.limitRiseSlider.value != "4000" || this.limitDecaySlider.value != "4" || this.limitThresholdSlider.value != "1" || this.compressionRatioSlider.value != "10" || this.compressionThresholdSlider.value != "1" || this.masterGainSlider.value != "1") {
 
-				this.limitRatioSlider.input.value = "10";
-				this.limitRiseSlider.input.value = "4000";
-				this.limitDecaySlider.input.value = "4";
-				this.limitThresholdSlider.input.value = "1";
-				this.compressionRatioSlider.input.value = "10";
-				this.compressionThresholdSlider.input.value = "1";
-				this.masterGainSlider.input.value = "1";
+				this.limitRatioSlider.value = "10";
+				this.limitRiseSlider.value = "4000";
+				this.limitDecaySlider.value = "4";
+				this.limitThresholdSlider.value = "1";
+				this.compressionRatioSlider.value = "10";
+				this.compressionThresholdSlider.value = "1";
+				this.masterGainSlider.value = "1";
 
 				this._whenInput();
 			}
@@ -440,13 +440,13 @@ namespace beepbox {
 		private _updateLimiter = (): void => {
 			// Save slider values to song
 			this._doc.record(new ChangeLimiterSettings(this._doc,
-				(+this.limitRatioSlider.input.value < 10 ? +this.limitRatioSlider.input.value / 10 : (+this.limitRatioSlider.input.value - 9)),
-				(+this.compressionRatioSlider.input.value < 10 ? +this.compressionRatioSlider.input.value / 10 : (1 + (+this.compressionRatioSlider.input.value - 10) / 60)),
-				+this.limitThresholdSlider.input.value,
-				+this.compressionThresholdSlider.input.value,
-				+this.limitRiseSlider.input.value,
-				+this.limitDecaySlider.input.value,
-				+this.masterGainSlider.input.value,
+				(+this.limitRatioSlider.value < 10 ? +this.limitRatioSlider.value / 10 : (+this.limitRatioSlider.value - 9)),
+				(+this.compressionRatioSlider.value < 10 ? +this.compressionRatioSlider.value / 10 : (1 + (+this.compressionRatioSlider.value - 10) / 60)),
+				+this.limitThresholdSlider.value,
+				+this.compressionThresholdSlider.value,
+				+this.limitRiseSlider.value,
+				+this.limitDecaySlider.value,
+				+this.masterGainSlider.value,
 			), StateChangeType.replace);
 		}
 
@@ -456,4 +456,4 @@ namespace beepbox {
 
 		}
 	}
-}
+//}

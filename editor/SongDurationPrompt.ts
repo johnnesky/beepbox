@@ -1,13 +1,15 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="changes.ts" />
+import {Config} from "../synth/SynthConfig";
+import {HTML} from "./html";
+import {SongDocument, StateChangeType} from "./SongDocument";
+import {Prompt} from "./Prompt";
+import {ChangeGroup} from "./Change";
+import {ChangeBarCount} from "./changes";
+import {ColorConfig} from "./ColorConfig";
 
-namespace beepbox {
-	const { button, div, span, h2, input, br, select, option } = HTML;
+//namespace beepbox {
+	const {button, div, span, h2, input, br, select, option} = HTML;
 
 	export class SongDurationPrompt implements Prompt {
 		private readonly _barsStepper: HTMLInputElement = input({ style: "width: 3em; margin-left: 1em;", type: "number", step: "1" });
@@ -103,4 +105,4 @@ namespace beepbox {
 			this._doc.record(group, StateChangeType.replace);
 		}
 	}
-}
+//}

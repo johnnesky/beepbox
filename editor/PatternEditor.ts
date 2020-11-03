@@ -1,13 +1,14 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="ColorConfig.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongEditor.ts" />
-/// <reference path="changes.ts" />
+import {Chord, Config} from "../synth/SynthConfig";
+import {NotePin, Note, makeNotePin, Pattern, Instrument, ModSetting} from "../synth/synth";
+import {ColorConfig} from "./ColorConfig";
+import {SongDocument} from "./SongDocument";
+import {HTML, SVG, prettyNumber} from "./html";
+import {ChangeSequence, UndoableChange} from "./Change";
+import {ChangeChannelBar, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePinTime, ChangeVolumeBend, ChangePitchBend, ChangePitchAdded} from "./changes";
 
-namespace beepbox {
+//namespace beepbox {
 	function makeEmptyReplacementElement<T extends Node>(node: T): T {
 		const clone: T = <T>node.cloneNode(false);
 		node.parentNode!.replaceChild(clone, node);
@@ -1381,4 +1382,4 @@ namespace beepbox {
 			return this._pitchHeight * (this._pitchCount - (pitch) - 0.5);
 		}
 	}
-}
+//}

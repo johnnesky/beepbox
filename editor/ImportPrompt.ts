@@ -1,16 +1,18 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="EditorConfig.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="SongEditor.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="html.ts" />
-/// <reference path="changes.ts" />
-/// <reference path="ArrayBufferReader.ts" />
+import {InstrumentType, Config} from "../synth/SynthConfig";
+import {NotePin, Note, makeNotePin, Pattern, Instrument, Channel, Song, Synth} from "../synth/synth";
+import {Preset, EditorConfig} from "./EditorConfig";
+import {SongDocument, StateChangeType} from "./SongDocument";
+import {Prompt} from "./Prompt";
+import {HTML} from "./html";
+import {ChangeGroup} from "./Change";
+import {removeDuplicatePatterns, ChangeSong, ChangeReplacePatterns} from "./changes";
+import {AnalogousDrum, analogousDrumMap, MidiChunkType, MidiFileFormat, MidiEventType, MidiControlEventMessage, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, midiVolumeToVolumeMult, midiExpressionToVolumeMult} from "./Midi";
+import {ArrayBufferReader} from "./ArrayBufferReader";
 
-namespace beepbox {
-	const { button, p, div, h2, input } = HTML;
+//namespace beepbox {
+	const {button, p, div, h2, input} = HTML;
 
 	export class ImportPrompt implements Prompt {
 		private readonly _fileInput: HTMLInputElement = input({ type: "file", accept: ".json,application/json,.mid,.midi,audio/midi,audio/x-midi" });
@@ -869,4 +871,4 @@ namespace beepbox {
 			this._doc.record(new ChangeImportMidi(this._doc), StateChangeType.replace, true);
 		}
 	}
-}
+//}

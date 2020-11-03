@@ -1,10 +1,13 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
+import {Config} from "../synth/SynthConfig";
+import {HarmonicsWave, Instrument} from "../synth/synth";
+import {SongDocument} from "./SongDocument";
+import {HTML, SVG, prettyNumber} from "./html";
+import {ColorConfig} from "./ColorConfig";
+import {ChangeHarmonics} from "./changes";
 
-namespace beepbox {
+//namespace beepbox {
 	export class HarmonicsEditor {
 		private readonly _editorWidth: number = 112;
 		private readonly _editorHeight: number = 26;
@@ -182,4 +185,4 @@ namespace beepbox {
 			}
 		}
 	}
-}
+//}

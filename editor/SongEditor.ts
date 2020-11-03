@@ -1,41 +1,41 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/SynthConfig.ts" />
-/// <reference path="EditorConfig.ts" />
-/// <reference path="ColorConfig.ts" />
-/// <reference path="html.ts" />
-/// <reference path="style.ts" />
-/// <reference path="ColorConfig.ts" />
-/// <reference path="Layout.ts" />
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="TipPrompt.ts" />
-/// <reference path="PatternEditor.ts" />
-/// <reference path="MuteEditor.ts" />
-/// <reference path="TrackEditor.ts" />
-/// <reference path="LoopEditor.ts" />
-/// <reference path="SpectrumEditor.ts" />
-/// <reference path="HarmonicsEditor.ts" />
-/// <reference path="BarScrollBar.ts" />
-/// <reference path="OctaveScrollBar.ts" />
-/// <reference path="Piano.ts" />
-/// <reference path="BeatsPerBarPrompt.ts" />
-/// <reference path="MoveNotesSidewaysPrompt.ts" />
-/// <reference path="SongDurationPrompt.ts" />
-/// <reference path="ChannelSettingsPrompt.ts" />
-/// <reference path="LimiterPrompt.ts" />
-/// <reference path="CustomChipPrompt.ts" />
-/// <reference path="ExportPrompt.ts" />
-/// <reference path="ImportPrompt.ts" />
-/// <reference path="MuteButton.ts" />
-/// <reference path="ThemePrompt.ts" />
-/// <reference path="LayoutPrompt.ts" />
-/// <reference path="SongRecoveryPrompt.ts" />
+import {InstrumentType, Config} from "../synth/SynthConfig";
+import {Preset, PresetCategory, EditorConfig, isMobile} from "./EditorConfig";
+import {ColorConfig} from "./ColorConfig";
+//import {Layout} from "./Layout";
+import {Pattern, Instrument, Channel, ModSetting, ModStatus} from "../synth/synth";
+import {HTML, SVG, prettyNumber} from "./html";
+import {SongDocument, StateChangeType} from "./SongDocument";
+import {Prompt} from "./Prompt";
+import {TipPrompt} from "./TipPrompt";
+import {PatternEditor} from "./PatternEditor";
+import {MuteEditor} from "./MuteEditor";
+import {TrackEditor} from "./TrackEditor";
+import {LoopEditor} from "./LoopEditor";
+import {SpectrumEditor} from "./SpectrumEditor";
+import {HarmonicsEditor} from "./HarmonicsEditor";
+import {BarScrollBar} from "./BarScrollBar";
+import {OctaveScrollBar} from "./OctaveScrollBar";
+import {Piano} from "./Piano";
+import {BeatsPerBarPrompt} from "./BeatsPerBarPrompt";
+import {MoveNotesSidewaysPrompt} from "./MoveNotesSidewaysPrompt";
+import {SongDurationPrompt} from "./SongDurationPrompt";
+import {ChannelSettingsPrompt} from "./ChannelSettingsPrompt";
+import {ExportPrompt} from "./ExportPrompt";
+import {ImportPrompt} from "./ImportPrompt";
+import { SongRecoveryPrompt } from "./SongRecoveryPrompt";
+import { CustomChipPrompt } from "./CustomChipPrompt";
+import { LimiterPrompt } from "./LimiterPrompt";
+import { ThemePrompt } from "./ThemePrompt";
+import { LayoutPrompt } from "./LayoutPrompt";
+import { Change, ChangeGroup } from "./Change";
+import { InputBox, Slider } from "./HTMLWrapper";
+import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, ChangeFilterResonance, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeChipWave, ChangeNoiseWave, ChangeFilterEnvelope, ChangePulseEnvelope, ChangeTransition, ChangeEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong, ChangeDetune, ChangeCustomWave, ChangeSongTitle, ChangePanDelay, ChangePatternsPerChannel, ChangePatternNumbers} from "./changes";
 
-namespace beepbox {
-	const { button, div, input, select, span, optgroup, option, canvas } = HTML;
-
+//namespace beepbox {
+	const {button, div, input, select, span, optgroup, option, canvas} = HTML;
+	
 	function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
 		for (let index: number = 0; index < items.length; index++) {
 			menu.appendChild(option({ value: index }, items[index]));
@@ -289,70 +289,6 @@ namespace beepbox {
 			this._change = null;
 		};
 
-
-	}
-
-	export class InputBox {
-		private _change: Change | null = null;
-		private _value: string = "";
-		private _oldValue: string = "";
-
-		constructor(public readonly input: HTMLInputElement, private readonly _doc: SongDocument, private readonly _getChange: (oldValue: string, newValue: string) => Change) {
-			input.addEventListener("input", this._whenInput);
-			input.addEventListener("change", this._whenChange);
-		}
-
-		public updateValue(value: string): void {
-			this._value = value;
-			this.input.value = String(value);
-		}
-
-		private _whenInput = (): void => {
-			const continuingProspectiveChange: boolean = this._doc.lastChangeWas(this._change);
-			if (!continuingProspectiveChange) this._oldValue = this._value;
-			this._change = this._getChange(this._oldValue, this.input.value);
-			this._doc.setProspectiveChange(this._change);
-		};
-
-		private _whenChange = (): void => {
-			this._doc.record(this._change!);
-			this._change = null;
-		};
-	}
-
-	export class Slider {
-		private _change: Change | null = null;
-		private _value: number = 0;
-		private _oldValue: number = 0;
-		public container: HTMLSpanElement;
-
-		constructor(public readonly input: HTMLInputElement, private readonly _doc: SongDocument, private readonly _getChange: ((oldValue: number, newValue: number) => Change) | null, midTick: boolean) {
-			// A container is created around the input to allow for spec-compliant pseudo css classes (e.g ::before and ::after, which must be added to containers, not the input itself)
-			this.container = (midTick) ? span({ className: "midTick", style: "position: sticky;" }, input) : span({ style: "position: sticky;" }, input);
-			input.addEventListener("input", this._whenInput);
-			input.addEventListener("change", this._whenChange);
-		}
-
-		public updateValue(value: number): void {
-			this._value = value;
-			this.input.value = String(value);
-		}
-
-		private _whenInput = (): void => {
-			const continuingProspectiveChange: boolean = this._doc.lastChangeWas(this._change);
-			if (!continuingProspectiveChange) this._oldValue = this._value;
-			if (this._getChange != null) {
-				this._change = this._getChange(this._oldValue, parseInt(this.input.value));
-				this._doc.setProspectiveChange(this._change);
-			}
-		};
-
-		private _whenChange = (): void => {
-			if (this._getChange != null) {
-				this._doc.record(this._change!);
-				this._change = null;
-			}
-		};
 	}
 
 	export class SongEditor {
@@ -2687,5 +2623,4 @@ namespace beepbox {
 			this._doc.savePreferences();
 		}
 	}
-
-}
+//}

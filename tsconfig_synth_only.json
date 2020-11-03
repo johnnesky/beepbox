@@ -1,8 +1,8 @@
 {
 	"files": [ "synth/synth.ts" ],
 	"compilerOptions": {
-		"outFile": "website/beepbox_synth.js",
-		
+		"rootDir": "./",
+		"outDir": "build",
 		"target": "es6",
 		"sourceMap": true,
 		"removeComments": true,
@@ -13,9 +13,6 @@
 		"strictBindCallApply": true,
 		"noImplicitReturns": true,
 		"noFallthroughCasesInSwitch": true,
-		"noUnusedLocals": true,
-		
-		"strict": false,
-		"strictPropertyInitialization": false
+		"noUnusedLocals": true
 	}
 }

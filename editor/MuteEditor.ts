@@ -1,12 +1,13 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="ColorConfig.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongEditor.ts" />
+import { SongDocument, StateChangeType} from "./SongDocument";
+import { HTML } from "./html";
+import { ColorConfig } from "./ColorConfig";
+import { InputBox } from "./HTMLWrapper";
+import { ChangeChannelOrder, ChangeChannelName, ChangeChannelCount } from "./changes";
+import { Config } from "../synth/SynthConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	export class MuteEditor {
 		private readonly _buttons: HTMLDivElement[] = [];
 		private readonly _channelCounts: HTMLDivElement[] = [];
@@ -16,8 +17,11 @@ namespace beepbox {
 		private readonly _channelDropDown: HTMLSelectElement = HTML.select({ style: "width: 0px; left: 19px; height: 19px; position:absolute; opacity:0" },
 
 			HTML.option({ value: "rename" }, "Rename..."),
+			HTML.option({ value: "chnInsert" }, "Insert Channel Above"),
 			HTML.option({ value: "chnUp" }, "Move Channel Up"),
 			HTML.option({ value: "chnDown" }, "Move Channel Down"),
+			HTML.option({ value: "chnMute" }, "Mute Channel"),
+			HTML.option({ value: "chnSolo" }, "Solo Channel"),
 			HTML.option({ value: "chnDelete" }, "Delete This Channel"),
 		);
 
@@ -368,4 +372,4 @@ namespace beepbox {
 			}
 		}
 	}
-}
+//}

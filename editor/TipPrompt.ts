@@ -1,11 +1,12 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="html.ts" />
-/// <reference path="Prompt.ts" />
+import {HTML} from "./html";
+import {Prompt} from "./Prompt";
+import {SongDocument} from "./SongDocument";
 
-namespace beepbox {
-	const { button, div, p, h2, h3 } = HTML;
-
+//namespace beepbox {
+	const {button, div, p, h2, h3} = HTML;
+	
 	export class TipPrompt implements Prompt {
 		private readonly _closeButton: HTMLButtonElement = button({ className: "cancelButton" });
 
@@ -287,4 +288,4 @@ namespace beepbox {
 			this._closeButton.removeEventListener("click", this._close);
 		}
 	}
-}
+//}

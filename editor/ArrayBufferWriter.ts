@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-namespace beepbox {
+//namespace beepbox {
 	function transfer(source: ArrayBuffer, length: number): ArrayBuffer {
 		const dest: ArrayBuffer = new ArrayBuffer(length);
 		let nextOffset = 0;
@@ -144,4 +144,4 @@ namespace beepbox {
 			return transfer(this._arrayBuffer, this._fileSize);
 		}
 	}
-}
+//}

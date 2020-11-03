@@ -1,12 +1,11 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="SongRecovery.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="html.ts" />
+import {SongDocument} from "./SongDocument";
+import {RecoveredSong, RecoveredVersion, SongRecovery, versionToKey} from "./SongRecovery";
+import {Prompt} from "./Prompt";
+import {HTML} from "./html";
 
-namespace beepbox {
+//namespace beepbox {
 	const {button, div, h2, p, select, option, iframe} = HTML;
 	
 	export class SongRecoveryPrompt implements Prompt {
@@ -60,4 +59,4 @@ namespace beepbox {
 			this._cancelButton.removeEventListener("click", this._close);
 		}
 	}
-}
+//}

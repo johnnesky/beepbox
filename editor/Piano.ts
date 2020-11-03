@@ -1,10 +1,12 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="html.ts" />
+import {Config} from "../synth/SynthConfig";
+import {SongDocument} from "./SongDocument";
+import { HTML, SVG} from "./html";
+import { ColorConfig } from "./ColorConfig";
+import { Instrument, ModSetting, ModStatus } from "../synth/synth";
 
-namespace beepbox {
+//namespace beepbox {
 	export class Piano {
 		private readonly _pianoContainer: HTMLDivElement = HTML.div({ style: "width: 100%; height: 100%; display: flex; flex-direction: column-reverse; align-items: stretch;" });
 		private readonly _drumContainer: HTMLDivElement = HTML.div({ style: "width: 100%; height: 100%; display: flex; flex-direction: column-reverse; align-items: stretch;" });
@@ -529,4 +531,4 @@ namespace beepbox {
 			this._updatePreview();
 		}
 	}
-}
+//}

@@ -1,13 +1,11 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-/// <reference path="../synth/synth.ts" />
-/// <reference path="html.ts" />
-/// <reference path="SongDocument.ts" />
-/// <reference path="Prompt.ts" />
-/// <reference path="changes.ts" />
-/// <reference path="ColorConfig.ts" />
+import { HTML } from "./html";
+import { Prompt } from "./Prompt";
+import { SongDocument } from "./SongDocument";
+import { ColorConfig } from "./ColorConfig";
 
-namespace beepbox {
+//namespace beepbox {
 	const { button, div, h2, select, option } = HTML;
 
 	export class ThemePrompt implements Prompt {
@@ -69,4 +67,4 @@ namespace beepbox {
 			this._doc.undo();
 		}
 	}
-}
+//}
