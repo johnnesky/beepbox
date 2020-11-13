@@ -2,5 +2,5 @@
 
 export interface Prompt {
 	container: HTMLElement;
-	cleanUp: ()=>void;
+	cleanUp: () => void;
 }

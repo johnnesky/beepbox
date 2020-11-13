@@ -1,22 +1,22 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import { BeepBoxOption, DictionaryArray, toNameMap, Config} from "../synth/SynthConfig";
-import {Song} from "../synth/synth";
+import { BeepBoxOption, DictionaryArray, toNameMap, Config } from "../synth/SynthConfig";
+import { Song } from "../synth/synth";
 import { HTML } from "./html";
 
 //namespace beepbox {
-	export interface ChannelColors extends BeepBoxOption {
-		readonly secondaryChannel: string;
-		readonly primaryChannel: string;
-		readonly secondaryNote: string;
-		readonly primaryNote: string;
-	}
+export interface ChannelColors extends BeepBoxOption {
+	readonly secondaryChannel: string;
+	readonly primaryChannel: string;
+	readonly secondaryNote: string;
+	readonly primaryNote: string;
+}
 
-	export class ColorConfig {
-		public static colorLookup: Map<number, ChannelColors> = new Map<number, ChannelColors>();
+export class ColorConfig {
+	public static colorLookup: Map<number, ChannelColors> = new Map<number, ChannelColors>();
 
-		public static readonly themes: { [name: string]: string } = {
-			"dark classic": `
+	public static readonly themes: { [name: string]: string } = {
+		"dark classic": `
 				:root {
 					--page-margin: black;
 					--editor-background: black;
@@ -129,7 +129,7 @@ import { HTML } from "./html";
 
 				}
 			`,
-			"dark competition": `
+		"dark competition": `
 				:root {
 					--page-margin: black;
 					--editor-background: black;
@@ -242,7 +242,7 @@ import { HTML } from "./html";
 
 				}
 			`,
-			"light classic": `
+		"light classic": `
 				:root {
 					-webkit-text-stroke-width: 0.5px;
 					--page-margin: #685d88;
@@ -363,7 +363,7 @@ import { HTML } from "./html";
 					box-shadow: inset 0 0 0 1px var(--secondary-text);
 				}
 			`,
-			"jummbox classic": `
+		"jummbox classic": `
 				:root {
 					--page-margin: #040410;
 					--editor-background: #040410;
@@ -475,7 +475,7 @@ import { HTML } from "./html";
 					--mod-primary-note-lum-scale: 0;
 				}
 			`,
-			"forest": `
+		"forest": `
 				:root {
 					--page-margin: #010c03;
 					--editor-background: #010c03;
@@ -587,7 +587,7 @@ import { HTML } from "./html";
 					--mod-primary-note-lum-scale: 0;
 				}
 			`,
-			"canyon": `
+		"canyon": `
 				:root {
 					--page-margin: #0a0000;
 					--editor-background: #0a0000;
@@ -699,7 +699,7 @@ import { HTML } from "./html";
 					--mod-primary-note-lum-scale: 0;
 				}
 			`,
-			"jummbox light": `
+		"jummbox light": `
 				:root {
 					-webkit-text-stroke-width: 0.5px;
 					--page-margin: #fefdff;
@@ -820,425 +820,425 @@ import { HTML } from "./html";
 					box-shadow: inset 0 0 0 1px var(--secondary-text);
 				}
 			`,
-		};
+	};
 
-		public static readonly pageMargin: string = "var(--page-margin)";
-		public static readonly editorBackground: string = "var(--editor-background)";
-		public static readonly hoverPreview: string = "var(--hover-preview)";
-		public static readonly playhead: string = "var(--playhead)";
-		public static readonly primaryText: string = "var(--primary-text)";
-		public static readonly secondaryText: string = "var(--secondary-text)";
-		public static readonly invertedText: string = "var(--inverted-text)";
-		public static readonly textSelection: string = "var(--text-selection)";
-		public static readonly boxSelectionFill: string = "var(--box-selection-fill)";
-		public static readonly loopAccent: string = "var(--loop-accent)";
-		public static readonly linkAccent: string = "var(--link-accent)";
-		public static readonly uiWidgetBackground: string = "var(--ui-widget-background)";
-		public static readonly uiWidgetFocus: string = "var(--ui-widget-focus)";
-		public static readonly pitchBackground: string = "var(--pitch-background)";
-		public static readonly tonic: string = "var(--tonic)";
-		public static readonly fifthNote: string = "var(--fifth-note)";
-		public static readonly whitePianoKey: string = "var(--white-piano-key)";
-		public static readonly blackPianoKey: string = "var(--black-piano-key)";
-		public static readonly useColorFormula: string = "var(--use-color-formula)";
-		public static readonly pitchSecondaryChannelHue: string = "var(--pitch-secondary-channel-hue)";
-		public static readonly pitchSecondaryChannelHueScale: string = "var(--pitch-secondary-channel-hue-scale)";
-		public static readonly pitchSecondaryChannelSat: string = "var(--pitch-secondary-channel-sat)";
-		public static readonly pitchSecondaryChannelSatScale: string = "var(--pitch-secondary-channel-sat-scale)";
-		public static readonly pitchSecondaryChannelLum: string = "var(--pitch-secondary-channel-lum)";
-		public static readonly pitchSecondaryChannelLumScale: string = "var(--pitch-secondary-channel-lum-scale)";
-		public static readonly pitchPrimaryChannelHue: string = "var(--pitch-primary-channel-hue)";
-		public static readonly pitchPrimaryChannelHueScale: string = "var(--pitch-primary-channel-hue-scale)";
-		public static readonly pitchPrimaryChannelSat: string = "var(--pitch-primary-channel-sat)";
-		public static readonly pitchPrimaryChannelSatScale: string = "var(--pitch-primary-channel-sat-scale)";
-		public static readonly pitchPrimaryChannelLum: string = "var(--pitch-primary-channel-lum)";
-		public static readonly pitchPrimaryChannelLumScale: string = "var(--pitch-primary-channel-lum-scale)";
-		public static readonly pitchSecondaryNoteHue: string = "var(--pitch-secondary-note-hue)";
-		public static readonly pitchSecondaryNoteHueScale: string = "var(--pitch-secondary-note-hue-scale)";
-		public static readonly pitchSecondaryNoteSat: string = "var(--pitch-secondary-note-sat)";
-		public static readonly pitchSecondaryNoteSatScale: string = "var(--pitch-secondary-note-sat-scale)";
-		public static readonly pitchSecondaryNoteLum: string = "var(--pitch-secondary-note-lum)";
-		public static readonly pitchSecondaryNoteLumScale: string = "var(--pitch-secondary-note-lum-scale)";
-		public static readonly pitchPrimaryNoteHue: string = "var(--pitch-primary-note-hue)";
-		public static readonly pitchPrimaryNoteHueScale: string = "var(--pitch-primary-note-hue-scale)";
-		public static readonly pitchPrimaryNoteSat: string = "var(--pitch-primary-note-sat)";
-		public static readonly pitchPrimaryNoteSatScale: string = "var(--pitch-primary-note-sat-scale)";
-		public static readonly pitchPrimaryNoteLum: string = "var(--pitch-primary-note-lum)";
-		public static readonly pitchPrimaryNoteLumScale: string = "var(--pitch-primary-note-lum-scale)";
-		public static readonly modSecondaryChannelHue: string = "var(--mod-secondary-channel-hue)";
-		public static readonly modSecondaryChannelHueScale: string = "var(--mod-secondary-channel-hue-scale)";
-		public static readonly modSecondaryChannelSat: string = "var(--mod-secondary-channel-sat)";
-		public static readonly modSecondaryChannelSatScale: string = "var(--mod-secondary-channel-sat-scale)";
-		public static readonly modSecondaryChannelLum: string = "var(--mod-secondary-channel-lum)";
-		public static readonly modSecondaryChannelLumScale: string = "var(--mod-secondary-channel-lum-scale)";
-		public static readonly modPrimaryChannelHue: string = "var(--mod-primary-channel-hue)";
-		public static readonly modPrimaryChannelHueScale: string = "var(--mod-primary-channel-hue-scale)";
-		public static readonly modPrimaryChannelSat: string = "var(--mod-primary-channel-sat)";
-		public static readonly modPrimaryChannelSatScale: string = "var(--mod-primary-channel-sat-scale)";
-		public static readonly modPrimaryChannelLum: string = "var(--mod-primary-channel-lum)";
-		public static readonly modPrimaryChannelLumScale: string = "var(--mod-primary-channel-lum-scale)";
-		public static readonly modSecondaryNoteHue: string = "var(--mod-secondary-note-hue)";
-		public static readonly modSecondaryNoteHueScale: string = "var(--mod-secondary-note-hue-scale)";
-		public static readonly modSecondaryNoteSat: string = "var(--mod-secondary-note-sat)";
-		public static readonly modSecondaryNoteSatScale: string = "var(--mod-secondary-note-sat-scale)";
-		public static readonly modSecondaryNoteLum: string = "var(--mod-secondary-note-lum)";
-		public static readonly modSecondaryNoteLumScale: string = "var(--mod-secondary-note-lum-scale)";
-		public static readonly modPrimaryNoteHue: string = "var(--mod-primary-note-hue)";
-		public static readonly modPrimaryNoteHueScale: string = "var(--mod-primary-note-hue-scale)";
-		public static readonly modPrimaryNoteSat: string = "var(--mod-primary-note-sat)";
-		public static readonly modPrimaryNoteSatScale: string = "var(--mod-primary-note-sat-scale)";
-		public static readonly modPrimaryNoteLum: string = "var(--mod-primary-note-lum)";
-		public static readonly modPrimaryNoteLumScale: string = "var(--mod-primary-note-lum-scale)";
-		public static readonly noiseSecondaryChannelHue: string = "var(--noise-secondary-channel-hue)";
-		public static readonly noiseSecondaryChannelHueScale: string = "var(--noise-secondary-channel-hue-scale)";
-		public static readonly noiseSecondaryChannelSat: string = "var(--noise-secondary-channel-sat)";
-		public static readonly noiseSecondaryChannelSatScale: string = "var(--noise-secondary-channel-sat-scale)";
-		public static readonly noiseSecondaryChannelLum: string = "var(--noise-secondary-channel-lum)";
-		public static readonly noiseSecondaryChannelLumScale: string = "var(--noise-secondary-channel-lum-scale)";
-		public static readonly noisePrimaryChannelHue: string = "var(--noise-primary-channel-hue)";
-		public static readonly noisePrimaryChannelHueScale: string = "var(--noise-primary-channel-hue-scale)";
-		public static readonly noisePrimaryChannelSat: string = "var(--noise-primary-channel-sat)";
-		public static readonly noisePrimaryChannelSatScale: string = "var(--noise-primary-channel-sat-scale)";
-		public static readonly noisePrimaryChannelLum: string = "var(--noise-primary-channel-lum)";
-		public static readonly noisePrimaryChannelLumScale: string = "var(--noise-primary-channel-lum-scale)";
-		public static readonly noiseSecondaryNoteHue: string = "var(--noise-secondary-note-hue)";
-		public static readonly noiseSecondaryNoteHueScale: string = "var(--noise-secondary-note-hue-scale)";
-		public static readonly noiseSecondaryNoteSat: string = "var(--noise-secondary-note-sat)";
-		public static readonly noiseSecondaryNoteSatScale: string = "var(--noise-secondary-note-sat-scale)";
-		public static readonly noiseSecondaryNoteLum: string = "var(--noise-secondary-note-lum)";
-		public static readonly noiseSecondaryNoteLumScale: string = "var(--noise-secondary-note-lum-scale)";
-		public static readonly noisePrimaryNoteHue: string = "var(--noise-primary-note-hue)";
-		public static readonly noisePrimaryNoteHueScale: string = "var(--noise-primary-note-hue-scale)";
-		public static readonly noisePrimaryNoteSat: string = "var(--noise-primary-note-sat)";
-		public static readonly noisePrimaryNoteSatScale: string = "var(--noise-primary-note-sat-scale)";
-		public static readonly noisePrimaryNoteLum: string = "var(--noise-primary-note-lum)";
-		public static readonly noisePrimaryNoteLumScale: string = "var(--noise-primary-note-lum-scale)";
-		public static readonly trackEditorBgPitch: string = "var(--track-editor-bg-pitch)";
-		public static readonly trackEditorBgPitchDim: string = "var(--track-editor-bg-pitch-dim)";
-		public static readonly trackEditorBgNoise: string = "var(--track-editor-bg-noise)";
-		public static readonly trackEditorBgNoiseDim: string = "var(--track-editor-bg-noise-dim)";
-		public static readonly trackEditorBgMod: string = "var(--track-editor-bg-mod)";
-		public static readonly trackEditorBgModDim: string = "var(--track-editor-bg-mod-dim)";
-		public static readonly multiplicativeModSlider: string = "var(--multiplicative-mod-slider)";
-		public static readonly overwritingModSlider: string = "var(--overwriting-mod-slider)";
-		public static readonly indicatorPrimary: string = "var(--indicator-primary)";
-		public static readonly indicatorSecondary: string = "var(--indicator-secondary)";
-		public static readonly select2OptGroup: string = "var(--select2-opt-group)";
-		public static readonly inputBoxOutline: string = "var(--input-box-outline)";
-		public static readonly muteButtonNormal: string = "var(--mute-button-normal)";
-		public static readonly muteButtonMod: string = "var(--mute-button-mod)";
-		public static readonly modLabelPrimary: string = "var(--mod-label-primary)";
-		public static readonly modLabelSecondaryText: string = "var(--mod-label-secondary-text)";
-		public static readonly modLabelPrimaryText: string = "var(--mod-label-primary-text)";
+	public static readonly pageMargin: string = "var(--page-margin)";
+	public static readonly editorBackground: string = "var(--editor-background)";
+	public static readonly hoverPreview: string = "var(--hover-preview)";
+	public static readonly playhead: string = "var(--playhead)";
+	public static readonly primaryText: string = "var(--primary-text)";
+	public static readonly secondaryText: string = "var(--secondary-text)";
+	public static readonly invertedText: string = "var(--inverted-text)";
+	public static readonly textSelection: string = "var(--text-selection)";
+	public static readonly boxSelectionFill: string = "var(--box-selection-fill)";
+	public static readonly loopAccent: string = "var(--loop-accent)";
+	public static readonly linkAccent: string = "var(--link-accent)";
+	public static readonly uiWidgetBackground: string = "var(--ui-widget-background)";
+	public static readonly uiWidgetFocus: string = "var(--ui-widget-focus)";
+	public static readonly pitchBackground: string = "var(--pitch-background)";
+	public static readonly tonic: string = "var(--tonic)";
+	public static readonly fifthNote: string = "var(--fifth-note)";
+	public static readonly whitePianoKey: string = "var(--white-piano-key)";
+	public static readonly blackPianoKey: string = "var(--black-piano-key)";
+	public static readonly useColorFormula: string = "var(--use-color-formula)";
+	public static readonly pitchSecondaryChannelHue: string = "var(--pitch-secondary-channel-hue)";
+	public static readonly pitchSecondaryChannelHueScale: string = "var(--pitch-secondary-channel-hue-scale)";
+	public static readonly pitchSecondaryChannelSat: string = "var(--pitch-secondary-channel-sat)";
+	public static readonly pitchSecondaryChannelSatScale: string = "var(--pitch-secondary-channel-sat-scale)";
+	public static readonly pitchSecondaryChannelLum: string = "var(--pitch-secondary-channel-lum)";
+	public static readonly pitchSecondaryChannelLumScale: string = "var(--pitch-secondary-channel-lum-scale)";
+	public static readonly pitchPrimaryChannelHue: string = "var(--pitch-primary-channel-hue)";
+	public static readonly pitchPrimaryChannelHueScale: string = "var(--pitch-primary-channel-hue-scale)";
+	public static readonly pitchPrimaryChannelSat: string = "var(--pitch-primary-channel-sat)";
+	public static readonly pitchPrimaryChannelSatScale: string = "var(--pitch-primary-channel-sat-scale)";
+	public static readonly pitchPrimaryChannelLum: string = "var(--pitch-primary-channel-lum)";
+	public static readonly pitchPrimaryChannelLumScale: string = "var(--pitch-primary-channel-lum-scale)";
+	public static readonly pitchSecondaryNoteHue: string = "var(--pitch-secondary-note-hue)";
+	public static readonly pitchSecondaryNoteHueScale: string = "var(--pitch-secondary-note-hue-scale)";
+	public static readonly pitchSecondaryNoteSat: string = "var(--pitch-secondary-note-sat)";
+	public static readonly pitchSecondaryNoteSatScale: string = "var(--pitch-secondary-note-sat-scale)";
+	public static readonly pitchSecondaryNoteLum: string = "var(--pitch-secondary-note-lum)";
+	public static readonly pitchSecondaryNoteLumScale: string = "var(--pitch-secondary-note-lum-scale)";
+	public static readonly pitchPrimaryNoteHue: string = "var(--pitch-primary-note-hue)";
+	public static readonly pitchPrimaryNoteHueScale: string = "var(--pitch-primary-note-hue-scale)";
+	public static readonly pitchPrimaryNoteSat: string = "var(--pitch-primary-note-sat)";
+	public static readonly pitchPrimaryNoteSatScale: string = "var(--pitch-primary-note-sat-scale)";
+	public static readonly pitchPrimaryNoteLum: string = "var(--pitch-primary-note-lum)";
+	public static readonly pitchPrimaryNoteLumScale: string = "var(--pitch-primary-note-lum-scale)";
+	public static readonly modSecondaryChannelHue: string = "var(--mod-secondary-channel-hue)";
+	public static readonly modSecondaryChannelHueScale: string = "var(--mod-secondary-channel-hue-scale)";
+	public static readonly modSecondaryChannelSat: string = "var(--mod-secondary-channel-sat)";
+	public static readonly modSecondaryChannelSatScale: string = "var(--mod-secondary-channel-sat-scale)";
+	public static readonly modSecondaryChannelLum: string = "var(--mod-secondary-channel-lum)";
+	public static readonly modSecondaryChannelLumScale: string = "var(--mod-secondary-channel-lum-scale)";
+	public static readonly modPrimaryChannelHue: string = "var(--mod-primary-channel-hue)";
+	public static readonly modPrimaryChannelHueScale: string = "var(--mod-primary-channel-hue-scale)";
+	public static readonly modPrimaryChannelSat: string = "var(--mod-primary-channel-sat)";
+	public static readonly modPrimaryChannelSatScale: string = "var(--mod-primary-channel-sat-scale)";
+	public static readonly modPrimaryChannelLum: string = "var(--mod-primary-channel-lum)";
+	public static readonly modPrimaryChannelLumScale: string = "var(--mod-primary-channel-lum-scale)";
+	public static readonly modSecondaryNoteHue: string = "var(--mod-secondary-note-hue)";
+	public static readonly modSecondaryNoteHueScale: string = "var(--mod-secondary-note-hue-scale)";
+	public static readonly modSecondaryNoteSat: string = "var(--mod-secondary-note-sat)";
+	public static readonly modSecondaryNoteSatScale: string = "var(--mod-secondary-note-sat-scale)";
+	public static readonly modSecondaryNoteLum: string = "var(--mod-secondary-note-lum)";
+	public static readonly modSecondaryNoteLumScale: string = "var(--mod-secondary-note-lum-scale)";
+	public static readonly modPrimaryNoteHue: string = "var(--mod-primary-note-hue)";
+	public static readonly modPrimaryNoteHueScale: string = "var(--mod-primary-note-hue-scale)";
+	public static readonly modPrimaryNoteSat: string = "var(--mod-primary-note-sat)";
+	public static readonly modPrimaryNoteSatScale: string = "var(--mod-primary-note-sat-scale)";
+	public static readonly modPrimaryNoteLum: string = "var(--mod-primary-note-lum)";
+	public static readonly modPrimaryNoteLumScale: string = "var(--mod-primary-note-lum-scale)";
+	public static readonly noiseSecondaryChannelHue: string = "var(--noise-secondary-channel-hue)";
+	public static readonly noiseSecondaryChannelHueScale: string = "var(--noise-secondary-channel-hue-scale)";
+	public static readonly noiseSecondaryChannelSat: string = "var(--noise-secondary-channel-sat)";
+	public static readonly noiseSecondaryChannelSatScale: string = "var(--noise-secondary-channel-sat-scale)";
+	public static readonly noiseSecondaryChannelLum: string = "var(--noise-secondary-channel-lum)";
+	public static readonly noiseSecondaryChannelLumScale: string = "var(--noise-secondary-channel-lum-scale)";
+	public static readonly noisePrimaryChannelHue: string = "var(--noise-primary-channel-hue)";
+	public static readonly noisePrimaryChannelHueScale: string = "var(--noise-primary-channel-hue-scale)";
+	public static readonly noisePrimaryChannelSat: string = "var(--noise-primary-channel-sat)";
+	public static readonly noisePrimaryChannelSatScale: string = "var(--noise-primary-channel-sat-scale)";
+	public static readonly noisePrimaryChannelLum: string = "var(--noise-primary-channel-lum)";
+	public static readonly noisePrimaryChannelLumScale: string = "var(--noise-primary-channel-lum-scale)";
+	public static readonly noiseSecondaryNoteHue: string = "var(--noise-secondary-note-hue)";
+	public static readonly noiseSecondaryNoteHueScale: string = "var(--noise-secondary-note-hue-scale)";
+	public static readonly noiseSecondaryNoteSat: string = "var(--noise-secondary-note-sat)";
+	public static readonly noiseSecondaryNoteSatScale: string = "var(--noise-secondary-note-sat-scale)";
+	public static readonly noiseSecondaryNoteLum: string = "var(--noise-secondary-note-lum)";
+	public static readonly noiseSecondaryNoteLumScale: string = "var(--noise-secondary-note-lum-scale)";
+	public static readonly noisePrimaryNoteHue: string = "var(--noise-primary-note-hue)";
+	public static readonly noisePrimaryNoteHueScale: string = "var(--noise-primary-note-hue-scale)";
+	public static readonly noisePrimaryNoteSat: string = "var(--noise-primary-note-sat)";
+	public static readonly noisePrimaryNoteSatScale: string = "var(--noise-primary-note-sat-scale)";
+	public static readonly noisePrimaryNoteLum: string = "var(--noise-primary-note-lum)";
+	public static readonly noisePrimaryNoteLumScale: string = "var(--noise-primary-note-lum-scale)";
+	public static readonly trackEditorBgPitch: string = "var(--track-editor-bg-pitch)";
+	public static readonly trackEditorBgPitchDim: string = "var(--track-editor-bg-pitch-dim)";
+	public static readonly trackEditorBgNoise: string = "var(--track-editor-bg-noise)";
+	public static readonly trackEditorBgNoiseDim: string = "var(--track-editor-bg-noise-dim)";
+	public static readonly trackEditorBgMod: string = "var(--track-editor-bg-mod)";
+	public static readonly trackEditorBgModDim: string = "var(--track-editor-bg-mod-dim)";
+	public static readonly multiplicativeModSlider: string = "var(--multiplicative-mod-slider)";
+	public static readonly overwritingModSlider: string = "var(--overwriting-mod-slider)";
+	public static readonly indicatorPrimary: string = "var(--indicator-primary)";
+	public static readonly indicatorSecondary: string = "var(--indicator-secondary)";
+	public static readonly select2OptGroup: string = "var(--select2-opt-group)";
+	public static readonly inputBoxOutline: string = "var(--input-box-outline)";
+	public static readonly muteButtonNormal: string = "var(--mute-button-normal)";
+	public static readonly muteButtonMod: string = "var(--mute-button-mod)";
+	public static readonly modLabelPrimary: string = "var(--mod-label-primary)";
+	public static readonly modLabelSecondaryText: string = "var(--mod-label-secondary-text)";
+	public static readonly modLabelPrimaryText: string = "var(--mod-label-primary-text)";
 
-		public static readonly pitchChannels: DictionaryArray<ChannelColors> = toNameMap([
-			{
-				name: "pitch1", // cyan
-				secondaryChannel: "var(--pitch1-secondary-channel)",
-				primaryChannel: "var(--pitch1-primary-channel)",
-				secondaryNote: "var(--pitch1-secondary-note)",
-				primaryNote: "var(--pitch1-primary-note)",
-			}, {
-				name: "pitch2", // yellow
-				secondaryChannel: "var(--pitch2-secondary-channel)",
-				primaryChannel: "var(--pitch2-primary-channel)",
-				secondaryNote: "var(--pitch2-secondary-note)",
-				primaryNote: "var(--pitch2-primary-note)",
-			}, {
-				name: "pitch3", // orange
-				secondaryChannel: "var(--pitch3-secondary-channel)",
-				primaryChannel: "var(--pitch3-primary-channel)",
-				secondaryNote: "var(--pitch3-secondary-note)",
-				primaryNote: "var(--pitch3-primary-note)",
-			}, {
-				name: "pitch4", // green
-				secondaryChannel: "var(--pitch4-secondary-channel)",
-				primaryChannel: "var(--pitch4-primary-channel)",
-				secondaryNote: "var(--pitch4-secondary-note)",
-				primaryNote: "var(--pitch4-primary-note)",
-			}, {
-				name: "pitch5", // purple
-				secondaryChannel: "var(--pitch5-secondary-channel)",
-				primaryChannel: "var(--pitch5-primary-channel)",
-				secondaryNote: "var(--pitch5-secondary-note)",
-				primaryNote: "var(--pitch5-primary-note)",
-			}, {
-				name: "pitch6", // blue
-				secondaryChannel: "var(--pitch6-secondary-channel)",
-				primaryChannel: "var(--pitch6-primary-channel)",
-				secondaryNote: "var(--pitch6-secondary-note)",
-				primaryNote: "var(--pitch6-primary-note)",
-			}, {
-				name: "pitch7", // blue
-				secondaryChannel: "var(--pitch7-secondary-channel)",
-				primaryChannel: "var(--pitch7-primary-channel)",
-				secondaryNote: "var(--pitch7-secondary-note)",
-				primaryNote: "var(--pitch7-primary-note)",
-			}, {
-				name: "pitch8", // blue
-				secondaryChannel: "var(--pitch8-secondary-channel)",
-				primaryChannel: "var(--pitch8-primary-channel)",
-				secondaryNote: "var(--pitch8-secondary-note)",
-				primaryNote: "var(--pitch8-primary-note)",
-			}, {
-				name: "pitch9", // blue
-				secondaryChannel: "var(--pitch9-secondary-channel)",
-				primaryChannel: "var(--pitch9-primary-channel)",
-				secondaryNote: "var(--pitch9-secondary-note)",
-				primaryNote: "var(--pitch9-primary-note)",
-			}, {
-				name: "pitch10", // blue
-				secondaryChannel: "var(--pitch10-secondary-channel)",
-				primaryChannel: "var(--pitch10-primary-channel)",
-				secondaryNote: "var(--pitch10-secondary-note)",
-				primaryNote: "var(--pitch10-primary-note)",
-			},
-		]);
-		public static readonly noiseChannels: DictionaryArray<ChannelColors> = toNameMap([
-			{
-				name: "noise1", // gray
-				secondaryChannel: "var(--noise1-secondary-channel)",
-				primaryChannel: "var(--noise1-primary-channel)",
-				secondaryNote: "var(--noise1-secondary-note)",
-				primaryNote: "var(--noise1-primary-note)",
-			}, {
-				name: "noise2", // brown
-				secondaryChannel: "var(--noise2-secondary-channel)",
-				primaryChannel: "var(--noise2-primary-channel)",
-				secondaryNote: "var(--noise2-secondary-note)",
-				primaryNote: "var(--noise2-primary-note)",
-			}, {
-				name: "noise3", // azure
-				secondaryChannel: "var(--noise3-secondary-channel)",
-				primaryChannel: "var(--noise3-primary-channel)",
-				secondaryNote: "var(--noise3-secondary-note)",
-				primaryNote: "var(--noise3-primary-note)",
-			}, {
-				name: "noise4",
-				secondaryChannel: "var(--noise4-secondary-channel)",
-				primaryChannel: "var(--noise4-primary-channel)",
-				secondaryNote: "var(--noise4-secondary-note)",
-				primaryNote: "var(--noise4-primary-note)",
-			},
-		]);
-		public static readonly modChannels: DictionaryArray<ChannelColors> = toNameMap([
-			{
-				name: "mod1",
-				secondaryChannel: "var(--mod1-secondary-channel)",
-				primaryChannel: "var(--mod1-primary-channel)",
-				secondaryNote: "var(--mod1-secondary-note)",
-				primaryNote: "var(--mod1-primary-note)",
-			}, {
-				name: "mod2",
-				secondaryChannel: "var(--mod2-secondary-channel)",
-				primaryChannel: "var(--mod2-primary-channel)",
-				secondaryNote: "var(--mod2-secondary-note)",
-				primaryNote: "var(--mod2-primary-note)",
-			}, {
-				name: "mod3",
-				secondaryChannel: "var(--mod3-secondary-channel)",
-				primaryChannel: "var(--mod3-primary-channel)",
-				secondaryNote: "var(--mod3-secondary-note)",
-				primaryNote: "var(--mod3-primary-note)",
-			}, {
-				name: "mod4",
-				secondaryChannel: "var(--mod4-secondary-channel)",
-				primaryChannel: "var(--mod4-primary-channel)",
-				secondaryNote: "var(--mod4-secondary-note)",
-				primaryNote: "var(--mod4-primary-note)",
-			},
-		]);
+	public static readonly pitchChannels: DictionaryArray<ChannelColors> = toNameMap([
+		{
+			name: "pitch1", // cyan
+			secondaryChannel: "var(--pitch1-secondary-channel)",
+			primaryChannel: "var(--pitch1-primary-channel)",
+			secondaryNote: "var(--pitch1-secondary-note)",
+			primaryNote: "var(--pitch1-primary-note)",
+		}, {
+			name: "pitch2", // yellow
+			secondaryChannel: "var(--pitch2-secondary-channel)",
+			primaryChannel: "var(--pitch2-primary-channel)",
+			secondaryNote: "var(--pitch2-secondary-note)",
+			primaryNote: "var(--pitch2-primary-note)",
+		}, {
+			name: "pitch3", // orange
+			secondaryChannel: "var(--pitch3-secondary-channel)",
+			primaryChannel: "var(--pitch3-primary-channel)",
+			secondaryNote: "var(--pitch3-secondary-note)",
+			primaryNote: "var(--pitch3-primary-note)",
+		}, {
+			name: "pitch4", // green
+			secondaryChannel: "var(--pitch4-secondary-channel)",
+			primaryChannel: "var(--pitch4-primary-channel)",
+			secondaryNote: "var(--pitch4-secondary-note)",
+			primaryNote: "var(--pitch4-primary-note)",
+		}, {
+			name: "pitch5", // purple
+			secondaryChannel: "var(--pitch5-secondary-channel)",
+			primaryChannel: "var(--pitch5-primary-channel)",
+			secondaryNote: "var(--pitch5-secondary-note)",
+			primaryNote: "var(--pitch5-primary-note)",
+		}, {
+			name: "pitch6", // blue
+			secondaryChannel: "var(--pitch6-secondary-channel)",
+			primaryChannel: "var(--pitch6-primary-channel)",
+			secondaryNote: "var(--pitch6-secondary-note)",
+			primaryNote: "var(--pitch6-primary-note)",
+		}, {
+			name: "pitch7", // blue
+			secondaryChannel: "var(--pitch7-secondary-channel)",
+			primaryChannel: "var(--pitch7-primary-channel)",
+			secondaryNote: "var(--pitch7-secondary-note)",
+			primaryNote: "var(--pitch7-primary-note)",
+		}, {
+			name: "pitch8", // blue
+			secondaryChannel: "var(--pitch8-secondary-channel)",
+			primaryChannel: "var(--pitch8-primary-channel)",
+			secondaryNote: "var(--pitch8-secondary-note)",
+			primaryNote: "var(--pitch8-primary-note)",
+		}, {
+			name: "pitch9", // blue
+			secondaryChannel: "var(--pitch9-secondary-channel)",
+			primaryChannel: "var(--pitch9-primary-channel)",
+			secondaryNote: "var(--pitch9-secondary-note)",
+			primaryNote: "var(--pitch9-primary-note)",
+		}, {
+			name: "pitch10", // blue
+			secondaryChannel: "var(--pitch10-secondary-channel)",
+			primaryChannel: "var(--pitch10-primary-channel)",
+			secondaryNote: "var(--pitch10-secondary-note)",
+			primaryNote: "var(--pitch10-primary-note)",
+		},
+	]);
+	public static readonly noiseChannels: DictionaryArray<ChannelColors> = toNameMap([
+		{
+			name: "noise1", // gray
+			secondaryChannel: "var(--noise1-secondary-channel)",
+			primaryChannel: "var(--noise1-primary-channel)",
+			secondaryNote: "var(--noise1-secondary-note)",
+			primaryNote: "var(--noise1-primary-note)",
+		}, {
+			name: "noise2", // brown
+			secondaryChannel: "var(--noise2-secondary-channel)",
+			primaryChannel: "var(--noise2-primary-channel)",
+			secondaryNote: "var(--noise2-secondary-note)",
+			primaryNote: "var(--noise2-primary-note)",
+		}, {
+			name: "noise3", // azure
+			secondaryChannel: "var(--noise3-secondary-channel)",
+			primaryChannel: "var(--noise3-primary-channel)",
+			secondaryNote: "var(--noise3-secondary-note)",
+			primaryNote: "var(--noise3-primary-note)",
+		}, {
+			name: "noise4",
+			secondaryChannel: "var(--noise4-secondary-channel)",
+			primaryChannel: "var(--noise4-primary-channel)",
+			secondaryNote: "var(--noise4-secondary-note)",
+			primaryNote: "var(--noise4-primary-note)",
+		},
+	]);
+	public static readonly modChannels: DictionaryArray<ChannelColors> = toNameMap([
+		{
+			name: "mod1",
+			secondaryChannel: "var(--mod1-secondary-channel)",
+			primaryChannel: "var(--mod1-primary-channel)",
+			secondaryNote: "var(--mod1-secondary-note)",
+			primaryNote: "var(--mod1-primary-note)",
+		}, {
+			name: "mod2",
+			secondaryChannel: "var(--mod2-secondary-channel)",
+			primaryChannel: "var(--mod2-primary-channel)",
+			secondaryNote: "var(--mod2-secondary-note)",
+			primaryNote: "var(--mod2-primary-note)",
+		}, {
+			name: "mod3",
+			secondaryChannel: "var(--mod3-secondary-channel)",
+			primaryChannel: "var(--mod3-primary-channel)",
+			secondaryNote: "var(--mod3-secondary-note)",
+			primaryNote: "var(--mod3-primary-note)",
+		}, {
+			name: "mod4",
+			secondaryChannel: "var(--mod4-secondary-channel)",
+			primaryChannel: "var(--mod4-primary-channel)",
+			secondaryNote: "var(--mod4-secondary-note)",
+			primaryNote: "var(--mod4-primary-note)",
+		},
+	]);
 
-		public static resetColors() {
-			this.colorLookup.clear();
+	public static resetColors() {
+		this.colorLookup.clear();
+	}
+
+	// Same as below, but won't return var colors
+	public static getComputedChannelColor(song: Song, channel: number): ChannelColors {
+		if (getComputedStyle(this._styleElement).getPropertyValue("--use-color-formula").trim() == "false") {
+			let base: ChannelColors = ColorConfig.getChannelColor(song, channel);
+			// Trim away "var(...)"
+			var regex = /\(([^)]+)\)/;
+			let newChannelSecondary: string = ColorConfig.getComputed((regex.exec(base.secondaryChannel) as RegExpExecArray)[1] as string);
+			let newChannelPrimary: string = ColorConfig.getComputed((regex.exec(base.primaryChannel) as RegExpExecArray)[1] as string);
+			let newNoteSecondary: string = ColorConfig.getComputed((regex.exec(base.secondaryNote) as RegExpExecArray)[1] as string);
+			let newNotePrimary: string = ColorConfig.getComputed((regex.exec(base.primaryNote) as RegExpExecArray)[1] as string);
+			return <ChannelColors>{ secondaryChannel: newChannelSecondary, primaryChannel: newChannelPrimary, secondaryNote: newNoteSecondary, primaryNote: newNotePrimary };
 		}
+		else {
+			return ColorConfig.getChannelColor(song, channel);
+		}
+	};
 
-		// Same as below, but won't return var colors
-		public static getComputedChannelColor(song: Song, channel: number): ChannelColors {
-			if (getComputedStyle(this._styleElement).getPropertyValue("--use-color-formula").trim() == "false") {
-				let base: ChannelColors = ColorConfig.getChannelColor(song, channel);
-				// Trim away "var(...)"
-				var regex = /\(([^)]+)\)/;
-				let newChannelSecondary: string = ColorConfig.getComputed((regex.exec(base.secondaryChannel) as RegExpExecArray)[1] as string);
-				let newChannelPrimary: string = ColorConfig.getComputed((regex.exec(base.primaryChannel) as RegExpExecArray)[1] as string);
-				let newNoteSecondary: string = ColorConfig.getComputed((regex.exec(base.secondaryNote) as RegExpExecArray)[1] as string);
-				let newNotePrimary: string = ColorConfig.getComputed((regex.exec(base.primaryNote) as RegExpExecArray)[1] as string);
-				return <ChannelColors>{ secondaryChannel: newChannelSecondary, primaryChannel: newChannelPrimary, secondaryNote: newNoteSecondary, primaryNote: newNotePrimary };
+	public static getChannelColor(song: Song, channel: number): ChannelColors {
+		if (getComputedStyle(this._styleElement).getPropertyValue("--use-color-formula").trim() == "false") {
+			// Set colors, not defined by formula
+			if (channel < song.pitchChannelCount) {
+				return ColorConfig.pitchChannels[channel % ColorConfig.pitchChannels.length];
+			} else if (channel < song.pitchChannelCount + song.noiseChannelCount) {
+				return ColorConfig.noiseChannels[(channel - song.pitchChannelCount) % ColorConfig.noiseChannels.length];
+			} else {
+				return ColorConfig.modChannels[(channel - song.pitchChannelCount - song.noiseChannelCount) % ColorConfig.modChannels.length];
+			}
+		}
+		else {
+			// Determine if color is cached
+			if (ColorConfig.colorLookup.has(channel)) {
+				return ColorConfig.colorLookup.get(channel) as ChannelColors;
 			}
 			else {
-				return ColorConfig.getChannelColor(song, channel);
-			}
-		};
-
-		public static getChannelColor(song: Song, channel: number): ChannelColors {
-			if (getComputedStyle(this._styleElement).getPropertyValue("--use-color-formula").trim() == "false") {
-				// Set colors, not defined by formula
+				// Formulaic color definition
 				if (channel < song.pitchChannelCount) {
-					return ColorConfig.pitchChannels[channel % ColorConfig.pitchChannels.length];
-				} else if (channel < song.pitchChannelCount + song.noiseChannelCount) {
-					return ColorConfig.noiseChannels[(channel - song.pitchChannelCount) % ColorConfig.noiseChannels.length];
-				} else {
-					return ColorConfig.modChannels[(channel - song.pitchChannelCount - song.noiseChannelCount) % ColorConfig.modChannels.length];
+					// Pitch formula
+					const pitchSecondaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-hue");
+					const pitchSecondaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-hue-scale");
+					const pitchSecondaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-sat");
+					const pitchSecondaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-sat-scale");
+					const pitchSecondaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-lum");
+					const pitchSecondaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-lum-scale");
+					const pitchPrimaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-hue");
+					const pitchPrimaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-hue-scale");
+					const pitchPrimaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-sat");
+					const pitchPrimaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-sat-scale");
+					const pitchPrimaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-lum");
+					const pitchPrimaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-lum-scale");
+					const pitchSecondaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-hue");
+					const pitchSecondaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-hue-scale");
+					const pitchSecondaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-sat");
+					const pitchSecondaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-sat-scale");
+					const pitchSecondaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-lum");
+					const pitchSecondaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-lum-scale");
+					const pitchPrimaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-hue");
+					const pitchPrimaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-hue-scale");
+					const pitchPrimaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-sat");
+					const pitchPrimaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-sat-scale");
+					const pitchPrimaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-lum");
+					const pitchPrimaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-lum-scale");
+
+					let newChannelSecondary: string = "hsl(" + ((+pitchSecondaryChannelHue + (channel * +pitchSecondaryChannelHueScale / Config.pitchChannelCountMax) * 256) % 256) + ","
+						+ (+pitchSecondaryChannelSat * (1 - (+pitchSecondaryChannelSatScale * Math.floor(channel / 7)))) + "%,"
+						+ (+pitchSecondaryChannelLum * (1 - (+pitchSecondaryChannelLumScale * Math.floor(channel / 7)))) + "%)";
+					let newChannelPrimary: string = "hsl(" + ((+pitchPrimaryChannelHue + (channel * +pitchPrimaryChannelHueScale / Config.pitchChannelCountMax) * 256) % 256) + ","
+						+ (+pitchPrimaryChannelSat * (1 - (+pitchPrimaryChannelSatScale * Math.floor(channel / 7)))) + "%,"
+						+ (+pitchPrimaryChannelLum * (1 - (+pitchPrimaryChannelLumScale * Math.floor(channel / 7)))) + "%)";
+					let newNoteSecondary: string = "hsl(" + ((+pitchSecondaryNoteHue + (channel * +pitchSecondaryNoteHueScale / Config.pitchChannelCountMax) * 256) % 256) + ","
+						+ (+pitchSecondaryNoteSat * (1 - (+pitchSecondaryNoteSatScale * Math.floor(channel / 7)))) + "%,"
+						+ (+pitchSecondaryNoteLum * (1 - (+pitchSecondaryNoteLumScale * Math.floor(channel / 7)))) + "%)";
+					let newNotePrimary: string = "hsl(" + ((+pitchPrimaryNoteHue + (channel * +pitchPrimaryNoteHueScale / Config.pitchChannelCountMax) * 256) % 256) + ","
+						+ (+pitchPrimaryNoteSat * (1 - (+pitchPrimaryNoteSatScale * Math.floor(channel / 7)))) + "%,"
+						+ (+pitchPrimaryNoteLum * (1 - (+pitchPrimaryNoteLumScale * Math.floor(channel / 7)))) + "%)";
+
+					let newChannelColors = <ChannelColors>{ secondaryChannel: newChannelSecondary, primaryChannel: newChannelPrimary, secondaryNote: newNoteSecondary, primaryNote: newNotePrimary };
+					ColorConfig.colorLookup.set(channel, newChannelColors);
+					return newChannelColors;
+
 				}
-			}
-			else {
-				// Determine if color is cached
-				if (ColorConfig.colorLookup.has(channel)) {
-					return ColorConfig.colorLookup.get(channel) as ChannelColors;
+				else if (channel < song.pitchChannelCount + song.noiseChannelCount) {
+					// Noise formula
+					const noiseSecondaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-hue");
+					const noiseSecondaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-hue-scale");
+					const noiseSecondaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-sat");
+					const noiseSecondaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-sat-scale");
+					const noiseSecondaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-lum");
+					const noiseSecondaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-lum-scale");
+					const noisePrimaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-hue");
+					const noisePrimaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-hue-scale");
+					const noisePrimaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-sat");
+					const noisePrimaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-sat-scale");
+					const noisePrimaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-lum");
+					const noisePrimaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-lum-scale");
+					const noiseSecondaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-hue");
+					const noiseSecondaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-hue-scale");
+					const noiseSecondaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-sat");
+					const noiseSecondaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-sat-scale");
+					const noiseSecondaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-lum");
+					const noiseSecondaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-lum-scale");
+					const noisePrimaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-hue");
+					const noisePrimaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-hue-scale");
+					const noisePrimaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-sat");
+					const noisePrimaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-sat-scale");
+					const noisePrimaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-lum");
+					const noisePrimaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-lum-scale");
+
+					let newChannelSecondary: string = "hsl(" + ((+noiseSecondaryChannelHue + (((channel - song.pitchChannelCount) * +noiseSecondaryChannelHueScale) / Config.noiseChannelCountMax) * 256) % 256) + ","
+						+ (+noiseSecondaryChannelSat + channel * +noiseSecondaryChannelSatScale) + "%,"
+						+ (+noiseSecondaryChannelLum + channel * +noiseSecondaryChannelLumScale) + "%)";
+					let newChannelPrimary: string = "hsl(" + ((+noisePrimaryChannelHue + (((channel - song.pitchChannelCount) * +noisePrimaryChannelHueScale) / Config.noiseChannelCountMax) * 256) % 256) + ","
+						+ (+noisePrimaryChannelSat + channel * +noisePrimaryChannelSatScale) + "%,"
+						+ (+noisePrimaryChannelLum + channel * +noisePrimaryChannelLumScale) + "%)";
+					let newNoteSecondary: string = "hsl(" + ((+noiseSecondaryNoteHue + (((channel - song.pitchChannelCount) * +noiseSecondaryNoteHueScale) / Config.noiseChannelCountMax) * 256) % 256) + ","
+						+ (+noiseSecondaryNoteSat + channel * +noiseSecondaryNoteSatScale) + "%,"
+						+ (+noiseSecondaryNoteLum + channel * +noiseSecondaryNoteLumScale) + "%)";
+					let newNotePrimary: string = "hsl(" + ((+noisePrimaryNoteHue + (((channel - song.pitchChannelCount) * +noisePrimaryNoteHueScale) / Config.noiseChannelCountMax) * 256) % 256) + ","
+						+ (+noisePrimaryNoteSat + channel * +noisePrimaryNoteSatScale) + "%,"
+						+ (+noisePrimaryNoteLum + channel * +noisePrimaryNoteLumScale) + "%)";
+
+					let newChannelColors = <ChannelColors>{ secondaryChannel: newChannelSecondary, primaryChannel: newChannelPrimary, secondaryNote: newNoteSecondary, primaryNote: newNotePrimary };
+					ColorConfig.colorLookup.set(channel, newChannelColors);
+					return newChannelColors;
 				}
 				else {
-					// Formulaic color definition
-					if (channel < song.pitchChannelCount) {
-						// Pitch formula
-						const pitchSecondaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-hue");
-						const pitchSecondaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-hue-scale");
-						const pitchSecondaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-sat");
-						const pitchSecondaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-sat-scale");
-						const pitchSecondaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-lum");
-						const pitchSecondaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-channel-lum-scale");
-						const pitchPrimaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-hue");
-						const pitchPrimaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-hue-scale");
-						const pitchPrimaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-sat");
-						const pitchPrimaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-sat-scale");
-						const pitchPrimaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-lum");
-						const pitchPrimaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-channel-lum-scale");
-						const pitchSecondaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-hue");
-						const pitchSecondaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-hue-scale");
-						const pitchSecondaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-sat");
-						const pitchSecondaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-sat-scale");
-						const pitchSecondaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-lum");
-						const pitchSecondaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-secondary-note-lum-scale");
-						const pitchPrimaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-hue");
-						const pitchPrimaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-hue-scale");
-						const pitchPrimaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-sat");
-						const pitchPrimaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-sat-scale");
-						const pitchPrimaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-lum");
-						const pitchPrimaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--pitch-primary-note-lum-scale");
+					// Mod formula
+					const modSecondaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-hue");
+					const modSecondaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-hue-scale");
+					const modSecondaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-sat");
+					const modSecondaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-sat-scale");
+					const modSecondaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-lum");
+					const modSecondaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-lum-scale");
+					const modPrimaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-hue");
+					const modPrimaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-hue-scale");
+					const modPrimaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-sat");
+					const modPrimaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-sat-scale");
+					const modPrimaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-lum");
+					const modPrimaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-lum-scale");
+					const modSecondaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-hue");
+					const modSecondaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-hue-scale");
+					const modSecondaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-sat");
+					const modSecondaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-sat-scale");
+					const modSecondaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-lum");
+					const modSecondaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-lum-scale");
+					const modPrimaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-hue");
+					const modPrimaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-hue-scale");
+					const modPrimaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-sat");
+					const modPrimaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-sat-scale");
+					const modPrimaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-lum");
+					const modPrimaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-lum-scale");
 
-						let newChannelSecondary: string = "hsl(" + ((+pitchSecondaryChannelHue + (channel * +pitchSecondaryChannelHueScale / Config.pitchChannelCountMax) * 256) % 256) + ","
-							+ (+pitchSecondaryChannelSat * (1 - (+pitchSecondaryChannelSatScale * Math.floor(channel / 7)))) + "%,"
-							+ (+pitchSecondaryChannelLum * (1 - (+pitchSecondaryChannelLumScale * Math.floor(channel / 7)))) + "%)";
-						let newChannelPrimary: string = "hsl(" + ((+pitchPrimaryChannelHue + (channel * +pitchPrimaryChannelHueScale / Config.pitchChannelCountMax) * 256) % 256) + ","
-							+ (+pitchPrimaryChannelSat * (1 - (+pitchPrimaryChannelSatScale * Math.floor(channel / 7)))) + "%,"
-							+ (+pitchPrimaryChannelLum * (1 - (+pitchPrimaryChannelLumScale * Math.floor(channel / 7)))) + "%)";
-						let newNoteSecondary: string = "hsl(" + ((+pitchSecondaryNoteHue + (channel * +pitchSecondaryNoteHueScale / Config.pitchChannelCountMax) * 256) % 256) + ","
-							+ (+pitchSecondaryNoteSat * (1 - (+pitchSecondaryNoteSatScale * Math.floor(channel / 7)))) + "%,"
-							+ (+pitchSecondaryNoteLum * (1 - (+pitchSecondaryNoteLumScale * Math.floor(channel / 7)))) + "%)";
-						let newNotePrimary: string = "hsl(" + ((+pitchPrimaryNoteHue + (channel * +pitchPrimaryNoteHueScale / Config.pitchChannelCountMax) * 256) % 256) + ","
-							+ (+pitchPrimaryNoteSat * (1 - (+pitchPrimaryNoteSatScale * Math.floor(channel / 7)))) + "%,"
-							+ (+pitchPrimaryNoteLum * (1 - (+pitchPrimaryNoteLumScale * Math.floor(channel / 7)))) + "%)";
+					let newChannelSecondary: string = "hsl(" + ((+modSecondaryChannelHue + (((channel - song.pitchChannelCount - song.noiseChannelCount) * +modSecondaryChannelHueScale) / Config.modChannelCountMax) * 256) % 256) + ","
+						+ (+modSecondaryChannelSat + channel * +modSecondaryChannelSatScale) + "%,"
+						+ (+modSecondaryChannelLum + channel * +modSecondaryChannelLumScale) + "%)";
+					let newChannelPrimary: string = "hsl(" + ((+modPrimaryChannelHue + (((channel - song.pitchChannelCount - song.noiseChannelCount) * +modPrimaryChannelHueScale) / Config.modChannelCountMax) * 256) % 256) + ","
+						+ (+modPrimaryChannelSat + channel * +modPrimaryChannelSatScale) + "%,"
+						+ (+modPrimaryChannelLum + channel * +modPrimaryChannelLumScale) + "%)";
+					let newNoteSecondary: string = "hsl(" + ((+modSecondaryNoteHue + (((channel - song.pitchChannelCount - song.noiseChannelCount) * +modSecondaryNoteHueScale) / Config.modChannelCountMax) * 256) % 256) + ","
+						+ (+modSecondaryNoteSat + channel * +modSecondaryNoteSatScale) + "%,"
+						+ (+modSecondaryNoteLum + channel * +modSecondaryNoteLumScale) + "%)";
+					let newNotePrimary: string = "hsl(" + ((+modPrimaryNoteHue + (((channel - song.pitchChannelCount - song.noiseChannelCount) * +modPrimaryNoteHueScale) / Config.modChannelCountMax) * 256) % 256) + ","
+						+ (+modPrimaryNoteSat + channel * +modPrimaryNoteSatScale) + "%,"
+						+ (+modPrimaryNoteLum + channel * +modPrimaryNoteLumScale) + "%)";
 
-						let newChannelColors = <ChannelColors>{ secondaryChannel: newChannelSecondary, primaryChannel: newChannelPrimary, secondaryNote: newNoteSecondary, primaryNote: newNotePrimary };
-						ColorConfig.colorLookup.set(channel, newChannelColors);
-						return newChannelColors;
-
-					}
-					else if (channel < song.pitchChannelCount + song.noiseChannelCount) {
-						// Noise formula
-						const noiseSecondaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-hue");
-						const noiseSecondaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-hue-scale");
-						const noiseSecondaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-sat");
-						const noiseSecondaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-sat-scale");
-						const noiseSecondaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-lum");
-						const noiseSecondaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-channel-lum-scale");
-						const noisePrimaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-hue");
-						const noisePrimaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-hue-scale");
-						const noisePrimaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-sat");
-						const noisePrimaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-sat-scale");
-						const noisePrimaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-lum");
-						const noisePrimaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-channel-lum-scale");
-						const noiseSecondaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-hue");
-						const noiseSecondaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-hue-scale");
-						const noiseSecondaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-sat");
-						const noiseSecondaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-sat-scale");
-						const noiseSecondaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-lum");
-						const noiseSecondaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-secondary-note-lum-scale");
-						const noisePrimaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-hue");
-						const noisePrimaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-hue-scale");
-						const noisePrimaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-sat");
-						const noisePrimaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-sat-scale");
-						const noisePrimaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-lum");
-						const noisePrimaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--noise-primary-note-lum-scale");
-
-						let newChannelSecondary: string = "hsl(" + ((+noiseSecondaryChannelHue + (((channel - song.pitchChannelCount) * +noiseSecondaryChannelHueScale) / Config.noiseChannelCountMax) * 256) % 256) + ","
-							+ (+noiseSecondaryChannelSat + channel * +noiseSecondaryChannelSatScale) + "%,"
-							+ (+noiseSecondaryChannelLum + channel * +noiseSecondaryChannelLumScale) + "%)";
-						let newChannelPrimary: string = "hsl(" + ((+noisePrimaryChannelHue + (((channel - song.pitchChannelCount) * +noisePrimaryChannelHueScale) / Config.noiseChannelCountMax) * 256) % 256) + ","
-							+ (+noisePrimaryChannelSat + channel * +noisePrimaryChannelSatScale) + "%,"
-							+ (+noisePrimaryChannelLum + channel * +noisePrimaryChannelLumScale) + "%)";
-						let newNoteSecondary: string = "hsl(" + ((+noiseSecondaryNoteHue + (((channel - song.pitchChannelCount) * +noiseSecondaryNoteHueScale) / Config.noiseChannelCountMax) * 256) % 256) + ","
-							+ (+noiseSecondaryNoteSat + channel * +noiseSecondaryNoteSatScale) + "%,"
-							+ (+noiseSecondaryNoteLum + channel * +noiseSecondaryNoteLumScale) + "%)";
-						let newNotePrimary: string = "hsl(" + ((+noisePrimaryNoteHue + (((channel - song.pitchChannelCount) * +noisePrimaryNoteHueScale) / Config.noiseChannelCountMax) * 256) % 256) + ","
-							+ (+noisePrimaryNoteSat + channel * +noisePrimaryNoteSatScale) + "%,"
-							+ (+noisePrimaryNoteLum + channel * +noisePrimaryNoteLumScale) + "%)";
-
-						let newChannelColors = <ChannelColors>{ secondaryChannel: newChannelSecondary, primaryChannel: newChannelPrimary, secondaryNote: newNoteSecondary, primaryNote: newNotePrimary };
-						ColorConfig.colorLookup.set(channel, newChannelColors);
-						return newChannelColors;
-					}
-					else {
-						// Mod formula
-						const modSecondaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-hue");
-						const modSecondaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-hue-scale");
-						const modSecondaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-sat");
-						const modSecondaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-sat-scale");
-						const modSecondaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-lum");
-						const modSecondaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-channel-lum-scale");
-						const modPrimaryChannelHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-hue");
-						const modPrimaryChannelHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-hue-scale");
-						const modPrimaryChannelSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-sat");
-						const modPrimaryChannelSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-sat-scale");
-						const modPrimaryChannelLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-lum");
-						const modPrimaryChannelLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-channel-lum-scale");
-						const modSecondaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-hue");
-						const modSecondaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-hue-scale");
-						const modSecondaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-sat");
-						const modSecondaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-sat-scale");
-						const modSecondaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-lum");
-						const modSecondaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-secondary-note-lum-scale");
-						const modPrimaryNoteHue: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-hue");
-						const modPrimaryNoteHueScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-hue-scale");
-						const modPrimaryNoteSat: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-sat");
-						const modPrimaryNoteSatScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-sat-scale");
-						const modPrimaryNoteLum: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-lum");
-						const modPrimaryNoteLumScale: number = +getComputedStyle(this._styleElement).getPropertyValue("--mod-primary-note-lum-scale");
-
-						let newChannelSecondary: string = "hsl(" + ((+modSecondaryChannelHue + (((channel - song.pitchChannelCount - song.noiseChannelCount) * +modSecondaryChannelHueScale) / Config.modChannelCountMax) * 256) % 256) + ","
-							+ (+modSecondaryChannelSat + channel * +modSecondaryChannelSatScale) + "%,"
-							+ (+modSecondaryChannelLum + channel * +modSecondaryChannelLumScale) + "%)";
-						let newChannelPrimary: string = "hsl(" + ((+modPrimaryChannelHue + (((channel - song.pitchChannelCount - song.noiseChannelCount) * +modPrimaryChannelHueScale) / Config.modChannelCountMax) * 256) % 256) + ","
-							+ (+modPrimaryChannelSat + channel * +modPrimaryChannelSatScale) + "%,"
-							+ (+modPrimaryChannelLum + channel * +modPrimaryChannelLumScale) + "%)";
-						let newNoteSecondary: string = "hsl(" + ((+modSecondaryNoteHue + (((channel - song.pitchChannelCount - song.noiseChannelCount) * +modSecondaryNoteHueScale) / Config.modChannelCountMax) * 256) % 256) + ","
-							+ (+modSecondaryNoteSat + channel * +modSecondaryNoteSatScale) + "%,"
-							+ (+modSecondaryNoteLum + channel * +modSecondaryNoteLumScale) + "%)";
-						let newNotePrimary: string = "hsl(" + ((+modPrimaryNoteHue + (((channel - song.pitchChannelCount - song.noiseChannelCount) * +modPrimaryNoteHueScale) / Config.modChannelCountMax) * 256) % 256) + ","
-							+ (+modPrimaryNoteSat + channel * +modPrimaryNoteSatScale) + "%,"
-							+ (+modPrimaryNoteLum + channel * +modPrimaryNoteLumScale) + "%)";
-
-						let newChannelColors = <ChannelColors>{ secondaryChannel: newChannelSecondary, primaryChannel: newChannelPrimary, secondaryNote: newNoteSecondary, primaryNote: newNotePrimary };
-						ColorConfig.colorLookup.set(channel, newChannelColors);
-						return newChannelColors;
-					}
+					let newChannelColors = <ChannelColors>{ secondaryChannel: newChannelSecondary, primaryChannel: newChannelPrimary, secondaryNote: newNoteSecondary, primaryNote: newNotePrimary };
+					ColorConfig.colorLookup.set(channel, newChannelColors);
+					return newChannelColors;
 				}
 			}
 		}
-
-		private static readonly _styleElement: HTMLStyleElement = document.head.appendChild(HTML.style({ type: "text/css" }));
-
-		public static setTheme(name: string): void {
-			this._styleElement.textContent = this.themes[name];
-			const themeColor = <HTMLMetaElement>document.querySelector("meta[name='theme-color']");
-			if (themeColor != null) {
-				themeColor.setAttribute("content", getComputedStyle(document.documentElement).getPropertyValue('--ui-widget-background'));
-			}
-
-			this.resetColors();
-		}
-
-		public static getComputed(name: string): string {
-			return getComputedStyle(this._styleElement).getPropertyValue(name);
-		}
 	}
+
+	private static readonly _styleElement: HTMLStyleElement = document.head.appendChild(HTML.style({ type: "text/css" }));
+
+	public static setTheme(name: string): void {
+		this._styleElement.textContent = this.themes[name];
+		const themeColor = <HTMLMetaElement>document.querySelector("meta[name='theme-color']");
+		if (themeColor != null) {
+			themeColor.setAttribute("content", getComputedStyle(document.documentElement).getPropertyValue('--ui-widget-background'));
+		}
+
+		this.resetColors();
+	}
+
+	public static getComputed(name: string): string {
+		return getComputedStyle(this._styleElement).getPropertyValue(name);
+	}
+}
 //}

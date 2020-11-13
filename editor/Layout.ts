@@ -1,14 +1,14 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {HTML} from "./html";
-import {ColorConfig} from "./ColorConfig";
+import { HTML } from "./html";
+import { ColorConfig } from "./ColorConfig";
 
 //namespace beepbox {
-	export class Layout {
-		private static readonly _normalLayout: string = `
+export class Layout {
+	private static readonly _normalLayout: string = `
 		`;
 
-		private static readonly _wideFullScreenLayout: string = `
+	private static readonly _wideFullScreenLayout: string = `
 			/* wide full screen (jummbox) */
 			@media (min-width: 1001px) {
 				#beepboxEditorContainer {
@@ -66,8 +66,8 @@ import {ColorConfig} from "./ColorConfig";
 
 			}
 		`;
-		
-		private static readonly _fullScreenLayout: string = `
+
+	private static readonly _fullScreenLayout: string = `
 			/* full screen (beepbox) */
 			@media (min-width: 701px) {
 				#beepboxEditorContainer {
@@ -149,21 +149,21 @@ import {ColorConfig} from "./ColorConfig";
 				}
 			}
 		`;
-		
-		private static readonly _styleElement: HTMLStyleElement = document.head.appendChild(HTML.style({type: "text/css"}));
-		
-		public static setFullScreen(layout: string): void {
-			switch (layout) {
-				case "normal":
-					this._styleElement.textContent = this._normalLayout;
-					break;
-				case "fullscreen":
-					this._styleElement.textContent = this._fullScreenLayout;
-					break;
-				case "widefullscreen":
-					this._styleElement.textContent = this._wideFullScreenLayout;
-					break;
-			}
+
+	private static readonly _styleElement: HTMLStyleElement = document.head.appendChild(HTML.style({ type: "text/css" }));
+
+	public static setFullScreen(layout: string): void {
+		switch (layout) {
+			case "normal":
+				this._styleElement.textContent = this._normalLayout;
+				break;
+			case "fullscreen":
+				this._styleElement.textContent = this._fullScreenLayout;
+				break;
+			case "widefullscreen":
+				this._styleElement.textContent = this._wideFullScreenLayout;
+				break;
 		}
 	}
+}
 //}

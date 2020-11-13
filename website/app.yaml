@@ -52,6 +52,11 @@ handlers:
   upload: (.*\.js)
   mime_type: application/javascript; charset=utf-8
 
+- url: /(.*\.js.map)
+  static_files: \1
+  upload: (.*\.js.map)
+  mime_type: application/json; charset=utf-8
+
 - url: /
   static_files: index.html
   upload: index\.html
