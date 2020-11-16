@@ -443,7 +443,7 @@ export class SongEditor {
 	private readonly _vibratoDelaySlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: this._doc.song.mstMaxVols.get(ModSetting.mstVibratoDelay), value: "0", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeVibratoDelay(this._doc, oldValue, newValue), false);
 	private readonly _vibratoDelayRow: HTMLElement = div({ className: "selectRow" }, span({ class: "tip", style: "margin-left:10px;", onclick: () => this._openPrompt("vibratoDelay") }, "Delay:"), this._vibratoDelaySlider.container);
 	private readonly _vibratoTypeSelect: HTMLSelectElement = buildOptions(select(), Config.vibratoTypes.map(vibrato => vibrato.name));
-	private readonly _vibratoTypeSelectRow: HTMLElement = div({ className: "selectRow" }, span({ class: "tip", style: "margin-left:10px;", onclick: () => this._openPrompt("vibrato") }, "Type:"), div({ className: "selectContainer", style: "width: 61.5%;" }, this._vibratoTypeSelect));
+	private readonly _vibratoTypeSelectRow: HTMLElement = div({ className: "selectRow" }, span({ class: "tip", style: "margin-left:10px;", onclick: () => this._openPrompt("vibratoType") }, "Type:"), div({ className: "selectContainer", style: "width: 61.5%;" }, this._vibratoTypeSelect));
 	private readonly _vibratoDropdownGroup: HTMLElement = div({ className: "editor-controls" }, this._vibratoDepthRow, this._vibratoSpeedRow, this._vibratoDelayRow, this._vibratoTypeSelectRow);
 	private readonly _phaseModGroup: HTMLElement = div({ className: "editor-controls" });
 	private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select(), Config.feedbacks.map(feedback => feedback.name));
