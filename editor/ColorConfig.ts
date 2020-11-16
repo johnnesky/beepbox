@@ -2,7 +2,7 @@
 
 import {BeepBoxOption, DictionaryArray, toNameMap} from "../synth/SynthConfig";
 import {Song} from "../synth/synth";
-import {HTML} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 
 //namespace beepbox {
 	export interface ChannelColors extends BeepBoxOption {

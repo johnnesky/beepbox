@@ -5,7 +5,7 @@ import {NotePin, Note, makeNotePin, Pattern, Instrument, Channel, Song, Synth} f
 import {Preset, EditorConfig} from "./EditorConfig";
 import {SongDocument, StateChangeType} from "./SongDocument";
 import {Prompt} from "./Prompt";
-import {HTML} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {ChangeGroup} from "./Change";
 import {removeDuplicatePatterns, ChangeSong, ChangeReplacePatterns} from "./changes";
 import {AnalogousDrum, analogousDrumMap, MidiChunkType, MidiFileFormat, MidiEventType, MidiControlEventMessage, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, midiVolumeToVolumeMult, midiExpressionToVolumeMult} from "./Midi";

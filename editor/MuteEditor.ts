@@ -1,7 +1,7 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 import {SongDocument} from "./SongDocument";
-import {HTML} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 
 //namespace beepbox {
 	export class MuteEditor {

@@ -9,8 +9,10 @@ npx rollup build/synth/synth.js \
 	--file website/beepbox_synth.js \
 	--format iife \
 	--output.name beepbox \
+	--context exports \
 	--sourcemap \
-	--plugin rollup-plugin-sourcemaps
+	--plugin rollup-plugin-sourcemaps \
+	--plugin @rollup/plugin-node-resolve
 
 # Minify website/beepbox_synth.js into website/beepbox_synth.min.js
 npx terser \

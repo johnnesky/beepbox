@@ -6,7 +6,7 @@ import {ColorConfig} from "./ColorConfig";
 import {Preset, EditorConfig} from "./EditorConfig";
 import {SongDocument} from "./SongDocument";
 import {Prompt} from "./Prompt";
-import {HTML} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {ArrayBufferWriter} from "./ArrayBufferWriter";
 import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, volumeMultToMidiVolume, volumeMultToMidiExpression, defaultMidiPitchBend, defaultMidiExpression} from "./Midi";
 

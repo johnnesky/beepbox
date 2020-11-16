@@ -4,9 +4,10 @@ import {Chord, Config} from "../synth/SynthConfig";
 import {NotePin, Note, makeNotePin, Pattern, Instrument} from "../synth/synth";
 import {ColorConfig} from "./ColorConfig";
 import {SongDocument} from "./SongDocument";
-import {HTML, SVG, prettyNumber} from "./html";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 import {ChangeSequence, UndoableChange} from "./Change";
 import {ChangeChannelBar, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePinTime, ChangeVolumeBend, ChangePitchBend, ChangePitchAdded} from "./changes";
+import {prettyNumber} from "./EditorConfig";
 
 //namespace beepbox {
 	function makeEmptyReplacementElement<T extends Node>(node: T): T {

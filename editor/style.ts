@@ -1,7 +1,7 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 import {ColorConfig} from "./ColorConfig";
-import {HTML} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 
 
 // Determine if the user's browser/OS adds scrollbars that occupy space.

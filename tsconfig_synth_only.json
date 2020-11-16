@@ -4,6 +4,7 @@
 		"rootDir": "./",
 		"outDir": "build",
 		"target": "es6",
+		"moduleResolution": "node",
 		"sourceMap": true,
 		"removeComments": true,
 		"noImplicitAny": true,

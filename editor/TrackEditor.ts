@@ -5,7 +5,7 @@ import {Note, Pattern} from "../synth/synth";
 import {ColorConfig, ChannelColors} from "./ColorConfig";
 import {isMobile} from "./EditorConfig";
 import {SongDocument, StateChangeType} from "./SongDocument";
-import {HTML, SVG} from "./html";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 import {ChangeGroup} from "./Change";
 import {ChangeChannelBar, ChangePatternNumbers, ChangeInsertBars, ChangeDeleteBars, ChangeEnsurePatternExists, ChangePaste, ChangePatternInstrument, ChangePatternsPerChannel, ChangePatternRhythm, ChangePatternScale, ChangeTranspose, comparePatternNotes, unionOfUsedNotes, generateScaleMap} from "./changes";
 

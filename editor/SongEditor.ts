@@ -1,11 +1,11 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 import {InstrumentType, Config} from "../synth/SynthConfig";
-import {Preset, PresetCategory, EditorConfig, isMobile} from "./EditorConfig";
+import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
 import {Pattern, Instrument, Channel} from "../synth/synth";
-import {HTML, prettyNumber} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {SongDocument, StateChangeType} from "./SongDocument";
 import {Prompt} from "./Prompt";
 import {TipPrompt} from "./TipPrompt";

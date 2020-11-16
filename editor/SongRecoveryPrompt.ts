@@ -3,7 +3,7 @@
 import {SongDocument} from "./SongDocument";
 import {RecoveredSong, RecoveredVersion, SongRecovery, versionToKey} from "./SongRecovery";
 import {Prompt} from "./Prompt";
-import {HTML} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 
 //namespace beepbox {
 	const {button, div, h2, p, select, option, iframe} = HTML;

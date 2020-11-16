@@ -46,7 +46,7 @@ import {Song} from "../synth/synth";
 	}
 		
 	export class SongRecovery {
-		private _saveVersionTimeoutHandle: number = 0;
+		private _saveVersionTimeoutHandle: ReturnType<typeof setTimeout>;
 		
 		private _song: Song = new Song();
 		

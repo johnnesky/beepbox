@@ -1,7 +1,7 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 import {Config} from "../synth/SynthConfig";
-import {HTML} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {SongDocument, StateChangeType} from "./SongDocument";
 import {Prompt} from "./Prompt";
 import {ChangeMoveNotesSideways} from "./changes";

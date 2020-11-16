@@ -2,7 +2,7 @@
 
 import {Config} from "../synth/SynthConfig";
 import {SongDocument, StateChangeType} from "./SongDocument";
-import {HTML, SVG} from "./html";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 import {ChangeOctave} from "./changes";
 import {ColorConfig} from "./ColorConfig";
 

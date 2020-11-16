@@ -1,24 +1,29 @@
 {
-  "name": "BeepBox",
-  "version": "3.0.9",
-  "description": "BeepBox is an online tool for sketching and sharing instrumental melodies.",
-  "author": "John Nesky",
-  "license": "MIT",
-  "homepage": "https://www.beepbox.co",
-  "scripts": {
-    "build": "npm run build-synth && npm run build-player && npm run build-editor",
-    "build-synth": "./compile_beepbox_synth.sh",
-    "build-player": "./compile_beepbox_player.sh",
-    "build-editor": "./compile_beepbox_editor.sh"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://johnnesky@github.com/johnnesky/beepbox.git"
-  },
-  "dependencies": {
-    "rollup": "^2.29.0",
-    "rollup-plugin-sourcemaps": "^0.6.3",
-    "terser": "^5.3.4",
-    "typescript": "^4.0.3"
-  }
+	"name": "BeepBox",
+	"version": "3.0.9",
+	"description": "BeepBox is an online tool for sketching and sharing instrumental melodies.",
+	"author": "John Nesky",
+	"license": "MIT",
+	"homepage": "https://www.beepbox.co",
+	"type": "module",
+	"scripts": {
+		"build": "npm run build-synth && npm run build-player && npm run build-editor",
+		"build-synth": "./compile_beepbox_synth.sh",
+		"build-player": "./compile_beepbox_player.sh",
+		"build-editor": "./compile_beepbox_editor.sh"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://johnnesky@github.com/johnnesky/beepbox.git"
+	},
+	"devDependencies": {
+		"@rollup/plugin-node-resolve": "^9.0.0",
+		"rollup": "^2.32.1",
+		"rollup-plugin-sourcemaps": "^0.6.3",
+		"terser": "^5.3.8",
+		"typescript": "^4.0.3"
+	},
+	"dependencies": {
+		"imperative-html": "^0.1.0"
+	}
 }

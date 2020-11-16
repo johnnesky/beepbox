@@ -6,7 +6,7 @@ import {DictionaryArray, BeepBoxOption, InstrumentType, toNameMap} from "../synt
 	export interface PresetCategory extends BeepBoxOption {
 		readonly presets: DictionaryArray<Preset>;
 	}
-
+	
 	export interface Preset extends BeepBoxOption {
 		readonly isNoise?: boolean;
 		readonly generalMidi?: boolean;
@@ -15,8 +15,12 @@ import {DictionaryArray, BeepBoxOption, InstrumentType, toNameMap} from "../synt
 		readonly customType?: InstrumentType;
 		readonly settings?: any;
 	}
-
+	
 	export const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
+	
+	export function prettyNumber(value: number): string {
+		return value.toFixed(2).replace(/\.?0*$/, "");
+	}
 	
 	export class EditorConfig {
 		public static readonly version: string = "3.0.9";

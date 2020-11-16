@@ -3,9 +3,10 @@
 import {Config} from "../synth/SynthConfig";
 import {HarmonicsWave, Instrument} from "../synth/synth";
 import {SongDocument} from "./SongDocument";
-import {HTML, SVG, prettyNumber} from "./html";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 import {ColorConfig} from "./ColorConfig";
 import {ChangeHarmonics} from "./changes";
+import {prettyNumber} from "./EditorConfig";
 
 //namespace beepbox {
 	export class HarmonicsEditor {

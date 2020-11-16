@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {HTML} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {ColorConfig} from "./ColorConfig";
 
 //namespace beepbox {

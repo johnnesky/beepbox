@@ -2,7 +2,7 @@
 
 import {Config} from "../synth/SynthConfig";
 import {SongDocument} from "./SongDocument";
-import {HTML} from "./html";
+import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {ColorConfig} from "./ColorConfig";
 
 //namespace beepbox {
