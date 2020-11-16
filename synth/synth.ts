@@ -4362,9 +4362,17 @@ export class Synth {
 						let instrument: Instrument = this.song.channels[channel].instruments[instrumentIdx];
 						let useArpeggioSpeed: number = instrument.arpeggioSpeed;
 						if (this.isModActive(ModSetting.mstArpeggioSpeed, false, channel, instrumentIdx)) {
-							useArpeggioSpeed = Math.round(this.getModValue(ModSetting.mstArpeggioSpeed, false, channel, instrumentIdx, false));
+							useArpeggioSpeed = this.getModValue(ModSetting.mstArpeggioSpeed, false, channel, instrumentIdx, false);
+							if (Number.isInteger(useArpeggioSpeed)) {
+								instrument.arpTime += Config.arpSpeedScale[useArpeggioSpeed];
+							} else {
+								// Linear interpolate arpeggio values
+								instrument.arpTime += (1 - (useArpeggioSpeed % 1)) * Config.arpSpeedScale[Math.floor(useArpeggioSpeed)] + (useArpeggioSpeed % 1) * Config.arpSpeedScale[Math.ceil(useArpeggioSpeed)];
+							}
 						}
-						instrument.arpTime += Config.arpSpeedScale[useArpeggioSpeed];
+						else {
+							instrument.arpTime += Config.arpSpeedScale[useArpeggioSpeed];
+						}
 					}
 				}
 
