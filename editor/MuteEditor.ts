@@ -232,9 +232,10 @@ export class MuteEditor {
 				break;
 			}
 		}
+		if (this._channelDropDown.value != "rename")
+			this._editor.refocusStage();
 
 		this._channelDropDown.selectedIndex = -1;
-		this._editor.refocusStage();
 	}
 
 	private _onClick = (event: MouseEvent): void => {
