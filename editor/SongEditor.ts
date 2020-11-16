@@ -298,7 +298,7 @@ export class SongEditor {
 	private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc, true, 0);
 	private readonly _patternEditorNext: PatternEditor = new PatternEditor(this._doc, false, 1);
 	private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc, this);
-	private readonly _muteEditor: MuteEditor = new MuteEditor(this._doc);
+	private readonly _muteEditor: MuteEditor = new MuteEditor(this._doc, this);
 	private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
 	private readonly _piano: Piano = new Piano(this._doc);
 	private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc, this._piano);
@@ -759,7 +759,7 @@ export class SongEditor {
 		for (let i: number = Config.drumCount - 1; i >= 0; i--) {
 			const drumIndex: number = i;
 			const spectrumEditor: SpectrumEditor = new SpectrumEditor(this._doc, drumIndex);
-			spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
+			spectrumEditor.container.addEventListener("mousedown", this.refocusStage);
 			this._drumsetSpectrumEditors[i] = spectrumEditor;
 
 			const envelopeSelect: HTMLSelectElement = buildOptions(select({ style: "width: 100%;", title: "Filter Envelope" }), Config.envelopes.map(envelope => envelope.name));
@@ -837,7 +837,7 @@ export class SongEditor {
 		this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
 		this._volumeSlider.input.addEventListener("input", this._setVolumeSlider);
 		this._patternArea.addEventListener("mousedown", this._refocusStageNotEditing);
-		this._trackArea.addEventListener("mousedown", this._refocusStage);
+		this._trackArea.addEventListener("mousedown", this.refocusStage);
 
 		// The song volume slider is styled slightly different than the class' default.
 		this._volumeSlider.container.style.setProperty("flex-grow", "1");
@@ -866,9 +866,9 @@ export class SongEditor {
 			this._modSetBoxes[mod].addEventListener("change", function () { thisRef._whenSetModSetting(mod); });
 		}
 
-		this._patternArea.addEventListener("mousedown", this._refocusStage);
-		this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
-		this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
+		this._patternArea.addEventListener("mousedown", this.refocusStage);
+		this._spectrumEditor.container.addEventListener("mousedown", this.refocusStage);
+		this._harmonicsEditor.container.addEventListener("mousedown", this.refocusStage);
 		this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
 		this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
 		this.mainLayer.addEventListener("keyup", this._whenKeyUp);
@@ -1102,7 +1102,7 @@ export class SongEditor {
 			this._promptContainer.removeChild(this.prompt.container);
 			this.prompt.cleanUp();
 			this.prompt = null;
-			this._refocusStage();
+			this.refocusStage();
 		}
 
 		if (promptName) {
@@ -1156,14 +1156,14 @@ export class SongEditor {
 		}
 	}
 
-	private _refocusStage = (): void => {
+	public refocusStage = (): void => {
 		this.mainLayer.focus({ preventScroll: true });
 	}
 
 	// Refocus stage if a sub-element that needs focus isn't being edited.
 	private _refocusStageNotEditing = (): void => {
 		if (!this._patternEditor.editingModLabel)
-			this.mainLayer.focus();
+			this.mainLayer.focus({ preventScroll: true });
 	}
 
 	public changeBarScrollPos(offset: number) {
@@ -1952,7 +1952,7 @@ export class SongEditor {
 		// If an interface element was selected, but becomes invisible (e.g. an instrument
 		// select menu) just select the editor container so keyboard commands still work.
 		if (wasActive && activeElement != null && activeElement.clientWidth == 0) {
-			this._refocusStage();
+			this.refocusStage();
 		}
 
 		this._setPrompt(this._doc.prompt);
@@ -2266,7 +2266,7 @@ export class SongEditor {
 		textField.select();
 		const succeeded: boolean = document.execCommand("copy");
 		textField.remove();
-		this._refocusStage();
+		this.refocusStage();
 		if (!succeeded) window.prompt("Copy this:", text);
 	}
 
@@ -2354,7 +2354,7 @@ export class SongEditor {
 		const instrumentCopy: any = instrument.toJsonObject();
 		instrumentCopy["isDrum"] = this._doc.song.getChannelIsNoise(this._doc.channel);
 		window.localStorage.setItem("instrumentCopy", JSON.stringify(instrumentCopy));
-		this._refocusStage();
+		this.refocusStage();
 	}
 
 	private _pasteInstrument(): void {
@@ -2364,7 +2364,7 @@ export class SongEditor {
 		if (instrumentCopy != null && instrumentCopy["isDrum"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
 			this._doc.record(new ChangePasteInstrument(this._doc, instrument, instrumentCopy));
 		}
-		this._refocusStage();
+		this.refocusStage();
 	}
 
 	private _randomPreset(): void {

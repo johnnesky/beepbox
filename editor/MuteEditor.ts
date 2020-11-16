@@ -6,6 +6,7 @@ import { ColorConfig } from "./ColorConfig";
 import { InputBox } from "./HTMLWrapper";
 import { ChangeChannelOrder, ChangeChannelName, ChangeChannelCount } from "./changes";
 import { Config } from "../synth/SynthConfig";
+import { SongEditor } from "./SongEditor";
 
 //namespace beepbox {
 export class MuteEditor {
@@ -37,7 +38,7 @@ export class MuteEditor {
 	private _channelDropDownOpen: boolean = false;
 	private _channelDropDownLastState: boolean = false;
 
-	constructor(private _doc: SongDocument) {
+	constructor(private _doc: SongDocument, private _editor: SongEditor) {
 		this.container.addEventListener("click", this._onClick);
 		this.container.addEventListener("mousemove", this._onMouseMove);
 		this.container.addEventListener("mouseleave", this._onMouseLeave);
@@ -233,6 +234,7 @@ export class MuteEditor {
 		}
 
 		this._channelDropDown.selectedIndex = -1;
+		this._editor.refocusStage();
 	}
 
 	private _onClick = (event: MouseEvent): void => {
