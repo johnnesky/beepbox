@@ -576,6 +576,7 @@ export class Instrument {
 	public feedbackAmplitude: number = 0;
 	public feedbackEnvelope: number = 1;
 	public LFOtime: number = 0;
+	public nextLFOtime: number = 0;
 	public arpTime: number = 0;
 	public customChipWave: Float64Array = new Float64Array(64);
 	public customChipWaveIntegral: Float64Array = new Float64Array(65); // One extra element for wrap-around in chipSynth.
@@ -1318,6 +1319,7 @@ export class Instrument {
 
 	public warmUp(): void {
 		this.LFOtime = 0;
+		this.nextLFOtime = 0;
 		this.arpTime = 0;
 		if (this.type == InstrumentType.noise) {
 			getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
@@ -4175,6 +4177,38 @@ export class Synth {
 				reverb = Math.pow(this.getModValue(ModSetting.mstReverb, true) / Config.reverbRange, 0.667) * 0.425;
 			}
 
+			// Update LFO time for instruments (used to be deterministic based on bar position but now vibrato/arp speed messes that up!)
+
+			const tickSampleCountdown: number = this.tickSampleCountdown;
+			const startRatio: number = 1.0 - (tickSampleCountdown) / samplesPerTick;
+			const endRatio: number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
+			const ticksIntoBar: number = (this.beat * Config.partsPerBeat + this.part) * Config.ticksPerPart + this.tick;
+			const partTimeTickStart: number = (ticksIntoBar) / Config.ticksPerPart;
+			const partTimeTickEnd: number = (ticksIntoBar + 1) / Config.ticksPerPart;
+			const partTimeStart: number = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * startRatio;
+			const partTimeEnd: number = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * endRatio;
+
+			for (let channel: number = 0; channel < this.song.pitchChannelCount + this.song.noiseChannelCount; channel++) {
+				for (let instrumentIdx: number = 0; instrumentIdx < this.song.instrumentsPerChannel; instrumentIdx++) {
+					let instrument: Instrument = this.song.channels[channel].instruments[instrumentIdx];
+					let useVibratoSpeed: number = instrument.vibratoSpeed;
+
+					instrument.LFOtime = instrument.nextLFOtime;
+
+					if (this.isModActive(ModSetting.mstVibratoSpeed, false, channel, instrumentIdx)) {
+						useVibratoSpeed = this.getModValue(ModSetting.mstVibratoSpeed, false, channel, instrumentIdx, false);
+					}
+
+					if (useVibratoSpeed == 0) {
+						instrument.LFOtime = 0;
+						instrument.nextLFOtime = 0;
+					}
+					else {
+						instrument.nextLFOtime += useVibratoSpeed * 0.1 * (partTimeEnd - partTimeStart);
+					}
+				}
+			}
+
 			for (let channel: number = 0; channel < this.song.pitchChannelCount + this.song.noiseChannelCount; channel++) {
 
 				if (channel == this.liveInputChannel) {
@@ -4455,7 +4489,7 @@ export class Synth {
 			// I figured this modulo math probably doesn't have to happen every LFO tick.
 			for (let channel: number = 0; channel < this.song.pitchChannelCount; channel++) {
 				for (let instrument of this.song.channels[channel].instruments) {
-					instrument.LFOtime = (instrument.LFOtime % (Config.vibratoTypes[instrument.vibratoType].period / (Config.ticksPerPart * samplesPerTick / this.samplesPerSecond)));
+					instrument.nextLFOtime = (instrument.nextLFOtime % (Config.vibratoTypes[instrument.vibratoType].period / (Config.ticksPerPart * samplesPerTick / this.samplesPerSecond)));
 					instrument.arpTime = (instrument.arpTime % (4 * Config.ticksPerArpeggio));
 				}
 			}
@@ -5171,21 +5205,7 @@ export class Synth {
 		if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.customChipWave) {
 
 			const lfoEffectStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * instrument.LFOtime);
-
-			// Update LFO time for instruments (used to be deterministic based on bar position but now vibrato/arp speed messes that up!)
-			let useVibratoSpeed: number = instrument.vibratoSpeed;
-			if (synth.isModActive(ModSetting.mstVibratoSpeed, false, channel, instrumentIdx)) {
-				useVibratoSpeed = synth.getModValue(ModSetting.mstVibratoSpeed, false, channel, instrumentIdx, false);
-			}
-
-			if (useVibratoSpeed == 0) {
-				instrument.LFOtime = 0;
-			}
-			else {
-				instrument.LFOtime += useVibratoSpeed * 0.1 * (partTimeEnd - partTimeStart);
-			}
-
-			const lfoEffectEnd: number = Synth.getLFOAmplitude(instrument, secondsPerPart * instrument.LFOtime);
+			const lfoEffectEnd: number = Synth.getLFOAmplitude(instrument, secondsPerPart * instrument.nextLFOtime);
 
 			let useVibratoStart: number = instrument.vibratoDepth;
 			let useVibratoEnd: number = instrument.vibratoDepth;
