@@ -2243,6 +2243,7 @@ export class SongEditor {
 				break;
 			case 187: // +
 			case 61: // Firefox +
+			case 171: // Some users have this as +? Hmm.
 				this._trackEditor.transpose(true, event.shiftKey || event.ctrlKey);
 				event.preventDefault();
 				break;

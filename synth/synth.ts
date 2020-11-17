@@ -2153,6 +2153,7 @@ export class Song {
 		let command: number;
 		let channel: number;
 		let useSlowerArpSpeed: boolean = false;
+		let useFastTwoNoteArp: boolean = false;
 		while (charIndex < compressed.length) switch (command = compressed.charCodeAt(charIndex++)) {
 			case SongTagCode.songTitle: {
 				// Length of song name string
@@ -2281,8 +2282,12 @@ export class Song {
 				// Port all arpeggio speeds over to match what they were, before arpeggio speed was decoupled from rhythm.
 				if (variant == "jummbox" && beforeThree || variant == "beepbox") {
 					// These are all the rhythms that had 4 ticks/arpeggio instead of 3.
-					if (this.rhythm == 2 || this.rhythm == 4) {
+					if (this.rhythm == 0 || this.rhythm == 2) {
 						useSlowerArpSpeed = true;
+					}
+					// Use faster two note arp on these rhythms
+					if (this.rhythm >= 2) {
+						useFastTwoNoteArp = true;
 					}
 				}
 			} break;
@@ -2312,6 +2317,9 @@ export class Song {
 				instrument.setTypeAndReset(instrumentType, instrumentChannelIterator >= this.pitchChannelCount && instrumentChannelIterator < this.pitchChannelCount + this.noiseChannelCount, instrumentChannelIterator >= this.pitchChannelCount + this.noiseChannelCount);
 				if (useSlowerArpSpeed) {
 					instrument.arpeggioSpeed = 9; // x3/4 speed. This used to be tied to rhythm, but now it is decoupled to each instrument's arp speed slider. This flag gets set when importing older songs to keep things consistent.
+				}
+				if (useFastTwoNoteArp) {
+					instrument.fastTwoNoteArp = true;
 				}
 			} break;
 			case SongTagCode.preset: {
@@ -3170,7 +3178,7 @@ export class Song {
 
 				for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 					const instrument: Instrument = channel.instruments[i];
-					instrument.fromJsonObject(channelObject["instruments"][i], isNoiseChannel, isModChannel, this.rhythm == 2 || this.rhythm == 4, this.rhythm >= 2);
+					instrument.fromJsonObject(channelObject["instruments"][i], isNoiseChannel, isModChannel, this.rhythm == 0 || this.rhythm == 2, this.rhythm >= 2);
 				}
 
 				for (let i: number = 0; i < this.patternsPerChannel; i++) {

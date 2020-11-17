@@ -382,7 +382,7 @@ export class ChangePreset extends Change {
 					const tempVolume: number = instrument.volume;
 					const tempPan: number = instrument.pan;
 					const tempPanDelay: number = instrument.panDelay;
-					instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel), doc.song.getChannelIsMod(doc.channel), doc.song.rhythm == 2 || doc.song.rhythm == 4, doc.song.rhythm >= 2);
+					instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel), doc.song.getChannelIsMod(doc.channel), doc.song.rhythm == 0 || doc.song.rhythm == 2, doc.song.rhythm >= 2);
 					instrument.volume = tempVolume;
 					instrument.pan = tempPan;
 					instrument.panDelay = tempPanDelay;
@@ -970,7 +970,7 @@ export class ChangeChannelCount extends Change {
 							const instrument: Instrument = new Instrument(isNoise, isMod);
 							const presetValue: number = pickRandomPresetValue(isNoise);
 							const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
-							instrument.fromJsonObject(preset.settings, isNoise, isMod, doc.song.rhythm == 2 || doc.song.rhythm == 4, doc.song.rhythm >= 2);
+							instrument.fromJsonObject(preset.settings, isNoise, isMod, doc.song.rhythm == 0 || doc.song.rhythm == 2, doc.song.rhythm >= 2);
 							instrument.preset = presetValue;
 							newChannels[channel].instruments[j] = instrument;
 						}
@@ -1404,7 +1404,7 @@ export class ChangeInstrumentsPerChannel extends Change {
 						// Drumsets are kinda expensive in terms of url length, so don't just copy them willy-nilly.
 						newInstrument.setTypeAndReset(InstrumentType.spectrum, true, false);
 					} else {
-						newInstrument.fromJsonObject(sampleInstrumentJson, doc.song.getChannelIsNoise(channel), doc.song.getChannelIsMod(channel), doc.song.rhythm == 2 || doc.song.rhythm == 4, doc.song.rhythm >= 2);
+						newInstrument.fromJsonObject(sampleInstrumentJson, doc.song.getChannelIsNoise(channel), doc.song.getChannelIsMod(channel), doc.song.rhythm == 0 || doc.song.rhythm == 2, doc.song.rhythm >= 2);
 					}
 					doc.song.channels[channel].instruments[j] = newInstrument;
 				}
@@ -2188,7 +2188,7 @@ export function setDefaultInstruments(song: Song): void {
 			const isMod: boolean = song.getChannelIsMod(channelIndex);
 			const presetValue: number = (channelIndex == song.pitchChannelCount) ? EditorConfig.nameToPresetValue(Math.random() > 0.5 ? "chip noise" : "standard drumset")! : pickRandomPresetValue(isNoise);
 			const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
-			instrument.fromJsonObject(preset.settings, isNoise, isMod, song.rhythm == 2 || song.rhythm == 4, song.rhythm >= 2);
+			instrument.fromJsonObject(preset.settings, isNoise, isMod, song.rhythm == 0 || song.rhythm == 2, song.rhythm >= 2);
 			instrument.preset = presetValue;
 		}
 	}
