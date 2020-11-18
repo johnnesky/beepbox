@@ -64,7 +64,7 @@ The build process outputs JavaScript files into this folder.
 
 Most of the dependencies are listed in [package.json](package.json), although
 I'd like to note that BeepBox also has an indirect, optional dependency on
-[lamejs](https://github.com/zhuker/lamejs) via
+[lamejs](https://www.npmjs.com/package/lamejs) via
 [jsdelivr](https://www.jsdelivr.com/) for exporting .mp3 files. If the user
 attempts to export an .mp3 file, BeepBox will direct the browser to download
 that dependency on demand.
