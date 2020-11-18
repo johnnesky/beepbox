@@ -17,10 +17,10 @@ import {ColorConfig} from "./ColorConfig";
 			option({value: "end"},       "Apply change at end of song."),
 			option({value: "beginning"}, "Apply change at beginning of song."),
 		);
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
-		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, "Okay");
+		private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
+		private readonly _okayButton: HTMLButtonElement = button({class: "okayButton", style: "width:45%;"}, "Okay");
 		
-		public readonly container: HTMLDivElement = div({className: "prompt noSelection", style: "width: 250px;"},
+		public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 250px;"},
 			h2("Song Length"),
 			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 				div({style: "display: inline-block; text-align: right;"},
@@ -31,7 +31,7 @@ import {ColorConfig} from "./ColorConfig";
 				this._barsStepper,
 			),
 			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-				div({className: "selectContainer", style: "width: 100%;"}, this._positionSelect),
+				div({class: "selectContainer", style: "width: 100%;"}, this._positionSelect),
 			),
 			div({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
 				this._okayButton,

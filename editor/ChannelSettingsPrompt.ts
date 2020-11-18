@@ -15,10 +15,10 @@ import {ChangePatternsPerChannel, ChangeInstrumentsPerChannel, ChangeChannelCoun
 		private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _pitchChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 		private readonly _drumChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
-		private readonly _okayButton: HTMLButtonElement = button({className: "okayButton", style: "width:45%;"}, "Okay");
+		private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
+		private readonly _okayButton: HTMLButtonElement = button({class: "okayButton", style: "width:45%;"}, "Okay");
 		
-		public readonly container: HTMLDivElement = div({className: "prompt noSelection", style: "width: 250px;"},
+		public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 250px;"},
 			h2("Channel Settings"),
 			div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 				"Pitch channels:",

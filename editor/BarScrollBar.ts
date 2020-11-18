@@ -23,7 +23,7 @@ import {ColorConfig} from "./ColorConfig";
 			this._rightHighlight,
 		);
 		
-		public readonly container: HTMLElement = HTML.div({className: "barScrollBar", style: "width: 512px; height: 20px; overflow: hidden; position: relative;"}, this._svg);
+		public readonly container: HTMLElement = HTML.div({class: "barScrollBar", style: "width: 512px; height: 20px; overflow: hidden; position: relative;"}, this._svg);
 		
 		private _mouseX: number = 0;
 		//private _mouseY: number = 0;

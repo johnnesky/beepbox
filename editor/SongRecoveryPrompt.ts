@@ -10,9 +10,9 @@ import {HTML} from "imperative-html/dist/esm/elements-strict";
 	
 	export class SongRecoveryPrompt implements Prompt {
 		private readonly _songContainer: HTMLDivElement = div();
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
+		private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
 		
-		public readonly container: HTMLDivElement = div({className: "prompt", style: "width: 300px;"},
+		public readonly container: HTMLDivElement = div({class: "prompt", style: "width: 300px;"},
 			h2("Song Recovery"),
 			div({style: "max-height: 385px; overflow-y: auto;"},
 				p("This is a TEMPORARY list of songs you have recently modified. Please keep your own backups of songs you care about!"),
@@ -40,7 +40,7 @@ import {HTML} from "imperative-html/dist/esm/elements-strict";
 				
 				const player: HTMLIFrameElement = iframe({style: "width: 100%; height: 60px; border: none; display: block;"});
 				player.src = "player/#song=" + window.localStorage.getItem(versionToKey(song.versions[0]));
-				const container: HTMLDivElement = div({style: "margin: 4px 0;"}, div({className: "selectContainer", style: "width: 100%; margin: 2px 0;"}, versionMenu), player);
+				const container: HTMLDivElement = div({style: "margin: 4px 0;"}, div({class: "selectContainer", style: "width: 100%; margin: 2px 0;"}, versionMenu), player);
 				this._songContainer.appendChild(container);
 				
 				versionMenu.addEventListener("change", () => {

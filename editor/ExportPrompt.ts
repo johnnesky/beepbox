@@ -47,11 +47,12 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 		private readonly _enableOutro: HTMLInputElement = input({type: "checkbox"});
 		private readonly _formatSelect: HTMLSelectElement = select({style: "width: 100%;"},
 			option({value: "wav"}, "Export to .wav file."),
+			option({value: "mp3"}, "Export to .mp3 file."),
 			option({value: "midi"}, "Export to .mid file."),
 			option({value: "json"}, "Export to .json file."),
 		);
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
-		private readonly _exportButton: HTMLButtonElement = button({className: "exportButton", style: "width:45%;"}, "Export");
+		private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
+		private readonly _exportButton: HTMLButtonElement = button({class: "exportButton", style: "width:45%;"}, "Export");
 		private static readonly midiSustainInstruments: number[] = [
 			0x4A, // rounded -> recorder
 			0x47, // triangle -> clarinet
@@ -83,7 +84,7 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 			0x6A, // spiky -> shamisen
 		];
 		
-		public readonly container: HTMLDivElement = div({className: "prompt noSelection", style: "width: 200px;"},
+		public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 200px;"},
 			h2("Export Options"),
 			div({style: "display: flex; flex-direction: row; align-items: center; justify-content: space-between;"},
 				"File name:",
@@ -101,7 +102,8 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 					div({style: "display: table-cell; vertical-align: middle;"}, this._enableOutro),
 				),
 			),
-			div({className: "selectContainer", style: "width: 100%;"}, this._formatSelect),
+			div({class: "selectContainer", style: "width: 100%;"}, this._formatSelect),
+			div({style: "text-align: left;"}, "(Be patient, exporting may take some time...)"),
 			div({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
 				this._exportButton,
 			),
@@ -181,6 +183,9 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 				case "wav":
 					this._exportToWav();
 					break;
+				case "mp3":
+					this._exportToMp3();
+					break;
 				case "midi":
 					this._exportToMidi();
 					break;
@@ -192,9 +197,9 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 			}
 		}
 		
-		private _exportToWav(): void {
-			
+		private _synthesize(sampleRate: number): {recordedSamplesL: Float32Array, recordedSamplesR: Float32Array} {
 			const synth: Synth = new Synth(this._doc.song);
+			synth.samplesPerSecond = sampleRate;
 			synth.loopRepeatCount = Number(this._loopDropDown.value) - 1;
 			if (!this._enableIntro.checked) {
 				for (let introIter: number = 0; introIter < this._doc.song.loopStart; introIter++) {
@@ -208,8 +213,15 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 			synth.synthesize(recordedSamplesL, recordedSamplesR, sampleFrames);
 			//console.log("export timer", (performance.now() - timer) / 1000.0);
 			
+			return {recordedSamplesL, recordedSamplesR};
+		}
+		
+		private _exportToWav(): void {
+			const sampleRate: number = 48000; // Use professional video editing standard sample rate for .wav file export.
+			const {recordedSamplesL, recordedSamplesR} = this._synthesize(sampleRate);
+			const sampleFrames: number = recordedSamplesL.length;
+			
 			const wavChannelCount: number = 2;
-			const sampleRate: number = 44100;
 			const bytesPerSample: number = 2;
 			const bitsPerSample: number = 8 * bytesPerSample;
 			const sampleCount: number = wavChannelCount * sampleFrames;
@@ -235,9 +247,10 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 			
 			if (bytesPerSample > 1) {
 				// usually samples are signed. 
+				const range: number = (1 << (bitsPerSample - 1)) - 1;
 				for (let i: number = 0; i < sampleFrames; i++) {
-					let valL: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i])) * ((1 << (bitsPerSample - 1)) - 1));
-					let valR: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i])) * ((1 << (bitsPerSample - 1)) - 1));
+					let valL: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i])) * range);
+					let valR: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i])) * range);
 					if (bytesPerSample == 2) {
 						data.setInt16(index, valL, true); index += 2;
 						data.setInt16(index, valR, true); index += 2;
@@ -258,10 +271,53 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 				}
 			}
 			
-			const blob = new Blob([arrayBuffer], {type: "audio/wav"});
+			const blob: Blob = new Blob([arrayBuffer], {type: "audio/wav"});
 			save(blob, this._fileName.value.trim() + ".wav");
-			
 			this._close();
+		}
+		
+		private _exportToMp3(): void {
+			const whenEncoderIsAvailable = (): void => {
+				const sampleRate: number = 44100; // Use consumer CD standard sample rate for .mp3 export.
+				const {recordedSamplesL, recordedSamplesR} = this._synthesize(sampleRate);
+				
+				const lamejs: any = (<any> window)["lamejs"];
+				const channelCount: number = 2;
+				const kbps: number = 192;
+				const sampleBlockSize: number = 1152;
+				const mp3encoder: any = new lamejs.Mp3Encoder(channelCount, sampleRate, kbps);
+				const mp3Data: any[] = [];
+				
+				const left: Int16Array = new Int16Array(recordedSamplesL.length);
+				const right: Int16Array = new Int16Array(recordedSamplesR.length);
+				const range: number = (1 << 15) - 1;
+				for (let i: number = 0; i < recordedSamplesL.length; i++) {
+					left[i]  = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i])) * range);
+					right[i] = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i])) * range);
+				}
+				
+				for (let i: number = 0; i < left.length; i += sampleBlockSize) {
+					const leftChunk: Int16Array = left.subarray(i, i + sampleBlockSize);
+					const rightChunk: Int16Array = right.subarray(i, i + sampleBlockSize);
+					const mp3buf: any = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+					if (mp3buf.length > 0) mp3Data.push(mp3buf);
+				}
+				const mp3buf: any = mp3encoder.flush();
+				if (mp3buf.length > 0) mp3Data.push(mp3buf);
+				
+				const blob: Blob = new Blob(mp3Data, {type: "audio/mp3"});
+				save(blob, this._fileName.value.trim() + ".mp3");
+				this._close();
+			}
+			
+			if ("lamejs" in window) {
+				whenEncoderIsAvailable();
+			} else {
+				var script = document.createElement("script");
+				script.src = "https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js";
+				script.onload = whenEncoderIsAvailable;
+				document.head.appendChild(script);
+			}
 		}
 		
 		private _exportToMidi(): void {
@@ -699,7 +755,7 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 				writer.rewriteUint32(trackStartIndex, writer.getWriteIndex() - trackStartIndex - 4);
 			}
 			
-			const blob = new Blob([writer.toCompactArrayBuffer()], {type: "audio/midi"});
+			const blob: Blob = new Blob([writer.toCompactArrayBuffer()], {type: "audio/midi"});
 			save(blob, this._fileName.value.trim() + ".mid");
 			
 			this._close();
@@ -708,7 +764,7 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 		private _exportToJson(): void {
 			const jsonObject: Object = this._doc.song.toJsonObject(this._enableIntro.checked, Number(this._loopDropDown.value), this._enableOutro.checked);
 			const jsonString: string = JSON.stringify(jsonObject, null, '\t');
-			const blob = new Blob([jsonString], {type: "application/json"});
+			const blob: Blob = new Blob([jsonString], {type: "application/json"});
 			save(blob, this._fileName.value.trim() + ".json");
 			this._close();
 		}

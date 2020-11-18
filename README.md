@@ -19,8 +19,8 @@ Beep Box is developed by [John Nesky](http://www.johnnesky.com/).
 
 The source code is available under the MIT license. The code is written in
 [TypeScript](https://www.typescriptlang.org/), which requires
-[node/npm](https://www.npmjs.com/get-npm), so install that first. Then to build
-this project, open the command line and run:
+[node & npm](https://www.npmjs.com/get-npm), so install those first. Then to
+build this project, open the command line and run:
 
 ```
 git clone https://github.com/johnnesky/beepbox.git
@@ -33,29 +33,38 @@ npm run build
 
 The code is divided into several folders.
 
-The synth/ folder has just the code you need to be able to play BeepBox songs
-out loud, and you could use this code in your own projects, like a web game.
-After compiling the synth code, open website/synth_example.html to see a demo
-using it. To rebuild just the synth code, run:
+The [synth/](synth) folder has just the code you need to be able to play BeepBox
+songs out loud, and you could use this code in your own projects, like a web
+game. After compiling the synth code, open website/synth_example.html to see a
+demo using it. To rebuild just the synth code, run:
 
 ```
 npm run build-synth
 ```
 
-The editor/ folder has additional code to display the online song editor
-interface. After compiling the editor code, open website/index.html to see the
-editor interface. To rebuild just the editor code, run:
+The [editor/](editor) folder has additional code to display the online song
+editor interface. After compiling the editor code, open website/index.html to
+see the editor interface. To rebuild just the editor code, run:
 
 ```
 npm run build-editor
 ```
 
-The player/ folder has a miniature song player interface for embedding on other
-sites. To rebuild just the player code, run:
+The [player/](player) folder has a miniature song player interface for embedding
+on other sites. To rebuild just the player code, run:
 
 ```
 npm run build-player
 ```
 
-The website/ folder contains index.html files to view the interfaces. The build
-process outputs JavaScript files into this folder.
+The [website/](website) folder contains index.html files to view the interfaces.
+The build process outputs JavaScript files into this folder.
+
+## Dependencies
+
+Most of the dependencies are listed in [package.json](package.json), although
+I'd like to note that BeepBox also has an indirect, optional dependency on
+[lamejs](https://github.com/zhuker/lamejs) via
+[jsdelivr](https://www.jsdelivr.com/) for exporting .mp3 files. If the user
+attempts to export an .mp3 file, BeepBox will direct the browser to download
+that dependency on demand.

@@ -16,9 +16,9 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 
 	export class ImportPrompt implements Prompt {
 		private readonly _fileInput: HTMLInputElement = input({type: "file", accept: ".json,application/json,.mid,.midi,audio/midi,audio/x-midi"});
-		private readonly _cancelButton: HTMLButtonElement = button({className: "cancelButton"});
+		private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
 		
-		public readonly container: HTMLDivElement = div({className: "prompt noSelection", style: "width: 300px;"},
+		public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 300px;"},
 			h2("Import"),
 			p({style: "text-align: left; margin: 0.5em 0;"},
 				"BeepBox songs can be exported and re-imported as .json files. You could also use other means to make .json files for BeepBox as long as they follow the same structure.",

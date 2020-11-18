@@ -8,7 +8,7 @@ import {SongDocument} from "./SongDocument";
 	const {button, div, p, h2} = HTML;
 	
 	export class TipPrompt implements Prompt {
-		private readonly _closeButton: HTMLButtonElement = button({className: "cancelButton"});
+		private readonly _closeButton: HTMLButtonElement = button({class: "cancelButton"});
 		
 		public readonly container: HTMLDivElement;
 		
@@ -225,7 +225,7 @@ import {SongDocument} from "./SongDocument";
 				default: throw new Error("Unhandled TipPrompt type: " + type);
 			}
 			
-			this.container = div({className: "prompt", style: "width: 250px;"},
+			this.container = div({class: "prompt", style: "width: 250px;"},
 				message,
 				this._closeButton,
 			);

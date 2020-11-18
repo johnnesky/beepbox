@@ -24,7 +24,7 @@ import {prettyNumber} from "./EditorConfig";
 			this._lastControlPointContainer,
 		);
 		
-		public readonly container: HTMLElement = HTML.div({className: "harmonics", style: "height: 2em;"}, this._svg);
+		public readonly container: HTMLElement = HTML.div({class: "harmonics", style: "height: 2em;"}, this._svg);
 		
 		private _mouseX: number = 0;
 		private _mouseY: number = 0;

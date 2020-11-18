@@ -99,7 +99,7 @@ import {ChangeChannelBar, ChangePatternNumbers, ChangeInsertBars, ChangeDeleteBa
 			this._downHighlight,
 			this._playhead,
 		);
-		private readonly _select: HTMLSelectElement = HTML.select({className: "trackSelectBox", style: "background: none; border: none; appearance: none; border-radius: initial; box-shadow: none; color: transparent; position: absolute; touch-action: none;"});
+		private readonly _select: HTMLSelectElement = HTML.select({class: "trackSelectBox", style: "background: none; border: none; appearance: none; border-radius: initial; box-shadow: none; color: transparent; position: absolute; touch-action: none;"});
 		public readonly container: HTMLElement = HTML.div({class: "noSelection", style: "height: 128px; position: relative; overflow:hidden;"}, this._svg, this._select);
 		
 		
