@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import { DictionaryArray, BeepBoxOption, InstrumentType, toNameMap, Config } from "../synth/SynthConfig";
+import { DictionaryArray, BeepBoxOption, InstrumentType, toNameMap } from "../synth/SynthConfig";
 
 //namespace beepbox {
 export interface PresetCategory extends BeepBoxOption {
@@ -19,8 +19,14 @@ export interface Preset extends BeepBoxOption {
 
 export const isMobile: boolean = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent);
 
+export function prettyNumber(value: number): string {
+	return value.toFixed(2).replace(/\.?0*$/, "");
+}
+
 export class EditorConfig {
-	public static readonly versionDisplayName: string = Config.versionDisplayName;
+	public static readonly version: string = "2.2"; // Not using patch versions in display right now, maybe someday.
+	public static readonly versionDisplayName: string = "JummBox " + EditorConfig.version;
+
 	public static readonly presetCategories: DictionaryArray<PresetCategory> = toNameMap([
 		{
 			name: "Custom Instruments", presets: <DictionaryArray<Preset>>toNameMap([

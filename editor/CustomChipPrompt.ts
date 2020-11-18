@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import { HTML, SVG } from "./html";
+import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { Prompt } from "./Prompt";
 import { SongDocument, StateChangeType } from "./SongDocument";
 import { ColorConfig } from "./ColorConfig";
@@ -34,7 +34,7 @@ export class CustomChipPromptCanvas {
 		this._blocks,
 	);
 
-	public readonly container: HTMLElement = HTML.div({ className: "", style: "height: 294px; width: 768px; padding-bottom: 1.5em;" }, this._svg);
+	public readonly container: HTMLElement = HTML.div({ class: "", style: "height: 294px; width: 768px; padding-bottom: 1.5em;" }, this._svg);
 
 	constructor(doc: SongDocument) {
 

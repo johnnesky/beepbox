@@ -1,6 +1,7 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 import { Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex } from "./SynthConfig";
+import { EditorConfig } from "../editor/EditorConfig";
 import { scaleElementsByFactor, inverseRealFourierTransform } from "./FFT";
 import { Deque } from "./Deque";
 
@@ -1636,7 +1637,7 @@ export class Song {
 		this.instrumentsPerChannel = 1;
 
 		this.title = "Unnamed";
-		document.title = Config.versionDisplayName;
+		document.title = EditorConfig.versionDisplayName;
 
 		if (andResetChannels) {
 			this.pitchChannelCount = 3;
@@ -2172,7 +2173,7 @@ export class Song {
 				// Length of song name string
 				var songNameLength = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 				this.title = decodeURIComponent(compressed.substring(charIndex, charIndex + songNameLength));
-				document.title = this.title + " - " + Config.versionDisplayName;
+				document.title = this.title + " - " + EditorConfig.versionDisplayName;
 
 				charIndex += songNameLength;
 			} break;

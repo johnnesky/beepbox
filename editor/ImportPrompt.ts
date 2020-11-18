@@ -5,7 +5,7 @@ import { NotePin, Note, makeNotePin, Pattern, Instrument, Channel, Song, Synth }
 import { Preset, EditorConfig } from "./EditorConfig";
 import { SongDocument, StateChangeType } from "./SongDocument";
 import { Prompt } from "./Prompt";
-import { HTML } from "./html";
+import { HTML } from "imperative-html/dist/esm/elements-strict";
 import { ChangeGroup } from "./Change";
 import { removeDuplicatePatterns, ChangeSong, ChangeReplacePatterns } from "./changes";
 import { AnalogousDrum, analogousDrumMap, MidiChunkType, MidiFileFormat, MidiEventType, MidiControlEventMessage, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, midiVolumeToVolumeMult, midiExpressionToVolumeMult } from "./Midi";
@@ -16,9 +16,9 @@ const { button, p, div, h2, input } = HTML;
 
 export class ImportPrompt implements Prompt {
 	private readonly _fileInput: HTMLInputElement = input({ type: "file", accept: ".json,application/json,.mid,.midi,audio/midi,audio/x-midi" });
-	private readonly _cancelButton: HTMLButtonElement = button({ className: "cancelButton" });
+	private readonly _cancelButton: HTMLButtonElement = button({ class: "cancelButton" });
 
-	public readonly container: HTMLDivElement = div({ className: "prompt noSelection", style: "width: 300px;" },
+	public readonly container: HTMLDivElement = div({ class: "prompt noSelection", style: "width: 300px;" },
 		h2("Import"),
 		p({ style: "text-align: left; margin: 0.5em 0;" },
 			"BeepBox songs can be exported and re-imported as .json files. You could also use other means to make .json files for BeepBox as long as they follow the same structure.",

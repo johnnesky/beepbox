@@ -1,11 +1,12 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import { HTML, SVG, prettyNumber } from "./html";
+import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { Prompt } from "./Prompt";
 import { SongDocument, StateChangeType } from "./SongDocument";
 import { ColorConfig } from "./ColorConfig";
 import { ChangeLimiterSettings } from "./changes";
 import { SongEditor } from "./SongEditor";
+import { prettyNumber } from "./EditorConfig";
 
 //namespace beepbox {
 const { button, div, h2, input } = HTML;
@@ -64,7 +65,7 @@ export class LimiterCanvas {
 		this._outVolumeCap,
 	);
 
-	public readonly container: HTMLElement = HTML.div({ className: "", style: "height: 4em; width: 80%; padding-bottom: 1.5em;" }, this._svg);
+	public readonly container: HTMLElement = HTML.div({ class: "", style: "height: 4em; width: 80%; padding-bottom: 1.5em;" }, this._svg);
 
 	private _limiterPrompt: LimiterPrompt;
 
@@ -200,11 +201,11 @@ export class LimiterPrompt implements Prompt {
 	private outVolumeHistoricTimer: number = 0.0;
 	private outVolumeHistoricCap: number = 0.0;
 
-	private readonly _cancelButton: HTMLButtonElement = button({ className: "cancelButton" });
-	private readonly _okayButton: HTMLButtonElement = button({ className: "okayButton", style: "width:45%;" }, "Okay");
+	private readonly _cancelButton: HTMLButtonElement = button({ class: "cancelButton" });
+	private readonly _okayButton: HTMLButtonElement = button({ class: "okayButton", style: "width:45%;" }, "Okay");
 	private readonly _resetButton: HTMLButtonElement = button({ style: "width:45%;" }, "Reset");
 
-	public readonly container: HTMLDivElement = div({ className: "prompt noSelection", style: "width: 250px;" },
+	public readonly container: HTMLDivElement = div({ class: "prompt noSelection", style: "width: 250px;" },
 		h2("Limiter Options"),
 		div({ style: "display: flex; width: 55%; align-self: center; flex-direction: row; align-items: center; justify-content: center;" },
 			this._playButton,

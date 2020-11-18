@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import { HTML } from "./html";
+import { HTML } from "imperative-html/dist/esm/elements-strict";
 import { Prompt } from "./Prompt";
 import { SongDocument } from "./SongDocument";
 
@@ -8,7 +8,7 @@ import { SongDocument } from "./SongDocument";
 const { button, div, p, h2, h3 } = HTML;
 
 export class TipPrompt implements Prompt {
-	private readonly _closeButton: HTMLButtonElement = button({ className: "cancelButton" });
+	private readonly _closeButton: HTMLButtonElement = button({ class: "cancelButton" });
 
 	public readonly container: HTMLDivElement;
 
@@ -325,7 +325,7 @@ export class TipPrompt implements Prompt {
 			default: throw new Error("Unhandled TipPrompt type: " + type);
 		}
 
-		this.container = div({ className: "prompt", style: "width: 250px;" },
+		this.container = div({ class: "prompt", style: "width: 250px;" },
 			message,
 			this._closeButton,
 		);

@@ -3,7 +3,7 @@
 
 import { Change } from "./Change";
 import { SongDocument } from "./SongDocument";
-import { HTML } from "./html";
+import { HTML } from "imperative-html/dist/esm/elements-strict";
 
 const { span } = HTML;
 
@@ -43,7 +43,7 @@ export class Slider {
 
 	constructor(public readonly input: HTMLInputElement, private readonly _doc: SongDocument, private readonly _getChange: ((oldValue: number, newValue: number) => Change) | null, midTick: boolean) {
 		// A container is created around the input to allow for spec-compliant pseudo css classes (e.g ::before and ::after, which must be added to containers, not the input itself)
-		this.container = (midTick) ? span({ className: "midTick", style: "position: sticky; width: 61.5%;" }, input) : span({ style: "position: sticky;" }, input);
+		this.container = (midTick) ? span({ class: "midTick", style: "position: sticky; width: 61.5%;" }, input) : span({ style: "position: sticky;" }, input);
 		input.addEventListener("input", this._whenInput);
 		input.addEventListener("change", this._whenChange);
 	}

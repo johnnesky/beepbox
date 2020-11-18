@@ -3,7 +3,7 @@
 import { Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config } from "../synth/SynthConfig";
 import { ColorConfig } from "../editor/ColorConfig";
 import { NotePin, Note, Pattern, Instrument, Channel, Synth } from "../synth/synth";
-import { HTML, SVG } from "../editor/html";
+import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 
 //namespace beepbox {
 const { a, button, div, h1, input } = HTML;

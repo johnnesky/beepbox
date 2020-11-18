@@ -47,7 +47,7 @@ function compareVersions(a: RecoveredVersion, b: RecoveredVersion): number {
 }
 
 export class SongRecovery {
-	private _saveVersionTimeoutHandle: number = 0;
+	private _saveVersionTimeoutHandle: ReturnType<typeof setTimeout>;
 
 	private _song: Song = new Song();
 

@@ -3,9 +3,10 @@
 import { Config } from "../synth/SynthConfig";
 import { SpectrumWave, Instrument } from "../synth/synth";
 import { SongDocument } from "./SongDocument";
-import { HTML, SVG, prettyNumber } from "./html";
+import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { ColorConfig } from "./ColorConfig";
 import { ChangeSpectrum } from "./changes";
+import { prettyNumber } from "./EditorConfig";
 
 //namespace beepbox {
 export class SpectrumEditor {
@@ -24,7 +25,7 @@ export class SpectrumEditor {
 		this._arrow,
 	);
 
-	public readonly container: HTMLElement = HTML.div({ className: "spectrum", style: "height: 2em;" }, this._svg);
+	public readonly container: HTMLElement = HTML.div({ class: "spectrum", style: "height: 2em;" }, this._svg);
 
 	private _mouseX: number = 0;
 	private _mouseY: number = 0;

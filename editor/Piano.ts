@@ -2,7 +2,7 @@
 
 import { Config } from "../synth/SynthConfig";
 import { SongDocument } from "./SongDocument";
-import { HTML, SVG } from "./html";
+import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { ColorConfig } from "./ColorConfig";
 import { Instrument, ModSetting, ModStatus } from "../synth/synth";
 

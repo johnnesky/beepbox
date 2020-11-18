@@ -1,7 +1,8 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
+
 import { SongDocument } from "./SongDocument";
-import { HTML, SVG } from "./html";
+import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { ColorConfig } from "./ColorConfig";
 
 //namespace beepbox {
@@ -25,7 +26,7 @@ export class BarScrollBar {
 		this._playhead,
 	);
 
-	public readonly container: HTMLElement = HTML.div({ className: "barScrollBar", style: "width: 512px; height: 20px; overflow: hidden; position: relative;" }, this._svg);
+	public readonly container: HTMLElement = HTML.div({ class: "barScrollBar", style: "width: 512px; height: 20px; overflow: hidden; position: relative;" }, this._svg);
 
 	private _mouseX: number = 0;
 	private _mouseDown: boolean = false;

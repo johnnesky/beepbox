@@ -2720,7 +2720,7 @@ export class ChangeSongTitle extends Change {
 		}
 
 		doc.song.title = newValue;
-		document.title = newValue + " - " + Config.versionDisplayName;
+		document.title = newValue + " - " + EditorConfig.versionDisplayName;
 		doc.notifier.changed();
 		if (oldValue != newValue) this._didSomething();
 	}

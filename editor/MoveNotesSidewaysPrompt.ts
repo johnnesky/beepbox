@@ -1,7 +1,7 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 import { Config } from "../synth/SynthConfig";
-import { HTML } from "./html";
+import { HTML } from "imperative-html/dist/esm/elements-strict";
 import { SongDocument, StateChangeType } from "./SongDocument";
 import { Prompt } from "./Prompt";
 import { ChangeMoveNotesSideways } from "./changes";
@@ -16,10 +16,10 @@ export class MoveNotesSidewaysPrompt implements Prompt {
 		option({ value: "overflow" }, "Overflow notes across bars."),
 		option({ value: "wrapAround" }, "Wrap notes around within bars."),
 	);
-	private readonly _cancelButton: HTMLButtonElement = button({ className: "cancelButton" });
-	private readonly _okayButton: HTMLButtonElement = button({ className: "okayButton", style: "width:45%;" }, "Okay");
+	private readonly _cancelButton: HTMLButtonElement = button({ class: "cancelButton" });
+	private readonly _okayButton: HTMLButtonElement = button({ class: "okayButton", style: "width:45%;" }, "Okay");
 
-	public readonly container: HTMLDivElement = div({ className: "prompt noSelection", style: "width: 250px;" },
+	public readonly container: HTMLDivElement = div({ class: "prompt noSelection", style: "width: 250px;" },
 		h2("Move Notes Sideways"),
 		div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
 			div({ style: "text-align: right;" },
@@ -30,7 +30,7 @@ export class MoveNotesSidewaysPrompt implements Prompt {
 			this._beatsStepper,
 		),
 		div({ style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;" },
-			div({ className: "selectContainer", style: "width: 100%;" }, this._conversionStrategySelect),
+			div({ class: "selectContainer", style: "width: 100%;" }, this._conversionStrategySelect),
 		),
 		div({ style: "display: flex; flex-direction: row-reverse; justify-content: space-between;" },
 			this._okayButton,

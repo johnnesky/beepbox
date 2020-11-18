@@ -5,11 +5,10 @@ import { Note, Pattern } from "../synth/synth";
 import { ColorConfig, ChannelColors } from "./ColorConfig";
 import { isMobile } from "./EditorConfig";
 import { SongDocument, StateChangeType } from "./SongDocument";
-import { HTML, SVG } from "./html";
+import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { ChangeGroup } from "./Change";
 import { ChangeChannelBar, ChangePatternNumbers, ChangeInsertBars, ChangeDeleteBars, ChangeEnsurePatternExists, ChangePaste, ChangePatternInstrument, ChangePatternsPerChannel, ChangePatternRhythm, ChangePatternScale, ChangeTranspose, comparePatternNotes, unionOfUsedNotes, generateScaleMap, ChangeModChannel, ChangeModInstrument, ChangeModSetting, ChangeChannelOrder } from "./changes";
 import { SongEditor } from "./SongEditor";
-
 //namespace beepbox {
 
 interface PatternCopy {
@@ -155,7 +154,7 @@ export class TrackEditor {
 		this._downHighlight,
 		this._playhead,
 	);
-	private readonly _select: HTMLSelectElement = HTML.select({ className: "trackSelectBox", style: "background: none; border: none; appearance: none; border-radius: initial; box-shadow: none; color: transparent; position: absolute; touch-action: none;" });
+	private readonly _select: HTMLSelectElement = HTML.select({ class: "trackSelectBox", style: "background: none; border: none; appearance: none; border-radius: initial; box-shadow: none; color: transparent; position: absolute; touch-action: none;" });
 	public readonly container: HTMLElement = HTML.div({ class: "noSelection", style: "height: 128px; position: relative; overflow:hidden;" }, this._svg, this._select, this._barDropDown);
 
 	private readonly _grid: Box[][] = [];

@@ -11,6 +11,7 @@ self.addEventListener("install", function(event) {
 				//"/2_3/beepbox_editor.min.js",
 				"/player/",
 				"/player/beepbox_player.min.js",
+				"https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js",
 			]).then(() => self.skipWaiting());
 		})
 	);
@@ -30,7 +31,8 @@ self.addEventListener("fetch", function(event) {
 				// it to the permanent cache.
 				if (event.request.url.startsWith(self.location.origin) ||
 					event.request.url.startsWith("https://fonts.googleapis.com") ||
-					event.request.url.startsWith("https://fonts.gstatic.com"))
+					event.request.url.startsWith("https://fonts.gstatic.com") ||
+					event.request.url.startsWith("https://cdn.jsdelivr.net"))
 				{
 					cache.put(event.request, response.clone());
 				}
