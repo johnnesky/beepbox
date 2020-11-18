@@ -1790,6 +1790,7 @@ export class Song {
 						buffer.push(SongTagCode.arpeggioSpeed, base64IntToCharCode[instrument.arpeggioSpeed]);
 						buffer.push(base64IntToCharCode[+instrument.fastTwoNoteArp]); // Two note arp setting piggybacks on this
 					}
+					buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
 					buffer.push(SongTagCode.algorithm, base64IntToCharCode[instrument.algorithm]);
 					buffer.push(SongTagCode.feedbackType, base64IntToCharCode[instrument.feedbackType]);
 					buffer.push(SongTagCode.feedbackAmplitude, base64IntToCharCode[instrument.feedbackAmplitude]);
@@ -1831,6 +1832,12 @@ export class Song {
 					}
 				} else if (instrument.type == InstrumentType.noise) {
 					buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipNoise]);
+					// Custom arpeggio speed... only if the instrument arpeggiates.
+					if (instrument.chord == 2) {
+						buffer.push(SongTagCode.arpeggioSpeed, base64IntToCharCode[instrument.arpeggioSpeed]);
+						buffer.push(base64IntToCharCode[+instrument.fastTwoNoteArp]); // Two note arp setting piggybacks on this
+					}
+					buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
 				} else if (instrument.type == InstrumentType.spectrum) {
 					buffer.push(SongTagCode.spectrum);
 					const spectrumBits: BitFieldWriter = new BitFieldWriter();
@@ -1838,6 +1845,11 @@ export class Song {
 						spectrumBits.write(Config.spectrumControlPointBits, instrument.spectrumWave.spectrum[i]);
 					}
 					spectrumBits.encodeBase64(buffer);
+					if (instrument.chord == 2) {
+						buffer.push(SongTagCode.arpeggioSpeed, base64IntToCharCode[instrument.arpeggioSpeed]);
+						buffer.push(base64IntToCharCode[+instrument.fastTwoNoteArp]); // Two note arp setting piggybacks on this
+					}
+					buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
 				} else if (instrument.type == InstrumentType.drumset) {
 					buffer.push(SongTagCode.filterEnvelope);
 					for (let j: number = 0; j < Config.drumCount; j++) {
@@ -1889,6 +1901,7 @@ export class Song {
 						buffer.push(base64IntToCharCode[+instrument.fastTwoNoteArp]); // Two note arp setting piggybacks on this
 					}
 					buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth], base64IntToCharCode[instrument.pulseEnvelope]);
+					buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
 				} else if (instrument.type == InstrumentType.mod) {
 					// Handled down below. Could be moved, but meh.
 				}

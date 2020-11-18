@@ -1450,7 +1450,13 @@ export class SongEditor {
 					this._vibratoDropdownGroup.style.display = "none";
 				} else {
 					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "";
+					// Temporarily hide interval select, until I get them working for these instrument types!
+					if (instrument.type == InstrumentType.spectrum || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.pwm) {
+						this._intervalSelectRow.style.display = "none";
+					}
+					else {
+						this._intervalSelectRow.style.display = "";
+					}
 					this._vibratoDropdownGroup.style.display = (this._openVibratoDropdown ? "" : "none");
 				}
 			}
