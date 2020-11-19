@@ -250,10 +250,10 @@ export class CustomChipPrompt implements Prompt {
 
 	public readonly _playButton: HTMLButtonElement = button({ style: "width: 55%;", type: "button" });
 
-	private readonly _cancelButton: HTMLButtonElement = button({ className: "cancelButton" });
-	private readonly _okayButton: HTMLButtonElement = button({ className: "okayButton", style: "width:45%;" }, "Okay");
+	private readonly _cancelButton: HTMLButtonElement = button({ class: "cancelButton" });
+	private readonly _okayButton: HTMLButtonElement = button({ class: "okayButton", style: "width:45%;" }, "Okay");
 
-	public readonly container: HTMLDivElement = div({ className: "prompt noSelection", style: "width: 600px;" },
+	public readonly container: HTMLDivElement = div({ class: "prompt noSelection", style: "width: 600px;" },
 		h2("Edit Custom Chip Instrument"),
 		div({ style: "display: flex; width: 55%; align-self: center; flex-direction: row; align-items: center; justify-content: center;" },
 			this._playButton,
