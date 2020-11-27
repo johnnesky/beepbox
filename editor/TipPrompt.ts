@@ -69,7 +69,8 @@ import {SongDocument} from "./SongDocument";
 				case "instrumentType": {
 					message = div(
 						h2("Instrument Type"),
-						p("BeepBox comes with many instrument presets. You can also create your own custom instruments, or even generate random ones!"),
+						p("BeepBox comes with many instrument presets. You can also create your own custom instruments!"),
+						p("There are also options for copying and pasting instrument settings and for generating random instruments at the top of the instrument type menu."),
 					);
 				} break;
 				case "filterCutoff": {
@@ -100,7 +101,7 @@ import {SongDocument} from "./SongDocument";
 					message = div(
 						h2("Transition"),
 						p("This setting controls how quickly notes begin and end."),
-						p("Hard transitions start suddenly and sound like instruments that are played by hitting or plucking, whereas soft transitions start gradually and sound like instruments that are played by blowing air. Some transitions stop suddenly, but some fade out slowly after the end of the note."),
+						p("Hard transitions start suddenly and sound like instruments that are played by hitting or plucking, whereas soft transitions start gradually and sound like instruments that are played by blowing air. Some transitions also stop suddenly, whereas others fade out slowly after the end of the note."),
 						p("The \"seamless\" and \"slide\" transitions connect the end of a note with the start of the next note."),
 					);
 				} break;
