@@ -64,7 +64,7 @@ handlers:
   secure: always
   redirect_http_response_code: 301
   http_headers:
-    Link: "<https://beepbox.co/>; rel=\"canonical\"" 
+    Link: "<https://www.beepbox.co/>; rel=\"canonical\"" 
 
 - url: /(.+/)*
   static_files: \1index.html

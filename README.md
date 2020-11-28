@@ -1,7 +1,7 @@
 # BeepBox
 
 BeepBox is an online tool for sketching and sharing instrumental melodies.
-Try it out [here](https://beepbox.co)!
+Try it out [here](https://www.beepbox.co)!
 
 All song data is packaged into the URL at the top of your browser. When you make
 changes to the song, the URL is updated to reflect your changes. When you are

@@ -402,7 +402,7 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 					writeEventTime(0);
 					writer.writeUint8(MidiEventType.meta);
 					writer.writeMidi7Bits(MidiMetaEventMessage.text);
-					writer.writeMidiAscii("Composed with beepbox.co");
+					writer.writeMidiAscii("Composed with https://www.beepbox.co");
 					
 					writeEventTime(0);
 					writer.writeUint8(MidiEventType.meta);
