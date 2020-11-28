@@ -23,7 +23,7 @@ import {DictionaryArray, BeepBoxOption, InstrumentType, toNameMap} from "../synt
 	}
 	
 	export class EditorConfig {
-		public static readonly version: string = "3.0.10";
+		public static readonly version: string = "3.0.11";
 		public static readonly versionDisplayName: string = "BeepBox " + EditorConfig.version;
 		public static readonly presetCategories: DictionaryArray<PresetCategory> = toNameMap([
 			{name: "Custom Instruments", presets: <DictionaryArray<Preset>> toNameMap([

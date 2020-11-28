@@ -134,6 +134,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 			option({value: "export"}, "↓ Export Song..."),
 			option({value: "copyUrl"}, "⎘ Copy Song URL"),
 			option({value: "shareUrl"}, "⤳ Share Song URL"),
+			option({value: "shortenUrl"}, "… Shorten Song URL"),
 			option({value: "viewPlayer"}, "▶ View in Song Player"),
 			option({value: "copyEmbed"}, "⎘ Copy HTML Embed Code"),
 			option({value: "songRecovery"}, "⚠ Recover Recent Song..."),
@@ -1189,6 +1190,9 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 					break;
 				case "shareUrl":
 					(<any>navigator).share({ url: new URL("#" + this._doc.song.toBase64String(), location.href).href });
+					break;
+				case "shortenUrl":
+					window.open("https://tinyurl.com/api-create.php?url=" + encodeURIComponent(new URL("#" + this._doc.song.toBase64String(), location.href).href));
 					break;
 				case "viewPlayer":
 					location.href = "player/#song=" + this._doc.song.toBase64String();
