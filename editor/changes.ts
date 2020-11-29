@@ -1664,6 +1664,7 @@ import {SongDocument} from "./SongDocument";
 								}
 							}
 						}
+						this.append(new ChangeTempo(doc, doc.song.tempo, doc.song.tempo * newValue / doc.song.beatsPerBar));
 					} break;
 					case "overflow": {
 						this.append(new ChangeMoveAndOverflowNotes(doc, newValue, 0));
@@ -1959,7 +1960,7 @@ import {SongDocument} from "./SongDocument";
 	export class ChangeTempo extends Change {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
-			doc.song.tempo = Math.max(Config.tempoMin, Math.min(Config.tempoMax, newValue));
+			doc.song.tempo = Math.max(Config.tempoMin, Math.min(Config.tempoMax, Math.round(newValue)));
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
