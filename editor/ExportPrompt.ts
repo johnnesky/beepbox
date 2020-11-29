@@ -206,7 +206,7 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 					synth.nextBar();
 				}
 			}
-			const sampleFrames: number = synth.getSamplesPerBar() * synth.getTotalBars(this._enableIntro.checked, this._enableOutro.checked);
+			const sampleFrames: number = Math.ceil(synth.getSamplesPerBar() * synth.getTotalBars(this._enableIntro.checked, this._enableOutro.checked));
 			const recordedSamplesL: Float32Array = new Float32Array(sampleFrames);
 			const recordedSamplesR: Float32Array = new Float32Array(sampleFrames);
 			//const timer: number = performance.now();

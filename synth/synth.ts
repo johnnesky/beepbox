@@ -2462,7 +2462,7 @@ declare global {
 				this.tick = Math.floor(remainder);
 				const samplesPerTick: number = this.getSamplesPerTick();
 				remainder = samplesPerTick * (remainder - this.tick);
-				this.tickSampleCountdown = Math.floor(samplesPerTick - remainder);
+				this.tickSampleCountdown = samplesPerTick - remainder;
 			}
 		}
 		
@@ -2634,9 +2634,8 @@ declare global {
 			let ended: boolean = false;
 			
 			// Check the bounds of the playhead:
-			if (this.tickSampleCountdown == 0 || this.tickSampleCountdown > samplesPerTick) {
-				this.tickSampleCountdown = samplesPerTick;
-			}
+			while (this.tickSampleCountdown <= 0) this.tickSampleCountdown += samplesPerTick;
+			if (this.tickSampleCountdown > samplesPerTick) this.tickSampleCountdown = samplesPerTick;
 			if (playSong) {
 				if (this.beat >= this.song.beatsPerBar) {
 					this.bar++;
@@ -2710,9 +2709,7 @@ declare global {
 			while (bufferIndex < outputBufferLength && !ended) {
 				
 				const samplesLeftInBuffer: number = outputBufferLength - bufferIndex;
-				const runLength: number = (this.tickSampleCountdown <= samplesLeftInBuffer)
-					? this.tickSampleCountdown
-					: samplesLeftInBuffer;
+				const runLength: number = Math.min(Math.ceil(this.tickSampleCountdown), samplesLeftInBuffer);
 				for (let channel: number = 0; channel < this.song.getChannelCount(); channel++) {
 
 					if (channel == this.liveInputChannel) {
@@ -2880,7 +2877,7 @@ declare global {
 					}
 					
 					this.tick++;
-					this.tickSampleCountdown = samplesPerTick;
+					this.tickSampleCountdown += samplesPerTick;
 					if (this.tick == Config.ticksPerPart) {
 						this.tick = 0;
 						this.part++;
@@ -4328,9 +4325,9 @@ declare global {
 			if (this.song == null) return 0;
 			const beatsPerMinute: number = this.song.getBeatsPerMinute();
 			const beatsPerSecond: number = beatsPerMinute / 60.0;
-			const partsPerSecond: number = beatsPerSecond * Config.partsPerBeat;
-			const tickPerSecond: number = partsPerSecond * Config.ticksPerPart;
-			return Math.floor(this.samplesPerSecond / tickPerSecond);
+			const partsPerSecond: number = Config.partsPerBeat * beatsPerSecond;
+			const tickPerSecond: number = Config.ticksPerPart * partsPerSecond;
+			return this.samplesPerSecond / tickPerSecond;
 		}
 	}
 	
