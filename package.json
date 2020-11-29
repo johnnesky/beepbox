@@ -1,6 +1,6 @@
 {
 	"name": "BeepBox",
-	"version": "3.0.10",
+	"version": "3.0.11",
 	"description": "BeepBox is an online tool for sketching and sharing instrumental melodies.",
 	"author": "John Nesky",
 	"license": "MIT",
@@ -8,9 +8,9 @@
 	"type": "module",
 	"scripts": {
 		"build": "npm run build-synth && npm run build-player && npm run build-editor",
-		"build-synth": "./compile_beepbox_synth.sh",
-		"build-player": "./compile_beepbox_player.sh",
-		"build-editor": "./compile_beepbox_editor.sh"
+		"build-synth": "compile_beepbox_synth.sh",
+		"build-player": "compile_beepbox_player.sh",
+		"build-editor": "compile_beepbox_editor.sh"
 	},
 	"repository": {
 		"type": "git",

@@ -2080,6 +2080,7 @@ export class ChangeBeatsPerBar extends ChangeGroup {
 							}
 						}
 					}
+					this.append(new ChangeTempo(doc, doc.song.tempo, doc.song.tempo * newValue / doc.song.beatsPerBar));
 				} break;
 				case "overflow": {
 					this.append(new ChangeMoveAndOverflowNotes(doc, newValue, 0));
@@ -2389,7 +2390,7 @@ export function removeDuplicatePatterns(channels: Channel[]): void {
 export class ChangeTempo extends Change {
 	constructor(doc: SongDocument, oldValue: number, newValue: number) {
 		super();
-		doc.song.tempo = Math.max(Config.tempoMin, Math.min(Config.tempoMax, newValue));
+		doc.song.tempo = Math.max(Config.tempoMin, Math.min(Config.tempoMax, Math.round(newValue)));
 		doc.synth.unsetMod(ModSetting.mstTempo);
 		doc.notifier.changed();
 		if (oldValue != newValue) this._didSomething();

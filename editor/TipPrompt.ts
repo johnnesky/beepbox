@@ -50,7 +50,7 @@ export class TipPrompt implements Prompt {
 			case "instrumentIndex": {
 				message = div(
 					h2("Instrument Number"),
-					p("BeepBox can have multiple instruments per channel, but it can only play one instrument at a time in each channel. This setting determines which of the instruments should be used to play the currently selected pattern. Different patterns in the channel can use different instruments."),
+					p("JummBox can have multiple instruments per channel, but it can only play one instrument at a time in each channel. This setting determines which of the instruments should be used to play the currently selected pattern. Different patterns in the channel can use different instruments."),
 				);
 			} break;
 			case "instrumentVolume": {
@@ -102,14 +102,15 @@ export class TipPrompt implements Prompt {
 			case "instrumentType": {
 				message = div(
 					h2("Instrument Type"),
-					p("BeepBox comes with many instrument presets. You can also create your own custom instruments, or even generate random ones!"),
+					p("JummBox comes with many instrument presets. You can also create your own custom instruments!"),
+					p("There are also options for copying and pasting instrument settings and for generating random instruments at the top of the instrument type menu."),
 				);
 			} break;
 			case "filterCutoff": {
 				message = div(
 					h2("Low-Pass Filter Cutoff Frequency"),
 					p("The lowest setting feels \"muffled\" or \"dark\", and the highest setting feels \"harsh\" or \"bright\"."),
-					p("Most sounds include a range of frequencies from low to high. BeepBox instruments have a filter that allows the lowest frequencies to pass through at full volume, but can reduce the volume of the higher frequencies that are above a cutoff frequency. This setting controls the cutoff frequency and thus the range of higher frequencies that are reduced."),
+					p("Most sounds include a range of frequencies from low to high. JummBox instruments have a filter that allows the lowest frequencies to pass through at full volume, but can reduce the volume of the higher frequencies that are above a cutoff frequency. This setting controls the cutoff frequency and thus the range of higher frequencies that are reduced."),
 					p("This cutoff setting also determines which frequency resonates when the resonance peak setting is used."),
 					// TODO: Add a graphic?
 				);
@@ -133,20 +134,20 @@ export class TipPrompt implements Prompt {
 				message = div(
 					h2("Transition"),
 					p("This setting controls how quickly notes begin and end."),
-					p("Hard transitions start suddenly and sound like instruments that are played by hitting or plucking, whereas soft transitions start gradually and sound like instruments that are played by blowing air. Some transitions stop suddenly, but some fade out slowly after the end of the note."),
+					p("Hard transitions start suddenly and sound like instruments that are played by hitting or plucking, whereas soft transitions start gradually and sound like instruments that are played by blowing air. Some transitions also stop suddenly, whereas others fade out slowly after the end of the note."),
 					p("The \"seamless\" and \"slide\" transitions connect the end of a note with the start of the next note."),
 				);
 			} break;
 			case "chipWave": {
 				message = div(
 					h2("Chip Wave"),
-					p("BeepBox comes with some sound waves based on classic electronic sound chips, as well as several unique waves."),
+					p("JummBox comes with some sound waves based on classic electronic sound chips, as well as several unique waves."),
 				);
 			} break;
 			case "chipNoise": {
 				message = div(
 					h2("Noise"),
-					p("BeepBox comes with several basic noise sounds. These do not have any distinct musical pitch, and can be used like drums to create beats and emphasize your song's rhythm."),
+					p("JummBox comes with several basic noise sounds. These do not have any distinct musical pitch, and can be used like drums to create beats and emphasize your song's rhythm."),
 				);
 			} break;
 			case "pulseEnvelope": {
@@ -165,7 +166,7 @@ export class TipPrompt implements Prompt {
 			case "interval": {
 				message = div(
 					h2("Instrument Interval"),
-					p("Some BeepBox instrument types can play two waves at slightly different frequencies. The difference between the frequencies is called an \"interval\", and this setting controls how large it is."),
+					p("Some JummBox instrument types can play two waves at slightly different frequencies. The difference between the frequencies is called an \"interval\", and this setting controls how large it is."),
 					p("When two similar waves play at slightly different frequencies, they move in and out of phase with each other over time as different parts of the waves line up. This creates a dynamic, shifting sound. Pianos are a common example of this kind of sound, because each piano key strikes multiple strings that are tuned to slightly different frequencies."),
 					p("If the interval is large, then the waves can sound out-of-tune and \"dissonant\". If the interval is even larger, then the two frequencies can even be distinct pitches."),
 				);
@@ -173,9 +174,9 @@ export class TipPrompt implements Prompt {
 			case "chords": {
 				message = div(
 					h2("Chords"),
-					p("When multiple notes occur at the same time, this is called a chord. Chords can be created in BeepBox's pattern editor by adding notes above or below another note."),
+					p("When multiple notes occur at the same time, this is called a chord. Chords can be created in JummBox's pattern editor by adding notes above or below another note."),
 					p("This setting determines how chords are played. The standard option is \"harmony\" which plays all of the notes out loud simultaneously. The \"strum\" option is similar, but plays the notes starting at slightly different times. The \"arpeggio\" option is used in \"chiptune\" style music and plays a single tone that rapidly alternates between all of the pitches in the chord."),
-					p("Some BeepBox instruments have an option called \"custom interval\" which uses the chord notes to control the interval between the waves of a single tone. This can create strange sound effects when combined with FM modulators."),
+					p("Some JummBox instruments have an option called \"custom interval\" which uses the chord notes to control the interval between the waves of a single tone. This can create strange sound effects when combined with FM modulators."),
 				);
 			} break;
 			case "vibrato": {
@@ -266,7 +267,7 @@ export class TipPrompt implements Prompt {
 			case "effects": {
 				message = div(
 					h2("Effects"),
-					p("BeepBox has two special effects you can add to instruments. You can turn on either effect, or both at once."),
+					p("JummBox has two special effects you can add to instruments. You can turn on either effect, or both at once."),
 					p("Reverb is a kind of echo effect. You can use the \"reverb\" slider in the \"Song Settings\" section above to control the amount of reverb for instruments that enable it. A little bit helps instruments sound more natural. Adding a lot of reverb can add sense of depth or mystery."),
 					p("The chorus effect combines multiple copies of the instrument's sound and adds a bit of vibrato to simulate an ensemble of instruments or voices."),
 				);

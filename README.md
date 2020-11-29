@@ -77,4 +77,4 @@ I'd like to note that BeepBox also has an indirect, optional dependency on
 attempts to export an .mp3 file, BeepBox will direct the browser to download
 that dependency on demand.
 
-A note for JummBox: I am compiling on Windows and this "npm run build" functionality isn't working for me, I have luck calling "./compile_beepbox_editor.sh" and the other compile scripts directly though.
+Note: I am compiling on Windows and "npm run build" setup doesn't work by default. You can get it working by going into package.json and removing the "./" from the paths for the build-synth, build-player, and build-editor rules.
