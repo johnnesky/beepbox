@@ -354,3 +354,5 @@
 √ Added preference to control whether to display song data in url.
 √ Added song recovery feature to file menu.
 √ Added .mp3 file export.
+√ Added tinyurl shortcut to file menu.
+√ BPM is now precise.

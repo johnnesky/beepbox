@@ -3584,7 +3584,7 @@ export class Synth {
 			this.tick = Math.floor(remainder);
 			const samplesPerTick: number = this.getSamplesPerTick();
 			remainder = samplesPerTick * (remainder - this.tick);
-			this.tickSampleCountdown = Math.floor(samplesPerTick - remainder);
+			this.tickSampleCountdown = samplesPerTick - remainder;
 		}
 	}
 
@@ -4091,9 +4091,9 @@ export class Synth {
 		let ended: boolean = false;
 
 		// Check the bounds of the playhead:
-		if (this.tickSampleCountdown == 0 || this.tickSampleCountdown > samplesPerTick) {
-			this.tickSampleCountdown = samplesPerTick;
-		}
+		while (this.tickSampleCountdown <= 0) this.tickSampleCountdown += samplesPerTick;
+		if (this.tickSampleCountdown > samplesPerTick) this.tickSampleCountdown = samplesPerTick;
+
 		if (playSong) {
 			if (this.beat >= this.song.beatsPerBar) {
 				this.bar++;
@@ -4175,9 +4175,7 @@ export class Synth {
 		while (bufferIndex < outputBufferLength && !ended) {
 
 			const samplesLeftInBuffer: number = outputBufferLength - bufferIndex;
-			const runLength: number = (this.tickSampleCountdown <= samplesLeftInBuffer)
-				? this.tickSampleCountdown
-				: samplesLeftInBuffer;
+			const runLength: number = Math.min(Math.ceil(this.tickSampleCountdown), samplesLeftInBuffer);
 
 			for (let modChannel: number = 0, channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; modChannel < this.song.modChannelCount; modChannel++ , channel++) {
 				// Also determines mod tones.
@@ -4433,7 +4431,7 @@ export class Synth {
 				}
 
 				this.tick++;
-				this.tickSampleCountdown = samplesPerTick;
+				this.tickSampleCountdown += samplesPerTick;
 				if (this.tick == Config.ticksPerPart) {
 					this.tick = 0;
 					this.part++;
@@ -6456,9 +6454,9 @@ const operator#Scaled   = operator#OutputMult * operator#Output;
 
 	private getSamplesPerTickSpecificBPM(beatsPerMinute: number): number {
 		const beatsPerSecond: number = beatsPerMinute / 60.0;
-		const partsPerSecond: number = beatsPerSecond * Config.partsPerBeat;
-		const tickPerSecond: number = partsPerSecond * Config.ticksPerPart;
-		return Math.floor(this.samplesPerSecond / tickPerSecond);
+		const partsPerSecond: number = Config.partsPerBeat * beatsPerSecond;
+		const tickPerSecond: number = Config.ticksPerPart * partsPerSecond;
+		return this.samplesPerSecond / tickPerSecond;
 	}
 }
 
