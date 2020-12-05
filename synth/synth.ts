@@ -4200,8 +4200,8 @@ export class Synth {
 			// Update LFO time for instruments (used to be deterministic based on bar position but now vibrato/arp speed messes that up!)
 
 			const tickSampleCountdown: number = this.tickSampleCountdown;
-			const startRatio: number = Math.max( 0.0, 1.0 - (tickSampleCountdown) / samplesPerTick );
-			const endRatio: number = Math.min( 1.0, 1.0 - (tickSampleCountdown - runLength) / samplesPerTick );
+			const startRatio: number = 1.0 - (tickSampleCountdown) / samplesPerTick;
+			const endRatio: number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
 			const ticksIntoBar: number = (this.beat * Config.partsPerBeat + this.part) * Config.ticksPerPart + this.tick;
 			const partTimeTickStart: number = (ticksIntoBar) / Config.ticksPerPart;
 			const partTimeTickEnd: number = (ticksIntoBar + 1) / Config.ticksPerPart;
@@ -4935,8 +4935,8 @@ export class Synth {
 		const beatsPerPart: number = 1.0 / Config.partsPerBeat;
 		const toneWasActive: boolean = tone.active;
 		const tickSampleCountdown: number = synth.tickSampleCountdown;
-		const startRatio: number = Math.max(0.0, 1.0 - (tickSampleCountdown) / samplesPerTick);
-		const endRatio: number = Math.min(1.0, 1.0 - (tickSampleCountdown - runLength) / samplesPerTick);
+		const startRatio: number = 1.0 - (tickSampleCountdown) / samplesPerTick;
+		const endRatio: number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
 		const ticksIntoBar: number = (synth.beat * Config.partsPerBeat + synth.part) * Config.ticksPerPart + synth.tick;
 		const partTimeTickStart: number = (ticksIntoBar) / Config.ticksPerPart;
 		const partTimeTickEnd: number = (ticksIntoBar + 1) / Config.ticksPerPart;
@@ -5205,8 +5205,8 @@ export class Synth {
 				customVolumeStart = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio);
 				customVolumeEnd = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
 			} else {
-				customVolumeStart = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio;
-				customVolumeEnd = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio;
+				customVolumeStart = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * Math.max( 0.0, startRatio );
+				customVolumeEnd = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * Math.min( 1.0, endRatio );
 				tone.customVolumeStart = customVolumeStart;
 				tone.customVolumeEnd = customVolumeEnd;
 			}
