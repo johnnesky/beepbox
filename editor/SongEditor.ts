@@ -879,50 +879,50 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 					event.preventDefault();
 					break;
 				case 67: // c
-					this._trackEditor.copy();
+					this._doc.selection.copy();
 					event.preventDefault();
 					break;
 				case 13: // enter/return
-					this._trackEditor.insertBars();
+					this._doc.selection.insertBars();
 					event.preventDefault();
 					break;
 				case 8: // backspace/delete
-					this._trackEditor.deleteBars();
+					this._doc.selection.deleteBars();
 					event.preventDefault();
 					break;
 				case 65: // a
 					if (event.shiftKey) {
-						this._trackEditor.selectChannel();
+						this._doc.selection.selectChannel();
 					} else {
-						this._trackEditor.selectAll();
+						this._doc.selection.selectAll();
 					}
 					event.preventDefault();
 					break;
 				case 68: // d
-					this._trackEditor.duplicatePatterns();
+					this._doc.selection.duplicatePatterns();
 					event.preventDefault();
 					break;
 				case 77: // m
 					if (this._doc.enableChannelMuting) {
-						this._trackEditor.muteChannels(event.shiftKey);
+						this._doc.selection.muteChannels(event.shiftKey);
 						event.preventDefault();
 					}
 					break;
 				case 83: // s
 					if (this._doc.enableChannelMuting) {
 						if (event.shiftKey) {
-							this._trackEditor.muteChannels(false);
+							this._doc.selection.muteChannels(false);
 						} else {
-							this._trackEditor.soloChannels();
+							this._doc.selection.soloChannels();
 						}
 						event.preventDefault();
 					}
 					break;
 				case 86: // v
 					if (event.shiftKey) {
-						this._trackEditor.pasteNumbers();
+						this._doc.selection.pasteNumbers();
 					} else {
-						this._trackEditor.pasteNotes();
+						this._doc.selection.pasteNotes();
 					}
 					event.preventDefault();
 					break;
@@ -953,12 +953,12 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 					break;
 				case 189: // -
 				case 173: // Firefox -
-					this._trackEditor.transpose(false, event.shiftKey);
+					this._doc.selection.transpose(false, event.shiftKey);
 					event.preventDefault();
 					break;
 				case 187: // +
 				case 61: // Firefox +
-					this._trackEditor.transpose(true, event.shiftKey);
+					this._doc.selection.transpose(true, event.shiftKey);
 					event.preventDefault();
 					break;
 			}
@@ -1051,7 +1051,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 			if (isNaN(<number> <unknown> this._scaleSelect.value)) {
 				switch (this._scaleSelect.value) {
 					case "forceScale":
-						this._trackEditor.forceScale();
+						this._doc.selection.forceScale();
 						break;
 				}
 				this._doc.notifier.changed();
@@ -1077,7 +1077,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 			if (isNaN(<number> <unknown> this._rhythmSelect.value)) {
 				switch (this._rhythmSelect.value) {
 					case "forceRhythm":
-						this._trackEditor.forceRhythm();
+						this._doc.selection.forceRhythm();
 						break;
 				}
 				this._doc.notifier.changed();
@@ -1129,7 +1129,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 		}
 		
 		private _whenSetInstrument = (): void => {
-			this._trackEditor.setInstrument(this._instrumentSelect.selectedIndex);
+			this._doc.selection.setInstrument(this._instrumentSelect.selectedIndex);
 		}
 		
 		private _whenCustomizePressed = (): void => {
@@ -1216,34 +1216,34 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 					this._doc.redo();
 					break;
 				case "copy":
-					this._trackEditor.copy();
+					this._doc.selection.copy();
 					break;
 				case "insertBars":
-					this._trackEditor.insertBars();
+					this._doc.selection.insertBars();
 					break;
 				case "deleteBars":
-					this._trackEditor.deleteBars();
+					this._doc.selection.deleteBars();
 					break;
 				case "pasteNotes":
-					this._trackEditor.pasteNotes();
+					this._doc.selection.pasteNotes();
 					break;
 				case "pasteNumbers":
-					this._trackEditor.pasteNumbers();
+					this._doc.selection.pasteNumbers();
 					break;
 				case "transposeUp":
-					this._trackEditor.transpose(true, false);
+					this._doc.selection.transpose(true, false);
 					break;
 				case "transposeDown":
-					this._trackEditor.transpose(false, false);
+					this._doc.selection.transpose(false, false);
 					break;
 				case "selectAll":
-					this._trackEditor.selectAll();
+					this._doc.selection.selectAll();
 					break;
 				case "selectChannel":
-					this._trackEditor.selectChannel();
+					this._doc.selection.selectChannel();
 					break;
 				case "duplicatePatterns":
-					this._trackEditor.duplicatePatterns();
+					this._doc.selection.duplicatePatterns();
 					break;
 				case "barCount":
 					this._openPrompt("barCount");

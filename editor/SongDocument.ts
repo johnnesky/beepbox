@@ -4,6 +4,7 @@ import {Pattern, Song, Synth} from "../synth/synth";
 import {SongRecovery, generateUid} from "./SongRecovery";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
+import {Selection} from "./Selection";
 import {Change} from "./Change";
 import {ChangeNotifier} from "./ChangeNotifier";
 import {ChangeSong, setDefaultInstruments} from "./changes";
@@ -29,6 +30,7 @@ import {ChangeSong, setDefaultInstruments} from "./changes";
 		public song: Song;
 		public synth: Synth;
 		public notifier: ChangeNotifier = new ChangeNotifier();
+		public selection: Selection = new Selection(this);
 		public channel: number = 0;
 		public bar: number = 0;
 		public autoPlay: boolean;
@@ -60,6 +62,8 @@ import {ChangeSong, setDefaultInstruments} from "./changes";
 		private _waitingToUpdateState: boolean = false;
 		
 		constructor() {
+			this.notifier.watch(this._normalizeSelection);
+			
 			this.autoPlay = window.localStorage.getItem("autoPlay") == "true";
 			this.autoFollow = window.localStorage.getItem("autoFollow") == "true";
 			this.enableNotePreview = window.localStorage.getItem("enableNotePreview") != "false";
@@ -251,6 +255,21 @@ import {ChangeSong, setDefaultInstruments} from "./changes";
 		
 		private _cleanDocument = (): void => {
 			this.notifier.notifyWatchers();
+		}
+		
+		private _normalizeSelection = (): void => {
+			// I'm allowing the doc.bar to drift outside the box selection while playing
+			// because it may auto-follow the playhead outside the selection but it would
+			// be annoying to lose your selection just because the song is playing.
+			if ((!this.synth.playing && (this.bar < this.selection.boxSelectionBar || this.selection.boxSelectionBar + this.selection.boxSelectionWidth <= this.bar)) ||
+				this.channel < this.selection.boxSelectionChannel ||
+				this.selection.boxSelectionChannel + this.selection.boxSelectionHeight <= this.channel ||
+				this.song.barCount < this.selection.boxSelectionBar + this.selection.boxSelectionWidth ||
+				this.song.getChannelCount() < this.selection.boxSelectionChannel + this.selection.boxSelectionHeight ||
+				(this.selection.boxSelectionWidth == 1 && this.selection.boxSelectionHeight == 1))
+			{
+				this.selection.resetBoxSelection();
+			}
 		}
 		
 		private _updateHistoryState = (): void => {

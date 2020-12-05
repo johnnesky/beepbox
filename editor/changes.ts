@@ -1252,25 +1252,33 @@ import {SongDocument} from "./SongDocument";
 	}
 	
 	export class ChangePaste extends ChangeGroup {
-		constructor(doc: SongDocument, pattern: Pattern, notes: any[], oldBeatsPerBar: number) {
+		constructor(doc: SongDocument, pattern: Pattern, notes: any[], selectionStart: number, selectionEnd: number, oldPartDuration: number) {
 			super();
 			
-			pattern.notes.length = 0;
-			for (const noteObject of notes) {
-				const note: Note = new Note(noteObject["pitches"][0], noteObject["start"], noteObject["end"], noteObject["pins"][0]["volume"], false);
-				note.pitches.length = 0;
-				for (const pitch of noteObject["pitches"]) {
-					note.pitches.push(pitch);
-				}
-				note.pins.length = 0;
-				for (const pin of noteObject["pins"]) {
-					note.pins.push(makeNotePin(pin.interval, pin.time, pin.volume));
-				}
-				pattern.notes.push(note);
-			}
+			// Erase the current contents of the selection:
+			this.append(new ChangeNoteTruncate(doc, pattern, selectionStart, selectionEnd));
 			
-			if (doc.song.beatsPerBar < oldBeatsPerBar) {
-				this.append(new ChangeNoteTruncate(doc, pattern, doc.song.beatsPerBar * Config.partsPerBeat, oldBeatsPerBar * Config.partsPerBeat));
+			while (selectionStart < selectionEnd) {
+				for (const noteObject of notes) {
+					const noteStart: number = noteObject["start"] + selectionStart;
+					const noteEnd: number = noteObject["end"] + selectionStart;
+					if (noteStart >= selectionEnd) break;
+					const note: Note = new Note(noteObject["pitches"][0], noteStart, noteEnd, noteObject["pins"][0]["volume"], false);
+					note.pitches.length = 0;
+					for (const pitch of noteObject["pitches"]) {
+						note.pitches.push(pitch);
+					}
+					note.pins.length = 0;
+					for (const pin of noteObject["pins"]) {
+						note.pins.push(makeNotePin(pin.interval, pin.time, pin.volume));
+					}
+					pattern.notes.push(note);
+					if (note.end > selectionEnd) {
+						this.append(new ChangeNoteLength(doc, note, note.start, selectionEnd));
+					}
+				}
+				
+				selectionStart += oldPartDuration;
 			}
 			
 			doc.notifier.changed();
