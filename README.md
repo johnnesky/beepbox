@@ -76,5 +76,3 @@ I'd like to note that BeepBox also has an indirect, optional dependency on
 [jsdelivr](https://www.jsdelivr.com/) for exporting .mp3 files. If the user
 attempts to export an .mp3 file, BeepBox will direct the browser to download
 that dependency on demand.
-
-Note: I am compiling on Windows and "npm run build" setup doesn't work by default. You can get it working by going into package.json and removing the "./" from the paths for the build-synth, build-player, and build-editor rules.
