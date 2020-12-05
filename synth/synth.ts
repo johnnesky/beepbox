@@ -3478,6 +3478,7 @@ export class Synth {
 												const deltaVolume: number = note.pins[pinIdx].volume - note.pins[pinIdx - 1].volume;
 
 												latestPinValues[Config.modCount - 1 - note.pitches[0]] = Math.round(note.pins[pinIdx - 1].volume + deltaVolume * toNextBarLength / transitionLength);
+												pinIdx = note.pins.length;
 											}
 										}
 									}
@@ -4093,7 +4094,6 @@ export class Synth {
 		// Check the bounds of the playhead:
 		while (this.tickSampleCountdown <= 0) this.tickSampleCountdown += samplesPerTick;
 		if (this.tickSampleCountdown > samplesPerTick) this.tickSampleCountdown = samplesPerTick;
-
 		if (playSong) {
 			if (this.beat >= this.song.beatsPerBar) {
 				this.bar++;
@@ -4200,8 +4200,8 @@ export class Synth {
 			// Update LFO time for instruments (used to be deterministic based on bar position but now vibrato/arp speed messes that up!)
 
 			const tickSampleCountdown: number = this.tickSampleCountdown;
-			const startRatio: number = 1.0 - (tickSampleCountdown) / samplesPerTick;
-			const endRatio: number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
+			const startRatio: number = Math.max( 0.0, 1.0 - (tickSampleCountdown) / samplesPerTick );
+			const endRatio: number = Math.min( 1.0, 1.0 - (tickSampleCountdown - runLength) / samplesPerTick );
 			const ticksIntoBar: number = (this.beat * Config.partsPerBeat + this.part) * Config.ticksPerPart + this.tick;
 			const partTimeTickStart: number = (ticksIntoBar) / Config.ticksPerPart;
 			const partTimeTickEnd: number = (ticksIntoBar + 1) / Config.ticksPerPart;
@@ -4935,8 +4935,8 @@ export class Synth {
 		const beatsPerPart: number = 1.0 / Config.partsPerBeat;
 		const toneWasActive: boolean = tone.active;
 		const tickSampleCountdown: number = synth.tickSampleCountdown;
-		const startRatio: number = 1.0 - (tickSampleCountdown) / samplesPerTick;
-		const endRatio: number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
+		const startRatio: number = Math.max(0.0, 1.0 - (tickSampleCountdown) / samplesPerTick);
+		const endRatio: number = Math.min(1.0, 1.0 - (tickSampleCountdown - runLength) / samplesPerTick);
 		const ticksIntoBar: number = (synth.beat * Config.partsPerBeat + synth.part) * Config.ticksPerPart + synth.tick;
 		const partTimeTickStart: number = (ticksIntoBar) / Config.ticksPerPart;
 		const partTimeTickEnd: number = (ticksIntoBar + 1) / Config.ticksPerPart;
@@ -5209,7 +5209,6 @@ export class Synth {
 				customVolumeEnd = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio;
 				tone.customVolumeStart = customVolumeStart;
 				tone.customVolumeEnd = customVolumeEnd;
-
 			}
 			transitionVolumeStart = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * startRatio;
 			transitionVolumeEnd = transitionVolumeTickStart + (transitionVolumeTickEnd - transitionVolumeTickStart) * endRatio;
