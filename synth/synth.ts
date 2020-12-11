@@ -3000,10 +3000,12 @@ export class Song {
 					let volumeCap: number = this.getVolumeCapForSetting(isModChannel, this.channels[channel].instruments[pattern.instrument].modSettings[Config.modCount - note.pitches[0] - 1]);
 					const pointArray: Object[] = [];
 					for (const pin of note.pins) {
+						let useVol: number = isModChannel ? Math.round(pin.volume) : Math.round(pin.volume * 100 / volumeCap);
 						pointArray.push({
 							"tick": (pin.time + note.start) * Config.rhythms[this.rhythm].stepsPerBeat / Config.partsPerBeat,
 							"pitchBend": pin.interval,
-							"volume": Math.round(pin.volume * 100 / volumeCap),
+							"volume": useVol,
+							"forMod": isModChannel,
 						});
 					}
 
@@ -3239,7 +3241,17 @@ export class Song {
 
 								let volumeCap: number = this.getVolumeCapForSetting(isModChannel, channel.instruments[pattern.instrument].modSettings[Config.modCount - note.pitches[0] - 1]);
 
-								const volume: number = (pointObject["volume"] == undefined) ? volumeCap : Math.max(0, Math.min(volumeCap, Math.round((pointObject["volume"] | 0) * volumeCap / 100)));
+								// The strange volume formula used for notes is not needed for mods. Some rounding errors were possible.
+								// A "forMod" signifier was added to new JSON export to detect when the higher precision export was used in a file.
+								let volume: number;
+								if (pointObject["volume"] == undefined) {
+									volume = volumeCap;
+								} else if (pointObject["forMod"] == undefined) {
+									volume = Math.max(0, Math.min(volumeCap, Math.round((pointObject["volume"] | 0) * volumeCap / 100)));
+								}
+								else {
+									volume = ((pointObject["forMod"] | 0 ) > 0 ) ? Math.round(pointObject["volume"] | 0) : Math.max(0, Math.min(volumeCap, Math.round((pointObject["volume"] | 0) * volumeCap / 100)));
+								}
 
 								if (time > this.beatsPerBar * Config.partsPerBeat) continue;
 								if (note.pins.length == 0) {
