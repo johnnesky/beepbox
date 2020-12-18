@@ -3486,7 +3486,7 @@ export class Synth {
 										for (let pinIdx = 0; pinIdx < note.pins.length; pinIdx++) {
 											if (note.pins[pinIdx].time + note.start > partsInBar) {
 												const transitionLength: number = note.pins[pinIdx].time - note.pins[pinIdx - 1].time;
-												const toNextBarLength: number = partsInBar - note.pins[pinIdx - 1].time;
+												const toNextBarLength: number = partsInBar - note.start - note.pins[pinIdx - 1].time;
 												const deltaVolume: number = note.pins[pinIdx].volume - note.pins[pinIdx - 1].volume;
 
 												latestPinValues[Config.modCount - 1 - note.pitches[0]] = Math.round(note.pins[pinIdx - 1].volume + deltaVolume * toNextBarLength / transitionLength);

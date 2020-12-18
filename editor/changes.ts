@@ -1696,13 +1696,15 @@ export class ChangeModSetting extends Change {
 
 			for (let i: number = 0; i < doc.song.patternsPerChannel; i++) {
 				const pattern: Pattern = doc.song.channels[doc.channel].patterns[i];
-				for (let j: number = 0; j < pattern.notes.length; j++) {
-					const note: Note = pattern.notes[j];
-					if (note.pitches[0] == Config.modCount - mod - 1) {
-						for (let k: number = 0; k < note.pins.length; k++) {
-							const pin: NotePin = note.pins[k];
-							if (pin.volume > cap)
-								pin.volume = cap;
+				if (pattern.instrument == doc.getCurrentInstrument()) {
+					for (let j: number = 0; j < pattern.notes.length; j++) {
+						const note: Note = pattern.notes[j];
+						if (note.pitches[0] == Config.modCount - mod - 1) {
+							for (let k: number = 0; k < note.pins.length; k++) {
+								const pin: NotePin = note.pins[k];
+								if (pin.volume > cap)
+									pin.volume = cap;
+							}
 						}
 					}
 				}
