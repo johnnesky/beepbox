@@ -69,6 +69,10 @@ export class Selection {
 	}
 	
 	public nextDigit(digit: string): void {
+		if (this.digits.length > 0 && this.digits != String(this._doc.song.channels[this.boxSelectionChannel].bars[this.boxSelectionBar])) {
+			this.digits = "";
+		}
+		
 		this.digits += digit;
 		let parsed: number = parseInt(this.digits);
 		if (parsed <= this._doc.song.patternsPerChannel) {

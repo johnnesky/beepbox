@@ -829,6 +829,8 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 		}
 		
 		private _tempoStepperCaptureNumberKeys = (event: KeyboardEvent): void => {
+			// When the number input is in focus, allow some keyboard events to
+			// edit the input without accidentally editing the song otherwise.
 			switch (event.keyCode) {
 				case 8: // backspace/delete
 				case 13: // enter/return
@@ -860,7 +862,6 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 				return;
 			}
 			
-			this._trackEditor.onKeyPressed(event);
 			switch (event.keyCode) {
 				case 32: // space
 					this._togglePlay();
@@ -960,6 +961,91 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 				case 61: // Firefox +
 					this._doc.selection.transpose(true, event.shiftKey);
 					event.preventDefault();
+					break;
+				case 38: // up
+					if (event.shiftKey) {
+						this._doc.selection.boxSelectionY1 = Math.max(0, this._doc.selection.boxSelectionY1 - 1);
+						this._doc.selection.selectionUpdated();
+					} else {
+						this._doc.selection.setChannelBar((this._doc.channel - 1 + this._doc.song.getChannelCount()) % this._doc.song.getChannelCount(), this._doc.bar);
+						this._doc.selection.resetBoxSelection();
+					}
+					event.preventDefault();
+					break;
+				case 40: // down
+					if (event.shiftKey) {
+						this._doc.selection.boxSelectionY1 = Math.min(this._doc.song.getChannelCount() - 1, this._doc.selection.boxSelectionY1 + 1);
+						this._doc.selection.selectionUpdated();
+					} else {
+						this._doc.selection.setChannelBar((this._doc.channel + 1) % this._doc.song.getChannelCount(), this._doc.bar);
+						this._doc.selection.resetBoxSelection();
+					}
+					event.preventDefault();
+					break;
+				case 37: // left
+					if (event.shiftKey) {
+						this._doc.selection.boxSelectionX1 = Math.max(0, this._doc.selection.boxSelectionX1 - 1);
+						this._doc.selection.scrollToSelection();
+						this._doc.selection.selectionUpdated();
+					} else {
+						this._doc.selection.setChannelBar(this._doc.channel, (this._doc.bar + this._doc.song.barCount - 1) % this._doc.song.barCount);
+						this._doc.selection.resetBoxSelection();
+					}
+					event.preventDefault();
+					break;
+				case 39: // right
+					if (event.shiftKey) {
+						this._doc.selection.boxSelectionX1 = Math.min(this._doc.song.barCount - 1, this._doc.selection.boxSelectionX1 + 1);
+						this._doc.selection.scrollToSelection();
+						this._doc.selection.selectionUpdated();
+					} else {
+						this._doc.selection.setChannelBar(this._doc.channel, (this._doc.bar + 1) % this._doc.song.barCount);
+						this._doc.selection.resetBoxSelection();
+					}
+					event.preventDefault();
+					break;
+				case 48: // 0
+					this._doc.selection.nextDigit("0");
+					event.preventDefault();
+					break;
+				case 49: // 1
+					this._doc.selection.nextDigit("1");
+					event.preventDefault();
+					break;
+				case 50: // 2
+					this._doc.selection.nextDigit("2");
+					event.preventDefault();
+					break;
+				case 51: // 3
+					this._doc.selection.nextDigit("3");
+					event.preventDefault();
+					break;
+				case 52: // 4
+					this._doc.selection.nextDigit("4");
+					event.preventDefault();
+					break;
+				case 53: // 5
+					this._doc.selection.nextDigit("5");
+					event.preventDefault();
+					break;
+				case 54: // 6
+					this._doc.selection.nextDigit("6");
+					event.preventDefault();
+					break;
+				case 55: // 7
+					this._doc.selection.nextDigit("7");
+					event.preventDefault();
+					break;
+				case 56: // 8
+					this._doc.selection.nextDigit("8");
+					event.preventDefault();
+					break;
+				case 57: // 9
+					this._doc.selection.nextDigit("9");
+					event.preventDefault();
+					break;
+				default:
+					this._doc.selection.digits = "";
 					break;
 			}
 		}
