@@ -37,7 +37,7 @@ import {prettyNumber} from "./EditorConfig";
 		private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({id: "patternEditorDrumBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse"});
 		private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", "pointer-events": "none", fill: "url(#patternEditorNoteBackground" + this._barOffset + ")"});
 		private _svgNoteContainer: SVGSVGElement = SVG.svg();
-		private readonly _svgPlayhead: SVGRectElement = SVG.rect({id: "", x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none"});
+		private readonly _svgPlayhead: SVGRectElement = SVG.rect({x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none"});
 		private readonly _svgPreview: SVGPathElement = SVG.path({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": "2", "pointer-events": "none"});
 		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; position: absolute;`, width: "100%", height: "100%"},
 			SVG.defs(
@@ -434,14 +434,34 @@ import {prettyNumber} from "./EditorConfig";
 			this._mouseYStart = this._mouseY;
 			this._updateCursorStatus();
 			this._updatePreview();
-			this._dragChange = new ChangeSequence();
+			const sequence: ChangeSequence = new ChangeSequence();
+			this._dragChange = sequence;
 			this._doc.setProspectiveChange(this._dragChange);
 			
-			if (this._doc.enableNotePreview && !this._doc.synth.playing && this._cursor.valid && this._cursor.curNote == null) {
-				const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
-				this._doc.synth.liveInputDuration = duration;
-				this._doc.synth.liveInputPitches = [this._cursor.pitch];
-				this._doc.synth.liveInputStarted = true;
+			if (this._cursor.valid && this._cursor.curNote == null) {
+				// If clicking in empty space, the result will be adding a note,
+				// so we can safely add it immediately. Note that if clicking on
+				// or near an existing note, the result will depend on whether
+				// a drag follows, so we couldn't add the note yet without being
+				// confusing.
+				
+				const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.song.getChannelIsNoise(this._doc.channel));
+				note.pins = [];
+				for (const oldPin of this._cursor.pins) {
+					note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
+				}
+				sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
+				const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
+				if (pattern == null) throw new Error();
+				sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
+				
+				if (this._doc.enableNotePreview && !this._doc.synth.playing) {
+					// Play the new note out loud if enabled.
+					const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
+					this._doc.synth.liveInputDuration = duration;
+					this._doc.synth.liveInputPitches = [this._cursor.pitch];
+					this._doc.synth.liveInputStarted = true;
+				}
 			}
 		}
 		
@@ -468,9 +488,6 @@ import {prettyNumber} from "./EditorConfig";
 		
 		private _whenCursorMoved(): void {
 			if (this._doc.enableNotePreview && this._mouseOver) this._doc.synth.maintainLiveInput();
-			
-			let start: number;
-			let end: number;
 			
 			// HACK: Undoable pattern changes rely on persistent instance
 			// references. Loading song from hash via undo/redo breaks that,
@@ -556,13 +573,8 @@ import {prettyNumber} from "./EditorConfig";
 							}
 						}
 						
-						/*
-						if (defaultLength < directLength) {
-							// See if I can find a better match by snapping to an existing note...
-							// E.G. in another channel
-						}
-						*/
-						
+						let start: number;
+						let end: number;
 						if (backwards) {
 							end = this._cursor.start;
 							start = end - defaultLength;
@@ -610,8 +622,8 @@ import {prettyNumber} from "./EditorConfig";
 							
 							this._dragVisible = false;
 						} else {
-							start = Math.min(this._cursor.curNote.start, shiftedTime);
-							end   = Math.max(this._cursor.curNote.end,   shiftedTime);
+							const start: number = Math.min(this._cursor.curNote.start, shiftedTime);
+							const   end: number = Math.max(this._cursor.curNote.end,   shiftedTime);
 							
 							this._dragTime = shiftedTime;
 							this._dragPitch = this._cursor.curNote.pitches[this._cursor.pitchIndex == -1 ? 0 : this._cursor.pitchIndex] + this._cursor.curNote.pins[this._cursor.nearPinIndex].interval;
@@ -702,27 +714,15 @@ import {prettyNumber} from "./EditorConfig";
 		
 		private _whenCursorReleased = (event: Event | null): void => {
 			if (!this._cursor.valid) return;
+			
 			const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
-			if (this._mouseDragging && continuousState) {
-				if (this._dragChange != null) {
-					this._doc.record(this._dragChange);
-					this._dragChange = null;
-				}
-			} else if (this._mouseDown && continuousState) {
-				if (this._cursor.curNote == null) {
-					const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.song.getChannelIsNoise(this._doc.channel));
-					note.pins = [];
-					for (const oldPin of this._cursor.pins) {
-						note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
+			if (this._mouseDown && continuousState) {
+				if (this._mouseDragging) {
+					if (this._dragChange != null) {
+						this._doc.record(this._dragChange);
+						this._dragChange = null;
 					}
-					const sequence: ChangeSequence = new ChangeSequence();
-					sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
-					const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
-					if (pattern == null) throw new Error();
-					sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
-					this._doc.record(sequence);
-				} else {
-					
+				} else if (this._cursor.curNote != null) {
 					if (this._pattern == null) throw new Error();
 					
 					if (this._cursor.pitchIndex == -1) {
