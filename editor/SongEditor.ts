@@ -6,7 +6,7 @@ import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
 import {Pattern, Instrument, Channel} from "../synth/synth";
 import {HTML} from "imperative-html/dist/esm/elements-strict";
-import {SongDocument, StateChangeType} from "./SongDocument";
+import {SongDocument} from "./SongDocument";
 import {Prompt} from "./Prompt";
 import {TipPrompt} from "./TipPrompt";
 import {PatternEditor} from "./PatternEditor";
@@ -26,7 +26,7 @@ import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
-import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, ChangeFilterResonance, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeFilterEnvelope, ChangePulseEnvelope, ChangeTransition, ChangeEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong} from "./changes";
+import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangeFilterCutoff, ChangeFilterResonance, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeFilterEnvelope, ChangePulseEnvelope, ChangeTransition, ChangeEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong} from "./changes";
 
 //namespace beepbox {
 	const {button, div, input, select, span, optgroup, option} = HTML;
@@ -863,6 +863,10 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 			}
 			
 			switch (event.keyCode) {
+				case 27: // ESC key
+					new ChangePatternSelection(this._doc, 0, 0);
+					this._doc.selection.resetBoxSelection();
+					break;
 				case 32: // space
 					this._togglePlay();
 					event.preventDefault();
@@ -1263,7 +1267,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangeFilterCutoff, 
 				case "new":
 					this._doc.goBackToStart();
 					for (const channel of this._doc.song.channels) channel.muted = false;
-					this._doc.record(new ChangeSong(this._doc, ""), StateChangeType.push, true);
+					this._doc.record(new ChangeSong(this._doc, ""), false, true);
 					break;
 				case "export":
 					this._openPrompt("export");

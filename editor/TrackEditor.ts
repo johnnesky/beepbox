@@ -147,8 +147,7 @@ import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 		}
 		
 		private _dragBoxSelection(): void {
-			this._doc.selection.boxSelectionX1 = this._mouseBar;
-			this._doc.selection.boxSelectionY1 = this._mouseChannel;
+			this._doc.selection.setTrackSelection(this._doc.selection.boxSelectionX0, this._mouseBar, this._doc.selection.boxSelectionY0, this._mouseChannel);
 			this._doc.selection.selectionUpdated();
 		}
 		
@@ -212,8 +211,7 @@ import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 			this._mouseStartChannel = this._mouseChannel;
 			if (event.shiftKey) {
 				this._mouseDragging = true;
-				this._doc.selection.boxSelectionX1 = this._mouseBar;
-				this._doc.selection.boxSelectionY1 = this._mouseChannel;
+				this._doc.selection.setTrackSelection(this._doc.selection.boxSelectionX0, this._mouseBar, this._doc.selection.boxSelectionY0, this._mouseChannel);
 				this._doc.selection.selectionUpdated();
 			} else {
 				this._mouseDragging = false;

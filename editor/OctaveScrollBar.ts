@@ -1,7 +1,7 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
 import {Config} from "../synth/SynthConfig";
-import {SongDocument, StateChangeType} from "./SongDocument";
+import {SongDocument} from "./SongDocument";
 import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 import {ChangeOctave} from "./changes";
 import {ColorConfig} from "./ColorConfig";
@@ -175,12 +175,12 @@ import {ColorConfig} from "./ColorConfig";
 					if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
 						if (currentOctave < Config.scrollableOctaves) {
 							this._change = new ChangeOctave(this._doc, oldValue, currentOctave + 1);
-							this._doc.record(this._change, canReplaceLastChange ? StateChangeType.replace : StateChangeType.push);
+							this._doc.record(this._change, canReplaceLastChange);
 						}
 					} else {
 						if (currentOctave > 0) {
 							this._change = new ChangeOctave(this._doc, oldValue, currentOctave - 1);
-							this._doc.record(this._change, canReplaceLastChange ? StateChangeType.replace : StateChangeType.push);
+							this._doc.record(this._change, canReplaceLastChange);
 						}
 					}
 				}

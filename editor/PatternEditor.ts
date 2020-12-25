@@ -6,7 +6,7 @@ import {ColorConfig} from "./ColorConfig";
 import {SongDocument} from "./SongDocument";
 import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 import {ChangeSequence, UndoableChange} from "./Change";
-import {ChangeChannelBar, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePinTime, ChangeVolumeBend, ChangePitchBend, ChangePitchAdded} from "./changes";
+import {ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeVolumeBend, ChangePitchBend, ChangePitchAdded} from "./changes";
 import {prettyNumber} from "./EditorConfig";
 
 //namespace beepbox {
@@ -27,7 +27,7 @@ import {prettyNumber} from "./EditorConfig";
 		public start:        number = 0;
 		public end:          number = 0;
 		public part:         number = 0;
-		public notePart:     number = 0;
+		public exactPart:    number = 0;
 		public nearPinIndex: number = 0;
 		public pins:         NotePin[] = [];
 	}
@@ -38,6 +38,7 @@ import {prettyNumber} from "./EditorConfig";
 		private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", "pointer-events": "none", fill: "url(#patternEditorNoteBackground" + this._barOffset + ")"});
 		private _svgNoteContainer: SVGSVGElement = SVG.svg();
 		private readonly _svgPlayhead: SVGRectElement = SVG.rect({x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none"});
+		private readonly _selectionRect: SVGRectElement = SVG.rect({fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "pointer-events": "none", visibility: "hidden"});
 		private readonly _svgPreview: SVGPathElement = SVG.path({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": "2", "pointer-events": "none"});
 		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; position: absolute;`, width: "100%", height: "100%"},
 			SVG.defs(
@@ -45,6 +46,7 @@ import {prettyNumber} from "./EditorConfig";
 				this._svgDrumBackground,
 			),
 			this._svgBackground,
+			this._selectionRect,
 			this._svgNoteContainer,
 			this._svgPreview,
 			this._svgPlayhead,
@@ -70,11 +72,18 @@ import {prettyNumber} from "./EditorConfig";
 		private _copiedPins: NotePin[];
 		private _mouseXStart: number = 0;
 		private _mouseYStart: number = 0;
+		private _shiftHeld: boolean = false;
+		private _touchTime: number = 0;
+		private _draggingStartOfSelection: boolean = false;
+		private _draggingEndOfSelection: boolean = false;
+		private _draggingSelectionContents: boolean = false;
 		private _dragTime: number = 0;
 		private _dragPitch: number = 0;
 		private _dragVolume: number = 0;
 		private _dragVisible: boolean = false;
 		private _dragChange: UndoableChange | null = null;
+		private _changePatternSelection: UndoableChange | null = null;
+		private _lastChangeWasPatternSelection: boolean = false;
 		private _cursor: PatternCursor = new PatternCursor();
 		private _pattern: Pattern | null = null;
 		private _playheadX: number = 0.0;
@@ -156,22 +165,22 @@ import {prettyNumber} from "./EditorConfig";
 			if (this._mouseX < 0 || this._mouseX > this._editorWidth || this._mouseY < 0 || this._mouseY > this._editorHeight || this._pitchHeight <= 0) return;
 			
 			const minDivision: number = this._getMinDivision();
-			const exactPart: number = this._mouseX / this._partWidth;
+			this._cursor.exactPart = this._mouseX / this._partWidth;
 			this._cursor.part =
 				Math.floor(
 					Math.max(0,
-						Math.min(this._doc.song.beatsPerBar * Config.partsPerBeat - minDivision, exactPart)
+						Math.min(this._doc.song.beatsPerBar * Config.partsPerBeat - minDivision, this._cursor.exactPart)
 					)
 				/ minDivision) * minDivision;
 			
 			if (this._pattern != null) {
 				for (const note of this._pattern.notes) {
-					if (note.end <= exactPart) {
+					if (note.end <= this._cursor.exactPart) {
 						this._cursor.prevNote = note;
 						this._cursor.curIndex++;
-					} else if (note.start <= exactPart && note.end > exactPart) {
+					} else if (note.start <= this._cursor.exactPart && note.end > this._cursor.exactPart) {
 						this._cursor.curNote = note;
-					} else if (note.start > exactPart) {
+					} else if (note.start > this._cursor.exactPart) {
 						this._cursor.nextNote = note;
 						break;
 					}
@@ -302,6 +311,18 @@ import {prettyNumber} from "./EditorConfig";
 			this._cursor.valid = true;
 		}
 		
+		private _cursorIsInSelection(): boolean {
+			return this._cursor.valid && this._doc.selection.patternSelectionActive && this._doc.selection.patternSelectionStart <= this._cursor.exactPart && this._cursor.exactPart <= this._doc.selection.patternSelectionEnd;
+		}
+		
+		private _cursorAtStartOfSelection(): boolean {
+			return this._cursor.valid && this._doc.selection.patternSelectionActive && this._cursor.pitchIndex == -1 && this._doc.selection.patternSelectionStart - 3 <= this._cursor.exactPart && this._cursor.exactPart <= this._doc.selection.patternSelectionStart + 1.25;
+		}
+		
+		private _cursorAtEndOfSelection(): boolean {
+			return this._cursor.valid && this._doc.selection.patternSelectionActive && this._cursor.pitchIndex == -1 && this._doc.selection.patternSelectionEnd - 1.25 <= this._cursor.exactPart && this._cursor.exactPart <= this._doc.selection.patternSelectionEnd + 3;
+		}
+		
 		private _findMousePitch(pixelY: number): number {
 			return Math.max(0, Math.min(this._pitchCount - 1, this._pitchCount - (pixelY / this._pitchHeight))) + this._octaveOffset;
 		}
@@ -371,6 +392,14 @@ import {prettyNumber} from "./EditorConfig";
 		}
 		
 		private _animatePlayhead = (timestamp: number): void => {
+			
+			if (this._usingTouch && !this._shiftHeld && !this._mouseDragging && this._mouseDown && performance.now() > this._touchTime + 1000 && this._cursor.valid && this._doc.lastChangeWas(this._dragChange)) {
+				this._dragChange!.undo();
+				this._shiftHeld = true;
+				this._whenCursorPressed();
+				this._doc.notifier.notifyWatchers();
+			}
+			
 			const playheadBar: number = Math.floor(this._doc.synth.playhead);
 			
 			if (this._doc.synth.playing && ((this._pattern != null && this._doc.song.getPattern(this._doc.channel, Math.floor(this._doc.synth.playhead)) == this._pattern) || Math.floor(this._doc.synth.playhead) == this._doc.bar + this._barOffset)) {
@@ -413,6 +442,7 @@ import {prettyNumber} from "./EditorConfig";
 		    if (isNaN(this._mouseX)) this._mouseX = 0;
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._usingTouch = false;
+			this._shiftHeld = event.shiftKey;
 			this._whenCursorPressed();
 		}
 		
@@ -424,6 +454,8 @@ import {prettyNumber} from "./EditorConfig";
 		    if (isNaN(this._mouseX)) this._mouseX = 0;
 		    if (isNaN(this._mouseY)) this._mouseY = 0;
 			this._usingTouch = true;
+			this._shiftHeld = event.shiftKey;
+			this._touchTime = performance.now();
 			this._whenCursorPressed();
 		}
 		
@@ -436,9 +468,30 @@ import {prettyNumber} from "./EditorConfig";
 			this._updatePreview();
 			const sequence: ChangeSequence = new ChangeSequence();
 			this._dragChange = sequence;
+			this._lastChangeWasPatternSelection = this._doc.lastChangeWas(this._changePatternSelection);
 			this._doc.setProspectiveChange(this._dragChange);
 			
-			if (this._cursor.valid && this._cursor.curNote == null) {
+			if (this._cursorAtStartOfSelection()) {
+				this._draggingStartOfSelection = true;
+			} else if (this._cursorAtEndOfSelection()) {
+				this._draggingEndOfSelection = true;
+			} else if (this._shiftHeld) {
+				if ((this._doc.selection.patternSelectionActive && this._cursor.pitchIndex == -1) || this._cursorIsInSelection()) {
+					sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+				} else {
+					if (this._cursor.curNote != null) {
+						sequence.append(new ChangePatternSelection(this._doc, this._cursor.curNote.start, this._cursor.curNote.end));
+					} else {
+						const start: number = Math.max(0, Math.min((this._doc.song.beatsPerBar - 1) * Config.partsPerBeat, Math.floor(this._cursor.exactPart / Config.partsPerBeat) * Config.partsPerBeat));
+						const end: number = start + Config.partsPerBeat;
+						sequence.append(new ChangePatternSelection(this._doc, start, end));
+					}
+				}
+			} else if (this._cursorIsInSelection()) {
+				this._draggingSelectionContents = true;
+			} else if (this._cursor.valid && this._cursor.curNote == null) {
+				sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+				
 				// If clicking in empty space, the result will be adding a note,
 				// so we can safely add it immediately. Note that if clicking on
 				// or near an existing note, the result will depend on whether
@@ -463,6 +516,7 @@ import {prettyNumber} from "./EditorConfig";
 					this._doc.synth.liveInputStarted = true;
 				}
 			}
+			this._updateSelection();
 		}
 		
 		private _whenMouseMoved = (event: MouseEvent): void => {
@@ -495,29 +549,106 @@ import {prettyNumber} from "./EditorConfig";
 			// invalid. Abort further drag changes until the mouse is released.
 			const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
 			
-			if (this._mouseDown && this._cursor.valid && continuousState) {
-				const minDivision: number = this._getMinDivision();
-				
-				if (!this._mouseDragging) {
-					const dx: number = this._mouseX - this._mouseXStart;
-					const dy: number = this._mouseY - this._mouseYStart;
-					if (Math.sqrt(dx * dx + dy * dy) > 5) {
-						this._mouseDragging = true;
-						this._mouseHorizontal = Math.abs(dx) >= Math.abs(dy);
-					}
+			if (!this._mouseDragging && this._mouseDown && this._cursor.valid && continuousState) {
+				const dx: number = this._mouseX - this._mouseXStart;
+				const dy: number = this._mouseY - this._mouseYStart;
+				if (Math.sqrt(dx * dx + dy * dy) > 5) {
+					this._mouseDragging = true;
+					this._mouseHorizontal = Math.abs(dx) >= Math.abs(dy);
 				}
+			}
+			
+			if (this._mouseDragging && this._mouseDown && this._cursor.valid && continuousState) {
+				this._dragChange!.undo();
+				const sequence: ChangeSequence = new ChangeSequence();
+				this._dragChange = sequence;
+				this._doc.setProspectiveChange(this._dragChange);
 				
-				if (this._mouseDragging) {
-					if (this._dragChange != null) {
-						this._dragChange.undo();
+				const minDivision: number = this._getMinDivision();
+				const currentPart: number = this._snapToMinDivision(this._mouseX / this._partWidth);
+				if (this._draggingStartOfSelection) {
+					sequence.append(new ChangePatternSelection(this._doc, Math.max(0, Math.min(this._doc.song.beatsPerBar * Config.partsPerBeat, currentPart)), this._doc.selection.patternSelectionEnd));
+					this._updateSelection();
+				} else if (this._draggingEndOfSelection) {
+					sequence.append(new ChangePatternSelection(this._doc, this._doc.selection.patternSelectionStart, Math.max(0, Math.min(this._doc.song.beatsPerBar * Config.partsPerBeat, currentPart))));
+					this._updateSelection();
+				} else if (this._draggingSelectionContents) {
+					const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
+					if (this._mouseDragging && pattern != null) {
+						this._dragChange!.undo();
+						const sequence: ChangeSequence = new ChangeSequence();
+						this._dragChange = sequence;
+						this._doc.setProspectiveChange(this._dragChange);
+						
+						const notesInScale: number = Config.scales[this._doc.song.scale].flags.filter(x=>x).length;
+						const pitchRatio: number = this._doc.song.getChannelIsNoise(this._doc.channel) ? 1 : 12 / notesInScale;
+						const draggedParts: number = Math.round((this._mouseX - this._mouseXStart) / (this._partWidth * minDivision)) * minDivision;
+						const draggedTranspose: number = Math.round((this._mouseYStart - this._mouseY) / (this._pitchHeight * pitchRatio));
+						sequence.append(new ChangeDragSelectedNotes(this._doc, this._doc.channel, pattern, draggedParts, draggedTranspose));
 					}
 					
-					const currentPart: number = this._snapToMinDivision(this._mouseX / this._partWidth);
-					const sequence: ChangeSequence = new ChangeSequence();
-					this._dragChange = sequence;
-					this._doc.setProspectiveChange(this._dragChange);
+				} else if (this._shiftHeld) {
+					
+					if (this._mouseDragging) {
+						let start: number = Math.max(0, Math.min((this._doc.song.beatsPerBar - 1) * Config.partsPerBeat, Math.floor(this._cursor.exactPart / Config.partsPerBeat) * Config.partsPerBeat));
+						let end: number = start + Config.partsPerBeat;
+						if (this._cursor.curNote != null) {
+							start = Math.max(start, this._cursor.curNote.start);
+							end = Math.min(end, this._cursor.curNote.end);
+						}
+						
+						// Todo: The following two conditional blocks could maybe be refactored.
+						if (currentPart < start) {
+							start = 0;
+							const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
+							if (pattern != null) {
+								for (let i: number = 0; i < pattern.notes.length; i++) {
+									if (pattern.notes[i].start <= currentPart) {
+										start = pattern.notes[i].start;
+									}
+									if (pattern.notes[i].end <= currentPart) {
+										start = pattern.notes[i].end;
+									}
+								}
+							}
+							for (let beat: number = 0; beat <= this._doc.song.beatsPerBar; beat++) {
+								const part: number = beat * Config.partsPerBeat;
+								if (start <= part && part <= currentPart) {
+									start = part;
+								}
+							}
+						}
+						
+						if (currentPart > end) {
+							end = Config.partsPerBeat * this._doc.song.beatsPerBar;
+							const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
+							if (pattern != null) {
+								for (let i: number = 0; i < pattern.notes.length; i++) {
+									if (pattern.notes[i].start >= currentPart) {
+										end = pattern.notes[i].start;
+										break;
+									}
+									if (pattern.notes[i].end >= currentPart) {
+										end = pattern.notes[i].end;
+										break;
+									}
+								}
+							}
+							for (let beat: number = 0; beat <= this._doc.song.beatsPerBar; beat++) {
+								const part: number = beat * Config.partsPerBeat;
+								if (currentPart < part && part < end) {
+									end = part;
+								}
+							}
+						}
+						
+						sequence.append(new ChangePatternSelection(this._doc, start, end));
+						this._updateSelection();
+					}
+				} else {
 					
 					if (this._cursor.curNote == null) {
+						sequence.append(new ChangePatternSelection(this._doc, 0, 0));
 						
 						let backwards: boolean;
 						let directLength: number;
@@ -606,6 +737,8 @@ import {prettyNumber} from "./EditorConfig";
 						
 						this._pattern = this._doc.getCurrentPattern(this._barOffset);
 					} else if (this._mouseHorizontal) {
+						sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+						
 						const shift: number = (this._mouseX - this._mouseXStart) / this._partWidth;
 						
 						const shiftedPin: NotePin = this._cursor.curNote.pins[this._cursor.nearPinIndex];
@@ -635,6 +768,8 @@ import {prettyNumber} from "./EditorConfig";
 							this._copyPins(this._cursor.curNote);
 						}
 					} else if (this._cursor.pitchIndex == -1) {
+						sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+						
 						const bendPart: number = 
 							Math.max(this._cursor.curNote.start,
 								Math.min(this._cursor.curNote.end,
@@ -667,6 +802,8 @@ import {prettyNumber} from "./EditorConfig";
 						sequence.append(new ChangeVolumeBend(this._doc, this._cursor.curNote, bendPart, bendVolume, bendInterval));
 						this._copyPins(this._cursor.curNote);
 					} else {
+						sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+						
 						this._dragVolume = this._cursor.curNote.pins[this._cursor.nearPinIndex].volume;
 						
 						if (this._pattern == null) throw new Error();
@@ -706,7 +843,9 @@ import {prettyNumber} from "./EditorConfig";
 						this._dragVisible = true;
 					}
 				}
-			} else {
+			}
+			
+			if (!(this._mouseDown && this._cursor.valid && continuousState)) {
 				this._updateCursorStatus();
 				this._updatePreview();
 			}
@@ -716,22 +855,28 @@ import {prettyNumber} from "./EditorConfig";
 			if (!this._cursor.valid) return;
 			
 			const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
-			if (this._mouseDown && continuousState) {
-				if (this._mouseDragging) {
-					if (this._dragChange != null) {
-						this._doc.record(this._dragChange);
-						this._dragChange = null;
-					}
-				} else if (this._cursor.curNote != null) {
+			if (this._mouseDown && continuousState && this._dragChange != null) {
+				
+				if (this._draggingSelectionContents) {
+					this._doc.record(this._dragChange);
+					this._dragChange = null;
+				} else if (this._draggingStartOfSelection || this._draggingEndOfSelection || this._shiftHeld) {
+					this._setPatternSelection(this._dragChange);
+					this._dragChange = null;
+				} else if (this._mouseDragging || this._cursor.curNote == null || !this._dragChange.isNoop() || this._draggingStartOfSelection || this._draggingEndOfSelection || this._draggingSelectionContents || this._shiftHeld) {
+					this._doc.record(this._dragChange);
+					this._dragChange = null;
+				} else {
 					if (this._pattern == null) throw new Error();
 					
+					const sequence: ChangeSequence = new ChangeSequence();
+					sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+					
 					if (this._cursor.pitchIndex == -1) {
-						const sequence: ChangeSequence = new ChangeSequence();
 						if (this._cursor.curNote.pitches.length == Config.maxChordSize) {
 							sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.curNote.pitches[0], 0, true));
 						}
 						sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));
-						this._doc.record(sequence);
 						this._copyPins(this._cursor.curNote);
 						
 						if (this._doc.enableNotePreview && !this._doc.synth.playing) {
@@ -742,18 +887,29 @@ import {prettyNumber} from "./EditorConfig";
 						}
 					} else {
 						if (this._cursor.curNote.pitches.length == 1) {
-							this._doc.record(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
+							sequence.append(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
 						} else {
-							this._doc.record(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
+							sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
 						}
 					}
+					
+					this._doc.record(sequence);
 				}
 			}
 			
 			this._mouseDown = false;
 			this._mouseDragging = false;
+			this._draggingStartOfSelection = false;
+			this._draggingEndOfSelection = false;
+			this._draggingSelectionContents = false;
+			this._lastChangeWasPatternSelection = false;
 			this._updateCursorStatus();
 			this._updatePreview();
+		}
+		
+		private _setPatternSelection(change: UndoableChange): void {
+			this._changePatternSelection = change;
+			this._doc.record(this._changePatternSelection, this._lastChangeWasPatternSelection);
 		}
 		
 		private _updatePreview(): void {
@@ -792,8 +948,38 @@ import {prettyNumber} from "./EditorConfig";
 					this._svgPreview.setAttribute("visibility", "hidden");
 				} else {
 					this._svgPreview.setAttribute("visibility", "visible");
-					this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+					
+					if (this._cursorAtStartOfSelection()) {
+						const center: number = this._partWidth * this._doc.selection.patternSelectionStart;
+						const left: string = prettyNumber(center - 4);
+						const right: string = prettyNumber(center + 4);
+						const bottom: number = this._pitchToPixelHeight(-0.5);
+						this._svgPreview.setAttribute("d", "M " + left + " 0 L " + left + " " + bottom + " L " + right + " " + bottom + " L " + right + " 0 z");
+					} else if (this._cursorAtEndOfSelection()) {
+						const center: number = this._partWidth * this._doc.selection.patternSelectionEnd;
+						const left: string = prettyNumber(center - 4);
+						const right: string = prettyNumber(center + 4);
+						const bottom: number = this._pitchToPixelHeight(-0.5);
+						this._svgPreview.setAttribute("d", "M " + left + " 0 L " + left + " " + bottom + " L " + right + " " + bottom + " L " + right + " 0 z");
+					} else if (this._cursorIsInSelection()) {
+						const left: string = prettyNumber(this._partWidth * this._doc.selection.patternSelectionStart - 2);
+						const right: string = prettyNumber(this._partWidth * this._doc.selection.patternSelectionEnd + 2);
+						const bottom: number = this._pitchToPixelHeight(-0.5);
+						this._svgPreview.setAttribute("d", "M " + left + " 0 L " + left + " " + bottom + " L " + right + " " + bottom + " L " + right + " 0 z");
+					} else {
+						this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+					}
 				}
+			}
+		}
+		
+		private _updateSelection(): void {
+			if (this._doc.selection.patternSelectionActive) {
+				this._selectionRect.setAttribute("visibility", "visible");
+				this._selectionRect.setAttribute("x", String(this._partWidth * this._doc.selection.patternSelectionStart));
+				this._selectionRect.setAttribute("width", String(this._partWidth * (this._doc.selection.patternSelectionEnd - this._doc.selection.patternSelectionStart)));
+			} else {
+				this._selectionRect.setAttribute("visibility", "hidden");
 			}
 		}
 		
@@ -830,6 +1016,8 @@ import {prettyNumber} from "./EditorConfig";
 				this._svgBackground.setAttribute("width", "" + this._editorWidth);
 				this._svgBackground.setAttribute("height", "" + this._editorHeight);
 				this._svgPlayhead.setAttribute("height", "" + this._editorHeight);
+				this._selectionRect.setAttribute("y", "0");
+				this._selectionRect.setAttribute("height", "" + this._editorHeight);
 			}
 			
 			const beatWidth = this._editorWidth / this._doc.song.beatsPerBar;
@@ -851,12 +1039,12 @@ import {prettyNumber} from "./EditorConfig";
 				}
 			}
 			
-			
 			this._svgNoteContainer = makeEmptyReplacementElement(this._svgNoteContainer);
 			
 			if (this._interactive) {
 				if (!this._mouseDown) this._updateCursorStatus();
 				this._updatePreview();
+				this._updateSelection();
 			}
 			
 			if (this._renderedFifths != this._doc.showFifth) {

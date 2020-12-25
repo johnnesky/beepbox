@@ -338,6 +338,16 @@ declare global {
 			}
 			return mainInterval;
 		}
+		
+		public clone(): Note {
+			const newNote: Note = new Note(-1, this.start, this.end, 3);
+			newNote.pitches = this.pitches.concat();
+			newNote.pins = [];
+			for (const pin of this.pins) {
+				newNote.pins.push(makeNotePin(pin.interval, pin.time, pin.volume));
+			}
+			return newNote;
+		}
 	}
 	
 	export class Pattern {
@@ -346,14 +356,8 @@ declare global {
 		
 		public cloneNotes(): Note[] {
 			const result: Note[] = [];
-			for (const oldNote of this.notes) {
-				const newNote: Note = new Note(-1, oldNote.start, oldNote.end, 3);
-				newNote.pitches = oldNote.pitches.concat();
-				newNote.pins = [];
-				for (const oldPin of oldNote.pins) {
-					newNote.pins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.volume));
-				}
-				result.push(newNote);
+			for (const note of this.notes) {
+				result.push(note.clone());
 			}
 			return result;
 		}

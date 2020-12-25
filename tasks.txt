@@ -356,3 +356,4 @@
 √ Added .mp3 file export.
 √ Added tinyurl shortcut to file menu.
 √ BPM is now precise.
+√ Hold shift (or long press on touch screen) and drag in pattern editor to select part of it. Pattern selection can be dragged, copied, and pasted.
