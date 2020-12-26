@@ -914,7 +914,7 @@ import {prettyNumber} from "./EditorConfig";
 		
 		private _updatePreview(): void {
 			if (this._usingTouch) {
-				if (!this._mouseDown || !this._cursor.valid  || !this._mouseDragging || !this._dragVisible) {
+				if (!this._mouseDown || !this._cursor.valid  || !this._mouseDragging || !this._dragVisible || this._shiftHeld || this._draggingStartOfSelection || this._draggingEndOfSelection || this._draggingSelectionContents) {
 					this._svgPreview.setAttribute("visibility", "hidden");
 				} else {
 					this._svgPreview.setAttribute("visibility", "visible");
