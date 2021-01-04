@@ -371,7 +371,7 @@ export class Selection {
 					const existingPattern: Pattern | undefined = this._doc.song.channels[channel].patterns[copiedPatternIndex - 1];
 					
 					if (existingPattern != undefined &&
-						copiedPartDuration == Config.partsPerBeat * Config.partsPerBeat * this._doc.song.beatsPerBar &&
+						copiedPartDuration == Config.partsPerBeat * this._doc.song.beatsPerBar &&
 						comparePatternNotes(patternCopy["notes"], existingPattern.notes) &&
 						instrumentCopy == existingPattern.instrument)
 					{
