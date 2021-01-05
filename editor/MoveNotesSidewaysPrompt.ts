@@ -2,7 +2,7 @@
 
 import { Config } from "../synth/SynthConfig";
 import { HTML } from "imperative-html/dist/esm/elements-strict";
-import { SongDocument, StateChangeType } from "./SongDocument";
+import { SongDocument } from "./SongDocument";
 import { Prompt } from "./Prompt";
 import { ChangeMoveNotesSideways } from "./changes";
 import { ColorConfig } from "./ColorConfig";
@@ -84,7 +84,7 @@ export class MoveNotesSidewaysPrompt implements Prompt {
 	private _saveChanges = (): void => {
 		window.localStorage.setItem("moveNotesSidewaysStrategy", this._conversionStrategySelect.value);
 		this._doc.prompt = null;
-		this._doc.record(new ChangeMoveNotesSideways(this._doc, +this._beatsStepper.value, this._conversionStrategySelect.value), StateChangeType.replace);
+		this._doc.record(new ChangeMoveNotesSideways(this._doc, +this._beatsStepper.value, this._conversionStrategySelect.value), true);
 	}
 }
 //}

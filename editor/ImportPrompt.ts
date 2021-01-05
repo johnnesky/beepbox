@@ -3,7 +3,7 @@
 import { InstrumentType, Config } from "../synth/SynthConfig";
 import { NotePin, Note, makeNotePin, Pattern, Instrument, Channel, Song, Synth } from "../synth/synth";
 import { Preset, EditorConfig } from "./EditorConfig";
-import { SongDocument, StateChangeType } from "./SongDocument";
+import { SongDocument } from "./SongDocument";
 import { Prompt } from "./Prompt";
 import { HTML } from "imperative-html/dist/esm/elements-strict";
 import { ChangeGroup } from "./Change";
@@ -57,7 +57,7 @@ export class ImportPrompt implements Prompt {
 			reader.addEventListener("load", (event: Event): void => {
 				this._doc.prompt = null;
 				this._doc.goBackToStart();
-				this._doc.record(new ChangeSong(this._doc, <string>reader.result), StateChangeType.replace, true);
+				this._doc.record(new ChangeSong(this._doc, <string>reader.result), true, true);
 			});
 			reader.readAsText(file);
 		} else if (extension == "midi" || extension == "mid") {
@@ -868,7 +868,8 @@ export class ImportPrompt implements Prompt {
 		this._doc.goBackToStart();
 		for (const channel of this._doc.song.channels) channel.muted = false;
 		this._doc.prompt = null;
-		this._doc.record(new ChangeImportMidi(this._doc), StateChangeType.replace, true);
+		this._doc.record(new ChangeImportMidi(this._doc), true, true);
 	}
 }
 //}
+

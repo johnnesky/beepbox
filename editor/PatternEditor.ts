@@ -6,7 +6,7 @@ import { ColorConfig } from "./ColorConfig";
 import { SongDocument } from "./SongDocument";
 import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { ChangeSequence, UndoableChange } from "./Change";
-import { ChangeChannelBar, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePinTime, ChangeVolumeBend, ChangePitchBend, ChangePitchAdded } from "./changes";
+import { ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeVolumeBend, ChangePitchBend, ChangePitchAdded } from "./changes";
 import { prettyNumber } from "./EditorConfig";
 
 //namespace beepbox {
@@ -27,7 +27,7 @@ class PatternCursor {
 	public start: number = 0;
 	public end: number = 0;
 	public part: number = 0;
-	public notePart: number = 0;
+	public exactPart: number = 0;
 	public nearPinIndex: number = 0;
 	public pins: NotePin[] = [];
 }
@@ -40,7 +40,8 @@ export class PatternEditor {
 	private readonly _svgModBackground: SVGPatternElement = SVG.pattern({ id: "patternEditorModBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse" });
 	private readonly _svgBackground: SVGRectElement = SVG.rect({ x: "0", y: "0", "pointer-events": "none", fill: "url(#patternEditorNoteBackground" + this._barOffset + ")" });
 	private _svgNoteContainer: SVGSVGElement = SVG.svg();
-	private readonly _svgPlayhead: SVGRectElement = SVG.rect({ id: "", x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none" });
+	private readonly _svgPlayhead: SVGRectElement = SVG.rect({ x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none" });
+	private readonly _selectionRect: SVGRectElement = SVG.rect({ class: "dashed-line dash-move", fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "fill-opacity": "0.4", "pointer-events": "none", visibility: "hidden" });
 	private readonly _svgPreview: SVGPathElement = SVG.path({ fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": "2", "pointer-events": "none" });
 	public modDragValueLabel: HTMLDivElement = HTML.div({ width: "90", "text-anchor": "start", contenteditable: "true", style: "display: flex, justify-content: center; align-items:center; position:absolute; pointer-events: none;", "dominant-baseline": "central", });
 	private readonly _svg: SVGSVGElement = SVG.svg({ style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; position: absolute;`, width: "100%", height: "100%" },
@@ -50,6 +51,7 @@ export class PatternEditor {
 			this._svgModBackground,
 		),
 		this._svgBackground,
+		this._selectionRect,
 		this._svgNoteContainer,
 		this._svgPreview,
 		this._svgPlayhead,
@@ -90,11 +92,19 @@ export class PatternEditor {
 	private _copiedPins: NotePin[];
 	private _mouseXStart: number = 0;
 	private _mouseYStart: number = 0;
+	private _touchTime: number = 0;
+	private _shiftHeld: boolean = false;
+	private _dragConfirmed: boolean = false;
+	private _draggingStartOfSelection: boolean = false;
+	private _draggingEndOfSelection: boolean = false;
+	private _draggingSelectionContents: boolean = false;
 	private _dragTime: number = 0;
 	private _dragPitch: number = 0;
 	private _dragVolume: number = 0;
 	private _dragVisible: boolean = false;
 	private _dragChange: UndoableChange | null = null;
+	private _changePatternSelection: UndoableChange | null = null;
+	private _lastChangeWasPatternSelection: boolean = false;
 	private _cursor: PatternCursor = new PatternCursor();
 	private _stashCursorPinVols: number[][] = [];
 	private _pattern: Pattern | null = null;
@@ -216,11 +226,11 @@ export class PatternEditor {
 		if (this._mouseX < 0 || this._mouseX > this._editorWidth || this._mouseY < 0 || this._mouseY > this._editorHeight || this._pitchHeight <= 0) return;
 
 		const minDivision: number = this._getMinDivision();
-		const exactPart: number = this._mouseX / this._partWidth;
+		this._cursor.exactPart = this._mouseX / this._partWidth;
 		this._cursor.part =
 			Math.floor(
 				Math.max(0,
-					Math.min(this._doc.song.beatsPerBar * Config.partsPerBeat - minDivision, exactPart)
+					Math.min(this._doc.song.beatsPerBar * Config.partsPerBeat - minDivision, this._cursor.exactPart)
 				)
 				/ minDivision) * minDivision;
 
@@ -228,7 +238,7 @@ export class PatternEditor {
 
 		if (this._pattern != null) {
 			for (const note of this._pattern.notes) {
-				if (note.end <= exactPart) {
+				if (note.end <= this._cursor.exactPart) {
 					if (this._doc.song.getChannelIsMod(this._doc.channel)) {
 						if (note.pitches[0] == Math.floor(this._findMousePitch(this._mouseY))) {
 							this._cursor.prevNote = note;
@@ -240,7 +250,7 @@ export class PatternEditor {
 						this._cursor.prevNote = note;
 						this._cursor.curIndex++;
 					}
-				} else if (note.start <= exactPart && note.end > exactPart) {
+				} else if (note.start <= this._cursor.exactPart && note.end > this._cursor.exactPart) {
 					if (this._doc.song.getChannelIsMod(this._doc.channel)) {
 						if (note.pitches[0] == Math.floor(this._findMousePitch(this._mouseY))) {
 							this._cursor.curNote = note;
@@ -253,7 +263,7 @@ export class PatternEditor {
 					else {
 						this._cursor.curNote = note;
 					}
-				} else if (note.start > exactPart) {
+				} else if (note.start > this._cursor.exactPart) {
 					if (this._doc.song.getChannelIsMod(this._doc.channel)) {
 						if (note.pitches[0] == Math.floor(this._findMousePitch(this._mouseY))) {
 							this._cursor.nextNote = note;
@@ -272,12 +282,12 @@ export class PatternEditor {
 
 					let pinIdx: number = 0;
 
-					while (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time < exactPart && pinIdx < this._cursor.curNote.pins.length) {
+					while (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time < this._cursor.exactPart && pinIdx < this._cursor.curNote.pins.length) {
 						pinIdx++;
 					}
 					// Decide if the previous pin is closer
 					if (pinIdx > 0) {
-						if (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time - exactPart > exactPart - (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx - 1].time)) {
+						if (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx].time - this._cursor.exactPart > this._cursor.exactPart - (this._cursor.curNote.start + this._cursor.curNote.pins[pinIdx - 1].time)) {
 							pinIdx--;
 						}
 					}
@@ -480,6 +490,18 @@ export class PatternEditor {
 
 	}
 
+	private _cursorIsInSelection(): boolean {
+		return this._cursor.valid && this._doc.selection.patternSelectionActive && this._doc.selection.patternSelectionStart <= this._cursor.exactPart && this._cursor.exactPart <= this._doc.selection.patternSelectionEnd;
+	}
+
+	private _cursorAtStartOfSelection(): boolean {
+		return this._cursor.valid && this._doc.selection.patternSelectionActive && this._cursor.pitchIndex == -1 && this._doc.selection.patternSelectionStart - 3 <= this._cursor.exactPart && this._cursor.exactPart <= this._doc.selection.patternSelectionStart + 1.25;
+	}
+
+	private _cursorAtEndOfSelection(): boolean {
+		return this._cursor.valid && this._doc.selection.patternSelectionActive && this._cursor.pitchIndex == -1 && this._doc.selection.patternSelectionEnd - 1.25 <= this._cursor.exactPart && this._cursor.exactPart <= this._doc.selection.patternSelectionEnd + 3;
+	}
+
 	private _findMousePitch(pixelY: number): number {
 		return Math.max(0, Math.min(this._pitchCount - 1, this._pitchCount - (pixelY / this._pitchHeight))) + this._octaveOffset;
 	}
@@ -568,6 +590,15 @@ export class PatternEditor {
 	}
 
 	private _animatePlayhead = (timestamp: number): void => {
+
+		if (this._usingTouch && !this.shiftMode && !this._mouseDragging && this._mouseDown && performance.now() > this._touchTime + 1000 && this._cursor.valid && this._doc.lastChangeWas(this._dragChange)) {
+			this._dragChange!.undo();
+			this._shiftHeld = true;
+			this._dragConfirmed = false;
+			this._whenCursorPressed();
+			this._doc.notifier.notifyWatchers();
+		}
+
 		const playheadBar: number = Math.floor(this._doc.synth.playhead);
 
 		if (this._doc.synth.playing && ((this._pattern != null && this._doc.song.getPattern(this._doc.channel, Math.floor(this._doc.synth.playhead)) == this._pattern) || Math.floor(this._doc.synth.playhead) == this._doc.bar + this._barOffset)) {
@@ -610,6 +641,8 @@ export class PatternEditor {
 		if (isNaN(this._mouseX)) this._mouseX = 0;
 		if (isNaN(this._mouseY)) this._mouseY = 0;
 		this._usingTouch = false;
+		this._shiftHeld = event.shiftKey;
+		this._dragConfirmed = false;
 		this._whenCursorPressed();
 	}
 
@@ -621,6 +654,9 @@ export class PatternEditor {
 		if (isNaN(this._mouseX)) this._mouseX = 0;
 		if (isNaN(this._mouseY)) this._mouseY = 0;
 		this._usingTouch = true;
+		this._shiftHeld = event.shiftKey;
+		this._dragConfirmed = false;
+		this._touchTime = performance.now();
 		this._whenCursorPressed();
 	}
 
@@ -690,15 +726,57 @@ export class PatternEditor {
 			this._mouseYStart = this._mouseY;
 			this._updateCursorStatus();
 			this._updatePreview();
-			this._dragChange = new ChangeSequence();
+			const sequence: ChangeSequence = new ChangeSequence();
+			this._dragChange = sequence;
+			this._lastChangeWasPatternSelection = this._doc.lastChangeWas(this._changePatternSelection);
 			this._doc.setProspectiveChange(this._dragChange);
 
-			if (this._doc.enableNotePreview && !this._doc.synth.playing && this._cursor.valid && this._cursor.curNote == null) {
-				const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
-				this._doc.synth.liveInputDuration = duration;
-				this._doc.synth.liveInputPitches = [this._cursor.pitch];
-				this._doc.synth.liveInputStarted = true;
+			if (this._cursorAtStartOfSelection()) {
+				this._draggingStartOfSelection = true;
+			} else if (this._cursorAtEndOfSelection()) {
+				this._draggingEndOfSelection = true;
+			} else if (this._shiftHeld) {
+				if ((this._doc.selection.patternSelectionActive && this._cursor.pitchIndex == -1) || this._cursorIsInSelection()) {
+					sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+				} else {
+					if (this._cursor.curNote != null) {
+						sequence.append(new ChangePatternSelection(this._doc, this._cursor.curNote.start, this._cursor.curNote.end));
+					} else {
+						const start: number = Math.max(0, Math.min((this._doc.song.beatsPerBar - 1) * Config.partsPerBeat, Math.floor(this._cursor.exactPart / Config.partsPerBeat) * Config.partsPerBeat));
+						const end: number = start + Config.partsPerBeat;
+						sequence.append(new ChangePatternSelection(this._doc, start, end));
+					}
+				}
+			} else if (this._cursorIsInSelection()) {
+				this._draggingSelectionContents = true;
+			} else if (this._cursor.valid && this._cursor.curNote == null) {
+				sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+
+				// If clicking in empty space, the result will be adding a note,
+				// so we can safely add it immediately. Note that if clicking on
+				// or near an existing note, the result will depend on whether
+				// a drag follows, so we couldn't add the note yet without being
+				// confusing.
+
+				const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.song.getChannelIsNoise(this._doc.channel));
+				note.pins = [];
+				for (const oldPin of this._cursor.pins) {
+					note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
+				}
+				sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
+				const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
+				if (pattern == null) throw new Error();
+				sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
+
+				if (this._doc.enableNotePreview && !this._doc.synth.playing) {
+					// Play the new note out loud if enabled.
+					const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
+					this._doc.synth.liveInputDuration = duration;
+					this._doc.synth.liveInputPitches = [this._cursor.pitch];
+					this._doc.synth.liveInputStarted = true;
+				}
 			}
+			this._updateSelection();
 		}
 	}
 
@@ -726,40 +804,117 @@ export class PatternEditor {
 	private _whenCursorMoved(): void {
 		if (this._doc.enableNotePreview && this._mouseOver) this._doc.synth.maintainLiveInput();
 
-		let start: number;
-		let end: number;
-
 		// HACK: Undoable pattern changes rely on persistent instance
 		// references. Loading song from hash via undo/redo breaks that,
 		// so changes are no longer undoable and the cursor status may be
 		// invalid. Abort further drag changes until the mouse is released.
 		const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
 
-		if (this._mouseDown && this._cursor.valid && continuousState) {
-			const minDivision: number = this._getMinDivision();
-
-			if (!this._mouseDragging) {
-				const dx: number = this._mouseX - this._mouseXStart;
-				const dy: number = this._mouseY - this._mouseYStart;
-				if (Math.sqrt(dx * dx + dy * dy) > 5) {
-					this._mouseDragging = true;
-					this._mouseHorizontal = Math.abs(dx) >= Math.abs(dy);
-				}
+		if (!this._mouseDragging && this._mouseDown && this._cursor.valid && continuousState) {
+			const dx: number = this._mouseX - this._mouseXStart;
+			const dy: number = this._mouseY - this._mouseYStart;
+			if (Math.sqrt(dx * dx + dy * dy) > 5) {
+				this._mouseDragging = true;
+				this._mouseHorizontal = Math.abs(dx) >= Math.abs(dy);
 			}
+		}
 
-			if (this._mouseDragging) {
-				if (this._dragChange != null) {
-					this._dragChange.undo();
+		if (this._shiftHeld && this._mouseHorizontal && Math.abs(this._mouseXStart - this._mouseX) > 5) {
+			this._dragConfirmed = true;
+		}
+
+		if (this._mouseDragging && this._mouseDown && this._cursor.valid && continuousState) {
+			this._dragChange!.undo();
+			const sequence: ChangeSequence = new ChangeSequence();
+			this._dragChange = sequence;
+			this._doc.setProspectiveChange(this._dragChange);
+
+			const minDivision: number = this._getMinDivision();
+			const currentPart: number = this._snapToMinDivision(this._mouseX / this._partWidth);
+			if (this._draggingStartOfSelection) {
+				sequence.append(new ChangePatternSelection(this._doc, Math.max(0, Math.min(this._doc.song.beatsPerBar * Config.partsPerBeat, currentPart)), this._doc.selection.patternSelectionEnd));
+				this._updateSelection();
+			} else if (this._draggingEndOfSelection) {
+				sequence.append(new ChangePatternSelection(this._doc, this._doc.selection.patternSelectionStart, Math.max(0, Math.min(this._doc.song.beatsPerBar * Config.partsPerBeat, currentPart))));
+				this._updateSelection();
+			} else if (this._draggingSelectionContents) {
+				const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
+				if (this._mouseDragging && pattern != null) {
+					this._dragChange!.undo();
+					const sequence: ChangeSequence = new ChangeSequence();
+					this._dragChange = sequence;
+					this._doc.setProspectiveChange(this._dragChange);
+
+					const notesInScale: number = Config.scales[this._doc.song.scale].flags.filter(x => x).length;
+					const pitchRatio: number = this._doc.song.getChannelIsNoise(this._doc.channel) ? 1 : 12 / notesInScale;
+					const draggedParts: number = Math.round((this._mouseX - this._mouseXStart) / (this._partWidth * minDivision)) * minDivision;
+					const draggedTranspose: number = Math.round((this._mouseYStart - this._mouseY) / (this._pitchHeight * pitchRatio));
+					sequence.append(new ChangeDragSelectedNotes(this._doc, this._doc.channel, pattern, draggedParts, draggedTranspose));
 				}
 
-				const currentPart: number = this._snapToMinDivision(this._mouseX / this._partWidth);
-				const sequence: ChangeSequence = new ChangeSequence();
-				this._dragChange = sequence;
-				this._doc.setProspectiveChange(this._dragChange);
+			} else if (this._shiftHeld && this._dragConfirmed) {
+
+				if (this._mouseDragging ) {
+					let start: number = Math.max(0, Math.min((this._doc.song.beatsPerBar - 1) * Config.partsPerBeat, Math.floor(this._cursor.exactPart / Config.partsPerBeat) * Config.partsPerBeat));
+					let end: number = start + Config.partsPerBeat;
+					if (this._cursor.curNote != null) {
+						start = Math.max(start, this._cursor.curNote.start);
+						end = Math.min(end, this._cursor.curNote.end);
+					}
+
+					// Todo: The following two conditional blocks could maybe be refactored.
+					if (currentPart < start) {
+						start = 0;
+						const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
+						if (pattern != null) {
+							for (let i: number = 0; i < pattern.notes.length; i++) {
+								if (pattern.notes[i].start <= currentPart) {
+									start = pattern.notes[i].start;
+								}
+								if (pattern.notes[i].end <= currentPart) {
+									start = pattern.notes[i].end;
+								}
+							}
+						}
+						for (let beat: number = 0; beat <= this._doc.song.beatsPerBar; beat++) {
+							const part: number = beat * Config.partsPerBeat;
+							if (start <= part && part <= currentPart) {
+								start = part;
+							}
+						}
+					}
+
+					if (currentPart > end) {
+						end = Config.partsPerBeat * this._doc.song.beatsPerBar;
+						const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
+						if (pattern != null) {
+							for (let i: number = 0; i < pattern.notes.length; i++) {
+								if (pattern.notes[i].start >= currentPart) {
+									end = pattern.notes[i].start;
+									break;
+								}
+								if (pattern.notes[i].end >= currentPart) {
+									end = pattern.notes[i].end;
+									break;
+								}
+							}
+						}
+						for (let beat: number = 0; beat <= this._doc.song.beatsPerBar; beat++) {
+							const part: number = beat * Config.partsPerBeat;
+							if (currentPart < part && part < end) {
+								end = part;
+							}
+						}
+					}
+
+					sequence.append(new ChangePatternSelection(this._doc, start, end));
+					this._updateSelection();
+				}
+			} else {
 
 				if (this._cursor.curNote == null) {
+					sequence.append(new ChangePatternSelection(this._doc, 0, 0));
 
-					//console.log("this._cursor.curNote == null");
 
 					let backwards: boolean;
 					let directLength: number;
@@ -814,12 +969,8 @@ export class PatternEditor {
 						}
 					}
 
-					/*
-					if (defaultLength < directLength) {
-						// See if I can find a better match by snapping to an existing note...
-						// E.G. in another channel
-					}
-					*/
+					let start: number;
+					let end: number;
 
 					if (backwards) {
 						end = this._cursor.start;
@@ -865,6 +1016,7 @@ export class PatternEditor {
 				} else if (this._mouseHorizontal) {
 
 					//console.log("this._mouseHorizontal");
+					sequence.append(new ChangePatternSelection(this._doc, 0, 0));
 
 					const shift: number = (this._mouseX - this._mouseXStart) / this._partWidth;
 
@@ -882,9 +1034,8 @@ export class PatternEditor {
 
 						this._dragVisible = false;
 					} else {
-
-						start = Math.min(this._cursor.curNote.start, shiftedTime);
-						end = Math.max(this._cursor.curNote.end, shiftedTime);
+						const start: number = Math.min(this._cursor.curNote.start, shiftedTime);
+						const end: number = Math.max(this._cursor.curNote.end, shiftedTime);
 
 						this._dragTime = shiftedTime;
 						this._dragPitch = this._cursor.curNote.pitches[this._cursor.pitchIndex == -1 ? 0 : this._cursor.pitchIndex] + this._cursor.curNote.pins[this._cursor.nearPinIndex].interval;
@@ -898,6 +1049,7 @@ export class PatternEditor {
 				} else if (this._cursor.pitchIndex == -1 || this._doc.song.getChannelIsMod(this._doc.channel)) {
 
 					//console.log("this._cursor.pitchIndex == -1");
+					sequence.append(new ChangePatternSelection(this._doc, 0, 0));
 
 					const bendPart: number =
 						Math.max(this._cursor.curNote.start,
@@ -917,6 +1069,11 @@ export class PatternEditor {
 					let dragFactorFast: number = 22.0 / Math.pow(cap, 0.5);
 					let dragSign: number = (this._mouseYStart > this._mouseY ? 1 : -1);
 					let dragCounts: number = Math.min(Math.abs(this._mouseYStart - this._mouseY) / dragFactorSlow, 8) + Math.max(0, Math.abs(this._mouseYStart - this._mouseY) / dragFactorFast - 8);
+
+					// Note volume drag overrides attempts to make a pattern selection
+					if (dragCounts > 0) {
+						this._shiftHeld = false;
+					}
 
 					for (let i: number = 1; i < this._cursor.curNote.pins.length; i++) {
 						prevPin = nextPin;
@@ -944,7 +1101,7 @@ export class PatternEditor {
 					this._copyPins(this._cursor.curNote);
 				} else {
 					//console.log("final else");
-
+					sequence.append(new ChangePatternSelection(this._doc, 0, 0));
 
 					this._dragVolume = this._cursor.curNote.pins[this._cursor.nearPinIndex].volume;
 
@@ -993,7 +1150,8 @@ export class PatternEditor {
 					this._dragVisible = true;
 				}
 			}
-		} else {
+		}
+		if (!(this._mouseDown && this._cursor.valid && continuousState)) {
 			this._updateCursorStatus();
 			this._updatePreview();
 		}
@@ -1002,41 +1160,34 @@ export class PatternEditor {
 	private _whenCursorReleased = (event: Event | null): void => {
 		if (!this._cursor.valid) return;
 		const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
-		if (this._mouseDragging && continuousState) {
-			if (this._dragChange != null) {
+		if (this._mouseDown && continuousState && this._dragChange != null) {
+			if (this._draggingSelectionContents) {
 				this._doc.record(this._dragChange);
 				this._dragChange = null;
 				// Need to re-sort the notes by start time as they might change order if user drags them around.
 				if (this._pattern != null && this._doc.song.getChannelIsMod(this._doc.channel)) this._pattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
-			}
-		} else if (this._mouseDown && continuousState) {
-			if (this._cursor.curNote == null) {
-				let cap: number = this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), this._cursor.pitch);
-				const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, cap, this._doc.song.getChannelIsNoise(this._doc.channel));
-				note.pins = [];
-				for (const oldPin of this._cursor.pins) {
-					note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
-				}
-				const sequence: ChangeSequence = new ChangeSequence();
-				sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
-				const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
-				if (pattern == null) throw new Error();
-				//console.log("p2 - " + this._cursor.curIndex);
-				sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
+
+			} else if (this._draggingStartOfSelection || this._draggingEndOfSelection || this._shiftHeld) {
+				this._setPatternSelection(this._dragChange);
+				this._dragChange = null;
+			} else if (this._mouseDragging || this._cursor.curNote == null || !this._dragChange.isNoop() || this._draggingStartOfSelection || this._draggingEndOfSelection || this._draggingSelectionContents || this._shiftHeld) {
+				this._doc.record(this._dragChange);
+				this._dragChange = null;
 				// Need to re-sort the notes by start time as they might change order if user drags them around.
 				if (this._pattern != null && this._doc.song.getChannelIsMod(this._doc.channel)) this._pattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
-				this._doc.record(sequence);
+
 			} else {
 
 				if (this._pattern == null) throw new Error();
 
-				if (this._cursor.pitchIndex == -1 && !this._doc.song.getChannelIsMod(this._doc.channel)) {
-					const sequence: ChangeSequence = new ChangeSequence();
+				const sequence: ChangeSequence = new ChangeSequence();
+				sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+
+				if (this._cursor.pitchIndex == -1) {
 					if (this._cursor.curNote.pitches.length == Config.maxChordSize) {
 						sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.curNote.pitches[0], 0, true));
 					}
 					sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));
-					this._doc.record(sequence);
 					this._copyPins(this._cursor.curNote);
 
 					if (this._doc.enableNotePreview && !this._doc.synth.playing) {
@@ -1047,25 +1198,34 @@ export class PatternEditor {
 					}
 				} else {
 					if (this._cursor.curNote.pitches.length == 1) {
-						//console.log("p1 - " + this._cursor.curIndex);
-						this._doc.record(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
+						sequence.append(new ChangeNoteAdded(this._doc, this._pattern, this._cursor.curNote, this._cursor.curIndex, true));
 					} else {
-						this._doc.record(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
+						sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.indexOf(this._cursor.pitch), true));
 					}
 				}
+				this._doc.record(sequence);
 			}
 		}
 
 		this._mouseDown = false;
 		this._mouseDragging = false;
+		this._draggingStartOfSelection = false;
+		this._draggingEndOfSelection = false;
+		this._draggingSelectionContents = false;
+		this._lastChangeWasPatternSelection = false;
 		this.modDragValueLabel.setAttribute("fill", ColorConfig.secondaryText);
 		this._updateCursorStatus();
 		this._updatePreview();
 	}
 
+	private _setPatternSelection(change: UndoableChange): void {
+		this._changePatternSelection = change;
+		this._doc.record(this._changePatternSelection, this._lastChangeWasPatternSelection);
+	}
+
 	private _updatePreview(): void {
 		if (this._usingTouch) {
-			if (!this._mouseDown || !this._cursor.valid || !this._mouseDragging || !this._dragVisible) {
+			if (!this._mouseDown || !this._cursor.valid || !this._mouseDragging || !this._dragVisible || this._shiftHeld || this._draggingStartOfSelection || this._draggingEndOfSelection || this._draggingSelectionContents) {
 				this._svgPreview.setAttribute("visibility", "hidden");
 
 				if (!this.editingModLabel) {
@@ -1112,8 +1272,38 @@ export class PatternEditor {
 				}
 			} else {
 				this._svgPreview.setAttribute("visibility", "visible");
-				this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, (this._pitchHeight - this._pitchBorder) / 2 + 1, true, this._octaveOffset);
+
+				if (this._cursorAtStartOfSelection()) {
+					const center: number = this._partWidth * this._doc.selection.patternSelectionStart;
+					const left: string = prettyNumber(center - 4);
+					const right: string = prettyNumber(center + 4);
+					const bottom: number = this._pitchToPixelHeight(-0.5);
+					this._svgPreview.setAttribute("d", "M " + left + " 0 L " + left + " " + bottom + " L " + right + " " + bottom + " L " + right + " 0 z");
+				} else if (this._cursorAtEndOfSelection()) {
+					const center: number = this._partWidth * this._doc.selection.patternSelectionEnd;
+					const left: string = prettyNumber(center - 4);
+					const right: string = prettyNumber(center + 4);
+					const bottom: number = this._pitchToPixelHeight(-0.5);
+					this._svgPreview.setAttribute("d", "M " + left + " 0 L " + left + " " + bottom + " L " + right + " " + bottom + " L " + right + " 0 z");
+				} else if (this._cursorIsInSelection()) {
+					const left: string = prettyNumber(this._partWidth * this._doc.selection.patternSelectionStart - 2);
+					const right: string = prettyNumber(this._partWidth * this._doc.selection.patternSelectionEnd + 2);
+					const bottom: number = this._pitchToPixelHeight(-0.5);
+					this._svgPreview.setAttribute("d", "M " + left + " 0 L " + left + " " + bottom + " L " + right + " " + bottom + " L " + right + " 0 z");
+				} else {
+					this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, (this._pitchHeight - this._pitchBorder) / 2 + 1, true, this._octaveOffset);
+				}
 			}
+		}
+	}
+
+	private _updateSelection(): void {
+		if (this._doc.selection.patternSelectionActive) {
+			this._selectionRect.setAttribute("visibility", "visible");
+			this._selectionRect.setAttribute("x", String(this._partWidth * this._doc.selection.patternSelectionStart));
+			this._selectionRect.setAttribute("width", String(this._partWidth * (this._doc.selection.patternSelectionEnd - this._doc.selection.patternSelectionStart)));
+		} else {
+			this._selectionRect.setAttribute("visibility", "hidden");
 		}
 	}
 
@@ -1189,6 +1379,8 @@ export class PatternEditor {
 			this._svgBackground.setAttribute("width", "" + this._editorWidth);
 			this._svgBackground.setAttribute("height", "" + this._editorHeight);
 			this._svgPlayhead.setAttribute("height", "" + this._editorHeight);
+			this._selectionRect.setAttribute("y", "0");
+			this._selectionRect.setAttribute("height", "" + this._editorHeight);
 		}
 
 		const beatWidth = this._editorWidth / this._doc.song.beatsPerBar;
@@ -1225,6 +1417,7 @@ export class PatternEditor {
 		if (this._interactive) {
 			if (!this._mouseDown) this._updateCursorStatus();
 			this._updatePreview();
+			this._updateSelection();
 		}
 
 		if (this._renderedFifths != this._doc.showFifth) {

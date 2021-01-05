@@ -2,7 +2,7 @@
 
 import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { Prompt } from "./Prompt";
-import { SongDocument, StateChangeType } from "./SongDocument";
+import { SongDocument } from "./SongDocument";
 import { ColorConfig } from "./ColorConfig";
 import { ChangeCustomWave } from "./changes";
 import { SongEditor } from "./SongEditor";
@@ -341,7 +341,7 @@ export class CustomChipPrompt implements Prompt {
 		this._doc.prompt = null;
 		// Restore custom chip to starting values
 		new ChangeCustomWave(this._doc, this.customChipCanvas.startingChipData);
-		this._doc.record(new ChangeCustomWave(this._doc, this.customChipCanvas.chipData), StateChangeType.replace);
+		this._doc.record(new ChangeCustomWave(this._doc, this.customChipCanvas.chipData), true);
 	}
 }
 //}

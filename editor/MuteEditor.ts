@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import { SongDocument, StateChangeType } from "./SongDocument";
+import { SongDocument } from "./SongDocument";
 import { HTML } from "imperative-html/dist/esm/elements-strict";
 import { ColorConfig } from "./ColorConfig";
 import { InputBox } from "./HTMLWrapper";
@@ -145,10 +145,10 @@ export class MuteEditor {
 				this._channelNameInput.input.select();
 				break;
 			case "chnUp":
-				this._doc.record(new ChangeChannelOrder(this._doc, this._channelDropDownChannel, this._channelDropDownChannel - 1), StateChangeType.push);
+				this._doc.record(new ChangeChannelOrder(this._doc, this._channelDropDownChannel, this._channelDropDownChannel - 1));
 				break;
 			case "chnDown":
-				this._doc.record(new ChangeChannelOrder(this._doc, this._channelDropDownChannel, this._channelDropDownChannel + 1), StateChangeType.push);
+				this._doc.record(new ChangeChannelOrder(this._doc, this._channelDropDownChannel, this._channelDropDownChannel + 1));
 				break;
 			case "chnMute":
 				this._doc.song.channels[this._channelDropDownChannel].muted = !this._doc.song.channels[this._channelDropDownChannel].muted;
@@ -196,10 +196,10 @@ export class MuteEditor {
 					swapIndex = newPitchChannelCount + newNoiseChannelCount + newModChannelCount;
 				}
 
-				this._doc.record(new ChangeChannelCount(this._doc, newPitchChannelCount, newNoiseChannelCount, newModChannelCount), StateChangeType.push);
+				this._doc.record(new ChangeChannelCount(this._doc, newPitchChannelCount, newNoiseChannelCount, newModChannelCount));
 
 				for (let channel: number = swapIndex - 1; channel > this._channelDropDownChannel + 1; channel--) {
-					this._doc.record(new ChangeChannelOrder(this._doc, channel - 1, channel), StateChangeType.replace);
+					this._doc.record(new ChangeChannelOrder(this._doc, channel - 1, channel), true);
 				}
 				break;
 			}
@@ -211,24 +211,24 @@ export class MuteEditor {
 					// Removing pitch channel, swap to the end since ChangeChannelCount expects a channel array of the previous size.
 					newPitchChannelCount--;
 					for (let channel: number = this._channelDropDownChannel; channel < newPitchChannelCount; channel++) {
-						this._doc.record(new ChangeChannelOrder(this._doc, channel, channel + 1), (channel == this._channelDropDownChannel ? StateChangeType.push : StateChangeType.replace));
+						this._doc.record(new ChangeChannelOrder(this._doc, channel, channel + 1), channel != this._channelDropDownChannel);
 					}
 				}
 				else if (this._channelDropDownChannel >= this._doc.song.pitchChannelCount && this._channelDropDownChannel < this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
 					// Removing noise channel, swap to the end since ChangeChannelCount expects a channel array of the previous size.
 					newNoiseChannelCount--;
 					for (let channel: number = this._channelDropDownChannel; channel < newPitchChannelCount + newNoiseChannelCount; channel++) {
-						this._doc.record(new ChangeChannelOrder(this._doc, channel, channel + 1), (channel == this._channelDropDownChannel ? StateChangeType.push : StateChangeType.replace));
+						this._doc.record(new ChangeChannelOrder(this._doc, channel, channel + 1), channel != this._channelDropDownChannel);
 					}
 				}
 				else {
 					// Removing mod channel, swap to the end since ChangeChannelCount expects a channel array of the previous size.
 					newModChannelCount--;
 					for (let channel: number = this._channelDropDownChannel; channel < newPitchChannelCount + newNoiseChannelCount + newModChannelCount; channel++) {
-						this._doc.record(new ChangeChannelOrder(this._doc, channel, channel + 1), (channel == this._channelDropDownChannel ? StateChangeType.push : StateChangeType.replace));
+						this._doc.record(new ChangeChannelOrder(this._doc, channel, channel + 1), channel != this._channelDropDownChannel);
 					}
 				}
-				this._doc.record(new ChangeChannelCount(this._doc, newPitchChannelCount, newNoiseChannelCount, newModChannelCount), StateChangeType.replace);
+				this._doc.record(new ChangeChannelCount(this._doc, newPitchChannelCount, newNoiseChannelCount, newModChannelCount), true);
 				break;
 			}
 		}

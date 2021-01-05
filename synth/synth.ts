@@ -344,6 +344,16 @@ export class Note {
 		}
 		return mainInterval;
 	}
+
+	public clone(): Note {
+		const newNote: Note = new Note(-1, this.start, this.end, 6);
+		newNote.pitches = this.pitches.concat();
+		newNote.pins = [];
+		for (const pin of this.pins) {
+			newNote.pins.push(makeNotePin(pin.interval, pin.time, pin.volume));
+		}
+		return newNote;
+	}
 }
 
 export class Pattern {
@@ -352,14 +362,8 @@ export class Pattern {
 
 	public cloneNotes(): Note[] {
 		const result: Note[] = [];
-		for (const oldNote of this.notes) {
-			const newNote: Note = new Note(-1, oldNote.start, oldNote.end, 6);
-			newNote.pitches = oldNote.pitches.concat();
-			newNote.pins = [];
-			for (const oldPin of oldNote.pins) {
-				newNote.pins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.volume));
-			}
-			result.push(newNote);
+		for (const note of this.notes) {
+			result.push(note.clone());
 		}
 		return result;
 	}
@@ -1846,6 +1850,14 @@ export class Song {
 						spectrumBits.write(Config.spectrumControlPointBits, instrument.spectrumWave.spectrum[i]);
 					}
 					spectrumBits.encodeBase64(buffer);
+					buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
+					// Custom vibrato settings
+					if (instrument.vibrato == Config.vibratos.length) {
+						buffer.push(base64IntToCharCode[Math.round(instrument.vibratoDepth * 25)]);
+						buffer.push(base64IntToCharCode[instrument.vibratoSpeed]);
+						buffer.push(base64IntToCharCode[instrument.vibratoDelay]);
+						buffer.push(base64IntToCharCode[instrument.vibratoType]);
+					}
 					if (instrument.chord == 2) {
 						buffer.push(SongTagCode.arpeggioSpeed, base64IntToCharCode[instrument.arpeggioSpeed]);
 						buffer.push(base64IntToCharCode[+instrument.fastTwoNoteArp]); // Two note arp setting piggybacks on this
@@ -5233,7 +5245,7 @@ export class Synth {
 		const sampleTime: number = 1.0 / synth.samplesPerSecond;
 		tone.active = true;
 
-		if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.customChipWave) {
+		if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.customChipWave || instrument.type == InstrumentType.spectrum) {
 
 			const lfoEffectStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * instrument.LFOtime);
 			const lfoEffectEnd: number = Synth.getLFOAmplitude(instrument, secondsPerPart * instrument.nextLFOtime);

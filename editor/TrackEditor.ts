@@ -1,32 +1,14 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import { Dictionary, Config } from "../synth/SynthConfig";
-import { Note, Pattern } from "../synth/synth";
+import { Pattern } from "../synth/synth";
 import { ColorConfig, ChannelColors } from "./ColorConfig";
+import { Config } from "../synth/SynthConfig";
 import { isMobile } from "./EditorConfig";
-import { SongDocument, StateChangeType } from "./SongDocument";
-import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
-import { ChangeGroup } from "./Change";
-import { ChangeChannelBar, ChangePatternNumbers, ChangeInsertBars, ChangeDeleteBars, ChangeEnsurePatternExists, ChangePaste, ChangePatternInstrument, ChangePatternsPerChannel, ChangePatternRhythm, ChangePatternScale, ChangeTranspose, comparePatternNotes, unionOfUsedNotes, generateScaleMap, ChangeModChannel, ChangeModInstrument, ChangeModSetting, ChangeChannelOrder } from "./changes";
+import { SongDocument } from "./SongDocument";
 import { SongEditor } from "./SongEditor";
+import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
+
 //namespace beepbox {
-
-interface PatternCopy {
-	instrument: number;
-	notes: any[];
-}
-
-interface ChannelCopy {
-	isNoise: boolean;
-	isMod: boolean;
-	patterns: Dictionary<PatternCopy>;
-	bars: number[];
-}
-
-interface SelectionCopy {
-	beatsPerBar: number;
-	channels: ChannelCopy[];
-}
 
 class Box {
 	private readonly _text: Text = document.createTextNode("1");
@@ -173,14 +155,8 @@ export class TrackEditor {
 	private _mouseOver: boolean = false;
 	private _mousePressed: boolean = false;
 	private _mouseDragging = false;
-	private _digits: string = "";
-	private _instrumentDigits: string = "";
 	private _barWidth: number = 32;
 	private _channelHeight: number = 32;
-	public _boxSelectionX0: number = 0;
-	public _boxSelectionY0: number = 0;
-	public _boxSelectionX1: number = 0;
-	public _boxSelectionY1: number = 0;
 	private _renderedChannelCount: number = 0;
 	private _renderedBarCount: number = 0;
 	private _renderedPatternCount: number = 0;
@@ -188,7 +164,6 @@ export class TrackEditor {
 	private _renderedBarWidth: number = -1;
 	private _renderedChannelHeight: number = -1;
 	private _touchMode: boolean = isMobile;
-	private _changeTranspose: ChangeGroup | null = null;
 	private _barDropDownBar: number = 0;
 	private _lastScrollTime: number = 0;
 
@@ -242,8 +217,8 @@ export class TrackEditor {
 
 			this._doc.bar = this._barDropDownBar - 1 + moveBarOffset;
 
-			this._resetBoxSelection();
-			this.insertBars();
+			this._doc.selection.resetBoxSelection();
+			this._doc.selection.insertBars();
 
 			// This moves doc.bar back. I kind of like moving it to the inserted zone, though.
 			// this._doc.bar = prevBar + ((prevBar < this._barDropDownBar + moveBarOffset) ? 0 : 1);
@@ -261,8 +236,8 @@ export class TrackEditor {
 
 			this._doc.bar = this._barDropDownBar;
 
-			this._resetBoxSelection();
-			this.deleteBars();
+			this._doc.selection.resetBoxSelection();
+			this._doc.selection.deleteBars();
 
 			// This moves doc.bar back. I kind of like moving it to the deleted zone, though.
 			// this._doc.bar = prevBar - ((prevBar <= this._barDropDownBar) ? 0 : 1);
@@ -279,7 +254,7 @@ export class TrackEditor {
 	}
 
 	private _whenSelectChanged = (): void => {
-		this._setPattern(this._select.selectedIndex);
+		this._doc.selection.setPattern(this._select.selectedIndex);
 	}
 
 	private _animatePlayhead = (timestamp: number): void => {
@@ -291,638 +266,15 @@ export class TrackEditor {
 		window.requestAnimationFrame(this._animatePlayhead);
 	}
 
-	public _selectionUpdated(): void {
-		this._doc.notifier.changed();
-		this._digits = "";
-		this._doc.forgetLastChange();
-	}
-
-	private get _boxSelectionBar(): number {
-		return Math.min(this._boxSelectionX0, this._boxSelectionX1);
-	}
-	private get _boxSelectionChannel(): number {
-		return Math.min(this._boxSelectionY0, this._boxSelectionY1);
-	}
-	private get _boxSelectionWidth(): number {
-		return Math.abs(this._boxSelectionX0 - this._boxSelectionX1) + 1;
-	}
-	private get _boxSelectionHeight(): number {
-		return Math.abs(this._boxSelectionY0 - this._boxSelectionY1) + 1;
-	}
-	private _scrollToSelection(): void {
-		this._doc.barScrollPos = Math.min(this._doc.barScrollPos, this._boxSelectionX1);
-		this._doc.barScrollPos = Math.max(this._doc.barScrollPos, this._boxSelectionX1 - (this._doc.trackVisibleBars - 1));
-	}
-
-	private _setChannelBar(channel: number, bar: number): void {
-		new ChangeChannelBar(this._doc, channel, bar);
-		this._selectionUpdated();
-	}
-
-	private _setPattern(pattern: number): void {
-		this._doc.record(new ChangePatternNumbers(this._doc, pattern, this._boxSelectionBar, this._boxSelectionChannel, this._boxSelectionWidth, this._boxSelectionHeight));
-	}
-
-	public onKeyPressed(event: KeyboardEvent): void {
-		switch (event.keyCode) {
-			case 27: // Esc
-				this._resetBoxSelection();
-				// Used to trigger re-render so box selection is visually clearead
-				this._selectionUpdated();
-				event.preventDefault();
-				break;
-			case 38: // up
-				if (event.ctrlKey) {
-					// Swap channel up, if it wouldn't break from the channel type layout
-					if (this._doc.channel == 0 || this._doc.channel == this._doc.song.pitchChannelCount || this._doc.channel == this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
-						break;
-					}
-					this._doc.record(new ChangeChannelOrder(this._doc, this._doc.channel - 1, this._doc.channel), StateChangeType.push);
-					this._setChannelBar((this._doc.channel - 1), this._doc.bar);
-				}
-				else if (event.shiftKey) {
-					this._boxSelectionY1 = Math.max(0, this._boxSelectionY1 - 1);
-					this._selectionUpdated();
-				} else {
-					this._setChannelBar((this._doc.channel - 1 + this._doc.song.getChannelCount()) % this._doc.song.getChannelCount(), this._doc.bar);
-					this._resetBoxSelection();
-				}
-				event.preventDefault();
-				break;
-			case 40: // down
-				if (event.ctrlKey) {
-					// Swap channel down, if it wouldn't break from the channel type layout
-					if (this._doc.channel == this._doc.song.pitchChannelCount - 1 || this._doc.channel == this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount - 1 || this._doc.channel == this._doc.song.getChannelCount() - 1) {
-						break;
-					}
-					this._doc.record(new ChangeChannelOrder(this._doc, this._doc.channel, this._doc.channel + 1), StateChangeType.push);
-					this._setChannelBar((this._doc.channel + 1), this._doc.bar);
-				}
-				else if (event.shiftKey) {
-					this._boxSelectionY1 = Math.min(this._doc.song.getChannelCount() - 1, this._boxSelectionY1 + 1);
-					this._selectionUpdated();
-				} else {
-					this._setChannelBar((this._doc.channel + 1) % this._doc.song.getChannelCount(), this._doc.bar);
-					this._resetBoxSelection();
-				}
-				event.preventDefault();
-				break;
-			case 37: // left
-				if (event.shiftKey) {
-					this._boxSelectionX1 = Math.max(0, this._boxSelectionX1 - 1);
-					this._scrollToSelection();
-					this._selectionUpdated();
-				} else {
-					this._setChannelBar(this._doc.channel, (this._doc.bar + this._doc.song.barCount - 1) % this._doc.song.barCount);
-					this._resetBoxSelection();
-				}
-				event.preventDefault();
-				break;
-			case 39: // right
-				if (event.shiftKey) {
-					this._boxSelectionX1 = Math.min(this._doc.song.barCount - 1, this._boxSelectionX1 + 1);
-					this._scrollToSelection();
-					this._selectionUpdated();
-				} else {
-					this._setChannelBar(this._doc.channel, (this._doc.bar + 1) % this._doc.song.barCount);
-					this._resetBoxSelection();
-				}
-				event.preventDefault();
-				break;
-			case 46: // Delete
-				this._digits = "";
-				this._nextDigit("0", false);
-				break;
-			case 48: // 0
-				this._nextDigit("0", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			case 49: // 1
-				this._nextDigit("1", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			case 50: // 2
-				this._nextDigit("2", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			case 51: // 3
-				this._nextDigit("3", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			case 52: // 4
-				this._nextDigit("4", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			case 53: // 5
-				this._nextDigit("5", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			case 54: // 6
-				this._nextDigit("6", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			case 55: // 7
-				this._nextDigit("7", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			case 56: // 8
-				this._nextDigit("8", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			case 57: // 9
-				this._nextDigit("9", event.shiftKey || event.ctrlKey);
-				event.preventDefault();
-				break;
-			default:
-				this._digits = "";
-				this._instrumentDigits = "";
-				break;
-		}
-	}
-
-	public insertBars(): void {
-		this._doc.record(new ChangeInsertBars(this._doc, this._boxSelectionBar + this._boxSelectionWidth, this._boxSelectionWidth), StateChangeType.jump);
-		const width: number = this._boxSelectionWidth;
-		this._boxSelectionX0 += width;
-		this._boxSelectionX1 += width;
-		this._songEditor._barScrollBar.animatePlayhead();
-	}
-
-	public deleteBars(): void {
-		this._doc.record(new ChangeDeleteBars(this._doc, this._boxSelectionBar, this._boxSelectionWidth), StateChangeType.jump);
-		const width: number = this._boxSelectionWidth;
-		this._boxSelectionX0 = Math.max(0, this._boxSelectionX0 - width);
-		this._boxSelectionX1 = Math.max(0, this._boxSelectionX1 - width);
-		this._songEditor._barScrollBar.animatePlayhead();
-	}
-
-	private * _eachSelectedChannel(): IterableIterator<number> {
-		for (let channel: number = this._boxSelectionChannel; channel < this._boxSelectionChannel + this._boxSelectionHeight; channel++) {
-			yield channel;
-		}
-	}
-
-	private * _eachSelectedBar(): IterableIterator<number> {
-		for (let bar: number = this._boxSelectionBar; bar < this._boxSelectionBar + this._boxSelectionWidth; bar++) {
-			yield bar;
-		}
-	}
-
-	private * _eachUnselectedBar(): IterableIterator<number> {
-		for (let bar: number = 0; bar < this._doc.song.barCount; bar++) {
-			if (bar < this._boxSelectionBar || bar >= this._boxSelectionBar + this._boxSelectionWidth) {
-				yield bar;
-			}
-		}
-	}
-
-	private * _eachSelectedPattern(channel: number): IterableIterator<Pattern> {
-		const handledPatterns: Dictionary<boolean> = {};
-		for (const bar of this._eachSelectedBar()) {
-			const currentPatternIndex: number = this._doc.song.channels[channel].bars[bar];
-			if (currentPatternIndex == 0) continue;
-			if (handledPatterns[String(currentPatternIndex)]) continue;
-			handledPatterns[String(currentPatternIndex)] = true;
-			const pattern: Pattern | null = this._doc.song.getPattern(channel, bar);
-			if (pattern == null) throw new Error();
-			yield pattern;
-		}
-	}
-
-	private _patternIndexIsUnused(channel: number, patternIndex: number): boolean {
-		for (let i: number = 0; i < this._doc.song.barCount; i++) {
-			if (this._doc.song.channels[channel].bars[i] == patternIndex) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	public copy(): void {
-		const channels: ChannelCopy[] = [];
-
-		for (const channel of this._eachSelectedChannel()) {
-			const patterns: Dictionary<PatternCopy> = {};
-			const bars: number[] = [];
-
-			for (const bar of this._eachSelectedBar()) {
-				const patternNumber: number = this._doc.song.channels[channel].bars[bar];
-				bars.push(patternNumber);
-				if (patterns[String(patternNumber)] == undefined) {
-					const pattern: Pattern | null = this._doc.song.getPattern(channel, bar);
-					let instrument: number = 0;
-					let notes: Note[] = [];
-					if (pattern != null) {
-						instrument = pattern.instrument;
-						notes = pattern.notes;
-					}
-					patterns[String(patternNumber)] = { "instrument": instrument, "notes": notes };
-				}
-			}
-
-			const channelCopy: ChannelCopy = {
-				"isNoise": this._doc.song.getChannelIsNoise(channel),
-				"isMod": this._doc.song.getChannelIsMod(channel),
-				"patterns": patterns,
-				"bars": bars,
-			};
-			channels.push(channelCopy);
-		}
-
-		const selectionCopy: SelectionCopy = {
-			"beatsPerBar": this._doc.song.beatsPerBar,
-			"channels": channels,
-		};
-		window.localStorage.setItem("selectionCopy", JSON.stringify(selectionCopy));
-	}
-
-	// I'm sorry this function is so complicated!
-	// Basically I'm trying to avoid accidentally modifying patterns that are used
-	// elsewhere in the song (unless we're just pasting a single pattern) but I'm
-	// also trying to reuse patterns where it makes sense to do so, especially 
-	// in the same channel it was copied from.
-	public pasteNotes(): void {
-		const selectionCopy: SelectionCopy | null = JSON.parse(String(window.localStorage.getItem("selectionCopy")));
-		if (selectionCopy == null) return;
-		const channelCopies: ChannelCopy[] = selectionCopy["channels"] || [];
-		const beatsPerBar: number = selectionCopy["beatsPerBar"] >>> 0;
-
-		const group: ChangeGroup = new ChangeGroup();
-		const fillSelection: boolean = (this._boxSelectionWidth > 1 || this._boxSelectionHeight > 1);
-
-		const pasteHeight: number = fillSelection ? this._boxSelectionHeight : Math.min(channelCopies.length, this._doc.song.getChannelCount() - this._boxSelectionChannel);
-		for (let pasteChannel: number = 0; pasteChannel < pasteHeight; pasteChannel++) {
-			const channelCopy: ChannelCopy = channelCopies[pasteChannel % channelCopies.length];
-			const channel: number = this._boxSelectionChannel + pasteChannel;
-
-			const isNoise: boolean = !!channelCopy["isNoise"];
-			const isMod: boolean = !!channelCopy["isMod"];
-			const patternCopies: Dictionary<PatternCopy> = channelCopy["patterns"] || {};
-			const copiedBars: number[] = channelCopy["bars"] || [];
-			if (copiedBars.length == 0) continue;
-			if (isNoise != this._doc.song.getChannelIsNoise(channel)) continue;
-			if (isMod != this._doc.song.getChannelIsMod(channel)) continue;
-
-			const pasteWidth: number = fillSelection ? this._boxSelectionWidth : Math.min(copiedBars.length, this._doc.song.barCount - this._boxSelectionBar);
-			if (!fillSelection && copiedBars.length == 1 && channelCopies.length == 1) {
-				// Special case: if there's just one pattern being copied, try to insert it
-				// into whatever pattern is already selected.
-				const copiedPatternIndex: number = copiedBars[0] >>> 0;
-				const bar: number = this._boxSelectionBar;
-				const currentPatternIndex: number = this._doc.song.channels[channel].bars[bar];
-				if (copiedPatternIndex == 0 && currentPatternIndex == 0) continue;
-
-				const patternCopy: PatternCopy = patternCopies[String(copiedPatternIndex)];
-
-				const instrumentCopy: number = Math.min(patternCopy["instrument"] >>> 0, this._doc.song.instrumentsPerChannel - 1);
-
-				if (currentPatternIndex == 0) {
-					const existingPattern: Pattern | undefined = this._doc.song.channels[channel].patterns[copiedPatternIndex - 1];
-					if (existingPattern != undefined &&
-						((comparePatternNotes(patternCopy["notes"], existingPattern.notes) && instrumentCopy == existingPattern.instrument) ||
-							this._patternIndexIsUnused(channel, copiedPatternIndex))) {
-						group.append(new ChangePatternNumbers(this._doc, copiedPatternIndex, bar, channel, 1, 1));
-					} else {
-						group.append(new ChangeEnsurePatternExists(this._doc, channel, bar));
-					}
-				}
-
-				const pattern: Pattern | null = this._doc.song.getPattern(channel, bar);
-				if (pattern == null) throw new Error();
-				group.append(new ChangePaste(this._doc, pattern, patternCopy["notes"], beatsPerBar));
-				group.append(new ChangePatternInstrument(this._doc, instrumentCopy, pattern));
-			} else {
-				for (let pasteBar: number = 0; pasteBar < pasteWidth; pasteBar++) {
-					const bar: number = this._boxSelectionBar + pasteBar;
-					const removedPattern: number = this._doc.song.channels[channel].bars[bar];
-					if (removedPattern != 0) {
-						group.append(new ChangePatternNumbers(this._doc, 0, bar, channel, 1, 1));
-						if (this._patternIndexIsUnused(channel, removedPattern)) {
-							// When a pattern becomes unused when replaced by rectangular selection pasting,
-							// remove all the notes from the pattern so that it may be reused.
-							this._doc.song.channels[channel].patterns[removedPattern - 1].notes.length = 0;
-						}
-					}
-				}
-
-				const reusablePatterns: Dictionary<number> = {};
-				for (let pasteBar: number = 0; pasteBar < pasteWidth; pasteBar++) {
-					const copiedPatternIndex: number = copiedBars[pasteBar % copiedBars.length] >>> 0;
-					if (copiedPatternIndex == 0) continue;
-
-					const bar: number = this._boxSelectionBar + pasteBar;
-					if (reusablePatterns[String(copiedPatternIndex)] != undefined) {
-						group.append(new ChangePatternNumbers(this._doc, reusablePatterns[String(copiedPatternIndex)], bar, channel, 1, 1));
-					} else {
-						const patternCopy: PatternCopy = patternCopies[String(copiedPatternIndex)];
-						const instrumentCopy: number = Math.min(patternCopy["instrument"] >>> 0, this._doc.song.instrumentsPerChannel - 1);
-						const existingPattern: Pattern | undefined = this._doc.song.channels[channel].patterns[copiedPatternIndex - 1];
-
-						if (existingPattern != undefined &&
-							comparePatternNotes(patternCopy["notes"], existingPattern.notes) &&
-							instrumentCopy == existingPattern.instrument) {
-							group.append(new ChangePatternNumbers(this._doc, copiedPatternIndex, bar, channel, 1, 1));
-						} else {
-							if (existingPattern != undefined && this._patternIndexIsUnused(channel, copiedPatternIndex)) {
-								group.append(new ChangePatternNumbers(this._doc, copiedPatternIndex, bar, channel, 1, 1));
-							} else {
-								group.append(new ChangeEnsurePatternExists(this._doc, channel, bar));
-							}
-							const pattern: Pattern | null = this._doc.song.getPattern(channel, bar);
-							if (pattern == null) throw new Error();
-							group.append(new ChangePaste(this._doc, pattern, patternCopy["notes"], beatsPerBar));
-							group.append(new ChangePatternInstrument(this._doc, instrumentCopy, pattern));
-						}
-
-						reusablePatterns[String(copiedPatternIndex)] = this._doc.song.channels[channel].bars[bar];
-					}
-				}
-			}
-		}
-
-		this._doc.record(group);
-	}
-
 	public movePlayheadToMouse(): void {
 		if (this._mouseOver) {
 			this._doc.synth.playhead = this._mouseBar + (this._mouseX % this._barWidth) / this._barWidth;
 		}
 	}
 
-	public pasteNumbers(): void {
-		const selectionCopy: SelectionCopy | null = JSON.parse(String(window.localStorage.getItem("selectionCopy")));
-		if (selectionCopy == null) return;
-		const channelCopies: ChannelCopy[] = selectionCopy["channels"] || [];
-
-		const group: ChangeGroup = new ChangeGroup();
-		const fillSelection: boolean = (this._boxSelectionWidth > 1 || this._boxSelectionHeight > 1);
-
-		const pasteHeight: number = fillSelection ? this._boxSelectionHeight : Math.min(channelCopies.length, this._doc.song.getChannelCount() - this._boxSelectionChannel);
-		for (let pasteChannel: number = 0; pasteChannel < pasteHeight; pasteChannel++) {
-			const channelCopy: ChannelCopy = channelCopies[pasteChannel % channelCopies.length];
-			const channel: number = this._boxSelectionChannel + pasteChannel;
-
-			const copiedBars: number[] = channelCopy["bars"] || [];
-			if (copiedBars.length == 0) continue;
-
-			const pasteWidth: number = fillSelection ? this._boxSelectionWidth : Math.min(copiedBars.length, this._doc.song.barCount - this._boxSelectionBar);
-			for (let pasteBar: number = 0; pasteBar < pasteWidth; pasteBar++) {
-				const copiedPatternIndex: number = copiedBars[pasteBar % copiedBars.length] >>> 0;
-				const bar: number = this._boxSelectionBar + pasteBar;
-
-				if (copiedPatternIndex > this._doc.song.patternsPerChannel) {
-					group.append(new ChangePatternsPerChannel(this._doc, copiedPatternIndex));
-				}
-
-				group.append(new ChangePatternNumbers(this._doc, copiedPatternIndex, bar, channel, 1, 1));
-			}
-		}
-
-		this._doc.record(group);
-	}
-
-	public selectAll(): void {
-		if (
-			this._boxSelectionBar == 0 &&
-			this._boxSelectionChannel == 0 &&
-			this._boxSelectionWidth == this._doc.song.barCount &&
-			this._boxSelectionHeight == this._doc.song.getChannelCount()
-		) {
-			this._resetBoxSelection();
-		} else {
-			this._boxSelectionX0 = 0;
-			this._boxSelectionY0 = 0;
-			this._boxSelectionX1 = this._doc.song.barCount - 1;
-			this._boxSelectionY1 = this._doc.song.getChannelCount() - 1;
-		}
-		this._selectionUpdated();
-	}
-
-	public selectChannel(): void {
-		if (
-			this._boxSelectionBar == 0 &&
-			this._boxSelectionWidth == this._doc.song.barCount
-		) {
-			this._boxSelectionX0 = this._boxSelectionX1 = this._doc.bar;
-		} else {
-			this._boxSelectionX0 = 0;
-			this._boxSelectionX1 = this._doc.song.barCount - 1;
-		}
-		this._selectionUpdated();
-	}
-
-	public duplicatePatterns(): void {
-		const group: ChangeGroup = new ChangeGroup();
-
-		for (const channel of this._eachSelectedChannel()) {
-			const reusablePatterns: Dictionary<number> = {};
-
-			for (const bar of this._eachSelectedBar()) {
-				const currentPatternIndex: number = this._doc.song.channels[channel].bars[bar];
-				if (currentPatternIndex == 0) continue;
-
-				if (reusablePatterns[String(currentPatternIndex)] == undefined) {
-					let isUsedElsewhere = false;
-					for (const bar2 of this._eachUnselectedBar()) {
-						if (this._doc.song.channels[channel].bars[bar2] == currentPatternIndex) {
-							isUsedElsewhere = true;
-							break;
-						}
-					}
-					if (isUsedElsewhere) {
-						// Need to duplicate the pattern.
-						const copiedPattern: Pattern = this._doc.song.getPattern(channel, bar)!;
-						group.append(new ChangePatternNumbers(this._doc, 0, bar, channel, 1, 1));
-						group.append(new ChangeEnsurePatternExists(this._doc, channel, bar));
-						const newPattern: Pattern | null = this._doc.song.getPattern(channel, bar);
-						if (newPattern == null) throw new Error();
-						group.append(new ChangePaste(this._doc, newPattern, copiedPattern.notes, this._doc.song.beatsPerBar));
-						group.append(new ChangePatternInstrument(this._doc, copiedPattern.instrument, newPattern));
-						reusablePatterns[String(currentPatternIndex)] = this._doc.song.channels[channel].bars[bar];
-					} else {
-						reusablePatterns[String(currentPatternIndex)] = currentPatternIndex;
-					}
-				}
-
-				group.append(new ChangePatternNumbers(this._doc, reusablePatterns[String(currentPatternIndex)], bar, channel, 1, 1));
-			}
-		}
-
-		this._doc.record(group);
-	}
-
-	public muteChannels(allChannels: boolean): void {
-		if (allChannels) {
-			let anyMuted: boolean = false;
-			for (let channel: number = 0; channel < this._doc.song.channels.length; channel++) {
-				if (this._doc.song.channels[channel].muted) {
-					anyMuted = true;
-					break;
-				}
-			}
-			for (let channel: number = 0; channel < this._doc.song.channels.length; channel++) {
-				this._doc.song.channels[channel].muted = !anyMuted;
-			}
-		} else {
-			let anyUnmuted: boolean = false;
-			for (const channel of this._eachSelectedChannel()) {
-				if (!this._doc.song.channels[channel].muted) {
-					anyUnmuted = true;
-					break;
-				}
-			}
-			for (const channel of this._eachSelectedChannel()) {
-				this._doc.song.channels[channel].muted = anyUnmuted;
-			}
-		}
-
-		this._doc.notifier.changed();
-	}
-
-	public soloChannels(): void {
-		let alreadySoloed: boolean = true;
-
-		for (let channel: number = 0; channel < this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount; channel++) {
-			const shouldBeMuted: boolean = channel < this._boxSelectionChannel || channel >= this._boxSelectionChannel + this._boxSelectionHeight;
-			if (this._doc.song.channels[channel].muted != shouldBeMuted) {
-				alreadySoloed = false;
-				break;
-			}
-		}
-
-		if (alreadySoloed) {
-			for (let channel: number = 0; channel < this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount; channel++) {
-				this._doc.song.channels[channel].muted = false;
-			}
-		} else {
-			for (let channel: number = 0; channel < this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount; channel++) {
-				this._doc.song.channels[channel].muted = channel < this._boxSelectionChannel || channel >= this._boxSelectionChannel + this._boxSelectionHeight;
-			}
-		}
-
-		this._doc.notifier.changed();
-	}
-
-	public forceRhythm(): void {
-		const group: ChangeGroup = new ChangeGroup();
-
-		for (const channel of this._eachSelectedChannel()) {
-			for (const pattern of this._eachSelectedPattern(channel)) {
-				group.append(new ChangePatternRhythm(this._doc, pattern));
-			}
-		}
-
-		this._doc.record(group);
-	}
-
-	public forceScale(): void {
-		const group: ChangeGroup = new ChangeGroup();
-
-		const scaleFlags: boolean[] = [true, false, false, false, false, false, false, false, false, false, false, false];
-		for (const channel of this._eachSelectedChannel()) {
-			if (this._doc.song.getChannelIsNoise(channel) || this._doc.song.getChannelIsMod(channel)) continue;
-			for (const pattern of this._eachSelectedPattern(channel)) {
-				unionOfUsedNotes(pattern, scaleFlags);
-			}
-		}
-
-		const scaleMap: number[] = generateScaleMap(scaleFlags, this._doc.song.scale);
-
-		for (const channel of this._eachSelectedChannel()) {
-			if (this._doc.song.getChannelIsNoise(channel) || this._doc.song.getChannelIsMod(channel)) continue;
-			for (const pattern of this._eachSelectedPattern(channel)) {
-				group.append(new ChangePatternScale(this._doc, pattern, scaleMap));
-			}
-		}
-
-		this._doc.record(group);
-	}
-
-	public transpose(upward: boolean, octave: boolean): void {
-		const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTranspose);
-		const group: ChangeGroup = new ChangeGroup();
-		this._changeTranspose = group;
-
-		for (const channel of this._eachSelectedChannel()) {
-			for (const pattern of this._eachSelectedPattern(channel)) {
-				group.append(new ChangeTranspose(this._doc, channel, pattern, upward, false, octave));
-			}
-		}
-		this._doc.record(group, canReplaceLastChange ? StateChangeType.replace : StateChangeType.push);
-	}
-
-	public setInstrument(instrument: number): void {
-		const group: ChangeGroup = new ChangeGroup();
-
-		for (const channel of this._eachSelectedChannel()) {
-			for (const pattern of this._eachSelectedPattern(channel)) {
-				group.append(new ChangePatternInstrument(this._doc, instrument, pattern));
-			}
-		}
-
-		this._doc.record(group);
-	}
-
-	public setModChannel(mod: number, index: number): void {
-		this._doc.record(new ChangeModChannel(this._doc, mod, index));
-	}
-
-	public setModInstrument(mod: number, instrument: number): void {
-		this._doc.record(new ChangeModInstrument(this._doc, mod, instrument));
-	}
-
-	public setModSetting(mod: number, text: string): void {
-		this._doc.record(new ChangeModSetting(this._doc, mod, text));
-	}
-
-	private _nextDigit(digit: string, forInstrument: boolean): void {
-		if (forInstrument) {
-			this._instrumentDigits += digit;
-			var parsed = parseInt(this._instrumentDigits);
-			if (parsed != 0 && parsed <= this._doc.song.instrumentsPerChannel) {
-				this._songEditor.changeInstrument(parsed - 1);
-				return;
-			}
-			this._instrumentDigits = digit;
-			parsed = parseInt(this._instrumentDigits);
-			if (parsed != 0 && parsed <= this._doc.song.instrumentsPerChannel) {
-				this._songEditor.changeInstrument(parsed - 1);
-				return;
-			}
-			this._instrumentDigits = "";
-		}
-		else {
-			this._digits += digit;
-			let parsed: number = parseInt(this._digits);
-			if (parsed <= this._doc.song.patternsPerChannel) {
-
-				this._setPattern(parsed);
-
-				return;
-			}
-
-			this._digits = digit;
-			parsed = parseInt(this._digits);
-			if (parsed <= this._doc.song.patternsPerChannel) {
-
-				this._setPattern(parsed);
-
-				return;
-			}
-
-			this._digits = "";
-		}
-	}
-
-	public _resetBoxSelection(): void {
-		this._boxSelectionX0 = this._boxSelectionX1 = this._doc.bar;
-		this._boxSelectionY0 = this._boxSelectionY1 = this._doc.channel;
-	}
-
 	private _dragBoxSelection(): void {
-		this._boxSelectionX1 = this._mouseBar;
-		this._boxSelectionY1 = this._mouseChannel;
-		this._selectionUpdated();
+		this._doc.selection.setTrackSelection(this._doc.selection.boxSelectionX0, this._mouseBar, this._doc.selection.boxSelectionY0, this._mouseChannel);
+		this._doc.selection.selectionUpdated();
 	}
 
 	private _updateSelectPos(event: TouchEvent): void {
@@ -989,16 +341,15 @@ export class TrackEditor {
 
 			if (event.shiftKey) {
 				this._mouseDragging = true;
-				this._boxSelectionX1 = this._mouseBar;
-				this._boxSelectionY1 = this._mouseChannel;
-				this._selectionUpdated();
+				this._doc.selection.setTrackSelection(this._doc.selection.boxSelectionX0, this._mouseBar, this._doc.selection.boxSelectionY0, this._mouseChannel);
+				this._doc.selection.selectionUpdated();
 			} else {
 				this._mouseDragging = false;
 				if (this._doc.channel != this._mouseChannel || this._doc.bar != this._mouseBar) {
-					this._setChannelBar(this._mouseChannel, this._mouseBar);
+					this._doc.selection.setChannelBar(this._mouseChannel, this._mouseBar);
 					this._mouseDragging = true;
 				}
-				this._resetBoxSelection();
+				this._doc.selection.resetBoxSelection();
 			}
 		}
 	}
@@ -1019,7 +370,7 @@ export class TrackEditor {
 			if (this._doc.channel == this._mouseChannel && this._doc.bar == this._mouseBar) {
 				const up: boolean = ((this._mouseY - Config.barEditorHeight) % this._channelHeight) < this._channelHeight / 2;
 				const patternCount: number = this._doc.song.patternsPerChannel;
-				this._setPattern((this._doc.song.channels[this._mouseChannel].bars[this._mouseBar] + (up ? 1 : patternCount)) % (patternCount + 1));
+				this._doc.selection.setPattern((this._doc.song.channels[this._mouseChannel].bars[this._mouseBar] + (up ? 1 : patternCount)) % (patternCount + 1));
 			}
 		}
 		this._mousePressed = false;
@@ -1252,26 +603,14 @@ export class TrackEditor {
 
 		this._select.style.display = this._touchMode ? "" : "none";
 
-		// I'm allowing the doc.bar to drift outside the box selection while playing
-		// because it may auto-follow the playhead outside the selection but it would
-		// be annoying to lose your selection just because the song is playing.
-		if ((!this._doc.synth.playing && (this._doc.bar < this._boxSelectionBar || this._boxSelectionBar + this._boxSelectionWidth <= this._doc.bar)) ||
-			this._doc.channel < this._boxSelectionChannel ||
-			this._boxSelectionChannel + this._boxSelectionHeight <= this._doc.channel ||
-			this._doc.song.barCount < this._boxSelectionBar + this._boxSelectionWidth ||
-			this._doc.song.getChannelCount() < this._boxSelectionChannel + this._boxSelectionHeight ||
-			(this._boxSelectionWidth == 1 && this._boxSelectionHeight == 1)) {
-			this._resetBoxSelection();
-		}
-
-		if (this._boxSelectionWidth > 1 || this._boxSelectionHeight > 1) {
+		if (this._doc.selection.boxSelectionWidth > 1 || this._doc.selection.boxSelectionHeight > 1) {
 			// TODO: This causes the selection rectangle to repaint every time the
 			// editor renders and the selection is visible. Check if anything changed
 			// before overwriting the attributes?
-			this._selectionRect.setAttribute("x", String(this._barWidth * this._boxSelectionBar + 1));
-			this._selectionRect.setAttribute("y", String(Config.barEditorHeight + this._channelHeight * this._boxSelectionChannel + 1));
-			this._selectionRect.setAttribute("width", String(this._barWidth * this._boxSelectionWidth - 2));
-			this._selectionRect.setAttribute("height", String(this._channelHeight * this._boxSelectionHeight - 2));
+			this._selectionRect.setAttribute("x", String(this._barWidth * this._doc.selection.boxSelectionBar + 1));
+			this._selectionRect.setAttribute("y", String(Config.barEditorHeight + this._channelHeight * this._doc.selection.boxSelectionChannel + 1));
+			this._selectionRect.setAttribute("width", String(this._barWidth * this._doc.selection.boxSelectionWidth - 2));
+			this._selectionRect.setAttribute("height", String(this._channelHeight * this._doc.selection.boxSelectionHeight - 2));
 			this._selectionRect.setAttribute("visibility", "visible");
 		} else {
 			this._selectionRect.setAttribute("visibility", "hidden");

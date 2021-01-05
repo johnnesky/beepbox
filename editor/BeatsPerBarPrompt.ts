@@ -2,10 +2,9 @@
 
 import { Config } from "../synth/SynthConfig";
 import { HTML } from "imperative-html/dist/esm/elements-strict";
-import { SongDocument, StateChangeType } from "./SongDocument";
+import { SongDocument } from "./SongDocument";
 import { Prompt } from "./Prompt";
 import { ChangeBeatsPerBar } from "./changes";
-//import {ColorConfig} from "./ColorConfig";
 
 
 //namespace beepbox {
@@ -82,7 +81,7 @@ export class BeatsPerBarPrompt implements Prompt {
 		const charCode = (event.which) ? event.which : event.keyCode;
 		if (charCode != 46 && charCode > 31 && (charCode < 48 || charCode > 57)) {
 			event.preventDefault();
-			return true;
+			return true;	
 		}
 		return false;
 	}
@@ -99,7 +98,7 @@ export class BeatsPerBarPrompt implements Prompt {
 	private _saveChanges = (): void => {
 		window.localStorage.setItem("beatCountStrategy", this._conversionStrategySelect.value);
 		this._doc.prompt = null;
-		this._doc.record(new ChangeBeatsPerBar(this._doc, BeatsPerBarPrompt._validate(this._beatsStepper), this._conversionStrategySelect.value), StateChangeType.replace);
+		this._doc.record(new ChangeBeatsPerBar(this._doc, BeatsPerBarPrompt._validate(this._beatsStepper), this._conversionStrategySelect.value), true);
 	}
 }
 //}

@@ -2,7 +2,7 @@
 
 import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { Prompt } from "./Prompt";
-import { SongDocument, StateChangeType } from "./SongDocument";
+import { SongDocument } from "./SongDocument";
 import { ColorConfig } from "./ColorConfig";
 import { ChangeLimiterSettings } from "./changes";
 import { SongEditor } from "./SongEditor";
@@ -448,7 +448,7 @@ export class LimiterPrompt implements Prompt {
 			+this.limitRiseSlider.value,
 			+this.limitDecaySlider.value,
 			+this.masterGainSlider.value,
-		), StateChangeType.replace);
+		), true);
 	}
 
 	private _saveChanges = (): void => {

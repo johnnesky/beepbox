@@ -2,7 +2,7 @@
 
 import { Config } from "../synth/SynthConfig";
 import { HTML } from "imperative-html/dist/esm/elements-strict";
-import { SongDocument, StateChangeType } from "./SongDocument";
+import { SongDocument } from "./SongDocument";
 import { Prompt } from "./Prompt";
 import { ChangeGroup } from "./Change";
 import { ChangePatternsPerChannel, ChangeInstrumentsPerChannel, ChangeChannelCount } from "./changes";
@@ -137,7 +137,7 @@ export class ChannelSettingsPrompt implements Prompt {
 		group.append(new ChangeInstrumentsPerChannel(this._doc, ChannelSettingsPrompt._validate(this._instrumentsStepper)));
 		group.append(new ChangeChannelCount(this._doc, ChannelSettingsPrompt._validate(this._pitchChannelStepper), ChannelSettingsPrompt._validate(this._drumChannelStepper), ChannelSettingsPrompt._validate(this._modChannelStepper)));
 		this._doc.prompt = null;
-		this._doc.record(group, StateChangeType.replace);
+		this._doc.record(group, true);
 	}
 }
 //}

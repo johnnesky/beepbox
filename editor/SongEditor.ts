@@ -6,7 +6,7 @@ import { Config, InstrumentType } from "../synth/SynthConfig";
 import { BarScrollBar } from "./BarScrollBar";
 import { BeatsPerBarPrompt } from "./BeatsPerBarPrompt";
 import { Change, ChangeGroup } from "./Change";
-import { ChangeAlgorithm, ChangeChannelBar, ChangeChipWave, ChangeChord, ChangeCustomWave, ChangeDetectKey, ChangeDetune, ChangeDrumsetEnvelope, ChangeEffects, ChangeFeedbackAmplitude, ChangeFeedbackEnvelope, ChangeFeedbackType, ChangeFilterCutoff, ChangeFilterEnvelope, ChangeFilterResonance, ChangeInterval, ChangeKey, ChangeNoiseWave, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangePan, ChangePasteInstrument, ChangePatternNumbers, ChangePatternsPerChannel, ChangePreset, ChangePulseEnvelope, ChangePulseWidth, ChangeRandomGeneratedInstrument, ChangeReverb, ChangeRhythm, ChangeScale, ChangeSong, ChangeSongTitle, ChangeTempo, ChangeTransition, ChangeVibrato, ChangeVibratoType, ChangeVolume, ChangeVibratoDepth, ChangeVibratoSpeed, ChangeVibratoDelay, ChangePanDelay, ChangeArpeggioSpeed, pickRandomPresetValue, ChangeFastTwoNoteArp } from "./changes";
+import { ChangeAlgorithm, ChangeChannelBar, ChangeChipWave, ChangeChannelOrder, ChangeChord, ChangeCustomWave, ChangeDetectKey, ChangeDetune, ChangeDrumsetEnvelope, ChangeEffects, ChangeFeedbackAmplitude, ChangeFeedbackEnvelope, ChangeFeedbackType, ChangeFilterCutoff, ChangeFilterEnvelope, ChangeFilterResonance, ChangeInterval, ChangeKey, ChangeNoiseWave, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangePan, ChangePasteInstrument, ChangePatternNumbers, ChangePatternsPerChannel, ChangePreset, ChangePulseEnvelope, ChangePulseWidth, ChangeRandomGeneratedInstrument, ChangeReverb, ChangeRhythm, ChangeScale, ChangeSong, ChangeSongTitle, ChangeTempo, ChangeTransition, ChangeVibrato, ChangeVibratoType, ChangeVolume, ChangeVibratoDepth, ChangeVibratoSpeed, ChangeVibratoDelay, ChangePanDelay, ChangeArpeggioSpeed, pickRandomPresetValue, ChangeFastTwoNoteArp, ChangePatternSelection } from "./changes";
 import { ChannelSettingsPrompt } from "./ChannelSettingsPrompt";
 import { ColorConfig } from "./ColorConfig";
 import { CustomChipPrompt } from "./CustomChipPrompt";
@@ -25,7 +25,7 @@ import { OctaveScrollBar } from "./OctaveScrollBar";
 import { PatternEditor } from "./PatternEditor";
 import { Piano } from "./Piano";
 import { Prompt } from "./Prompt";
-import { SongDocument, StateChangeType } from "./SongDocument";
+import { SongDocument } from "./SongDocument";
 import { SongDurationPrompt } from "./SongDurationPrompt";
 import { SongRecoveryPrompt } from "./SongRecoveryPrompt";
 import { SpectrumEditor } from "./SpectrumEditor";
@@ -1273,10 +1273,10 @@ export class SongEditor {
 
 			if (channel.bars[this._doc.bar] != 0) {
 
-				let lowestSelX: number = Math.min(this._trackEditor._boxSelectionX0, this._trackEditor._boxSelectionX1);
-				let highestSelX: number = Math.max(this._trackEditor._boxSelectionX0, this._trackEditor._boxSelectionX1);
-				let lowestSelY: number = Math.min(this._trackEditor._boxSelectionY0, this._trackEditor._boxSelectionY1);
-				let highestSelY: number = Math.max(this._trackEditor._boxSelectionY0, this._trackEditor._boxSelectionY1);
+				let lowestSelX: number = Math.min(this._doc.selection.boxSelectionX0, this._doc.selection.boxSelectionX1);
+				let highestSelX: number = Math.max(this._doc.selection.boxSelectionX0, this._doc.selection.boxSelectionX1);
+				let lowestSelY: number = Math.min(this._doc.selection.boxSelectionY0, this._doc.selection.boxSelectionY1);
+				let highestSelY: number = Math.max(this._doc.selection.boxSelectionY0, this._doc.selection.boxSelectionY1);
 
 				for (let i: number = 0; i < this._doc.song.barCount; i++) {
 					// Check for this exact bar in another place, but only count it if it's not within the selection
@@ -1493,7 +1493,7 @@ export class SongEditor {
 			this._vibratoSpeedSlider.updateValue(instrument.vibratoSpeed);
 			setSelectedValue(this._vibratoTypeSelect, instrument.vibratoType);
 			this._arpeggioSpeedSlider.updateValue(instrument.arpeggioSpeed);
-			
+
 			this._panDelaySlider.updateValue(instrument.panDelay);
 			if (instrument.type == InstrumentType.customChipWave) {
 				this._customWaveDrawCanvas.redrawCanvas();
@@ -1509,10 +1509,10 @@ export class SongEditor {
 			var patternUsed = false;
 			var instrumentUsed = false;
 
-			let lowestSelX: number = Math.min(this._trackEditor._boxSelectionX0, this._trackEditor._boxSelectionX1);
-			let highestSelX: number = Math.max(this._trackEditor._boxSelectionX0, this._trackEditor._boxSelectionX1);
-			let lowestSelY: number = Math.min(this._trackEditor._boxSelectionY0, this._trackEditor._boxSelectionY1);
-			let highestSelY: number = Math.max(this._trackEditor._boxSelectionY0, this._trackEditor._boxSelectionY1);
+			let lowestSelX: number = Math.min(this._doc.selection.boxSelectionX0, this._doc.selection.boxSelectionX1);
+			let highestSelX: number = Math.max(this._doc.selection.boxSelectionX0, this._doc.selection.boxSelectionX1);
+			let lowestSelY: number = Math.min(this._doc.selection.boxSelectionY0, this._doc.selection.boxSelectionY1);
+			let highestSelY: number = Math.max(this._doc.selection.boxSelectionY0, this._doc.selection.boxSelectionY1);
 
 			if (channel.bars[this._doc.bar] != 0) {
 
@@ -1993,6 +1993,8 @@ export class SongEditor {
 	}
 
 	private _tempoStepperCaptureNumberKeys = (event: KeyboardEvent): void => {
+		// When the number input is in focus, allow some keyboard events to
+		// edit the input without accidentally editing the song otherwise.
 		switch (event.keyCode) {
 			case 8: // backspace/delete
 			case 13: // enter/return
@@ -2048,8 +2050,12 @@ export class SongEditor {
 			return;
 		}
 
-		this._trackEditor.onKeyPressed(event);
+		//this._trackEditor.onKeyPressed(event);
 		switch (event.keyCode) {
+			case 27: // ESC key
+				new ChangePatternSelection(this._doc, 0, 0);
+				this._doc.selection.resetBoxSelection();
+				break;
 			case 16: // Shift
 				this._patternEditor.shiftMode = true;
 				break;
@@ -2083,30 +2089,31 @@ export class SongEditor {
 				event.preventDefault();
 				break;
 			case 67: // c
-				this._trackEditor.copy();
-				this._trackEditor._resetBoxSelection();
-				this._trackEditor._selectionUpdated();
+				this._doc.selection.copy();
+				new ChangePatternSelection(this._doc, 0, 0);
+				this._doc.selection.resetBoxSelection();
+				//this._trackEditor._selectionUpdated();
 				event.preventDefault();
 				break;
 			case 13: // enter/return
-				this._trackEditor.insertBars();
+				this._doc.selection.insertBars();
 				event.preventDefault();
 				break;
 			case 8: // backspace/delete
-				this._trackEditor.deleteBars();
+				this._doc.selection.deleteBars();
 				this._barScrollBar.animatePlayhead();
 				event.preventDefault();
 				break;
 			case 65: // a
 				if (event.shiftKey) {
-					this._trackEditor.selectChannel();
+					this._doc.selection.selectChannel();
 				} else {
-					this._trackEditor.selectAll();
+					this._doc.selection.selectAll();
 				}
 				event.preventDefault();
 				break;
 			case 68: // d
-				this._trackEditor.duplicatePatterns();
+				this._doc.selection.duplicatePatterns();
 				event.preventDefault();
 				break;
 			case 70: // f
@@ -2133,7 +2140,7 @@ export class SongEditor {
 				break;
 			case 77: // m
 				if (this._doc.enableChannelMuting) {
-					this._trackEditor.muteChannels(event.shiftKey);
+					this._doc.selection.muteChannels(event.shiftKey);
 					event.preventDefault();
 				}
 				break;
@@ -2197,18 +2204,18 @@ export class SongEditor {
 			case 83: // s
 				if (this._doc.enableChannelMuting) {
 					if (event.shiftKey) {
-						this._trackEditor.muteChannels(false);
+						this._doc.selection.muteChannels(false);
 					} else {
-						this._trackEditor.soloChannels();
+						this._doc.selection.soloChannels();
 					}
 					event.preventDefault();
 				}
 				break;
 			case 86: // v
 				if (event.shiftKey) {
-					this._trackEditor.pasteNumbers();
+					this._doc.selection.pasteNumbers();
 				} else {
-					this._trackEditor.pasteNotes();
+					this._doc.selection.pasteNotes();
 				}
 				event.preventDefault();
 				break;
@@ -2244,14 +2251,120 @@ export class SongEditor {
 				break;
 			case 189: // -
 			case 173: // Firefox -
-				this._trackEditor.transpose(false, event.shiftKey || event.ctrlKey);
+				this._doc.selection.transpose(false, event.shiftKey || event.ctrlKey);
 				event.preventDefault();
 				break;
 			case 187: // +
 			case 61: // Firefox +
 			case 171: // Some users have this as +? Hmm.
-				this._trackEditor.transpose(true, event.shiftKey || event.ctrlKey);
+				this._doc.selection.transpose(true, event.shiftKey || event.ctrlKey);
 				event.preventDefault();
+				break;
+			case 38: // up
+				if (event.ctrlKey) {
+					// Swap channel up, if it wouldn't break from the channel type layout
+					if (this._doc.channel == 0 || this._doc.channel == this._doc.song.pitchChannelCount || this._doc.channel == this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
+						break;
+					}
+					this._doc.record(new ChangeChannelOrder(this._doc, this._doc.channel - 1, this._doc.channel), false);
+					this._doc.selection.setChannelBar((this._doc.channel - 1), this._doc.bar);
+				}
+				else if (event.shiftKey) {
+					this._doc.selection.boxSelectionY1 = Math.max(0, this._doc.selection.boxSelectionY1 - 1);
+					this._doc.selection.selectionUpdated();
+				} else {
+					this._doc.selection.setChannelBar((this._doc.channel - 1 + this._doc.song.getChannelCount()) % this._doc.song.getChannelCount(), this._doc.bar);
+					this._doc.selection.resetBoxSelection();
+				}
+				event.preventDefault();
+				break;
+			case 40: // down
+				if (event.ctrlKey) {
+					// Swap channel down, if it wouldn't break from the channel type layout
+					if (this._doc.channel == this._doc.song.pitchChannelCount - 1 || this._doc.channel == this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount - 1 || this._doc.channel == this._doc.song.getChannelCount() - 1) {
+						break;
+					}
+					this._doc.record(new ChangeChannelOrder(this._doc, this._doc.channel, this._doc.channel + 1), false);
+					this._doc.selection.setChannelBar((this._doc.channel + 1), this._doc.bar);
+				}
+				else if (event.shiftKey) {
+					this._doc.selection.boxSelectionY1 = Math.min(this._doc.song.getChannelCount() - 1, this._doc.selection.boxSelectionY1 + 1);
+					this._doc.selection.selectionUpdated();
+				} else {
+					this._doc.selection.setChannelBar((this._doc.channel + 1) % this._doc.song.getChannelCount(), this._doc.bar);
+					this._doc.selection.resetBoxSelection();
+				}
+				event.preventDefault();
+				break;
+			case 37: // left
+				if (event.shiftKey) {
+					this._doc.selection.boxSelectionX1 = Math.max(0, this._doc.selection.boxSelectionX1 - 1);
+					this._doc.selection.scrollToSelection();
+					this._doc.selection.selectionUpdated();
+				} else {
+					this._doc.selection.setChannelBar(this._doc.channel, (this._doc.bar + this._doc.song.barCount - 1) % this._doc.song.barCount);
+					this._doc.selection.resetBoxSelection();
+				}
+				event.preventDefault();
+				break;
+			case 39: // right
+				if (event.shiftKey) {
+					this._doc.selection.boxSelectionX1 = Math.min(this._doc.song.barCount - 1, this._doc.selection.boxSelectionX1 + 1);
+					this._doc.selection.scrollToSelection();
+					this._doc.selection.selectionUpdated();
+				} else {
+					this._doc.selection.setChannelBar(this._doc.channel, (this._doc.bar + 1) % this._doc.song.barCount);
+					this._doc.selection.resetBoxSelection();
+				}
+				event.preventDefault();
+				break;
+			case 46: // Delete
+				this._doc.selection.digits = "";
+				this._doc.selection.nextDigit("0", false);
+				break;
+			case 48: // 0
+				this._doc.selection.nextDigit("0", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			case 49: // 1
+				this._doc.selection.nextDigit("1", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			case 50: // 2
+				this._doc.selection.nextDigit("2", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			case 51: // 3
+				this._doc.selection.nextDigit("3", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			case 52: // 4
+				this._doc.selection.nextDigit("4", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			case 53: // 5
+				this._doc.selection.nextDigit("5", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			case 54: // 6
+				this._doc.selection.nextDigit("6", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			case 55: // 7
+				this._doc.selection.nextDigit("7", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			case 56: // 8
+				this._doc.selection.nextDigit("8", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			case 57: // 9
+				this._doc.selection.nextDigit("9", event.shiftKey || event.ctrlKey);
+				event.preventDefault();
+				break;
+			default:
+				this._doc.selection.digits = "";
+				this._doc.selection.instrumentDigits = "";
 				break;
 		}
 	}
@@ -2392,7 +2505,7 @@ export class SongEditor {
 		if (isNaN(<number><unknown>this._scaleSelect.value)) {
 			switch (this._scaleSelect.value) {
 				case "forceScale":
-					this._trackEditor.forceScale();
+					this._doc.selection.forceScale();
 					break;
 			}
 			this._doc.notifier.changed();
@@ -2418,7 +2531,7 @@ export class SongEditor {
 		if (isNaN(<number><unknown>this._rhythmSelect.value)) {
 			switch (this._rhythmSelect.value) {
 				case "forceRhythm":
-					this._trackEditor.forceRhythm();
+					this._doc.selection.forceRhythm();
 					break;
 			}
 			this._doc.notifier.changed();
@@ -2476,7 +2589,7 @@ export class SongEditor {
 	}
 
 	private _whenSetInstrument = (): void => {
-		this._trackEditor.setInstrument(this._instrumentSelect.selectedIndex);
+		this._doc.selection.setInstrument(this._instrumentSelect.selectedIndex);
 
 		// Force piano to re-show, if channel is modulator
 		if (this._doc.channel >= this._doc.song.pitchChannelCount + this._doc.song.noiseChannelCount) {
@@ -2485,14 +2598,14 @@ export class SongEditor {
 	}
 
 	private _whenSetModChannel = (mod: number): void => {
-		this._trackEditor.setModChannel(mod, this._modChannelBoxes[mod].selectedIndex);
+		this._doc.selection.setModChannel(mod, this._modChannelBoxes[mod].selectedIndex);
 
 		// Force piano to re-show
 		this._piano.forceRender();
 	}
 
 	private _whenSetModInstrument = (mod: number): void => {
-		this._trackEditor.setModInstrument(mod, this._modInstrumentBoxes[mod].selectedIndex);
+		this._doc.selection.setModInstrument(mod, this._modInstrumentBoxes[mod].selectedIndex);
 
 		// Force piano to re-show
 		this._piano.forceRender();
@@ -2501,7 +2614,7 @@ export class SongEditor {
 	private _whenSetModSetting = (mod: number): void => {
 		//let prevSetting: number = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].modSettings[mod];
 
-		this._trackEditor.setModSetting(mod, this._modSetBoxes[mod].children[this._modSetBoxes[mod].selectedIndex].textContent as string);
+		this._doc.selection.setModSetting(mod, this._modSetBoxes[mod].children[this._modSetBoxes[mod].selectedIndex].textContent as string);
 
 		/* Currently cut this as it would have to scale all patterns to make any sense, and I'm leery about the loss of information
 		 * inherent in scaling to and from a smaller note resolution.
@@ -2563,7 +2676,7 @@ export class SongEditor {
 			case "new":
 				this._doc.goBackToStart();
 				for (const channel of this._doc.song.channels) channel.muted = false;
-				this._doc.record(new ChangeSong(this._doc, ""), StateChangeType.push, true);
+				this._doc.record(new ChangeSong(this._doc, ""), false, true);
 				break;
 			case "export":
 				this._openPrompt("export");
@@ -2602,34 +2715,34 @@ export class SongEditor {
 				this._doc.redo();
 				break;
 			case "copy":
-				this._trackEditor.copy();
+				this._doc.selection.copy();
 				break;
 			case "insertBars":
-				this._trackEditor.insertBars();
+				this._doc.selection.insertBars();
 				break;
 			case "deleteBars":
-				this._trackEditor.deleteBars();
+				this._doc.selection.deleteBars();
 				break;
 			case "pasteNotes":
-				this._trackEditor.pasteNotes();
+				this._doc.selection.pasteNotes();
 				break;
 			case "pasteNumbers":
-				this._trackEditor.pasteNumbers();
+				this._doc.selection.pasteNumbers();
 				break;
 			case "transposeUp":
-				this._trackEditor.transpose(true, false);
+				this._doc.selection.transpose(true, false);
 				break;
 			case "transposeDown":
-				this._trackEditor.transpose(false, false);
+				this._doc.selection.transpose(false, false);
 				break;
 			case "selectAll":
-				this._trackEditor.selectAll();
+				this._doc.selection.selectAll();
 				break;
 			case "selectChannel":
-				this._trackEditor.selectChannel();
+				this._doc.selection.selectChannel();
 				break;
 			case "duplicatePatterns":
-				this._trackEditor.duplicatePatterns();
+				this._doc.selection.duplicatePatterns();
 				break;
 			case "barCount":
 				this._openPrompt("barCount");

@@ -2,7 +2,7 @@
 
 import { Config } from "../synth/SynthConfig";
 import { HTML } from "imperative-html/dist/esm/elements-strict";
-import { SongDocument, StateChangeType } from "./SongDocument";
+import { SongDocument } from "./SongDocument";
 import { Prompt } from "./Prompt";
 import { ChangeGroup } from "./Change";
 import { ChangeBarCount } from "./changes";
@@ -102,7 +102,7 @@ export class SongDurationPrompt implements Prompt {
 		const group: ChangeGroup = new ChangeGroup();
 		group.append(new ChangeBarCount(this._doc, SongDurationPrompt._validate(this._barsStepper), this._positionSelect.value == "beginning"));
 		this._doc.prompt = null;
-		this._doc.record(group, StateChangeType.replace);
+		this._doc.record(group, true);
 	}
 }
 //}

@@ -4,6 +4,7 @@ import { Pattern, Song, Synth } from "../synth/synth";
 import { SongRecovery, generateUid } from "./SongRecovery";
 import { ColorConfig } from "./ColorConfig";
 import { Layout } from "./Layout";
+import { Selection } from "./Selection";
 import { Change } from "./Change";
 import { ChangeNotifier } from "./ChangeNotifier";
 import { ChangeSong, setDefaultInstruments } from "./changes";
@@ -17,19 +18,14 @@ interface HistoryState {
 	channel: number;
 	recoveryUid: string;
 	prompt: string | null;
-}
-
-export const enum StateChangeType {
-	replace = 0,
-	push,
-	jump,
-	length,
+	selection: { x0: number, x1: number, y0: number, y1: number, start: number, end: number };
 }
 
 export class SongDocument {
 	public song: Song;
 	public synth: Synth;
 	public notifier: ChangeNotifier = new ChangeNotifier();
+	public selection: Selection = new Selection(this);
 	public channel: number = 0;
 	public muteEditorChannel: number = 0;
 	public bar: number = 0;
@@ -60,13 +56,13 @@ export class SongDocument {
 	private _recoveryUid: string;
 	private _recentChange: Change | null = null;
 	private _sequenceNumber: number = 0;
-	private _stateChangeType: StateChangeType = StateChangeType.replace;
+	private _stateShouldBePushed: boolean = false;
 	private _recordedNewSong: boolean = false;
-	private _barFromCurrentState: number = 0;
-	private _channelFromCurrentState: number = 0;
 	public _waitingToUpdateState: boolean = false;
 
 	constructor() {
+		this.notifier.watch(this._normalizeSelection);
+
 		this.autoPlay = window.localStorage.getItem("autoPlay") == "true";
 		this.autoFollow = window.localStorage.getItem("autoFollow") == "true";
 		this.enableNotePreview = window.localStorage.getItem("enableNotePreview") == "true";
@@ -107,7 +103,7 @@ export class SongDocument {
 		let state: HistoryState | null = this._getHistoryState();
 		if (state == null) {
 			// When the page is first loaded, indicate that undo is NOT possible.
-			state = { canUndo: false, sequenceNumber: 0, bar: 0, channel: 0, recoveryUid: generateUid(), prompt: null };
+			state = { canUndo: false, sequenceNumber: 0, bar: 0, channel: 0, recoveryUid: generateUid(), prompt: null, selection: this.selection.toJSON() };
 		}
 		if (state.recoveryUid == undefined) state.recoveryUid = generateUid();
 		this._replaceState(state, songString);
@@ -116,11 +112,10 @@ export class SongDocument {
 
 		this.bar = state.bar;
 		this.channel = state.channel;
-		this._barFromCurrentState = state.bar;
-		this._channelFromCurrentState = state.channel;
 		this._recoveryUid = state.recoveryUid;
 		this.barScrollPos = Math.max(0, this.bar - (this.trackVisibleBars - 6));
 		this.prompt = state.prompt;
+		this.selection.fromJSON(state.selection);
 
 		// For all input events, catch them when they are about to finish bubbling,
 		// presumably after all handlers are done updating the model, then update the
@@ -215,7 +210,7 @@ export class SongDocument {
 			// The user changed the hash directly.
 			this._sequenceNumber++;
 			this._resetSongRecoveryUid();
-			const state: HistoryState = { canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: null };
+			const state: HistoryState = { canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: null, selection: this.selection.toJSON() };
 			new ChangeSong(this, window.location.hash);
 			this.prompt = state.prompt;
 			if (this.displayBrowserUrl) {
@@ -234,22 +229,14 @@ export class SongDocument {
 		// Abort if we've already handled the current state. 
 		if (state.sequenceNumber == this._sequenceNumber) return;
 
-		if (state.sequenceNumber == this._sequenceNumber - 1) {
-			// undo:
-			this.bar = this._barFromCurrentState;
-			this.channel = this._channelFromCurrentState;
-		} else if (state.sequenceNumber != this._sequenceNumber) {
-			// redo, or jump multiple steps in history:
-			this.bar = state.bar;
-			this.channel = state.channel;
-		}
+		this.bar = state.bar;
+		this.channel = state.channel;
 		this._sequenceNumber = state.sequenceNumber;
 		this.prompt = state.prompt;
 		new ChangeSong(this, this._getHash());
 
-		this._barFromCurrentState = state.bar;
-		this._channelFromCurrentState = state.channel;
 		this._recoveryUid = state.recoveryUid;
+		this.selection.fromJSON(state.selection);
 
 		//this.barScrollPos = Math.min(this.bar, Math.max(this.bar - (this.trackVisibleBars - 1), this.barScrollPos));
 
@@ -261,41 +248,47 @@ export class SongDocument {
 		this.notifier.notifyWatchers();
 	}
 
+	private _normalizeSelection = (): void => {
+		// I'm allowing the doc.bar to drift outside the box selection while playing
+		// because it may auto-follow the playhead outside the selection but it would
+		// be annoying to lose your selection just because the song is playing.
+		if ((!this.synth.playing && (this.bar < this.selection.boxSelectionBar || this.selection.boxSelectionBar + this.selection.boxSelectionWidth <= this.bar)) ||
+			this.channel < this.selection.boxSelectionChannel ||
+			this.selection.boxSelectionChannel + this.selection.boxSelectionHeight <= this.channel ||
+			this.song.barCount < this.selection.boxSelectionBar + this.selection.boxSelectionWidth ||
+			this.song.getChannelCount() < this.selection.boxSelectionChannel + this.selection.boxSelectionHeight ||
+			(this.selection.boxSelectionWidth == 1 && this.selection.boxSelectionHeight == 1)) {
+			this.selection.resetBoxSelection();
+		}
+	}
+
 	private _updateHistoryState = (): void => {
 		this._waitingToUpdateState = false;
 		const hash: string = this.song.toBase64String();
-		if (this._stateChangeType == StateChangeType.push) {
-			this._sequenceNumber++;
-		} else if (this._stateChangeType >= StateChangeType.jump) {
-			this._sequenceNumber += 2;
-		}
+		if (this._stateShouldBePushed) this._sequenceNumber++;
 		if (this._recordedNewSong) {
 			this._resetSongRecoveryUid();
 		} else {
 			this._recovery.saveVersion(this._recoveryUid, this.song.title, hash);
 		}
-		let state: HistoryState = { canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: this.prompt };
-		if (this._stateChangeType == StateChangeType.replace) {
-			this._replaceState(state, hash);
-		} else {
+		let state: HistoryState = { canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: this.prompt, selection: this.selection.toJSON() };
+		if (this._stateShouldBePushed) {
 			this._pushState(state, hash);
+		} else {
+			this._replaceState(state, hash);
 		}
-		this._barFromCurrentState = state.bar;
-		this._channelFromCurrentState = state.channel;
-		this._stateChangeType = StateChangeType.replace;
+		this._stateShouldBePushed = false;
 		this._recordedNewSong = false;
 	}
 
-	public record(change: Change, stateChangeType: StateChangeType = StateChangeType.push, newSong: boolean = false): void {
+	public record(change: Change, replace: boolean = false, newSong: boolean = false): void {
 		if (change.isNoop()) {
 			this._recentChange = null;
-			if (stateChangeType == StateChangeType.replace) {
-				this._back();
-			}
+			if (replace) this._back();
 		} else {
 			change.commit();
 			this._recentChange = change;
-			if (this._stateChangeType < stateChangeType) this._stateChangeType = stateChangeType;
+			this._stateShouldBePushed = this._stateShouldBePushed || !replace;
 			this._recordedNewSong = this._recordedNewSong || newSong;
 			if (!this._waitingToUpdateState) {
 				// Defer updating the url/history until all sequenced changes have
@@ -315,7 +308,7 @@ export class SongDocument {
 		this.prompt = prompt;
 		const hash: string = this.song.toBase64String();
 		this._sequenceNumber++;
-		const state = { canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: this.prompt };
+		const state = { canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: this.prompt, selection: this.selection.toJSON() };
 		this._pushState(state, hash);
 	}
 
