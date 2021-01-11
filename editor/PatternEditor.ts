@@ -985,9 +985,9 @@ import {prettyNumber} from "./EditorConfig";
 		
 		public render(): void {
 			const nextPattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
-			if (this._pattern != nextPattern) {
-				this._whenCursorReleased(null);
+			if (this._pattern != nextPattern && this._pattern != null) {
 				this._dragChange = null;
+				this._whenCursorReleased(null);
 			}
 			this._pattern = nextPattern;
 			
