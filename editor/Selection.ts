@@ -35,7 +35,7 @@ export class Selection {
 	public patternSelectionActive: boolean = false;
 
 	private _changeTranspose: ChangeGroup | null = null;
-	private _changeTrack: ChangeGroup | null = null;
+	//private _changeTrack: ChangeGroup | null = null;
 
 	constructor(private _doc: SongDocument) { }
 
@@ -87,10 +87,15 @@ export class Selection {
 	}
 
 	public setChannelBar(channel: number, bar: number): void {
+		/* BeepBox counts clicking around as a change.
 		const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTrack);
 		this._changeTrack = new ChangeGroup();
 		this._changeTrack.append(new ChangeChannelBar(this._doc, channel, bar));
 		this._doc.record(this._changeTrack, canReplaceLastChange);
+		this.selectionUpdated();
+		*/
+		// JummBox does not count this as a change
+		new ChangeChannelBar(this._doc, channel, bar);
 		this.selectionUpdated();
 	}
 
@@ -587,10 +592,12 @@ export class Selection {
 	}
 
 	public setTrackSelection(newX0: number, newX1: number, newY0: number, newY1: number): void {
-		const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTrack);
-		this._changeTrack = new ChangeGroup();
-		this._changeTrack.append(new ChangeTrackSelection(this._doc, newX0, newX1, newY0, newY1));
-		this._doc.record(this._changeTrack, canReplaceLastChange);
+		//const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTrack);
+		//this._changeTrack = new ChangeGroup();
+		//this._changeTrack.append(new ChangeTrackSelection(this._doc, newX0, newX1, newY0, newY1));
+		// this._doc.record(this._changeTrack, canReplaceLastChange);
+		new ChangeTrackSelection(this._doc, newX0, newX1, newY0, newY1);
+		// In JummBox selections don't cause a change.
 	}
 
 	public transpose(upward: boolean, octave: boolean): void {

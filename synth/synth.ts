@@ -4527,6 +4527,7 @@ export class Synth {
 			// Set samples per tick if song tempo mods changed it
 			if (this.isModActive(ModSetting.mstTempo, true)) {
 				samplesPerTick = this.getSamplesPerTick();
+				this.tickSampleCountdown = Math.min( this.tickSampleCountdown, samplesPerTick );
 			}
 
 			// Bound LFO times to be within their period (to keep values from getting large)

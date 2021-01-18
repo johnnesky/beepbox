@@ -1310,13 +1310,13 @@ export class PatternEditor {
 	public render(): void {
 		const nextPattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
 
-		if (this._pattern != nextPattern) {
+		if (this._pattern != nextPattern && this._pattern != null) {
 			if (this._doc.song.getChannelIsMod(this._doc.channel) && this._interactive && nextPattern != null) {
 				// Need to re-sort the notes by start time as they might change order if user drags them around.
 				nextPattern.notes.sort(function (a, b) { return (a.start == b.start) ? a.pitches[0] - b.pitches[0] : a.start - b.start; });
 			}
-			this._whenCursorReleased(null);
 			this._dragChange = null;
+			this._whenCursorReleased(null);
 		}
 		this._pattern = nextPattern;
 
