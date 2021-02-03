@@ -2,7 +2,7 @@
 
 import { InstrumentType, EnvelopeType, Config, getArpeggioPitchIndex } from "../synth/SynthConfig";
 import { Instrument, Pattern, Note, Song, Synth } from "../synth/synth";
-//import {ColorConfig} from "./ColorConfig";
+import {ColorConfig} from "./ColorConfig";
 import { Preset, EditorConfig } from "./EditorConfig";
 import { SongDocument } from "./SongDocument";
 import { Prompt } from "./Prompt";
@@ -41,6 +41,14 @@ function save(blob: Blob, name: string): void {
 }
 
 export class ExportPrompt implements Prompt {
+	private synth: Synth;
+	private thenExportTo: string;
+	private recordedSamplesL: Float32Array;
+	private recordedSamplesR: Float32Array;
+	private sampleFrames: number;
+	private totalChunks: number;
+	private currentChunk: number;
+	private outputStarted: boolean = false;
 	private readonly _fileName: HTMLInputElement = input({ type: "text", style: "width: 10em;", value: "BeepBox-Song", maxlength: 250, "autofocus": "autofocus" });
 	private readonly _computedSamplesLabel: HTMLDivElement = div({ style: "width: 10em;" }, new Text("0:00"));
 	private readonly _enableIntro: HTMLInputElement = input({ type: "checkbox" });
@@ -54,6 +62,12 @@ export class ExportPrompt implements Prompt {
 	);
 	private readonly _cancelButton: HTMLButtonElement = button({ class: "cancelButton" });
 	private readonly _exportButton: HTMLButtonElement = button({ class: "exportButton", style: "width:45%;" }, "Export");
+	private readonly _outputProgressBar: HTMLDivElement = div({ style: `width: 0%; background: ${ColorConfig.loopAccent}; height: 100%; position: absolute; z-index: 2;` });
+	private readonly _outputProgressLabel: HTMLDivElement = div({ style: `position: relative; top: -1px; z-index: 3;` }, "0%");
+	private readonly _outputProgressContainer: HTMLDivElement = div({ style: `height: 12px; background: ${ColorConfig.uiWidgetBackground}; display: block; position: relative; z-index: 1;` },
+		this._outputProgressBar,
+		this._outputProgressLabel,
+	);
 	private static readonly midiSustainInstruments: number[] = [
 		0x4A, // rounded -> recorder
 		0x47, // triangle -> clarinet
@@ -108,7 +122,8 @@ export class ExportPrompt implements Prompt {
 			),
 		),
 		div({ class: "selectContainer", style: "width: 100%;" }, this._formatSelect),
-		div({ style: "text-align: left;" }, "(Be patient, exporting may take some time...)"),
+		div({ style: "text-align: left;" }, "Exporting can be slow. Reloading the page or clicking the X will cancel it. Please be patient."),
+		this._outputProgressContainer,
 		div({ style: "display: flex; flex-direction: row-reverse; justify-content: space-between;" },
 			this._exportButton,
 		),
@@ -165,6 +180,7 @@ export class ExportPrompt implements Prompt {
 	}
 
 	private _close = (): void => {
+		this.outputStarted = false;
 		this._doc.undo();
 	}
 
@@ -212,18 +228,24 @@ export class ExportPrompt implements Prompt {
 	}
 
 	private _export = (): void => {
+		if (this.outputStarted == true)
+			return;
 		window.localStorage.setItem("exportFormat", this._formatSelect.value);
 		switch (this._formatSelect.value) {
 			case "wav":
-				this._exportToWav();
+				this.outputStarted = true;
+				this._exportTo("wav");
 				break;
 			case "mp3":
-				this._exportToMp3();
+				this.outputStarted = true;
+				this._exportTo("mp3");
 				break;
 			case "midi":
+				this.outputStarted = true;
 				this._exportToMidi();
 				break;
 			case "json":
+				this.outputStarted = true;
 				this._exportToJson();
 				break;
 			default:
@@ -231,30 +253,95 @@ export class ExportPrompt implements Prompt {
 		}
 	}
 
-	private _synthesize(sampleRate: number): { recordedSamplesL: Float32Array, recordedSamplesR: Float32Array } {
-		const synth: Synth = new Synth(this._doc.song);
-		synth.samplesPerSecond = sampleRate;
-		synth.loopRepeatCount = Number(this._loopDropDown.value) - 1;
-		if (!this._enableIntro.checked) {
-			for (let introIter: number = 0; introIter < this._doc.song.loopStart; introIter++) {
-				synth.nextBar();
+	private _synthesize(): void {
+		//const timer: number = performance.now();
+
+		// If output was stopped e.g. user clicked the close button, abort.
+		if (this.outputStarted == false) {
+			return;
+		}
+
+		// Update progress bar UI once per 5 sec of exported data
+		const samplesPerChunk: number = this.synth.samplesPerSecond * 5; //e.g. 44100 * 5
+		const currentFrame: number = this.currentChunk * samplesPerChunk;
+
+		const samplesInChunk: number = Math.min(samplesPerChunk, this.sampleFrames - currentFrame);
+		const tempSamplesL = new Float32Array(samplesInChunk);
+		const tempSamplesR = new Float32Array(samplesInChunk);
+
+		this.synth.synthesize(tempSamplesL, tempSamplesR, samplesInChunk);
+
+		// Concatenate chunk data into final array
+		this.recordedSamplesL.set(tempSamplesL, currentFrame);
+		this.recordedSamplesR.set(tempSamplesR, currentFrame);
+
+		// Update UI
+		this._outputProgressBar.style.setProperty("width", Math.round((this.currentChunk + 1) / this.totalChunks * 100.0) + "%");
+		this._outputProgressLabel.innerText = Math.round((this.currentChunk + 1) / this.totalChunks * 100.0) + "%";
+
+		// Next call, synthesize the next chunk.
+		this.currentChunk++;
+
+		if (this.currentChunk >= this.totalChunks) {
+			// Done, call final function
+			this._outputProgressLabel.innerText = "Encoding...";
+			if (this.thenExportTo == "wav") {
+				this._exportToWavFinish();
+			}
+			else if (this.thenExportTo == "mp3") {
+				this._exportToMp3Finish();
+			}
+			else {
+				throw new Error("Unrecognized file export type chosen!");
 			}
 		}
-		synth.computeLatestModValues();
-		const sampleFrames: number = synth.getTotalSamples(this._enableIntro.checked, this._enableOutro.checked, synth.loopRepeatCount);
-		const recordedSamplesL: Float32Array = new Float32Array(sampleFrames);
-		const recordedSamplesR: Float32Array = new Float32Array(sampleFrames);
-		//const timer: number = performance.now();
-		synth.synthesize(recordedSamplesL, recordedSamplesR, sampleFrames);
-		//console.log("export timer", (performance.now() - timer) / 1000.0);
+		else {
+			// Continue batch export
+			setTimeout(() => { this._synthesize(); });
+		}
 
-		return { recordedSamplesL, recordedSamplesR };
+		//console.log("export timer", (performance.now() - timer) / 1000.0);
 	}
 
-	private _exportToWav(): void {
-		const sampleRate: number = 48000; // Use professional video editing standard sample rate for .wav file export.
-		const { recordedSamplesL, recordedSamplesR } = this._synthesize(sampleRate);
-		const sampleFrames: number = recordedSamplesL.length;
+	private _exportTo(type: string): void {
+		// Batch the export operation
+		this.thenExportTo = type;
+		this.currentChunk = 0;
+		this.synth = new Synth(this._doc.song);
+		if (type == "wav") {
+			this.synth.samplesPerSecond = 48000; // Use professional video editing standard sample rate for .wav file export.
+		}
+		else if (type == "mp3") {
+			this.synth.samplesPerSecond = 44100; // Use consumer CD standard sample rate for .mp3 export.
+		}
+		else {
+			throw new Error("Unrecognized file export type chosen!");
+		}
+
+		this._outputProgressBar.style.setProperty("width", "0%");
+		this._outputProgressLabel.innerText = "0%";
+
+		this.synth.loopRepeatCount = Number(this._loopDropDown.value) - 1;
+		if (!this._enableIntro.checked) {
+			for (let introIter: number = 0; introIter < this._doc.song.loopStart; introIter++) {
+				this.synth.nextBar();
+			}
+		}
+		this.synth.computeLatestModValues();
+
+		this.sampleFrames = this.synth.getTotalSamples(this._enableIntro.checked, this._enableOutro.checked, this.synth.loopRepeatCount);
+		// Compute how many UI updates will need to run to determine how many 
+		this.totalChunks = Math.ceil(this.sampleFrames / (this.synth.samplesPerSecond * 5));
+		this.recordedSamplesL = new Float32Array(this.sampleFrames);
+		this.recordedSamplesR = new Float32Array(this.sampleFrames);
+
+		// Batch the actual export
+		setTimeout(() => { this._synthesize(); });
+	}
+
+	private _exportToWavFinish(): void {
+		const sampleFrames: number = this.recordedSamplesL.length;
+		const sampleRate: number = this.synth.samplesPerSecond;
 
 		const wavChannelCount: number = 2;
 		const bytesPerSample: number = 2;
@@ -284,8 +371,8 @@ export class ExportPrompt implements Prompt {
 			// usually samples are signed. 
 			const range: number = (1 << (bitsPerSample - 1)) - 1;
 			for (let i: number = 0; i < sampleFrames; i++) {
-				let valL: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i])) * range);
-				let valR: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i])) * range);
+				let valL: number = Math.floor(Math.max(-1, Math.min(1, this.recordedSamplesL[i])) * range);
+				let valR: number = Math.floor(Math.max(-1, Math.min(1, this.recordedSamplesR[i])) * range);
 				if (bytesPerSample == 2) {
 					data.setInt16(index, valL, true); index += 2;
 					data.setInt16(index, valR, true); index += 2;
@@ -299,8 +386,8 @@ export class ExportPrompt implements Prompt {
 		} else {
 			// 8 bit samples are a special case: they are unsigned.
 			for (let i: number = 0; i < sampleFrames; i++) {
-				let valL: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i])) * 127 + 128);
-				let valR: number = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i])) * 127 + 128);
+				let valL: number = Math.floor(Math.max(-1, Math.min(1, this.recordedSamplesL[i])) * 127 + 128);
+				let valR: number = Math.floor(Math.max(-1, Math.min(1, this.recordedSamplesR[i])) * 127 + 128);
 				data.setUint8(index, valL > 255 ? 255 : (valL < 0 ? 0 : valL)); index++;
 				data.setUint8(index, valR > 255 ? 255 : (valR < 0 ? 0 : valR)); index++;
 			}
@@ -312,24 +399,21 @@ export class ExportPrompt implements Prompt {
 		this._close();
 	}
 
-	private _exportToMp3(): void {
+	private _exportToMp3Finish( ): void {
 		const whenEncoderIsAvailable = (): void => {
-			const sampleRate: number = 44100; // Use consumer CD standard sample rate for .mp3 export.
-			const { recordedSamplesL, recordedSamplesR } = this._synthesize(sampleRate);
-
 			const lamejs: any = (<any>window)["lamejs"];
 			const channelCount: number = 2;
 			const kbps: number = 192;
 			const sampleBlockSize: number = 1152;
-			const mp3encoder: any = new lamejs.Mp3Encoder(channelCount, sampleRate, kbps);
+			const mp3encoder: any = new lamejs.Mp3Encoder(channelCount, this.synth.samplesPerSecond, kbps);
 			const mp3Data: any[] = [];
 
-			const left: Int16Array = new Int16Array(recordedSamplesL.length);
-			const right: Int16Array = new Int16Array(recordedSamplesR.length);
+			const left: Int16Array = new Int16Array(this.recordedSamplesL.length);
+			const right: Int16Array = new Int16Array(this.recordedSamplesR.length);
 			const range: number = (1 << 15) - 1;
-			for (let i: number = 0; i < recordedSamplesL.length; i++) {
-				left[i] = Math.floor(Math.max(-1, Math.min(1, recordedSamplesL[i])) * range);
-				right[i] = Math.floor(Math.max(-1, Math.min(1, recordedSamplesR[i])) * range);
+			for (let i: number = 0; i < this.recordedSamplesL.length; i++) {
+				left[i] = Math.floor(Math.max(-1, Math.min(1, this.recordedSamplesL[i])) * range);
+				right[i] = Math.floor(Math.max(-1, Math.min(1, this.recordedSamplesR[i])) * range);
 			}
 
 			for (let i: number = 0; i < left.length; i += sampleBlockSize) {
@@ -338,6 +422,7 @@ export class ExportPrompt implements Prompt {
 				const mp3buf: any = mp3encoder.encodeBuffer(leftChunk, rightChunk);
 				if (mp3buf.length > 0) mp3Data.push(mp3buf);
 			}
+
 			const mp3buf: any = mp3encoder.flush();
 			if (mp3buf.length > 0) mp3Data.push(mp3buf);
 

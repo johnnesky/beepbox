@@ -986,21 +986,6 @@ export class Instrument {
 			this.chord = Config.chords.findIndex(chord => chord.name == instrumentObject["chord"]);
 			if (this.chord == -1) this.chord = 2;
 
-			// Arpeggio speed
-			if (this.chord == 2 && instrumentObject["arpeggioSpeed"] != undefined) {
-				this.arpeggioSpeed = instrumentObject["arpeggioSpeed"];
-			}
-			else {
-				this.arpeggioSpeed = (useSlowerRhythm) ? 9 : 12; // Decide whether to import arps as x3/4 speed
-			}
-
-			if (instrumentObject["fastTwoNoteArp"] != undefined) {
-				this.fastTwoNoteArp = instrumentObject["fastTwoNoteArp"];
-			}
-			else {
-				this.fastTwoNoteArp = useFastTwoNoteArp;
-			}
-
 		} else if (this.type == InstrumentType.spectrum) {
 			if (instrumentObject["spectrum"] != undefined) {
 				for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
@@ -1127,21 +1112,6 @@ export class Instrument {
 			this.chord = Config.chords.findIndex(chord => chord.name == instrumentObject["chord"]);
 			if (this.chord == -1) this.chord = 2;
 
-			// Arpeggio speed
-			if (this.chord == 2 && instrumentObject["arpeggioSpeed"] != undefined) {
-				this.arpeggioSpeed = instrumentObject["arpeggioSpeed"];
-			}
-			else {
-				this.arpeggioSpeed = (useSlowerRhythm) ? 9 : 12; // Decide whether to import arps as x3/4 speed
-			}
-
-			if (instrumentObject["fastTwoNoteArp"] != undefined) {
-				this.fastTwoNoteArp = instrumentObject["fastTwoNoteArp"];
-			}
-			else {
-				this.fastTwoNoteArp = useFastTwoNoteArp;
-			}
-
 			// The original chorus setting had an option that now maps to two different settings. Override those if necessary.
 			if (instrumentObject["chorus"] == "custom harmony") {
 				this.interval = 2;
@@ -1170,21 +1140,6 @@ export class Instrument {
 
 			this.chord = Config.chords.findIndex(chord => chord.name == instrumentObject["chord"]);
 			if (this.chord == -1) this.chord = 3;
-
-			// Arpeggio speed
-			if (this.chord == 2 && instrumentObject["arpeggioSpeed"] != undefined) {
-				this.arpeggioSpeed = instrumentObject["arpeggioSpeed"];
-			}
-			else {
-				this.arpeggioSpeed = (useSlowerRhythm) ? 9 : 12; // Decide whether to import arps as x3/4 speed
-			}
-
-			if (instrumentObject["fastTwoNoteArp"] != undefined) {
-				this.fastTwoNoteArp = instrumentObject["fastTwoNoteArp"];
-			}
-			else {
-				this.fastTwoNoteArp = useFastTwoNoteArp;
-			}
 
 			this.algorithm = Config.algorithms.findIndex(algorithm => algorithm.name == instrumentObject["algorithm"]);
 			if (this.algorithm == -1) this.algorithm = 0;
@@ -1249,21 +1204,6 @@ export class Instrument {
 			this.chord = Config.chords.findIndex(chord => chord.name == instrumentObject["chord"]);
 			if (this.chord == -1) this.chord = 2;
 
-			// Arpeggio speed
-			if (this.chord == 2 && instrumentObject["arpeggioSpeed"] != undefined) {
-				this.arpeggioSpeed = instrumentObject["arpeggioSpeed"];
-			}
-			else {
-				this.arpeggioSpeed = (useSlowerRhythm) ? 9 : 12; // Decide whether to import arps as x3/4 speed
-			}
-
-			if (instrumentObject["fastTwoNoteArp"] != undefined) {
-				this.fastTwoNoteArp = instrumentObject["fastTwoNoteArp"];
-			}
-			else {
-				this.fastTwoNoteArp = useFastTwoNoteArp;
-			}
-
 			// The original chorus setting had an option that now maps to two different settings. Override those if necessary.
 			if (instrumentObject["chorus"] == "custom harmony") {
 				this.interval = 2;
@@ -1307,6 +1247,23 @@ export class Instrument {
 			}
 		} else {
 			throw new Error("Unrecognized instrument type.");
+		}
+
+		if (this.type != InstrumentType.mod) {
+			// Arpeggio speed
+			if (this.chord == 2 && instrumentObject["arpeggioSpeed"] != undefined) {
+				this.arpeggioSpeed = instrumentObject["arpeggioSpeed"];
+			}
+			else {
+				this.arpeggioSpeed = (useSlowerRhythm) ? 9 : 12; // Decide whether to import arps as x3/4 speed
+			}
+
+			if (instrumentObject["fastTwoNoteArp"] != undefined) {
+				this.fastTwoNoteArp = instrumentObject["fastTwoNoteArp"];
+			}
+			else {
+				this.fastTwoNoteArp = useFastTwoNoteArp;
+			}
 		}
 	}
 
@@ -3728,7 +3685,7 @@ export class Synth {
 																//
 																// This is an expression of samples per tick "instantaneously", and it can be multiplied by a number of ticks to get a sample count.
 																// But this isn't the full story. BeatsPerMin, e.g. tempo, changes throughout the interval so it has to be expressed in terms of ticks, "t"
-																// ( Also from now on PartsPerBeat, TicksPerPart, and SecPerMin are compbined into one scalar, called "BPMScalar" )
+																// ( Also from now on PartsPerBeat, TicksPerPart, and SecPerMin are combined into one scalar, called "BPMScalar" )
 																// Substituting BPM for a step variable that moves with respect to the current tick, we get
 																// SamplesPerTick = SamplesPerSec / (BPMScalar * ( (EndTempo - StartTempo / TickLength) * t + StartTempo ) )
 																//
