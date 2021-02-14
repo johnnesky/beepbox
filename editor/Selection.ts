@@ -86,7 +86,10 @@ export class Selection {
 		const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTrack);
 		this._changeTrack = new ChangeGroup();
 		this._changeTrack.append(new ChangeChannelBar(this._doc, channel, bar));
-		this._doc.record(this._changeTrack, canReplaceLastChange);
+		// Don't erase existing redo history just to look at highlighted pattern.
+		if (!this._doc.hasRedoHistory()) {
+			this._doc.record(this._changeTrack, canReplaceLastChange);
+		}
 		this.selectionUpdated();
 	}
 	
@@ -555,7 +558,10 @@ export class Selection {
 		const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTrack);
 		this._changeTrack = new ChangeGroup();
 		this._changeTrack.append(new ChangeTrackSelection(this._doc, newX0, newX1, newY0, newY1));
-		this._doc.record(this._changeTrack, canReplaceLastChange);
+		// Don't erase existing redo history just to change track selection.
+		if (!this._doc.hasRedoHistory()) {
+			this._doc.record(this._changeTrack, canReplaceLastChange);
+		}
 	}
 	
 	public transpose(upward: boolean, octave: boolean): void {

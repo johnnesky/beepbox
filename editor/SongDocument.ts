@@ -49,6 +49,7 @@ import {ChangeSong, setDefaultInstruments} from "./changes";
 		private _recoveryUid: string;
 		private _recentChange: Change | null = null;
 		private _sequenceNumber: number = 0;
+		private _lastSequenceNumber: number = 0;
 		private _stateShouldBePushed: boolean = false;
 		private _recordedNewSong: boolean = false;
 		private _waitingToUpdateState: boolean = false;
@@ -167,6 +168,11 @@ import {ChangeSong, setDefaultInstruments} from "./changes";
 				window.sessionStorage.setItem(String(currentIndex), JSON.stringify({state, hash}));
 				window.history.replaceState(null, "", location.pathname);
 			}
+			this._lastSequenceNumber = state.sequenceNumber;
+		}
+		
+		public hasRedoHistory(): boolean {
+			return this._lastSequenceNumber > this._sequenceNumber;
 		}
 		
 		private _forward(): void {

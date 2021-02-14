@@ -909,7 +909,10 @@ import {prettyNumber} from "./EditorConfig";
 		
 		private _setPatternSelection(change: UndoableChange): void {
 			this._changePatternSelection = change;
-			this._doc.record(this._changePatternSelection, this._lastChangeWasPatternSelection);
+			// Don't erase existing redo history just to change pattern selection.
+			if (!this._doc.hasRedoHistory()) {
+				this._doc.record(this._changePatternSelection, this._lastChangeWasPatternSelection);
+			}
 		}
 		
 		private _updatePreview(): void {
