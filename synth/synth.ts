@@ -1046,7 +1046,7 @@ export class Instrument {
 			if (this.chord == -1) this.chord = 0;
 		} else if (this.type == InstrumentType.pwm) {
 			if (instrumentObject["pulseWidth"] != undefined) {
-				this.pulseWidth = clamp(0, Config.pulseWidthRange + 1, instrumentObject["pulseWidth"]);
+				this.pulseWidth = clamp(0, Config.pulseWidthRange + 1, Math.round(instrumentObject["pulseWidth"]));
 			} else {
 				this.pulseWidth = Config.pulseWidthRange;
 			}
@@ -3219,7 +3219,7 @@ export class Song {
 									volume = Math.max(0, Math.min(volumeCap, Math.round((pointObject["volume"] | 0) * volumeCap / 100)));
 								}
 								else {
-									volume = ((pointObject["forMod"] | 0 ) > 0 ) ? Math.round(pointObject["volume"] | 0) : Math.max(0, Math.min(volumeCap, Math.round((pointObject["volume"] | 0) * volumeCap / 100)));
+									volume = ((pointObject["forMod"] | 0) > 0) ? Math.round(pointObject["volume"] | 0) : Math.max(0, Math.min(volumeCap, Math.round((pointObject["volume"] | 0) * volumeCap / 100)));
 								}
 
 								if (time > this.beatsPerBar * Config.partsPerBeat) continue;
@@ -3609,6 +3609,7 @@ export class Synth {
 		let endBar: number = enableOutro ? this.song.barCount : (this.song.loopStart + this.song.loopLength);
 		let hasTempoMods: boolean = false;
 		let hasNextBarMods: boolean = false;
+		let prevTempo: number = this.song.tempo;
 
 		// Determine if any tempo or next bar mods happen anywhere in the window
 		for (let channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; channel < this.song.getChannelCount(); channel++) {
@@ -3628,11 +3629,62 @@ export class Synth {
 			}
 		}
 
+		// If intro is not zero length, determine what the "entry" tempo is going into the start part, by looking at mods that came before...
+		if (startBar > 0) {
+			let latestTempoPin: number | null = null;
+			let latestTempoValue: number = 0;
+
+			for (let bar: number = startBar - 1; bar >= 0; bar--) {
+				for (let channel: number = this.song.pitchChannelCount + this.song.noiseChannelCount; channel < this.song.getChannelCount(); channel++) {
+					let pattern = this.song.getPattern(channel, bar);
+
+					if (pattern != null) {
+						let instrumentIdx: number = this.song.getPatternInstrument(channel, bar);
+						let instrument: Instrument = this.song.channels[channel].instruments[instrumentIdx];
+
+						let partsInBar: number = this.findPartsInBar(bar);
+
+						for (const note of pattern.notes) {
+							if (instrument.modSettings[Config.modCount - 1 - note.pitches[0]] == ModSetting.mstTempo && instrument.modStatuses[Config.modCount - 1 - note.pitches[0]] == ModStatus.msForSong) {
+								if (note.start < partsInBar && (latestTempoPin == null || note.end > latestTempoPin)) {
+									if (note.end <= partsInBar) {
+										latestTempoPin = note.end;
+										latestTempoValue = note.pins[note.pins.length - 1].volume;
+									}
+									else {
+										latestTempoPin = partsInBar;
+										// Find the pin where bar change happens, and compute where pin volume would be at that time
+										for (let pinIdx = 0; pinIdx < note.pins.length; pinIdx++) {
+											if (note.pins[pinIdx].time + note.start > partsInBar) {
+												const transitionLength: number = note.pins[pinIdx].time - note.pins[pinIdx - 1].time;
+												const toNextBarLength: number = partsInBar - note.start - note.pins[pinIdx - 1].time;
+												const deltaVolume: number = note.pins[pinIdx].volume - note.pins[pinIdx - 1].volume;
+
+												latestTempoValue = Math.round(note.pins[pinIdx - 1].volume + deltaVolume * toNextBarLength / transitionLength);
+												pinIdx = note.pins.length;
+											}
+										}
+									}
+								}
+							}
+						}
+
+						
+					}
+				}
+
+				// Done once you process a pattern where tempo mods happened, since the search happens backward
+				if (latestTempoPin != null) {
+					prevTempo = this.song.modValueToReal(latestTempoValue, ModSetting.mstTempo);
+					bar = -1;
+				}
+			}
+		}
+
 		if (hasTempoMods || hasNextBarMods) {
 			// Run from start bar to end bar and observe looping, computing average tempo across each bar
 			let bar: number = startBar;
 			let ended: boolean = false;
-			let prevTempo: number = this.song.tempo;
 			let totalSamples: number = 0;
 
 			while (!ended) {
@@ -4484,7 +4536,7 @@ export class Synth {
 			// Set samples per tick if song tempo mods changed it
 			if (this.isModActive(ModSetting.mstTempo, true)) {
 				samplesPerTick = this.getSamplesPerTick();
-				this.tickSampleCountdown = Math.min( this.tickSampleCountdown, samplesPerTick );
+				this.tickSampleCountdown = Math.min(this.tickSampleCountdown, samplesPerTick);
 			}
 
 			// Bound LFO times to be within their period (to keep values from getting large)
@@ -5187,8 +5239,8 @@ export class Synth {
 				customVolumeStart = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * startRatio);
 				customVolumeEnd = Synth.expressionToVolumeMult(customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * endRatio);
 			} else {
-				customVolumeStart = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * Math.max( 0.0, startRatio );
-				customVolumeEnd = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * Math.min( 1.0, endRatio );
+				customVolumeStart = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * Math.max(0.0, startRatio);
+				customVolumeEnd = customVolumeTickStart + (customVolumeTickEnd - customVolumeTickStart) * Math.min(1.0, endRatio);
 				tone.customVolumeStart = customVolumeStart;
 				tone.customVolumeEnd = customVolumeEnd;
 			}
