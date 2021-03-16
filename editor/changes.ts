@@ -170,6 +170,7 @@ export class ChangeMoveAndOverflowNotes extends ChangeGroup {
 		for (let channelIndex: number = 0; channelIndex < doc.song.getChannelCount(); channelIndex++) {
 			const oldChannel: Channel = doc.song.channels[channelIndex];
 			const newChannel: Channel = new Channel();
+
 			if (channelIndex < doc.song.pitchChannelCount) {
 				pitchChannels.push(newChannel);
 			} else if (channelIndex < doc.song.pitchChannelCount + doc.song.noiseChannelCount) {
@@ -181,6 +182,8 @@ export class ChangeMoveAndOverflowNotes extends ChangeGroup {
 
 			newChannel.muted = oldChannel.muted;
 			newChannel.octave = oldChannel.octave;
+			newChannel.name = oldChannel.name;
+	
 			for (const instrument of oldChannel.instruments) {
 				newChannel.instruments.push(instrument);
 			}
