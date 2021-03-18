@@ -2086,7 +2086,7 @@ export class ChangeBeatsPerBar extends ChangeGroup {
 						const sequence: ChangeSequence = new ChangeSequence();
 						for (let i: number = 0; i < doc.song.getChannelCount(); i++) {
 							for (let j: number = 0; j < doc.song.channels[i].patterns.length; j++) {
-								sequence.append(new ChangeNoteTruncate(doc, doc.song.channels[i].patterns[j], newValue * Config.partsPerBeat, doc.song.beatsPerBar * Config.partsPerBeat));
+								sequence.append(new ChangeNoteTruncate(doc, doc.song.channels[i].patterns[j], newValue * Config.partsPerBeat, doc.song.beatsPerBar * Config.partsPerBeat, null, true));
 							}
 						}
 					}
