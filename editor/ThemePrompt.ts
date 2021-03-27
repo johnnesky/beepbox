@@ -31,19 +31,24 @@ export class ThemePrompt implements Prompt {
 		),
 		this._cancelButton,
 	);
+	private readonly lastTheme: string | null = window.localStorage.getItem("colorTheme")
 
 	constructor(private _doc: SongDocument) {
-
-		const lastTheme: string | null = window.localStorage.getItem("colorTheme");
-		if (lastTheme != null) {
-			this._themeSelect.value = lastTheme;
+		if (this.lastTheme != null) {
+			this._themeSelect.value = this.lastTheme;
 		}
 		this._okayButton.addEventListener("click", this._saveChanges);
 		this._cancelButton.addEventListener("click", this._close);
 		this.container.addEventListener("keydown", this._whenKeyPressed);
+		this._themeSelect.addEventListener("change", this._previewTheme);
 	}
 
 	private _close = (): void => {
+		if (this.lastTheme != null) {
+			ColorConfig.setTheme(this.lastTheme);
+		} else {
+			ColorConfig.setTheme("dark classic");
+		}
 		this._doc.undo();
 	}
 
@@ -63,8 +68,11 @@ export class ThemePrompt implements Prompt {
 		window.localStorage.setItem("colorTheme", this._themeSelect.value);
 		this._doc.prompt = null;
 		this._doc.colorTheme = this._themeSelect.value;
-		ColorConfig.setTheme(this._themeSelect.value);
 		this._doc.undo();
+	}
+
+	private _previewTheme = (): void => {
+		ColorConfig.setTheme(this._themeSelect.value);
 	}
 }
 //}
