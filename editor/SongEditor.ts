@@ -2233,6 +2233,16 @@ export class SongEditor {
 				}
 				event.preventDefault();
 				break;
+			case 82: // r
+				if (event.shiftKey) {
+					this._randomGenerated();
+				} else {
+					this._randomPreset();
+
+				}
+				event.preventDefault();
+
+				break;
 			case 219: // left brace
 				this._doc.synth.prevBar();
 				if (this._doc.autoFollow) {
