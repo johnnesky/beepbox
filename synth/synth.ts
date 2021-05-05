@@ -1,8 +1,9 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex} from "./SynthConfig";
+import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
 import {Deque} from "./Deque";
+import {FilterCoefficients, FrequencyResponse, FilterBiquad} from "./filtering";
 
 declare global {
 	interface Window {
@@ -10,6 +11,8 @@ declare global {
 		webkitAudioContext: any;
 	}
 }
+
+const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals, which have poor performance.
 
 //namespace beepbox {
 	// For performance debugging:
@@ -98,7 +101,7 @@ declare global {
 		vibrato = CharCode.c,
 		transition = CharCode.d,
 		loopEnd = CharCode.e,
-		filterCutoff = CharCode.f,
+		filter = CharCode.f,
 		barCount = CharCode.g,
 		interval = CharCode.h,
 		instrumentCount = CharCode.i,
@@ -117,8 +120,8 @@ declare global {
 		volume = CharCode.v,
 		wave = CharCode.w,
 		
-		filterResonance = CharCode.y,
-		filterEnvelope = CharCode.z,
+		filterResonance = CharCode.y, // DEPRECATED
+		filterEnvelope = CharCode.z, // DEPRECATED
 		algorithm = CharCode.A,
 		feedbackAmplitude = CharCode.B,
 		chord = CharCode.C,
@@ -539,13 +542,231 @@ declare global {
 		}
 	}
 	
+	export class FilterControlPoint {
+		public freq: number = 0;
+		public gain: number = Config.filterGainCenter;
+		public type: FilterType = FilterType.peak;
+		
+		public set(freqSetting: number, gainSetting: number): void {
+			this.freq = freqSetting;
+			this.gain = gainSetting;
+		}
+		
+		public getHz(): number {
+			return FilterControlPoint.getHzFromSettingValue(this.freq);
+		}
+		
+		public static getHzFromSettingValue(value: number): number {
+			return Config.filterFreqMaxHz * Math.pow(2.0, (value - (Config.filterFreqRange - 1)) * Config.filterFreqStep);
+		}
+		public static getSettingValueFromHz(hz: number): number {
+			return Math.log2(hz / Config.filterFreqMaxHz) / Config.filterFreqStep + (Config.filterFreqRange - 1);
+		}
+		public static getRoundedSettingValueFromHz(hz: number): number {
+			return Math.max(0, Math.min(Config.filterFreqRange - 1, Math.round(FilterControlPoint.getSettingValueFromHz(hz))));
+		}
+		
+		public getLinearGain(gainRangeMult: number = 1.0): number {
+			return Math.pow(2.0, (this.gain - Config.filterGainCenter) * Config.filterGainStep * gainRangeMult);
+		}
+		public static getRoundedSettingValueFromLinearGain(linearGain: number): number {
+			return Math.max(0, Math.min(Config.filterGainRange - 1, Math.round(Math.log2(linearGain) / Config.filterGainStep + Config.filterGainCenter)));
+		}
+		
+		public toCoefficients(filter: FilterCoefficients, sampleRate: number, freqMult: number = 1.0, gainMult: number = 1.0, gainRangeMult: number = 1.0): void {
+			const cornerRadiansPerSample: number = 2.0 * Math.PI * Math.max(Config.filterFreqMinHz, Math.min(Config.filterFreqMaxHz, freqMult * this.getHz())) / sampleRate;
+			const linearGain: number = gainMult * this.getLinearGain(gainRangeMult);
+			switch (this.type) {
+				case FilterType.lowPass:
+					filter.lowPass2ndOrderButterworth(cornerRadiansPerSample, linearGain);
+					break;
+				case FilterType.highPass:
+					filter.highPass2ndOrderButterworth(cornerRadiansPerSample, linearGain);
+					break;
+				case FilterType.peak:
+					filter.peak2ndOrder(cornerRadiansPerSample, linearGain, 1.0);
+					break;
+				default:
+					throw new Error();
+			}
+		}
+		
+		public getVolumeCompensationMult(): number {
+			const octave: number = (this.freq - (Config.filterFreqRange - 1)) * Config.filterFreqStep;
+			const gainPow: number = (this.gain - Config.filterGainCenter) * Config.filterGainStep;
+			switch (this.type) {
+				case FilterType.lowPass:
+					const freqRelativeTo8khz: number = Math.pow(2.0, octave) * Config.filterFreqMaxHz / 8000.0;
+					// Reverse the frequency warping from importing legacy simplified filters to imitate how the legacy filter cutoff setting affected volume.
+					const warpedFreq: number = (Math.sqrt(1.0 + 4.0 * freqRelativeTo8khz) - 1.0) / 2.0;
+					const warpedOctave: number = Math.log2(warpedFreq);
+					return Math.pow(0.5, 0.2 * Math.max(0.0, gainPow + 1.0) + Math.min(0.0, Math.max(-3.0, 0.595 * warpedOctave + 0.35 * Math.min(0.0, gainPow + 1.0))));
+				case FilterType.highPass:
+					return Math.pow(0.5, 0.125 * Math.max(0.0, gainPow + 1.0) + Math.min(0.0, 0.3 * (-octave - Math.log2(Config.filterFreqMaxHz / 125.0)) + 0.2 * Math.min(0.0, gainPow + 1.0)));
+				case FilterType.peak:
+					const distanceFromCenter: number = octave + Math.log2(Config.filterFreqMaxHz / 2000.0);
+					const freqLoudness: number = Math.pow(1.0 / (1.0 + Math.pow(distanceFromCenter / 3.0, 2.0)), 2.0);
+					return Math.pow(0.5, 0.125 * Math.max(0.0, gainPow) + 0.1 * freqLoudness * Math.min(0.0, gainPow));
+				default:
+					throw new Error();
+			}
+		}
+	}
+	
+	export class FilterSettings {
+		public readonly controlPoints: FilterControlPoint[] = [];
+		public controlPointCount: number = 0;
+		
+		constructor() {
+			this.reset();
+		}
+		
+		reset(): void {
+			this.controlPointCount = 0;
+		}
+		
+		addPoint(type: FilterType, freqSetting: number, gainSetting: number): void {
+			let controlPoint: FilterControlPoint;
+			if (this.controlPoints.length <= this.controlPointCount) {
+				controlPoint = new FilterControlPoint();
+				this.controlPoints[this.controlPointCount] = controlPoint;
+			} else {
+				controlPoint = this.controlPoints[this.controlPointCount];
+			}
+			this.controlPointCount++;
+			controlPoint.type = type;
+			controlPoint.set(freqSetting, gainSetting);
+		}
+		
+		public toJsonObject(): Object {
+			const filterArray: any[] = [];
+			for (let i: number = 0; i < this.controlPointCount; i++) {
+				const point: FilterControlPoint = this.controlPoints[i];
+				filterArray.push({
+					"type": Config.filterTypeNames[point.type],
+					"cutoffHz": Math.round(point.getHz() * 100) / 100,
+					"linearGain": Math.round(point.getLinearGain() * 10000) / 10000,
+				});
+			}
+			return filterArray;
+		}
+		
+		public fromJsonObject(filterObject: any): void {
+			this.controlPoints.length = 0;
+			if (filterObject) {
+				for (const pointObject of filterObject) {
+					const point: FilterControlPoint = new FilterControlPoint();
+					point.type = Config.instrumentTypeNames.indexOf(pointObject["type"]);
+					if (point.type == -1) point.type = FilterType.peak;
+					if (pointObject["cutoffHz"]) {
+						point.freq = FilterControlPoint.getRoundedSettingValueFromHz(pointObject["cutoffHz"]);
+					} else {
+						point.freq = 0;
+					}
+					if (pointObject["linearGain"]) {
+						point.gain = FilterControlPoint.getRoundedSettingValueFromLinearGain(pointObject["linearGain"]);
+					} else {
+						point.gain = Config.filterGainCenter;
+					}
+					this.controlPoints.push(point);
+				}
+			}
+			this.controlPointCount = this.controlPoints.length;
+		}
+		
+		public convertLegacySettings(legacyCutoffSetting: number | undefined, legacyResonanceSetting: number | undefined, legacyEnv: Envelope, instrumentType: InstrumentType): void {
+			this.reset();
+			
+			// legacy defaults:
+			if (legacyCutoffSetting == undefined) legacyCutoffSetting = (instrumentType == InstrumentType.chip) ? 6 : 10;
+			if (legacyResonanceSetting == undefined) legacyResonanceSetting = 0;
+			
+			const legacyFilterCutoffMaxHz: number = 8000; // This was carefully calculated to correspond to no change in response when filtering at 48000 samples per second... when using the legacy simplified low-pass filter.
+			const legacyFilterMax: number = 0.95;
+			const legacyFilterMaxRadians: number = Math.asin(legacyFilterMax / 2.0) * 2.0;
+			const legacyFilterMaxResonance: number = 0.95;
+			const legacyFilterCutoffRange: number = 11;
+			const legacyFilterResonanceRange: number = 8;
+			
+			const resonant: boolean = (legacyResonanceSetting > 1);
+			const firstOrder: boolean = (legacyResonanceSetting == 0);
+			const cutoffAtMax: boolean = (legacyCutoffSetting == legacyFilterCutoffRange - 1);
+			const envDecays: boolean = (legacyEnv.type == EnvelopeType.flare || legacyEnv.type == EnvelopeType.twang || legacyEnv.type == EnvelopeType.decay || legacyEnv.type == EnvelopeType.custom);
+			
+			const standardSampleRate: number = 48000;
+			const legacyHz: number = legacyFilterCutoffMaxHz * Math.pow(2.0, (legacyCutoffSetting - (legacyFilterCutoffRange - 1)) * 0.5);
+			const legacyRadians: number = Math.min(legacyFilterMaxRadians, 2 * Math.PI * legacyHz / standardSampleRate);
+			
+			if (!envDecays && !resonant && cutoffAtMax) {
+				// The response is flat and there's no envelopes, so don't even bother adding any control points.
+			} else if (firstOrder) {
+				// In general, a 1st order lowpass can be approximated by a 2nd order lowpass
+				// with a cutoff ~4 octaves higher (*16) and a gain of 1/16.
+				// However, BeepBox's original lowpass filters behaved oddly as they
+				// approach the nyquist frequency, so I've devised this curved conversion
+				// to guess at a perceptually appropriate new cutoff frequency and gain.
+				const extraOctaves: number = 3.5;
+				const targetRadians: number = legacyRadians * Math.pow(2.0, extraOctaves);
+				const curvedRadians: number = targetRadians / (1.0 + targetRadians / (Math.PI * 0.8));
+				const curvedHz: number = standardSampleRate * curvedRadians / (2.0 * Math.PI)
+				const freqSetting: number = FilterControlPoint.getRoundedSettingValueFromHz(curvedHz);
+				const finalHz: number = FilterControlPoint.getHzFromSettingValue(freqSetting);
+				const finalRadians: number = 2.0 * Math.PI * finalHz / standardSampleRate;
+				
+				const legacyFilter: FilterCoefficients = new FilterCoefficients();
+				legacyFilter.lowPass1stOrderSimplified(legacyRadians);
+				const response: FrequencyResponse = new FrequencyResponse();
+				response.analyze(legacyFilter, finalRadians);
+				const legacyFilterGainAtNewRadians: number = response.magnitude();
+				
+				let logGain: number = Math.log2(legacyFilterGainAtNewRadians);
+				// Bias slightly toward 2^(-extraOctaves):
+				logGain = -extraOctaves + (logGain + extraOctaves) * 0.82;
+				// Decaying envelopes move the cutoff frequency back into an area where the best approximation of the first order slope requires a lower gain setting.
+				if (envDecays) logGain = Math.min(logGain, -2.0);
+				const convertedGain: number = Math.pow(2.0, logGain);
+				const gainSetting: number = FilterControlPoint.getRoundedSettingValueFromLinearGain(convertedGain);
+				
+				this.addPoint(FilterType.lowPass, freqSetting, gainSetting);
+			} else {
+				const intendedGain: number = 0.5 / (1.0 - legacyFilterMaxResonance * Math.sqrt(Math.max(0.0, legacyResonanceSetting - 1.0) / (legacyFilterResonanceRange - 2.0)));
+				const invertedGain: number = 0.5 / intendedGain;
+				const maxRadians: number = 2.0 * Math.PI * legacyFilterCutoffMaxHz / standardSampleRate;
+				const freqRatio: number = legacyRadians / maxRadians;
+				const targetRadians: number = legacyRadians * (freqRatio * Math.pow(invertedGain, 0.9) + 1.0);
+				const curvedRadians: number = legacyRadians + (targetRadians - legacyRadians) * invertedGain;
+				let curvedHz: number;
+				if (envDecays) {
+					curvedHz = standardSampleRate * Math.min(curvedRadians, legacyRadians * Math.pow(2, 0.25)) / (2.0 * Math.PI)
+				} else {
+					curvedHz = standardSampleRate * curvedRadians / (2.0 * Math.PI)
+				}
+				const freqSetting: number = FilterControlPoint.getRoundedSettingValueFromHz(curvedHz);
+				
+				let legacyFilterGain: number;
+				if (envDecays) {
+					legacyFilterGain = intendedGain;
+				} else {
+					const legacyFilter: FilterCoefficients = new FilterCoefficients();
+					legacyFilter.lowPass2ndOrderSimplified(legacyRadians, intendedGain);
+					const response: FrequencyResponse = new FrequencyResponse();
+					response.analyze(legacyFilter, curvedRadians);
+					legacyFilterGain = response.magnitude();
+				}
+				if (!resonant) legacyFilterGain = Math.min(legacyFilterGain, Math.sqrt(0.5));
+				const gainSetting: number = FilterControlPoint.getRoundedSettingValueFromLinearGain(legacyFilterGain);
+				
+				this.addPoint(FilterType.lowPass, freqSetting, gainSetting);
+			}
+		}
+	}
+	
 	export class Instrument {
 		public type: InstrumentType = InstrumentType.chip;
 		public preset: number = 0;
 		public chipWave: number = 2;
 		public chipNoise: number = 1;
-		public filterCutoff: number = 6;
-		public filterResonance: number = 0;
+		public filter: FilterSettings = new FilterSettings();
 		public filterEnvelope: number = 1;
 		public transition: number = 1;
 		public vibrato: number = 0;
@@ -582,11 +803,10 @@ declare global {
 			this.preset = type;
 			this.volume = 0;
 			this.pan = Config.panCenter;
+			this.filter.reset();
 			switch (type) {
 				case InstrumentType.chip:
 					this.chipWave = 2;
-					this.filterCutoff = 6;
-					this.filterResonance = 0;
 					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					this.transition = 1;
 					this.vibrato = 0;
@@ -599,9 +819,7 @@ declare global {
 					this.vibrato = 0;
 					this.effects = 1;
 					this.chord = 3;
-					this.filterCutoff = 10;
-					this.filterResonance = 0;
-					this.filterEnvelope = 1;
+					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					this.algorithm = 0;
 					this.feedbackType = 0;
 					this.feedbackAmplitude = 0;
@@ -615,16 +833,12 @@ declare global {
 					this.transition = 1;
 					this.effects = 0;
 					this.chord = 2;
-					this.filterCutoff = 10;
-					this.filterResonance = 0;
 					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					break;
 				case InstrumentType.spectrum:
 					this.transition = 1;
 					this.effects = 1;
 					this.chord = 0;
-					this.filterCutoff = 10;
-					this.filterResonance = 0;
 					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					this.spectrumWave.reset(isNoiseChannel);
 					break;
@@ -636,8 +850,6 @@ declare global {
 					}
 					break;
 				case InstrumentType.harmonics:
-					this.filterCutoff = 10;
-					this.filterResonance = 0;
 					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					this.transition = 1;
 					this.vibrato = 0;
@@ -647,8 +859,6 @@ declare global {
 					this.harmonicsWave.reset();
 					break;
 				case InstrumentType.pwm:
-					this.filterCutoff = 10;
-					this.filterResonance = 0;
 					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					this.transition = 1;
 					this.vibrato = 0;
@@ -669,6 +879,7 @@ declare global {
 				"volume": (5 - this.volume) * 20,
 				"pan": (this.pan - Config.panCenter) * 100 / Config.panCenter,
 				"effects": Config.effectsNames[this.effects],
+				"filter": this.filter.toJsonObject(),
 			};
 			
 			if (this.preset != this.type) {
@@ -678,9 +889,7 @@ declare global {
 			if (this.type != InstrumentType.drumset) {
 				instrumentObject["transition"] = Config.transitions[this.transition].name;
 				instrumentObject["chord"] = this.getChord().name;
-				instrumentObject["filterCutoffHz"] = Math.round(Config.filterCutoffMaxHz * Math.pow(2.0, this.getFilterCutoffOctaves()));
-				instrumentObject["filterResonance"] = Math.round(100 * this.filterResonance / (Config.filterResonanceRange - 1));
-				instrumentObject["filterEnvelope"] = this.getFilterEnvelope().name;
+				instrumentObject["filterEnvelope"] = this.getFilterEnvelope().name; // DEPRECATED
 			}
 			
 			if (this.type == InstrumentType.noise) {
@@ -707,7 +916,7 @@ declare global {
 				instrumentObject["interval"] = Config.intervals[this.interval].name;
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 			} else if (this.type == InstrumentType.pwm) {
-				instrumentObject["pulseWidth"] = Math.round(Math.pow(0.5, (Config.pulseWidthRange - this.pulseWidth - 1) * 0.5) * 50 * 32) / 32;
+				instrumentObject["pulseWidth"] = Math.round(Math.pow(0.5, (Config.pulseWidthRange - this.pulseWidth - 1) * 0.5) * 50 * 100000) / 100000;
 				instrumentObject["pulseEnvelope"] = Config.envelopes[this.pulseEnvelope].name;
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 			} else if (this.type == InstrumentType.harmonics) {
@@ -769,29 +978,41 @@ declare global {
 			this.effects = Config.effectsNames.indexOf(instrumentObject["effects"]);
 			if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
 			
-			if (instrumentObject["filterCutoffHz"] != undefined) {
-				this.filterCutoff = clamp(0, Config.filterCutoffRange, Math.round((Config.filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject["filterCutoffHz"] | 0) / Config.filterCutoffMaxHz) / Math.LN2));
-			} else {
-				this.filterCutoff = (this.type == InstrumentType.chip) ? 6 : 10;
-			}
-			if (instrumentObject["filterResonance"] != undefined) {
-				this.filterResonance = clamp(0, Config.filterResonanceRange, Math.round((Config.filterResonanceRange - 1) * (instrumentObject["filterResonance"] | 0) / 100));
-			} else {
-				this.filterResonance = 0;
-			}
 			this.filterEnvelope = Config.envelopes.findIndex(envelope=>envelope.name == instrumentObject["filterEnvelope"]);
 			if (this.filterEnvelope == -1) this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
-			
-			if (instrumentObject["filter"] != undefined) {
-				const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
-				const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
-				const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
-				const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
-				let legacyFilter: number = oldFilterNames[instrumentObject["filter"]] != undefined ? oldFilterNames[instrumentObject["filter"]] : filterNames.indexOf(instrumentObject["filter"]);
-				if (legacyFilter == -1) legacyFilter = 0;
-				this.filterCutoff = legacyToCutoff[legacyFilter];
-				this.filterEnvelope = legacyToEnvelope[legacyFilter];
-				this.filterResonance = 0;
+			if (Array.isArray(instrumentObject["filter"])) {
+				this.filter.fromJsonObject(instrumentObject["filter"]);
+			} else {
+				// Convert from legacy filter settings.
+				let legacyCutoffSetting: number | undefined = undefined;
+				let legacyResonanceSetting: number | undefined = undefined;
+				const filterCutoffMaxHz: number = 8000;
+				const filterCutoffRange: number = 11;
+				const filterResonanceRange: number = 8;
+				if (instrumentObject["filterCutoffHz"] != undefined) {
+					legacyCutoffSetting = clamp(0, filterCutoffRange, Math.round((filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject["filterCutoffHz"] | 0) / filterCutoffMaxHz) / Math.LN2));
+				} else {
+					legacyCutoffSetting = (this.type == InstrumentType.chip) ? 6 : 10;
+				}
+				if (instrumentObject["filterResonance"] != undefined) {
+					legacyResonanceSetting = clamp(0, filterResonanceRange, Math.round((filterResonanceRange - 1) * (instrumentObject["filterResonance"] | 0) / 100));
+				} else {
+					legacyResonanceSetting = 0;
+				}
+				
+				if (instrumentObject["filter"] != undefined) {
+					const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
+					const legacyToEnvelope: string[] = ["steady", "steady", "steady", "steady", "decay 1", "decay 2", "decay 3"];
+					const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
+					const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
+					let legacyFilter: number = oldFilterNames[instrumentObject["filter"]] != undefined ? oldFilterNames[instrumentObject["filter"]] : filterNames.indexOf(instrumentObject["filter"]);
+					if (legacyFilter == -1) legacyFilter = 0;
+					legacyCutoffSetting = legacyToCutoff[legacyFilter];
+					this.filterEnvelope = Config.envelopes.dictionary[legacyToEnvelope[legacyFilter]].index;
+					legacyResonanceSetting = 0;
+				}
+				
+				this.filter.convertLegacySettings(legacyCutoffSetting, legacyResonanceSetting, Config.envelopes[this.filterEnvelope], this.type);
 			}
 			
 			const legacyEffectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy"];
@@ -994,15 +1215,6 @@ declare global {
 		public getChord(): Chord {
 			return this.type == InstrumentType.drumset ? Config.chords.dictionary["harmony"] : Config.chords[this.chord];
 		}
-		public getFilterCutoffOctaves(): number {
-			return this.type == InstrumentType.drumset ? 0 : (this.filterCutoff - (Config.filterCutoffRange - 1)) * 0.5;
-		}
-		public getFilterIsFirstOrder(): boolean {
-			return this.type == InstrumentType.drumset ? false : this.filterResonance == 0;
-		}
-		public getFilterResonance(): number {
-			return this.type == InstrumentType.drumset ? 1 : this.filterResonance;
-		}
 		public getFilterEnvelope(): Envelope {
 			if (this.type == InstrumentType.drumset) throw new Error("Can't getFilterEnvelope() for drumset.");
 			return Config.envelopes[this.filterEnvelope];
@@ -1024,7 +1236,7 @@ declare global {
 	export class Song {
 		private static readonly _format: string = "BeepBox";
 		private static readonly _oldestVersion: number = 2;
-		private static readonly _latestVersion: number = 8;
+		private static readonly _latestVersion: number = 9;
 		
 		public scale: number;
 		public key: number;
@@ -1073,14 +1285,14 @@ declare global {
 			if (andResetChannels) {
 				this.pitchChannelCount = 3;
 				this.noiseChannelCount = 1;
-				for (let channelIndex = 0; channelIndex < this.getChannelCount(); channelIndex++) {
+				for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
 					if (this.channels.length <= channelIndex) {
 						this.channels[channelIndex] = new Channel();
 					}
 					const channel: Channel = this.channels[channelIndex];
 					channel.octave = 3 - channelIndex; // [3, 2, 1, 0]; Descending octaves with drums at zero in last channel.
 				
-					for (let pattern = 0; pattern < this.patternsPerChannel; pattern++) {
+					for (let pattern: number = 0; pattern < this.patternsPerChannel; pattern++) {
 						if (channel.patterns.length <= pattern) {
 							channel.patterns[pattern] = new Pattern();
 						} else {
@@ -1090,7 +1302,7 @@ declare global {
 					channel.patterns.length = this.patternsPerChannel;
 				
 					const isNoiseChannel: boolean = channelIndex >= this.pitchChannelCount;
-					for (let instrument = 0; instrument < this.instrumentsPerChannel; instrument++) {
+					for (let instrument: number = 0; instrument < this.instrumentsPerChannel; instrument++) {
 						if (channel.instruments.length <= instrument) {
 							channel.instruments[instrument] = new Instrument(isNoiseChannel);
 						}
@@ -1098,7 +1310,7 @@ declare global {
 					}
 					channel.instruments.length = this.instrumentsPerChannel;
 				
-					for (let bar = 0; bar < this.barCount; bar++) {
+					for (let bar: number = 0; bar < this.barCount; bar++) {
 						channel.bars[bar] = bar < 4 ? 1 : 0;
 					}
 					channel.bars.length = this.barCount;
@@ -1139,10 +1351,14 @@ declare global {
 					buffer.push(SongTagCode.preset, base64IntToCharCode[instrument.preset >> 6], base64IntToCharCode[instrument.preset & 63]);
 					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects]);
 					
+					buffer.push(SongTagCode.filter, base64IntToCharCode[instrument.filter.controlPointCount]);
+					for (let j: number = 0; j < instrument.filter.controlPointCount; j++) {
+						const point: FilterControlPoint = instrument.filter.controlPoints[j];
+						buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
+					}
+					
 					if (instrument.type != InstrumentType.drumset) {
 						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
-						buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
-						buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
 						buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]);
 						buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 					}
@@ -1383,6 +1599,7 @@ declare global {
 			const beforeSix:   boolean = version < 6;
 			const beforeSeven: boolean = version < 7;
 			const beforeEight: boolean = version < 8;
+			const beforeNine:  boolean = version < 9;
 			this.initToDefault(beforeSix);
 			
 			if (beforeThree) {
@@ -1391,19 +1608,41 @@ declare global {
 				this.channels[3].instruments[0].chipNoise = 0;
 			}
 			
+			interface LegacyFilterSettings { cutoff?: number; resonance?: number; }
+			let legacyFilterSettings: LegacyFilterSettings[][] | null = null;
+			if (beforeNine) {
+				// Unfortunately, old versions of BeepBox had a variety of different ways of
+				// saving filter-related parameters in the URL, and none of them directly
+				// correspond to the new way of saving filter parameters. We can approximate
+				// old filters by collecting all the old settings for an instrument and
+				// passing them to convertLegacySettings(), so I use this data structure to
+				// collect the settings for each instrument if necessary.
+				legacyFilterSettings = [];
+				for (let i: number = legacyFilterSettings.length; i < this.getChannelCount(); i++) {
+					legacyFilterSettings[i] = [];
+					for (let j: number = 0; j < this.instrumentsPerChannel; j++) legacyFilterSettings[i][j] = {};
+				}
+			}
+			
 			let instrumentChannelIterator: number = 0;
 			let instrumentIndexIterator: number = -1;
 			let command: SongTagCode;
 			while (charIndex < compressed.length) switch(command = compressed.charCodeAt(charIndex++)) {
 				case SongTagCode.channelCount: {
 					this.pitchChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					this.noiseChannelCount  = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+					this.noiseChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.pitchChannelCount = validateRange(Config.pitchChannelCountMin, Config.pitchChannelCountMax, this.pitchChannelCount);
 					this.noiseChannelCount = validateRange(Config.noiseChannelCountMin, Config.noiseChannelCountMax, this.noiseChannelCount);
 					for (let channelIndex = this.channels.length; channelIndex < this.getChannelCount(); channelIndex++) {
 						this.channels[channelIndex] = new Channel();
 					}
 					this.channels.length = this.getChannelCount();
+					if (beforeNine) {
+						for (let i: number = legacyFilterSettings!.length; i < this.getChannelCount(); i++) {
+							legacyFilterSettings![i] = [];
+							for (let j: number = 0; j < this.instrumentsPerChannel; j++) legacyFilterSettings![i][j] = {};
+						}
+					}
 				} break;
 				case SongTagCode.scale: {
 					this.scale = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
@@ -1455,7 +1694,7 @@ declare global {
 				case SongTagCode.barCount: {
 					const barCount: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					this.barCount = validateRange(Config.barCountMin, Config.barCountMax, barCount);
-					for (let channel = 0; channel < this.getChannelCount(); channel++) {
+					for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 						for (let bar = this.channels[channel].bars.length; bar < this.barCount; bar++) {
 							this.channels[channel].bars[bar] = 1;
 						}
@@ -1470,7 +1709,7 @@ declare global {
 						patternsPerChannel = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					}
 					this.patternsPerChannel = validateRange(1, Config.barCountMax, patternsPerChannel);
-					for (let channel = 0; channel < this.getChannelCount(); channel++) {
+					for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 						for (let pattern = this.channels[channel].patterns.length; pattern < this.patternsPerChannel; pattern++) {
 							this.channels[channel].patterns[pattern] = new Pattern();
 						}
@@ -1480,16 +1719,19 @@ declare global {
 				case SongTagCode.instrumentCount: {
 					const instrumentsPerChannel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
 					this.instrumentsPerChannel = validateRange(Config.instrumentsPerChannelMin, Config.instrumentsPerChannelMax, instrumentsPerChannel);
-					for (let channel = 0; channel < this.getChannelCount(); channel++) {
+					for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 						const isNoiseChannel: boolean = channel >= this.pitchChannelCount;
-						for (let instrumentIndex = this.channels[channel].instruments.length; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
+						for (let instrumentIndex: number = this.channels[channel].instruments.length; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
 							this.channels[channel].instruments[instrumentIndex] = new Instrument(isNoiseChannel);
 						}
 						this.channels[channel].instruments.length = this.instrumentsPerChannel;
 						if (beforeSix) {
-							for (let instrumentIndex = 0; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
+							for (let instrumentIndex: number = 0; instrumentIndex < this.instrumentsPerChannel; instrumentIndex++) {
 								this.channels[channel].instruments[instrumentIndex].setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel);
 							}
+						}
+						if (beforeNine) {
+							for (let j: number = legacyFilterSettings![channel].length; j < this.instrumentsPerChannel; j++) legacyFilterSettings![channel][j] = {};
 						}
 					}
 				} break;
@@ -1525,7 +1767,13 @@ declare global {
 					if (beforeThree) {
 						const legacyWaves: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0];
 						const channel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channels[channel].instruments[0].chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
+						const instrument: Instrument = this.channels[channel].instruments[0];
+						instrument.chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
+						
+						// Version 2 didn't save any settings for settings for filters,
+						// just waves, so initialize the filters here I guess.
+						instrument.filter.convertLegacySettings(undefined, undefined, Config.envelopes[instrument.filterEnvelope], instrument.type);
+						
 					} else if (beforeSix) {
 						const legacyWaves: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0];
 						for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
@@ -1552,49 +1800,84 @@ declare global {
 						}
 					}
 				} break;
-				case SongTagCode.filterCutoff: {
-					if (beforeSeven) {
-						const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
-						const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
-						const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
-					
-						if (beforeThree) {
-							const channel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-							const instrument: Instrument = this.channels[channel].instruments[0];
-							const legacyFilter: number = [1, 3, 4, 5][clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
-							instrument.filterCutoff = legacyToCutoff[legacyFilter];
-							instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
-							instrument.filterResonance = 0;
-						} else if (beforeSix) {
-							for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
-								for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-									const instrument: Instrument = this.channels[channel].instruments[i];
-									const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
-									if (channel < this.pitchChannelCount) {
-										instrument.filterCutoff = legacyToCutoff[legacyFilter];
-										instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
-										instrument.filterResonance = 0;
-									} else {
-										instrument.filterCutoff = 10;
-										instrument.filterEnvelope = 1;
-										instrument.filterResonance = 0;
+				case SongTagCode.filter: {
+					if (beforeNine) {
+						if (beforeSeven) {
+							const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
+							const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
+							const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
+							
+							if (beforeThree) {
+								const channel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+								const instrument: Instrument = this.channels[channel].instruments[0];
+								const legacySettings: LegacyFilterSettings = legacyFilterSettings![channel][0];
+								const legacyFilter: number = [1, 3, 4, 5][clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+								legacySettings.cutoff = legacyToCutoff[legacyFilter];
+								legacySettings.resonance = 0;
+								instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
+								instrument.filter.convertLegacySettings(legacySettings.cutoff, legacySettings.resonance, Config.envelopes[instrument.filterEnvelope], instrument.type);
+							} else if (beforeSix) {
+								for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
+									for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
+										const instrument: Instrument = this.channels[channel].instruments[i];
+										const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
+										const legacySettings: LegacyFilterSettings = legacyFilterSettings![channel][i];
+										if (channel < this.pitchChannelCount) {
+											legacySettings.cutoff = legacyToCutoff[legacyFilter];
+											legacySettings.resonance = 0;
+											instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
+										} else {
+											legacySettings.cutoff = 10;
+											legacySettings.resonance = 0;
+											instrument.filterEnvelope = 1;
+										}
+										instrument.filter.convertLegacySettings(legacySettings.cutoff, legacySettings.resonance, Config.envelopes[instrument.filterEnvelope], instrument.type);
 									}
 								}
+							} else {
+								const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+								const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
+								legacySettings.cutoff = legacyToCutoff[legacyFilter];
+								legacySettings.resonance = 0;
+								instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
+								instrument.filter.convertLegacySettings(legacySettings.cutoff, legacySettings.resonance, Config.envelopes[instrument.filterEnvelope], instrument.type);
 							}
 						} else {
-							const legacyFilter: number = clamp(0, filterNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							const filterCutoffRange: number = 11;
 							const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-							instrument.filterCutoff = legacyToCutoff[legacyFilter];
-							instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
-							instrument.filterResonance = 0;
+							const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
+							legacySettings.cutoff = clamp(0, filterCutoffRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							instrument.filter.convertLegacySettings(legacySettings.cutoff, legacySettings.resonance, Config.envelopes[instrument.filterEnvelope], instrument.type);
 						}
 					} else {
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-						instrument.filterCutoff = clamp(0, Config.filterCutoffRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						const originalControlPointCount: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						instrument.filter.controlPointCount = clamp(0, Config.filterMaxPoints + 1, originalControlPointCount);
+						for (let i: number = instrument.filter.controlPoints.length; i < instrument.filter.controlPointCount; i++) {
+							instrument.filter.controlPoints[i] = new FilterControlPoint();
+						}
+						for (let i: number = 0; i < instrument.filter.controlPointCount; i++) {
+							const point: FilterControlPoint = instrument.filter.controlPoints[i];
+							point.type = clamp(0, FilterType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							point.freq = clamp(0, Config.filterFreqRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							point.gain = clamp(0, Config.filterGainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						}
+						for (let i: number = instrument.filter.controlPointCount; i < originalControlPointCount; i++) {
+							charIndex += 3;
+						}
 					}
 				} break;
 				case SongTagCode.filterResonance: {
-					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].filterResonance = clamp(0, Config.filterResonanceRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					if (beforeNine) {
+						const filterResonanceRange: number = 8;
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+						const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
+						legacySettings.resonance = clamp(0, filterResonanceRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						instrument.filter.convertLegacySettings(legacySettings.cutoff, legacySettings.resonance, Config.envelopes[instrument.filterEnvelope], instrument.type);
+					} else {
+						// Do nothing? This song tag code is deprecated for now.
+					}
 				} break;
 				case SongTagCode.filterEnvelope: {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -1604,6 +1887,13 @@ declare global {
 						}
 					} else {
 						instrument.filterEnvelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					}
+					
+					if (beforeNine) {
+						// The presence of an envelope affects how convertLegacySettings
+						// decides the closest possible approximation, so update it.
+						const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
+						instrument.filter.convertLegacySettings(legacySettings.cutoff, legacySettings.resonance, Config.envelopes[instrument.filterEnvelope], instrument.type);
 					}
 				} break;
 				case SongTagCode.pulseWidth: {
@@ -2351,10 +2641,11 @@ declare global {
 		public phaseDeltaScale: number = 0.0;
 		public pulseWidth: number = 0.0;
 		public pulseWidthDelta: number = 0.0;
-		public filter: number = 0.0;
-		public filterScale: number = 0.0;
-		public filterSample0: number = 0.0;
-		public filterSample1: number = 0.0;
+		public readonly filters: FilterBiquad[] = [];
+		public filterCount: number = 0;
+		public initialFilterInput1: number = 0.0;
+		public initialFilterInput2: number = 0.0;
+		
 		public vibratoScale: number = 0.0;
 		public intervalMult: number = 0.0;
 		public intervalVolumeMult: number = 1.0;
@@ -2367,14 +2658,16 @@ declare global {
 		}
 		
 		public reset(): void {
+			this.sample = 0.0;
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				this.phases[i] = 0.0;
 				this.feedbackOutputs[i] = 0.0;
 			}
-			this.sample = 0.0;
-			this.filterSample0 = 0.0;
-			this.filterSample1 = 0.0;
-			this.liveInputSamplesHeld = 0.0;
+			for (const filter of this.filters) filter.resetOutput();
+			this.filterCount = 0;
+			this.initialFilterInput1 = 0.0;
+			this.initialFilterInput2 = 0.0;
+			this.liveInputSamplesHeld = 0;
 		}
 	}
 	
@@ -2415,14 +2708,15 @@ declare global {
 		private tickSampleCountdown: number = 0;
 		private isPlayingSong: boolean = false;
 		private liveInputEndTime: number = 0.0;
+		private filterStartCoefficients: FilterCoefficients = new FilterCoefficients();
+		private filterEndCoefficients: FilterCoefficients = new FilterCoefficients();
+		private tempDrumSetControlPoint: FilterControlPoint = new FilterControlPoint();
 		
 		private readonly tonePool: Deque<Tone> = new Deque<Tone>();
 		private readonly activeTones: Array<Deque<Tone>> = [];
 		private readonly releasedTones: Array<Deque<Tone>> = [];
 		private readonly liveInputTones: Deque<Tone> = new Deque<Tone>();
 		
-		//private highpassInput: number = 0.0;
-		//private highpassOutput: number = 0.0;
 		private limit: number = 0.0;
 		
 		private stereoBufferIndex: number = 0;
@@ -2553,13 +2847,14 @@ declare global {
 		}
 		
 		public resetEffects(): void {
+			this.limit = 0.0;
+			this.chorusDelayPos = 0;
+			this.chorusPhase = 0.0;
 			this.reverbDelayPos = 0;
 			this.reverbFeedback0 = 0.0;
 			this.reverbFeedback1 = 0.0;
 			this.reverbFeedback2 = 0.0;
 			this.reverbFeedback3 = 0.0;
-			//this.highpassInput = 0.0;
-			//this.highpassOutput = 0.0;
 			this.freeAllTones();
 			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
 			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
@@ -2703,11 +2998,8 @@ declare global {
 			let reverbFeedback2: number = +this.reverbFeedback2;
 			let reverbFeedback3: number = +this.reverbFeedback3;
 			const reverb: number = Math.pow(this.song.reverb / Config.reverbRange, 0.667) * 0.425;
-			//const highpassFilter: number = Math.pow(0.5, 400 / this.samplesPerSecond);
 			const limitDecay: number = 1.0 - Math.pow(0.5, 4.0 / this.samplesPerSecond);
 			const limitRise: number = 1.0 - Math.pow(0.5, 4000.0 / this.samplesPerSecond);
-			//let highpassInput: number = +this.highpassInput;
-			//let highpassOutput: number = +this.highpassOutput;
 			let limit: number = +this.limit;
 			
 			while (bufferIndex < outputBufferLength && !ended) {
@@ -2845,17 +3137,9 @@ declare global {
 					const sampleL = sampleForNoneL + chorusSampleL + sampleForReverbL + reverbSample1 + reverbSample2 + reverbSample3;
 					const sampleR = sampleForNoneR + chorusSampleR + sampleForReverbR + reverbSample0 + reverbSample2 - reverbSample3;
 					
-					/*
-					highpassOutput = highpassOutput * highpassFilter + sample - highpassInput;
-					highpassInput = sample;
-					// use highpassOutput instead of sample below?
-					*/
-					
 					// A compressor/limiter.
-					const absL: number = sampleL < 0.0 ? -sampleL : sampleL;
-					const absR: number = sampleR < 0.0 ? -sampleR : sampleR;
-					const abs: number = absL > absR ? absL : absR;
-					limit += (abs - limit) * (limit < abs ? limitRise : limitDecay);
+					const abs: number = Math.max(Math.abs(sampleL), Math.abs(sampleR));
+					limit += (abs - limit) * (limit < abs ? limitRise : limitDecay * (1.0 + limit));
 					const limitedVolume = volume / (limit >= 1 ? limit * 1.05 : limit * 0.8 + 0.25);
 					outputDataL[i] = sampleL * limitedVolume;
 					outputDataR[i] = sampleR * limitedVolume;
@@ -2932,15 +3216,19 @@ declare global {
 				}
 			}
 			
-			// Optimization: Avoid persistent reverb values in the float denormal range.
-			const epsilon: number = (1.0e-24);
-			if (-epsilon < reverbFeedback0 && reverbFeedback0 < epsilon) reverbFeedback0 = 0.0;
-			if (-epsilon < reverbFeedback1 && reverbFeedback1 < epsilon) reverbFeedback1 = 0.0;
-			if (-epsilon < reverbFeedback2 && reverbFeedback2 < epsilon) reverbFeedback2 = 0.0;
-			if (-epsilon < reverbFeedback3 && reverbFeedback3 < epsilon) reverbFeedback3 = 0.0;
-			//if (-epsilon < highpassInput && highpassInput < epsilon) highpassInput = 0.0;
-			//if (-epsilon < highpassOutput && highpassOutput < epsilon) highpassOutput = 0.0;
-			if (-epsilon < limit && limit < epsilon) limit = 0.0;
+			// Avoid persistent denormal or NaN values in the delay buffers and filter history.
+			if (!Number.isFinite(reverbFeedback0) || Math.abs(reverbFeedback0) < epsilon) reverbFeedback0 = 0.0;
+			if (!Number.isFinite(reverbFeedback1) || Math.abs(reverbFeedback1) < epsilon) reverbFeedback1 = 0.0;
+			if (!Number.isFinite(reverbFeedback2) || Math.abs(reverbFeedback2) < epsilon) reverbFeedback2 = 0.0;
+			if (!Number.isFinite(reverbFeedback3) || Math.abs(reverbFeedback3) < epsilon) reverbFeedback3 = 0.0;
+			if (!Number.isFinite(limit) || Math.abs(limit) < epsilon) limit = 0.0;
+			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos, 0x3FFF);
+			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  3041, 0x3FFF);
+			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  6426, 0x3FFF);
+			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos + 10907, 0x3FFF);
+			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos + 10907, 0x3FFF);
+			this.sanitizeDelayLine(chorusDelayLine, chorusDelayPos, 0x7FF);
+			this.sanitizeDelayLine(chorusDelayLine, chorusDelayPos + 0x400, 0x7FF);
 			
 			this.stereoBufferIndex = (this.stereoBufferIndex + outputBufferLength * 2) % stereoBufferLength;
 			this.chorusPhase = chorusPhase;
@@ -2950,8 +3238,6 @@ declare global {
 			this.reverbFeedback1 = reverbFeedback1;
 			this.reverbFeedback2 = reverbFeedback2;
 			this.reverbFeedback3 = reverbFeedback3;
-			//this.highpassInput = highpassInput;
-			//this.highpassOutput = highpassOutput;
 			this.limit = limit;
 			
 			if (playSong) {
@@ -3259,8 +3545,6 @@ declare global {
 			const partTimeEnd: number   = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * endRatio;
 			
 			tone.phaseDeltaScale = 0.0;
-			tone.filter = 1.0;
-			tone.filterScale = 1.0;
 			tone.vibratoScale = 0.0;
 			tone.intervalMult = 1.0;
 			tone.intervalVolumeMult = 1.0;
@@ -3531,6 +3815,10 @@ declare global {
 				}
 			}
 			
+			if (resetPhases) {
+				tone.reset();
+			}
+			
 			const instrumentVolumeMult: number = Synth.instrumentVolumeToVolumeMult(instrument.volume);
 			
 			if (instrument.type == InstrumentType.drumset) {
@@ -3542,29 +3830,49 @@ declare global {
 				tone.drumsetPitch = Math.max(0, Math.min(Config.drumCount - 1, tone.drumsetPitch));
 			}
 			
-			const cutoffOctaves: number = instrument.getFilterCutoffOctaves();
+			// TODO: Oh dear this is gonna be awkward to handle... And it should be inverted for highpass?
+			// I guess the envelope type and speed should be passed in to getVolumeCompensationMult()...
+			// Oh but there may be an unbounded number of these! And they may be multiplied by other envelopes!
+			// And the envelope should have no effect if there's no filter control points!
+			// And how does it interact with drumset?
+			let filterVolume: number = 1.0;
 			const filterEnvelope: Envelope = (instrument.type == InstrumentType.drumset) ? instrument.getDrumsetEnvelope(tone.drumsetPitch) : instrument.getFilterEnvelope();
-			const filterCutoffHz: number = Config.filterCutoffMaxHz * Math.pow(2.0, cutoffOctaves);
-			const filterBase: number = 2.0 * Math.sin(Math.PI * filterCutoffHz / synth.samplesPerSecond);
-			const filterMin: number = 2.0 * Math.sin(Math.PI * Config.filterCutoffMinHz / synth.samplesPerSecond);
-			tone.filter = filterBase * Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
-			let endFilter: number = filterBase * Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
-			tone.filter = Math.min(Config.filterMax, Math.max(filterMin, tone.filter));
-			endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
-			tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
-			let filterVolume: number = Math.pow(0.5, cutoffOctaves * 0.35);
-			if (instrument.filterResonance > 0) {
-				filterVolume = Math.pow(filterVolume, 1.7) * Math.pow(0.5, 0.125 * (instrument.filterResonance - 1));
-			}
 			if (filterEnvelope.type == EnvelopeType.decay) {
 				filterVolume *= (1.25 + .025 * filterEnvelope.speed);
 			} else if (filterEnvelope.type == EnvelopeType.twang) {
 				filterVolume *= (1 + .02 * filterEnvelope.speed);
 			}
 			
-			if (resetPhases) {
-				tone.reset();
+			// TODO: separate envelopes for each control point's freq or gain.
+			const filterEnvelopeStart: number = (instrument.type == InstrumentType.drumset) ? 1.0 : Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+			const filterEnvelopeEnd: number = (instrument.type == InstrumentType.drumset) ? 1.0 : Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
+			const drumsetFilterEnvelopeStart: number = (instrument.type != InstrumentType.drumset) ? 1.0 : Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
+			const drumsetFilterEnvelopeEnd: number = (instrument.type != InstrumentType.drumset) ? 1.0 : Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
+			
+			const filterSettings: FilterSettings = instrument.filter;
+			for (let i: number = 0; i < filterSettings.controlPointCount; i++) {
+				const point: FilterControlPoint = filterSettings.controlPoints[i];
+				point.toCoefficients(synth.filterStartCoefficients, synth.samplesPerSecond, filterEnvelopeStart, 1.0, 1.0);
+				point.toCoefficients(synth.filterEndCoefficients, synth.samplesPerSecond, filterEnvelopeEnd, 1.0, 1.0);
+				if (tone.filters.length <= i) tone.filters[i] = new FilterBiquad();
+				tone.filters[i].loadCoefficientsWithGradient(synth.filterStartCoefficients, synth.filterEndCoefficients, 1.0 / runLength);
+				filterVolume *= point.getVolumeCompensationMult();
 			}
+			tone.filterCount = filterSettings.controlPointCount;
+			
+			if (instrument.type == InstrumentType.drumset) {
+				const point: FilterControlPoint = synth.tempDrumSetControlPoint;
+				point.type = FilterType.lowPass;
+				point.gain = FilterControlPoint.getRoundedSettingValueFromLinearGain(0.5);
+				point.freq = FilterControlPoint.getRoundedSettingValueFromHz(8000.0);
+				// Drumset envelopes are warped to better imitate the legacy simplified 2nd order lowpass at ~48000Hz that I used to use.
+				point.toCoefficients(synth.filterStartCoefficients, synth.samplesPerSecond, drumsetFilterEnvelopeStart * (1.0 + drumsetFilterEnvelopeStart), 1.0, 1.0);
+				point.toCoefficients(synth.filterEndCoefficients, synth.samplesPerSecond, drumsetFilterEnvelopeEnd * (1.0 + drumsetFilterEnvelopeEnd), 1.0, 1.0);
+				if (tone.filters.length == tone.filterCount) tone.filters[tone.filterCount] = new FilterBiquad();
+				tone.filters[tone.filterCount].loadCoefficientsWithGradient(synth.filterStartCoefficients, synth.filterEndCoefficients, 1.0 / runLength);
+				tone.filterCount++;
+			}
+			filterVolume = Math.min(3.0, filterVolume);
 			
 			if (instrument.type == InstrumentType.fm) {
 				// phase modulation!
@@ -3737,7 +4045,7 @@ declare global {
 								}
 							}
 						} else if (line.indexOf("#") != -1) {
-							for (let j = 0; j < Config.operatorCount; j++) {
+							for (let j: number = 0; j < Config.operatorCount; j++) {
 								synthSource.push(line.replace(/\#/g, j + ""));
 							}
 						} else {
@@ -3784,13 +4092,10 @@ declare global {
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 			
-			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
-			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
-			let filterSample0: number = +tone.filterSample0;
-			let filterSample1: number = +tone.filterSample1;
+			const filters: FilterBiquad[] = tone.filters;
+			const filterCount: number = tone.filterCount;
+			let initialFilterInput1: number = tone.initialFilterInput1;
+			let initialFilterInput2: number = tone.initialFilterInput2;
 			
 			const phaseAInt: number = phaseA|0;
 			const phaseBInt: number = phaseB|0;
@@ -3828,33 +4133,29 @@ declare global {
 				prevWaveIntegralA = nextWaveIntegralA;
 				prevWaveIntegralB = nextWaveIntegralB;
 				
-				const combinedWave: number = (waveA + waveB * intervalSign);
+				const inputSample: number = waveA + waveB * intervalSign;
+				const sample: number = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+				initialFilterInput2 = initialFilterInput1;
+				initialFilterInput1 = inputSample;
 				
-				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
-				filterSample1 += filter2 * (filterSample0 - filterSample1);
-				
-				filter1 *= filterScale1;
-				filter2 *= filterScale2;
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				const output: number = filterSample1 * volume;
+				const output: number = sample * volume;
 				volume += volumeDelta;
 				
 				data[stereoBufferIndex] += output * stereoVolume1;
 				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+				
 				stereoBufferIndex += 2;
 			}
 			
 			tone.phases[0] = phaseA / waveLength;
 			tone.phases[1] = phaseB / waveLength;
 			
-			const epsilon: number = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
-			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
-			tone.filterSample0 = filterSample0;
-			tone.filterSample1 = filterSample1;
+			synth.sanitizeFilters(filters);
+			tone.initialFilterInput1 = initialFilterInput1;
+			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
 		private static harmonicsSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
@@ -3873,15 +4174,12 @@ declare global {
 			const volumeDelta: number = +tone.volumeDelta;
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
-
-			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
-			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
-			let filterSample0: number = +tone.filterSample0;
-			let filterSample1: number = +tone.filterSample1;
-
+			
+			const filters: FilterBiquad[] = tone.filters;
+			const filterCount: number = tone.filterCount;
+			let initialFilterInput1: number = tone.initialFilterInput1;
+			let initialFilterInput2: number = tone.initialFilterInput2;
+			
 			const phaseAInt: number = phaseA|0;
 			const phaseBInt: number = phaseB|0;
 			const indexA: number = phaseAInt % waveLength;
@@ -3918,19 +4216,16 @@ declare global {
 				
 				prevWaveIntegralA = nextWaveIntegralA;
 				prevWaveIntegralB = nextWaveIntegralB;
-
-				const combinedWave: number = (waveA + waveB * intervalSign);
 				
-				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
-				filterSample1 += filter2 * (filterSample0 - filterSample1);
+				const inputSample: number = waveA + waveB * intervalSign;
+				const sample: number = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+				initialFilterInput2 = initialFilterInput1;
+				initialFilterInput1 = inputSample;
 				
-				filter1 *= filterScale1;
-				filter2 *= filterScale2;
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				const output: number = filterSample1 * volume;
+				const output: number = sample * volume;
 				volume += volumeDelta;
 				
 				data[stereoBufferIndex] += output * stereoVolume1;
@@ -3941,11 +4236,9 @@ declare global {
 			tone.phases[0] = phaseA / waveLength;
 			tone.phases[1] = phaseB / waveLength;
 			
-			const epsilon: number = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
-			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
-			tone.filterSample0 = filterSample0;
-			tone.filterSample1 = filterSample1;
+			synth.sanitizeFilters(filters);
+			tone.initialFilterInput1 = initialFilterInput1;
+			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
 		private static pulseWidthSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
@@ -3958,13 +4251,10 @@ declare global {
 			let pulseWidth: number = tone.pulseWidth;
 			const pulseWidthDelta: number = tone.pulseWidthDelta;
 			
-			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
-			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
-			let filterSample0: number = +tone.filterSample0;
-			let filterSample1: number = +tone.filterSample1;
+			const filters: FilterBiquad[] = tone.filters;
+			const filterCount: number = tone.filterCount;
+			let initialFilterInput1: number = tone.initialFilterInput1;
+			let initialFilterInput2: number = tone.initialFilterInput2;
 			
 			const stopIndex: number = stereoBufferIndex + runLength;
 			stereoBufferIndex += tone.stereoOffset;
@@ -3994,18 +4284,16 @@ declare global {
 					pulseWave -= (t+t+t*t+1) * 0.5;
 				}
 				
-				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (pulseWave - filterSample0 + feedback * (filterSample0 - filterSample1));
-				filterSample1 += filter2 * (filterSample0 - filterSample1);
-				
-				filter1 *= filterScale1;
-				filter2 *= filterScale2;
+				const inputSample: number = pulseWave;
+				const sample: number = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+				initialFilterInput2 = initialFilterInput1;
+				initialFilterInput1 = inputSample;
 				
 				phase += phaseDelta;
 				phaseDelta *= phaseDeltaScale;
 				pulseWidth += pulseWidthDelta;
 				
-				const output: number = filterSample1 * volume;
+				const output: number = sample * volume;
 				volume += volumeDelta;
 				
 				data[stereoBufferIndex] += output * stereoVolume1;
@@ -4015,11 +4303,9 @@ declare global {
 			
 			tone.phases[0] = phase;
 			
-			const epsilon: number = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
-			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
-			tone.filterSample0 = filterSample0;
-			tone.filterSample1 = filterSample1;
+			synth.sanitizeFilters(filters);
+			tone.initialFilterInput1 = initialFilterInput1;
+			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
 		private static fmSourceTemplate: string[] = (`
@@ -4037,13 +4323,10 @@ declare global {
 			let volume = +tone.volumeStart;
 			const volumeDelta = +tone.volumeDelta;
 			
-			let filter1 = +tone.filter;
-			let filter2 = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
-			const filterScale1 = +tone.filterScale;
-			const filterScale2 = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = beepbox.Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (beepbox.Config.filterResonanceRange - 2), 0.5);
-			let filterSample0 = +tone.filterSample0;
-			let filterSample1 = +tone.filterSample1;
+			const filters = tone.filters;
+			const filterCount = tone.filterCount;
+			let initialFilterInput1 = tone.initialFilterInput1;
+			let initialFilterInput2 = tone.initialFilterInput2;
 			
 			const stopIndex = stereoBufferIndex + runLength;
 			stereoBufferIndex += tone.stereoOffset;
@@ -4054,18 +4337,17 @@ declare global {
 				// INSERT OPERATOR COMPUTATION HERE
 				const fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
 				
-				const feedback = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (fmOutput - filterSample0 + feedback * (filterSample0 - filterSample1));
-				filterSample1 += filter2 * (filterSample0 - filterSample1);
+				const inputSample = fmOutput;
+				const sample = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+				initialFilterInput2 = initialFilterInput1;
+				initialFilterInput1 = inputSample;
 				
 				feedbackMult += feedbackDelta;
 				operator#OutputMult += operator#OutputDelta;
 				operator#Phase += operator#PhaseDelta;
 				operator#PhaseDelta *= phaseDeltaScale;
-				filter1 *= filterScale1;
-				filter2 *= filterScale2;
 				
-				const output = filterSample1 * volume;
+				const output = sample * volume;
 				volume += volumeDelta;
 				
 				data[stereoBufferIndex] += output * stereoVolume1;
@@ -4076,11 +4358,9 @@ declare global {
 			tone.phases[#] = operator#Phase / ` + Config.sineWaveLength + `;
 			tone.feedbackOutputs[#] = operator#Output;
 			
-			const epsilon = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
-			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
-			tone.filterSample0 = filterSample0;
-			tone.filterSample1 = filterSample1;
+			synth.sanitizeFilters(filters);
+			tone.initialFilterInput1 = initialFilterInput1;
+			tone.initialFilterInput2 = initialFilterInput2;
 		`).split("\n");
 		
 		private static operatorSourceTemplate: string[] = (`
@@ -4103,16 +4383,15 @@ declare global {
 				// Zero phase means the tone was reset, just give noise a random start phase instead.
 				phase = Math.random() * Config.chipNoiseLength;
 			}
-			let sample: number = +tone.sample;
+			let noiseSample: number = +tone.sample;
 			
-			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
-			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
-			let filterSample0: number = +tone.filterSample0;
-			let filterSample1: number = +tone.filterSample1;
+			const filters: FilterBiquad[] = tone.filters;
+			const filterCount: number = tone.filterCount;
+			let initialFilterInput1: number = tone.initialFilterInput1;
+			let initialFilterInput2: number = tone.initialFilterInput2;
 			
+			// This is for a "legacy" style simplified 1st order lowpass filter with
+			// a cutoff frequency that is relative to the tone's fundamental frequency.
 			const pitchRelativefilter: number = Math.min(1.0, tone.phaseDeltas[0] * Config.chipNoises[instrument.chipNoise].pitchFilterMult);
 			
 			const stopIndex: number = stereoBufferIndex + runLength;
@@ -4123,18 +4402,17 @@ declare global {
 			while (stereoBufferIndex < stopIndex) {
 				const waveSample: number = wave[phase & 0x7fff];
 				
-				sample += (waveSample - sample) * pitchRelativefilter;
-			
-				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (sample - filterSample0 + feedback * (filterSample0 - filterSample1));
-				filterSample1 += filter2 * (filterSample0 - filterSample1);
-			
+				noiseSample += (waveSample - noiseSample) * pitchRelativefilter;
+				
+				const inputSample: number = noiseSample;
+				const sample: number = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+				initialFilterInput2 = initialFilterInput1;
+				initialFilterInput1 = inputSample;
+				
 				phase += phaseDelta;
-				filter1 *= filterScale1;
-				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
 				
-				const output: number = filterSample1 * volume;
+				const output: number = sample * volume;
 				volume += volumeDelta;
 				
 				data[stereoBufferIndex] += output * stereoVolume1;
@@ -4143,13 +4421,11 @@ declare global {
 			}
 			
 			tone.phases[0] = phase / Config.chipNoiseLength;
-			tone.sample = sample;
+			tone.sample = noiseSample;
 			
-			const epsilon: number = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
-			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
-			tone.filterSample0 = filterSample0;
-			tone.filterSample1 = filterSample1;
+			synth.sanitizeFilters(filters);
+			tone.initialFilterInput1 = initialFilterInput1;
+			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
 		private static spectrumSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
@@ -4158,19 +4434,19 @@ declare global {
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
-			let sample: number = +tone.sample;
-			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
-			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
-			let filterSample0: number = +tone.filterSample0;
-			let filterSample1: number = +tone.filterSample1;
+			let noiseSample: number = +tone.sample;
+			
+			const filters: FilterBiquad[] = tone.filters;
+			const filterCount: number = tone.filterCount;
+			let initialFilterInput1: number = tone.initialFilterInput1;
+			let initialFilterInput2: number = tone.initialFilterInput2;
 			
 			let phase: number = (tone.phases[0] % 1) * Config.chipNoiseLength;
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
 			if (tone.phases[0] == 0) phase = Synth.findRandomZeroCrossing(wave) + phaseDelta;
 			
+			// This is for a "legacy" style simplified 1st order lowpass filter with
+			// a cutoff frequency that is relative to the tone's fundamental frequency.
 			const pitchRelativefilter: number = Math.min(1.0, phaseDelta);
 			
 			const stopIndex: number = stereoBufferIndex + runLength;
@@ -4185,18 +4461,17 @@ declare global {
 				const phaseRatio: number = phase - phaseInt;
 				waveSample += (wave[index + 1] - waveSample) * phaseRatio;
 				
-				sample += (waveSample - sample) * pitchRelativefilter;
+				noiseSample += (waveSample - noiseSample) * pitchRelativefilter;
 				
-				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (sample - filterSample0 + feedback * (filterSample0 - filterSample1));
-				filterSample1 += filter2 * (filterSample0 - filterSample1);
+				const inputSample: number = noiseSample;
+				const sample: number = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+				initialFilterInput2 = initialFilterInput1;
+				initialFilterInput1 = inputSample;
 			
 				phase += phaseDelta;
-				filter1 *= filterScale1;
-				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
 				
-				const output: number = filterSample1 * volume;
+				const output: number = sample * volume;
 				volume += volumeDelta;
 				
 				data[stereoBufferIndex] += output * stereoVolume1;
@@ -4205,13 +4480,11 @@ declare global {
 			}
 			
 			tone.phases[0] = phase / Config.chipNoiseLength;
-			tone.sample = sample;
+			tone.sample = noiseSample;
 			
-			const epsilon: number = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
-			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
-			tone.filterSample0 = filterSample0;
-			tone.filterSample1 = filterSample1;
+			synth.sanitizeFilters(filters);
+			tone.initialFilterInput1 = initialFilterInput1;
+			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
 		private static drumsetSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
@@ -4220,14 +4493,11 @@ declare global {
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
 			let volume: number = +tone.volumeStart;
 			const volumeDelta: number = +tone.volumeDelta;
-			let sample: number = +tone.sample;
-			let filter1: number = +tone.filter;
-			let filter2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
-			const filterScale1: number = +tone.filterScale;
-			const filterScale2: number = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (Config.filterResonanceRange - 2), 0.5);
-			let filterSample0: number = +tone.filterSample0;
-			let filterSample1: number = +tone.filterSample1;
+			
+			const filters: FilterBiquad[] = tone.filters;
+			const filterCount: number = tone.filterCount;
+			let initialFilterInput1: number = tone.initialFilterInput1;
+			let initialFilterInput2: number = tone.initialFilterInput2;
 			
 			let phase: number = (tone.phases[0] % 1) * Config.chipNoiseLength;
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
@@ -4241,20 +4511,19 @@ declare global {
 			while (stereoBufferIndex < stopIndex) {
 				const phaseInt: number = phase|0;
 				const index: number = phaseInt & 0x7fff;
-				sample = wave[index];
+				let noiseSample: number = wave[index];
 				const phaseRatio: number = phase - phaseInt;
-				sample += (wave[index + 1] - sample) * phaseRatio;
+				noiseSample += (wave[index + 1] - noiseSample) * phaseRatio;
 				
-				const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (sample - filterSample0 + feedback * (filterSample0 - filterSample1));
-				filterSample1 += filter2 * (filterSample0 - filterSample1);
+				const inputSample: number = noiseSample;
+				const sample: number = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+				initialFilterInput2 = initialFilterInput1;
+				initialFilterInput1 = inputSample;
 			
 				phase += phaseDelta;
-				filter1 *= filterScale1;
-				filter2 *= filterScale2;
 				phaseDelta *= phaseDeltaScale;
 				
-				const output: number = filterSample1 * volume;
+				const output: number = sample * volume;
 				volume += volumeDelta;
 				
 				data[stereoBufferIndex] += output * stereoVolume1;
@@ -4263,13 +4532,10 @@ declare global {
 			}
 			
 			tone.phases[0] = phase / Config.chipNoiseLength;
-			tone.sample = sample;
 			
-			const epsilon: number = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
-			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
-			tone.filterSample0 = filterSample0;
-			tone.filterSample1 = filterSample1;
+			synth.sanitizeFilters(filters);
+			tone.initialFilterInput1 = initialFilterInput1;
+			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
 		private static findRandomZeroCrossing(wave: Float32Array): number {
@@ -4332,6 +4598,62 @@ declare global {
 			const partsPerSecond: number = Config.partsPerBeat * beatsPerSecond;
 			const tickPerSecond: number = Config.ticksPerPart * partsPerSecond;
 			return this.samplesPerSecond / tickPerSecond;
+		}
+		
+		private sanitizeFilters(filters: FilterBiquad[]): void {
+			let reset: boolean = false;
+			for (const filter of filters) {
+				const output1: number = Math.abs(filter.output1);
+				const output2: number = Math.abs(filter.output2);
+				// If either is a large value, Infinity, or NaN, then just reset all filter history.
+				if (!(output1 < 100) || !(output2 < 100)) {
+					reset = true;
+					break;
+				}
+				if (output1 < epsilon) filter.output1 = 0.0;
+				if (output2 < epsilon) filter.output2 = 0.0;
+			}
+			if (reset) {
+				for (const filter of filters) {
+					filter.output1 = 0.0;
+					filter.output2 = 0.0;
+				}
+			}
+		}
+		
+		private sanitizeDelayLine(delayLine: Float32Array, lastIndex: number, mask: number): void {
+			while (true) {
+				lastIndex--;
+				const index: number = lastIndex & mask;
+				const sample: number = Math.abs(delayLine[index]);
+				if (Number.isFinite(sample) && (sample == 0.0 || sample >= epsilon)) break;
+				delayLine[index] = 0.0;
+			}
+		}
+		
+		private applyFilters(sample: number, input1: number, input2: number, filterCount: number, filters: FilterBiquad[]): number {
+			for (let i: number = 0; i < filterCount; i++) {
+				const filter: FilterBiquad = filters[i];
+				const output1: number = filter.output1;
+				const output2: number = filter.output2;
+				const a1: number = filter.a1;
+				const a2: number = filter.a2;
+				const b0: number = filter.b0;
+				const b1: number = filter.b1;
+				const b2: number = filter.b2;
+				sample = b0 * sample + b1 * input1 + b2 * input2 - a1 * output1 - a2 * output2;
+				filter.a1 = a1 + filter.a1Delta;
+				filter.a2 = a2 + filter.a2Delta;
+				filter.b0 = b0 + filter.b0Delta;
+				filter.b1 = b1 + filter.b1Delta;
+				filter.b2 = b2 + filter.b2Delta;
+				filter.output2 = output1;
+				filter.output1 = sample;
+				// Updating the input values is waste if the next filter doesn't exist...
+				input2 = output2;
+				input1 = output1;
+			}
+			return sample;
 		}
 	}
 	

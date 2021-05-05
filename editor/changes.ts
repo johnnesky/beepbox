@@ -1,7 +1,7 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {Algorithm, Dictionary, InstrumentType, Config} from "../synth/SynthConfig";
-import {NotePin, Note, makeNotePin, Pattern, SpectrumWave, HarmonicsWave, Instrument, Channel, Song} from "../synth/synth";
+import {Algorithm, Dictionary, FilterType, InstrumentType, Config} from "../synth/SynthConfig";
+import {NotePin, Note, makeNotePin, Pattern, FilterSettings, FilterControlPoint, SpectrumWave, HarmonicsWave, Instrument, Channel, Song} from "../synth/synth";
 import {Preset, PresetCategory, EditorConfig} from "./EditorConfig";
 import {Change, ChangeGroup, ChangeSequence, UndoableChange} from "./Change";
 import {SongDocument} from "./SongDocument";
@@ -374,14 +374,56 @@ import {SongDocument} from "./SongDocument";
 			const isNoise: boolean = doc.song.getChannelIsNoise(doc.channel);
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
 			
+			const addingPoints: FilterControlPoint[] = [];
+			const midFreq: number = FilterControlPoint.getRoundedSettingValueFromHz(700.0);
+			const lowPassPoint: FilterControlPoint = new FilterControlPoint();
+			addingPoints.push(lowPassPoint);
+			lowPassPoint.type = FilterType.lowPass;
+			lowPassPoint.freq = selectCurvedDistribution(midFreq, Config.filterFreqRange - 1, FilterControlPoint.getRoundedSettingValueFromHz(4000.0), 1.0 / Config.filterFreqStep);
+			lowPassPoint.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter - 0.5 / Config.filterGainStep, 2.0 / Config.filterGainStep);
+			if (Math.random() > 0.5) {
+				const highPassPoint: FilterControlPoint = new FilterControlPoint();
+				addingPoints.push(highPassPoint);
+				highPassPoint.type = FilterType.highPass;
+				highPassPoint.freq = selectCurvedDistribution(0, midFreq - 1, FilterControlPoint.getRoundedSettingValueFromHz(250.0), 1.0 / Config.filterFreqStep);
+				highPassPoint.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter - 0.5 / Config.filterGainStep, 2.0 / Config.filterGainStep);
+			}
+			if (Math.random() > 0.5) {
+				const peakPoint: FilterControlPoint = new FilterControlPoint();
+				addingPoints.push(peakPoint);
+				peakPoint.type = FilterType.peak;
+				peakPoint.freq = selectCurvedDistribution(0, Config.filterFreqRange - 1, FilterControlPoint.getRoundedSettingValueFromHz(1400.0), 1.0 / Config.filterFreqStep);
+				peakPoint.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter, 2.0 / Config.filterGainStep);
+			}
+			if (Math.random() > 0.5) {
+				const peakPoint: FilterControlPoint = new FilterControlPoint();
+				addingPoints.push(peakPoint);
+				peakPoint.type = FilterType.peak;
+				peakPoint.freq = selectCurvedDistribution(0, Config.filterFreqRange - 1, FilterControlPoint.getRoundedSettingValueFromHz(500.0), 1.0 / Config.filterFreqStep);
+				peakPoint.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter, 2.0 / Config.filterGainStep);
+			}
+			instrument.filter.controlPointCount = 0;
+			for (let i: number = 0; i < addingPoints.length; i++) {
+				const point: FilterControlPoint = addingPoints[i];
+				let alreadyUsed: boolean = false;
+				for (let j: number = 0; j < i; j++) {
+					if (point.freq == addingPoints[j].freq) {
+						alreadyUsed = true;
+						break;
+					}
+				}
+				if (alreadyUsed) break;
+				if (point.type == FilterType.peak && point.gain == Config.filterGainCenter) break;
+				instrument.filter.controlPoints[instrument.filter.controlPointCount] = point;
+				instrument.filter.controlPointCount++;
+			}
+			
 			if (isNoise) {
 				const type: InstrumentType = selectWeightedRandom([
 					{item: InstrumentType.noise,    weight: 1},
 					{item: InstrumentType.spectrum, weight: 3},
 				]);
 				instrument.preset = instrument.type = type;
-				instrument.filterCutoff = selectCurvedDistribution(4, Config.filterCutoffRange - 1, Config.filterCutoffRange - 2, 2);
-				instrument.filterResonance = selectCurvedDistribution(0, Config.filterResonanceRange - 1, 1, 2);
 				instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
 					{item: "steady"  , weight: 2},
 					{item: "punch"   , weight: 4},
@@ -483,8 +525,6 @@ import {SongDocument} from "./SongDocument";
 					{item: InstrumentType.fm,        weight: 4},
 				]);
 				instrument.preset = instrument.type = type;
-				instrument.filterCutoff = selectCurvedDistribution(2, Config.filterCutoffRange - 1, 7, 1.5);
-				instrument.filterResonance = selectCurvedDistribution(0, Config.filterResonanceRange - 1, 1, 2);
 				instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
 					{item: "steady"  , weight: 10},
 					{item: "punch"   , weight: 6},
@@ -1030,21 +1070,81 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
-	export class ChangeFilterCutoff extends ChangeInstrumentSlider {
-		constructor(doc: SongDocument, oldValue: number, newValue: number) {
-			super(doc);
-			this._instrument.filterCutoff = newValue;
-			doc.notifier.changed();
-			if (oldValue != newValue) this._didSomething();
+	export class ChangeFilterAddPoint extends UndoableChange {
+		private _doc: SongDocument;
+		private _instrument: Instrument;
+		private _instrumentPrevPreset: number;
+		private _instrumentNextPreset: number;
+		private _filterSettings: FilterSettings;
+		private _point: FilterControlPoint;
+		private _index: number;
+		constructor(doc: SongDocument, filterSettings: FilterSettings, point: FilterControlPoint, index: number, deletion: boolean = false) {
+			super(deletion);
+			this._doc = doc;
+			this._instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+			this._instrumentNextPreset = deletion ? this._instrument.preset : this._instrument.type;
+			this._instrumentPrevPreset = deletion ? this._instrument.type : this._instrument.preset;
+			this._filterSettings = filterSettings;
+			this._point = point;
+			this._index = index;
+			this._didSomething();
+			this.redo();
+		}
+		
+		protected _doForwards(): void {
+			this._filterSettings.controlPoints.splice(this._index, 0, this._point);
+			this._filterSettings.controlPointCount++;
+			this._filterSettings.controlPoints.length = this._filterSettings.controlPointCount;
+			this._instrument.preset = this._instrumentNextPreset;
+			this._doc.notifier.changed();
+		}
+		
+		protected _doBackwards(): void {
+			this._filterSettings.controlPoints.splice(this._index, 1);
+			this._filterSettings.controlPointCount--;
+			this._filterSettings.controlPoints.length = this._filterSettings.controlPointCount;
+			this._instrument.preset = this._instrumentPrevPreset;
+			this._doc.notifier.changed();
 		}
 	}
 	
-	export class ChangeFilterResonance extends ChangeInstrumentSlider {
-		constructor(doc: SongDocument, oldValue: number, newValue: number) {
-			super(doc);
-			this._instrument.filterResonance = newValue;
-			doc.notifier.changed();
-			if (oldValue != newValue) this._didSomething();
+	export class ChangeFilterMovePoint extends UndoableChange {
+		private _doc: SongDocument;
+		private _instrument: Instrument;
+		private _instrumentPrevPreset: number;
+		private _instrumentNextPreset: number;
+		private _point: FilterControlPoint;
+		private _oldFreq: number;
+		private _newFreq: number;
+		private _oldGain: number;
+		private _newGain: number;
+		constructor(doc: SongDocument, point: FilterControlPoint, oldFreq: number, newFreq: number, oldGain: number, newGain: number) {
+			super(false);
+			this._doc = doc;
+			this._instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+			this._instrumentNextPreset = this._instrument.type;
+			this._instrumentPrevPreset = this._instrument.preset;
+			this._point = point;
+			this._oldFreq = oldFreq;
+			this._newFreq = newFreq;
+			this._oldGain = oldGain;
+			this._newGain = newGain;
+			this._didSomething();
+			this.redo();
+		}
+		
+		protected _doForwards(): void {
+			this._point.freq = this._newFreq;
+			this._point.gain = this._newGain;
+			this._instrument.preset = this._instrumentNextPreset;
+			this._doc.notifier.changed();
+		}
+		
+		protected _doBackwards(): void {
+			this._point.freq = this._oldFreq;
+			this._point.gain = this._oldGain;
+			this._instrument.preset = this._instrumentPrevPreset;
+			this._doc.notifier.changed();
 		}
 	}
 	

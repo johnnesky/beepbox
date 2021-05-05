@@ -29,6 +29,13 @@ SOFTWARE.
 		dictionary: Dictionary<T>;
 	}
 	
+	export const enum FilterType {
+		lowPass = 0,
+		highPass = 1,
+		peak = 2,
+		length,
+	}
+	
 	export const enum EnvelopeType {
 		custom,
 		steady,
@@ -187,7 +194,7 @@ SOFTWARE.
 			{name: "freehand",      stepsPerBeat:24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1]], roundUpThresholds: null},
 		]);
 		
-		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM"];
+		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM"]; // See InstrumentType enum above.
 		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false];
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
 			{name: "rounded",      volume: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
@@ -209,12 +216,17 @@ SOFTWARE.
 			{name: "buzz",    volume: 0.3,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
 			{name: "hollow",  volume: 1.5,  basePitch: 96,  pitchFilterMult:    1.0, isSoft: true,  samples: null},
 		]);
-		public static readonly filterCutoffMaxHz: number = 8000; // This is carefully calculated to correspond to no change when filtering at 48000 samples per second.
-		public static readonly filterCutoffMinHz: number = 1;
-		public static readonly filterMax: number = 0.95;
-		public static readonly filterMaxResonance: number = 0.95;
-		public static readonly filterCutoffRange: number = 11;
-		public static readonly filterResonanceRange: number = 8;
+		
+		public static readonly filterFreqMaxHz: number = 16000.0;
+		public static readonly filterFreqMinHz: number = 1.0;
+		public static readonly filterFreqRange: number = 33;
+		public static readonly filterFreqStep: number = 1.0/4.0;
+		public static readonly filterGainRange: number = 15;
+		public static readonly filterGainCenter: number = 7;
+		public static readonly filterGainStep: number = 1.0/2.0;
+		public static readonly filterMaxPoints: number = 8;
+		public static readonly filterTypeNames: ReadonlyArray<string> = ["low-pass", "high-pass", "peak"]; // See FilterType enum above.
+		
 		public static readonly transitions: DictionaryArray<Transition> = toNameMap([
 			{name: "seamless",    isSeamless: true,  attackSeconds: 0.0,    releases: false, releaseTicks: 1,  slides: false, slideTicks: 3},
 			{name: "hard",        isSeamless: false, attackSeconds: 0.0,    releases: false, releaseTicks: 3,  slides: false, slideTicks: 3},

@@ -10,6 +10,7 @@ import {SongDocument} from "./SongDocument";
 import {Prompt} from "./Prompt";
 import {TipPrompt} from "./TipPrompt";
 import {PatternEditor} from "./PatternEditor";
+import {FilterEditor} from "./FilterEditor";
 import {MuteEditor} from "./MuteEditor";
 import {TrackEditor} from "./TrackEditor";
 import {LoopEditor} from "./LoopEditor";
@@ -26,7 +27,7 @@ import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
-import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangeFilterCutoff, ChangeFilterResonance, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeFilterEnvelope, ChangePulseEnvelope, ChangeTransition, ChangeEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong} from "./changes";
+import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong} from "./changes";
 
 //namespace beepbox {
 	const {button, div, input, select, span, optgroup, option} = HTML;
@@ -196,10 +197,8 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select(), Config.transitions.map(transition=>transition.name));
 		private readonly _transitionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("transition")}, "Transition:"), div({class: "selectContainer"}, this._transitionSelect));
 		private readonly _effectsSelect: HTMLSelectElement = buildOptions(select(), Config.effectsNames);
-		private readonly _filterCutoffSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue));
-		private _filterCutoffRow: HTMLDivElement = div({class: "selectRow", title: "Low-pass Filter Cutoff Frequency"}, span({class: "tip", onclick: ()=>this._openPrompt("filterCutoff")}, "Filter Cut:"), this._filterCutoffSlider.input);
-		private readonly _filterResonanceSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.filterResonanceRange - 1, value: "6", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeFilterResonance(this._doc, oldValue, newValue));
-		private _filterResonanceRow: HTMLDivElement = div({class: "selectRow", title: "Low-pass Filter Peak Resonance"}, span({class: "tip", onclick: ()=>this._openPrompt("filterResonance")}, "Filter Peak:"), this._filterResonanceSlider.input);
+		private readonly _filterEditor: FilterEditor = new FilterEditor(this._doc);
+		private readonly _filterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("filter")}, "Filter:"), this._filterEditor.container);
 		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
 		private _filterEnvelopeRow: HTMLDivElement = div({class: "selectRow", title: "Low-pass Filter Envelope"}, span({class: "tip", onclick: ()=>this._openPrompt("filterEnvelope")}, "Filter Env:"), div({class: "selectContainer"}, this._filterEnvelopeSelect));
 		private readonly _pulseEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
@@ -233,8 +232,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			"Customize Instrument",
 		);
 		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({class: "editor-controls"},
-			this._filterCutoffRow,
-			this._filterResonanceRow,
+			this._filterRow,
 			this._filterEnvelopeRow,
 			this._transitionRow,
 			div({class: "selectRow"},
@@ -676,8 +674,6 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 					this._drumsetGroup.style.display = "";
 					this._transitionRow.style.display = "none";
 					this._chordSelectRow.style.display = "none";
-					this._filterCutoffRow.style.display = "none";
-					this._filterResonanceRow.style.display = "none";
 					this._filterEnvelopeRow.style.display = "none";
 					for (let i: number = 0; i < Config.drumCount; i++) {
 						setSelectedValue(this._drumsetEnvelopeSelects[i], instrument.drumsetEnvelopes[i]);
@@ -687,8 +683,6 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 					this._drumsetGroup.style.display = "none";
 					this._transitionRow.style.display = "";
 					this._chordSelectRow.style.display = "";
-					this._filterCutoffRow.style.display = "";
-					this._filterResonanceRow.style.display = "";
 					this._filterEnvelopeRow.style.display = "";
 				}
 				if (instrument.type == InstrumentType.chip) {
@@ -787,8 +781,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			
 			this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote;
 			
-			this._filterCutoffSlider.updateValue(instrument.filterCutoff);
-			this._filterResonanceSlider.updateValue(instrument.filterResonance);
+			this._filterEditor.render();
 			setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
 			setSelectedValue(this._transitionSelect, instrument.transition);
 			setSelectedValue(this._effectsSelect, instrument.effects);
