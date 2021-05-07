@@ -1192,6 +1192,34 @@ export class ChangeFastTwoNoteArp extends Change {
 	}
 }
 
+export class ChangeTieNoteTransition extends Change {
+	constructor(doc: SongDocument, newValue: boolean) {
+		super();
+		const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+		const oldValue = instrument.tieNoteTransition;
+
+		doc.notifier.changed();
+		if (oldValue != newValue) {
+			instrument.tieNoteTransition = newValue;
+			this._didSomething();
+		}
+	}
+}
+
+export class ChangeClicklessTransition extends Change {
+	constructor(doc: SongDocument, newValue: boolean) {
+		super();
+		const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+		const oldValue = instrument.clicklessTransition;
+
+		doc.notifier.changed();
+		if (oldValue != newValue) {
+			instrument.clicklessTransition = newValue;
+			this._didSomething();
+		}
+	}
+}
+
 export class ChangeSpectrum extends Change {
 	constructor(doc: SongDocument, instrument: Instrument, spectrumWave: SpectrumWave) {
 		super();

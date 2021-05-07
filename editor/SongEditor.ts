@@ -6,7 +6,7 @@ import { Config, InstrumentType } from "../synth/SynthConfig";
 import { BarScrollBar } from "./BarScrollBar";
 import { BeatsPerBarPrompt } from "./BeatsPerBarPrompt";
 import { Change, ChangeGroup } from "./Change";
-import { ChangeAlgorithm, ChangeChannelBar, ChangeChipWave, ChangeChannelOrder, ChangeChord, ChangeCustomWave, ChangeDetectKey, ChangeDetune, ChangeDrumsetEnvelope, ChangeEffects, ChangeFeedbackAmplitude, ChangeFeedbackEnvelope, ChangeFeedbackType, ChangeFilterCutoff, ChangeFilterEnvelope, ChangeFilterResonance, ChangeInterval, ChangeKey, ChangeNoiseWave, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangePan, ChangePasteInstrument, ChangePatternNumbers, ChangePatternsPerChannel, ChangePreset, ChangePulseEnvelope, ChangePulseWidth, ChangeRandomGeneratedInstrument, ChangeReverb, ChangeRhythm, ChangeScale, ChangeSong, ChangeSongTitle, ChangeTempo, ChangeTransition, ChangeVibrato, ChangeVibratoType, ChangeVolume, ChangeVibratoDepth, ChangeVibratoSpeed, ChangeVibratoDelay, ChangePanDelay, ChangeArpeggioSpeed, pickRandomPresetValue, ChangeFastTwoNoteArp, ChangePatternSelection } from "./changes";
+import { ChangeAlgorithm, ChangeChannelBar, ChangeChipWave, ChangeChannelOrder, ChangeChord, ChangeCustomWave, ChangeDetectKey, ChangeDetune, ChangeDrumsetEnvelope, ChangeEffects, ChangeFeedbackAmplitude, ChangeFeedbackEnvelope, ChangeFeedbackType, ChangeFilterCutoff, ChangeFilterEnvelope, ChangeFilterResonance, ChangeInterval, ChangeKey, ChangeNoiseWave, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangePan, ChangePasteInstrument, ChangePatternNumbers, ChangePatternsPerChannel, ChangePreset, ChangePulseEnvelope, ChangePulseWidth, ChangeRandomGeneratedInstrument, ChangeReverb, ChangeRhythm, ChangeScale, ChangeSong, ChangeSongTitle, ChangeTempo, ChangeTransition, ChangeVibrato, ChangeVibratoType, ChangeVolume, ChangeVibratoDepth, ChangeVibratoSpeed, ChangeVibratoDelay, ChangePanDelay, ChangeArpeggioSpeed, pickRandomPresetValue, ChangeFastTwoNoteArp, ChangeClicklessTransition, ChangeTieNoteTransition, ChangePatternSelection } from "./changes";
 import { ChannelSettingsPrompt } from "./ChannelSettingsPrompt";
 import { ColorConfig } from "./ColorConfig";
 import { CustomChipPrompt } from "./CustomChipPrompt";
@@ -411,7 +411,13 @@ export class SongEditor {
 	private readonly _chipWaveSelectRow: HTMLDivElement = div({ class: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("chipWave") }, "Wave: "), div({ class: "selectContainer" }, this._chipWaveSelect));
 	private readonly _chipNoiseSelectRow: HTMLDivElement = div({ class: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("chipNoise") }, "Noise: "), div({ class: "selectContainer" }, this._chipNoiseSelect));
 	private readonly _transitionSelect: HTMLSelectElement = buildOptions(select(), Config.transitions.map(transition => transition.name));
-	private readonly _transitionRow: HTMLDivElement = div({ class: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("transition") }, "Transition:"), div({ class: "selectContainer" }, this._transitionSelect));
+	private readonly _transitionDropdown: HTMLButtonElement = button({ style: "margin-left:0em; height:1.5em; width: 10px; padding: 0px; font-size: 8px;", onclick: () => this._toggleDropdownMenu(3) }, "▼");
+	private readonly _transitionRow: HTMLDivElement = div({ class: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("transition") }, "Transition:"), this._transitionDropdown, div({ class: "selectContainer" }, this._transitionSelect));
+	private readonly _tieNoteTransitionBox: HTMLInputElement = input({ type: "checkbox", style: "width: 1em; padding: 0; margin-right: 4em;" });
+	private readonly _tieNoteTransitionRow: HTMLElement = div({ class: "selectRow" }, span({ class: "tip", style: "margin-left:10px;", onclick: () => this._openPrompt("transitionBar") }, "Tie Over Bars:"), this._tieNoteTransitionBox);
+	private readonly _clicklessTransitionBox: HTMLInputElement = input({ type: "checkbox", style: "width: 1em; padding: 0; margin-right: 4em;" });
+	private readonly _clicklessTransitionRow: HTMLElement = div({ class: "selectRow" }, span({ class: "tip", style: "margin-left:10px;", onclick: () => this._openPrompt("clicklessTransition") }, "Clickless:"), this._clicklessTransitionBox);
+	private readonly _transitionDropdownGroup: HTMLElement = div({ class: "editor-controls" }, this._tieNoteTransitionRow, this._clicklessTransitionRow);
 	private readonly _effectsSelect: HTMLSelectElement = buildOptions(select(), Config.effectsNames);
 	private readonly _filterCutoffSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue), false);
 	private _filterCutoffRow: HTMLDivElement = div({ class: "selectRow", title: "Low-pass Filter Cutoff Frequency" }, span({ class: "tip", onclick: () => this._openPrompt("filterCutoff") }, "Filter Cut:"), this._filterCutoffSlider.container);
@@ -515,6 +521,7 @@ export class SongEditor {
 		this._filterResonanceRow,
 		this._filterEnvelopeRow,
 		this._transitionRow,
+		this._transitionDropdownGroup,
 
 		div({ class: "selectRow" },
 			span({ class: "tip", onclick: () => this._openPrompt("effects") }, "Effects:"),
@@ -541,7 +548,7 @@ export class SongEditor {
 			this._instrumentPasteButton,
 		),
 	);
-	private readonly _instrumentSettingsTextRow: HTMLDivElement = div({ id: "instrumentSettingsText", style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};` },
+	private readonly _instrumentSettingsTextRow: HTMLDivElement = div({ id: "instrumentSettingsText", style: `margin: 3px 0; max-width: 15em; text-align: center; color: ${ColorConfig.secondaryText};` },
 		"Instrument Settings"
 	);
 	private readonly _instrumentSettingsGroup: HTMLDivElement = div({ class: "editor-controls" },
@@ -689,6 +696,7 @@ export class SongEditor {
 	private _openPanDropdown: boolean = false;
 	private _openVibratoDropdown: boolean = false;
 	private _openChordDropdown: boolean = false;
+	private _openTransitionDropdown: boolean = false;
 
 	private outVolumeHistoricTimer: number = 0;
 	private outVolumeHistoricCap: number = 0;
@@ -880,6 +888,8 @@ export class SongEditor {
 		this._detuneSliderInputBox.addEventListener("input", () => { this._doc.record(new ChangeDetune(this._doc, this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].detune, Math.min(Config.detuneMax, Math.max(Config.detuneMin, Math.round(+this._detuneSliderInputBox.value))))) });
 		this._customWaveDraw.addEventListener("input", () => { this._doc.record(new ChangeCustomWave(this._doc, this._customWaveDrawCanvas.newArray)) });
 		this._twoNoteArpBox.addEventListener("input", () => { this._doc.record(new ChangeFastTwoNoteArp(this._doc, this._twoNoteArpBox.checked)) });
+		this._tieNoteTransitionBox.addEventListener("input", () => { this._doc.record(new ChangeTieNoteTransition(this._doc, this._tieNoteTransitionBox.checked)) });
+		this._clicklessTransitionBox.addEventListener("input", () => { this._doc.record(new ChangeClicklessTransition(this._doc, this._clicklessTransitionBox.checked)) });
 
 		this._promptContainer.addEventListener("click", (event) => {
 			if (event.target == this._promptContainer) {
@@ -920,6 +930,10 @@ export class SongEditor {
 				this._openChordDropdown = this._openChordDropdown ? false : true;
 				group = this._chordDropdownGroup;
 				break;
+			case 3:
+				target = this._transitionDropdown;
+				this._openTransitionDropdown = this._openTransitionDropdown ? false : true;
+				group = this._transitionDropdownGroup;
 		}
 
 		if (target.textContent == "▼") {
@@ -1262,7 +1276,13 @@ export class SongEditor {
 			this._instrumentSettingsGroup.appendChild(this._instrumentCopyGroup);
 			this._instrumentSettingsGroup.insertBefore(this._instrumentSelectRow, this._instrumentSettingsGroup.firstChild);
 			this._instrumentSettingsGroup.insertBefore(this._instrumentSettingsTextRow, this._instrumentSettingsGroup.firstChild);
-			this._instrumentSettingsTextRow.textContent = "Instrument Settings";
+
+			if (this._doc.song.channels[this._doc.channel].name == "") {
+				this._instrumentSettingsTextRow.textContent = "Instrument Settings";
+			}
+			else {
+				this._instrumentSettingsTextRow.textContent = this._doc.song.channels[this._doc.channel].name;
+			}
 
 			this._modulatorGroup.style.display = "none";
 
@@ -1363,6 +1383,7 @@ export class SongEditor {
 					this._chipWaveSelectRow.style.display = "none";
 					this._drumsetGroup.style.display = "";
 					this._transitionRow.style.display = "none";
+					this._transitionDropdownGroup.style.display = "none";
 					this._chordSelectRow.style.display = "none";
 					this._chordDropdownGroup.style.display = "none";
 					this._filterCutoffRow.style.display = "none";
@@ -1375,6 +1396,7 @@ export class SongEditor {
 				} else {
 					this._drumsetGroup.style.display = "none";
 					this._transitionRow.style.display = "";
+					this._transitionDropdownGroup.style.display = (this._openTransitionDropdown ? "" : "none");
 					this._chordSelectRow.style.display = "";
 					this._chordDropdownGroup.style.display = (this._openChordDropdown && instrument.chord == 2 ? "" : "none");
 					this._chordDropdown.style.display = (instrument.chord == 2 ? "" : "none");
@@ -1557,7 +1579,12 @@ export class SongEditor {
 			this._modulatorGroup.appendChild(this._instrumentCopyGroup);
 			this._modulatorGroup.insertBefore(this._instrumentSelectRow, this._modulatorGroup.firstChild);
 			this._modulatorGroup.insertBefore(this._instrumentSettingsTextRow, this._modulatorGroup.firstChild);
-			this._instrumentSettingsTextRow.textContent = "Modulator Settings";
+			if (this._doc.song.channels[this._doc.channel].name == "") {
+				this._instrumentSettingsTextRow.textContent = "Modulator Settings";
+			}
+			else {
+				this._instrumentSettingsTextRow.textContent = this._doc.song.channels[this._doc.channel].name;
+			}
 
 			this._chipNoiseSelectRow.style.display = "none";
 			this._chipWaveSelectRow.style.display = "none";
@@ -1951,6 +1978,8 @@ export class SongEditor {
 		this._panSlider.updateValue(instrument.pan);
 		this._detuneSlider.updateValue(instrument.detune);
 		this._twoNoteArpBox.checked = instrument.fastTwoNoteArp ? true : false;
+		this._tieNoteTransitionBox.checked = instrument.tieNoteTransition ? true : false;
+		this._clicklessTransitionBox.checked = instrument.clicklessTransition ? true : false;
 		setSelectedValue(this._instrumentSelect, instrumentIndex);
 
 		this._volumeSlider.updateValue(this._doc.volume);

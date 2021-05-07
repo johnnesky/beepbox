@@ -327,6 +327,8 @@ export class ExportPrompt implements Prompt {
 				this.synth.nextBar();
 			}
 		}
+
+		this.synth.warmUpSynthesizer(this._doc.song);
 		this.synth.computeLatestModValues();
 
 		this.sampleFrames = this.synth.getTotalSamples(this._enableIntro.checked, this._enableOutro.checked, this.synth.loopRepeatCount);

@@ -322,6 +322,18 @@ export class TipPrompt implements Prompt {
 					p("Most modulators behave as you'd expect and work just as if you were moving their associated slider. But with the special setting 'Next Bar', the first note you lay will cause the playhead to skip the rest of the bar and jump right to the next one."),
 				);
 			} break;
+			case "transitionBar": {
+				message = div(
+					h2("Tie Notes Over Bars"),
+					p("With this option ticked, notes won't transition across bars if you put notes with the same pitches at the start of the next bar. Instead they will 'tie over' and sound like one long note."),
+				);
+			} break;
+			case "clicklessTransition": {
+				message = div(
+					h2("Clickless Transition"),
+					p("Sometimes, seamless and other transition types can make audible 'clicks' when changing between notes. Ticking this option will cause those clicks to be silenced as much as possible."),
+				);
+			} break;
 
 			default: throw new Error("Unhandled TipPrompt type: " + type);
 		}

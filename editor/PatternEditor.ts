@@ -993,7 +993,7 @@ export class PatternEditor {
 							if (pattern.notes[i].start >= end) break;
 						}
 						const theNote: Note = new Note(this._cursor.pitch, start, end,
-							this._doc.song.getVolumeCap(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), this._cursor.pitch),
+							this._doc.song.getNewNoteVolume(this._doc.song.getChannelIsMod(this._doc.channel), this._doc.channel, this._doc.getCurrentInstrument(this._barOffset), this._cursor.pitch),
 							this._doc.song.getChannelIsNoise(this._doc.channel));
 						sequence.append(new ChangeNoteAdded(this._doc, pattern, theNote, i));
 						this._copyPins(theNote);
