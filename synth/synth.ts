@@ -651,6 +651,8 @@ export class Instrument {
         this.panDelay = 10;
         this.arpeggioSpeed = 12;
         this.detune = 0;
+        this.tieNoteTransition = false;
+        this.clicklessTransition = false;
         switch (type) {
             case InstrumentType.chip:
                 this.chipWave = 2;
@@ -2002,7 +2004,7 @@ export class Song {
 
             const octaveOffset: number = (isNoiseChannel || isModChannel) ? 0 : this.channels[channel].octave * 12;
             let lastPitch: number = ((isNoiseChannel || isModChannel) ? 4 : 12) + octaveOffset;
-            const recentPitches: number[] = isModChannel ? [0, 1, 2, 3, 4, 5] : (isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0]);
+            const recentPitches: number[] = isModChannel ? [0, 1, 2, 3, 4, 5] : (isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0] : [12, 19, 24, 31, 36, 7, 0]);
             const recentShapes: any[] = [];
 
             for (let i: number = 0; i < recentPitches.length; i++) {
