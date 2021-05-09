@@ -4665,8 +4665,6 @@ export class Synth {
                             }
                         }
 
-                        console.log(this.tyingOver[channel]);
-
                         for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
                             const tone: Tone = this.activeTones[channel].get(i);
                             const transition: Transition = tone.instrument.getTransition();
