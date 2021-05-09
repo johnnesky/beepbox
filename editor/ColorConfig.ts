@@ -708,7 +708,7 @@ export class ColorConfig {
 			--primary-text: #fff;
 			--secondary-text: #acacac;
 			--inverted-text: #290505;
-			--text-selection: rgba(155, 155, 155 0.99);
+			--text-selection: rgba(155, 155, 155, 0.99);
 			--box-selection-fill: #79797970;
 			--loop-accent: #646464;
 			--link-accent: #707070;

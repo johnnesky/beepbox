@@ -1515,8 +1515,13 @@ export class SongEditor {
 			this._vibratoSpeedSlider.updateValue(instrument.vibratoSpeed);
 			setSelectedValue(this._vibratoTypeSelect, instrument.vibratoType);
 			this._arpeggioSpeedSlider.updateValue(instrument.arpeggioSpeed);
-
 			this._panDelaySlider.updateValue(instrument.panDelay);
+			this._vibratoDelaySlider.input.title = "" + instrument.vibratoDelay;
+			this._vibratoDepthSlider.input.title = "" + instrument.vibratoDepth;
+			this._vibratoSpeedSlider.input.title = "" + instrument.vibratoSpeed;
+			this._panDelaySlider.input.title = "" + instrument.panDelay;
+			this._arpeggioSpeedSlider.input.title = "x" + prettyNumber(Config.arpSpeedScale[instrument.arpeggioSpeed]);
+
 			if (instrument.type == InstrumentType.customChipWave) {
 				this._customWaveDrawCanvas.redrawCanvas();
 

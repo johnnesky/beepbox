@@ -2004,7 +2004,7 @@ export class Song {
 
             const octaveOffset: number = (isNoiseChannel || isModChannel) ? 0 : this.channels[channel].octave * 12;
             let lastPitch: number = ((isNoiseChannel || isModChannel) ? 4 : 12) + octaveOffset;
-            const recentPitches: number[] = isModChannel ? [0, 1, 2, 3, 4, 5] : (isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0] : [12, 19, 24, 31, 36, 7, 0]);
+            const recentPitches: number[] = isModChannel ? [0, 1, 2, 3, 4, 5] : (isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0]);
             const recentShapes: any[] = [];
 
             for (let i: number = 0; i < recentPitches.length; i++) {
@@ -2876,7 +2876,7 @@ export class Song {
                     let note: Note | null = null;
                     let pin: NotePin | null = null;
                     let lastPitch: number = ((isNoiseChannel || isModChannel) ? 4 : 12) + octaveOffset;
-                    const recentPitches: number[] = isModChannel ? [0, 1, 2, 3, 4, 5] : (isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0] : [12, 19, 24, 31, 36, 7, 0]);
+                    const recentPitches: number[] = isModChannel ? [0, 1, 2, 3, 4, 5] : (isNoiseChannel ? [4, 6, 7, 2, 3, 8, 0, 10] : [12, 19, 24, 31, 36, 7, 0]);
                     const recentShapes: any[] = [];
                     for (let i: number = 0; i < recentPitches.length; i++) {
                         recentPitches[i] += octaveOffset;
@@ -4136,11 +4136,6 @@ export class Synth {
         this.tick = 0;
         this.tickSampleCountdown = samplesPerTick;
 
-        // Reset note ties
-        for ( let channel: number = 0; channel < this.song.pitchChannelCount + this.song.noiseChannelCount; channel++ ) {
-            this.tyingOver[channel] = -1;
-        }
-
         if (this.loopRepeatCount != 0 && this.bar == this.song.loopStart + this.song.loopLength) {
             this.bar = this.song.loopStart;
             if (this.loopRepeatCount > 0) this.loopRepeatCount--;
@@ -4644,8 +4639,18 @@ export class Synth {
                                                 i = nextPattern.notes.length;
                                                 
                                                 if ( carryOver ) {
+                                                    // Prior to an actual tie, all releasing for hard transitions also needs to be
+                                                    // cancelled. So, this check is ran a few parts before the end of a bar too.
+                                                    // In those cases, just set tyingOver to 0 for that duration to cancel release
+                                                    // handling, but not affect note start time calculations.
+                                                    if ( this.part + this.beat * Config.partsPerBeat < this.findPartsInBar(this.bar) ) {
+                                                        // Only does this if it is needed, so if we're long tying (next else-if below) then don't ruin the math.
+                                                        if ( isNaN(this.tyingOver[channel]) || this.tyingOver[channel] < 0 ) {
+                                                            this.tyingOver[channel] = 0;
+                                                        }
+                                                    }
                                                     // Special case: tying over a whole bar, just add the length.
-                                                    if ( currNote.start == 0 && this.tyingOver[channel] >= 0 ) {
+                                                    else if ( currNote.start == 0 && this.tyingOver[channel] >= 0 ) {
                                                         this.tyingOver[channel] += this.part + this.beat * Config.partsPerBeat;
                                                     }
                                                     else {
@@ -4660,13 +4665,15 @@ export class Synth {
                             }
                         }
 
+                        console.log(this.tyingOver[channel]);
+
                         for (let i: number = 0; i < this.activeTones[channel].count(); i++) {
                             const tone: Tone = this.activeTones[channel].get(i);
                             const transition: Transition = tone.instrument.getTransition();
                             
                             if (tone.note != null && tone.note.end == this.part + this.beat * Config.partsPerBeat) {
                                 // Free tone if the transition allows
-                                if (!(transition.isSeamless || tone.instrument.clicklessTransition || carryOver)) {
+                                if (!(transition.isSeamless || tone.instrument.clicklessTransition || this.tyingOver[channel] >= 0)) {
                                     if (transition.releases) {
                                         this.releaseTone(channel, tone);
                                     } else {
@@ -4984,12 +4991,7 @@ export class Synth {
                     this.syncTones(channel, toneList, instrument, (notes[mod] as Note).pitches, (notes[mod] as Note), (prevNotes[mod] as Note), (nextNotes[mod] as Note), time);
                 } else {
                     while (toneList.count() > 0) {
-                        // Automatically free or release seamless tones if there's no new note to take over.
-                        if (toneList.peakBack().instrument.getTransition().releases) {
-                            this.releaseTone(channel, toneList.popBack());
-                        } else {
-                            this.freeTone(toneList.popBack());
-                        }
+                        this.freeTone(toneList.popBack());
                     }
                 }
             }
@@ -5021,7 +5023,7 @@ export class Synth {
             } else {
                 while (toneList.count() > 0) {
                     // Automatically free or release seamless tones if there's no new note to take over.
-                    if (toneList.peakBack().instrument.getTransition().releases) {
+                    if (toneList.peakBack().instrument.getTransition().releases && this.tyingOver[channel] < 0) {
                         this.releaseTone(channel, toneList.popBack());
                     } else {
                         this.freeTone(toneList.popBack());
@@ -5067,7 +5069,7 @@ export class Synth {
                 let noteStart: number = noteForThisTone.start + strumOffsetParts - Math.max(0, this.tyingOver[channel] || 0);
 
                 if (noteStart > currentPart) {
-                    if (toneList.count() > i && transition.isSeamless && prevNoteForThisTone != null) {
+                    if (toneList.count() > i && (transition.isSeamless || this.tyingOver[channel] >= 0 ) && prevNoteForThisTone != null) {
                         nextNoteForThisTone = noteForThisTone;
                         noteForThisTone = prevNoteForThisTone;
                         prevNoteForThisTone = null;
@@ -5078,9 +5080,10 @@ export class Synth {
                 }
 
                 let noteEnd: number = noteForThisTone.end;
-                if (transition.isSeamless && nextNoteForThisTone != null) {
+                if ((transition.isSeamless || this.tyingOver[channel] >= 0 ) && nextNoteForThisTone != null) {
                     noteEnd = Math.min(Config.partsPerBeat * this.song!.beatsPerBar, noteEnd + strumOffsetParts);
                 }
+
 
                 let tone: Tone;
                 if (toneList.count() <= i) {
@@ -5108,7 +5111,7 @@ export class Synth {
 
         while (toneList.count() > toneCount) {
             // Automatically free or release seamless tones if there's no new note to take over.
-            if (toneList.peakBack().instrument.getTransition().releases) {
+            if (toneList.peakBack().instrument.getTransition().releases && this.tyingOver[channel] < 0) {
                 this.releaseTone(channel, toneList.popBack());
             } else {
                 this.freeTone(toneList.popBack());
@@ -5425,7 +5428,7 @@ export class Synth {
                         chordVolumeTickEnd = Synth.computeChordVolume(tone.chordSize + slideRatioEndTick * chordSizeDiff);
                     }
                 }
-            } else if (!transition.releases) {
+            } else if (!(transition.releases && synth.tyingOver[channel] < 0 )) {
                 const releaseTicks: number = transition.releaseTicks;
                 if (releaseTicks > 0.0) {
                     transitionVolumeTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / releaseTicks);
