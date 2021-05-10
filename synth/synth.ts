@@ -4233,7 +4233,13 @@ export class Synth {
         }
         this.activeTones.length = channelCount;
         this.releasedTones.length = channelCount;
-        this.tyingOver.length = channelCount;
+        if ( channelCount != this.tyingOver.length ) {
+            let idx: number = this.tyingOver.length;
+            this.tyingOver.length = channelCount;
+            while ( idx < this.tyingOver.length ) {
+                this.tyingOver[idx++] = -1;
+            }
+        }
 
         for (let i: number = this.activeModTones.length; i < this.song.modChannelCount; i++) {
             this.activeModTones[i] = [];
@@ -4645,7 +4651,7 @@ export class Synth {
                                                     // handling, but not affect note start time calculations.
                                                     if ( this.part + this.beat * Config.partsPerBeat < this.findPartsInBar(this.bar) ) {
                                                         // Only does this if it is needed, so if we're long tying (next else-if below) then don't ruin the math.
-                                                        if ( isNaN(this.tyingOver[channel]) || this.tyingOver[channel] < 0 ) {
+                                                        if ( this.tyingOver[channel] < 0 ) {
                                                             this.tyingOver[channel] = 0;
                                                         }
                                                     }
@@ -5050,7 +5056,7 @@ export class Synth {
             tone.chordSize = 1;
             tone.instrument = instrument;
             tone.note = note;
-            tone.noteStart = note.start - Math.max(0, this.tyingOver[channel] || 0);
+            tone.noteStart = note.start - Math.max(0, this.tyingOver[channel]);
             tone.noteEnd = note.end;
             tone.prevNote = prevNote;
             tone.nextNote = nextNote;
@@ -5064,14 +5070,14 @@ export class Synth {
                 let prevNoteForThisTone: Note | null = (prevNote && prevNote.pitches.length > i) ? prevNote : null;
                 let noteForThisTone: Note = note;
                 let nextNoteForThisTone: Note | null = (nextNote && nextNote.pitches.length > i) ? nextNote : null;
-                let noteStart: number = noteForThisTone.start + strumOffsetParts - Math.max(0, this.tyingOver[channel] || 0);
+                let noteStart: number = noteForThisTone.start + strumOffsetParts - Math.max(0, this.tyingOver[channel]);
 
                 if (noteStart > currentPart) {
                     if (toneList.count() > i && (transition.isSeamless || this.tyingOver[channel] >= 0 ) && prevNoteForThisTone != null) {
                         nextNoteForThisTone = noteForThisTone;
                         noteForThisTone = prevNoteForThisTone;
                         prevNoteForThisTone = null;
-                        noteStart = noteForThisTone.start + strumOffsetParts - Math.max(0, this.tyingOver[channel] || 0) ;
+                        noteStart = noteForThisTone.start + strumOffsetParts - Math.max(0, this.tyingOver[channel]) ;
                     } else {
                         break;
                     }
