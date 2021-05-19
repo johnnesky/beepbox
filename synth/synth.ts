@@ -3488,7 +3488,6 @@ class Tone {
 }
 
 export class Synth {
-    //debugVal: number = 0;
 
     public warmUpSynthesizer(song: Song | null): void {
         // Don't bother to generate the drum waves unless the song actually
@@ -3607,6 +3606,7 @@ export class Synth {
     public loopRepeatCount: number = -1;
     public volume: number = 1.0;
 
+    private wantToSkip: boolean = false;
     private playheadInternal: number = 0.0;
     private bar: number = 0;
     private beat: number = 0;
@@ -4352,8 +4352,12 @@ export class Synth {
                             this.playTone(this.song, stereoBufferIndex, stereoBufferLength, channel, samplesPerTick, runLength, tone, false, false);
                     }
                 }
-                // Could do released mod tones here too, but that functionality is unused currently.
-                /* for (let i: number = 0; i < this.releasedModtones[channel].count(); i++) { ... */
+            }
+
+            // Handle next bar mods if they were set
+            if ( this.wantToSkip ) {
+                this.wantToSkip = false;
+                this.skipBar();
             }
 
             if (this.isModActive(ModSetting.mstReverb, true)) {
@@ -4766,6 +4770,7 @@ export class Synth {
                     }
                 }
             }
+
         }
 
         // Optimization: Avoid persistent reverb values in the float denormal range.
@@ -6626,7 +6631,7 @@ const operator#Scaled   = operator#OutputMult * operator#Output;
             synth.song.channels[instrument.modChannels[mod]].instruments[instrument.modInstruments[mod]].arpTime = 0;
         }
         else if (setting == ModSetting.mstNextBar) {
-            synth.skipBar();
+            synth.wantToSkip = true;
         }
     }
 
