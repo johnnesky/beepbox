@@ -358,3 +358,4 @@
 √ BPM is now precise.
 √ Hold shift (or long press on touch screen) and drag in pattern editor to select part of it. Pattern selection can be dragged, copied, and pasted.
 √ Replaced lowpass cutoff/resonance system with a more flexible filter biquad stacking system.
+√ Added electric guitar instrument type.

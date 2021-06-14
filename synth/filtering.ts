@@ -60,7 +60,8 @@ samples:
 	y[2] = y[1];
 	y[1] = y[0];
 
-You can compose multiple filters into a higher order filter like this:
+You can compose multiple filters into a higher order filter, although doing so
+reduces the numerical stability of the filter:
 
 	filter3.combination(filter1, filter2);
 	// filter3.order will equal: filter1.order + filter2.order
@@ -122,7 +123,7 @@ and downwards once per period and the direction is ambigous. This is where we
 need to move into the complex number domain, where the real and imaginary
 components can provide enough information to compute the previous position on
 the input signal. So now instead of talking about sine waves, we're talking
-about waves where the real component is a sine wave and the complex component
+about waves where the imaginary component is a sine wave and the real component
 is a cosine wave at the same frequency. Together, they trace around a unit
 circle in the complex domain, and each sample is just a consistent rotation
 applied to the previous sample. The "delay operator" described above, z^-1, is
@@ -188,11 +189,11 @@ create extra resonance.
 
 export class FilterCoefficients {
 	public readonly a: number[] = [1.0]; // output coefficients (negated, keep a[0]=1)
-	public readonly b: number[] = [1.0]; // input coefficients (not negated)
+	public readonly b: number[] = [1.0]; // input coefficients
 	public order: number = 0;
 	
-	public linearGainZeroOrder(linearGain: number): void {
-		//a[0] = 1.0;
+	public linearGain0thOrder(linearGain: number): void {
+		//a[0] = 1.0; // a0 should always be normalized to 1.0, no need to assign it directly.
 		this.b[0] = linearGain;
 		this.order = 0;
 	}
@@ -200,11 +201,10 @@ export class FilterCoefficients {
 	public lowPass1stOrderButterworth(cornerRadiansPerSample: number): void {
 		// First-order Butterworth low-pass filter according to:
 		// https://www.researchgate.net/publication/338022014_Digital_Implementation_of_Butterworth_First-Order_Filter_Type_IIR
-		const g: number = 2.0 * Math.tan(cornerRadiansPerSample * 0.5);
-		const a0: number = g + 2.0;
-		this.a[1] = (g - 2.0) / a0;
-		this.b[0] = g / a0;
-		this.b[1] = g / a0;
+		const g: number = 1.0 / Math.tan(cornerRadiansPerSample * 0.5);
+		const a0: number = 1.0 + g;
+		this.a[1] = (1.0 - g) / a0;
+		this.b[1] = this.b[0] = 1 / a0;
 		this.order = 1;
 	}
 	
@@ -214,24 +214,39 @@ export class FilterCoefficients {
 		// then the output is the same as the input, and if the cutoff is higher
 		// than that, then the output actually resonates at high frequencies
 		// instead of attenuating.
+		// I'm guessing this filter was converted from analog to digital using
+		// the "matched z-transform" method instead of the "bilinear transform"
+		// method. The difference is that the bilinear transform warps
+		// frequencies so that the lowpass response of zero at analogue ∞hz maps
+		// to the digital nyquist frequency, whereas the matched z-transform
+		// preserves the frequency of the filter response but also adds the
+		// reflected response from above the nyquist frequency.
 		const g: number = 2.0 * Math.sin(cornerRadiansPerSample * 0.5);
 		this.a[1] = g - 1.0;
 		this.b[0] = g;
 		this.b[1] = 0.0;
+		/*
+		// Alternatively:
+		const g: number = 1.0 / (2.0 * Math.sin(cornerRadiansPerSample / 2));
+		const a0: number = g;
+		this.a[1] = (1.0 - g) / a0;
+		this.b[0] = 1.0 / a0;
+		this.b[1] = 0.0 / a0;
+		*/
 		this.order = 1;
 	}
 	
 	public highPass1stOrderButterworth(cornerRadiansPerSample: number): void {
 		// First-order Butterworth high-pass filter according to:
 		// https://www.researchgate.net/publication/338022014_Digital_Implementation_of_Butterworth_First-Order_Filter_Type_IIR
-		const g: number = 2.0 * Math.tan(cornerRadiansPerSample * 0.5);
-		const a0: number = g + 2.0;
-		this.a[1] = (g - 2.0) / a0;
-		this.b[0] = 2.0 / a0;
-		this.b[1] = -2.0 / a0;
+		const g: number = 1.0 / Math.tan(cornerRadiansPerSample * 0.5);
+		const a0: number = 1.0 + g;
+		this.a[1] = (1.0 - g) / a0;
+		this.b[0] = g / a0;
+		this.b[1] = -g / a0;
 		this.order = 1;
 	}
-	
+	/*
 	public highPass1stOrderSimplified(cornerRadiansPerSample: number): void {
 		// The output of this filter is nearly identical to the 1st order
 		// Butterworth high-pass above, except it resonates when the cutoff
@@ -242,9 +257,50 @@ export class FilterCoefficients {
 		this.b[1] = -1.0;
 		this.order = 1;
 	}
+	*/
+	public highShelf1stOrder(cornerRadiansPerSample: number, shelfLinearGain: number): void {
+		// I had trouble figuring this one out because I couldn't find any
+		// online algorithms that I understood. There are 3 degrees of freedom
+		// and I could narrow down a couple of them based on the desired gain at
+		// DC and nyquist, but getting the cutoff frequency correct took a
+		// little bit of trial and error in my attempts to interpret page 53 of
+		// this chapter: http://www.music.mcgill.ca/~ich/classes/FiltersChap2.pdf
+		// Obviously I don't fully understand the bilinear transform yet!
+		const tan: number = Math.tan(cornerRadiansPerSample * 0.5);
+		const sqrtGain: number = Math.sqrt(shelfLinearGain);
+		const g: number = (tan * sqrtGain - 1) / (tan * sqrtGain + 1.0);
+		const a0: number = 1.0;
+		this.a[1] = g / a0;
+		this.b[0] = (1.0 + g + shelfLinearGain * (1.0 - g)) / (2.0 * a0);
+		this.b[1] = (1.0 + g - shelfLinearGain * (1.0 - g)) / (2.0 * a0);
+		this.order = 1;
+	}
 	
-	public allPass1stOrder(cornerRadiansPerSample: number): void {
+	public allPass1stOrderInvertPhaseAbove(cornerRadiansPerSample: number): void {
 		const g: number = (Math.sin(cornerRadiansPerSample) - 1.0) / Math.cos(cornerRadiansPerSample);
+		this.a[1] = g;
+		this.b[0] = g;
+		this.b[1] = 1.0;
+		this.order = 1;
+	}
+	
+	/*
+	// I haven't found a practical use for this version of the all pass filter.
+	// It seems to create a weird subharmonic when used in a delay feedback loop.
+	public allPass1stOrderInvertPhaseBelow(cornerRadiansPerSample: number): void {
+		const g: number = (Math.sin(cornerRadiansPerSample) - 1.0) / Math.cos(cornerRadiansPerSample);
+		this.a[1] = g;
+		this.b[0] = -g;
+		this.b[1] = -1.0;
+		this.order = 1;
+	}
+	*/
+	
+	public allPass1stOrderFractionalDelay(delay: number) {
+		// Very similar to allPass1stOrderInvertPhaseAbove, but configured
+		// differently and for a different purpose! Useful for interpolating
+		// between samples in a delay line.
+		const g: number = (1.0 - delay) / (1.0 + delay);
 		this.a[1] = g;
 		this.b[0] = g;
 		this.b[1] = 1.0;
@@ -262,9 +318,8 @@ export class FilterCoefficients {
 		const a0: number = 1.0 + alpha;
 		this.a[1] = -2.0*cos / a0;
 		this.a[2] = (1 - alpha) / a0;
-		this.b[0] = (1 - cos) / (2.0*a0);
+		this.b[2] = this.b[0] = (1 - cos) / (2.0*a0);
 		this.b[1] = (1 - cos) / a0;
-		this.b[2] = (1 - cos) / (2.0*a0);
 		this.order = 2;
 	}
 	
@@ -292,12 +347,11 @@ export class FilterCoefficients {
 		const a0: number = 1.0 + alpha;
 		this.a[1] = -2.0*cos / a0;
 		this.a[2] = (1.0 - alpha) / a0;
-		this.b[0] = (1.0 + cos) / (2.0*a0);
-		this.b[1] =-(1.0 + cos) / a0;
-		this.b[2] = (1.0 + cos) / (2.0*a0);
+		this.b[2] = this.b[0] = (1.0 + cos) / (2.0*a0);
+		this.b[1] = -(1.0 + cos) / a0;
 		this.order = 2;
 	}
-	
+	/*
 	public highPass2ndOrderSimplified(cornerRadiansPerSample: number, peakLinearGain: number): void {
 		const g: number = 2.0 * Math.sin(cornerRadiansPerSample * 0.5);
 		const filterResonance: number = 1.0 - 1.0 / (2.0 * peakLinearGain);
@@ -309,7 +363,7 @@ export class FilterCoefficients {
 		this.b[2] = 1.0;
 		this.order = 2;
 	}
-	
+	*/
 	public peak2ndOrder(cornerRadiansPerSample: number, peakLinearGain: number, bandWidthScale: number): void {
 		const sqrtGain: number = Math.sqrt(peakLinearGain);
 		const bandWidth: number = bandWidthScale * cornerRadiansPerSample / (sqrtGain >= 1 ? sqrtGain : 1/sqrtGain);
@@ -402,7 +456,7 @@ export class FrequencyResponse {
 	}
 }
 
-export class FilterBiquad {
+export class DynamicBiquadFilter {
 	public a1: number = 0.0;
 	public a2: number = 0.0;
 	public b0: number = 1.0;

@@ -508,6 +508,7 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 									} else if (instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics) {
 										instrumentProgram = instrumentDecays ? 2 : 81; // electric grand : sawtooth
 									} else {
+										// TODO: Handle electric guitar instruments.
 										throw new Error("Unrecognized instrument type.");
 									}
 								}
@@ -552,13 +553,10 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 							const preset: Preset | null = EditorConfig.valueToPreset(instrument.preset);
 							writeInstrumentSettings(instrumentIndex);
 							
-							let chordHarmonizes: boolean = false;
-							let usesArpeggio: boolean = true;
+							let usesArpeggio: boolean = instrument.getChord().arpeggiates;
 							let polyphony: number = 1;
-							chordHarmonizes = instrument.getChord().harmonizes;
-							usesArpeggio = instrument.getChord().arpeggiates;
 							if (usesArpeggio) {
-								if (chordHarmonizes) {
+								if (instrument.getChord().customInterval) {
 									if (instrument.type == InstrumentType.chip) {
 										polyphony = 2;
 									} else if (instrument.type == InstrumentType.fm) {
@@ -576,12 +574,12 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 								
 								const noteStartTime: number = barStartTime + note.start * midiTicksPerPart;
 								let pinTime: number = noteStartTime;
-								let pinVolume: number = note.pins[0].volume;
+								let pinExpression: number = note.pins[0].expression;
 								let pinInterval: number = note.pins[0].interval;
 								const prevPitches: number[] = [-1, -1, -1, -1];
 								const nextPitches: number[] = [-1, -1, -1, -1];
 								const toneCount: number = Math.min(polyphony, note.pitches.length);
-								const velocity: number = isDrumset ? Math.max(1, Math.round(defaultNoteVelocity * note.pins[0].volume / 3)) : defaultNoteVelocity;
+								const velocity: number = isDrumset ? Math.max(1, Math.round(defaultNoteVelocity * note.pins[0].expression / 3)) : defaultNoteVelocity;
 								
 								// The maximum midi pitch bend range is +/- 24 semitones from the base pitch. 
 								// To make the most of this, choose a base pitch that is within 24 semitones from as much of the note as possible.
@@ -615,20 +613,20 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 								
 								for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
 									const nextPinTime: number = noteStartTime + note.pins[pinIndex].time * midiTicksPerPart;
-									const nextPinVolume: number = note.pins[pinIndex].volume;
+									const nextPinExpression: number = note.pins[pinIndex].expression;
 									const nextPinInterval: number = note.pins[pinIndex].interval;
 									
 									const length: number = nextPinTime - pinTime;
 									for (let midiTick: number = 0; midiTick < length; midiTick++) {
 										const midiTickTime: number = pinTime + midiTick;
-										const linearVolume: number = lerp(pinVolume, nextPinVolume, midiTick / length);
+										const linearExpression: number = lerp(pinExpression, nextPinExpression, midiTick / length);
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, midiTick / length);
 										
 										const interval: number = linearInterval * intervalScale - pitchOffset;
 										
 										const pitchBend: number = Math.max(0, Math.min(0x3fff, Math.round(0x2000 * (1.0 + interval / pitchBendRange))));
 										
-										const expression: number = Math.min(0x7f, Math.round(volumeMultToMidiExpression(Synth.expressionToVolumeMult(linearVolume))));
+										const expression: number = Math.min(0x7f, Math.round(volumeMultToMidiExpression(Synth.expressionToVolumeMult(linearExpression))));
 										
 										if (pitchBend != prevPitchBend) {
 											writeEventTime(midiTickTime);
@@ -704,7 +702,7 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 									}
 									
 									pinTime = nextPinTime;
-									pinVolume = nextPinVolume;
+									pinExpression = nextPinExpression;
 									pinInterval = nextPinInterval;
 								}
 

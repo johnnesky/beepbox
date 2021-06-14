@@ -33,6 +33,7 @@ export class FilterEditor {
 	);
 	private readonly _pointRadius: number = 2;
 	
+	private _useDistortionFilter: boolean = false;
 	private _touchMode: boolean = false;
 	private _mouseX: number = 0;
 	private _mouseY: number = 0;
@@ -55,7 +56,8 @@ export class FilterEditor {
 	private _renderedPointGains: number = -1;
 	//private _renderedKey: number = -1;
 	
-	constructor(private _doc: SongDocument) {
+	constructor(private _doc: SongDocument, useDistortionFilter: boolean = false) {
+		this._useDistortionFilter = useDistortionFilter;
 		/*
 		for (let i: number = 0; i < Config.filterFreqRange * Config.filterFreqStep; i++) {
 			this._octaves.appendChild(SVG.rect({fill: ColorConfig.tonic, x: i * this._editorWidth / (Config.filterFreqRange * Config.filterFreqStep) - 0.5, y: 0, width: 1, height: this._editorHeight}));
@@ -231,6 +233,7 @@ export class FilterEditor {
 	}
 	
 	private _whenCursorReleased = (event: Event): void => {
+		if (this.container.offsetParent == null) return;
 		if (this._mouseDown && this._doc.lastChangeWas(this._dragChange) && this._dragChange != null) {
 			if (!this._addingPoint && !this._mouseDragging && !this._touchMode) {
 				if (this._selectedIndex < this._filterSettings.controlPointCount && this._selectedIndex != -1) {
@@ -348,7 +351,7 @@ export class FilterEditor {
 	
 	public render(): void {
 		const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
-		const filterSettings: FilterSettings = instrument.filter;
+		const filterSettings: FilterSettings = this._useDistortionFilter ? instrument.distortionFilter : instrument.filter;
 		if (this._filterSettings != filterSettings) {
 			this._dragChange = null;
 			this._mouseDown = false;

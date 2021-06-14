@@ -6,7 +6,7 @@ import {ColorConfig} from "./ColorConfig";
 import {SongDocument} from "./SongDocument";
 import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 import {ChangeSequence, UndoableChange} from "./Change";
-import {ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeVolumeBend, ChangePitchBend, ChangePitchAdded} from "./changes";
+import {ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeExpressionBend, ChangePitchBend, ChangePitchAdded} from "./changes";
 import {prettyNumber} from "./EditorConfig";
 
 //namespace beepbox {
@@ -79,7 +79,7 @@ import {prettyNumber} from "./EditorConfig";
 		private _draggingSelectionContents: boolean = false;
 		private _dragTime: number = 0;
 		private _dragPitch: number = 0;
-		private _dragVolume: number = 0;
+		private _dragExpression: number = 0;
 		private _dragVisible: boolean = false;
 		private _dragChange: UndoableChange | null = null;
 		private _changePatternSelection: UndoableChange | null = null;
@@ -298,10 +298,10 @@ import {prettyNumber} from "./EditorConfig";
 					this._cursor.pins = [];
 					for (const oldPin of this._copiedPins) {
 						if (oldPin.time <= this._cursor.end - this._cursor.start) {
-							this._cursor.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
+							this._cursor.pins.push(makeNotePin(0, oldPin.time, oldPin.expression));
 							if (oldPin.time == this._cursor.end - this._cursor.start) break;
 						} else {
-							this._cursor.pins.push(makeNotePin(0, this._cursor.end - this._cursor.start, oldPin.volume));
+							this._cursor.pins.push(makeNotePin(0, this._cursor.end - this._cursor.start, oldPin.expression));
 							break;
 						}
 					}
@@ -366,11 +366,11 @@ import {prettyNumber} from "./EditorConfig";
 		private _copyPins(note: Note): void {
 			this._copiedPins = [];
 			for (const oldPin of note.pins) {
-				this._copiedPins.push(makeNotePin(0, oldPin.time, oldPin.volume));
+				this._copiedPins.push(makeNotePin(0, oldPin.time, oldPin.expression));
 			}
 			for (let i: number = 1; i < this._copiedPins.length - 1; ) {
-				if (this._copiedPins[i-1].volume == this._copiedPins[i].volume && 
-				    this._copiedPins[i].volume == this._copiedPins[i+1].volume)
+				if (this._copiedPins[i-1].expression == this._copiedPins[i].expression && 
+				    this._copiedPins[i].expression == this._copiedPins[i+1].expression)
 				{
 					this._copiedPins.splice(i, 1);
 				} else {
@@ -501,7 +501,7 @@ import {prettyNumber} from "./EditorConfig";
 				const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, 3, this._doc.song.getChannelIsNoise(this._doc.channel));
 				note.pins = [];
 				for (const oldPin of this._cursor.pins) {
-					note.pins.push(makeNotePin(0, oldPin.time, oldPin.volume));
+					note.pins.push(makeNotePin(0, oldPin.time, oldPin.expression));
 				}
 				sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
 				const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
@@ -731,7 +731,7 @@ import {prettyNumber} from "./EditorConfig";
 						
 							this._dragTime = backwards ? start : end;
 							this._dragPitch = this._cursor.pitch;
-							this._dragVolume = theNote.pins[backwards ? 0 : 1].volume;
+							this._dragExpression = theNote.pins[backwards ? 0 : 1].expression;
 							this._dragVisible = true;
 						}
 						
@@ -760,7 +760,7 @@ import {prettyNumber} from "./EditorConfig";
 							
 							this._dragTime = shiftedTime;
 							this._dragPitch = this._cursor.curNote.pitches[this._cursor.pitchIndex == -1 ? 0 : this._cursor.pitchIndex] + this._cursor.curNote.pins[this._cursor.nearPinIndex].interval;
-							this._dragVolume = this._cursor.curNote.pins[this._cursor.nearPinIndex].volume;
+							this._dragExpression = this._cursor.curNote.pins[this._cursor.nearPinIndex].expression;
 							this._dragVisible = true;
 							
 							sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, start, end, this._cursor.curNote));
@@ -779,32 +779,32 @@ import {prettyNumber} from "./EditorConfig";
 						
 						let prevPin: NotePin;
 						let nextPin: NotePin = this._cursor.curNote.pins[0];
-						let bendVolume: number = 0;
+						let bendExpression: number = 0;
 						let bendInterval: number = 0;
 						for (let i: number = 1; i < this._cursor.curNote.pins.length; i++) {
 							prevPin = nextPin;
 							nextPin = this._cursor.curNote.pins[i];
 							if (bendPart > nextPin.time) continue;
 							if (bendPart < prevPin.time) throw new Error();
-							const volumeRatio: number = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
-							bendVolume = Math.round(prevPin.volume * (1.0 - volumeRatio) + nextPin.volume * volumeRatio + ((this._mouseYStart - this._mouseY) / 25.0));
-							if (bendVolume < 0) bendVolume = 0;
-							if (bendVolume > 3) bendVolume = 3;
-							bendInterval = this._snapToPitch(prevPin.interval * (1.0 - volumeRatio) + nextPin.interval * volumeRatio + this._cursor.curNote.pitches[0], 0, Config.maxPitch) - this._cursor.curNote.pitches[0];
+							const expressionRatio: number = (bendPart - prevPin.time) / (nextPin.time - prevPin.time);
+							bendExpression = Math.round(prevPin.expression * (1.0 - expressionRatio) + nextPin.expression * expressionRatio + ((this._mouseYStart - this._mouseY) / 25.0));
+							if (bendExpression < 0) bendExpression = 0;
+							if (bendExpression > 3) bendExpression = 3;
+							bendInterval = this._snapToPitch(prevPin.interval * (1.0 - expressionRatio) + nextPin.interval * expressionRatio + this._cursor.curNote.pitches[0], 0, Config.maxPitch) - this._cursor.curNote.pitches[0];
 							break;
 						}
 						
 						this._dragTime = this._cursor.curNote.start + bendPart;
 						this._dragPitch = this._cursor.curNote.pitches[this._cursor.pitchIndex == -1 ? 0 : this._cursor.pitchIndex] + bendInterval;
-						this._dragVolume = bendVolume;
+						this._dragExpression = bendExpression;
 						this._dragVisible = true;
 						
-						sequence.append(new ChangeVolumeBend(this._doc, this._cursor.curNote, bendPart, bendVolume, bendInterval));
+						sequence.append(new ChangeExpressionBend(this._doc, this._cursor.curNote, bendPart, bendExpression, bendInterval));
 						this._copyPins(this._cursor.curNote);
 					} else {
 						sequence.append(new ChangePatternSelection(this._doc, 0, 0));
 						
-						this._dragVolume = this._cursor.curNote.pins[this._cursor.nearPinIndex].volume;
+						this._dragExpression = this._cursor.curNote.pins[this._cursor.nearPinIndex].expression;
 						
 						if (this._pattern == null) throw new Error();
 						
@@ -931,18 +931,18 @@ import {prettyNumber} from "./EditorConfig";
 					
 					let pathString: string = "";
 					
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0) - height) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0) + height) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y - radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
-					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y + radius * (this._dragVolume / 3.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragExpression / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragExpression / 3.0) - height) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragExpression / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragExpression / 3.0) + height) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragExpression / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y - radius * (this._dragExpression / 3.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragExpression / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x + width) + " " + prettyNumber(y + radius * (this._dragExpression / 3.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y - radius * (this._dragExpression / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y - radius * (this._dragExpression / 3.0)) + " ";
+					pathString += "M " + prettyNumber(x) + " " + prettyNumber(y + radius * (this._dragExpression / 3.0)) + " ";
+					pathString += "L " + prettyNumber(x - width) + " " + prettyNumber(y + radius * (this._dragExpression / 3.0)) + " ";
 					
 					this._svgPreview.setAttribute("d", pathString);
 				}
@@ -1108,7 +1108,7 @@ import {prettyNumber} from "./EditorConfig";
 						if (note.pitches.length > 1) {
 							const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 							const chord: Chord = instrument.getChord();
-							if (!chord.harmonizes || chord.arpeggiates || chord.strumParts > 0) {
+							if (chord.customInterval || chord.arpeggiates || chord.strumParts > 0) {
 								let oscillatorLabel: SVGTextElement = SVG.text();
 								oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
 								oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));
@@ -1126,13 +1126,13 @@ import {prettyNumber} from "./EditorConfig";
 			}
 		}
 		
-		private _drawNote(svgElement: SVGPathElement, pitch: number, start: number, pins: NotePin[], radius: number, showVolume: boolean, offset: number): void {
+		private _drawNote(svgElement: SVGPathElement, pitch: number, start: number, pins: NotePin[], radius: number, showExpression: boolean, offset: number): void {
 			const totalWidth: number = this._partWidth * (pins[pins.length - 1].time + pins[0].time);
 			const endOffset: number = 0.5 * Math.min(2, totalWidth - 1);
 			
 			let nextPin: NotePin = pins[0];
 			
-			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + endOffset) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showVolume ? nextPin.volume / 3.0 : 1.0)) + " ";
+			let pathString: string = "M " + prettyNumber(this._partWidth * (start + nextPin.time) + endOffset) + " " + prettyNumber(this._pitchToPixelHeight(pitch - offset) + radius * (showExpression ? nextPin.expression / 3.0 : 1.0)) + " ";
 			for (let i: number = 1; i < pins.length; i++) {
 				let prevPin: NotePin = nextPin;
 				nextPin = pins[i];
@@ -1140,12 +1140,12 @@ import {prettyNumber} from "./EditorConfig";
 				let nextSide: number = this._partWidth * (start + nextPin.time) - (i == pins.length - 1 ? endOffset : 0);
 				let prevHeight: number = this._pitchToPixelHeight(pitch + prevPin.interval - offset);
 				let nextHeight: number = this._pitchToPixelHeight(pitch + nextPin.interval - offset);
-				let prevVolume: number = showVolume ? prevPin.volume / 3.0 : 1.0;
-				let nextVolume: number = showVolume ? nextPin.volume / 3.0 : 1.0;
-				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
-				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(prevSide + 1) + " " + prettyNumber(prevHeight - radius * prevVolume) + " ";
-				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(nextSide - 1) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
-				pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight - radius * nextVolume) + " ";
+				let prevExpression: number = showExpression ? prevPin.expression / 3.0 : 1.0;
+				let nextExpression: number = showExpression ? nextPin.expression / 3.0 : 1.0;
+				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight - radius * prevExpression) + " ";
+				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(prevSide + 1) + " " + prettyNumber(prevHeight - radius * prevExpression) + " ";
+				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(nextSide - 1) + " " + prettyNumber(nextHeight - radius * nextExpression) + " ";
+				pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight - radius * nextExpression) + " ";
 			}
 			for (let i: number = pins.length - 2; i >= 0; i--) {
 				let prevPin: NotePin = nextPin;
@@ -1154,12 +1154,12 @@ import {prettyNumber} from "./EditorConfig";
 				let nextSide: number = this._partWidth * (start + nextPin.time) + (i == 0 ? endOffset : 0);
 				let prevHeight: number = this._pitchToPixelHeight(pitch + prevPin.interval - offset);
 				let nextHeight: number = this._pitchToPixelHeight(pitch + nextPin.interval - offset);
-				let prevVolume: number = showVolume ? prevPin.volume / 3.0 : 1.0;
-				let nextVolume: number = showVolume ? nextPin.volume / 3.0 : 1.0;
-				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
-				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(prevSide - 1) + " " + prettyNumber(prevHeight + radius * prevVolume) + " ";
-				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(nextSide + 1) + " " + prettyNumber(nextHeight + radius * nextVolume) + " ";
-				pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight + radius * nextVolume) + " ";
+				let prevExpression: number = showExpression ? prevPin.expression / 3.0 : 1.0;
+				let nextExpression: number = showExpression ? nextPin.expression / 3.0 : 1.0;
+				pathString += "L " + prettyNumber(prevSide) + " " + prettyNumber(prevHeight + radius * prevExpression) + " ";
+				if (prevPin.interval < nextPin.interval) pathString += "L " + prettyNumber(prevSide - 1) + " " + prettyNumber(prevHeight + radius * prevExpression) + " ";
+				if (prevPin.interval > nextPin.interval) pathString += "L " + prettyNumber(nextSide + 1) + " " + prettyNumber(nextHeight + radius * nextExpression) + " ";
+				pathString += "L " + prettyNumber(nextSide) + " " + prettyNumber(nextHeight + radius * nextExpression) + " ";
 			}
 			pathString += "z";
 			

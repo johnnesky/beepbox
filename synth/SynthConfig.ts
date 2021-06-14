@@ -56,6 +56,7 @@ SOFTWARE.
 		drumset = 4,
 		harmonics = 5,
 		pwm = 6,
+		guitar = 7,
 		length,
 	}
 	
@@ -82,12 +83,12 @@ SOFTWARE.
 	}
 
 	export interface ChipWave extends BeepBoxOption {
-		readonly volume: number;
+		readonly expression: number;
 		readonly samples: Float64Array;
 	}
 
 	export interface ChipNoise extends BeepBoxOption {
-		readonly volume: number;
+		readonly expression: number;
 		readonly basePitch: number;
 		readonly pitchFilterMult: number;
 		readonly isSoft: boolean;
@@ -106,22 +107,21 @@ SOFTWARE.
 	export interface Vibrato extends BeepBoxOption {
 		readonly amplitude: number;
 		readonly periodsSeconds: ReadonlyArray<number>;
-		readonly delayParts: number;
+		readonly delayTicks: number;
 	}
 
 	export interface Interval extends BeepBoxOption {
 		readonly spread: number;
 		readonly offset: number;
-		readonly volume: number;
+		readonly expression: number;
 		readonly sign: number;
 	}
 
 	export interface Chord extends BeepBoxOption {
-		readonly harmonizes: boolean;
 		readonly customInterval: boolean;
 		readonly arpeggiates: boolean;
-		readonly isCustomInterval: boolean;
 		readonly strumParts: number;
+		readonly singleTone: boolean;
 	}
 
 	export interface Algorithm extends BeepBoxOption {
@@ -194,27 +194,37 @@ SOFTWARE.
 			{name: "freehand",      stepsPerBeat:24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1]], roundUpThresholds: null},
 		]);
 		
-		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM"]; // See InstrumentType enum above.
-		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false];
+		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "Electric Guitar"]; // See InstrumentType enum above.
+		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false, false];
+		public static readonly chipBaseExpression:      number = 0.03375; // Doubled by interval feature, but affected by expression adjustments per interval setting and wave shape.
+		public static readonly fmBaseExpression:        number = 0.03;
+		public static readonly noiseBaseExpression:     number = 0.19;
+		public static readonly spectrumBaseExpression:  number = 0.3; // Spectrum can be in pitch or noise channels, the expression is doubled for noise.
+		public static readonly drumsetBaseExpression:   number = 0.45; // Drums tend to be loud but brief!
+		public static readonly harmonicsBaseExpression: number = 0.025;
+		public static readonly pwmBaseExpression:       number = 0.04725; // It's actually closer to half of this, the synthesized pulse amplitude range is only .5 to -.5, but also note that the fundamental sine partial amplitude of a square wave is 4/π times the measured square wave amplitude.
+		public static readonly guitarBaseExpression:    number = 0.03;
+		public static readonly distortionBaseVolume:    number = 0.0125; // Distortion is not affected by pitchDamping, which otherwise approximately halves expression for notes around the middle of the range.
+		
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
-			{name: "rounded",      volume: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
-			{name: "triangle",     volume: 1.0,  samples: centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0])},
-			{name: "square",       volume: 0.5,  samples: centerWave([1.0, -1.0])},
-			{name: "1/4 pulse",    volume: 0.5,  samples: centerWave([1.0, -1.0, -1.0, -1.0])},
-			{name: "1/8 pulse",    volume: 0.5,  samples: centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "sawtooth",     volume: 0.65, samples: centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0])},
-			{name: "double saw",   volume: 0.5,  samples: centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2])},
-			{name: "double pulse", volume: 0.4,  samples: centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0])},
-			{name: "spiky",        volume: 0.4,  samples: centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0])},
+			{name: "rounded",      expression: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
+			{name: "triangle",     expression: 1.0,  samples: centerWave([1.0/15.0, 3.0/15.0, 5.0/15.0, 7.0/15.0, 9.0/15.0, 11.0/15.0, 13.0/15.0, 15.0/15.0, 15.0/15.0, 13.0/15.0, 11.0/15.0, 9.0/15.0, 7.0/15.0, 5.0/15.0, 3.0/15.0, 1.0/15.0, -1.0/15.0, -3.0/15.0, -5.0/15.0, -7.0/15.0, -9.0/15.0, -11.0/15.0, -13.0/15.0, -15.0/15.0, -15.0/15.0, -13.0/15.0, -11.0/15.0, -9.0/15.0, -7.0/15.0, -5.0/15.0, -3.0/15.0, -1.0/15.0])},
+			{name: "square",       expression: 0.5,  samples: centerWave([1.0, -1.0])},
+			{name: "1/4 pulse",    expression: 0.5,  samples: centerWave([1.0, -1.0, -1.0, -1.0])},
+			{name: "1/8 pulse",    expression: 0.5,  samples: centerWave([1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0])},
+			{name: "sawtooth",     expression: 0.65, samples: centerWave([1.0/31.0, 3.0/31.0, 5.0/31.0, 7.0/31.0, 9.0/31.0, 11.0/31.0, 13.0/31.0, 15.0/31.0, 17.0/31.0, 19.0/31.0, 21.0/31.0, 23.0/31.0, 25.0/31.0, 27.0/31.0, 29.0/31.0, 31.0/31.0, -31.0/31.0, -29.0/31.0, -27.0/31.0, -25.0/31.0, -23.0/31.0, -21.0/31.0, -19.0/31.0, -17.0/31.0, -15.0/31.0, -13.0/31.0, -11.0/31.0, -9.0/31.0, -7.0/31.0, -5.0/31.0, -3.0/31.0, -1.0/31.0])},
+			{name: "double saw",   expression: 0.5,  samples: centerWave([0.0, -0.2, -0.4, -0.6, -0.8, -1.0, 1.0, -0.8, -0.6, -0.4, -0.2, 1.0, 0.8, 0.6, 0.4, 0.2])},
+			{name: "double pulse", expression: 0.4,  samples: centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0])},
+			{name: "spiky",        expression: 0.4,  samples: centerWave([1.0, -1.0, 1.0, -1.0, 1.0, 0.0])},
 		]);
 		// Noise waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
 		public static readonly chipNoises: DictionaryArray<ChipNoise> = toNameMap([
-			{name: "retro",   volume: 0.25, basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
-			{name: "white",   volume: 1.0,  basePitch: 69,  pitchFilterMult:    8.0, isSoft: true,  samples: null},
+			{name: "retro",   expression: 0.25, basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
+			{name: "white",   expression: 1.0,  basePitch: 69,  pitchFilterMult:    8.0, isSoft: true,  samples: null},
 			// The "clang" and "buzz" noises are based on similar noises in the modded beepbox! :D
-			{name: "clang",   volume: 0.4,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
-			{name: "buzz",    volume: 0.3,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
-			{name: "hollow",  volume: 1.5,  basePitch: 96,  pitchFilterMult:    1.0, isSoft: true,  samples: null},
+			{name: "clang",   expression: 0.4,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
+			{name: "buzz",    expression: 0.3,  basePitch: 69,  pitchFilterMult: 1024.0, isSoft: false, samples: null},
+			{name: "hollow",  expression: 1.5,  basePitch: 96,  pitchFilterMult:    1.0, isSoft: true,  samples: null},
 		]);
 		
 		public static readonly filterFreqMaxHz: number = 16000.0;
@@ -236,35 +246,38 @@ SOFTWARE.
 			{name: "hard fade",   isSeamless: false, attackSeconds: 0.0,    releases: true,  releaseTicks: 48, slides: false, slideTicks: 3},
 			{name: "medium fade", isSeamless: false, attackSeconds: 0.0125, releases: true,  releaseTicks: 72, slides: false, slideTicks: 3},
 			{name: "soft fade",   isSeamless: false, attackSeconds: 0.06,   releases: true,  releaseTicks: 96, slides: false, slideTicks: 6},
+			{name: "hard overlap",isSeamless: false, attackSeconds: 0.0,    releases: true,  releaseTicks: 12, slides: false, slideTicks: 3},
 		]);
 		public static readonly vibratos: DictionaryArray<Vibrato> = toNameMap([
-			{name: "none",    amplitude: 0.0,  periodsSeconds: [0.14], delayParts: 0},
-			{name: "light",   amplitude: 0.15, periodsSeconds: [0.14], delayParts: 0},
-			{name: "delayed", amplitude: 0.3,  periodsSeconds: [0.14], delayParts: 18},
-			{name: "heavy",   amplitude: 0.45, periodsSeconds: [0.14], delayParts: 0},
-			{name: "shaky",   amplitude: 0.1,  periodsSeconds: [0.11, 1.618*0.11, 3*0.11], delayParts: 0},
+			{name: "none",    amplitude: 0.0,  periodsSeconds: [0.14], delayTicks: 0},
+			{name: "light",   amplitude: 0.15, periodsSeconds: [0.14], delayTicks: 0},
+			{name: "delayed", amplitude: 0.3,  periodsSeconds: [0.14], delayTicks: 37}, // It will fade in over the previous two ticks.
+			{name: "heavy",   amplitude: 0.45, periodsSeconds: [0.14], delayTicks: 0},
+			{name: "shaky",   amplitude: 0.1,  periodsSeconds: [0.11, 1.618*0.11, 3*0.11], delayTicks: 0},
 		]);
 		public static readonly intervals: DictionaryArray<Interval> = toNameMap([
-			{name: "union",      spread: 0.0,  offset: 0.0, volume: 0.7, sign: 1.0},
-			{name: "shimmer",    spread: 0.018,offset: 0.0, volume: 0.8, sign: 1.0},
-			{name: "hum",        spread: 0.045,offset: 0.0, volume: 1.0, sign: 1.0},
-			{name: "honky tonk", spread: 0.09, offset: 0.0, volume: 1.0, sign: 1.0},
-			{name: "dissonant",  spread: 0.25, offset: 0.0, volume: 0.9, sign: 1.0},
-			{name: "fifth",      spread: 3.5,  offset: 3.5, volume: 0.9, sign: 1.0},
-			{name: "octave",     spread: 6.0,  offset: 6.0, volume: 0.8, sign: 1.0},
-			{name: "bowed",      spread: 0.02, offset: 0.0, volume: 1.0, sign:-1.0},
-			{name: "piano",      spread: 0.01, offset: 0.0, volume: 1.0, sign: 0.7},
+			{name: "union",      spread: 0.0,  offset: 0.0, expression: 0.7, sign: 1.0},
+			{name: "shimmer",    spread: 0.018,offset: 0.0, expression: 0.8, sign: 1.0},
+			{name: "hum",        spread: 0.045,offset: 0.0, expression: 1.0, sign: 1.0},
+			{name: "honky tonk", spread: 0.09, offset: 0.0, expression: 1.0, sign: 1.0},
+			{name: "dissonant",  spread: 0.25, offset: 0.0, expression: 0.9, sign: 1.0},
+			{name: "fifth",      spread: 3.5,  offset: 3.5, expression: 0.9, sign: 1.0},
+			{name: "octave",     spread: 6.0,  offset: 6.0, expression: 0.8, sign: 1.0},
+			{name: "bowed",      spread: 0.02, offset: 0.0, expression: 1.0, sign:-1.0},
+			{name: "piano",      spread: 0.01, offset: 0.0, expression: 1.0, sign: 0.7},
 		]);
 		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
 		public static readonly volumeRange: number = 8;
 		public static readonly volumeLogScale: number = -0.5;
 		public static readonly panCenter: number = 4;
 		public static readonly panMax: number = Config.panCenter * 2;
+		public static readonly panDelaySecondsMax: number = 0.00065;
+		public static readonly chorusDelayRange: number = 0.0034;
 		public static readonly chords: DictionaryArray<Chord> = toNameMap([
-			{name: "harmony",         harmonizes:  true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 0},
-			{name: "strum",           harmonizes:  true, customInterval: false, arpeggiates: false, isCustomInterval: false, strumParts: 1},
-			{name: "arpeggio",        harmonizes: false, customInterval: false, arpeggiates:  true, isCustomInterval: false, strumParts: 0},
-			{name: "custom interval", harmonizes:  true, customInterval:  true, arpeggiates:  true, isCustomInterval:  true, strumParts: 0},
+			{name: "harmony",         customInterval: false, arpeggiates: false, strumParts: 0, singleTone: false},
+			{name: "strum",           customInterval: false, arpeggiates: false, strumParts: 1, singleTone: false},
+			{name: "arpeggio",        customInterval: false, arpeggiates:  true, strumParts: 0, singleTone:  true},
+			{name: "custom interval", customInterval:  true, arpeggiates:  true, strumParts: 0, singleTone:  true},
 		]);
 		public static readonly maxChordSize: number = 4;
 		public static readonly operatorCount: number = 4;
@@ -346,6 +359,7 @@ SOFTWARE.
 			{name: "1→2→3→4",     indices: [ [], [1], [2], [3]]},
 		]);
 		public static readonly chipNoiseLength: number = 1 << 15; // 32768
+		public static readonly spectrumNoiseLength: number = 1 << 15; // 32768
 		public static readonly spectrumBasePitch: number = 24;
 		public static readonly spectrumControlPoints: number = 30;
 		public static readonly spectrumControlPointsPerOctave: number = 7;
@@ -357,6 +371,7 @@ SOFTWARE.
 		public static readonly harmonicsMax: number = (1 << Config.harmonicsControlPointBits) - 1;
 		public static readonly harmonicsWavelength: number = 1 << 11; // 2048
 		public static readonly pulseWidthRange: number = 8;
+		public static readonly pulseWidthStepPower: number = 0.5;
 		public static readonly pitchChannelCountMin: number = 1;
 		public static readonly pitchChannelCountMax: number = 6;
 		public static readonly noiseChannelCountMin: number = 0;
@@ -373,26 +388,41 @@ SOFTWARE.
 		public static readonly sineWaveLength: number = 1 << 8; // 256
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
 		public static readonly sineWave: Float64Array = generateSineWave();
+		
+		// Guitars have an all-pass filter with a corner frequency based on the tone fundamental frequency, in order to add a slight inharmonicity. (Which is important for distortion.)
+		public static readonly guitarDispersionCenterFreq: number = 6000.0; // The tone fundamental freq is pulled toward this freq for computing the all-pass corner freq.
+		public static readonly guitarDispersionFreqScale: number = 0.3; // The tone fundamental freq freq moves this much toward the center freq for computing the all-pass corner freq.
+		public static readonly guitarDispersionFreqMult: number = 4.0; // The all-pass corner freq is based on this times the adjusted tone fundamental freq.
+		public static readonly guitarShelfHz: number = 4000.0; // The cutoff freq of the shelf filter that is used to decay the high frequency energy in the guitar string.
+		public static readonly guitarPulseWidthRandomness: number = 0.1;
+		
+		public static readonly distortionRange: number = 8;
+		public static readonly sustainRange: number = 8;
 	}
 	
 	function centerWave(wave: Array<number>): Float64Array {
 		let sum: number = 0.0;
-		for (let i: number = 0; i < wave.length; i++) {
-			sum += wave[i];
-		}
+		for (let i: number = 0; i < wave.length; i++) sum += wave[i];
 		const average: number = sum / wave.length;
-		
-		// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
-		let cumulative: number = 0;
-		let wavePrev: number = 0;
-		for (let i: number = 0; i < wave.length; i++) {
-			cumulative += wavePrev;
-			wavePrev = wave[i] - average;
-			wave[i] = cumulative;
-		}
+		for (let i: number = 0; i < wave.length; i++) wave[i] -= average;
+		performIntegral(wave);
 		// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
 		wave.push(0);
 		return new Float64Array(wave);
+	}
+	
+	export function performIntegral(wave: {length: number, [index: number]: number}): void {
+		// Perform the integral on the wave. The synth function will perform the derivative to get the original wave back but with antialiasing.
+		let cumulative: number = 0.0;
+		for (let i: number = 0; i < wave.length; i++) {
+			const temp = wave[i];
+			wave[i] = cumulative;
+			cumulative += temp;
+		}
+	}
+	
+	export function getPulseWidthRatio(pulseWidth: number): number {
+		return Math.pow(0.5, (Config.pulseWidthRange - 1 - pulseWidth) * Config.pulseWidthStepPower) * 0.5;
 	}
 	
 	// The function arguments will be defined in FFT.ts, but I want
@@ -446,8 +476,8 @@ SOFTWARE.
 				}
 			} else if (index == 4) {
 				// "hollow" drums, designed in frequency space and then converted via FFT:
-				drawNoiseSpectrum(wave, 10, 11, 1, 1, 0);
-				drawNoiseSpectrum(wave, 11, 14, .6578, .6578, 0);
+				drawNoiseSpectrum(wave, Config.chipNoiseLength, 10, 11, 1, 1, 0);
+				drawNoiseSpectrum(wave, Config.chipNoiseLength, 11, 14, .6578, .6578, 0);
 				inverseRealFourierTransform!(wave, Config.chipNoiseLength);
 				scaleElementsByFactor!(wave, 1.0 / Math.sqrt(Config.chipNoiseLength));
 			} else {
@@ -460,19 +490,17 @@ SOFTWARE.
 		return wave;
 	}
 	
-	export function drawNoiseSpectrum(wave: Float32Array, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overallSlope: number): number {
+	export function drawNoiseSpectrum(wave: Float32Array, waveLength: number, lowOctave: number, highOctave: number, lowPower: number, highPower: number, overallSlope: number): number {
 		const referenceOctave: number = 11;
 		const referenceIndex: number = 1 << referenceOctave;
 		const lowIndex: number = Math.pow(2, lowOctave) | 0;
-		const highIndex: number = Math.min(Config.chipNoiseLength >> 1, Math.pow(2, highOctave) | 0);
+		const highIndex: number = Math.min(waveLength >> 1, Math.pow(2, highOctave) | 0);
 		const retroWave: Float32Array = getDrumWave(0);
 		let combinedAmplitude: number = 0.0;
 		for (let i: number = lowIndex; i < highIndex; i++) {
 			
-			let lerped: number = lowPower + (highPower - lowPower) * (Math.log(i) / Math.LN2 - lowOctave) / (highOctave - lowOctave);
-			//let amplitude: number = Math.pow(2, lerped);
-			//let amplitude: number = Math.pow((lerped + 5) / 7, 4);
-			let amplitude: number = Math.pow(2, (lerped-1)*Config.spectrumMax + 1) * lerped;
+			let lerped: number = lowPower + (highPower - lowPower) * (Math.log2(i) - lowOctave) / (highOctave - lowOctave);
+			let amplitude: number = Math.pow(2, (lerped - 1) * 7 + 1) * lerped;
 			
 			amplitude *= Math.pow(i / referenceIndex, overallSlope);
 			
@@ -481,14 +509,14 @@ SOFTWARE.
 			// Add two different sources of psuedo-randomness to the noise
 			// (individually they aren't random enough) but in a deterministic
 			// way so that live spectrum editing doesn't result in audible pops.
-			// Multiple all the sine wave amplitudes by 1 or -1 based on the 
+			// Multiply all the sine wave amplitudes by 1 or -1 based on the
 			// LFSR retro wave (effectively random), and also rotate the phase
 			// of each sine wave based on the golden angle to disrupt the symmetry.
 			amplitude *= retroWave[i];
 			const radians: number = 0.61803398875 * i * i * Math.PI * 2.0;
 			
 			wave[i] = Math.cos(radians) * amplitude;
-			wave[Config.chipNoiseLength - i] = Math.sin(radians) * amplitude;
+			wave[waveLength - i] = Math.sin(radians) * amplitude;
 		}
 		
 		return combinedAmplitude;

@@ -131,10 +131,10 @@ import {SongDocument} from "./SongDocument";
 				if (nextPinTime > 0) {
 					// Insert an interpolated pin at the start of the new note.
 					const ratio: number = (-newPinTime) / (nextPinTime - newPinTime);
-					newNote.pins.push(makeNotePin(Math.round(pin.interval + ratio * (nextPin.interval - pin.interval)), 0, Math.round(pin.volume + ratio * (nextPin.volume - pin.volume))));
+					newNote.pins.push(makeNotePin(Math.round(pin.interval + ratio * (nextPin.interval - pin.interval)), 0, Math.round(pin.expression + ratio * (nextPin.expression - pin.expression))));
 				}
 			} else if (newPinTime <= newNoteLength) {
-				newNote.pins.push(makeNotePin(pin.interval, newPinTime, pin.volume));
+				newNote.pins.push(makeNotePin(pin.interval, newPinTime, pin.expression));
 			} else {
 				if (pinIndex < 1) throw new Error("Error converting pins in note overflow.");
 				const prevPin: NotePin = oldNote.pins[pinIndex - 1];
@@ -142,7 +142,7 @@ import {SongDocument} from "./SongDocument";
 				if (prevPinTime < newNoteLength) {
 					// Insert an interpolated pin at the end of the new note.
 					const ratio: number = (newNoteLength - prevPinTime) / (newPinTime - prevPinTime);
-					newNote.pins.push(makeNotePin(Math.round(prevPin.interval + ratio * (pin.interval - prevPin.interval)), newNoteLength, Math.round(prevPin.volume + ratio * (pin.volume - prevPin.volume))));
+					newNote.pins.push(makeNotePin(Math.round(prevPin.interval + ratio * (pin.interval - prevPin.interval)), newNoteLength, Math.round(prevPin.expression + ratio * (pin.expression - prevPin.expression))));
 				}
 			}
 		}
@@ -261,8 +261,8 @@ import {SongDocument} from "./SongDocument";
 			for (let i: number = 1; i < this._newPins.length - 1; ) {
 				if (this._newPins[i-1].interval == this._newPins[i].interval && 
 				    this._newPins[i].interval == this._newPins[i+1].interval && 
-				    this._newPins[i-1].volume == this._newPins[i].volume && 
-				    this._newPins[i].volume == this._newPins[i+1].volume)
+				    this._newPins[i-1].expression == this._newPins[i].expression && 
+				    this._newPins[i].expression == this._newPins[i+1].expression)
 				{
 					this._newPins.splice(i, 1);
 				} else {
@@ -325,7 +325,7 @@ import {SongDocument} from "./SongDocument";
 				if (preset != null) {
 					if (preset.customType != undefined) {
 						instrument.type = preset.customType;
-						if (!Config.instrumentTypeHasSpecialInterval[instrument.type] && Config.chords[instrument.chord].isCustomInterval) {
+						if (!Config.instrumentTypeHasSpecialInterval[instrument.type] && Config.chords[instrument.chord].customInterval) {
 							instrument.chord = 0;
 						}
 					} else if (preset.settings != undefined) {
@@ -517,6 +517,7 @@ import {SongDocument} from "./SongDocument";
 					default: throw new Error("Unhandled noise instrument type in random generator.");
 				}
 			} else {
+				// TODO: Add support for electric guitar and distortion.
 				const type: InstrumentType = selectWeightedRandom([
 					{item: InstrumentType.chip,      weight: 4},
 					{item: InstrumentType.pwm,       weight: 4},
@@ -1056,6 +1057,24 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
+	export class ChangeDistortion extends ChangeInstrumentSlider {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super(doc);
+			this._instrument.distortion = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangeSustain extends ChangeInstrumentSlider {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super(doc);
+			this._instrument.sustain = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
 	export class ChangePulseEnvelope extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1374,14 +1393,14 @@ import {SongDocument} from "./SongDocument";
 					const noteStart: number = noteObject["start"] + selectionStart;
 					const noteEnd: number = noteObject["end"] + selectionStart;
 					if (noteStart >= selectionEnd) break;
-					const note: Note = new Note(noteObject["pitches"][0], noteStart, noteEnd, noteObject["pins"][0]["volume"], false);
+					const note: Note = new Note(noteObject["pitches"][0], noteStart, noteEnd, noteObject["pins"][0]["expression"], false);
 					note.pitches.length = 0;
 					for (const pitch of noteObject["pitches"]) {
 						note.pitches.push(pitch);
 					}
 					note.pins.length = 0;
 					for (const pin of noteObject["pins"]) {
-						note.pins.push(makeNotePin(pin.interval, pin.time, pin.volume));
+						note.pins.push(makeNotePin(pin.interval, pin.time, pin.expression));
 					}
 					pattern.notes.splice(noteInsertionIndex++, 0, note);
 					if (note.end > selectionEnd) {
@@ -1536,17 +1555,17 @@ import {SongDocument} from "./SongDocument";
 				const oldPin: NotePin = note.pins[i];
 				const time: number = oldPin.time;
 				if (time < skipStart) {
-					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.volume));
+					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.expression));
 				} else if (time > skipEnd) {
 					if (!setPin) {
-						this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
+						this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].expression));
 						setPin = true;
 					}
-					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.volume));
+					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.expression));
 				}
 			}
 			if (!setPin) {
-				this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].volume));
+				this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].expression));
 			}
 			
 			this._finishSetup();
@@ -1564,7 +1583,7 @@ import {SongDocument} from "./SongDocument";
 			let setStart: boolean = false;
 			let setEnd: boolean   = false;
 			let prevInterval: number = 0;
-			let prevVolume: number = 3;
+			let prevExpression: number = 3;
 			let persist: boolean = true;
 			let i: number;
 			let direction: number;
@@ -1588,24 +1607,24 @@ import {SongDocument} from "./SongDocument";
 					if (!setStart) {
 						if (time * direction <= bendStart * direction) {
 							prevInterval = oldPin.interval;
-							prevVolume = oldPin.volume;
+							prevExpression = oldPin.expression;
 						}
 						if (time * direction < bendStart * direction) {
-							push(makeNotePin(oldPin.interval, time, oldPin.volume));
+							push(makeNotePin(oldPin.interval, time, oldPin.expression));
 							break;
 						} else {
-							push(makeNotePin(prevInterval, bendStart, prevVolume));
+							push(makeNotePin(prevInterval, bendStart, prevExpression));
 							setStart = true;
 						}
 					} else if (!setEnd) {
 						if (time * direction <= bendEnd * direction) {
 							prevInterval = oldPin.interval;
-							prevVolume = oldPin.volume;
+							prevExpression = oldPin.expression;
 						}
 						if (time * direction < bendEnd * direction) {
 							break;
 						} else {
-							push(makeNotePin(bendTo, bendEnd, prevVolume));
+							push(makeNotePin(bendTo, bendEnd, prevExpression));
 							setEnd = true;
 						}
 					} else {
@@ -1613,14 +1632,14 @@ import {SongDocument} from "./SongDocument";
 							break;
 						} else {
 							if (oldPin.interval != prevInterval) persist = false;
-							push(makeNotePin(persist ? bendTo : oldPin.interval, time, oldPin.volume));
+							push(makeNotePin(persist ? bendTo : oldPin.interval, time, oldPin.expression));
 							break;
 						}
 					}
 				}
 			}
 			if (!setEnd) {
-				push(makeNotePin(bendTo, bendEnd, prevVolume));
+				push(makeNotePin(bendTo, bendEnd, prevExpression));
 			}
 			
 			this._finishSetup();
@@ -1669,7 +1688,7 @@ import {SongDocument} from "./SongDocument";
 			super(doc, note);
 			
 			for (const oldPin of this._oldPins) {
-				this._newPins.push(makeNotePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.volume));
+				this._newPins.push(makeNotePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.expression));
 			}
 			
 			this._finishSetup();
@@ -1828,7 +1847,7 @@ import {SongDocument} from "./SongDocument";
 								if (prevPin.interval == nextPin.interval) {
 									let weight: number = nextPin.time - prevPin.time;
 									weight += Math.max(0, Math.min(Config.partsPerBeat, nextPin.time + note.start) - (prevPin.time + note.start));
-									weight *= nextPin.volume + prevPin.volume;
+									weight *= nextPin.expression + prevPin.expression;
 									for (const pitch of note.pitches) {
 										const key = (basePitch + prevPin.interval + pitch) % 12;
 										keyWeights[key] += weight;
@@ -2037,7 +2056,7 @@ import {SongDocument} from "./SongDocument";
 			}
 			
 			for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
-				if (newNote.pins[pinIndex].interval != oldNote.pins[pinIndex].interval || newNote.pins[pinIndex].time != oldNote.pins[pinIndex].time || newNote.pins[pinIndex].volume != oldNote.pins[pinIndex].volume) {
+				if (newNote.pins[pinIndex].interval != oldNote.pins[pinIndex].interval || newNote.pins[pinIndex].time != oldNote.pins[pinIndex].time || newNote.pins[pinIndex].expression != oldNote.pins[pinIndex].expression) {
 					return false;
 				}
 			}
@@ -2132,20 +2151,20 @@ import {SongDocument} from "./SongDocument";
 			truncStart -= this._oldStart;
 			truncEnd   -= this._oldStart;
 			let setStart: boolean = false;
-			let prevVolume: number = this._oldPins[0].volume;
+			let prevExpression: number = this._oldPins[0].expression;
 			let prevInterval: number = this._oldPins[0].interval;
 			let pushLastPin: boolean = true;
 			let i: number;
 			for (i = 0; i < this._oldPins.length; i++) {
 				const oldPin: NotePin = this._oldPins[i];
 				if (oldPin.time < truncStart) {
-					prevVolume = oldPin.volume;
+					prevExpression = oldPin.expression;
 					prevInterval = oldPin.interval;
 				} else if (oldPin.time <= truncEnd) {
 					if (oldPin.time > truncStart && !setStart) {
-						this._newPins.push(makeNotePin(prevInterval, truncStart, prevVolume));
+						this._newPins.push(makeNotePin(prevInterval, truncStart, prevExpression));
 					}
-					this._newPins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.volume));
+					this._newPins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.expression));
 					setStart = true;
 					if (oldPin.time == truncEnd) {
 						pushLastPin = false;
@@ -2157,7 +2176,7 @@ import {SongDocument} from "./SongDocument";
 				
 			}
 			
-			if (pushLastPin) this._newPins.push(makeNotePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].volume));
+			if (pushLastPin) this._newPins.push(makeNotePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].expression));
 			
 			this._finishSetup();
 		}
@@ -2324,7 +2343,7 @@ import {SongDocument} from "./SongDocument";
 					}
 				}
 				interval -= this._newPitches[0];
-				this._newPins.push(makeNotePin(interval, oldPin.time, oldPin.volume));
+				this._newPins.push(makeNotePin(interval, oldPin.time, oldPin.expression));
 			}
 			
 			if (this._newPins[0].interval != 0) throw new Error("wrong pin start interval");
@@ -2332,8 +2351,8 @@ import {SongDocument} from "./SongDocument";
 			for (let i: number = 1; i < this._newPins.length - 1; ) {
 				if (this._newPins[i-1].interval == this._newPins[i].interval && 
 				    this._newPins[i].interval == this._newPins[i+1].interval && 
-				    this._newPins[i-1].volume == this._newPins[i].volume && 
-				    this._newPins[i].volume == this._newPins[i+1].volume)
+				    this._newPins[i-1].expression == this._newPins[i].expression && 
+				    this._newPins[i].expression == this._newPins[i+1].expression)
 				{
 					this._newPins.splice(i, 1);
 				} else {
@@ -2559,7 +2578,7 @@ import {SongDocument} from "./SongDocument";
 					if (interval < min) interval = min;
 					if (interval > max) interval = max;
 					const transformedInterval: number = scaleMap[interval % 12] + (interval - (interval % 12));
-					newPins.push(makeNotePin(transformedInterval - newPitches[0], oldPin.time, oldPin.volume));
+					newPins.push(makeNotePin(transformedInterval - newPitches[0], oldPin.time, oldPin.expression));
 				}
 			
 				if (newPins[0].interval != 0) throw new Error("wrong pin start interval");
@@ -2567,8 +2586,8 @@ import {SongDocument} from "./SongDocument";
 				for (let i: number = 1; i < newPins.length - 1; ) {
 					if (newPins[i-1].interval == newPins[i].interval && 
 						newPins[i].interval == newPins[i+1].interval && 
-						newPins[i-1].volume == newPins[i].volume && 
-						newPins[i].volume == newPins[i+1].volume)
+						newPins[i-1].expression == newPins[i].expression && 
+						newPins[i].expression == newPins[i+1].expression)
 					{
 						newPins.splice(i, 1);
 					} else {
@@ -2602,12 +2621,12 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
-	export class ChangeVolumeBend extends UndoableChange {
+	export class ChangeExpressionBend extends UndoableChange {
 		private _doc: SongDocument;
 		private _note: Note;
 		private _oldPins: NotePin[];
 		private _newPins: NotePin[];
-		constructor(doc: SongDocument, note: Note, bendPart: number, bendVolume: number, bendInterval: number) {
+		constructor(doc: SongDocument, note: Note, bendPart: number, bendExpression: number, bendInterval: number) {
 			super(false);
 			this._doc = doc;
 			this._note = note;
@@ -2620,11 +2639,11 @@ import {SongDocument} from "./SongDocument";
 				if (pin.time < bendPart) {
 					this._newPins.push(pin);
 				} else if (pin.time == bendPart) {
-					this._newPins.push(makeNotePin(bendInterval, bendPart, bendVolume));
+					this._newPins.push(makeNotePin(bendInterval, bendPart, bendExpression));
 					inserted = true;
 				} else {
 					if (!inserted) {
-						this._newPins.push(makeNotePin(bendInterval, bendPart, bendVolume));
+						this._newPins.push(makeNotePin(bendInterval, bendPart, bendExpression));
 						inserted = true;
 					}
 					this._newPins.push(pin);
@@ -2634,8 +2653,8 @@ import {SongDocument} from "./SongDocument";
 			for (let i: number = 1; i < this._newPins.length - 1; ) {
 				if (this._newPins[i-1].interval == this._newPins[i].interval && 
 				    this._newPins[i].interval == this._newPins[i+1].interval && 
-				    this._newPins[i-1].volume == this._newPins[i].volume && 
-				    this._newPins[i].volume == this._newPins[i+1].volume)
+				    this._newPins[i-1].expression == this._newPins[i].expression && 
+				    this._newPins[i].expression == this._newPins[i+1].expression)
 				{
 					this._newPins.splice(i, 1);
 				} else {

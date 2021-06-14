@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {InstrumentType, Config} from "../synth/SynthConfig";
+import {InstrumentType, Config, getPulseWidthRatio} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
@@ -27,7 +27,7 @@ import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
-import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong} from "./changes";
+import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong, ChangeDistortion, ChangeSustain} from "./changes";
 
 //namespace beepbox {
 	const {button, div, input, select, span, optgroup, option} = HTML;
@@ -60,6 +60,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			customTypeGroup.appendChild(option({value: InstrumentType.pwm}, EditorConfig.valueToPreset(InstrumentType.pwm)!.name));
 			customTypeGroup.appendChild(option({value: InstrumentType.harmonics}, EditorConfig.valueToPreset(InstrumentType.harmonics)!.name));
 			customTypeGroup.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.guitar}, EditorConfig.valueToPreset(InstrumentType.guitar)!.name));
 			customTypeGroup.appendChild(option({value: InstrumentType.fm}, EditorConfig.valueToPreset(InstrumentType.fm)!.name));
 		}
 		menu.appendChild(customTypeGroup);
@@ -199,12 +200,18 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private readonly _effectsSelect: HTMLSelectElement = buildOptions(select(), Config.effectsNames);
 		private readonly _filterEditor: FilterEditor = new FilterEditor(this._doc);
 		private readonly _filterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("filter")}, "Filter:"), this._filterEditor.container);
+		private readonly _distortionFilterEditor: FilterEditor = new FilterEditor(this._doc, true);
+		private readonly _distortionFilterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("distortionFilter")}, "Post-Filter:"), this._distortionFilterEditor.container);
 		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
 		private _filterEnvelopeRow: HTMLDivElement = div({class: "selectRow", title: "Low-pass Filter Envelope"}, span({class: "tip", onclick: ()=>this._openPrompt("filterEnvelope")}, "Filter Env:"), div({class: "selectContainer"}, this._filterEnvelopeSelect));
 		private readonly _pulseEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
 		private _pulseEnvelopeRow: HTMLDivElement = div({class: "selectRow", title: "Pulse Width Modulator Envelope"}, span({class: "tip", onclick: ()=>this._openPrompt("pulseEnvelope")}, "Pulse Env:"), div({class: "selectContainer"}, this._pulseEnvelopeSelect));
 		private readonly _pulseWidthSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.pulseWidthRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangePulseWidth(this._doc, oldValue, newValue));
 		private _pulseWidthRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pulseWidth")}, "Pulse Width:"), this._pulseWidthSlider.input);
+		private readonly _distortionSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.distortionRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeDistortion(this._doc, oldValue, newValue));
+		private _distortionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("distortion")}, "Distortion:"), this._distortionSlider.input);
+		private readonly _sustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.sustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeSustain(this._doc, oldValue, newValue));
+		private _sustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("sustain")}, "Sustain:"), this._sustainSlider.input);
 		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select(), Config.intervals.map(interval=>interval.name));
 		private readonly _intervalSelectRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("interval")}, "Interval:"), div({class: "selectContainer"}, this._intervalSelect));
 		private readonly _chordSelect: HTMLSelectElement = buildOptions(select(), Config.chords.map(chord=>chord.name));
@@ -235,10 +242,6 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			this._filterRow,
 			this._filterEnvelopeRow,
 			this._transitionRow,
-			div({class: "selectRow"},
-				span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects:"),
-				div({class: "selectContainer"}, this._effectsSelect),
-			),
 			this._chordSelectRow,
 			this._vibratoSelectRow,
 			this._intervalSelectRow,
@@ -253,6 +256,13 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			this._drumsetGroup,
 			this._pulseEnvelopeRow,
 			this._pulseWidthRow,
+			this._sustainRow,
+			div({class: "selectRow"},
+				span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects:"),
+				div({class: "selectContainer"}, this._effectsSelect),
+			),
+			this._distortionRow,
+			this._distortionFilterRow,
 		);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({class: "editor-controls"},
 			div({style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};`},
@@ -476,6 +486,8 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			this._patternArea.addEventListener("mousedown", this._refocusStage);
 			this._trackArea.addEventListener("mousedown", this._refocusStage);
 			this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
+			this._filterEditor.container.addEventListener("mousedown", this._refocusStage);
+			this._distortionFilterEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
@@ -630,7 +642,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			setSelectedValue(this._scaleSelect, this._doc.song.scale);
 			this._scaleSelect.title = Config.scales[this._doc.song.scale].realName;
 			setSelectedValue(this._keySelect, Config.keys.length - 1 - this._doc.song.key);
-			this._tempoSlider.updateValue(Math.max(0, Math.min(28, Math.round(4.0 + 9.0 * Math.log(this._doc.song.tempo / 120.0) / Math.LN2))));
+			this._tempoSlider.updateValue(Math.max(0, Math.min(28, Math.round(4.0 + 9.0 * Math.log2(this._doc.song.tempo / 120.0)))));
 			this._tempoStepper.value = this._doc.song.tempo.toString();
 			this._reverbSlider.updateValue(this._doc.song.reverb);
 			setSelectedValue(this._rhythmSelect, this._doc.song.rhythm);
@@ -721,12 +733,27 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 				}
 				if (instrument.type == InstrumentType.pwm) {
 					this._pulseEnvelopeRow.style.display = "";
-					this._pulseWidthRow.style.display = "";
-					this._pulseWidthSlider.input.title = prettyNumber(Math.pow(0.5, (Config.pulseWidthRange - instrument.pulseWidth - 1) * 0.5) * 50) + "%";
 					setSelectedValue(this._pulseEnvelopeSelect, instrument.pulseEnvelope);
-					this._pulseWidthSlider.updateValue(instrument.pulseWidth);
 				} else {
 					this._pulseEnvelopeRow.style.display = "none";
+				}
+				if (instrument.type == InstrumentType.guitar) {
+					this._distortionRow.style.display = "";
+					this._sustainRow.style.display = "";
+					this._distortionSlider.updateValue(instrument.distortion);
+					this._sustainSlider.updateValue(instrument.sustain);
+					this._distortionFilterRow.style.display = "";
+					this._distortionFilterEditor.render();
+				} else {
+					this._distortionRow.style.display = "none";
+					this._sustainRow.style.display = "none";
+					this._distortionFilterRow.style.display = "none";
+				}
+				if (instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.guitar) {
+					this._pulseWidthRow.style.display = "";
+					this._pulseWidthSlider.input.title = prettyNumber(getPulseWidthRatio(instrument.pulseWidth) * 100) + "%";
+					this._pulseWidthSlider.updateValue(instrument.pulseWidth);
+				} else {
 					this._pulseWidthRow.style.display = "none";
 				}
 				
@@ -751,13 +778,16 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 				} else if (instrument.type == InstrumentType.pwm) {
 					this._vibratoSelectRow.style.display = "";
 					this._intervalSelectRow.style.display = "none";
+				} else if (instrument.type == InstrumentType.guitar) {
+					this._vibratoSelectRow.style.display = "";
+					this._intervalSelectRow.style.display = "none";
 				} else {
 					throw new Error("Unrecognized instrument type: " + instrument.type);
 				}
 			}
 			
 			for (let chordIndex: number = 0; chordIndex < Config.chords.length; chordIndex++) {
-				const hidden: boolean = !Config.instrumentTypeHasSpecialInterval[instrument.type] ? Config.chords[chordIndex].isCustomInterval : false;
+				let hidden: boolean = (!Config.instrumentTypeHasSpecialInterval[instrument.type] && Config.chords[chordIndex].customInterval);
 				const option: Element = this._chordSelect.children[chordIndex];
 				if (hidden) {
 					if (!option.hasAttribute("hidden")) {

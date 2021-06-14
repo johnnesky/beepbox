@@ -149,7 +149,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 			}
 			interface ExpressionEvent {
 				midiTick: number;
-				volume: number;
+				expression: number;
 			}
 			
 			// To read a MIDI file we have to simulate state changing over time.
@@ -248,7 +248,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 										currentInstrumentPans[eventChannel] = value;
 									} break;
 									case MidiControlEventMessage.expressionMSB: {
-										expressionEvents[eventChannel].push({midiTick: currentMidiTick, volume: Synth.volumeMultToExpression(midiExpressionToVolumeMult(value))});
+										expressionEvents[eventChannel].push({midiTick: currentMidiTick, expression: Synth.volumeMultToExpression(midiExpressionToVolumeMult(value))});
 									} break;
 									case MidiControlEventMessage.setParameterLSB: {
 										if (channelRPNMSB[eventChannel] == MidiRegisteredParameterNumberMSB.pitchBendRange && channelRPNLSB[eventChannel] == MidiRegisteredParameterNumberLSB.pitchBendRange) {
@@ -520,7 +520,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 					}
 					function updateCurrentMidiExpression(midiTick: number) {
 						while (expressionEventIndex < expressionEvents[midiChannel].length && expressionEvents[midiChannel][expressionEventIndex].midiTick <= midiTick) {
-							currentMidiExpression = expressionEvents[midiChannel][expressionEventIndex].volume;
+							currentMidiExpression = expressionEvents[midiChannel][expressionEventIndex].expression;
 							expressionEventIndex++;
 						}
 					}
@@ -617,12 +617,12 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 									interface PotentialPin {
 										part: number;
 										pitch: number;
-										volume: number;
+										expression: number;
 										keyPitch: boolean;
-										keyVolume: boolean;
+										keyExpression: boolean;
 									}
 									const potentialPins: PotentialPin[] = [
-										{part: 0, pitch: initialBeepBoxPitch, volume: firstPin.volume, keyPitch: false, keyVolume: false}
+										{part: 0, pitch: initialBeepBoxPitch, expression: firstPin.expression, keyPitch: false, keyExpression: false}
 									];
 									let prevPinIndex: number = 0;
 									
@@ -659,7 +659,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 										prevPartExpression = partExpression;
 										
 										if (keyPitch || keyExpression || lastPart) {
-											const currentPin: PotentialPin = {part: noteRelativePart, pitch: nearestPitch, volume: nearestExpression, keyPitch: keyPitch || lastPart, keyVolume: keyExpression || lastPart};
+											const currentPin: PotentialPin = {part: noteRelativePart, pitch: nearestPitch, expression: nearestExpression, keyPitch: keyPitch || lastPart, keyExpression: keyExpression || lastPart};
 											const prevPin: PotentialPin = potentialPins[prevPinIndex];
 											
 											// At all key points in the list of potential pins, check to see if they
@@ -691,32 +691,32 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 												}
 											}
 											
-											if (currentPin.keyVolume) {
-												const slope: number = (currentPin.volume - prevPin.volume) / (currentPin.part - prevPin.part);
-												let furthestVolumeDistance: number = Math.abs(slope); // minimum distance to make a new pin.
-												let addVolumePin: boolean = false;
-												let addVolumePinAtIndex: number = Number.MAX_VALUE;
+											if (currentPin.keyExpression) {
+												const slope: number = (currentPin.expression - prevPin.expression) / (currentPin.part - prevPin.part);
+												let furthestExpressionDistance: number = Math.abs(slope); // minimum distance to make a new pin.
+												let addExpressionPin: boolean = false;
+												let addExpressionPinAtIndex: number = Number.MAX_VALUE;
 												for (let potentialIndex: number = prevPinIndex + 1; potentialIndex < potentialPins.length; potentialIndex++) {
 													const potentialPin: PotentialPin = potentialPins[potentialIndex];
-													if (potentialPin.keyVolume) {
-														const interpolatedVolume: number = prevPin.volume + slope * (potentialPin.part - prevPin.part);
-														const distance: number = Math.abs(interpolatedVolume - potentialPin.volume);
-														if (furthestVolumeDistance < distance) {
-															furthestVolumeDistance = distance;
-															addVolumePin = true;
-															addVolumePinAtIndex = potentialIndex;
+													if (potentialPin.keyExpression) {
+														const interpolatedExpression: number = prevPin.expression + slope * (potentialPin.part - prevPin.part);
+														const distance: number = Math.abs(interpolatedExpression - potentialPin.expression);
+														if (furthestExpressionDistance < distance) {
+															furthestExpressionDistance = distance;
+															addExpressionPin = true;
+															addExpressionPinAtIndex = potentialIndex;
 														}
 													}
 												}
-												if (addVolumePin) {
+												if (addExpressionPin) {
 													addPin = true;
-													addPinAtIndex = Math.min(addPinAtIndex, addVolumePinAtIndex);
+													addPinAtIndex = Math.min(addPinAtIndex, addExpressionPinAtIndex);
 												}
 											}
 											
 											if (addPin) {
 												const toBePinned: PotentialPin = potentialPins[addPinAtIndex];
-												note.pins.push(makeNotePin(toBePinned.pitch - initialBeepBoxPitch, toBePinned.part, toBePinned.volume));
+												note.pins.push(makeNotePin(toBePinned.pitch - initialBeepBoxPitch, toBePinned.part, toBePinned.expression));
 												prevPinIndex = addPinAtIndex;
 											}
 											
@@ -726,7 +726,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 									
 									// And always add a pin at the end of the note.
 									const lastToBePinned: PotentialPin = potentialPins[potentialPins.length - 1];
-									note.pins.push(makeNotePin(lastToBePinned.pitch - initialBeepBoxPitch, lastToBePinned.part, lastToBePinned.volume));
+									note.pins.push(makeNotePin(lastToBePinned.pitch - initialBeepBoxPitch, lastToBePinned.part, lastToBePinned.expression));
 									
 									// Use interval range to constrain min/max pitches so no pin is out of bounds.
 									let maxPitch: number = channelMaxPitch;
