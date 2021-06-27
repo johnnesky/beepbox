@@ -60,6 +60,14 @@ SOFTWARE.
 		length,
 	}
 	
+	export const enum EffectType {
+		reverb = 0,
+		chorus = 1,
+		panning = 2,
+		distortion = 3,
+		length,
+	}
+	
 	export interface BeepBoxOption {
 		readonly index: number;
 		readonly name: string;
@@ -178,6 +186,8 @@ SOFTWARE.
 		public static readonly tempoMin: number = 30;
 		public static readonly tempoMax: number = 300;
 		public static readonly reverbRange: number = 4;
+		public static readonly reverbDelayBufferSize: number = 16384; // TODO: Compute a buffer size based on sample rate.
+		public static readonly reverbDelayBufferMask: number = Config.reverbDelayBufferSize - 1; // TODO: Compute a buffer size based on sample rate.
 		public static readonly beatsPerBarMin: number = 3;
 		public static readonly beatsPerBarMax: number = 16;
 		public static readonly barCountMin: number = 1;
@@ -266,13 +276,18 @@ SOFTWARE.
 			{name: "bowed",      spread: 0.02, offset: 0.0, expression: 1.0, sign:-1.0},
 			{name: "piano",      spread: 0.01, offset: 0.0, expression: 1.0, sign: 0.7},
 		]);
-		public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
+		public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion"];
+		public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.distortion, EffectType.panning, EffectType.chorus, EffectType.reverb];
 		public static readonly volumeRange: number = 8;
 		public static readonly volumeLogScale: number = -0.5;
 		public static readonly panCenter: number = 4;
 		public static readonly panMax: number = Config.panCenter * 2;
 		public static readonly panDelaySecondsMax: number = 0.00065;
+		public static readonly chorusPeriodSeconds: number = 2.0;
 		public static readonly chorusDelayRange: number = 0.0034;
+		public static readonly chorusDelayOffsets: ReadonlyArray<ReadonlyArray<number>> = [[1.51, 2.10, 3.35], [1.47, 2.15, 3.25]];
+		public static readonly chorusPhaseOffsets: ReadonlyArray<ReadonlyArray<number>> = [[0.0, 2.1, 4.2], [3.2, 5.3, 1.0]];
+		public static readonly chorusMaxDelay: number = Config.chorusDelayRange * (1.0 + Config.chorusDelayOffsets[0].concat(Config.chorusDelayOffsets[1]).reduce((x,y)=>Math.max(x,y)));
 		public static readonly chords: DictionaryArray<Chord> = toNameMap([
 			{name: "harmony",         customInterval: false, arpeggiates: false, strumParts: 0, singleTone: false},
 			{name: "strum",           customInterval: false, arpeggiates: false, strumParts: 1, singleTone: false},
@@ -430,7 +445,7 @@ SOFTWARE.
 	// depend on FFT here. synth.ts will take care of importing FFT.ts.
 	//function inverseRealFourierTransform(array: {length: number, [index: number]: number}, fullArrayLength: number): void;
 	//function scaleElementsByFactor(array: {length: number, [index: number]: number}, factor: number): void;
-	export function getDrumWave(index: number, inverseRealFourierTransform: Function | null = null, scaleElementsByFactor: Function | null = null): Float32Array {
+	export function getDrumWave(index: number, inverseRealFourierTransform: Function | null, scaleElementsByFactor: Function | null): Float32Array {
 		let wave: Float32Array | null = Config.chipNoises[index].samples;
 		if (wave == null) {
 			wave = new Float32Array(Config.chipNoiseLength + 1);
@@ -495,7 +510,7 @@ SOFTWARE.
 		const referenceIndex: number = 1 << referenceOctave;
 		const lowIndex: number = Math.pow(2, lowOctave) | 0;
 		const highIndex: number = Math.min(waveLength >> 1, Math.pow(2, highOctave) | 0);
-		const retroWave: Float32Array = getDrumWave(0);
+		const retroWave: Float32Array = getDrumWave(0, null, null);
 		let combinedAmplitude: number = 0.0;
 		for (let i: number = lowIndex; i < highIndex; i++) {
 			
@@ -550,5 +565,21 @@ SOFTWARE.
 		const result: DictionaryArray<T> = <DictionaryArray<T>> <any> array;
 		result.dictionary = dictionary;
 		return result;
+	}
+	
+	export function effectsIncludeDistortion(effects: number): boolean {
+		return (effects & (1 << EffectType.distortion)) != 0;
+	}
+	
+	export function effectsIncludePanning(effects: number): boolean {
+		return (effects & (1 << EffectType.panning)) != 0;
+	}
+	
+	export function effectsIncludeChorus(effects: number): boolean {
+		return (effects & (1 << EffectType.chorus)) != 0;
+	}
+	
+	export function effectsIncludeReverb(effects: number): boolean {
+		return (effects & (1 << EffectType.reverb)) != 0;
 	}
 //}

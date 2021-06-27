@@ -428,7 +428,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 					const presetValue: number = EditorConfig.nameToPresetValue("standard drumset")!;
 					const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
 					const instrument: Instrument = new Instrument(false);
-					instrument.fromJsonObject(preset.settings, false);
+					instrument.fromJsonObject(preset.settings, false, 1);
 					instrument.preset = presetValue;
 					channel.instruments.push(instrument);
 
@@ -576,7 +576,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 											instrumentByProgram[currentProgram] = instrument;
 											
 											if (presetValue != null && preset != null && (preset.isNoise == true) == isNoiseChannel) {
-												instrument.fromJsonObject(preset.settings, isNoiseChannel);
+												instrument.fromJsonObject(preset.settings, isNoiseChannel, 1);
 												instrument.preset = presetValue;
 											} else {
 												instrument.setTypeAndReset(isNoiseChannel ? InstrumentType.noise : InstrumentType.chip, isNoiseChannel);
@@ -844,7 +844,6 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 					song.beatsPerBar = beatsPerBar;
 					song.key = key;
 					song.scale = 11;
-					song.reverb = 1;
 					song.rhythm = 1;
 					
 					removeDuplicatePatterns(pitchChannels);

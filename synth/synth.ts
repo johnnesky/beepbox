@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio} from "./SynthConfig";
+import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, Transition, Chord, Envelope, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeDistortion, effectsIncludePanning, effectsIncludeChorus, effectsIncludeReverb} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
 import {Deque} from "./Deque";
 import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter} from "./filtering";
@@ -96,52 +96,51 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 	}
 	
 	const enum SongTagCode {
-		beatCount = CharCode.a,
-		bars = CharCode.b,
-		vibrato = CharCode.c,
-		transition = CharCode.d,
-		loopEnd = CharCode.e,
-		filter = CharCode.f,
-		barCount = CharCode.g,
-		interval = CharCode.h,
-		instrumentCount = CharCode.i,
-		patternCount = CharCode.j,
-		key = CharCode.k,
-		loopStart = CharCode.l,
-		reverb = CharCode.m,
-		channelCount = CharCode.n,
-		channelOctave = CharCode.o,
-		patterns = CharCode.p,
-		effects = CharCode.q,
-		rhythm = CharCode.r,
-		scale = CharCode.s,
-		tempo = CharCode.t,
-		preset = CharCode.u,
-		volume = CharCode.v,
-		wave = CharCode.w,
+		beatCount = CharCode.a,           // added in song url version 2
+		bars = CharCode.b,                // added in 2
+		vibrato = CharCode.c,             // added in 2
+		transition = CharCode.d,          // added in 3
+		loopEnd = CharCode.e,             // added in 2
+		filter = CharCode.f,              // added in 3
+		barCount = CharCode.g,            // added in 3
+		interval = CharCode.h,            // added in 2
+		instrumentCount = CharCode.i,     // added in 3
+		patternCount = CharCode.j,        // added in 3
+		key = CharCode.k,                 // added in 2
+		loopStart = CharCode.l,           // added in 2
+		reverb = CharCode.m,              // added in 6
+		channelCount = CharCode.n,        // added in 6
+		channelOctave = CharCode.o,       // added in 3
+		patterns = CharCode.p,            // added in 2
+		effects = CharCode.q,             // added in 7
+		rhythm = CharCode.r,              // added in 2
+		scale = CharCode.s,               // added in 2
+		tempo = CharCode.t,               // added in 2
+		preset = CharCode.u,              // added in 7
+		volume = CharCode.v,              // added in 2
+		wave = CharCode.w,                // added in 2
 		
-		filterResonance = CharCode.y, // DEPRECATED
-		filterEnvelope = CharCode.z, // DEPRECATED
-		algorithm = CharCode.A,
-		feedbackAmplitude = CharCode.B,
-		chord = CharCode.C,
-		distortion = CharCode.D,
-		operatorEnvelopes = CharCode.E,
-		feedbackType = CharCode.F,
-		distortionFilter = CharCode.G,
-		harmonics = CharCode.H,
+		filterResonance = CharCode.y,     // added in 7, DEPRECATED
+		filterEnvelope = CharCode.z,      // added in 7, DEPRECATED (or replace with general envelope?)
+		algorithm = CharCode.A,           // added in 6
+		feedbackAmplitude = CharCode.B,   // added in 6
+		chord = CharCode.C,               // added in 7
+		distortion = CharCode.D,          // added in 9
+		operatorEnvelopes = CharCode.E,   // added in 6, DEPRECATED
+		feedbackType = CharCode.F,        // added in 6
+		distortionFilter = CharCode.G,    // added in 9
+		harmonics = CharCode.H,           // added in 7
 		
-		pan = CharCode.L,
+		pan = CharCode.L,                 // added between 8 and 9
 		
-		operatorAmplitudes = CharCode.P,
-		operatorFrequencies = CharCode.Q,
+		operatorAmplitudes = CharCode.P,  // added in 6
+		operatorFrequencies = CharCode.Q, // added in 6
 		
-		spectrum = CharCode.S,
-		startInstrument = CharCode.T,
-		sustain = CharCode.U,
-		
-		feedbackEnvelope = CharCode.V,
-		pulseWidth = CharCode.W,
+		spectrum = CharCode.S,            // added in 7
+		startInstrument = CharCode.T,     // added in 6
+		sustain = CharCode.U,             // added in 9
+		feedbackEnvelope = CharCode.V,    // added in 6, DEPRECATED
+		pulseWidth = CharCode.W,          // added in 7
 	}
 	
 	const base64IntToCharCode: ReadonlyArray<number> = [48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,45,95];
@@ -488,7 +487,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			if (this._waveIsReady) return this._wave!;
 			
 			const waveLength: number = Config.harmonicsWavelength;
-			const retroWave: Float32Array = getDrumWave(0);
+			const retroWave: Float32Array = getDrumWave(0, null, null);
 			
 			if (this._wave == null || this._wave.length != waveLength + 1) {
 				this._wave = new Float32Array(waveLength + 1);
@@ -549,8 +548,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const waveLength: number = Config.harmonicsWavelength;
 			GuitarImpulseWave._wave = new Float32Array(waveLength + 1);
 			const wave: Float32Array = GuitarImpulseWave._wave;
-			const retroWave: Float32Array = getDrumWave(0);
-			//const scaleFactor: number = 1.0 / Math.sqrt(waveLength);
+			const retroWave: Float32Array = getDrumWave(0, null, null);
 			
 			for (let harmonicFreq: number = 1; harmonicFreq < (waveLength >> 1); harmonicFreq++) {
 				let amplitude: number = 0.5 / harmonicFreq; // The symmetric inverse FFT doubles amplitudes, compensating for that here.
@@ -813,6 +811,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public pulseEnvelope: number = 1;
 		public sustain: number = 6;
 		public distortion: number = 0;
+		public reverb: number = 0;
 		public algorithm: number = 0;
 		public feedbackType: number = 0;
 		public feedbackAmplitude: number = 0;
@@ -838,24 +837,24 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.type = type;
 			this.preset = type;
 			this.volume = 0;
+			this.reverb = 2;
+			this.distortionFilter.reset();
+			this.distortion = Math.floor((Config.distortionRange - 1) * 0.75);
 			this.pan = Config.panCenter;
 			this.filter.reset();
+			this.vibrato = 0;
+			this.interval = 0;
+			this.transition = Config.transitions.dictionary["hard"].index;
+			this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 			switch (type) {
 				case InstrumentType.chip:
 					this.chipWave = 2;
-					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
-					this.transition = Config.transitions.dictionary["hard"].index;
-					this.vibrato = 0;
-					this.interval = 0;
 					this.effects = 1;
 					this.chord = 2;
 					break;
 				case InstrumentType.fm:
-					this.transition = Config.transitions.dictionary["hard"].index;
-					this.vibrato = 0;
 					this.effects = 1;
 					this.chord = 3;
-					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					this.algorithm = 0;
 					this.feedbackType = 0;
 					this.feedbackAmplitude = 0;
@@ -866,16 +865,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					break;
 				case InstrumentType.noise:
 					this.chipNoise = 1;
-					this.transition = Config.transitions.dictionary["hard"].index;
 					this.effects = 0;
 					this.chord = 2;
-					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					break;
 				case InstrumentType.spectrum:
-					this.transition = Config.transitions.dictionary["hard"].index;
 					this.effects = 1;
 					this.chord = 0;
-					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
 					this.spectrumWave.reset(isNoiseChannel);
 					break;
 				case InstrumentType.drumset:
@@ -886,33 +881,20 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					}
 					break;
 				case InstrumentType.harmonics:
-					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
-					this.transition = Config.transitions.dictionary["hard"].index;
-					this.vibrato = 0;
-					this.interval = 0;
 					this.effects = 1;
 					this.chord = 0;
 					this.harmonicsWave.reset();
 					break;
 				case InstrumentType.pwm:
-					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
-					this.transition = Config.transitions.dictionary["hard"].index;
-					this.vibrato = 0;
 					this.effects = 1;
 					this.chord = 2;
 					this.pulseWidth = Config.pulseWidthRange - 1;
 					this.pulseEnvelope = Config.envelopes.dictionary["twang 2"].index;
 					break;
 				case InstrumentType.guitar:
-					this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
-					this.transition = Config.transitions.dictionary["hard"].index;
-					this.vibrato = 0;
-					this.interval = 0;
 					this.effects = 1;
 					this.chord = 3;
 					this.pulseWidth = Config.pulseWidthRange - 3;
-					this.distortionFilter.reset();
-					this.distortion = 0;
 					this.sustain = 6;
 					break;
 				default:
@@ -924,13 +906,30 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const instrumentObject: any = {
 				"type": Config.instrumentTypeNames[this.type],
 				"volume": (5 - this.volume) * 20,
-				"pan": (this.pan - Config.panCenter) * 100 / Config.panCenter,
-				"effects": Config.effectsNames[this.effects],
 				"filter": this.filter.toJsonObject(),
 			};
 			
 			if (this.preset != this.type) {
 				instrumentObject["preset"] = this.preset;
+			}
+			
+			const effects: string[] = [];
+			for (const effect of Config.effectOrder) {
+				if (this.effects & (1 << effect)) {
+					effects.push(Config.effectsNames[effect]);
+				}
+			}
+			instrumentObject["effects"] = effects;
+			
+			if (effectsIncludeDistortion(this.effects)) {
+				instrumentObject["distortionFilter"] = this.distortionFilter.toJsonObject();
+				instrumentObject["distortion"] = Math.round(100 * this.distortion / (Config.distortionRange - 1));
+			}
+			if (effectsIncludePanning(this.effects)) {
+				instrumentObject["pan"] = Math.round(100 * (this.pan - Config.panCenter) / Config.panCenter);
+			}
+			if (effectsIncludeReverb(this.effects)) {
+				instrumentObject["reverb"] = Math.round(100 * this.reverb / (Config.reverbRange - 1));
 			}
 			
 			if (this.type != InstrumentType.drumset) {
@@ -969,8 +968,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			} else if (this.type == InstrumentType.guitar) {
 				instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
 				instrumentObject["sustain"] = Math.round(100 * this.sustain / (Config.sustainRange - 1));
-				instrumentObject["distortionFilter"] = this.distortionFilter.toJsonObject();
-				instrumentObject["distortion"] = Math.round(100 * this.distortion / (Config.distortionRange - 1));
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 			} else if (this.type == InstrumentType.harmonics) {
 				instrumentObject["interval"] = Config.intervals[this.interval].name;
@@ -1000,7 +997,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			return instrumentObject;
 		}
 		
-		public fromJsonObject(instrumentObject: any, isNoiseChannel: boolean): void {
+		public fromJsonObject(instrumentObject: any, isNoiseChannel: boolean, legacyGlobalReverb: number = 0): void {
 			if (instrumentObject == undefined) instrumentObject = {};
 			
 			let type: InstrumentType = Config.instrumentTypeNames.indexOf(instrumentObject["type"]);
@@ -1017,19 +1014,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				this.volume = 0;
 			}
 			
-			if (instrumentObject["pan"] != undefined) {
-				this.pan = clamp(0, Config.panMax + 1, Math.round(Config.panCenter + (instrumentObject["pan"] | 0) * Config.panCenter / 100));
-			} else {
-				this.pan = Config.panCenter;
-			}
-			
 			const oldTransitionNames: Dictionary<number> = {"binary": 0, "sudden": 1, "smooth": 2};
 			const transitionObject = instrumentObject["transition"] || instrumentObject["envelope"]; // the transition property used to be called envelope, so try that too.
 			this.transition = oldTransitionNames[transitionObject] != undefined ? oldTransitionNames[transitionObject] : Config.transitions.findIndex(transition=>transition.name==transitionObject);
 			if (this.transition == -1) this.transition = 1;
-			
-			this.effects = Config.effectsNames.indexOf(instrumentObject["effects"]);
-			if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
 			
 			this.filterEnvelope = Config.envelopes.findIndex(envelope=>envelope.name == instrumentObject["filterEnvelope"]);
 			if (this.filterEnvelope == -1) this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
@@ -1092,6 +1080,57 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				this.pulseWidth = Config.pulseWidthRange - 1;
 			}
 			
+			if (instrumentObject["pan"] != undefined) {
+				this.pan = clamp(0, Config.panMax + 1, Math.round(Config.panCenter + (instrumentObject["pan"] | 0) * Config.panCenter / 100));
+			} else {
+				this.pan = Config.panCenter;
+			}
+			
+			if (Array.isArray(instrumentObject["effects"])) {
+				let effects: number = 0;
+				for (let i: number = 0; i < instrumentObject["effects"].length; i++) {
+					effects = effects | (1 << Config.effectsNames.indexOf(instrumentObject["effects"][i]));
+				}
+				this.effects = (effects & ((1 << EffectType.length) - 1));
+			} else {
+				const legacyEffectsNames: string[] = ["none", "reverb", "chorus", "chorus & reverb"];
+				this.effects = legacyEffectsNames.indexOf(instrumentObject["effects"]);
+				if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
+				
+				// Old songs may have a panning value without explicitly enabling it.
+				if (this.pan != Config.panCenter) {
+					this.effects = (this.effects | (1 << EffectType.panning));
+				}
+			}
+			
+			if (instrumentObject["distortionFilter"] != undefined) {
+				this.distortionFilter.fromJsonObject(instrumentObject["distortionFilter"]);
+			} else {
+				this.distortionFilter.reset();
+			}
+			if (instrumentObject["distortion"] != undefined) {
+				this.distortion = clamp(0, Config.distortionRange, Math.round((Config.distortionRange - 1) * (instrumentObject["distortion"] | 0) / 100));
+			} else {
+				this.distortion = 0;
+			}
+			
+			if (instrumentObject["reverb"] != undefined) {
+				this.reverb = clamp(0, Config.reverbRange, Math.round((Config.reverbRange - 1) * (instrumentObject["reverb"] | 0) / 100));
+			} else {
+				if (legacyGlobalReverb == 0) {
+					// If the original song reverb was zero, just disable the instrument reverb effect entirely.
+					this.effects = (this.effects & (~(1 << EffectType.reverb)));
+				} else {
+					this.reverb = legacyGlobalReverb;
+				}
+			}
+			
+			if (instrumentObject["sustain"] != undefined) {
+				this.sustain = clamp(0, Config.sustainRange, Math.round((Config.sustainRange - 1) * (instrumentObject["sustain"] | 0) / 100));
+			} else {
+				this.sustain = 6;
+			}
+			
 			if (this.type == InstrumentType.noise) {
 				this.chipNoise = Config.chipNoises.findIndex(wave=>wave.name==instrumentObject["wave"]);
 				if (this.chipNoise == -1) this.chipNoise = 1;
@@ -1144,23 +1183,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject["chord"]);
 				if (this.chord == -1) this.chord = 0;
 			} else if (this.type == InstrumentType.guitar) {
-				if (instrumentObject["distortionFilter"] != undefined) {
-					this.distortionFilter.fromJsonObject(instrumentObject["distortionFilter"]);
-				} else {
-					this.distortionFilter.reset();
-				}
-				
-				if (instrumentObject["distortion"] != undefined) {
-					this.distortion = clamp(0, Config.distortionRange, Math.round((Config.distortionRange - 1) * (instrumentObject["distortion"] | 0) / 100));
-				} else {
-					this.distortion = 0;
-				}
-				if (instrumentObject["sustain"] != undefined) {
-					this.sustain = clamp(0, Config.sustainRange, Math.round((Config.sustainRange - 1) * (instrumentObject["sustain"] | 0) / 100));
-				} else {
-					this.sustain = 6;
-				}
-				
 				this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject["chord"]);
 				if (this.chord == -1) this.chord = 3;
 			} else if (this.type == InstrumentType.chip) {
@@ -1229,7 +1251,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		
 		public warmUp(samplesPerSecond: number): void {
 			if (this.type == InstrumentType.noise) {
-				getDrumWave(this.chipNoise);
+				getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
 			} else if (this.type == InstrumentType.harmonics) {
 				this.harmonicsWave.getCustomWave();
 			} else if (this.type == InstrumentType.guitar) {
@@ -1245,7 +1267,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		
 		public getDrumWave(): Float32Array {
 			if (this.type == InstrumentType.noise) {
-				return getDrumWave(this.chipNoise);
+				return getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
 			} else if (this.type == InstrumentType.spectrum) {
 				return this.spectrumWave.getCustomWave(8);
 			} else {
@@ -1257,7 +1279,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			if (this.type == InstrumentType.drumset) {
 				return this.drumsetSpectrumWaves[pitch].getCustomWave(Instrument._drumsetIndexToSpectrumOctave(pitch));
 			} else {
-				throw new Error("Unhandled instrument type in getDrumWave");
+				throw new Error("Unhandled instrument type in getDrumsetWave");
 			}
 		}
 		
@@ -1293,7 +1315,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public scale: number;
 		public key: number;
 		public tempo: number;
-		public reverb: number;
 		public beatsPerBar: number;
 		public barCount: number;
 		public patternsPerChannel: number;
@@ -1327,7 +1348,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.loopStart = 0;
 			this.loopLength = 4;
 			this.tempo = 150;
-			this.reverb = 0;
 			this.beatsPerBar = 8;
 			this.barCount = 16;
 			this.patternsPerChannel = 8;
@@ -1382,7 +1402,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			buffer.push(SongTagCode.loopStart, base64IntToCharCode[this.loopStart >> 6], base64IntToCharCode[this.loopStart & 0x3f]);
 			buffer.push(SongTagCode.loopEnd, base64IntToCharCode[(this.loopLength - 1) >> 6], base64IntToCharCode[(this.loopLength - 1) & 0x3f]);
 			buffer.push(SongTagCode.tempo, base64IntToCharCode[this.tempo >> 6], base64IntToCharCode[this.tempo & 63]);
-			buffer.push(SongTagCode.reverb, base64IntToCharCode[this.reverb]);
 			buffer.push(SongTagCode.beatCount, base64IntToCharCode[this.beatsPerBar - 1]);
 			buffer.push(SongTagCode.barCount, base64IntToCharCode[(this.barCount - 1) >> 6], base64IntToCharCode[(this.barCount - 1) & 0x3f]);
 			buffer.push(SongTagCode.patternCount, base64IntToCharCode[(this.patternsPerChannel - 1) >> 6], base64IntToCharCode[(this.patternsPerChannel - 1) & 0x3f]);
@@ -1399,14 +1418,28 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					const instrument: Instrument = this.channels[channel].instruments[i];
 					buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
 					buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
-					buffer.push(SongTagCode.pan, base64IntToCharCode[instrument.pan]);
 					buffer.push(SongTagCode.preset, base64IntToCharCode[instrument.preset >> 6], base64IntToCharCode[instrument.preset & 63]);
-					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects]);
+					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects >> 6], base64IntToCharCode[instrument.effects & 63]);
 					
 					buffer.push(SongTagCode.filter, base64IntToCharCode[instrument.filter.controlPointCount]);
 					for (let j: number = 0; j < instrument.filter.controlPointCount; j++) {
 						const point: FilterControlPoint = instrument.filter.controlPoints[j];
 						buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
+					}
+					
+					if (effectsIncludeDistortion(instrument.effects)) {
+						buffer.push(SongTagCode.distortion, base64IntToCharCode[instrument.distortion]);
+						buffer.push(SongTagCode.distortionFilter, base64IntToCharCode[instrument.distortionFilter.controlPointCount]);
+						for (let j: number = 0; j < instrument.distortionFilter.controlPointCount; j++) {
+							const point: FilterControlPoint = instrument.distortionFilter.controlPoints[j];
+							buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
+						}
+					}
+					if (effectsIncludePanning(instrument.effects)) {
+						buffer.push(SongTagCode.pan, base64IntToCharCode[instrument.pan]);
+					}
+					if (effectsIncludeReverb(instrument.effects)) {
+						buffer.push(SongTagCode.reverb, base64IntToCharCode[instrument.reverb]);
 					}
 					
 					if (instrument.type != InstrumentType.drumset) {
@@ -1478,13 +1511,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					} else if (instrument.type == InstrumentType.guitar) {
 						buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth]);
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
-						buffer.push(SongTagCode.distortion, base64IntToCharCode[instrument.distortion]);
 						buffer.push(SongTagCode.sustain, base64IntToCharCode[instrument.sustain]);
-						buffer.push(SongTagCode.distortionFilter, base64IntToCharCode[instrument.distortionFilter.controlPointCount]);
-						for (let j: number = 0; j < instrument.distortionFilter.controlPointCount; j++) {
-							const point: FilterControlPoint = instrument.distortionFilter.controlPoints[j];
-							buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
-						}
 					} else {
 						throw new Error("Unknown instrument type.");
 					}
@@ -1687,6 +1714,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 			}
 			
+			let legacyGlobalReverb: number = 0; // beforeNine reverb was song-global, record that reverb here and adapt it to instruments as needed.
+			
 			let instrumentChannelIterator: number = 0;
 			let instrumentIndexIterator: number = -1;
 			let command: SongTagCode;
@@ -1743,8 +1772,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					this.tempo = clamp(Config.tempoMin, Config.tempoMax + 1, this.tempo);
 				} break;
 				case SongTagCode.reverb: {
-					this.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					this.reverb = clamp(0, Config.reverbRange, this.reverb);
+					if (beforeNine) {
+						legacyGlobalReverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						legacyGlobalReverb = clamp(0, 4, legacyGlobalReverb);
+					} else {
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+						instrument.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						instrument.reverb = clamp(0, Config.reverbRange, instrument.reverb);
+					}
 				} break;
 				case SongTagCode.beatCount: {
 					if (beforeThree) {
@@ -1821,6 +1856,16 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 					const instrumentType: number = validateRange(0, InstrumentType.length - 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					instrument.setTypeAndReset(instrumentType, instrumentChannelIterator >= this.pitchChannelCount);
+					
+					if (beforeSeven) {
+						// the reverb effect was applied to all pitched instruments if nonzero but never explicitly enabled if beforeSeven, so enable it here.
+						if (legacyGlobalReverb > 0 && !this.getChannelIsNoise(instrumentChannelIterator)) {
+							instrument.effects = (1 << EffectType.reverb);
+							instrument.reverb = legacyGlobalReverb;
+						} else {
+							instrument.effects = 0;
+						}
+					}
 				} break;
 				case SongTagCode.preset: {
 					const presetValue: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -2079,7 +2124,23 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chord = clamp(0, Config.chords.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} break;
 				case SongTagCode.effects: {
-					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].effects = clamp(0, Config.effectsNames.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					if (beforeNine) {
+						instrument.effects = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] & ((1 << EffectType.length) - 1));
+						if (legacyGlobalReverb == 0) {
+							// Disable reverb if legacy song reverb was zero.
+							instrument.effects = (instrument.effects & (~(1 << EffectType.reverb)));
+						} else if (effectsIncludeReverb(instrument.effects)) {
+							instrument.reverb = legacyGlobalReverb;
+						}
+						if (instrument.pan != Config.panCenter) {
+							// Enable panning if panning slider isn't centered.
+							instrument.effects = (instrument.effects | (1 << EffectType.panning));
+						}
+					} else {
+						instrument.effects = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					}
+					instrument.effects = (instrument.effects & ((1 << EffectType.length) - 1));
 				} break;
 				case SongTagCode.volume: {
 					if (beforeThree) {
@@ -2436,7 +2497,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				"beatsPerBar": this.beatsPerBar,
 				"ticksPerBeat": Config.rhythms[this.rhythm].stepsPerBeat,
 				"beatsPerMinute": this.tempo,
-				"reverb": this.reverb,
 				//"outroBars": this.barCount - this.loopStart - this.loopLength; // derive this from bar arrays?
 				//"patternCount": this.patternsPerChannel, // derive this from pattern arrays?
 				//"instrumentsPerChannel": this.instrumentsPerChannel, //derive this from instrument arrays?
@@ -2487,8 +2547,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				this.tempo = clamp(Config.tempoMin, Config.tempoMax + 1, jsonObject["beatsPerMinute"] | 0);
 			}
 			
+			let legacyGlobalReverb: number = 0; // In older songs, reverb was song-global, record that here and pass it to Instrument.fromJsonObject() for context.
 			if (jsonObject["reverb"] != undefined) {
-				this.reverb = clamp(0, Config.reverbRange, jsonObject["reverb"] | 0);
+				legacyGlobalReverb = clamp(0, 4, jsonObject["reverb"] | 0);
 			}
 			
 			if (jsonObject["beatsPerBar"] != undefined) {
@@ -2568,7 +2629,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					
 					for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 						const instrument: Instrument = channel.instruments[i];
-						instrument.fromJsonObject(channelObject["instruments"][i], isNoiseChannel);
+						instrument.fromJsonObject(channelObject["instruments"][i], isNoiseChannel, legacyGlobalReverb);
 					}
 					
 					for (let i: number = 0; i < this.patternsPerChannel; i++) {
@@ -2769,14 +2830,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public feedbackMult: number = 0.0;
 		public feedbackDelta: number = 0.0;
 		
-		// TODO: Move these to InstrumentState.
-		public stereoVolume1: number = 0.0;
-		public stereoVolume2: number = 0.0;
-		public stereoOffset: number = 0.0;
-		public stereoDelay: number = 0.0;
-		public volumeStart: number = 0.0;
-		public volumeDelta: number = 0.0;
-		
 		constructor() {
 			this.reset();
 		}
@@ -2801,33 +2854,117 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 	class InstrumentState {
 		public instrument: Instrument;
 		
-		public awake: boolean = false;
-		public tonesAddedInThisTick: boolean = false;
-		public computed: boolean = false;
-		public readonly releasedTones: Deque<Tone> = new Deque<Tone>();
-		
-		public volumeStart: number = 1.0;
-		public volumeDelta: number = 0.0;
-		public stereoOffset: number = 0;
-		public stereoVolume1: number = 1.0;
-		public stereoVolume2: number = 1.0;
-		public stereoDelay: number = 0;
+		public awake: boolean = false; // Whether the instrument's effects-processing loop should continue.
+		public computed: boolean = false; // Whether the effects-processing parameters are up-to-date for the current synth run.
+		public tonesAddedInThisTick: boolean = false; // Whether any instrument tones are currently active.
+		public flushingDelayLines: boolean = false; // If no tones were active recently, enter a mode where the delay lines are filled with zeros to reset them for later use.
+		public deactivateAfterThisTick: boolean = false; // Whether the instrument is ready to be deactivated because the delay lines, if any, are fully zeroed.
+		public attentuationProgress: number = 0.0; // How long since an active tone introduced an input signal to the delay lines, normalized from 0 to 1 based on how long to wait until the delay lines signal will have audibly dissapated.
+		public flushedSamples: number = 0; // How many delay line samples have been flushed to zero.
+		public readonly releasedTones: Deque<Tone> = new Deque<Tone>(); // Tones that are in the process of fading out after the corresponding notes ended.
 		
 		public readonly distortionFilters: DynamicBiquadFilter[] = [];
 		public distortionFilterCount: number = 0;
 		public initialDistortionFilterInput1: number = 0.0;
 		public initialDistortionFilterInput2: number = 0.0;
 		
-		public reset(): void {
+		public volumeStart: number = 1.0;
+		public volumeDelta: number = 0.0;
+		public delayInputMultStart: number = 0.0;
+		public delayInputMultDelta: number = 0.0;
+		
+		public panningDelayLine: Float32Array | null = null;
+		public panningDelayPos: number = 0;
+		public panningVolumeStartL: number = 0.0;
+		public panningVolumeStartR: number = 0.0;
+		public panningVolumeDeltaL: number = 0.0;
+		public panningVolumeDeltaR: number = 0.0;
+		public panningOffsetStartL: number = 0.0;
+		public panningOffsetStartR: number = 0.0;
+		public panningOffsetDeltaL: number = 0.0;
+		public panningOffsetDeltaR: number = 0.0;
+		
+		public chorusDelayLineL: Float32Array | null = null;
+		public chorusDelayLineR: Float32Array | null = null;
+		public chorusDelayLineDirty: boolean = false;
+		public chorusDelayPos: number = 0;
+		public chorusPhase: number = 0;
+		
+		public reverbDelayLine: Float32Array | null = null;
+		public reverbDelayLineDirty: boolean = false;
+		public reverbDelayPos: number = 0;
+		public reverbFeedback0: number = 0.0;
+		public reverbFeedback1: number = 0.0;
+		public reverbFeedback2: number = 0.0;
+		public reverbFeedback3: number = 0.0;
+		public reverbMult: number = 0.0;
+		
+		public allocateNecessaryBuffers(synth: Synth, instrument: Instrument): void {
+			if (effectsIncludePanning(instrument.effects)) {
+				if (this.panningDelayLine == null || this.panningDelayLine.length < synth.panningDelayBufferSize) {
+					this.panningDelayLine = new Float32Array(synth.panningDelayBufferSize);
+				}
+			}
+			if (effectsIncludeChorus(instrument.effects)) {
+				if (this.chorusDelayLineL == null || this.chorusDelayLineL.length < synth.chorusDelayBufferSize) {
+					this.chorusDelayLineL = new Float32Array(synth.chorusDelayBufferSize);
+				}
+				if (this.chorusDelayLineR == null || this.chorusDelayLineR.length < synth.chorusDelayBufferSize) {
+					this.chorusDelayLineR = new Float32Array(synth.chorusDelayBufferSize);
+				}
+			}
+			if (effectsIncludeReverb(instrument.effects)) {
+				// TODO: Make reverb delay line sample rate agnostic. Maybe just double buffer size for 96KHz? Adjust attenuation and shelf cutoff appropriately?
+				if (this.reverbDelayLine == null) {
+					this.reverbDelayLine = new Float32Array(Config.reverbDelayBufferSize);
+				}
+			}
+		}
+		
+		public deactivate(): void {
 			for (const filter of this.distortionFilters) filter.resetOutput();
 			this.distortionFilterCount = 0;
 			this.initialDistortionFilterInput1 = 0.0;
 			this.initialDistortionFilterInput2 = 0.0;
+			this.panningDelayPos = 0;
+			if (this.panningDelayLine != null) for (let i: number = 0; i < this.panningDelayLine.length; i++) this.panningDelayLine[i] = 0.0;
+			
 			this.awake = false;
+			this.flushingDelayLines = false;
+			this.deactivateAfterThisTick = false;
+			this.attentuationProgress = 0.0;
+			this.flushedSamples = 0;
 		}
 		
-		public compute(instrument: Instrument, samplesPerSecond: number, tickSampleCountdown: number, samplesPerTick: number, runLength: number): void {
+		public resetAllEffects(): void {
+			this.deactivate();
+			
+			if (this.chorusDelayLineDirty) {
+				for (let i: number = 0; i < this.chorusDelayLineL!.length; i++) this.chorusDelayLineL![i] = 0.0;
+				for (let i: number = 0; i < this.chorusDelayLineR!.length; i++) this.chorusDelayLineR![i] = 0.0;
+			}
+			if (this.reverbDelayLineDirty) {
+				for (let i: number = 0; i < this.reverbDelayLine!.length; i++) this.reverbDelayLine![i] = 0.0;
+			}
+			
+			this.chorusPhase = 0.0;
+			this.reverbFeedback0 = 0.0;
+			this.reverbFeedback1 = 0.0;
+			this.reverbFeedback2 = 0.0;
+			this.reverbFeedback3 = 0.0;
+		}
+		
+		public compute(synth: Synth, instrument: Instrument, samplesPerTick: number, runLength: number): void {
 			this.computed = true;
+			
+			this.allocateNecessaryBuffers(synth, instrument);
+			
+			const samplesPerSecond: number = synth.samplesPerSecond;
+			const tickSampleCountdown: number = synth.tickSampleCountdown;
+			
+			const usesPanning: boolean = effectsIncludePanning(instrument.effects);
+			const usesChorus: boolean = effectsIncludeChorus(instrument.effects);
+			const usesReverb: boolean = effectsIncludeReverb(instrument.effects);
 
 			// TODO: Automation.
 			let distortionFilterVolume: number = 1.0;
@@ -2846,30 +2983,99 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const instrumentVolumeMult: number = Synth.instrumentVolumeToVolumeMult(instrument.volume);
 			let volumeStart: number = instrumentVolumeMult * distortionFilterVolume;
 			let volumeEnd: number = instrumentVolumeMult * distortionFilterVolume;
-			if (!this.tonesAddedInThisTick) {
-				// If this instrument isn't playing tones anymore, the volume can fade out by the end of the tick.
-				volumeStart *= (tickSampleCountdown            ) / samplesPerTick;
-				volumeEnd   *= (tickSampleCountdown - runLength) / samplesPerTick;
+			let delayInputMultStart: number = 1.0;
+			let delayInputMultEnd: number = 1.0;
+			
+			if (usesPanning) {
+				const pan: number = (instrument.pan - Config.panCenter) / Config.panCenter;
+				const maxDelaySamples: number = samplesPerSecond * Config.panDelaySecondsMax;
+				const delaySamples: number = pan * maxDelaySamples * 2.0;
+				this.panningVolumeStartL = Math.cos((1 + pan) * Math.PI * 0.25) * 1.414;
+				this.panningVolumeStartR = Math.cos((1 - pan) * Math.PI * 0.25) * 1.414;
+				this.panningVolumeDeltaL = 0.0; // TODO: Automation.
+				this.panningVolumeDeltaR = 0.0; // TODO: Automation.
+				this.panningOffsetStartL = Math.max(0.0, delaySamples);
+				this.panningOffsetStartR = Math.max(0.0, -delaySamples);
+				this.panningOffsetDeltaL = 0.0; // TODO: Automation.
+				this.panningOffsetDeltaR = 0.0; // TODO: Automation.
 			}
+			
+			if (usesReverb) {
+				this.reverbMult = Math.pow(instrument.reverb / Config.reverbRange, 0.667) * 0.425;
+			}
+			
+			if (this.tonesAddedInThisTick) {
+				this.attentuationProgress = 0.0;
+				this.flushedSamples = 0;
+				this.flushingDelayLines = false;
+			} else if (!this.flushingDelayLines) {
+				const tickProgressStart: number = (tickSampleCountdown            ) / samplesPerTick;
+				const tickProgressEnd:   number = (tickSampleCountdown - runLength) / samplesPerTick;
+				
+				// If this instrument isn't playing tones anymore, the volume can fade out by the
+				// end of the first tick. It's possible for filters and the panning delay line to
+				// continue past the end of the tone but they should have mostly dissipated by the
+				// end of the tick anyway.
+				if (this.attentuationProgress == 0.0) {
+					volumeStart *= tickProgressStart;
+					volumeEnd *= tickProgressEnd;
+				} else {
+					volumeStart = 0.0;
+					volumeEnd = 0.0;
+				}
+				
+				const attenuationThreshold: number = 1.0 / 256.0; // when the delay line signal has attenuated this much, it should be inaudible and should be flushed to zero.
+				const halfLifeMult: number = -Math.log2(attenuationThreshold);
+				let delayDuration: number = 0.0;
+				
+				if (usesChorus) {
+					delayDuration += Config.chorusMaxDelay;
+				}
+				
+				if (usesReverb) {
+					const averageMult: number = this.reverbMult * 2.0;
+					const averageDelaySeconds: number = (Config.reverbDelayBufferSize / 4.0) / samplesPerSecond;
+					const attenuationPerSecond: number = Math.pow(averageMult, 1.0 / averageDelaySeconds);
+					const halfLife: number = -1.0 / Math.log2(attenuationPerSecond);
+					const reverbDuration: number = halfLife * halfLifeMult;
+					delayDuration += reverbDuration;
+				}
+				
+				const secondsInTick: number = samplesPerTick / samplesPerSecond;
+				const tickIsEnding: boolean = (runLength >= tickSampleCountdown);
+				const progressInTick: number = secondsInTick / delayDuration;
+				const progressAtEndOfTick: number = this.attentuationProgress + progressInTick;
+				if (progressAtEndOfTick >= 1.0) {
+					delayInputMultStart *= tickProgressStart;
+					delayInputMultEnd *= tickProgressEnd;
+				}
+				if (tickIsEnding) {
+					this.attentuationProgress = progressAtEndOfTick;
+					if (this.attentuationProgress >= 1.0) {
+						this.flushingDelayLines = true;
+					}
+				}
+			} else {
+				// Flushing delay lines to zero since the signal has mostly dissipated.
+				volumeStart = 0.0;
+				volumeEnd = 0.0;
+				delayInputMultStart = 0.0;
+				delayInputMultEnd = 0.0;
+				
+				let totalDelaySamples: number = 0;
+				if (usesChorus) totalDelaySamples += synth.chorusDelayBufferSize;
+				if (usesReverb) totalDelaySamples += Config.reverbDelayBufferSize;
+				
+				this.flushedSamples += runLength;
+				if (this.flushedSamples >= totalDelaySamples) {
+					this.deactivateAfterThisTick = true;
+				}
+			}
+			
 			this.volumeStart = volumeStart;
 			this.volumeDelta = (volumeEnd - volumeStart) / runLength;
-			
-			const pan: number = (instrument.pan - Config.panCenter) / Config.panCenter;
-			const maxDelaySamples: number = samplesPerSecond * Config.panDelaySecondsMax;
-			const delaySamples: number = Math.round(-pan * maxDelaySamples) * 2;
-			const volumeL: number = Math.cos((1 + pan) * Math.PI * 0.25) * 1.414;
-			const volumeR: number = Math.cos((1 - pan) * Math.PI * 0.25) * 1.414;
-			if (delaySamples >= 0) {
-				this.stereoVolume1 = volumeL;
-				this.stereoVolume2 = volumeR;
-				this.stereoOffset = 0;
-				this.stereoDelay = Math.max(0.0, delaySamples) + 1;
-			} else {
-				this.stereoVolume1 = volumeR;
-				this.stereoVolume2 = volumeL;
-				this.stereoOffset = 1;
-				this.stereoDelay = Math.max(0.0, -delaySamples) - 1;
-			}
+			this.delayInputMultStart = delayInputMultStart;
+			this.delayInputMultDelta = (delayInputMultEnd - delayInputMultStart) / runLength;
 		}
 	}
 	
@@ -2879,15 +3085,34 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 	}
 	
 	export class Synth {
+	
+		private syncSongState(): void {
+			const channelCount: number = this.song!.getChannelCount();
+			for (let i: number = this.channels.length; i < channelCount; i++) {
+				this.channels[i] = new ChannelState();
+			}
+			this.channels.length = channelCount;
+			for (let i: number = 0; i < channelCount; i++) {
+				const channelState: ChannelState = this.channels[i];
+				for (let j: number = channelState.instruments.length; j < this.song!.instrumentsPerChannel; j++) {
+					channelState.instruments[j] = new InstrumentState();
+				}
+				channelState.instruments.length = this.song!.instrumentsPerChannel;
+			}
+		}
 		
 		private warmUpSynthesizer(song: Song | null): void {
 			// Don't bother to generate the drum waves unless the song actually
 			// uses them, since they may require a lot of computation.
 			if (song != null) {
+				this.syncSongState();
 				for (let j: number = 0; j < song.getChannelCount(); j++) {
 					for (let i: number = 0; i < song.instrumentsPerChannel; i++) {
-						Synth.getInstrumentSynthFunction(song.channels[j].instruments[i]);
-						song.channels[j].instruments[i].warmUp(this.samplesPerSecond);
+						const instrument: Instrument = song.channels[j].instruments[i];
+						const instrumentState: InstrumentState = this.channels[j].instruments[i];
+						Synth.getInstrumentSynthFunction(instrument);
+						instrument.warmUp(this.samplesPerSecond);
+						instrumentState.allocateNecessaryBuffers(this, instrument);
 					}
 				}
 			}
@@ -2898,8 +3123,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		}
 		
 		public samplesPerSecond: number = 44100;
-		public guitarDelayBufferSize: number = Synth.fittingPowerOfTwo(this.samplesPerSecond / Instrument.frequencyFromPitch(12));
-		public guitarDelayBufferMask: number = this.guitarDelayBufferSize - 1;
+		public guitarDelayBufferSize: number;
+		public guitarDelayBufferMask: number;
+		public panningDelayBufferSize: number;
+		public panningDelayBufferMask: number;
+		public chorusDelayBufferSize: number;
+		public chorusDelayBufferMask: number;
+		// TODO: reverb
 		
 		public song: Song | null = null;
 		public liveInputDuration: number = 0;
@@ -2914,7 +3144,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		private beat: number = 0;
 		private part: number = 0;
 		private tick: number = 0;
-		private tickSampleCountdown: number = 0;
+		public tickSampleCountdown: number = 0;
 		private isPlayingSong: boolean = false;
 		private liveInputEndTime: number = 0.0;
 		
@@ -2923,31 +3153,16 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		private tempDrumSetControlPoint: FilterControlPoint = new FilterControlPoint();
 		private tempFrequencyResponse: FrequencyResponse = new FrequencyResponse();
 		
+		private static readonly fmSynthFunctionCache: Dictionary<Function> = {};
+		private static readonly effectsFunctionCache: Function[] = Array(1 << 4).fill(undefined); // keep in sync with the number of post-process effects.
+		
 		private readonly channels: ChannelState[] = [];
 		private readonly tonePool: Deque<Tone> = new Deque<Tone>();
 		private readonly liveInputTones: Deque<Tone> = new Deque<Tone>();
 		
 		private limit: number = 0.0;
 		
-		private stereoBufferIndex: number = 0;
-		// TODO: combine these into a single temp stereo buffer.
-		private samplesForNone: Float32Array | null = null;
-		private samplesForReverb: Float32Array | null = null;
-		private samplesForChorus: Float32Array | null = null;
-		private samplesForChorusReverb: Float32Array | null = null;
-		// TODO: This should be general temp mono buffer for effects.
-		private samplesForDistortion: Float32Array | null = null;
-		
-		private chorusDelayLine: Float32Array = new Float32Array(2048);
-		private chorusDelayPos: number = 0;
-		private chorusPhase: number = 0;
-		
-		private reverbDelayLine: Float32Array = new Float32Array(16384);
-		private reverbDelayPos: number = 0;
-		private reverbFeedback0: number = 0.0;
-		private reverbFeedback1: number = 0.0;
-		private reverbFeedback2: number = 0.0;
-		private reverbFeedback3: number = 0.0;
+		private tempMonoInstrumentSampleBuffer: Float32Array | null = null;
 		
 		private audioCtx: any | null = null;
 		private scriptNode: any | null = null;
@@ -2991,6 +3206,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		}
 		
 		constructor(song: Song | string | null = null) {
+			this.computeDelayBufferSizes();
 			if (song != null) this.setSong(song);
 		}
 		
@@ -3000,6 +3216,15 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			} else if (song instanceof Song) {
 				this.song = song;
 			}
+		}
+		
+		private computeDelayBufferSizes(): void {
+			this.guitarDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond / Instrument.frequencyFromPitch(12));
+			this.guitarDelayBufferMask = this.guitarDelayBufferSize - 1;
+			this.panningDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond * Config.panDelaySecondsMax);
+			this.panningDelayBufferMask = this.panningDelayBufferSize - 1;
+			this.chorusDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond * Config.chorusMaxDelay);
+			this.chorusDelayBufferMask = this.chorusDelayBufferSize - 1;
 		}
 		
 		private activateAudio(): void {
@@ -3012,8 +3237,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				this.scriptNode.channelInterpretation = 'speakers';
 				this.scriptNode.connect(this.audioCtx.destination);
 				
-				this.guitarDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond / Instrument.frequencyFromPitch(12));
-				this.guitarDelayBufferMask = this.guitarDelayBufferSize - 1;
+				this.computeDelayBufferSizes();
 			}
 			this.audioCtx.resume();
 		}
@@ -3064,26 +3288,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		
 		public resetEffects(): void {
 			this.limit = 0.0;
-			this.chorusDelayPos = 0;
-			this.chorusPhase = 0.0;
-			this.reverbDelayPos = 0;
-			this.reverbFeedback0 = 0.0;
-			this.reverbFeedback1 = 0.0;
-			this.reverbFeedback2 = 0.0;
-			this.reverbFeedback3 = 0.0;
 			this.freeAllTones();
-			for (let i: number = 0; i < this.reverbDelayLine.length; i++) this.reverbDelayLine[i] = 0.0;
-			for (let i: number = 0; i < this.chorusDelayLine.length; i++) this.chorusDelayLine[i] = 0.0;
-			if (this.samplesForNone != null) for (let i: number = 0; i < this.samplesForNone.length; i++) this.samplesForNone[i] = 0.0;
-			if (this.samplesForReverb != null) for (let i: number = 0; i < this.samplesForReverb.length; i++) this.samplesForReverb[i] = 0.0;
-			if (this.samplesForChorus != null) for (let i: number = 0; i < this.samplesForChorus.length; i++) this.samplesForChorus[i] = 0.0;
-			if (this.samplesForChorusReverb != null) for (let i: number = 0; i < this.samplesForChorusReverb.length; i++) this.samplesForChorusReverb[i] = 0.0;
-			if (this.samplesForDistortion != null) for (let i: number = 0; i < this.samplesForDistortion.length; i++) this.samplesForDistortion[i] = 0.0;
-			
 			if (this.song != null) {
 				for (const channelState of this.channels) {
 					for (const instrumentState of channelState.instruments) {
-						instrumentState.reset();
+						instrumentState.resetAllEffects();
 					}
 				}
 			}
@@ -3176,60 +3385,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			
 			//const synthStartTime: number = performance.now();
 			
-			const channelCount: number = song.getChannelCount();
-			for (let i: number = this.channels.length; i < channelCount; i++) {
-				this.channels[i] = new ChannelState();
-			}
-			this.channels.length = channelCount;
-			for (let i: number = 0; i < channelCount; i++) {
-				const channelState: ChannelState = this.channels[i];
-				for (let j: number = channelState.instruments.length; j < song.instrumentsPerChannel; j++) {
-					channelState.instruments[j] = new InstrumentState();
-				}
-				channelState.instruments.length = song.instrumentsPerChannel;
-			}
+			this.syncSongState();
 			
-			const stereoBufferLength: number = outputBufferLength * 4;
-			if (this.samplesForNone == null || this.samplesForNone.length != stereoBufferLength ||
-				this.samplesForReverb == null || this.samplesForReverb.length != stereoBufferLength ||
-				this.samplesForChorus == null || this.samplesForChorus.length != stereoBufferLength ||
-				this.samplesForChorusReverb == null || this.samplesForChorusReverb.length != stereoBufferLength ||
-				this.samplesForDistortion == null || this.samplesForDistortion.length != outputBufferLength)
-			{
-				this.samplesForNone = new Float32Array(stereoBufferLength);
-				this.samplesForReverb = new Float32Array(stereoBufferLength);
-				this.samplesForChorus = new Float32Array(stereoBufferLength);
-				this.samplesForChorusReverb = new Float32Array(stereoBufferLength);
-				this.samplesForDistortion = new Float32Array(outputBufferLength);
-				this.stereoBufferIndex = 0;
+			if (this.tempMonoInstrumentSampleBuffer == null || this.tempMonoInstrumentSampleBuffer.length < outputBufferLength) {
+				this.tempMonoInstrumentSampleBuffer = new Float32Array(outputBufferLength);
 			}
-			let stereoBufferIndex: number = this.stereoBufferIndex;
-			const samplesForNone: Float32Array = this.samplesForNone;
-			const samplesForReverb: Float32Array = this.samplesForReverb;
-			const samplesForChorus: Float32Array = this.samplesForChorus;
-			const samplesForChorusReverb: Float32Array = this.samplesForChorusReverb;
 			
 			// Post processing parameters:
 			const volume: number = +this.volume;
-			const chorusDelayLine: Float32Array = this.chorusDelayLine;
-			const reverbDelayLine: Float32Array = this.reverbDelayLine;
-			const chorusDuration: number = 2.0;
-			const chorusAngle: number = Math.PI * 2.0 / (chorusDuration * this.samplesPerSecond);
-			const chorusRange: number = this.samplesPerSecond * Config.chorusDelayRange;
-			const chorusOffset0: number = 0x800 - 1.51 * chorusRange;
-			const chorusOffset1: number = 0x800 - 2.10 * chorusRange;
-			const chorusOffset2: number = 0x800 - 3.35 * chorusRange;
-			const chorusOffset3: number = 0x800 - 1.47 * chorusRange;
-			const chorusOffset4: number = 0x800 - 2.15 * chorusRange;
-			const chorusOffset5: number = 0x800 - 3.25 * chorusRange;
-			let chorusPhase: number = this.chorusPhase % (Math.PI * 2.0);
-			let chorusDelayPos: number = this.chorusDelayPos & 0x7FF;
-			let reverbDelayPos: number = this.reverbDelayPos & 0x3FFF;
-			let reverbFeedback0: number = +this.reverbFeedback0;
-			let reverbFeedback1: number = +this.reverbFeedback1;
-			let reverbFeedback2: number = +this.reverbFeedback2;
-			let reverbFeedback3: number = +this.reverbFeedback3;
-			const reverb: number = Math.pow(song.reverb / Config.reverbRange, 0.667) * 0.425;
 			const limitDecay: number = 1.0 - Math.pow(0.5, 4.0 / this.samplesPerSecond);
 			const limitRise: number = 1.0 - Math.pow(0.5, 4000.0 / this.samplesPerSecond);
 			let limit: number = +this.limit;
@@ -3256,7 +3419,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 								
 								for (let i: number = 0; i < this.liveInputTones.count(); i++) {
 									const tone: Tone = this.liveInputTones.get(i);
-									this.playTone(song, stereoBufferIndex, stereoBufferLength, channelIndex, samplesPerTick, runLength, tone, false, false);
+									this.playTone(song, channelIndex, samplesPerTick, bufferIndex, runLength, tone, false, false);
 									tonesPlayedInThisChannel++;
 								}
 							}
@@ -3264,7 +3427,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							this.determineCurrentActiveTones(song, channelIndex, playSong);
 							for (let i: number = 0; i < channelState.activeTones.count(); i++) {
 								const tone: Tone = channelState.activeTones.get(i);
-								this.playTone(song, stereoBufferIndex, stereoBufferLength, channelIndex, samplesPerTick, runLength, tone, false, false);
+								this.playTone(song, channelIndex, samplesPerTick, bufferIndex, runLength, tone, false, false);
 								tonesPlayedInThisChannel++;
 							}
 						}
@@ -3279,17 +3442,16 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							}
 							
 							const shouldFadeOutFast: boolean = (tonesPlayedInThisChannel >= Config.maximumTonesPerChannel);
-							this.playTone(song, stereoBufferIndex, stereoBufferLength, channelIndex, samplesPerTick, runLength, tone, true, shouldFadeOutFast);
+							this.playTone(song, channelIndex, samplesPerTick, bufferIndex, runLength, tone, true, shouldFadeOutFast);
 							tonesPlayedInThisChannel++;
 						}
 						
 						if (instrumentState.awake) {
 							if (!instrumentState.computed) {
-								instrumentState.compute(instrument, this.samplesPerSecond, this.tickSampleCountdown, samplesPerTick, runLength);
+								instrumentState.compute(this, instrument, samplesPerTick, runLength);
 							}
 							
-							const synthBuffer: Float32Array = this.selectSampleBufferForEffects(instrument.effects);
-							Synth.distortionSynth(this, synthBuffer, stereoBufferIndex, stereoBufferLength, runLength * 2, instrument, instrumentState);
+							Synth.effectsSynth(this, outputDataL, outputDataR, bufferIndex, runLength, instrument, instrumentState);
 							
 							instrumentState.computed = false;
 						}
@@ -3297,107 +3459,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 				
 				// Post processing:
-				let chorusTap0Index: number = chorusDelayPos + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
-				let chorusTap1Index: number = chorusDelayPos + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
-				let chorusTap2Index: number = chorusDelayPos + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
-				let chorusTap3Index: number = chorusDelayPos + 0x400 + chorusOffset3 - chorusRange * Math.sin(chorusPhase + 3.2);
-				let chorusTap4Index: number = chorusDelayPos + 0x400 + chorusOffset4 - chorusRange * Math.sin(chorusPhase + 5.3);
-				let chorusTap5Index: number = chorusDelayPos + 0x400 + chorusOffset5 - chorusRange * Math.sin(chorusPhase + 1.0);
-				chorusPhase += chorusAngle * runLength;
-				const chorusTap0End: number = chorusDelayPos + runLength + chorusOffset0 - chorusRange * Math.sin(chorusPhase + 0);
-				const chorusTap1End: number = chorusDelayPos + runLength + chorusOffset1 - chorusRange * Math.sin(chorusPhase + 2.1);
-				const chorusTap2End: number = chorusDelayPos + runLength + chorusOffset2 - chorusRange * Math.sin(chorusPhase + 4.2);
-				const chorusTap3End: number = chorusDelayPos + runLength + 0x400 + chorusOffset3 - chorusRange * Math.sin(chorusPhase + 3.2);
-				const chorusTap4End: number = chorusDelayPos + runLength + 0x400 + chorusOffset4 - chorusRange * Math.sin(chorusPhase + 5.3);
-				const chorusTap5End: number = chorusDelayPos + runLength + 0x400 + chorusOffset5 - chorusRange * Math.sin(chorusPhase + 1.0);
-				const chorusTap0Delta: number = (chorusTap0End - chorusTap0Index) / runLength;
-				const chorusTap1Delta: number = (chorusTap1End - chorusTap1Index) / runLength;
-				const chorusTap2Delta: number = (chorusTap2End - chorusTap2Index) / runLength;
-				const chorusTap3Delta: number = (chorusTap3End - chorusTap3Index) / runLength;
-				const chorusTap4Delta: number = (chorusTap4End - chorusTap4Index) / runLength;
-				const chorusTap5Delta: number = (chorusTap5End - chorusTap5Index) / runLength;
 				const runEnd: number = bufferIndex + runLength;
 				for (let i: number = bufferIndex; i < runEnd; i++) {
-					const bufferIndexL: number = stereoBufferIndex;
-					const bufferIndexR: number = stereoBufferIndex + 1;
-					const sampleForNoneL: number = samplesForNone[bufferIndexL]; samplesForNone[bufferIndexL] = 0.0;
-					const sampleForNoneR: number = samplesForNone[bufferIndexR]; samplesForNone[bufferIndexR] = 0.0;
-					const sampleForReverbL: number = samplesForReverb[bufferIndexL]; samplesForReverb[bufferIndexL] = 0.0;
-					const sampleForReverbR: number = samplesForReverb[bufferIndexR]; samplesForReverb[bufferIndexR] = 0.0;
-					const sampleForChorusL: number = samplesForChorus[bufferIndexL]; samplesForChorus[bufferIndexL] = 0.0;
-					const sampleForChorusR: number = samplesForChorus[bufferIndexR]; samplesForChorus[bufferIndexR] = 0.0;
-					const sampleForChorusReverbL: number = samplesForChorusReverb[bufferIndexL]; samplesForChorusReverb[bufferIndexL] = 0.0;
-					const sampleForChorusReverbR: number = samplesForChorusReverb[bufferIndexR]; samplesForChorusReverb[bufferIndexR] = 0.0;
-					stereoBufferIndex += 2;
-					
-					const combinedChorusL: number = sampleForChorusL + sampleForChorusReverbL;
-					const combinedChorusR: number = sampleForChorusR + sampleForChorusReverbR;
-					
-					const chorusTap0Ratio: number = chorusTap0Index % 1;
-					const chorusTap1Ratio: number = chorusTap1Index % 1;
-					const chorusTap2Ratio: number = chorusTap2Index % 1;
-					const chorusTap3Ratio: number = chorusTap3Index % 1;
-					const chorusTap4Ratio: number = chorusTap4Index % 1;
-					const chorusTap5Ratio: number = chorusTap5Index % 1;
-					const chorusTap0A: number = chorusDelayLine[(chorusTap0Index) & 0x7FF];
-					const chorusTap0B: number = chorusDelayLine[(chorusTap0Index + 1) & 0x7FF];
-					const chorusTap1A: number = chorusDelayLine[(chorusTap1Index) & 0x7FF];
-					const chorusTap1B: number = chorusDelayLine[(chorusTap1Index + 1) & 0x7FF];
-					const chorusTap2A: number = chorusDelayLine[(chorusTap2Index) & 0x7FF];
-					const chorusTap2B: number = chorusDelayLine[(chorusTap2Index + 1) & 0x7FF];
-					const chorusTap3A: number = chorusDelayLine[(chorusTap3Index) & 0x7FF];
-					const chorusTap3B: number = chorusDelayLine[(chorusTap3Index + 1) & 0x7FF];
-					const chorusTap4A: number = chorusDelayLine[(chorusTap4Index) & 0x7FF];
-					const chorusTap4B: number = chorusDelayLine[(chorusTap4Index + 1) & 0x7FF];
-					const chorusTap5A: number = chorusDelayLine[(chorusTap5Index) & 0x7FF];
-					const chorusTap5B: number = chorusDelayLine[(chorusTap5Index + 1) & 0x7FF];
-					const chorusTap0: number = chorusTap0A + (chorusTap0B - chorusTap0A) * chorusTap0Ratio;
-					const chorusTap1: number = chorusTap1A + (chorusTap1B - chorusTap1A) * chorusTap1Ratio;
-					const chorusTap2: number = chorusTap2A + (chorusTap2B - chorusTap2A) * chorusTap2Ratio;
-					const chorusTap3: number = chorusTap3A + (chorusTap3B - chorusTap3A) * chorusTap3Ratio;
-					const chorusTap4: number = chorusTap4A + (chorusTap4B - chorusTap4A) * chorusTap4Ratio;
-					const chorusTap5: number = chorusTap5A + (chorusTap5B - chorusTap5A) * chorusTap5Ratio;
-					const chorusSampleL = 0.5 * (combinedChorusL - chorusTap0 + chorusTap1 - chorusTap2);
-					const chorusSampleR = 0.5 * (combinedChorusR - chorusTap3 + chorusTap4 - chorusTap5);
-					chorusDelayLine[chorusDelayPos] = combinedChorusL;
-					chorusDelayLine[(chorusDelayPos + 0x400) & 0x7FF] = combinedChorusR;
-					chorusDelayPos = (chorusDelayPos + 1) & 0x7FF;
-					chorusTap0Index += chorusTap0Delta;
-					chorusTap1Index += chorusTap1Delta;
-					chorusTap2Index += chorusTap2Delta;
-					chorusTap3Index += chorusTap3Delta;
-					chorusTap4Index += chorusTap4Delta;
-					chorusTap5Index += chorusTap5Delta;
-					
-					// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
-					// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
-					// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
-					// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
-					const reverbDelayPos1: number = (reverbDelayPos +  3041) & 0x3FFF;
-					const reverbDelayPos2: number = (reverbDelayPos +  6426) & 0x3FFF;
-					const reverbDelayPos3: number = (reverbDelayPos + 10907) & 0x3FFF;
-					const reverbSample0: number = (reverbDelayLine[reverbDelayPos]);
-					const reverbSample1: number = reverbDelayLine[reverbDelayPos1];
-					const reverbSample2: number = reverbDelayLine[reverbDelayPos2];
-					const reverbSample3: number = reverbDelayLine[reverbDelayPos3];
-					const reverbTemp0: number = -(reverbSample0 + sampleForChorusReverbL + sampleForReverbL) + reverbSample1;
-					const reverbTemp1: number = -(reverbSample0 + sampleForChorusReverbR + sampleForReverbR) - reverbSample1;
-					const reverbTemp2: number = -reverbSample2 + reverbSample3;
-					const reverbTemp3: number = -reverbSample2 - reverbSample3;
-					reverbFeedback0 += ((reverbTemp0 + reverbTemp2) * reverb - reverbFeedback0) * 0.5;
-					reverbFeedback1 += ((reverbTemp1 + reverbTemp3) * reverb - reverbFeedback1) * 0.5;
-					reverbFeedback2 += ((reverbTemp0 - reverbTemp2) * reverb - reverbFeedback2) * 0.5;
-					reverbFeedback3 += ((reverbTemp1 - reverbTemp3) * reverb - reverbFeedback3) * 0.5;
-					reverbDelayLine[reverbDelayPos1] = reverbFeedback0;
-					reverbDelayLine[reverbDelayPos2] = reverbFeedback1;
-					reverbDelayLine[reverbDelayPos3] = reverbFeedback2;
-					reverbDelayLine[reverbDelayPos ] = reverbFeedback3;
-					reverbDelayPos = (reverbDelayPos + 1) & 0x3FFF;
-					
-					const sampleL = sampleForNoneL + chorusSampleL + sampleForReverbL + reverbSample1 + reverbSample2 + reverbSample3;
-					const sampleR = sampleForNoneR + chorusSampleR + sampleForReverbR + reverbSample0 + reverbSample2 - reverbSample3;
-					
 					// A compressor/limiter.
+					const sampleL = outputDataL[i];
+					const sampleR = outputDataR[i];
 					const abs: number = Math.max(Math.abs(sampleL), Math.abs(sampleR));
 					limit += (abs - limit) * (limit < abs ? limitRise : limitDecay * (1.0 + limit));
 					const limitedVolume = volume / (limit >= 1 ? limit * 1.05 : limit * 0.8 + 0.25);
@@ -3425,8 +3491,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 									tone.ticksSinceReleased++;
 								}
 							}
-							if (!instrumentState.tonesAddedInThisTick) {
-								instrumentState.reset();
+							if (instrumentState.deactivateAfterThisTick) {
+								instrumentState.deactivate();
 							}
 							instrumentState.tonesAddedInThisTick = false;
 						}
@@ -3487,28 +3553,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 			}
 			
-			// Avoid persistent denormal or NaN values in the delay buffers and filter history.
-			if (!Number.isFinite(reverbFeedback0) || Math.abs(reverbFeedback0) < epsilon) reverbFeedback0 = 0.0;
-			if (!Number.isFinite(reverbFeedback1) || Math.abs(reverbFeedback1) < epsilon) reverbFeedback1 = 0.0;
-			if (!Number.isFinite(reverbFeedback2) || Math.abs(reverbFeedback2) < epsilon) reverbFeedback2 = 0.0;
-			if (!Number.isFinite(reverbFeedback3) || Math.abs(reverbFeedback3) < epsilon) reverbFeedback3 = 0.0;
+			// Avoid persistent denormal or NaN values.
 			if (!Number.isFinite(limit) || Math.abs(limit) < epsilon) limit = 0.0;
-			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos, 0x3FFF);
-			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  3041, 0x3FFF);
-			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  6426, 0x3FFF);
-			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos + 10907, 0x3FFF);
-			this.sanitizeDelayLine(reverbDelayLine, reverbDelayPos + 10907, 0x3FFF);
-			this.sanitizeDelayLine(chorusDelayLine, chorusDelayPos, 0x7FF);
-			this.sanitizeDelayLine(chorusDelayLine, chorusDelayPos + 0x400, 0x7FF);
-			
-			this.stereoBufferIndex = (this.stereoBufferIndex + outputBufferLength * 2) % stereoBufferLength;
-			this.chorusPhase = chorusPhase;
-			this.chorusDelayPos = chorusDelayPos;
-			this.reverbDelayPos = reverbDelayPos;
-			this.reverbFeedback0 = reverbFeedback0;
-			this.reverbFeedback1 = reverbFeedback1;
-			this.reverbFeedback2 = reverbFeedback2;
-			this.reverbFeedback3 = reverbFeedback3;
 			this.limit = limit;
 			
 			if (playSong) {
@@ -3760,37 +3806,21 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			}
 		}
 		
-		private selectSampleBufferForEffects(effects: number): Float32Array {
-			switch (effects) {
-				case 0: return this.samplesForNone!;
-				case 1: return this.samplesForReverb!;
-				case 2: return this.samplesForChorus!;
-				case 3: return this.samplesForChorusReverb!;
-				default: throw new Error();
-			}
-		}
-		
-		private playTone(song: Song, stereoBufferIndex: number, stereoBufferLength: number, channelIndex: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
+		private playTone(song: Song, channelIndex: number, samplesPerTick: number, bufferIndex: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
 			const channel: Channel = song.channels[channelIndex];
 			const channelState: ChannelState = this.channels[channelIndex];
 			const instrument: Instrument = channel.instruments[tone.instrumentIndex];
 			const instrumentState: InstrumentState = channelState.instruments[tone.instrumentIndex];
 			
-			// TODO: Handle effects more generally. Be more consistent about using stereo-vs-mono buffers.
-			const usesDistortionEffect: boolean = (instrument.type == InstrumentType.guitar);
-			let synthBuffer: Float32Array = this.selectSampleBufferForEffects(instrument.effects);
-			if (usesDistortionEffect) {
-				synthBuffer = this.samplesForDistortion!;
-				instrumentState.awake = true;
-				instrumentState.tonesAddedInThisTick = true;
-				if (!instrumentState.computed) {
-					instrumentState.compute(instrument, this.samplesPerSecond, this.tickSampleCountdown, samplesPerTick, runLength);
-				}
+			instrumentState.awake = true;
+			instrumentState.tonesAddedInThisTick = true;
+			if (!instrumentState.computed) {
+				instrumentState.compute(this, instrument, samplesPerTick, runLength);
 			}
 			
 			Synth.computeTone(this, song, channelIndex, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
 			const synthesizer: Function = Synth.getInstrumentSynthFunction(instrument);
-			synthesizer(this, synthBuffer, stereoBufferIndex, stereoBufferLength, runLength * 2, tone, instrument);
+			synthesizer(this, bufferIndex, runLength, tone, instrument);
 		}
 		
 		private static computeEnvelope(envelope: Envelope, time: number, beats: number, noteExpression: number): number {
@@ -3847,26 +3877,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			tone.intervalMult = 1.0;
 			tone.intervalExpressionMult = 1.0;
 			tone.active = false;
-			
-			// TODO: Move panning to InstrumentState.
-			const pan: number = (instrument.pan - Config.panCenter) / Config.panCenter;
-			const maxDelay: number = 0.00065 * synth.samplesPerSecond;
-			const delay: number = Math.round(-pan * maxDelay) * 2;
-			const volumeL: number = Math.cos((1 + pan) * Math.PI * 0.25) * 1.414;
-			const volumeR: number = Math.cos((1 - pan) * Math.PI * 0.25) * 1.414;
-			const delayL: number = Math.max(0.0, -delay);
-			const delayR: number = Math.max(0.0, delay);
-			if (delay >= 0) {
-				tone.stereoVolume1 = volumeL;
-				tone.stereoVolume2 = volumeR;
-				tone.stereoOffset = 0;
-				tone.stereoDelay = delayR + 1;
-			} else {
-				tone.stereoVolume1 = volumeR;
-				tone.stereoVolume2 = volumeL;
-				tone.stereoOffset = 1;
-				tone.stereoDelay = delayL - 1;
-			}
 			
 			let resetPhases: boolean = true;
 			let toneIsOnLastTick: boolean = shouldFadeOutFast;
@@ -4117,8 +4127,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				tone.reset();
 			}
 			
-			const instrumentVolumeMult: number = Synth.instrumentVolumeToVolumeMult(instrument.volume);
-			
 			if (instrument.type == InstrumentType.drumset) {
 				// It's possible that the note will change while the user is editing it,
 				// but the tone's pitches don't get updated because the tone has already
@@ -4245,10 +4253,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				let feedbackEnd: number = feedbackAmplitude * Synth.computeEnvelope(feedbackEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, noteExpressionEnd);
 				tone.feedbackMult = feedbackStart;
 				tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
-				
-				tone.volumeStart = instrumentVolumeMult;
-				const volumeEnd: number = instrumentVolumeMult;
-				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
 			} else if (instrument.type == InstrumentType.guitar) {
 				// Increase expression to compensate for string decay.
 				const decayExpression: number = Math.pow(2.0, 0.7 * (1.0 - instrument.sustain / (Config.sustainRange - 1)));
@@ -4276,11 +4280,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					tone.expressionStarts[pitchIndex] = expressionStart;
 					tone.expressionDeltas[pitchIndex] = (expressionEnd - expressionStart) / runLength;
 				}
-				
-				// TODO: Get rid of tone.volume* entirely.
-				tone.volumeStart = instrumentVolumeMult;
-				let volumeEnd: number = instrumentVolumeMult;
-				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
 				
 				tone.pulseWidth = getPulseWidthRatio(instrument.pulseWidth);
 			} else {
@@ -4332,10 +4331,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					expressionEnd *= noteExpressionEnd;
 				}
 				
-				// TODO: stop mixing in expression with volume here:
-				tone.volumeStart = expressionStart * instrumentVolumeMult;
-				const volumeEnd: number = expressionEnd * instrumentVolumeMult;
-				tone.volumeDelta = (volumeEnd - tone.volumeStart) / runLength;
+				tone.expressionStarts[0] = expressionStart;
+				tone.expressionDeltas[0] = (expressionEnd - expressionStart) / runLength;
 			}
 			
 			tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
@@ -4349,8 +4346,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			}
 			return effect;
 		}
-		
-		private static readonly fmSynthFunctionCache: Dictionary<Function> = {};
 		
 		private static getInstrumentSynthFunction(instrument: Instrument): Function {
 			if (instrument.type == InstrumentType.fm) {
@@ -4400,7 +4395,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					
 					//console.log(synthSource.join("\n"));
 					
-					Synth.fmSynthFunctionCache[fingerprint] = new Function("synth", "data", "stereoBufferIndex", "stereoBufferLength", "runLength", "tone", "instrument", synthSource.join("\n"));
+					Synth.fmSynthFunctionCache[fingerprint] = new Function("synth", "bufferIndex", "runLength", "tone", "instrument", synthSource.join("\n"));
 				}
 				return Synth.fmSynthFunctionCache[fingerprint];
 			} else if (instrument.type == InstrumentType.chip) {
@@ -4422,9 +4417,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			}
 		}
 		
-		private static chipSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static chipSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			const wave: Float64Array = Config.chipWaves[instrument.chipWave].samples;
-			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
+			const waveLength: number = wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
 			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
 			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.intervalMult;
@@ -4434,15 +4430,15 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			let phaseDeltaA: number = tone.phaseDeltas[0] * intervalA * waveLength;
 			let phaseDeltaB: number = phaseDeltaA * deltaRatio;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
-			let volume: number = +tone.volumeStart;
-			const volumeDelta: number = +tone.volumeDelta;
+			let expression: number = +tone.expressionStarts[0];
+			const expressionDelta: number = +tone.expressionDeltas[0];
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 			
 			const filters: DynamicBiquadFilter[] = tone.filters;
-			const filterCount: number = tone.filterCount;
-			let initialFilterInput1: number = tone.initialFilterInput1;
-			let initialFilterInput2: number = tone.initialFilterInput2;
+			const filterCount: number = tone.filterCount|0;
+			let initialFilterInput1: number = +tone.initialFilterInput1;
+			let initialFilterInput2: number = +tone.initialFilterInput2;
 			
 			const phaseAInt: number = phaseA|0;
 			const phaseBInt: number = phaseB|0;
@@ -4450,17 +4446,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const indexB: number = phaseBInt % waveLength;
 			const phaseRatioA: number = phaseA - phaseAInt;
 			const phaseRatioB: number = phaseB - phaseBInt;
-			let prevWaveIntegralA: number = wave[indexA];
-			let prevWaveIntegralB: number = wave[indexB];
+			let prevWaveIntegralA: number = +wave[indexA];
+			let prevWaveIntegralB: number = +wave[indexB];
 			prevWaveIntegralA += (wave[indexA+1] - prevWaveIntegralA) * phaseRatioA;
 			prevWaveIntegralB += (wave[indexB+1] - prevWaveIntegralB) * phaseRatioB;
 			
-			const stopIndex: number = stereoBufferIndex + runLength;
-			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
-			while (stereoBufferIndex < stopIndex) {
+			const stopIndex: number = bufferIndex + runLength;
+			for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
 				
 				phaseA += phaseDeltaA;
 				phaseB += phaseDeltaB;
@@ -4488,12 +4480,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				const output: number = sample * volume;
-				volume += volumeDelta;
+				const output: number = sample * expression;
+				expression += expressionDelta;
 				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
-				stereoBufferIndex += 2;
+				data[sampleIndex] += output;
 			}
 			
 			tone.phases[0] = phaseA / waveLength;
@@ -4504,9 +4494,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
-		private static harmonicsSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static harmonicsSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			const wave: Float32Array = instrument.harmonicsWave.getCustomWave();
-			const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
+			const waveLength: number = wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
 			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
 			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.intervalMult;
@@ -4516,15 +4507,15 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			let phaseDeltaA: number = tone.phaseDeltas[0] * intervalA * waveLength;
 			let phaseDeltaB: number = phaseDeltaA * deltaRatio;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
-			let volume: number = +tone.volumeStart;
-			const volumeDelta: number = +tone.volumeDelta;
+			let expression: number = +tone.expressionStarts[0];
+			const expressionDelta: number = +tone.expressionDeltas[0];
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
 			let phaseB: number = (tone.phases[1] % 1) * waveLength;
 			
 			const filters: DynamicBiquadFilter[] = tone.filters;
-			const filterCount: number = tone.filterCount;
-			let initialFilterInput1: number = tone.initialFilterInput1;
-			let initialFilterInput2: number = tone.initialFilterInput2;
+			const filterCount: number = tone.filterCount|0;
+			let initialFilterInput1: number = +tone.initialFilterInput1;
+			let initialFilterInput2: number = +tone.initialFilterInput2;
 			
 			const phaseAInt: number = phaseA|0;
 			const phaseBInt: number = phaseB|0;
@@ -4532,21 +4523,17 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const indexB: number = phaseBInt % waveLength;
 			const phaseRatioA: number = phaseA - phaseAInt;
 			const phaseRatioB: number = phaseB - phaseBInt;
-			let prevWaveIntegralA: number = wave[indexA];
-			let prevWaveIntegralB: number = wave[indexB];
+			let prevWaveIntegralA: number = +wave[indexA];
+			let prevWaveIntegralB: number = +wave[indexB];
 			prevWaveIntegralA += (wave[indexA+1] - prevWaveIntegralA) * phaseRatioA;
 			prevWaveIntegralB += (wave[indexB+1] - prevWaveIntegralB) * phaseRatioB;
 			
-			const stopIndex: number = stereoBufferIndex + runLength;
-			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
-			while (stereoBufferIndex < stopIndex) {
-
+			const stopIndex: number = bufferIndex + runLength;
+			for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
+				
 				phaseA += phaseDeltaA;
 				phaseB += phaseDeltaB;
-
+				
 				const phaseAInt: number = phaseA|0;
 				const phaseBInt: number = phaseB|0;
 				const indexA: number = phaseAInt % waveLength;
@@ -4570,12 +4557,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				phaseDeltaA *= phaseDeltaScale;
 				phaseDeltaB *= phaseDeltaScale;
 				
-				const output: number = sample * volume;
-				volume += volumeDelta;
+				const output: number = sample * expression;
+				expression += expressionDelta;
 				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
-				stereoBufferIndex += 2;
+				data[sampleIndex] += output;
 			}
 			
 			tone.phases[0] = phaseA / waveLength;
@@ -4586,40 +4571,37 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
-		private static guitarSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static guitarSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			// This algorithm is similar to the Karpluss-Strong algorithm in principle,
 			// but an all-pass filter for dispersion and with more control over the impulse.
 			
-			const delayBufferMask: number = synth.guitarDelayBufferMask >>> 0;
+			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			
-			// TODO: Handle mono buffers more generally.
-			const monoSampleCount: number = runLength >> 1;
+			const delayBufferMask: number = synth.guitarDelayBufferMask >>> 0;
 			
 			const stringDecay: number = 1.0 - instrument.sustain / (Config.sustainRange - 1);
 			
 			if (tone.guitarString == null) tone.guitarString = new GuitarString();
 			let guitarString: GuitarString | null = tone.guitarString;
 			
-			if (guitarString.delayLine == null) {
+			if (guitarString.delayLine == null || guitarString.delayLine.length < synth.guitarDelayBufferSize) {
 				guitarString.delayLine = new Float32Array(synth.guitarDelayBufferSize);
 			}
 			
 			const delayLine: Float32Array = guitarString.delayLine;
-			const prevDelayLength: number = guitarString.prevDelayLength;
-			let allPassSample: number = guitarString.allPassSample;
-			let allPassPrevInput: number = guitarString.allPassPrevInput;
-			let shelfSample: number = guitarString.shelfSample;
-			let shelfPrevInput: number = guitarString.shelfPrevInput;
-			let fractionalDelaySample: number = guitarString.fractionalDelaySample;
+			const prevDelayLength: number = +guitarString.prevDelayLength;
+			let allPassSample: number = +guitarString.allPassSample;
+			let allPassPrevInput: number = +guitarString.allPassPrevInput;
+			let shelfSample: number = +guitarString.shelfSample;
+			let shelfPrevInput: number = +guitarString.shelfPrevInput;
+			let fractionalDelaySample: number = +guitarString.fractionalDelaySample;
 			
-			// TODO: other instruments besides guitar should support separate expression and volume fields...
-			// But I guess combine them if distortion isn't used?
 			let expression: number = +tone.expressionStarts[0];
 			const expressionDelta: number = +tone.expressionDeltas[0];
 			
-			const phaseDeltaStart: number = tone.phaseDeltas[0];
+			const phaseDeltaStart: number = +tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
-			const phaseDeltaEnd: number = phaseDeltaStart * Math.pow(phaseDeltaScale, monoSampleCount);
+			const phaseDeltaEnd: number = phaseDeltaStart * Math.pow(phaseDeltaScale, runLength);
 			
 			const radiansPerSampleStart: number = Math.PI * 2.0 * phaseDeltaStart;
 			const radiansPerSampleEnd:   number = Math.PI * 2.0 * phaseDeltaEnd;
@@ -4633,12 +4615,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			
 			Synth.tempFilterStartCoefficients.allPass1stOrderInvertPhaseAbove(allPassRadiansStart);
 			synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart);
-			let allPassG: number = Synth.tempFilterStartCoefficients.b[0]; // same as a[1]
+			let allPassG: number = +Synth.tempFilterStartCoefficients.b[0]; // same as a[1]
 			const allPassPhaseDelayStart: number = -synth.tempFrequencyResponse.angle() / centerHarmonicStart;
 			
 			Synth.tempFilterEndCoefficients.allPass1stOrderInvertPhaseAbove(allPassRadiansEnd);
 			synth.tempFrequencyResponse.analyze(Synth.tempFilterEndCoefficients, centerHarmonicEnd);
-			const allPassGEnd: number = Synth.tempFilterEndCoefficients.b[0]; // same as a[1]
+			const allPassGEnd: number = +Synth.tempFilterEndCoefficients.b[0]; // same as a[1]
 			const allPassPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
 			
 			const shelfRadians: number = 2.0 * Math.PI * Config.guitarShelfHz / synth.samplesPerSecond;
@@ -4652,14 +4634,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			
 			Synth.tempFilterStartCoefficients.highShelf1stOrder(shelfRadians, shelfGainStart);
 			synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart);
-			let shelfA1: number = Synth.tempFilterStartCoefficients.a[1];
+			let shelfA1: number = +Synth.tempFilterStartCoefficients.a[1];
 			let shelfB0: number = Synth.tempFilterStartCoefficients.b[0] * expressionDecayStart;
 			let shelfB1: number = Synth.tempFilterStartCoefficients.b[1] * expressionDecayStart;
 			const shelfPhaseDelayStart: number = -synth.tempFrequencyResponse.angle() / centerHarmonicStart;
 			
 			Synth.tempFilterEndCoefficients.highShelf1stOrder(shelfRadians, shelfGainEnd);
 			synth.tempFrequencyResponse.analyze(Synth.tempFilterEndCoefficients, centerHarmonicEnd);
-			const shelfA1End: number = Synth.tempFilterEndCoefficients.a[1];
+			const shelfA1End: number = +Synth.tempFilterEndCoefficients.a[1];
 			const shelfB0End: number = Synth.tempFilterEndCoefficients.b[0] * expressionDecayEnd;
 			const shelfB1End: number = Synth.tempFilterEndCoefficients.b[1] * expressionDecayEnd;
 			const shelfPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
@@ -4669,19 +4651,19 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			let delayLength: number = periodLengthStart - allPassPhaseDelayStart - shelfPhaseDelayStart;
 			const delayLengthEnd: number = periodLengthEnd - allPassPhaseDelayEnd - shelfPhaseDelayEnd;
 			
-			const delayLengthDelta: number = (delayLengthEnd - delayLength) / monoSampleCount;
-			const allPassGDelta: number = (allPassGEnd - allPassG) / monoSampleCount;
-			const shelfA1Delta: number = (shelfA1End - shelfA1) / monoSampleCount;
-			const shelfB0Delta: number = (shelfB0End - shelfB0) / monoSampleCount;
-			const shelfB1Delta: number = (shelfB1End - shelfB1) / monoSampleCount;
+			const delayLengthDelta: number = (delayLengthEnd - delayLength) / runLength;
+			const allPassGDelta: number = (allPassGEnd - allPassG) / runLength;
+			const shelfA1Delta: number = (shelfA1End - shelfA1) / runLength;
+			const shelfB0Delta: number = (shelfB0End - shelfB0) / runLength;
+			const shelfB1Delta: number = (shelfB1End - shelfB1) / runLength;
 			
 			const filters: DynamicBiquadFilter[] = tone.filters;
-			const filterCount: number = tone.filterCount;
-			let initialFilterInput1: number = tone.initialFilterInput1;
-			let initialFilterInput2: number = tone.initialFilterInput2;
+			const filterCount: number = tone.filterCount|0;
+			let initialFilterInput1: number = +tone.initialFilterInput1;
+			let initialFilterInput2: number = +tone.initialFilterInput2;
 			
 			const pitchChanged: boolean = Math.abs(Math.log2(delayLength / prevDelayLength)) > 0.01;
-			let delayIndex: number = guitarString.delayIndex;
+			let delayIndex: number = guitarString.delayIndex|0;
 			if (delayIndex == -1 || pitchChanged)  {
 				// -1 delay index means the tone was reset.
 				// Also, if the pitch changed suddenly (e.g. from seamless or arpeggio) then reset the wave.
@@ -4749,8 +4731,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			
 			const delayResetOffset: number = guitarString.delayResetOffset|0;
 			
-			let tempIndex: number = 0;
-			while (tempIndex < monoSampleCount) {
+			const stopIndex: number = bufferIndex + runLength;
+			for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
 				const targetSampleTime: number = delayIndex - delayLength;
 				const lowerIndex: number = (targetSampleTime + 0.125) | 0; // Offset to improve stability of all-pass filter.
 				const upperIndex: number = lowerIndex + 1;
@@ -4774,7 +4756,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				const sample: number = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
 				initialFilterInput2 = initialFilterInput1;
 				initialFilterInput1 = inputSample;
-				data[tempIndex++] += sample;
+				data[sampleIndex] += sample;
 				
 				expression += expressionDelta;
 				delayLength += delayLengthDelta;
@@ -4802,85 +4784,352 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
-		private static distortionSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, instrument: Instrument, instrumentState: InstrumentState): void {
-			const samplesForDistortion: Float32Array | null = synth.samplesForDistortion;
-			if (samplesForDistortion == null) throw new Error();
-			
-			// TODO: This distortion range is going to change when distortion can be disabled entirely and the zero value isn't needed.
-			//const distortion: number = 1.0 / (1.0 + 5.0 * instrument.distortion / (Config.distortionRange - 1));
-			const distortionSlider: number = instrument.distortion / (Config.distortionRange - 1);
-			const distortion: number = Math.pow(1.0 - 0.95 * distortionSlider, 1.5);
-			const amp: number = (1.0 + 2.0 * distortionSlider) / Config.distortionBaseVolume;
-			
-			let volume: number = instrumentState.volumeStart * Config.distortionBaseVolume;
-			const volumeDelta: number = instrumentState.volumeDelta * Config.distortionBaseVolume;
-			const stopIndex: number = stereoBufferIndex + runLength;
-			stereoBufferIndex += instrumentState.stereoOffset;
-			const stereoVolume1: number = instrumentState.stereoVolume1;
-			const stereoVolume2: number = instrumentState.stereoVolume2;
-			const stereoDelay: number = instrumentState.stereoDelay;
-			
-			let filters: DynamicBiquadFilter[] = instrumentState.distortionFilters;
-			const filterCount: number = instrumentState.distortionFilterCount;
-			let initialFilterInput1: number = instrumentState.initialDistortionFilterInput1;
-			let initialFilterInput2: number = instrumentState.initialDistortionFilterInput2;
-			
-			let tempIndex: number = 0;
-			while (stereoBufferIndex < stopIndex) {
-				const distortionInput: number = samplesForDistortion[tempIndex] * amp; // + 0.5; // DC warmth?
-				samplesForDistortion[tempIndex] = 0.0;
-				tempIndex++;
+		private static effectsSynth(synth: Synth, outputDataL: Float32Array, outputDataR: Float32Array, bufferIndex: number, runLength: number, instrument: Instrument, instrumentState: InstrumentState): void {
+			// TODO: If automation is involved, don't assume sliders will stay at zero.
+			const usesDistortionEffect: boolean = effectsIncludeDistortion(instrument.effects) && instrument.distortion != 0;
+			const usesPanningEffect: boolean = effectsIncludePanning(instrument.effects) && instrument.pan != Config.panCenter;
+			const usesChorusEffect: boolean = effectsIncludeChorus(instrument.effects);
+			const usesReverbEffect: boolean = effectsIncludeReverb(instrument.effects) && instrument.reverb != 0;
+			let signature: number = 0;
+			if (usesDistortionEffect) signature = signature | 1;
+			signature = signature << 1;
+			if (usesPanningEffect) signature = signature | 1;
+			signature = signature << 1;
+			if (usesChorusEffect) signature = signature | 1;
+			signature = signature << 1;
+			if (usesReverbEffect) signature = signature | 1;
+
+			let effectsFunction: Function = Synth.effectsFunctionCache[signature];
+			if (effectsFunction == undefined) {
+				let effectsSource: string = "";
 				
-				const distortionOutput: number = distortionInput / ((1.0 - distortion) * Math.abs(distortionInput) + distortion);
+				const usesEffectFilter: boolean = usesDistortionEffect; // TODO: Bitcrush?
+				const usesDelayEffects: boolean = usesChorusEffect || usesReverbEffect;
 				
-				const inputSample: number = distortionOutput;
-				const sample: number = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
-				initialFilterInput2 = initialFilterInput1;
-				initialFilterInput1 = inputSample;
+				effectsSource += `
+					const tempMonoInstrumentSampleBuffer = synth.tempMonoInstrumentSampleBuffer;
+					
+					let volume = +instrumentState.volumeStart;
+					let volumeDelta = +instrumentState.volumeDelta;`
 				
-				const output: number = sample * volume;
-				volume += volumeDelta;
+				if (usesDelayEffects) {
+					effectsSource += `
+					
+					let delayInputMult = +instrumentState.delayInputMultStart;
+					const delayInputMultDelta = +instrumentState.delayInputMultDelta;`
+				}
 				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
-				stereoBufferIndex += 2;
+				if (usesDistortionEffect) {
+					effectsSource += `
+					
+					//const distortion = 1.0 / (1.0 + 5.0 * instrument.distortion / (beepbox.Config.distortionRange - 1));
+					const distortionSlider = instrument.distortion / (beepbox.Config.distortionRange - 1);
+					const distortion = Math.pow(1.0 - 0.95 * distortionSlider, 1.5);
+					const amp = (1.0 + 2.0 * distortionSlider) / beepbox.Config.distortionBaseVolume;
+					volume *= beepbox.Config.distortionBaseVolume;
+					volumeDelta *= beepbox.Config.distortionBaseVolume;`
+				}
+				
+				if (usesEffectFilter) {
+					effectsSource += `
+					
+					let filters = instrumentState.distortionFilters;
+					const filterCount = instrumentState.distortionFilterCount|0;
+					let initialFilterInput1 = +instrumentState.initialDistortionFilterInput1;
+					let initialFilterInput2 = +instrumentState.initialDistortionFilterInput2;`
+				}
+				
+				if (usesPanningEffect) {
+					effectsSource += `
+					
+					const panningMask = synth.panningDelayBufferMask >>> 0;
+					const panningDelayLine = instrumentState.panningDelayLine;
+					let panningDelayPos = instrumentState.panningDelayPos & panningMask;
+					let   panningVolumeL      = +instrumentState.panningVolumeStartL;
+					let   panningVolumeR      = +instrumentState.panningVolumeStartR;
+					const panningVolumeDeltaL = +instrumentState.panningVolumeDeltaL;
+					const panningVolumeDeltaR = +instrumentState.panningVolumeDeltaR;
+					let   panningOffsetL      = panningDelayPos - instrumentState.panningOffsetStartL + synth.panningDelayBufferSize;
+					let   panningOffsetR      = panningDelayPos - instrumentState.panningOffsetStartR + synth.panningDelayBufferSize;
+					const panningOffsetDeltaL = instrumentState.panningOffsetDeltaL + 1.0;
+					const panningOffsetDeltaR = instrumentState.panningOffsetDeltaR + 1.0;`
+				}
+					
+				if (usesChorusEffect) {
+					effectsSource += `
+					
+					const chorusMask = synth.chorusDelayBufferMask >>> 0;
+					const chorusDelayLineL = instrumentState.chorusDelayLineL;
+					const chorusDelayLineR = instrumentState.chorusDelayLineR;
+					instrumentState.chorusDelayLineDirty = true;
+					let chorusDelayPos = instrumentState.chorusDelayPos & chorusMask;
+					
+					const chorusDuration = +beepbox.Config.chorusPeriodSeconds;
+					const chorusAngle = Math.PI * 2.0 / (chorusDuration * synth.samplesPerSecond);
+					const chorusRange = synth.samplesPerSecond * beepbox.Config.chorusDelayRange;
+					const chorusOffset0 = synth.chorusDelayBufferSize - beepbox.Config.chorusDelayOffsets[0][0] * chorusRange;
+					const chorusOffset1 = synth.chorusDelayBufferSize - beepbox.Config.chorusDelayOffsets[0][1] * chorusRange;
+					const chorusOffset2 = synth.chorusDelayBufferSize - beepbox.Config.chorusDelayOffsets[0][2] * chorusRange;
+					const chorusOffset3 = synth.chorusDelayBufferSize - beepbox.Config.chorusDelayOffsets[1][0] * chorusRange;
+					const chorusOffset4 = synth.chorusDelayBufferSize - beepbox.Config.chorusDelayOffsets[1][1] * chorusRange;
+					const chorusOffset5 = synth.chorusDelayBufferSize - beepbox.Config.chorusDelayOffsets[1][2] * chorusRange;
+					let chorusPhase = instrumentState.chorusPhase % (Math.PI * 2.0);
+					let chorusTap0Index = chorusDelayPos + chorusOffset0 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[0][0]);
+					let chorusTap1Index = chorusDelayPos + chorusOffset1 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[0][1]);
+					let chorusTap2Index = chorusDelayPos + chorusOffset2 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[0][2]);
+					let chorusTap3Index = chorusDelayPos + chorusOffset3 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[1][0]);
+					let chorusTap4Index = chorusDelayPos + chorusOffset4 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[1][1]);
+					let chorusTap5Index = chorusDelayPos + chorusOffset5 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[1][2]);
+					chorusPhase += chorusAngle * runLength;
+					const chorusTap0End = chorusDelayPos + chorusOffset0 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[0][0]) + runLength;
+					const chorusTap1End = chorusDelayPos + chorusOffset1 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[0][1]) + runLength;
+					const chorusTap2End = chorusDelayPos + chorusOffset2 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[0][2]) + runLength;
+					const chorusTap3End = chorusDelayPos + chorusOffset3 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[1][0]) + runLength;
+					const chorusTap4End = chorusDelayPos + chorusOffset4 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[1][1]) + runLength;
+					const chorusTap5End = chorusDelayPos + chorusOffset5 - chorusRange * Math.sin(chorusPhase + beepbox.Config.chorusPhaseOffsets[1][2]) + runLength;
+					const chorusTap0Delta = (chorusTap0End - chorusTap0Index) / runLength;
+					const chorusTap1Delta = (chorusTap1End - chorusTap1Index) / runLength;
+					const chorusTap2Delta = (chorusTap2End - chorusTap2Index) / runLength;
+					const chorusTap3Delta = (chorusTap3End - chorusTap3Index) / runLength;
+					const chorusTap4Delta = (chorusTap4End - chorusTap4Index) / runLength;
+					const chorusTap5Delta = (chorusTap5End - chorusTap5Index) / runLength;`
+				}
+					
+				if (usesReverbEffect) {
+					effectsSource += `
+					
+					const reverbMask = beepbox.Config.reverbDelayBufferMask >>> 0; //TODO: Dynamic reverb buffer size.
+					const reverbDelayLine = instrumentState.reverbDelayLine;
+					instrumentState.reverbDelayLineDirty = true;
+					let reverbDelayPos = instrumentState.reverbDelayPos & reverbMask;
+					
+					let reverbFeedback0 = +instrumentState.reverbFeedback0;
+					let reverbFeedback1 = +instrumentState.reverbFeedback1;
+					let reverbFeedback2 = +instrumentState.reverbFeedback2;
+					let reverbFeedback3 = +instrumentState.reverbFeedback3;
+					
+					const reverb = +instrumentState.reverbMult;`
+				}
+				
+				effectsSource += `
+					
+					const stopIndex = bufferIndex + runLength;
+					for (let sampleIndex = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
+						let sample = tempMonoInstrumentSampleBuffer[sampleIndex];
+						tempMonoInstrumentSampleBuffer[sampleIndex] = 0.0;`
+						
+				if (usesDistortionEffect) {
+					effectsSource += `
+						
+						sample *= amp; // + 0.5; // DC warmth?
+						sample = sample / ((1.0 - distortion) * Math.abs(sample) + distortion);`
+				}
+						
+				if (usesEffectFilter) {
+					effectsSource += `
+						
+						const inputSample = sample;
+						sample = synth.applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+						initialFilterInput2 = initialFilterInput1;
+						initialFilterInput1 = inputSample;`
+				}
+				
+				effectsSource += `
+					
+						sample *= volume;
+						volume += volumeDelta;`
+				
+				if (usesPanningEffect) {
+					effectsSource += `
+					
+						const panningRatioL  = panningOffsetL % 1;
+						const panningRatioR  = panningOffsetR % 1;
+						const panningTapLA   = panningDelayLine[(panningOffsetL) & panningMask];
+						const panningTapLB   = panningDelayLine[(panningOffsetL + 1) & panningMask];
+						const panningTapRA   = panningDelayLine[(panningOffsetR) & panningMask];
+						const panningTapRB   = panningDelayLine[(panningOffsetR + 1) & panningMask];
+						const panningTapL    = panningTapLA + (panningTapLB - panningTapLA) * panningRatioL;
+						const panningTapR    = panningTapRA + (panningTapRB - panningTapRA) * panningRatioR;
+						let sampleL = panningTapL * panningVolumeL;
+						let sampleR = panningTapR * panningVolumeR;
+						panningDelayLine[panningDelayPos] = sample;
+						panningDelayPos = (panningDelayPos + 1) & panningMask;
+						panningVolumeL += panningVolumeDeltaL;
+						panningVolumeR += panningVolumeDeltaR;
+						panningOffsetL += panningOffsetDeltaL;
+						panningOffsetR += panningOffsetDeltaR;`
+				} else {
+					effectsSource += `
+					
+						let sampleL = sample;
+						let sampleR = sample;`
+				}
+					
+				if (usesChorusEffect) {
+					effectsSource += `
+					
+						const chorusTap0Ratio = chorusTap0Index % 1;
+						const chorusTap1Ratio = chorusTap1Index % 1;
+						const chorusTap2Ratio = chorusTap2Index % 1;
+						const chorusTap3Ratio = chorusTap3Index % 1;
+						const chorusTap4Ratio = chorusTap4Index % 1;
+						const chorusTap5Ratio = chorusTap5Index % 1;
+						const chorusTap0A = chorusDelayLineL[(chorusTap0Index) & chorusMask];
+						const chorusTap0B = chorusDelayLineL[(chorusTap0Index + 1) & chorusMask];
+						const chorusTap1A = chorusDelayLineL[(chorusTap1Index) & chorusMask];
+						const chorusTap1B = chorusDelayLineL[(chorusTap1Index + 1) & chorusMask];
+						const chorusTap2A = chorusDelayLineL[(chorusTap2Index) & chorusMask];
+						const chorusTap2B = chorusDelayLineL[(chorusTap2Index + 1) & chorusMask];
+						const chorusTap3A = chorusDelayLineR[(chorusTap3Index) & chorusMask];
+						const chorusTap3B = chorusDelayLineR[(chorusTap3Index + 1) & chorusMask];
+						const chorusTap4A = chorusDelayLineR[(chorusTap4Index) & chorusMask];
+						const chorusTap4B = chorusDelayLineR[(chorusTap4Index + 1) & chorusMask];
+						const chorusTap5A = chorusDelayLineR[(chorusTap5Index) & chorusMask];
+						const chorusTap5B = chorusDelayLineR[(chorusTap5Index + 1) & chorusMask];
+						const chorusTap0 = chorusTap0A + (chorusTap0B - chorusTap0A) * chorusTap0Ratio;
+						const chorusTap1 = chorusTap1A + (chorusTap1B - chorusTap1A) * chorusTap1Ratio;
+						const chorusTap2 = chorusTap2A + (chorusTap2B - chorusTap2A) * chorusTap2Ratio;
+						const chorusTap3 = chorusTap3A + (chorusTap3B - chorusTap3A) * chorusTap3Ratio;
+						const chorusTap4 = chorusTap4A + (chorusTap4B - chorusTap4A) * chorusTap4Ratio;
+						const chorusTap5 = chorusTap5A + (chorusTap5B - chorusTap5A) * chorusTap5Ratio;
+						chorusDelayLineL[chorusDelayPos] = sampleL * delayInputMult;
+						chorusDelayLineR[chorusDelayPos] = sampleR * delayInputMult;
+						sampleL = 0.5 * (sampleL - chorusTap0 + chorusTap1 - chorusTap2);
+						sampleR = 0.5 * (sampleR - chorusTap3 + chorusTap4 - chorusTap5);
+						chorusDelayPos = (chorusDelayPos + 1) & chorusMask;
+						chorusTap0Index += chorusTap0Delta;
+						chorusTap1Index += chorusTap1Delta;
+						chorusTap2Index += chorusTap2Delta;
+						chorusTap3Index += chorusTap3Delta;
+						chorusTap4Index += chorusTap4Delta;
+						chorusTap5Index += chorusTap5Delta;`
+				}
+					
+				if (usesReverbEffect) {
+					effectsSource += `
+					
+						// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
+						// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
+						// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
+						// Buffer offsets: 3041    -> 6426   -> 10907 -> 16384
+						const reverbDelayPos1 = (reverbDelayPos +  3041) & reverbMask;
+						const reverbDelayPos2 = (reverbDelayPos +  6426) & reverbMask;
+						const reverbDelayPos3 = (reverbDelayPos + 10907) & reverbMask;
+						const reverbSample0 = (reverbDelayLine[reverbDelayPos]);
+						const reverbSample1 = reverbDelayLine[reverbDelayPos1];
+						const reverbSample2 = reverbDelayLine[reverbDelayPos2];
+						const reverbSample3 = reverbDelayLine[reverbDelayPos3];
+						const reverbTemp0 = -(reverbSample0 + sampleL) + reverbSample1;
+						const reverbTemp1 = -(reverbSample0 + sampleR) - reverbSample1;
+						const reverbTemp2 = -reverbSample2 + reverbSample3;
+						const reverbTemp3 = -reverbSample2 - reverbSample3;
+						reverbFeedback0 += ((reverbTemp0 + reverbTemp2) * reverb - reverbFeedback0) * 0.5;
+						reverbFeedback1 += ((reverbTemp1 + reverbTemp3) * reverb - reverbFeedback1) * 0.5;
+						reverbFeedback2 += ((reverbTemp0 - reverbTemp2) * reverb - reverbFeedback2) * 0.5;
+						reverbFeedback3 += ((reverbTemp1 - reverbTemp3) * reverb - reverbFeedback3) * 0.5;
+						reverbDelayLine[reverbDelayPos1] = reverbFeedback0 * delayInputMult;
+						reverbDelayLine[reverbDelayPos2] = reverbFeedback1 * delayInputMult;
+						reverbDelayLine[reverbDelayPos3] = reverbFeedback2 * delayInputMult;
+						reverbDelayLine[reverbDelayPos ] = reverbFeedback3 * delayInputMult;
+						reverbDelayPos = (reverbDelayPos + 1) & reverbMask;
+						sampleL += reverbSample1 + reverbSample2 + reverbSample3;
+						sampleR += reverbSample0 + reverbSample2 - reverbSample3;`
+				}
+				
+				effectsSource += `
+						
+						outputDataL[sampleIndex] += sampleL;
+						outputDataR[sampleIndex] += sampleR;`
+						
+				if (usesDelayEffects) {
+					effectsSource += `
+					
+						delayInputMult += delayInputMultDelta;`
+				}
+				
+				effectsSource += `
+					}
+					
+					// Avoid persistent denormal or NaN values in the delay buffers and filter history.
+					const epsilon = (1.0e-24);`
+					
+				if (usesEffectFilter) {
+					effectsSource += `
+						
+					synth.sanitizeFilters(filters);
+					// The filter input here is downstream from another filter so we
+					// better make sure it's safe too.
+					if (!(initialFilterInput1 < 100) || !(initialFilterInput2 < 100)) {
+						initialFilterInput1 = 0.0;
+						initialFilterInput2 = 0.0;
+					}
+					if (Math.abs(initialFilterInput1) < epsilon) initialFilterInput1 = 0.0;
+					if (Math.abs(initialFilterInput2) < epsilon) initialFilterInput2 = 0.0;
+					instrumentState.initialDistortionFilterInput1 = initialFilterInput1;
+					instrumentState.initialDistortionFilterInput2 = initialFilterInput2;`
+				}
+				
+				if (usesPanningEffect) {
+					effectsSource += `
+					
+					beepbox.Synth.sanitizeDelayLine(panningDelayLine, panningDelayPos, panningMask);
+					instrumentState.panningDelayPos = panningDelayPos;`
+				}
+					
+				if (usesChorusEffect) {
+					effectsSource += `
+					
+					beepbox.Synth.sanitizeDelayLine(chorusDelayLineL, chorusDelayPos, chorusMask);
+					beepbox.Synth.sanitizeDelayLine(chorusDelayLineR, chorusDelayPos, chorusMask);
+					instrumentState.chorusPhase = chorusPhase;
+					instrumentState.chorusDelayPos = chorusDelayPos;`
+				}
+					
+				if (usesReverbEffect) {
+					effectsSource += `
+					
+					if (!Number.isFinite(reverbFeedback0) || Math.abs(reverbFeedback0) < epsilon) reverbFeedback0 = 0.0;
+					if (!Number.isFinite(reverbFeedback1) || Math.abs(reverbFeedback1) < epsilon) reverbFeedback1 = 0.0;
+					if (!Number.isFinite(reverbFeedback2) || Math.abs(reverbFeedback2) < epsilon) reverbFeedback2 = 0.0;
+					if (!Number.isFinite(reverbFeedback3) || Math.abs(reverbFeedback3) < epsilon) reverbFeedback3 = 0.0;
+					beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos        , reverbMask);
+					beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  3041, reverbMask);
+					beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  6426, reverbMask);
+					beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos + 10907, reverbMask);
+					instrumentState.reverbDelayPos  = reverbDelayPos;
+					instrumentState.reverbFeedback0 = reverbFeedback0;
+					instrumentState.reverbFeedback1 = reverbFeedback1;
+					instrumentState.reverbFeedback2 = reverbFeedback2;
+					instrumentState.reverbFeedback3 = reverbFeedback3;`
+				}
+				
+				//console.log(effectsSource);
+				effectsFunction = new Function("synth", "outputDataL", "outputDataR", "bufferIndex", "runLength", "instrument", "instrumentState", effectsSource);
+				Synth.effectsFunctionCache[signature] = effectsFunction;
 			}
 			
-			synth.sanitizeFilters(filters);
-			// The filter input here is downstream from another filter so we
-			// better make sure it's safe too.
-			const epsilon: number = (1.0e-24);
-			if (!(initialFilterInput1 < 100) || !(initialFilterInput2 < 100)) {
-				initialFilterInput1 = 0.0;
-				initialFilterInput2 = 0.0;
-			}
-			if (Math.abs(initialFilterInput1) < epsilon) initialFilterInput1 = 0.0;
-			if (Math.abs(initialFilterInput2) < epsilon) initialFilterInput2 = 0.0;
-			instrumentState.initialDistortionFilterInput1 = initialFilterInput1;
-			instrumentState.initialDistortionFilterInput2 = initialFilterInput2;
+			effectsFunction(synth, outputDataL, outputDataR, bufferIndex, runLength, instrument, instrumentState);
 		}
 		
-		private static pulseWidthSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static pulseWidthSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
+			
 			let phaseDelta: number = tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
-			let volume: number = +tone.volumeStart;
-			const volumeDelta: number = +tone.volumeDelta;
+			let expression: number = +tone.expressionStarts[0];
+			const expressionDelta: number = +tone.expressionDeltas[0];
 			let phase: number = (tone.phases[0] % 1);
 			
 			let pulseWidth: number = tone.pulseWidth;
 			const pulseWidthDelta: number = tone.pulseWidthDelta;
 			
 			const filters: DynamicBiquadFilter[] = tone.filters;
-			const filterCount: number = tone.filterCount;
-			let initialFilterInput1: number = tone.initialFilterInput1;
-			let initialFilterInput2: number = tone.initialFilterInput2;
+			const filterCount: number = tone.filterCount|0;
+			let initialFilterInput1: number = +tone.initialFilterInput1;
+			let initialFilterInput2: number = +tone.initialFilterInput2;
 			
-			const stopIndex: number = stereoBufferIndex + runLength;
-			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
-			while (stereoBufferIndex < stopIndex) {
+			const stopIndex: number = bufferIndex + runLength;
+			for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
 				
 				const sawPhaseA: number = phase % 1;
 				const sawPhaseB: number = (phase + pulseWidth) % 1;
@@ -4912,12 +5161,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				phaseDelta *= phaseDeltaScale;
 				pulseWidth += pulseWidthDelta;
 				
-				const output: number = sample * volume;
-				volume += volumeDelta;
+				const output: number = sample * expression;
+				expression += expressionDelta;
 				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
-				stereoBufferIndex += 2;
+				data[sampleIndex] += output;
 			}
 			
 			tone.phases[0] = phase;
@@ -4928,6 +5175,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		}
 		
 		private static fmSourceTemplate: string[] = (`
+			const data = synth.tempMonoInstrumentSampleBuffer;
 			const sineWave = beepbox.Config.sineWave;
 			
 			let phaseDeltaScale = +tone.phaseDeltaScale;
@@ -4939,20 +5187,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			let operator#Output      = +tone.feedbackOutputs[#];
 			let feedbackMult         = +tone.feedbackMult;
 			const feedbackDelta      = +tone.feedbackDelta;
-			let volume = +tone.volumeStart;
-			const volumeDelta = +tone.volumeDelta;
 			
 			const filters = tone.filters;
-			const filterCount = tone.filterCount;
-			let initialFilterInput1 = tone.initialFilterInput1;
-			let initialFilterInput2 = tone.initialFilterInput2;
+			const filterCount = tone.filterCount|0;
+			let initialFilterInput1 = +tone.initialFilterInput1;
+			let initialFilterInput2 = +tone.initialFilterInput2;
 			
-			const stopIndex = stereoBufferIndex + runLength;
-			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1 = tone.stereoVolume1;
-			const stereoVolume2 = tone.stereoVolume2;
-			const stereoDelay = tone.stereoDelay;
-			while (stereoBufferIndex < stopIndex) {
+			const stopIndex = bufferIndex + runLength;
+			for (let sampleIndex = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
 				// INSERT OPERATOR COMPUTATION HERE
 				const fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
 				
@@ -4966,12 +5208,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				operator#Phase += operator#PhaseDelta;
 				operator#PhaseDelta *= phaseDeltaScale;
 				
-				const output = sample * volume;
-				volume += volumeDelta;
-				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
-				stereoBufferIndex += 2;
+				data[sampleIndex] += sample;
 			}
 			
 			tone.phases[#] = operator#Phase / ` + Config.sineWaveLength + `;
@@ -4991,12 +5228,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				const operator#Scaled   = operator#OutputMult * operator#Output;
 		`).split("\n");
 		
-		private static noiseSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static noiseSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = +tone.phaseDeltas[0];
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
-			let volume: number = +tone.volumeStart;
-			const volumeDelta: number = +tone.volumeDelta;
+			let expression: number = +tone.expressionStarts[0];
+			const expressionDelta: number = +tone.expressionDeltas[0];
 			let phase: number = (tone.phases[0] % 1) * Config.chipNoiseLength;
 			if (tone.phases[0] == 0) {
 				// Zero phase means the tone was reset, just give noise a random start phase instead.
@@ -5006,20 +5244,16 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			let noiseSample: number = +tone.sample;
 			
 			const filters: DynamicBiquadFilter[] = tone.filters;
-			const filterCount: number = tone.filterCount;
-			let initialFilterInput1: number = tone.initialFilterInput1;
-			let initialFilterInput2: number = tone.initialFilterInput2;
+			const filterCount: number = tone.filterCount|0;
+			let initialFilterInput1: number = +tone.initialFilterInput1;
+			let initialFilterInput2: number = +tone.initialFilterInput2;
 			
 			// This is for a "legacy" style simplified 1st order lowpass filter with
 			// a cutoff frequency that is relative to the tone's fundamental frequency.
 			const pitchRelativefilter: number = Math.min(1.0, tone.phaseDeltas[0] * Config.chipNoises[instrument.chipNoise].pitchFilterMult);
 			
-			const stopIndex: number = stereoBufferIndex + runLength;
-			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
-			while (stereoBufferIndex < stopIndex) {
+			const stopIndex: number = bufferIndex + runLength;
+			for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
 				const waveSample: number = wave[phase & phaseMask];
 				
 				noiseSample += (waveSample - noiseSample) * pitchRelativefilter;
@@ -5032,12 +5266,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				phase += phaseDelta;
 				phaseDelta *= phaseDeltaScale;
 				
-				const output: number = sample * volume;
-				volume += volumeDelta;
+				const output: number = sample * expression;
+				expression += expressionDelta;
 				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
-				stereoBufferIndex += 2;
+				data[sampleIndex] += output;
 			}
 			
 			tone.phases[0] = phase / Config.chipNoiseLength;
@@ -5048,18 +5280,19 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
-		private static spectrumSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static spectrumSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = tone.phaseDeltas[0] * (1 << 7);
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
-			let volume: number = +tone.volumeStart;
-			const volumeDelta: number = +tone.volumeDelta;
+			let expression: number = +tone.expressionStarts[0];
+			const expressionDelta: number = +tone.expressionDeltas[0];
 			let noiseSample: number = +tone.sample;
 			
 			const filters: DynamicBiquadFilter[] = tone.filters;
-			const filterCount: number = tone.filterCount;
-			let initialFilterInput1: number = tone.initialFilterInput1;
-			let initialFilterInput2: number = tone.initialFilterInput2;
+			const filterCount: number = tone.filterCount|0;
+			let initialFilterInput1: number = +tone.initialFilterInput1;
+			let initialFilterInput2: number = +tone.initialFilterInput2;
 			
 			let phase: number = (tone.phases[0] % 1) * Config.spectrumNoiseLength;
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
@@ -5070,12 +5303,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			// a cutoff frequency that is relative to the tone's fundamental frequency.
 			const pitchRelativefilter: number = Math.min(1.0, phaseDelta);
 			
-			const stopIndex: number = stereoBufferIndex + runLength;
-			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
-			while (stereoBufferIndex < stopIndex) {
+			const stopIndex: number = bufferIndex + runLength;
+			for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
 				const phaseInt: number = phase|0;
 				const index: number = phaseInt & phaseMask;
 				let waveSample: number = wave[index];
@@ -5092,12 +5321,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				phase += phaseDelta;
 				phaseDelta *= phaseDeltaScale;
 				
-				const output: number = sample * volume;
-				volume += volumeDelta;
+				const output: number = sample * expression;
+				expression += expressionDelta;
 				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
-				stereoBufferIndex += 2;
+				data[sampleIndex] += output;
 			}
 			
 			tone.phases[0] = phase / Config.spectrumNoiseLength;
@@ -5108,29 +5335,26 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			tone.initialFilterInput2 = initialFilterInput2;
 		}
 		
-		private static drumsetSynth(synth: Synth, data: Float32Array, stereoBufferIndex: number, stereoBufferLength: number, runLength: number, tone: Tone, instrument: Instrument): void {
+		private static drumsetSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			let wave: Float32Array = instrument.getDrumsetWave(tone.drumsetPitch);
 			let phaseDelta: number = tone.phaseDeltas[0] / Instrument.drumsetIndexReferenceDelta(tone.drumsetPitch);;
 			const phaseDeltaScale: number = +tone.phaseDeltaScale;
-			let volume: number = +tone.volumeStart;
-			const volumeDelta: number = +tone.volumeDelta;
+			let expression: number = +tone.expressionStarts[0];
+			const expressionDelta: number = +tone.expressionDeltas[0];
 			
 			const filters: DynamicBiquadFilter[] = tone.filters;
-			const filterCount: number = tone.filterCount;
-			let initialFilterInput1: number = tone.initialFilterInput1;
-			let initialFilterInput2: number = tone.initialFilterInput2;
+			const filterCount: number = tone.filterCount|0;
+			let initialFilterInput1: number = +tone.initialFilterInput1;
+			let initialFilterInput2: number = +tone.initialFilterInput2;
 			
 			let phase: number = (tone.phases[0] % 1) * Config.spectrumNoiseLength;
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
 			if (tone.phases[0] == 0) phase = Synth.findRandomZeroCrossing(wave, Config.spectrumNoiseLength) + phaseDelta;
 			const phaseMask: number = Config.spectrumNoiseLength - 1;
 			
-			const stopIndex: number = stereoBufferIndex + runLength;
-			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1: number = tone.stereoVolume1;
-			const stereoVolume2: number = tone.stereoVolume2;
-			const stereoDelay: number = tone.stereoDelay;
-			while (stereoBufferIndex < stopIndex) {
+			const stopIndex: number = bufferIndex + runLength;
+			for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
 				const phaseInt: number = phase|0;
 				const index: number = phaseInt & phaseMask;
 				let noiseSample: number = wave[index];
@@ -5145,12 +5369,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				phase += phaseDelta;
 				phaseDelta *= phaseDeltaScale;
 				
-				const output: number = sample * volume;
-				volume += volumeDelta;
+				const output: number = sample * expression;
+				expression += expressionDelta;
 				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
-				stereoBufferIndex += 2;
+				data[sampleIndex] += output;
 			}
 			
 			tone.phases[0] = phase / Config.spectrumNoiseLength;
@@ -5224,7 +5446,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		}
 		
 		private static fittingPowerOfTwo(x: number): number {
-			return 1 << (32 - Math.clz32(x - 1));
+			return 1 << (32 - Math.clz32(Math.ceil(x) - 1));
 		}
 		
 		private sanitizeFilters(filters: DynamicBiquadFilter[]): void {
@@ -5248,7 +5470,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			}
 		}
 		
-		private sanitizeDelayLine(delayLine: Float32Array, lastIndex: number, mask: number): void {
+		public static sanitizeDelayLine(delayLine: Float32Array, lastIndex: number, mask: number): void {
 			while (true) {
 				lastIndex--;
 				const index: number = lastIndex & mask;

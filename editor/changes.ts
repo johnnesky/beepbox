@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {Algorithm, Dictionary, FilterType, InstrumentType, Config} from "../synth/SynthConfig";
+import {Algorithm, Dictionary, FilterType, InstrumentType, EffectType, Config, effectsIncludePanning} from "../synth/SynthConfig";
 import {NotePin, Note, makeNotePin, Pattern, FilterSettings, FilterControlPoint, SpectrumWave, HarmonicsWave, Instrument, Channel, Song} from "../synth/synth";
 import {Preset, PresetCategory, EditorConfig} from "./EditorConfig";
 import {Change, ChangeGroup, ChangeSequence, UndoableChange} from "./Change";
@@ -331,9 +331,14 @@ import {SongDocument} from "./SongDocument";
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
 						const tempPan: number = instrument.pan;
-						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel));
+						const usesPanning: boolean = effectsIncludePanning(instrument.effects);
+						instrument.fromJsonObject(preset.settings, doc.song.getChannelIsNoise(doc.channel), 1);
+						// Reset the volume and panning effect to be whatever they were before loading a preset. The presets shouldn't override these.
 						instrument.volume = tempVolume;
 						instrument.pan = tempPan;
+						if (usesPanning && instrument.pan != Config.panCenter) {
+							instrument.effects = (instrument.effects | (1 << EffectType.panning));
+						}
 					}
 				}
 				instrument.preset = newValue;
@@ -456,6 +461,7 @@ import {SongDocument} from "./SongDocument";
 					{item: "medium fade", weight: 2},
 					{item: "soft fade"  , weight: 1},
 				])].index;
+				// TODO: randomly generate effects.
 				instrument.effects = Config.effectsNames.indexOf(selectWeightedRandom([
 					{item: "none"  , weight: 1},
 					{item: "reverb", weight: 3},
@@ -558,6 +564,7 @@ import {SongDocument} from "./SongDocument";
 					{item: "medium fade", weight: 2},
 					{item: "soft fade"  , weight: 2},
 				])].index;
+				// TODO: randomly generate effects.
 				instrument.effects = Config.effectsNames.indexOf(selectWeightedRandom([
 					{item: "none"           , weight: 1},
 					{item: "reverb"         , weight: 10},
@@ -764,17 +771,20 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
-	export class ChangeEffects extends Change {
-		constructor(doc: SongDocument, newValue: number) {
+	export class ChangeToggleEffects extends Change {
+		constructor(doc: SongDocument, toggleFlag: number) {
 			super();
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
 			const oldValue: number = instrument.effects;
-			if (oldValue != newValue) {
-				this._didSomething();
-				instrument.effects = newValue;
+			const selected: boolean = ((oldValue & (1 << toggleFlag)) != 0);
+			const newValue: number = selected ? (oldValue & (~(1 << toggleFlag))) : (oldValue | (1 << toggleFlag));
+			instrument.effects = newValue;
+			// As a special case, toggling the panning effect doesn't remove the preset.
+			if (toggleFlag != EffectType.panning) {
 				instrument.preset = instrument.type;
-				doc.notifier.changed();
 			}
+			this._didSomething();
+			doc.notifier.changed();
 		}
 	}
 	
@@ -1910,7 +1920,7 @@ import {SongDocument} from "./SongDocument";
 				const isNoise: boolean = song.getChannelIsNoise(channelIndex);
 				const presetValue: number = (channelIndex == song.pitchChannelCount) ? EditorConfig.nameToPresetValue(Math.random() > 0.5 ? "chip noise" : "standard drumset")! : pickRandomPresetValue(isNoise);
 				const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
-				instrument.fromJsonObject(preset.settings, isNoise);
+				instrument.fromJsonObject(preset.settings, isNoise, 1);
 				instrument.preset = presetValue;
 				instrument.volume = 1;
 			}
@@ -2109,10 +2119,10 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
-	export class ChangeReverb extends Change {
+	export class ChangeReverb extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
-			super();
-			doc.song.reverb = newValue;
+			super(doc);
+			this._instrument.reverb = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}

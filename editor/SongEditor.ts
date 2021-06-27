@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {InstrumentType, Config, getPulseWidthRatio} from "../synth/SynthConfig";
+import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeDistortion, effectsIncludePanning, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
@@ -27,7 +27,7 @@ import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
-import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong, ChangeDistortion, ChangeSustain} from "./changes";
+import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong, ChangeDistortion, ChangeSustain} from "./changes";
 
 //namespace beepbox {
 	const {button, div, input, select, span, optgroup, option} = HTML;
@@ -130,7 +130,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private readonly _nextBarButton: HTMLButtonElement = button({class: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
 		private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "75", value: "50", step: "1"});
 		private readonly _fileMenu: HTMLSelectElement = select({style: "width: 100%;"},
-			option({selected: true, disabled: true, hidden: false}, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
+			option({selected: true, disabled: true, hidden: false}, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
 			option({value: "new"}, "+ New Blank Song"),
 			option({value: "import"}, "↑ Import Song..."),
 			option({value: "export"}, "↓ Export Song..."),
@@ -142,7 +142,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			option({value: "songRecovery"}, "⚠ Recover Recent Song..."),
 		);
 		private readonly _editMenu: HTMLSelectElement = select({style: "width: 100%;"},
-			option({selected: true, disabled: true, hidden: false}, "Edit"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
+			option({selected: true, disabled: true, hidden: false}, "Edit"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
 			option({value: "undo"}, "Undo (Z)"),
 			option({value: "redo"}, "Redo (Y)"),
 			option({value: "copy"}, "Copy Pattern (C)"),
@@ -161,7 +161,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			option({value: "channelSettings"}, "Channel Settings..."),
 		);
 		private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"},
-			option({selected: true, disabled: true, hidden: false}, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option. :(
+			option({selected: true, disabled: true, hidden: false}, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
 			option({value: "autoPlay"}, "Auto Play On Load"),
 			option({value: "autoFollow"}, "Auto Follow Track"),
 			option({value: "enableNotePreview"}, "Preview Added Notes"),
@@ -180,6 +180,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0; width: 4em; flex-grow: 1; vertical-align: middle;", type: "range", min: "0", max: "14", value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, Math.round(120.0 * Math.pow(2.0, (-4.0 + newValue) / 9.0))));
 		private readonly _tempoStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 0.4em; vertical-align: middle;", type: "number", step: "1"});
 		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
+		private readonly _reverbRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb: "), this._reverbSlider.input);
 		private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select(), Config.rhythms.map(rhythm=>rhythm.name));
 		private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false);
 		private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true);
@@ -197,7 +198,8 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private readonly _chipNoiseSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipNoise")}, "Noise: "), div({class: "selectContainer"}, this._chipNoiseSelect));
 		private readonly _transitionSelect: HTMLSelectElement = buildOptions(select(), Config.transitions.map(transition=>transition.name));
 		private readonly _transitionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("transition")}, "Transition:"), div({class: "selectContainer"}, this._transitionSelect));
-		private readonly _effectsSelect: HTMLSelectElement = buildOptions(select(), Config.effectsNames);
+		private readonly _effectsDisplayOption: HTMLOptionElement = option({selected: true, disabled: true, hidden: false}, "Preferences"); // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
+		private readonly _effectsSelect: HTMLSelectElement = select(this._effectsDisplayOption);
 		private readonly _filterEditor: FilterEditor = new FilterEditor(this._doc);
 		private readonly _filterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("filter")}, "Filter:"), this._filterEditor.container);
 		private readonly _distortionFilterEditor: FilterEditor = new FilterEditor(this._doc, true);
@@ -263,6 +265,8 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			),
 			this._distortionRow,
 			this._distortionFilterRow,
+			this._panSliderRow,
+			this._reverbRow,
 		);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({class: "editor-controls"},
 			div({style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};`},
@@ -270,7 +274,6 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			),
 			this._instrumentSelectRow,
 			this._instrumentVolumeSliderRow,
-			this._panSliderRow,
 			div({class: "selectRow"},
 				span({class: "tip", onclick: ()=>this._openPrompt("instrumentType")}, "Type: "),
 				div({class: "selectContainer"}, this._pitchedPresetSelect, this._drumPresetSelect),
@@ -348,10 +351,6 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 							this._tempoSlider.input,
 							this._tempoStepper,
 						),
-					),
-					div({class: "selectRow"},
-						span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb: "),
-						this._reverbSlider.input,
 					),
 					div({class: "selectRow"},
 						span({class: "tip", onclick: ()=>this._openPrompt("rhythm")}, "Rhythm: "),
@@ -614,22 +613,22 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			this._patternEditor.render();
 			
 			const optionCommands: ReadonlyArray<string> = [
-				(this._doc.autoPlay ? "✓ " : "") + "Auto Play On Load",
-				(this._doc.autoFollow ? "✓ " : "") + "Auto Follow Track",
-				(this._doc.enableNotePreview ? "✓ " : "") + "Preview Added Notes",
-				(this._doc.showLetters ? "✓ " : "") + "Show Piano Keys",
-				(this._doc.showFifth ? "✓ " : "") + 'Highlight "Fifth" Notes',
-				(this._doc.showChannels ? "✓ " : "") + "Show All Channels",
-				(this._doc.showScrollBar ? "✓ " : "") + "Octave Scroll Bar",
-				(this._doc.alwaysShowSettings ? "✓ " : "") + "Customize All Instruments",
-				(this._doc.enableChannelMuting ? "✓ " : "") + "Enable Channel Muting",
-				(this._doc.displayBrowserUrl ? "✓ " : "") + "Display Song Data in URL",
-				(this._doc.fullScreen ? "✓ " : "") + "Full-Screen Layout",
-				(this._doc.colorTheme == "light classic" ? "✓ " : "") + "Light Theme",
-			]
+				(this._doc.autoPlay ? "✓ " : "　") + "Auto Play On Load",
+				(this._doc.autoFollow ? "✓ " : "　") + "Auto Follow Track",
+				(this._doc.enableNotePreview ? "✓ " : "　") + "Preview Added Notes",
+				(this._doc.showLetters ? "✓ " : "　") + "Show Piano Keys",
+				(this._doc.showFifth ? "✓ " : "　") + 'Highlight "Fifth" Notes',
+				(this._doc.showChannels ? "✓ " : "　") + "Show All Channels",
+				(this._doc.showScrollBar ? "✓ " : "　") + "Octave Scroll Bar",
+				(this._doc.alwaysShowSettings ? "✓ " : "　") + "Customize All Instruments",
+				(this._doc.enableChannelMuting ? "✓ " : "　") + "Enable Channel Muting",
+				(this._doc.displayBrowserUrl ? "✓ " : "　") + "Display Song Data in URL",
+				(this._doc.fullScreen ? "✓ " : "　") + "Full-Screen Layout",
+				(this._doc.colorTheme == "light classic" ? "✓ " : "　") + "Light Theme",
+			];
 			for (let i: number = 0; i < optionCommands.length; i++) {
 				const option: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.children[i + 1];
-				if (option.innerText != optionCommands[i]) option.innerText = optionCommands[i];
+				if (option.textContent != optionCommands[i]) option.textContent = optionCommands[i];
 			}
 			
 			const channel: Channel = this._doc.song.channels[this._doc.channel];
@@ -639,12 +638,30 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			const wasActive: boolean = this.mainLayer.contains(document.activeElement);
 			const activeElement: Element | null = document.activeElement;
 			
+			let effectDisplayLabel: string = "";
+			for (let i: number = this._effectsSelect.childElementCount - 1; i < Config.effectOrder.length; i++) {
+				this._effectsSelect.appendChild(option({value: i}));
+			}
+			this._effectsSelect.selectedIndex = 0;
+			for (let i: number = 0; i < Config.effectOrder.length; i++) {
+				let effectFlag: number = Config.effectOrder[i];
+				const selected: boolean = ((instrument.effects & (1 << effectFlag)) != 0);
+				const label: string = (selected ? "✓ " : "　") + Config.effectsNames[effectFlag];
+				const option: HTMLOptionElement = <HTMLOptionElement> this._effectsSelect.children[i + 1];
+				if (option.textContent != label) option.textContent = label;
+				if (selected) {
+					if (effectDisplayLabel != "") effectDisplayLabel += ", ";
+					effectDisplayLabel += Config.effectsNames[effectFlag];
+				}
+			}
+			if (effectDisplayLabel == "") effectDisplayLabel = "none";
+			if (this._effectsDisplayOption.textContent != effectDisplayLabel) this._effectsDisplayOption.textContent = effectDisplayLabel;
+			
 			setSelectedValue(this._scaleSelect, this._doc.song.scale);
 			this._scaleSelect.title = Config.scales[this._doc.song.scale].realName;
 			setSelectedValue(this._keySelect, Config.keys.length - 1 - this._doc.song.key);
 			this._tempoSlider.updateValue(Math.max(0, Math.min(28, Math.round(4.0 + 9.0 * Math.log2(this._doc.song.tempo / 120.0)))));
 			this._tempoStepper.value = this._doc.song.tempo.toString();
-			this._reverbSlider.updateValue(this._doc.song.reverb);
 			setSelectedValue(this._rhythmSelect, this._doc.song.rhythm);
 			
 			if (this._doc.song.getChannelIsNoise(this._doc.channel)) {
@@ -738,16 +755,10 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 					this._pulseEnvelopeRow.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.guitar) {
-					this._distortionRow.style.display = "";
 					this._sustainRow.style.display = "";
-					this._distortionSlider.updateValue(instrument.distortion);
 					this._sustainSlider.updateValue(instrument.sustain);
-					this._distortionFilterRow.style.display = "";
-					this._distortionFilterEditor.render();
 				} else {
-					this._distortionRow.style.display = "none";
 					this._sustainRow.style.display = "none";
-					this._distortionFilterRow.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.guitar) {
 					this._pulseWidthRow.style.display = "";
@@ -755,6 +766,30 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 					this._pulseWidthSlider.updateValue(instrument.pulseWidth);
 				} else {
 					this._pulseWidthRow.style.display = "none";
+				}
+				
+				if (effectsIncludeDistortion(instrument.effects)) {
+					this._distortionRow.style.display = "";
+					this._distortionSlider.updateValue(instrument.distortion);
+					this._distortionFilterRow.style.display = "";
+					this._distortionFilterEditor.render();
+				} else {
+					this._distortionRow.style.display = "none";
+					this._distortionFilterRow.style.display = "none";
+				}
+				
+				if (effectsIncludePanning(instrument.effects)) {
+					this._panSliderRow.style.display = "";
+					this._panSlider.updateValue(instrument.pan);
+				} else {
+					this._panSliderRow.style.display = "none";
+				}
+				
+				if (effectsIncludeReverb(instrument.effects)) {
+					this._reverbRow.style.display = "";
+					this._reverbSlider.updateValue(instrument.reverb);
+				} else {
+					this._reverbRow.style.display = "none";
 				}
 				
 				if (instrument.type == InstrumentType.noise) {
@@ -814,12 +849,10 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			this._filterEditor.render();
 			setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
 			setSelectedValue(this._transitionSelect, instrument.transition);
-			setSelectedValue(this._effectsSelect, instrument.effects);
 			setSelectedValue(this._vibratoSelect, instrument.vibrato);
 			setSelectedValue(this._intervalSelect, instrument.interval);
 			setSelectedValue(this._chordSelect, instrument.chord);
 			this._instrumentVolumeSlider.updateValue(-instrument.volume);
-			this._panSlider.updateValue(instrument.pan);
 			setSelectedValue(this._instrumentSelect, instrumentIndex);
 			
 			this._volumeSlider.value = String(this._doc.volume);
@@ -842,12 +875,12 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 				this._playButton.classList.remove("playButton");
 				this._playButton.classList.add("pauseButton");
 				this._playButton.title = "Pause (Space)";
-				this._playButton.innerText = "Pause";
+				this._playButton.textContent = "Pause";
 			} else {
 				this._playButton.classList.remove("pauseButton");
 				this._playButton.classList.add("playButton");
 				this._playButton.title = "Play (Space)";
-				this._playButton.innerText = "Play";
+				this._playButton.textContent = "Play";
 			}
 		}
 		
@@ -956,11 +989,16 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 					break;
 				case 73: // i
 					if (event.shiftKey) {
+						// Copy the current instrument as a preset to the clipboard.
 						const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 						const instrumentObject: any = instrument.toJsonObject();
+						delete instrumentObject["preset"];
+						// Volume and the panning effect are not included in presets.
 						delete instrumentObject["volume"];
 						delete instrumentObject["pan"];
-						delete instrumentObject["preset"];
+						const panningEffectIndex: number = instrumentObject["effects"].indexOf(Config.effectsNames[EffectType.panning]);
+						if (panningEffectIndex != -1) instrumentObject["effects"].splice(panningEffectIndex, 1);
+						// TODO: If the instrument has any envelopes or automation targetting panning, remove those too.
 						this._copyTextToClipboard(JSON.stringify(instrumentObject));
 					}
 					event.preventDefault();
@@ -1085,7 +1123,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 				return;
 			}
 			const textField: HTMLTextAreaElement = document.createElement("textarea");
-			textField.innerText = text;
+			textField.textContent = text;
 			document.body.appendChild(textField);
 			textField.select();
 			const succeeded: boolean = document.execCommand("copy");
@@ -1270,7 +1308,9 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		}
 		
 		private _whenSetEffects = (): void => {
-			this._doc.record(new ChangeEffects(this._doc, this._effectsSelect.selectedIndex));
+			const toggleFlag: number = Config.effectOrder[this._effectsSelect.selectedIndex - 1];
+			this._doc.record(new ChangeToggleEffects(this._doc, toggleFlag));
+			this._effectsSelect.selectedIndex = 0;
 		}
 		
 		private _whenSetVibrato = (): void => {

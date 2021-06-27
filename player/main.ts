@@ -460,12 +460,12 @@ import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 			playButton.classList.remove("playButton");
 			playButton.classList.add("pauseButton");
 			playButton.title = "Pause (Space)";
-			playButton.innerText = "Pause";
+			playButton.textContent = "Pause";
 		} else {
 			playButton.classList.remove("pauseButton");
 			playButton.classList.add("playButton");
 			playButton.title = "Play (Space)";
-			playButton.innerText = "Play";
+			playButton.textContent = "Play";
 		}
 		pauseButtonDisplayed = synth.playing;
 	}
@@ -505,7 +505,7 @@ import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 			return;
 		}
 		const textField: HTMLTextAreaElement = document.createElement("textarea");
-		textField.innerText = location.href;
+		textField.textContent = location.href;
 		document.body.appendChild(textField);
 		textField.select();
 		const succeeded: boolean = document.execCommand("copy");
