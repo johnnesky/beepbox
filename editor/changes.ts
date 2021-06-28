@@ -1076,6 +1076,24 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
+	export class ChangeBitcrusherFreq extends ChangeInstrumentSlider {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super(doc);
+			this._instrument.bitcrusherFreq = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangeBitcrusherQuantization extends ChangeInstrumentSlider {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super(doc);
+			this._instrument.bitcrusherQuantization = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
 	export class ChangeSustain extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);

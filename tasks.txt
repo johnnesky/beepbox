@@ -360,3 +360,4 @@
 √ Replaced lowpass cutoff/resonance system with a more flexible filter biquad stacking system.
 √ Added electric guitar instrument type.
 √ Allow any instrument to add the distortion effect. Make effects applied per-instrument.
+√ Added Bitcrusher effect.

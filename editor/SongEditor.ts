@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeDistortion, effectsIncludePanning, effectsIncludeReverb} from "../synth/SynthConfig";
+import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
@@ -27,7 +27,7 @@ import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
-import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong, ChangeDistortion, ChangeSustain} from "./changes";
+import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong, ChangeDistortion, ChangeSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization} from "./changes";
 
 //namespace beepbox {
 	const {button, div, input, select, span, optgroup, option} = HTML;
@@ -212,6 +212,10 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private _pulseWidthRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pulseWidth")}, "Pulse Width:"), this._pulseWidthSlider.input);
 		private readonly _distortionSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.distortionRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeDistortion(this._doc, oldValue, newValue));
 		private _distortionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("distortion")}, "Distortion:"), this._distortionSlider.input);
+		private readonly _bitcrusherQuantizationSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherQuantizationRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeBitcrusherQuantization(this._doc, oldValue, newValue));
+		private _bitcrusherQuantizationRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherQuantization")}, "Bitcrusher:"), this._bitcrusherQuantizationSlider.input);
+		private readonly _bitcrusherFreqSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherFreqRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeBitcrusherFreq(this._doc, oldValue, newValue));
+		private _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Bitcrush Freq:"), this._bitcrusherFreqSlider.input);
 		private readonly _sustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.sustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeSustain(this._doc, oldValue, newValue));
 		private _sustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("sustain")}, "Sustain:"), this._sustainSlider.input);
 		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select(), Config.intervals.map(interval=>interval.name));
@@ -265,6 +269,8 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			),
 			this._distortionRow,
 			this._distortionFilterRow,
+			this._bitcrusherQuantizationRow,
+			this._bitcrusherFreqRow,
 			this._panSliderRow,
 			this._reverbRow,
 		);
@@ -776,6 +782,16 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 				} else {
 					this._distortionRow.style.display = "none";
 					this._distortionFilterRow.style.display = "none";
+				}
+				
+				if (effectsIncludeBitcrusher(instrument.effects)) {
+					this._bitcrusherQuantizationRow.style.display = "";
+					this._bitcrusherFreqRow.style.display = "";
+					this._bitcrusherQuantizationSlider.updateValue(instrument.bitcrusherQuantization);
+					this._bitcrusherFreqSlider.updateValue(instrument.bitcrusherFreq);
+				} else {
+					this._bitcrusherQuantizationRow.style.display = "none";
+					this._bitcrusherFreqRow.style.display = "none";
 				}
 				
 				if (effectsIncludePanning(instrument.effects)) {

@@ -65,6 +65,7 @@ SOFTWARE.
 		chorus = 1,
 		panning = 2,
 		distortion = 3,
+		bitcrusher = 4,
 		length,
 	}
 	
@@ -276,8 +277,8 @@ SOFTWARE.
 			{name: "bowed",      spread: 0.02, offset: 0.0, expression: 1.0, sign:-1.0},
 			{name: "piano",      spread: 0.01, offset: 0.0, expression: 1.0, sign: 0.7},
 		]);
-		public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion"];
-		public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.distortion, EffectType.panning, EffectType.chorus, EffectType.reverb];
+		public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher"];
+		public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.reverb];
 		public static readonly volumeRange: number = 8;
 		public static readonly volumeLogScale: number = -0.5;
 		public static readonly panCenter: number = 4;
@@ -413,6 +414,9 @@ SOFTWARE.
 		
 		public static readonly distortionRange: number = 8;
 		public static readonly sustainRange: number = 8;
+		public static readonly bitcrusherFreqRange: number = 14;
+		public static readonly bitcrusherOctaveStep: number = 0.5;
+		public static readonly bitcrusherQuantizationRange: number = 8;
 	}
 	
 	function centerWave(wave: Array<number>): Float64Array {
@@ -569,6 +573,10 @@ SOFTWARE.
 	
 	export function effectsIncludeDistortion(effects: number): boolean {
 		return (effects & (1 << EffectType.distortion)) != 0;
+	}
+	
+	export function effectsIncludeBitcrusher(effects: number): boolean {
+		return (effects & (1 << EffectType.bitcrusher)) != 0;
 	}
 	
 	export function effectsIncludePanning(effects: number): boolean {

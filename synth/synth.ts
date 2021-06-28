@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, Transition, Chord, Envelope, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeDistortion, effectsIncludePanning, effectsIncludeChorus, effectsIncludeReverb} from "./SynthConfig";
+import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, Transition, Chord, Envelope, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeReverb} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
 import {Deque} from "./Deque";
 import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter} from "./filtering";
@@ -135,7 +135,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		
 		operatorAmplitudes = CharCode.P,  // added in 6
 		operatorFrequencies = CharCode.Q, // added in 6
-		
+		bitcrusher = CharCode.R,          // added in 9
 		spectrum = CharCode.S,            // added in 7
 		startInstrument = CharCode.T,     // added in 6
 		sustain = CharCode.U,             // added in 9
@@ -811,6 +811,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public pulseEnvelope: number = 1;
 		public sustain: number = 6;
 		public distortion: number = 0;
+		public bitcrusherFreq: number = 0;
+		public bitcrusherQuantization: number = 0;
 		public reverb: number = 0;
 		public algorithm: number = 0;
 		public feedbackType: number = 0;
@@ -840,6 +842,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.reverb = 2;
 			this.distortionFilter.reset();
 			this.distortion = Math.floor((Config.distortionRange - 1) * 0.75);
+			this.bitcrusherFreq = Math.floor((Config.bitcrusherFreqRange - 1) * 0.5)
+			this.bitcrusherQuantization = Math.floor((Config.bitcrusherQuantizationRange - 1) * 0.5);
 			this.pan = Config.panCenter;
 			this.filter.reset();
 			this.vibrato = 0;
@@ -924,6 +928,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			if (effectsIncludeDistortion(this.effects)) {
 				instrumentObject["distortionFilter"] = this.distortionFilter.toJsonObject();
 				instrumentObject["distortion"] = Math.round(100 * this.distortion / (Config.distortionRange - 1));
+			}
+			if (effectsIncludeBitcrusher(this.effects)) {
+				instrumentObject["bitcrusherOctave"] = (Config.bitcrusherFreqRange - 1 - this.bitcrusherFreq) * Config.bitcrusherOctaveStep;
+				instrumentObject["bitcrusherQuantization"] = Math.round(100 * this.bitcrusherQuantization / (Config.bitcrusherQuantizationRange - 1));
 			}
 			if (effectsIncludePanning(this.effects)) {
 				instrumentObject["pan"] = Math.round(100 * (this.pan - Config.panCenter) / Config.panCenter);
@@ -1110,8 +1118,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			}
 			if (instrumentObject["distortion"] != undefined) {
 				this.distortion = clamp(0, Config.distortionRange, Math.round((Config.distortionRange - 1) * (instrumentObject["distortion"] | 0) / 100));
-			} else {
-				this.distortion = 0;
+			}
+			
+			if (instrumentObject["bitcrusherOctave"] != undefined) {
+				this.bitcrusherFreq = Config.bitcrusherFreqRange - 1 - (+instrumentObject["bitcrusherOctave"]) / Config.bitcrusherOctaveStep;
+			}
+			if (instrumentObject["bitcrusherQuantization"] != undefined) {
+				this.bitcrusherQuantization = clamp(0, Config.bitcrusherQuantizationRange, Math.round((Config.bitcrusherQuantizationRange - 1) * (instrumentObject["bitcrusherQuantization"] | 0) / 100));
 			}
 			
 			if (instrumentObject["reverb"] != undefined) {
@@ -1434,6 +1447,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							const point: FilterControlPoint = instrument.distortionFilter.controlPoints[j];
 							buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
 						}
+					}
+					if (effectsIncludeBitcrusher(instrument.effects)) {
+						buffer.push(SongTagCode.bitcrusher, base64IntToCharCode[instrument.bitcrusherFreq], base64IntToCharCode[instrument.bitcrusherQuantization]);
 					}
 					if (effectsIncludePanning(instrument.effects)) {
 						buffer.push(SongTagCode.pan, base64IntToCharCode[instrument.pan]);
@@ -2033,6 +2049,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				case SongTagCode.distortion: {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 					instrument.distortion = clamp(0, Config.distortionRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				} break;
+				case SongTagCode.bitcrusher: {
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					instrument.bitcrusherFreq = clamp(0, Config.bitcrusherFreqRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					instrument.bitcrusherQuantization = clamp(0, Config.bitcrusherQuantizationRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} break;
 				case SongTagCode.sustain: {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -2863,15 +2884,22 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public flushedSamples: number = 0; // How many delay line samples have been flushed to zero.
 		public readonly releasedTones: Deque<Tone> = new Deque<Tone>(); // Tones that are in the process of fading out after the corresponding notes ended.
 		
-		public readonly distortionFilters: DynamicBiquadFilter[] = [];
-		public distortionFilterCount: number = 0;
-		public initialDistortionFilterInput1: number = 0.0;
-		public initialDistortionFilterInput2: number = 0.0;
-		
 		public volumeStart: number = 1.0;
 		public volumeDelta: number = 0.0;
 		public delayInputMultStart: number = 0.0;
 		public delayInputMultDelta: number = 0.0;
+		
+		public bitcrusherCurrentValue: number = 0.0;
+		public bitcrusherPhase: number = 1.0;
+		public bitcrusherPhaseDelta: number = 0.0;
+		public bitcrusherPhaseDeltaScale: number = 1.0;
+		public bitcrusherScale: number = 1.0;
+		public bitcrusherScaleDelta: number = 0.0;
+		
+		public readonly distortionFilters: DynamicBiquadFilter[] = [];
+		public distortionFilterCount: number = 0;
+		public initialDistortionFilterInput1: number = 0.0;
+		public initialDistortionFilterInput2: number = 0.0;
 		
 		public panningDelayLine: Float32Array | null = null;
 		public panningDelayPos: number = 0;
@@ -2922,6 +2950,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		}
 		
 		public deactivate(): void {
+			this.bitcrusherCurrentValue = 0.0;
+			this.bitcrusherPhase = 1.0;
 			for (const filter of this.distortionFilters) filter.resetOutput();
 			this.distortionFilterCount = 0;
 			this.initialDistortionFilterInput1 = 0.0;
@@ -2962,10 +2992,21 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const samplesPerSecond: number = synth.samplesPerSecond;
 			const tickSampleCountdown: number = synth.tickSampleCountdown;
 			
+			const usesBitcrusher: boolean = effectsIncludeBitcrusher(instrument.effects);
 			const usesPanning: boolean = effectsIncludePanning(instrument.effects);
 			const usesChorus: boolean = effectsIncludeChorus(instrument.effects);
 			const usesReverb: boolean = effectsIncludeReverb(instrument.effects);
-
+			
+			if (usesBitcrusher) {
+				const basePitch: number = Config.keys[synth.song!.key].basePitch; // TODO: What if there's a key change mid-song?
+				const freq: number = Instrument.frequencyFromPitch(basePitch + 60) * Math.pow(2.0, (Config.bitcrusherFreqRange - 1 - instrument.bitcrusherFreq) * Config.bitcrusherOctaveStep);
+				this.bitcrusherPhaseDelta = Math.min(1.0, freq / samplesPerSecond);
+				this.bitcrusherScale = 4 * Math.pow(2.0, Math.pow(2.0, (Config.bitcrusherQuantizationRange - 1 - instrument.bitcrusherQuantization) * 0.5));
+				// TODO: Automation.
+				this.bitcrusherPhaseDeltaScale = 1.0;
+				this.bitcrusherScaleDelta = 0.0;
+			}
+			
 			// TODO: Automation.
 			let distortionFilterVolume: number = 1.0;
 			const distortionFilterSettings: FilterSettings = instrument.distortionFilter;
@@ -3154,7 +3195,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		private tempFrequencyResponse: FrequencyResponse = new FrequencyResponse();
 		
 		private static readonly fmSynthFunctionCache: Dictionary<Function> = {};
-		private static readonly effectsFunctionCache: Function[] = Array(1 << 4).fill(undefined); // keep in sync with the number of post-process effects.
+		private static readonly effectsFunctionCache: Function[] = Array(1 << 5).fill(undefined); // keep in sync with the number of post-process effects.
 		
 		private readonly channels: ChannelState[] = [];
 		private readonly tonePool: Deque<Tone> = new Deque<Tone>();
@@ -4787,11 +4828,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		private static effectsSynth(synth: Synth, outputDataL: Float32Array, outputDataR: Float32Array, bufferIndex: number, runLength: number, instrument: Instrument, instrumentState: InstrumentState): void {
 			// TODO: If automation is involved, don't assume sliders will stay at zero.
 			const usesDistortionEffect: boolean = effectsIncludeDistortion(instrument.effects) && instrument.distortion != 0;
+			const usesBitcrusherEffect: boolean = effectsIncludeBitcrusher(instrument.effects);
 			const usesPanningEffect: boolean = effectsIncludePanning(instrument.effects) && instrument.pan != Config.panCenter;
 			const usesChorusEffect: boolean = effectsIncludeChorus(instrument.effects);
 			const usesReverbEffect: boolean = effectsIncludeReverb(instrument.effects) && instrument.reverb != 0;
 			let signature: number = 0;
 			if (usesDistortionEffect) signature = signature | 1;
+			signature = signature << 1;
+			if (usesBitcrusherEffect) signature = signature | 1;
 			signature = signature << 1;
 			if (usesPanningEffect) signature = signature | 1;
 			signature = signature << 1;
@@ -4803,7 +4847,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			if (effectsFunction == undefined) {
 				let effectsSource: string = "";
 				
-				const usesEffectFilter: boolean = usesDistortionEffect; // TODO: Bitcrush?
+				const usesEffectFilter: boolean = usesDistortionEffect; // TODO: Bitcrusher?
 				const usesDelayEffects: boolean = usesChorusEffect || usesReverbEffect;
 				
 				effectsSource += `
@@ -4822,12 +4866,21 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (usesDistortionEffect) {
 					effectsSource += `
 					
-					//const distortion = 1.0 / (1.0 + 5.0 * instrument.distortion / (beepbox.Config.distortionRange - 1));
 					const distortionSlider = instrument.distortion / (beepbox.Config.distortionRange - 1);
 					const distortion = Math.pow(1.0 - 0.95 * distortionSlider, 1.5);
-					const amp = (1.0 + 2.0 * distortionSlider) / beepbox.Config.distortionBaseVolume;
-					volume *= beepbox.Config.distortionBaseVolume;
-					volumeDelta *= beepbox.Config.distortionBaseVolume;`
+					const distortionBaseVolume = beepbox.Config.distortionBaseVolume;
+					const amp = (1.0 + 2.0 * distortionSlider) / distortionBaseVolume;`
+				}
+				
+				if (usesBitcrusherEffect) {
+					effectsSource += `
+					
+					let bitcrusherCurrentValue = +instrumentState.bitcrusherCurrentValue;
+					let bitcrusherPhase = +instrumentState.bitcrusherPhase;
+					let bitcrusherPhaseDelta = +instrumentState.bitcrusherPhaseDelta;
+					const bitcrusherPhaseDeltaScale = +instrumentState.bitcrusherPhaseDeltaScale;
+					let bitcrusherScale = +instrumentState.bitcrusherScale;
+					const bitcrusherScaleDelta = +instrumentState.bitcrusherScaleDelta;`
 				}
 				
 				if (usesEffectFilter) {
@@ -4922,7 +4975,27 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					effectsSource += `
 						
 						sample *= amp; // + 0.5; // DC warmth?
-						sample = sample / ((1.0 - distortion) * Math.abs(sample) + distortion);`
+						sample = distortionBaseVolume * sample / ((1.0 - distortion) * Math.abs(sample) + distortion);`
+				}
+				
+				if (usesBitcrusherEffect) {
+					effectsSource += `
+						
+						// TODO: optimize? How bad is the conditional branch here?
+						bitcrusherPhase += bitcrusherPhaseDelta;
+						bitcrusherPhaseDelta *= bitcrusherPhaseDeltaScale;
+						bitcrusherScale += bitcrusherScaleDelta;
+						if (bitcrusherPhase < 1.0) {
+							sample = bitcrusherCurrentValue;
+						} else {
+							bitcrusherPhase = bitcrusherPhase % 1.0;
+							const ratio = bitcrusherPhase / bitcrusherPhaseDelta;
+							const scaledSample = sample * bitcrusherScale;
+							const oldValue = bitcrusherCurrentValue;
+							const newValue = (scaledSample + (scaledSample > 0 ? 0.5 : -.5)|0) / bitcrusherScale;
+							sample = oldValue + (newValue - oldValue) * ratio;
+							bitcrusherCurrentValue = newValue;
+						}`
 				}
 						
 				if (usesEffectFilter) {
@@ -5052,6 +5125,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					
 					// Avoid persistent denormal or NaN values in the delay buffers and filter history.
 					const epsilon = (1.0e-24);`
+				
+				if (usesBitcrusherEffect) {
+					effectsSource += `
+						
+						instrumentState.bitcrusherCurrentValue = bitcrusherCurrentValue;
+						instrumentState.bitcrusherPhase = bitcrusherPhase;`
+				}
 					
 				if (usesEffectFilter) {
 					effectsSource += `
