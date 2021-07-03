@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeReverb} from "../synth/SynthConfig";
+import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
@@ -200,10 +200,10 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private readonly _transitionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("transition")}, "Transition:"), div({class: "selectContainer"}, this._transitionSelect));
 		private readonly _effectsDisplayOption: HTMLOptionElement = option({selected: true, disabled: true, hidden: false}, "Preferences"); // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
 		private readonly _effectsSelect: HTMLSelectElement = select(this._effectsDisplayOption);
-		private readonly _filterEditor: FilterEditor = new FilterEditor(this._doc);
-		private readonly _filterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("filter")}, "Filter:"), this._filterEditor.container);
-		private readonly _distortionFilterEditor: FilterEditor = new FilterEditor(this._doc, true);
-		private readonly _distortionFilterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("distortionFilter")}, "Post-Filter:"), this._distortionFilterEditor.container);
+		private readonly _eqFilterEditor: FilterEditor = new FilterEditor(this._doc);
+		private readonly _eqFilterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("eqFilter")}, "EQ Filter:"), this._eqFilterEditor.container);
+		private readonly _noteFilterEditor: FilterEditor = new FilterEditor(this._doc, true);
+		private readonly _noteFilterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("noteFilter")}, "Note Filter:"), this._noteFilterEditor.container);
 		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
 		private _filterEnvelopeRow: HTMLDivElement = div({class: "selectRow", title: "Low-pass Filter Envelope"}, span({class: "tip", onclick: ()=>this._openPrompt("filterEnvelope")}, "Filter Env:"), div({class: "selectContainer"}, this._filterEnvelopeSelect));
 		private readonly _pulseEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
@@ -213,9 +213,9 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private readonly _distortionSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.distortionRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeDistortion(this._doc, oldValue, newValue));
 		private _distortionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("distortion")}, "Distortion:"), this._distortionSlider.input);
 		private readonly _bitcrusherQuantizationSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherQuantizationRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeBitcrusherQuantization(this._doc, oldValue, newValue));
-		private _bitcrusherQuantizationRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherQuantization")}, "Bitcrusher:"), this._bitcrusherQuantizationSlider.input);
+		private _bitcrusherQuantizationRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherQuantization")}, "Bit Crush:"), this._bitcrusherQuantizationSlider.input);
 		private readonly _bitcrusherFreqSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherFreqRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeBitcrusherFreq(this._doc, oldValue, newValue));
-		private _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Bitcrush Freq:"), this._bitcrusherFreqSlider.input);
+		private _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Freq Crush:"), this._bitcrusherFreqSlider.input);
 		private readonly _sustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.sustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeSustain(this._doc, oldValue, newValue));
 		private _sustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("sustain")}, "Sustain:"), this._sustainSlider.input);
 		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select(), Config.intervals.map(interval=>interval.name));
@@ -245,8 +245,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			"Customize Instrument",
 		);
 		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({class: "editor-controls"},
-			this._filterRow,
-			this._filterEnvelopeRow,
+			this._eqFilterRow,
 			this._transitionRow,
 			this._chordSelectRow,
 			this._vibratoSelectRow,
@@ -267,8 +266,9 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 				span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects:"),
 				div({class: "selectContainer"}, this._effectsSelect),
 			),
+			this._noteFilterRow,
+			this._filterEnvelopeRow,
 			this._distortionRow,
-			this._distortionFilterRow,
 			this._bitcrusherQuantizationRow,
 			this._bitcrusherFreqRow,
 			this._panSliderRow,
@@ -491,8 +491,8 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			this._patternArea.addEventListener("mousedown", this._refocusStage);
 			this._trackArea.addEventListener("mousedown", this._refocusStage);
 			this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
-			this._filterEditor.container.addEventListener("mousedown", this._refocusStage);
-			this._distortionFilterEditor.container.addEventListener("mousedown", this._refocusStage);
+			this._eqFilterEditor.container.addEventListener("mousedown", this._refocusStage);
+			this._noteFilterEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
@@ -709,7 +709,6 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 					this._drumsetGroup.style.display = "";
 					this._transitionRow.style.display = "none";
 					this._chordSelectRow.style.display = "none";
-					this._filterEnvelopeRow.style.display = "none";
 					for (let i: number = 0; i < Config.drumCount; i++) {
 						setSelectedValue(this._drumsetEnvelopeSelects[i], instrument.drumsetEnvelopes[i]);
 						this._drumsetSpectrumEditors[i].render();
@@ -718,7 +717,6 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 					this._drumsetGroup.style.display = "none";
 					this._transitionRow.style.display = "";
 					this._chordSelectRow.style.display = "";
-					this._filterEnvelopeRow.style.display = "";
 				}
 				if (instrument.type == InstrumentType.chip) {
 					this._chipWaveSelectRow.style.display = "";
@@ -774,14 +772,21 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 					this._pulseWidthRow.style.display = "none";
 				}
 				
+				if (effectsIncludeNoteFilter(instrument.effects)) {
+					this._noteFilterRow.style.display = "";
+					this._noteFilterEditor.render();
+					this._filterEnvelopeRow.style.display = "";
+					setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
+				} else {
+					this._noteFilterRow.style.display = "none";
+					this._filterEnvelopeRow.style.display = "none";
+				}
+				
 				if (effectsIncludeDistortion(instrument.effects)) {
 					this._distortionRow.style.display = "";
 					this._distortionSlider.updateValue(instrument.distortion);
-					this._distortionFilterRow.style.display = "";
-					this._distortionFilterEditor.render();
 				} else {
 					this._distortionRow.style.display = "none";
-					this._distortionFilterRow.style.display = "none";
 				}
 				
 				if (effectsIncludeBitcrusher(instrument.effects)) {
@@ -862,8 +867,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			
 			this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote;
 			
-			this._filterEditor.render();
-			setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
+			this._eqFilterEditor.render();
 			setSelectedValue(this._transitionSelect, instrument.transition);
 			setSelectedValue(this._vibratoSelect, instrument.vibrato);
 			setSelectedValue(this._intervalSelect, instrument.interval);

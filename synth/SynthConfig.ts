@@ -66,6 +66,7 @@ SOFTWARE.
 		panning = 2,
 		distortion = 3,
 		bitcrusher = 4,
+		noteFilter = 5,
 		length,
 	}
 	
@@ -277,8 +278,8 @@ SOFTWARE.
 			{name: "bowed",      spread: 0.02, offset: 0.0, expression: 1.0, sign:-1.0},
 			{name: "piano",      spread: 0.01, offset: 0.0, expression: 1.0, sign: 0.7},
 		]);
-		public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher"];
-		public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.reverb];
+		public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher", "note filter"];
+		public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.noteFilter, EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.reverb];
 		public static readonly volumeRange: number = 8;
 		public static readonly volumeLogScale: number = -0.5;
 		public static readonly panCenter: number = 4;
@@ -569,6 +570,10 @@ SOFTWARE.
 		const result: DictionaryArray<T> = <DictionaryArray<T>> <any> array;
 		result.dictionary = dictionary;
 		return result;
+	}
+	
+	export function effectsIncludeNoteFilter(effects: number): boolean {
+		return (effects & (1 << EffectType.noteFilter)) != 0;
 	}
 	
 	export function effectsIncludeDistortion(effects: number): boolean {

@@ -407,7 +407,7 @@ import {SongDocument} from "./SongDocument";
 				peakPoint.freq = selectCurvedDistribution(0, Config.filterFreqRange - 1, FilterControlPoint.getRoundedSettingValueFromHz(500.0), 1.0 / Config.filterFreqStep);
 				peakPoint.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter, 2.0 / Config.filterGainStep);
 			}
-			instrument.filter.controlPointCount = 0;
+			instrument.eqFilter.controlPointCount = 0;
 			for (let i: number = 0; i < addingPoints.length; i++) {
 				const point: FilterControlPoint = addingPoints[i];
 				let alreadyUsed: boolean = false;
@@ -419,8 +419,8 @@ import {SongDocument} from "./SongDocument";
 				}
 				if (alreadyUsed) break;
 				if (point.type == FilterType.peak && point.gain == Config.filterGainCenter) break;
-				instrument.filter.controlPoints[instrument.filter.controlPointCount] = point;
-				instrument.filter.controlPointCount++;
+				instrument.eqFilter.controlPoints[instrument.eqFilter.controlPointCount] = point;
+				instrument.eqFilter.controlPointCount++;
 			}
 			
 			if (isNoise) {

@@ -33,7 +33,7 @@ export class FilterEditor {
 	);
 	private readonly _pointRadius: number = 2;
 	
-	private _useDistortionFilter: boolean = false;
+	private _useNoteFilter: boolean = false;
 	private _touchMode: boolean = false;
 	private _mouseX: number = 0;
 	private _mouseY: number = 0;
@@ -56,8 +56,8 @@ export class FilterEditor {
 	private _renderedPointGains: number = -1;
 	//private _renderedKey: number = -1;
 	
-	constructor(private _doc: SongDocument, useDistortionFilter: boolean = false) {
-		this._useDistortionFilter = useDistortionFilter;
+	constructor(private _doc: SongDocument, useNoteFilter: boolean = false) {
+		this._useNoteFilter = useNoteFilter;
 		/*
 		for (let i: number = 0; i < Config.filterFreqRange * Config.filterFreqStep; i++) {
 			this._octaves.appendChild(SVG.rect({fill: ColorConfig.tonic, x: i * this._editorWidth / (Config.filterFreqRange * Config.filterFreqStep) - 0.5, y: 0, width: 1, height: this._editorHeight}));
@@ -351,7 +351,7 @@ export class FilterEditor {
 	
 	public render(): void {
 		const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
-		const filterSettings: FilterSettings = this._useDistortionFilter ? instrument.distortionFilter : instrument.filter;
+		const filterSettings: FilterSettings = this._useNoteFilter ? instrument.noteFilter : instrument.eqFilter;
 		if (this._filterSettings != filterSettings) {
 			this._dragChange = null;
 			this._mouseDown = false;
