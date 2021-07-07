@@ -56,7 +56,7 @@ SOFTWARE.
 		drumset = 4,
 		harmonics = 5,
 		pwm = 6,
-		guitar = 7,
+		pickedString = 7,
 		length,
 	}
 	
@@ -67,6 +67,7 @@ SOFTWARE.
 		distortion = 3,
 		bitcrusher = 4,
 		noteFilter = 5,
+		echo = 6,
 		length,
 	}
 	
@@ -187,6 +188,11 @@ SOFTWARE.
 		public static readonly blackKeyNameParents: ReadonlyArray<number> = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
 		public static readonly tempoMin: number = 30;
 		public static readonly tempoMax: number = 300;
+		public static readonly echoDelayRange: number = 24;
+		public static readonly echoDelayStepTicks: number = 4;
+		public static readonly echoSustainRange: number = 8;
+		public static readonly echoShelfHz: number = 4000.0; // The cutoff freq of the shelf filter that is used to decay echoes.
+		public static readonly echoShelfGain: number = Math.pow(2.0, -0.5);
 		public static readonly reverbRange: number = 4;
 		public static readonly reverbDelayBufferSize: number = 16384; // TODO: Compute a buffer size based on sample rate.
 		public static readonly reverbDelayBufferMask: number = Config.reverbDelayBufferSize - 1; // TODO: Compute a buffer size based on sample rate.
@@ -206,7 +212,7 @@ SOFTWARE.
 			{name: "freehand",      stepsPerBeat:24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1],       [0, 1, 2, 1]], roundUpThresholds: null},
 		]);
 		
-		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "Electric Guitar"]; // See InstrumentType enum above.
+		public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "Picked String"]; // See InstrumentType enum above.
 		public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false, false];
 		public static readonly chipBaseExpression:      number = 0.03375; // Doubled by interval feature, but affected by expression adjustments per interval setting and wave shape.
 		public static readonly fmBaseExpression:        number = 0.03;
@@ -215,7 +221,7 @@ SOFTWARE.
 		public static readonly drumsetBaseExpression:   number = 0.45; // Drums tend to be loud but brief!
 		public static readonly harmonicsBaseExpression: number = 0.025;
 		public static readonly pwmBaseExpression:       number = 0.04725; // It's actually closer to half of this, the synthesized pulse amplitude range is only .5 to -.5, but also note that the fundamental sine partial amplitude of a square wave is 4/π times the measured square wave amplitude.
-		public static readonly guitarBaseExpression:    number = 0.03;
+		public static readonly pickedStringBaseExpression: number = 0.03;
 		public static readonly distortionBaseVolume:    number = 0.0125; // Distortion is not affected by pitchDamping, which otherwise approximately halves expression for notes around the middle of the range.
 		
 		public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
@@ -278,8 +284,8 @@ SOFTWARE.
 			{name: "bowed",      spread: 0.02, offset: 0.0, expression: 1.0, sign:-1.0},
 			{name: "piano",      spread: 0.01, offset: 0.0, expression: 1.0, sign: 0.7},
 		]);
-		public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher", "note filter"];
-		public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.noteFilter, EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.reverb];
+		public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher", "note filter", "echo"];
+		public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.noteFilter, EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.echo, EffectType.reverb];
 		public static readonly volumeRange: number = 8;
 		public static readonly volumeLogScale: number = -0.5;
 		public static readonly panCenter: number = 4;
@@ -406,15 +412,15 @@ SOFTWARE.
 		public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
 		public static readonly sineWave: Float64Array = generateSineWave();
 		
-		// Guitars have an all-pass filter with a corner frequency based on the tone fundamental frequency, in order to add a slight inharmonicity. (Which is important for distortion.)
-		public static readonly guitarDispersionCenterFreq: number = 6000.0; // The tone fundamental freq is pulled toward this freq for computing the all-pass corner freq.
-		public static readonly guitarDispersionFreqScale: number = 0.3; // The tone fundamental freq freq moves this much toward the center freq for computing the all-pass corner freq.
-		public static readonly guitarDispersionFreqMult: number = 4.0; // The all-pass corner freq is based on this times the adjusted tone fundamental freq.
-		public static readonly guitarShelfHz: number = 4000.0; // The cutoff freq of the shelf filter that is used to decay the high frequency energy in the guitar string.
-		public static readonly guitarPulseWidthRandomness: number = 0.1;
+		// Picked strings have an all-pass filter with a corner frequency based on the tone fundamental frequency, in order to add a slight inharmonicity. (Which is important for distortion.)
+		public static readonly pickedStringDispersionCenterFreq: number = 6000.0; // The tone fundamental freq is pulled toward this freq for computing the all-pass corner freq.
+		public static readonly pickedStringDispersionFreqScale: number = 0.3; // The tone fundamental freq freq moves this much toward the center freq for computing the all-pass corner freq.
+		public static readonly pickedStringDispersionFreqMult: number = 4.0; // The all-pass corner freq is based on this times the adjusted tone fundamental freq.
+		public static readonly pickedStringShelfHz: number = 4000.0; // The cutoff freq of the shelf filter that is used to decay the high frequency energy in the picked string.
+		public static readonly pickedStringPulseWidthRandomness: number = 0.1; // TODO: Try harmonic-style wave instead of pulse?
 		
 		public static readonly distortionRange: number = 8;
-		public static readonly sustainRange: number = 8;
+		public static readonly stringSustainRange: number = 8;
 		public static readonly bitcrusherFreqRange: number = 14;
 		public static readonly bitcrusherOctaveStep: number = 0.5;
 		public static readonly bitcrusherQuantizationRange: number = 8;
@@ -590,6 +596,10 @@ SOFTWARE.
 	
 	export function effectsIncludeChorus(effects: number): boolean {
 		return (effects & (1 << EffectType.chorus)) != 0;
+	}
+	
+	export function effectsIncludeEcho(effects: number): boolean {
+		return (effects & (1 << EffectType.echo)) != 0;
 	}
 	
 	export function effectsIncludeReverb(effects: number): boolean {

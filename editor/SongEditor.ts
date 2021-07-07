@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeReverb} from "../synth/SynthConfig";
+import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
@@ -27,7 +27,7 @@ import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
-import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong, ChangeDistortion, ChangeSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization} from "./changes";
+import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization} from "./changes";
 
 //namespace beepbox {
 	const {button, div, input, select, span, optgroup, option} = HTML;
@@ -60,7 +60,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			customTypeGroup.appendChild(option({value: InstrumentType.pwm}, EditorConfig.valueToPreset(InstrumentType.pwm)!.name));
 			customTypeGroup.appendChild(option({value: InstrumentType.harmonics}, EditorConfig.valueToPreset(InstrumentType.harmonics)!.name));
 			customTypeGroup.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
-			customTypeGroup.appendChild(option({value: InstrumentType.guitar}, EditorConfig.valueToPreset(InstrumentType.guitar)!.name));
+			customTypeGroup.appendChild(option({value: InstrumentType.pickedString}, EditorConfig.valueToPreset(InstrumentType.pickedString)!.name));
 			customTypeGroup.appendChild(option({value: InstrumentType.fm}, EditorConfig.valueToPreset(InstrumentType.fm)!.name));
 		}
 		menu.appendChild(customTypeGroup);
@@ -181,6 +181,10 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private readonly _tempoStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 0.4em; vertical-align: middle;", type: "number", step: "1"});
 		private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
 		private readonly _reverbRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb: "), this._reverbSlider.input);
+		private readonly _echoSustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.echoSustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeEchoSustain(this._doc, oldValue, newValue));
+		private readonly _echoSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoSustain")}, "Echo: "), this._echoSustainSlider.input);
+		private readonly _echoDelaySlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.echoDelayRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeEchoDelay(this._doc, oldValue, newValue));
+		private readonly _echoDelayRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoDelay")}, "Echo Delay: "), this._echoDelaySlider.input);
 		private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select(), Config.rhythms.map(rhythm=>rhythm.name));
 		private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false);
 		private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true);
@@ -216,8 +220,8 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 		private _bitcrusherQuantizationRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherQuantization")}, "Bit Crush:"), this._bitcrusherQuantizationSlider.input);
 		private readonly _bitcrusherFreqSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherFreqRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeBitcrusherFreq(this._doc, oldValue, newValue));
 		private _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Freq Crush:"), this._bitcrusherFreqSlider.input);
-		private readonly _sustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.sustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeSustain(this._doc, oldValue, newValue));
-		private _sustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("sustain")}, "Sustain:"), this._sustainSlider.input);
+		private readonly _stringSustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.stringSustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeStringSustain(this._doc, oldValue, newValue));
+		private _stringSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("stringSustain")}, "Sustain:"), this._stringSustainSlider.input);
 		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select(), Config.intervals.map(interval=>interval.name));
 		private readonly _intervalSelectRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("interval")}, "Interval:"), div({class: "selectContainer"}, this._intervalSelect));
 		private readonly _chordSelect: HTMLSelectElement = buildOptions(select(), Config.chords.map(chord=>chord.name));
@@ -261,7 +265,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			this._drumsetGroup,
 			this._pulseEnvelopeRow,
 			this._pulseWidthRow,
-			this._sustainRow,
+			this._stringSustainRow,
 			div({class: "selectRow"},
 				span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects:"),
 				div({class: "selectContainer"}, this._effectsSelect),
@@ -272,6 +276,8 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 			this._bitcrusherQuantizationRow,
 			this._bitcrusherFreqRow,
 			this._panSliderRow,
+			this._echoSustainRow,
+			this._echoDelayRow,
 			this._reverbRow,
 		);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({class: "editor-controls"},
@@ -758,13 +764,13 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 				} else {
 					this._pulseEnvelopeRow.style.display = "none";
 				}
-				if (instrument.type == InstrumentType.guitar) {
-					this._sustainRow.style.display = "";
-					this._sustainSlider.updateValue(instrument.sustain);
+				if (instrument.type == InstrumentType.pickedString) {
+					this._stringSustainRow.style.display = "";
+					this._stringSustainSlider.updateValue(instrument.stringSustain);
 				} else {
-					this._sustainRow.style.display = "none";
+					this._stringSustainRow.style.display = "none";
 				}
-				if (instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.guitar) {
+				if (instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.pickedString) {
 					this._pulseWidthRow.style.display = "";
 					this._pulseWidthSlider.input.title = prettyNumber(getPulseWidthRatio(instrument.pulseWidth) * 100) + "%";
 					this._pulseWidthSlider.updateValue(instrument.pulseWidth);
@@ -806,6 +812,16 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 					this._panSliderRow.style.display = "none";
 				}
 				
+				if (effectsIncludeEcho(instrument.effects)) {
+					this._echoSustainRow.style.display = "";
+					this._echoSustainSlider.updateValue(instrument.echoSustain);
+					this._echoDelayRow.style.display = "";
+					this._echoDelaySlider.updateValue(instrument.echoDelay);
+				} else {
+					this._echoSustainRow.style.display = "none";
+					this._echoDelayRow.style.display = "none";
+				}
+				
 				if (effectsIncludeReverb(instrument.effects)) {
 					this._reverbRow.style.display = "";
 					this._reverbSlider.updateValue(instrument.reverb);
@@ -834,7 +850,7 @@ import {ChangeTempo, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelecti
 				} else if (instrument.type == InstrumentType.pwm) {
 					this._vibratoSelectRow.style.display = "";
 					this._intervalSelectRow.style.display = "none";
-				} else if (instrument.type == InstrumentType.guitar) {
+				} else if (instrument.type == InstrumentType.pickedString) {
 					this._vibratoSelectRow.style.display = "";
 					this._intervalSelectRow.style.display = "none";
 				} else {

@@ -523,7 +523,7 @@ import {SongDocument} from "./SongDocument";
 					default: throw new Error("Unhandled noise instrument type in random generator.");
 				}
 			} else {
-				// TODO: Add support for electric guitar and distortion.
+				// TODO: Add support for picked string and distortion.
 				const type: InstrumentType = selectWeightedRandom([
 					{item: InstrumentType.chip,      weight: 4},
 					{item: InstrumentType.pwm,       weight: 4},
@@ -1094,10 +1094,10 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
-	export class ChangeSustain extends ChangeInstrumentSlider {
+	export class ChangeStringSustain extends ChangeInstrumentSlider {
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super(doc);
-			this._instrument.sustain = newValue;
+			this._instrument.stringSustain = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}
@@ -2132,6 +2132,24 @@ import {SongDocument} from "./SongDocument";
 		constructor(doc: SongDocument, oldValue: number, newValue: number) {
 			super();
 			doc.song.tempo = Math.max(Config.tempoMin, Math.min(Config.tempoMax, Math.round(newValue)));
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangeEchoDelay extends ChangeInstrumentSlider {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super(doc);
+			this._instrument.echoDelay = newValue;
+			doc.notifier.changed();
+			if (oldValue != newValue) this._didSomething();
+		}
+	}
+	
+	export class ChangeEchoSustain extends ChangeInstrumentSlider {
+		constructor(doc: SongDocument, oldValue: number, newValue: number) {
+			super(doc);
+			this._instrument.echoSustain = newValue;
 			doc.notifier.changed();
 			if (oldValue != newValue) this._didSomething();
 		}

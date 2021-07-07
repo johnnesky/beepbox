@@ -35,7 +35,7 @@ import {DictionaryArray, BeepBoxOption, InstrumentType, toNameMap} from "../synt
 				{name: "drumset",          customType: InstrumentType.drumset},
 				{name: "harmonics",        customType: InstrumentType.harmonics},
 				{name: "pulse width",      customType: InstrumentType.pwm},
-				{name: "electric guitar",  customType: InstrumentType.guitar},
+				{name: "picked string",    customType: InstrumentType.pickedString},
 			])},
 			{name: "Retro Presets", presets: <DictionaryArray<Preset>> toNameMap([
 				{name: "square wave",      midiProgram:  80, settings: {"type":"chip","transition":"seamless","effects":"none","chord":"arpeggio","filterCutoffHz":4000,"filterResonance":0,"filterEnvelope":"steady","wave":"square","interval":"union","vibrato":"none"}},
