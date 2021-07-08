@@ -2971,12 +2971,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public delayInputMultStart: number = 0.0;
 		public delayInputMultDelta: number = 0.0;
 		
-		public bitcrusherCurrentValue: number = 0.0;
+		public bitcrusherPrevInput: number = 0.0;
+		public bitcrusherCurrentOutput: number = 0.0;
 		public bitcrusherPhase: number = 1.0;
 		public bitcrusherPhaseDelta: number = 0.0;
 		public bitcrusherPhaseDeltaScale: number = 1.0;
 		public bitcrusherScale: number = 1.0;
 		public bitcrusherScaleDelta: number = 0.0;
+		public bitcrusherFoldLevel: number = 1.0;
 		
 		public readonly eqFilters: DynamicBiquadFilter[] = [];
 		public eqFilterCount: number = 0;
@@ -3078,7 +3080,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		}
 		
 		public deactivate(): void {
-			this.bitcrusherCurrentValue = 0.0;
+			this.bitcrusherPrevInput = 0.0;
+			this.bitcrusherCurrentOutput = 0.0;
 			this.bitcrusherPhase = 1.0;
 			for (let i: number = 0; i < this.eqFilterCount; i++) {
 				this.eqFilters[i].resetOutput();
@@ -3144,8 +3147,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				const basePitch: number = Config.keys[synth.song!.key].basePitch; // TODO: What if there's a key change mid-song?
 				const freq: number = Instrument.frequencyFromPitch(basePitch + 60) * Math.pow(2.0, (Config.bitcrusherFreqRange - 1 - instrument.bitcrusherFreq) * Config.bitcrusherOctaveStep);
 				this.bitcrusherPhaseDelta = Math.min(1.0, freq / samplesPerSecond);
-				// TODO: When bitcrushing is maxed out, the resulting amplitude should match a standard square wave.
-				this.bitcrusherScale = 4 * Math.pow(2.0, Math.pow(2.0, (Config.bitcrusherQuantizationRange - 1 - instrument.bitcrusherQuantization) * 0.5));
+				this.bitcrusherScale = 2.0 * Config.bitcrusherBaseVolume * Math.pow(2.0, 1.0 - Math.pow(2.0, (Config.bitcrusherQuantizationRange - 1 - instrument.bitcrusherQuantization) * 0.5));
+				this.bitcrusherFoldLevel = 2.0 * Config.bitcrusherBaseVolume * Math.pow(1.5, Config.bitcrusherQuantizationRange - 1 - instrument.bitcrusherQuantization);
+				
 				// TODO: Automation.
 				this.bitcrusherPhaseDeltaScale = 1.0;
 				this.bitcrusherScaleDelta = 0.0;
@@ -5063,12 +5067,16 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (usesBitcrusher) {
 					effectsSource += `
 					
-					let bitcrusherCurrentValue = +instrumentState.bitcrusherCurrentValue;
+					let bitcrusherPrevInput = +instrumentState.bitcrusherPrevInput;
+					let bitcrusherCurrentOutput = +instrumentState.bitcrusherCurrentOutput;
 					let bitcrusherPhase = +instrumentState.bitcrusherPhase;
 					let bitcrusherPhaseDelta = +instrumentState.bitcrusherPhaseDelta;
 					const bitcrusherPhaseDeltaScale = +instrumentState.bitcrusherPhaseDeltaScale;
 					let bitcrusherScale = +instrumentState.bitcrusherScale;
-					const bitcrusherScaleDelta = +instrumentState.bitcrusherScaleDelta;`
+					const bitcrusherScaleDelta = +instrumentState.bitcrusherScaleDelta;
+					const bitcrusherFoldLevel = +instrumentState.bitcrusherFoldLevel;
+					const bitcrusherWrapMiddle = bitcrusherFoldLevel * 2.0;
+					const bitcrusherWrapLevel = bitcrusherFoldLevel * 4.0;`
 				}
 				
 				if (usesEqFilter) {
@@ -5194,19 +5202,26 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (usesBitcrusher) {
 					effectsSource += `
 						
+						bitcrusherPhase += bitcrusherPhaseDelta;
 						if (bitcrusherPhase < 1.0) {
-							sample = bitcrusherCurrentValue;
+							bitcrusherPrevInput = sample;
+							sample = bitcrusherCurrentOutput;
 						} else {
 							bitcrusherPhase = bitcrusherPhase % 1.0;
 							const ratio = bitcrusherPhase / bitcrusherPhaseDelta;
-							const scaledSample = sample * bitcrusherScale;
-							const oldValue = bitcrusherCurrentValue;
-							const newValue = (((scaledSample > 0 ? scaledSample + 1 : scaledSample)|0)-.5) / bitcrusherScale;
+							
+							const lerpedInput = sample + (bitcrusherPrevInput - sample) * ratio;
+							bitcrusherPrevInput = sample;
+							
+							const wrappedSample = (((lerpedInput + bitcrusherFoldLevel) % bitcrusherWrapLevel) + bitcrusherWrapLevel) % bitcrusherWrapLevel;
+							const foldedSample = bitcrusherFoldLevel - Math.abs(bitcrusherWrapMiddle - wrappedSample);
+							const scaledSample = foldedSample / bitcrusherScale;
+							const oldValue = bitcrusherCurrentOutput;
+							const newValue = (((scaledSample > 0 ? scaledSample + 1 : scaledSample)|0)-.5) * bitcrusherScale;
 							
 							sample = oldValue + (newValue - oldValue) * ratio;
-							bitcrusherCurrentValue = newValue;
+							bitcrusherCurrentOutput = newValue;
 						}
-						bitcrusherPhase += bitcrusherPhaseDelta;
 						bitcrusherPhaseDelta *= bitcrusherPhaseDeltaScale;
 						bitcrusherScale += bitcrusherScaleDelta;`
 				}
@@ -5367,8 +5382,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (usesBitcrusher) {
 					effectsSource += `
 						
-						instrumentState.bitcrusherCurrentValue = bitcrusherCurrentValue;
-						instrumentState.bitcrusherPhase = bitcrusherPhase;`
+					if (Math.abs(bitcrusherPrevInput) < epsilon) bitcrusherPrevInput = 0.0;
+					if (Math.abs(bitcrusherCurrentOutput) < epsilon) bitcrusherCurrentOutput = 0.0;
+					instrumentState.bitcrusherPrevInput = bitcrusherPrevInput;
+					instrumentState.bitcrusherCurrentOutput = bitcrusherCurrentOutput;
+					instrumentState.bitcrusherPhase = bitcrusherPhase;`
 				}
 					
 				if (usesEqFilter) {
