@@ -3024,11 +3024,18 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public reverbDelayLine: Float32Array | null = null;
 		public reverbDelayLineDirty: boolean = false;
 		public reverbDelayPos: number = 0;
-		public reverbFeedback0: number = 0.0;
-		public reverbFeedback1: number = 0.0;
-		public reverbFeedback2: number = 0.0;
-		public reverbFeedback3: number = 0.0;
 		public reverbMult: number = 0.0;
+		public reverbShelfA1: number = 0.0;
+		public reverbShelfB0: number = 0.0;
+		public reverbShelfB1: number = 0.0;
+		public reverbShelfSample0: number = 0.0;
+		public reverbShelfSample1: number = 0.0;
+		public reverbShelfSample2: number = 0.0;
+		public reverbShelfSample3: number = 0.0;
+		public reverbShelfPrevInput0: number = 0.0;
+		public reverbShelfPrevInput1: number = 0.0;
+		public reverbShelfPrevInput2: number = 0.0;
+		public reverbShelfPrevInput3: number = 0.0;
 		
 		public allocateNecessaryBuffers(synth: Synth, instrument: Instrument, samplesPerTick: number): void {
 			if (effectsIncludePanning(instrument.effects)) {
@@ -3096,6 +3103,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.echoShelfSampleR = 0.0;
 			this.echoShelfPrevInputL = 0.0;
 			this.echoShelfPrevInputR = 0.0;
+			this.reverbShelfSample0 = 0.0;
+			this.reverbShelfSample1 = 0.0;
+			this.reverbShelfSample2 = 0.0;
+			this.reverbShelfSample3 = 0.0;
+			this.reverbShelfPrevInput0 = 0.0;
+			this.reverbShelfPrevInput1 = 0.0;
+			this.reverbShelfPrevInput2 = 0.0;
+			this.reverbShelfPrevInput3 = 0.0;
 			
 			this.awake = false;
 			this.flushingDelayLines = false;
@@ -3120,10 +3135,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			}
 			
 			this.chorusPhase = 0.0;
-			this.reverbFeedback0 = 0.0;
-			this.reverbFeedback1 = 0.0;
-			this.reverbFeedback2 = 0.0;
-			this.reverbFeedback3 = 0.0;
 		}
 		
 		public compute(synth: Synth, instrument: Instrument, samplesPerTick: number, runLength: number): void {
@@ -3216,6 +3227,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			
 			if (usesReverb) {
 				this.reverbMult = Math.pow(instrument.reverb / Config.reverbRange, 0.667) * 0.425;
+				
+				const shelfRadians: number = 2.0 * Math.PI * Config.reverbShelfHz / synth.samplesPerSecond;
+				Synth.tempFilterStartCoefficients.highShelf1stOrder(shelfRadians, Config.reverbShelfGain);
+				this.reverbShelfA1 = Synth.tempFilterStartCoefficients.a[1];
+				this.reverbShelfB0 = Synth.tempFilterStartCoefficients.b[0];
+				this.reverbShelfB1 = Synth.tempFilterStartCoefficients.b[1];
 			}
 			
 			if (this.tonesAddedInThisTick) {
@@ -5177,10 +5194,17 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					instrumentState.reverbDelayLineDirty = true;
 					let reverbDelayPos = instrumentState.reverbDelayPos & reverbMask;
 					
-					let reverbFeedback0 = +instrumentState.reverbFeedback0;
-					let reverbFeedback1 = +instrumentState.reverbFeedback1;
-					let reverbFeedback2 = +instrumentState.reverbFeedback2;
-					let reverbFeedback3 = +instrumentState.reverbFeedback3;
+					const reverbShelfA1 = +instrumentState.reverbShelfA1;
+					const reverbShelfB0 = +instrumentState.reverbShelfB0;
+					const reverbShelfB1 = +instrumentState.reverbShelfB1;
+					let reverbShelfSample0 = +instrumentState.reverbShelfSample0;
+					let reverbShelfSample1 = +instrumentState.reverbShelfSample1;
+					let reverbShelfSample2 = +instrumentState.reverbShelfSample2;
+					let reverbShelfSample3 = +instrumentState.reverbShelfSample3;
+					let reverbShelfPrevInput0 = +instrumentState.reverbShelfPrevInput0;
+					let reverbShelfPrevInput1 = +instrumentState.reverbShelfPrevInput1;
+					let reverbShelfPrevInput2 = +instrumentState.reverbShelfPrevInput2;
+					let reverbShelfPrevInput3 = +instrumentState.reverbShelfPrevInput3;
 					
 					const reverb = +instrumentState.reverbMult;`
 				}
@@ -5349,14 +5373,22 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						const reverbTemp1 = -(reverbSample0 + sampleR) - reverbSample1;
 						const reverbTemp2 = -reverbSample2 + reverbSample3;
 						const reverbTemp3 = -reverbSample2 - reverbSample3;
-						reverbFeedback0 += ((reverbTemp0 + reverbTemp2) * reverb - reverbFeedback0) * 0.5;
-						reverbFeedback1 += ((reverbTemp1 + reverbTemp3) * reverb - reverbFeedback1) * 0.5;
-						reverbFeedback2 += ((reverbTemp0 - reverbTemp2) * reverb - reverbFeedback2) * 0.5;
-						reverbFeedback3 += ((reverbTemp1 - reverbTemp3) * reverb - reverbFeedback3) * 0.5;
-						reverbDelayLine[reverbDelayPos1] = reverbFeedback0 * delayInputMult;
-						reverbDelayLine[reverbDelayPos2] = reverbFeedback1 * delayInputMult;
-						reverbDelayLine[reverbDelayPos3] = reverbFeedback2 * delayInputMult;
-						reverbDelayLine[reverbDelayPos ] = reverbFeedback3 * delayInputMult;
+						const reverbShelfInput0 = (reverbTemp0 + reverbTemp2) * reverb;
+						const reverbShelfInput1 = (reverbTemp1 + reverbTemp3) * reverb;
+						const reverbShelfInput2 = (reverbTemp0 - reverbTemp2) * reverb;
+						const reverbShelfInput3 = (reverbTemp1 - reverbTemp3) * reverb;
+						reverbShelfSample0 = reverbShelfB0 * reverbShelfInput0 + reverbShelfB1 * reverbShelfPrevInput0 - reverbShelfA1 * reverbShelfSample0;
+						reverbShelfSample1 = reverbShelfB0 * reverbShelfInput1 + reverbShelfB1 * reverbShelfPrevInput1 - reverbShelfA1 * reverbShelfSample1;
+						reverbShelfSample2 = reverbShelfB0 * reverbShelfInput2 + reverbShelfB1 * reverbShelfPrevInput2 - reverbShelfA1 * reverbShelfSample2;
+						reverbShelfSample3 = reverbShelfB0 * reverbShelfInput3 + reverbShelfB1 * reverbShelfPrevInput3 - reverbShelfA1 * reverbShelfSample3;
+						reverbShelfPrevInput0 = reverbShelfInput0;
+						reverbShelfPrevInput1 = reverbShelfInput1;
+						reverbShelfPrevInput2 = reverbShelfInput2;
+						reverbShelfPrevInput3 = reverbShelfInput3;
+						reverbDelayLine[reverbDelayPos1] = reverbShelfSample0 * delayInputMult;
+						reverbDelayLine[reverbDelayPos2] = reverbShelfSample1 * delayInputMult;
+						reverbDelayLine[reverbDelayPos3] = reverbShelfSample2 * delayInputMult;
+						reverbDelayLine[reverbDelayPos ] = reverbShelfSample3 * delayInputMult;
 						reverbDelayPos = (reverbDelayPos + 1) & reverbMask;
 						sampleL += reverbSample1 + reverbSample2 + reverbSample3;
 						sampleR += reverbSample0 + reverbSample2 - reverbSample3;`
@@ -5441,19 +5473,28 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (usesReverb) {
 					effectsSource += `
 					
-					if (!Number.isFinite(reverbFeedback0) || Math.abs(reverbFeedback0) < epsilon) reverbFeedback0 = 0.0;
-					if (!Number.isFinite(reverbFeedback1) || Math.abs(reverbFeedback1) < epsilon) reverbFeedback1 = 0.0;
-					if (!Number.isFinite(reverbFeedback2) || Math.abs(reverbFeedback2) < epsilon) reverbFeedback2 = 0.0;
-					if (!Number.isFinite(reverbFeedback3) || Math.abs(reverbFeedback3) < epsilon) reverbFeedback3 = 0.0;
 					beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos        , reverbMask);
 					beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  3041, reverbMask);
 					beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  6426, reverbMask);
 					beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos + 10907, reverbMask);
 					instrumentState.reverbDelayPos  = reverbDelayPos;
-					instrumentState.reverbFeedback0 = reverbFeedback0;
-					instrumentState.reverbFeedback1 = reverbFeedback1;
-					instrumentState.reverbFeedback2 = reverbFeedback2;
-					instrumentState.reverbFeedback3 = reverbFeedback3;`
+					
+					if (!Number.isFinite(reverbShelfSample0) || Math.abs(reverbShelfSample0) < epsilon) reverbShelfSample0 = 0.0;
+					if (!Number.isFinite(reverbShelfSample1) || Math.abs(reverbShelfSample1) < epsilon) reverbShelfSample1 = 0.0;
+					if (!Number.isFinite(reverbShelfSample2) || Math.abs(reverbShelfSample2) < epsilon) reverbShelfSample2 = 0.0;
+					if (!Number.isFinite(reverbShelfSample3) || Math.abs(reverbShelfSample3) < epsilon) reverbShelfSample3 = 0.0;
+					if (!Number.isFinite(reverbShelfPrevInput0) || Math.abs(reverbShelfPrevInput0) < epsilon) reverbShelfPrevInput0 = 0.0;
+					if (!Number.isFinite(reverbShelfPrevInput1) || Math.abs(reverbShelfPrevInput1) < epsilon) reverbShelfPrevInput1 = 0.0;
+					if (!Number.isFinite(reverbShelfPrevInput2) || Math.abs(reverbShelfPrevInput2) < epsilon) reverbShelfPrevInput2 = 0.0;
+					if (!Number.isFinite(reverbShelfPrevInput3) || Math.abs(reverbShelfPrevInput3) < epsilon) reverbShelfPrevInput3 = 0.0;
+					instrumentState.reverbShelfSample0 = reverbShelfSample0;
+					instrumentState.reverbShelfSample1 = reverbShelfSample1;
+					instrumentState.reverbShelfSample2 = reverbShelfSample2;
+					instrumentState.reverbShelfSample3 = reverbShelfSample3;
+					instrumentState.reverbShelfPrevInput0 = reverbShelfPrevInput0;
+					instrumentState.reverbShelfPrevInput1 = reverbShelfPrevInput1;
+					instrumentState.reverbShelfPrevInput2 = reverbShelfPrevInput2;
+					instrumentState.reverbShelfPrevInput3 = reverbShelfPrevInput3;`
 				}
 				
 				//console.log(effectsSource);
