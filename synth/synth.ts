@@ -5163,8 +5163,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					const echoShelfA1 = +instrumentState.echoShelfA1;
 					const echoShelfB0 = +instrumentState.echoShelfB0;
 					const echoShelfB1 = +instrumentState.echoShelfB1;
-					let echoShelfSampleL = +instrumentState.echoShelfSampleR;
-					let echoShelfSampleR = +instrumentState.echoShelfSampleL;
+					let echoShelfSampleL = +instrumentState.echoShelfSampleL;
+					let echoShelfSampleR = +instrumentState.echoShelfSampleR;
 					let echoShelfPrevInputL = +instrumentState.echoShelfPrevInputL;
 					let echoShelfPrevInputR = +instrumentState.echoShelfPrevInputR;`
 				}
@@ -5236,7 +5236,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 				
 				effectsSource += `
-					
+						
 						sample *= volume;
 						volume += volumeDelta;`
 				
@@ -5261,14 +5261,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						panningOffsetR += panningOffsetDeltaR;`
 				} else {
 					effectsSource += `
-					
+						
 						let sampleL = sample;
 						let sampleR = sample;`
 				}
 					
 				if (usesChorus) {
 					effectsSource += `
-					
+						
 						const chorusTap0Ratio = chorusTap0Index % 1;
 						const chorusTap1Ratio = chorusTap1Index % 1;
 						const chorusTap2Ratio = chorusTap2Index % 1;
@@ -5333,7 +5333,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				
 				if (usesReverb) {
 					effectsSource += `
-					
+						
 						// Reverb, implemented using a feedback delay network with a Hadamard matrix and lowpass filters.
 						// good ratios:    0.555235 + 0.618033 + 0.818 +   1.0 = 2.991268
 						// Delay lengths:  3041     + 3385     + 4481  +  5477 = 16384 = 2^14
@@ -5369,7 +5369,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						
 				if (usesDelays) {
 					effectsSource += `
-					
+						
 						delayInputMult += delayInputMultDelta;`
 				}
 				
