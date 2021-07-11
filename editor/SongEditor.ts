@@ -253,7 +253,6 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 			this._transitionRow,
 			this._chordSelectRow,
 			this._vibratoSelectRow,
-			this._intervalSelectRow,
 			this._chipWaveSelectRow,
 			this._chipNoiseSelectRow,
 			this._algorithmSelectRow,
@@ -263,9 +262,10 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 			this._spectrumRow,
 			this._harmonicsRow,
 			this._drumsetGroup,
-			this._pulseEnvelopeRow,
 			this._pulseWidthRow,
+			this._pulseEnvelopeRow,
 			this._stringSustainRow,
+			this._intervalSelectRow,
 			div({class: "selectRow"},
 				span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects:"),
 				div({class: "selectContainer"}, this._effectsSelect),
@@ -705,11 +705,17 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 				} else {
 					this._spectrumRow.style.display = "none";
 				}
-				if (instrument.type == InstrumentType.harmonics) {
+				if (instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pickedString) {
 					this._harmonicsRow.style.display = "";
 					this._harmonicsEditor.render();
 				} else {
 					this._harmonicsRow.style.display = "none";
+				}
+				if (instrument.type == InstrumentType.pickedString) {
+					this._stringSustainRow.style.display = "";
+					this._stringSustainSlider.updateValue(instrument.stringSustain);
+				} else {
+					this._stringSustainRow.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.drumset) {
 					this._drumsetGroup.style.display = "";
@@ -761,20 +767,11 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 				if (instrument.type == InstrumentType.pwm) {
 					this._pulseEnvelopeRow.style.display = "";
 					setSelectedValue(this._pulseEnvelopeSelect, instrument.pulseEnvelope);
-				} else {
-					this._pulseEnvelopeRow.style.display = "none";
-				}
-				if (instrument.type == InstrumentType.pickedString) {
-					this._stringSustainRow.style.display = "";
-					this._stringSustainSlider.updateValue(instrument.stringSustain);
-				} else {
-					this._stringSustainRow.style.display = "none";
-				}
-				if (instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.pickedString) {
 					this._pulseWidthRow.style.display = "";
 					this._pulseWidthSlider.input.title = prettyNumber(getPulseWidthRatio(instrument.pulseWidth) * 100) + "%";
 					this._pulseWidthSlider.updateValue(instrument.pulseWidth);
 				} else {
+					this._pulseEnvelopeRow.style.display = "none";
 					this._pulseWidthRow.style.display = "none";
 				}
 				

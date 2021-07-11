@@ -467,6 +467,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public harmonics: number[] = [];
 		private _wave: Float32Array | null = null;
 		private _waveIsReady: boolean = false;
+		private _generatedForType: InstrumentType;
 		
 		constructor() {
 			this.reset();
@@ -486,7 +487,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this._waveIsReady = false;
 		}
 		
-		public getCustomWave(): Float32Array {
+		public getCustomWave(instrumentType: InstrumentType): Float32Array {
+			if (this._generatedForType != instrumentType) {
+				this._generatedForType = instrumentType;
+				this._waveIsReady = false;
+			}
+			const harmonicsRendered: number = (instrumentType == InstrumentType.pickedString) ? Config.harmonicsRenderedForPickedString : Config.harmonicsRendered;
+			
 			if (this._waveIsReady) return this._wave!;
 			
 			const waveLength: number = Config.harmonicsWavelength;
@@ -504,11 +511,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const overallSlope: number = -0.25;
 			let combinedControlPointAmplitude: number = 1;
 			
-			for (let harmonicIndex: number = 0; harmonicIndex < Config.harmonicsRendered; harmonicIndex++) {
+			for (let harmonicIndex: number = 0; harmonicIndex < harmonicsRendered; harmonicIndex++) {
 				const harmonicFreq: number = harmonicIndex + 1;
 				let controlValue: number = harmonicIndex < Config.harmonicsControlPoints ? this.harmonics[harmonicIndex] : this.harmonics[Config.harmonicsControlPoints - 1];
 				if (harmonicIndex >= Config.harmonicsControlPoints) {
-					controlValue *= 1 - (harmonicIndex - Config.harmonicsControlPoints) / (Config.harmonicsRendered - Config.harmonicsControlPoints);
+					controlValue *= 1 - (harmonicIndex - Config.harmonicsControlPoints) / (harmonicsRendered - Config.harmonicsControlPoints);
 				}
 				const normalizedValue: number = controlValue / Config.harmonicsMax;
 				let amplitude: number = Math.pow(2, controlValue - Config.harmonicsMax + 1) * Math.sqrt(normalizedValue);
@@ -536,42 +543,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			wave[waveLength] = wave[0];
 			
 			this._waveIsReady = true;
-			return wave;
-		}
-	}
-	
-	export class PickedStringImpulseWave {
-		private static _wave: Float32Array | null = null;
-		
-		private constructor () { throw new Error(); } // Don't instantiate.
-		
-		public static getWave(): Float32Array {
-			if (PickedStringImpulseWave._wave != null) return PickedStringImpulseWave._wave;
-			
-			const waveLength: number = Config.harmonicsWavelength;
-			PickedStringImpulseWave._wave = new Float32Array(waveLength + 1);
-			const wave: Float32Array = PickedStringImpulseWave._wave;
-			const retroWave: Float32Array = getDrumWave(0, null, null);
-			
-			for (let harmonicFreq: number = 1; harmonicFreq < (waveLength >> 1); harmonicFreq++) {
-				let amplitude: number = 0.5 / harmonicFreq; // The symmetric inverse FFT doubles amplitudes, compensating for that here.
-				
-				// Multiply all the sine wave amplitudes by 1 or -1 based on the LFSR
-				// retro wave (effectively random) to avoid egregiously tall spikes.
-				amplitude *= retroWave[harmonicFreq + 588];
-				
-				/*
-				const radians: number = 0.61803398875 * harmonicFreq * harmonicFreq * Math.PI * 2.0;
-				wave[harmonicFreq] = Math.sin(radians) * amplitude;
-				wave[waveLength - harmonicFreq] = Math.cos(radians) * amplitude;
-				*/
-				wave[waveLength - harmonicFreq] = amplitude;
-			}
-			
-			inverseRealFourierTransform(wave, waveLength);
-			performIntegral(wave);
-			// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
-			wave[waveLength] = wave[0];
 			return wave;
 		}
 	}
@@ -894,7 +865,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					break;
 				case InstrumentType.pickedString:
 					this.chord = Config.chords.dictionary["strum"].index;
-					this.pulseWidth = Config.pulseWidthRange - 3;
+					this.harmonicsWave.reset();
 					this.stringSustain = 6;
 					break;
 				default:
@@ -966,6 +937,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				instrumentObject["filterEnvelope"] = this.getFilterEnvelope().name; // DEPRECATED
 			}
 			
+			if (this.type == InstrumentType.harmonics || this.type == InstrumentType.pickedString) {
+				instrumentObject["harmonics"] = [];
+				for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
+					instrumentObject["harmonics"][i] = Math.round(100 * this.harmonicsWave.harmonics[i] / Config.harmonicsMax);
+				}
+			}
+			
 			if (this.type == InstrumentType.noise) {
 				instrumentObject["wave"] = Config.chipNoises[this.chipNoise].name;
 			} else if (this.type == InstrumentType.spectrum) {
@@ -1000,10 +978,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			} else if (this.type == InstrumentType.harmonics) {
 				instrumentObject["interval"] = Config.intervals[this.interval].name;
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
-				instrumentObject["harmonics"] = [];
-				for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
-					instrumentObject["harmonics"][i] = Math.round(100 * this.harmonicsWave.harmonics[i] / Config.harmonicsMax);
-				}
 			} else if (this.type == InstrumentType.fm) {
 				const operatorArray: Object[] = [];
 				for (const operator of this.operators) {
@@ -1305,9 +1279,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			if (this.type == InstrumentType.noise) {
 				getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
 			} else if (this.type == InstrumentType.harmonics) {
-				this.harmonicsWave.getCustomWave();
+				this.harmonicsWave.getCustomWave(this.type);
 			} else if (this.type == InstrumentType.pickedString) {
-				PickedStringImpulseWave.getWave();
+				this.harmonicsWave.getCustomWave(this.type);
 			} else if (this.type == InstrumentType.spectrum) {
 				this.spectrumWave.getCustomWave(8);
 			} else if (this.type == InstrumentType.drumset) {
@@ -1509,6 +1483,15 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 					}
 					
+					if (instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pickedString) {
+						buffer.push(SongTagCode.harmonics);
+						const harmonicsBits: BitFieldWriter = new BitFieldWriter();
+						for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
+							harmonicsBits.write(Config.harmonicsControlPointBits, instrument.harmonicsWave.harmonics[i]);
+						}
+						harmonicsBits.encodeBase64(buffer);
+					}
+					
 					if (instrument.type == InstrumentType.chip) {
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipWave]);
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
@@ -1558,19 +1541,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					} else if (instrument.type == InstrumentType.harmonics) {
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
-						
-						buffer.push(SongTagCode.harmonics);
-						const harmonicsBits: BitFieldWriter = new BitFieldWriter();
-						for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
-							harmonicsBits.write(Config.harmonicsControlPointBits, instrument.harmonicsWave.harmonics[i]);
-						}
-						harmonicsBits.encodeBase64(buffer);
 					} else if (instrument.type == InstrumentType.pwm) {
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						// TODO: The envelope should be saved separately.
 						buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth], base64IntToCharCode[instrument.pulseEnvelope]);
 					} else if (instrument.type == InstrumentType.pickedString) {
-						buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth]);
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.stringSustain, base64IntToCharCode[instrument.stringSustain]);
 					} else {
@@ -4757,7 +4732,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		
 		private static harmonicsSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
-			const wave: Float32Array = instrument.harmonicsWave.getCustomWave();
+			const wave: Float32Array = instrument.harmonicsWave.getCustomWave(instrument.type);
 			const waveLength: number = wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
 			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
@@ -4932,6 +4907,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				// Also, if the pitch changed suddenly (e.g. from seamless or arpeggio) then reset the wave.
 				
 				delayIndex = 0;
+				allPassSample = 0.0;
+				allPassPrevInput = 0.0;
+				shelfSample = 0.0;
+				shelfPrevInput = 0.0;
+				fractionalDelaySample = 0.0;
+				
 				// Clear away a region of the delay buffer for the new impulse.
 				const startImpulseFrom: number = -delayLength;
 				const startZerosFrom: number = Math.floor(startImpulseFrom - periodLengthStart / 2);
@@ -4941,51 +4922,27 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					delayLine[i & delayBufferMask] = 0.0;
 				}
 				
-				allPassSample = 0.0;
-				allPassPrevInput = 0.0;
-				shelfSample = 0.0;
-				shelfPrevInput = 0.0;
-				fractionalDelaySample = 0.0;
-				
-				const impulseWave: Float32Array = PickedStringImpulseWave.getWave();
-				const impulseWaveLength: number = +impulseWave.length - 1; // The first sample is duplicated at the end, don't double-count it.
+				const impulseWave: Float32Array = instrument.harmonicsWave.getCustomWave(instrument.type);
+				const impulseWaveLength: number = impulseWave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 				const impulsePhaseDelta: number = impulseWaveLength / periodLengthStart;
-				const pulseOffset: number = periodLengthStart * (tone.pulseWidth * (1.0 + (Math.random() - 0.5) * Config.pickedStringPulseWidthRandomness));
-				const impulseExpressionMult: number = 0.5; // Compensate for adding two copies of the wave.
-				
-				const startFirstWaveFrom: number = startImpulseFrom;
-				const startFirstWaveFromSample: number = Math.ceil(startFirstWaveFrom);
-				const stopFirstWaveAtSample: number = Math.floor(startImpulseFrom + periodLengthStart);
-				const startFirstWavePhase: number = (startFirstWaveFromSample - startFirstWaveFrom) * impulsePhaseDelta;
-				const startSecondWaveFrom: number = startFirstWaveFrom + pulseOffset;
-				const startSecondWaveFromSample: number = Math.ceil(startSecondWaveFrom);
-				const stopSecondWaveAtSample: number = Math.floor(startSecondWaveFrom + periodLengthStart);
-				const startSecondWavePhase: number = (startSecondWaveFromSample - startSecondWaveFrom) * impulsePhaseDelta;
-
-				let impulsePhase: number = startFirstWavePhase;
-				let prevWaveIntegral: number = 0.0;
-				for (let i: number = startFirstWaveFromSample; i <= stopFirstWaveAtSample; i++) {
-					const impulsePhaseInt: number = impulsePhase|0;
-					const index: number = impulsePhaseInt % impulseWaveLength;
-					let nextWaveIntegral: number = impulseWave[index];
-					const phaseRatio: number = impulsePhase - impulsePhaseInt;
-					nextWaveIntegral += (impulseWave[index+1] - nextWaveIntegral) * phaseRatio;
-					const sample: number = (nextWaveIntegral - prevWaveIntegral) / impulsePhaseDelta;
-					delayLine[i & delayBufferMask] += sample * impulseExpressionMult;
-					prevWaveIntegral = nextWaveIntegral;
-					impulsePhase += impulsePhaseDelta;
+				if (impulseWaveLength <= Math.ceil(periodLengthStart)) {
+					throw new Error("Picked string delay buffer too small to contain wave, buffer: " + impulseWaveLength + ", period: " + periodLengthStart);
 				}
+				
+				const startImpulseFromSample: number = Math.ceil(startImpulseFrom);
+				const stopImpulseAtSample: number = Math.floor(startImpulseFrom + periodLengthStart);
+				const startImpulsePhase: number = (startImpulseFromSample - startImpulseFrom) * impulsePhaseDelta;
 
-				impulsePhase = startSecondWavePhase;
-				prevWaveIntegral = 0.0;
-				for (let i: number = startSecondWaveFromSample; i <= stopSecondWaveAtSample; i++) {
+				let impulsePhase: number = startImpulsePhase;
+				let prevWaveIntegral: number = 0.0;
+				for (let i: number = startImpulseFromSample; i <= stopImpulseAtSample; i++) {
 					const impulsePhaseInt: number = impulsePhase|0;
 					const index: number = impulsePhaseInt % impulseWaveLength;
 					let nextWaveIntegral: number = impulseWave[index];
 					const phaseRatio: number = impulsePhase - impulsePhaseInt;
 					nextWaveIntegral += (impulseWave[index+1] - nextWaveIntegral) * phaseRatio;
 					const sample: number = (nextWaveIntegral - prevWaveIntegral) / impulsePhaseDelta;
-					delayLine[i & delayBufferMask] -= sample * impulseExpressionMult;
+					delayLine[i & delayBufferMask] += sample;
 					prevWaveIntegral = nextWaveIntegral;
 					impulsePhase += impulsePhaseDelta;
 				}

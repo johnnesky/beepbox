@@ -223,7 +223,7 @@ SOFTWARE.
 		public static readonly drumsetBaseExpression:   number = 0.45; // Drums tend to be loud but brief!
 		public static readonly harmonicsBaseExpression: number = 0.025;
 		public static readonly pwmBaseExpression:       number = 0.04725; // It's actually closer to half of this, the synthesized pulse amplitude range is only .5 to -.5, but also note that the fundamental sine partial amplitude of a square wave is 4/π times the measured square wave amplitude.
-		public static readonly pickedStringBaseExpression: number = 0.03;
+		public static readonly pickedStringBaseExpression: number = 0.035; // Same as harmonics, but compensate for lacking the "interval" feature.
 		public static readonly distortionBaseVolume:    number = 0.0125; // Distortion is not affected by pitchDamping, which otherwise approximately halves expression for notes around the middle of the range.
 		public static readonly bitcrusherBaseVolume:    number = 0.0125; // Same as distortion, used when bit crushing is maxed out (aka "1-bit" output).
 		
@@ -393,6 +393,7 @@ SOFTWARE.
 		public static readonly spectrumMax: number = (1 << Config.spectrumControlPointBits) - 1;
 		public static readonly harmonicsControlPoints: number = 28;
 		public static readonly harmonicsRendered: number = 64;
+		public static readonly harmonicsRenderedForPickedString: number = 1 << 9; // 512
 		public static readonly harmonicsControlPointBits: number = 3;
 		public static readonly harmonicsMax: number = (1 << Config.harmonicsControlPointBits) - 1;
 		public static readonly harmonicsWavelength: number = 1 << 11; // 2048
