@@ -2971,6 +2971,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public delayInputMultStart: number = 0.0;
 		public delayInputMultDelta: number = 0.0;
 		
+		public distortionFractionalInput1: number = 0.0;
+		public distortionFractionalInput2: number = 0.0;
+		public distortionFractionalInput3: number = 0.0;
+		public distortionPrevInput: number = 0.0;
+		public distortionNextOutput: number = 0.0;
+		
 		public bitcrusherPrevInput: number = 0.0;
 		public bitcrusherCurrentOutput: number = 0.0;
 		public bitcrusherPhase: number = 1.0;
@@ -3096,6 +3102,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.eqFilterCount = 0;
 			this.initialEqFilterInput1 = 0.0;
 			this.initialEqFilterInput2 = 0.0;
+			this.distortionFractionalInput1 = 0.0;
+			this.distortionFractionalInput2 = 0.0;
+			this.distortionFractionalInput3 = 0.0;
+			this.distortionPrevInput = 0.0;
+			this.distortionNextOutput = 0.0;
 			this.panningDelayPos = 0;
 			if (this.panningDelayLine != null) for (let i: number = 0; i < this.panningDelayLine.length; i++) this.panningDelayLine[i] = 0.0;
 			this.echoDelayOffsetLastTickIsComputed = false;
@@ -5073,12 +5084,45 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 				
 				if (usesDistortion) {
+					// Distortion can sometimes create noticeable aliasing.
+					// It seems the established industry best practice for distortion antialiasing
+					// is to upsample the inputs ("zero stuffing" followed by a brick wall lowpass
+					// at the original nyquist frequency), perform the distortion, then downsample
+					// (the lowpass again followed by dropping in-between samples). This is
+					// "mathematically correct" in that it preserves only the intended frequencies,
+					// but it has several unfortunate tradeoffs depending on the choice of filter,
+					// introducing latency and/or time smearing, since no true brick wall filter
+					// exists. For the time being, I've opted to instead generate in-between input
+					// samples using fractional delay all-pass filters, and after distorting them,
+					// I "downsample" these with a simple weighted sum.
+					
 					effectsSource += `
 					
 					const distortionSlider = instrument.distortion / (beepbox.Config.distortionRange - 1);
-					const distortion = Math.pow(1.0 - 0.95 * distortionSlider, 1.5);
-					const distortionBaseVolume = beepbox.Config.distortionBaseVolume;
-					const amp = (1.0 + 2.0 * distortionSlider) / distortionBaseVolume;`
+					const distortion = +Math.pow(1.0 - 0.95 * distortionSlider, 1.5);
+					const distortionReverse = 1.0 - distortion;
+					const distortionBaseVolume = +beepbox.Config.distortionBaseVolume;
+					const distortionDrive = (1.0 + 2.0 * distortionSlider) / distortionBaseVolume;
+					const distortionFractionalResolution = 4.0;
+					const distortionOversampleCompensation = distortionBaseVolume / distortionFractionalResolution;
+					const distortionFractionalDelay1 = 1.0 / distortionFractionalResolution;
+					const distortionFractionalDelay2 = 2.0 / distortionFractionalResolution;
+					const distortionFractionalDelay3 = 3.0 / distortionFractionalResolution;
+					const distortionFractionalDelayG1 = (1.0 - distortionFractionalDelay1) / (1.0 + distortionFractionalDelay1); // Inlined version of FilterCoefficients.prototype.allPass1stOrderFractionalDelay
+					const distortionFractionalDelayG2 = (1.0 - distortionFractionalDelay2) / (1.0 + distortionFractionalDelay2); // Inlined version of FilterCoefficients.prototype.allPass1stOrderFractionalDelay
+					const distortionFractionalDelayG3 = (1.0 - distortionFractionalDelay3) / (1.0 + distortionFractionalDelay3); // Inlined version of FilterCoefficients.prototype.allPass1stOrderFractionalDelay
+					const distortionNextOutputWeight1 = Math.cos(Math.PI * distortionFractionalDelay1) * 0.5 + 0.5;
+					const distortionNextOutputWeight2 = Math.cos(Math.PI * distortionFractionalDelay2) * 0.5 + 0.5;
+					const distortionNextOutputWeight3 = Math.cos(Math.PI * distortionFractionalDelay3) * 0.5 + 0.5;
+					const distortionPrevOutputWeight1 = 1.0 - distortionNextOutputWeight1;
+					const distortionPrevOutputWeight2 = 1.0 - distortionNextOutputWeight2;
+					const distortionPrevOutputWeight3 = 1.0 - distortionNextOutputWeight3;
+					
+					let distortionFractionalInput1 = +instrumentState.distortionFractionalInput1;
+					let distortionFractionalInput2 = +instrumentState.distortionFractionalInput2;
+					let distortionFractionalInput3 = +instrumentState.distortionFractionalInput3;
+					let distortionPrevInput = +instrumentState.distortionPrevInput;
+					let distortionNextOutput = +instrumentState.distortionNextOutput;`
 				}
 				
 				if (usesBitcrusher) {
@@ -5219,8 +5263,19 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (usesDistortion) {
 					effectsSource += `
 						
-						sample *= amp; // + 0.5; // DC warmth?
-						sample = distortionBaseVolume * sample / ((1.0 - distortion) * Math.abs(sample) + distortion);`
+						const distortionNextInput = sample * distortionDrive;
+						sample = distortionNextOutput;
+						distortionNextOutput = distortionNextInput / (distortionReverse * Math.abs(distortionNextInput) + distortion);
+						distortionFractionalInput1 = distortionFractionalDelayG1 * distortionNextInput + distortionPrevInput - distortionFractionalDelayG1 * distortionFractionalInput1;
+						distortionFractionalInput2 = distortionFractionalDelayG2 * distortionNextInput + distortionPrevInput - distortionFractionalDelayG2 * distortionFractionalInput2;
+						distortionFractionalInput3 = distortionFractionalDelayG3 * distortionNextInput + distortionPrevInput - distortionFractionalDelayG3 * distortionFractionalInput3;
+						const distortionOutput1 = distortionFractionalInput1 / (distortionReverse * Math.abs(distortionFractionalInput1) + distortion);
+						const distortionOutput2 = distortionFractionalInput2 / (distortionReverse * Math.abs(distortionFractionalInput2) + distortion);
+						const distortionOutput3 = distortionFractionalInput3 / (distortionReverse * Math.abs(distortionFractionalInput3) + distortion);
+						distortionNextOutput += distortionOutput1 * distortionNextOutputWeight1 + distortionOutput2 * distortionNextOutputWeight2 + distortionOutput3 * distortionNextOutputWeight3;
+						sample += distortionOutput1 * distortionPrevOutputWeight1 + distortionOutput2 * distortionPrevOutputWeight2 + distortionOutput3 * distortionPrevOutputWeight3;
+						sample *= distortionOversampleCompensation;
+						distortionPrevInput = distortionNextInput;`
 				}
 				
 				if (usesBitcrusher) {
@@ -5289,7 +5344,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						let sampleL = sample;
 						let sampleR = sample;`
 				}
-					
+				
 				if (usesChorus) {
 					effectsSource += `
 						
@@ -5398,7 +5453,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						
 						outputDataL[sampleIndex] += sampleL;
 						outputDataR[sampleIndex] += sampleR;`
-						
+				
 				if (usesDelays) {
 					effectsSource += `
 						
@@ -5411,6 +5466,22 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					// Avoid persistent denormal or NaN values in the delay buffers and filter history.
 					const epsilon = (1.0e-24);`
 				
+				if (usesDistortion) {
+					effectsSource += `
+					
+					if (!Number.isFinite(distortionFractionalInput1) || Math.abs(distortionFractionalInput1) < epsilon) distortionFractionalInput1 = 0.0;
+					if (!Number.isFinite(distortionFractionalInput2) || Math.abs(distortionFractionalInput2) < epsilon) distortionFractionalInput2 = 0.0;
+					if (!Number.isFinite(distortionFractionalInput3) || Math.abs(distortionFractionalInput3) < epsilon) distortionFractionalInput3 = 0.0;
+					if (!Number.isFinite(distortionPrevInput) || Math.abs(distortionPrevInput) < epsilon) distortionPrevInput = 0.0;
+					if (!Number.isFinite(distortionNextOutput) || Math.abs(distortionNextOutput) < epsilon) distortionNextOutput = 0.0;
+					
+					instrumentState.distortionFractionalInput1 = distortionFractionalInput1;
+					instrumentState.distortionFractionalInput2 = distortionFractionalInput2;
+					instrumentState.distortionFractionalInput3 = distortionFractionalInput3;
+					instrumentState.distortionPrevInput = distortionPrevInput;
+					instrumentState.distortionNextOutput = distortionNextOutput;`
+				}
+				
 				if (usesBitcrusher) {
 					effectsSource += `
 						
@@ -5420,7 +5491,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					instrumentState.bitcrusherCurrentOutput = bitcrusherCurrentOutput;
 					instrumentState.bitcrusherPhase = bitcrusherPhase;`
 				}
-					
+				
 				if (usesEqFilter) {
 					effectsSource += `
 						
@@ -5443,7 +5514,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					beepbox.Synth.sanitizeDelayLine(panningDelayLine, panningDelayPos, panningMask);
 					instrumentState.panningDelayPos = panningDelayPos;`
 				}
-					
+				
 				if (usesChorus) {
 					effectsSource += `
 					
@@ -5452,7 +5523,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					instrumentState.chorusPhase = chorusPhase;
 					instrumentState.chorusDelayPos = chorusDelayPos;`
 				}
-					
+				
 				if (usesEcho) {
 					effectsSource += `
 					
