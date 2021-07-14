@@ -201,6 +201,8 @@ export class FilterCoefficients {
 	public lowPass1stOrderButterworth(cornerRadiansPerSample: number): void {
 		// First-order Butterworth low-pass filter according to:
 		// https://www.researchgate.net/publication/338022014_Digital_Implementation_of_Butterworth_First-Order_Filter_Type_IIR
+		// A butterworth filter is one where the amplitude response is equal to:
+		// 1 / √(1 + (freq / cutoffFreq)^(2 * order))
 		const g: number = 1.0 / Math.tan(cornerRadiansPerSample * 0.5);
 		const a0: number = 1.0 + g;
 		this.a[1] = (1.0 - g) / a0;

@@ -101,14 +101,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		vibrato             = CharCode.c, // added in 2
 		transition          = CharCode.d, // added in 3
 		loopEnd             = CharCode.e, // added in 2
-		noteFilter          = CharCode.f, // added in 3
+		eqFilter            = CharCode.f, // added in 3
 		barCount            = CharCode.g, // added in 3
 		interval            = CharCode.h, // added in 2
 		instrumentCount     = CharCode.i, // added in 3
 		patternCount        = CharCode.j, // added in 3
 		key                 = CharCode.k, // added in 2
 		loopStart           = CharCode.l, // added in 2
-		reverb              = CharCode.m, // added in 6
+		reverb              = CharCode.m, // added in 6, DEPRECATED
 		channelCount        = CharCode.n, // added in 6
 		channelOctave       = CharCode.o, // added in 3
 		patterns            = CharCode.p, // added in 2
@@ -119,7 +119,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		preset              = CharCode.u, // added in 7
 		volume              = CharCode.v, // added in 2
 		wave                = CharCode.w, // added in 2
-		distortion          = CharCode.x, // added in 9
+		
 		filterResonance     = CharCode.y, // added in 7, DEPRECATED
 		filterEnvelope      = CharCode.z, // added in 7, DEPRECATED (or replace with general envelope?)
 		algorithm           = CharCode.A, // added in 6
@@ -131,19 +131,17 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		
 		harmonics           = CharCode.H, // added in 7
 		stringSustain       = CharCode.I, // added in 9
-		echo                = CharCode.J, // added in 9
 		
-		pan                 = CharCode.L, // added between 8 and 9
+		pan                 = CharCode.L, // added between 8 and 9, DEPRECATED
 		
 		operatorAmplitudes  = CharCode.P, // added in 6
 		operatorFrequencies = CharCode.Q, // added in 6
-		eqFilter            = CharCode.R, // added in 9
+		
 		spectrum            = CharCode.S, // added in 7
 		startInstrument     = CharCode.T, // added in 6
 		
 		feedbackEnvelope    = CharCode.V, // added in 6, DEPRECATED
 		pulseWidth          = CharCode.W, // added in 7
-		bitcrusher          = CharCode.X, // added in 9
 	}
 	
 	const base64IntToCharCode: ReadonlyArray<number> = [48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,45,95];
@@ -1445,7 +1443,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					buffer.push(SongTagCode.startInstrument, base64IntToCharCode[instrument.type]);
 					buffer.push(SongTagCode.volume, base64IntToCharCode[instrument.volume]);
 					buffer.push(SongTagCode.preset, base64IntToCharCode[instrument.preset >> 6], base64IntToCharCode[instrument.preset & 63]);
-					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects >> 6], base64IntToCharCode[instrument.effects & 63]);
 					
 					buffer.push(SongTagCode.eqFilter, base64IntToCharCode[instrument.eqFilter.controlPointCount]);
 					for (let j: number = 0; j < instrument.eqFilter.controlPointCount; j++) {
@@ -1453,28 +1450,28 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
 					}
 					
+					buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects >> 6], base64IntToCharCode[instrument.effects & 63]);
 					if (effectsIncludeNoteFilter(instrument.effects)) {
-						buffer.push(SongTagCode.noteFilter, base64IntToCharCode[instrument.noteFilter.controlPointCount]);
+						buffer.push(base64IntToCharCode[instrument.noteFilter.controlPointCount]);
 						for (let j: number = 0; j < instrument.noteFilter.controlPointCount; j++) {
 							const point: FilterControlPoint = instrument.noteFilter.controlPoints[j];
 							buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
 						}
 					}
-					
 					if (effectsIncludeDistortion(instrument.effects)) {
-						buffer.push(SongTagCode.distortion, base64IntToCharCode[instrument.distortion]);
+						buffer.push(base64IntToCharCode[instrument.distortion]);
 					}
 					if (effectsIncludeBitcrusher(instrument.effects)) {
-						buffer.push(SongTagCode.bitcrusher, base64IntToCharCode[instrument.bitcrusherFreq], base64IntToCharCode[instrument.bitcrusherQuantization]);
+						buffer.push(base64IntToCharCode[instrument.bitcrusherFreq], base64IntToCharCode[instrument.bitcrusherQuantization]);
 					}
 					if (effectsIncludePanning(instrument.effects)) {
-						buffer.push(SongTagCode.pan, base64IntToCharCode[instrument.pan]);
+						buffer.push(base64IntToCharCode[instrument.pan]);
 					}
 					if (effectsIncludeEcho(instrument.effects)) {
-						buffer.push(SongTagCode.echo, base64IntToCharCode[instrument.echoSustain], base64IntToCharCode[instrument.echoDelay]);
+						buffer.push(base64IntToCharCode[instrument.echoSustain], base64IntToCharCode[instrument.echoDelay]);
 					}
 					if (effectsIncludeReverb(instrument.effects)) {
-						buffer.push(SongTagCode.reverb, base64IntToCharCode[instrument.reverb]);
+						buffer.push(base64IntToCharCode[instrument.reverb]);
 					}
 					
 					if (instrument.type != InstrumentType.drumset) {
@@ -1807,19 +1804,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					}
 					this.tempo = clamp(Config.tempoMin, Config.tempoMax + 1, this.tempo);
 				} break;
-				case SongTagCode.echo: {
-					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					instrument.echoSustain = clamp(0, Config.echoSustainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					instrument.echoDelay = clamp(0, Config.echoDelayRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-				} break;
 				case SongTagCode.reverb: {
 					if (beforeNine) {
 						legacyGlobalReverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						legacyGlobalReverb = clamp(0, 4, legacyGlobalReverb);
 					} else {
-						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-						instrument.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						instrument.reverb = clamp(0, Config.reverbRange, instrument.reverb);
+						// Do nothing? This song tag code is deprecated for now.
 					}
 				} break;
 				case SongTagCode.beatCount: {
@@ -1949,7 +1939,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						}
 					}
 				} break;
-				case SongTagCode.noteFilter: {
+				case SongTagCode.eqFilter: {
 					if (beforeNine) {
 						if (beforeSeven) {
 							const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
@@ -2003,36 +1993,19 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					} else {
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 						const originalControlPointCount: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						instrument.noteFilter.controlPointCount = clamp(0, Config.filterMaxPoints + 1, originalControlPointCount);
-						for (let i: number = instrument.noteFilter.controlPoints.length; i < instrument.noteFilter.controlPointCount; i++) {
-							instrument.noteFilter.controlPoints[i] = new FilterControlPoint();
+						instrument.eqFilter.controlPointCount = clamp(0, Config.filterMaxPoints + 1, originalControlPointCount);
+						for (let i: number = instrument.eqFilter.controlPoints.length; i < instrument.eqFilter.controlPointCount; i++) {
+							instrument.eqFilter.controlPoints[i] = new FilterControlPoint();
 						}
-						for (let i: number = 0; i < instrument.noteFilter.controlPointCount; i++) {
-							const point: FilterControlPoint = instrument.noteFilter.controlPoints[i];
+						for (let i: number = 0; i < instrument.eqFilter.controlPointCount; i++) {
+							const point: FilterControlPoint = instrument.eqFilter.controlPoints[i];
 							point.type = clamp(0, FilterType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							point.freq = clamp(0, Config.filterFreqRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							point.gain = clamp(0, Config.filterGainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						}
-						for (let i: number = instrument.noteFilter.controlPointCount; i < originalControlPointCount; i++) {
+						for (let i: number = instrument.eqFilter.controlPointCount; i < originalControlPointCount; i++) {
 							charIndex += 3;
 						}
-					}
-				} break;
-				case SongTagCode.eqFilter: {
-					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					const originalControlPointCount: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					instrument.eqFilter.controlPointCount = clamp(0, Config.filterMaxPoints + 1, originalControlPointCount);
-					for (let i: number = instrument.eqFilter.controlPoints.length; i < instrument.eqFilter.controlPointCount; i++) {
-						instrument.eqFilter.controlPoints[i] = new FilterControlPoint();
-					}
-					for (let i: number = 0; i < instrument.eqFilter.controlPointCount; i++) {
-						const point: FilterControlPoint = instrument.eqFilter.controlPoints[i];
-						point.type = clamp(0, FilterType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						point.freq = clamp(0, Config.filterFreqRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						point.gain = clamp(0, Config.filterGainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					}
-					for (let i: number = instrument.eqFilter.controlPointCount; i < originalControlPointCount; i++) {
-						charIndex += 3;
 					}
 				} break;
 				case SongTagCode.filterResonance: {
@@ -2042,7 +2015,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
 						legacySettings.resonance = clamp(0, filterResonanceRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
-				} else {
+					} else {
 						// Do nothing? This song tag code is deprecated for now.
 					}
 				} break;
@@ -2072,15 +2045,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						// TODO: The envelope should be saved separately, check beforeNine.
 						instrument.pulseEnvelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
-				} break;
-				case SongTagCode.distortion: {
-					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					instrument.distortion = clamp(0, Config.distortionRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-				} break;
-				case SongTagCode.bitcrusher: {
-					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					instrument.bitcrusherFreq = clamp(0, Config.bitcrusherFreqRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					instrument.bitcrusherQuantization = clamp(0, Config.bitcrusherQuantizationRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} break;
 				case SongTagCode.stringSustain: {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -2216,6 +2180,41 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
 					} else {
 						instrument.effects = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						
+						if (effectsIncludeNoteFilter(instrument.effects)) {
+							const originalControlPointCount: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+							instrument.noteFilter.controlPointCount = clamp(0, Config.filterMaxPoints + 1, originalControlPointCount);
+							for (let i: number = instrument.noteFilter.controlPoints.length; i < instrument.noteFilter.controlPointCount; i++) {
+								instrument.noteFilter.controlPoints[i] = new FilterControlPoint();
+							}
+							for (let i: number = 0; i < instrument.noteFilter.controlPointCount; i++) {
+								const point: FilterControlPoint = instrument.noteFilter.controlPoints[i];
+								point.type = clamp(0, FilterType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								point.freq = clamp(0, Config.filterFreqRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+								point.gain = clamp(0, Config.filterGainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							}
+							for (let i: number = instrument.noteFilter.controlPointCount; i < originalControlPointCount; i++) {
+								charIndex += 3;
+							}
+						}
+						if (effectsIncludeDistortion(instrument.effects)) {
+							instrument.distortion = clamp(0, Config.distortionRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						}
+						if (effectsIncludeBitcrusher(instrument.effects)) {
+							instrument.bitcrusherFreq = clamp(0, Config.bitcrusherFreqRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							instrument.bitcrusherQuantization = clamp(0, Config.bitcrusherQuantizationRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						}
+						if (effectsIncludePanning(instrument.effects)) {
+							instrument.pan = clamp(0, Config.panMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						}
+						if (effectsIncludeEcho(instrument.effects)) {
+							instrument.echoSustain = clamp(0, Config.echoSustainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							instrument.echoDelay = clamp(0, Config.echoDelayRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						}
+						if (effectsIncludeReverb(instrument.effects)) {
+							instrument.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+							instrument.reverb = clamp(0, Config.reverbRange, instrument.reverb);
+						}
 					}
 					// Clamp the range.
 					instrument.effects = (instrument.effects & ((1 << EffectType.length) - 1));
@@ -2247,8 +2246,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					}
 				} break;
 				case SongTagCode.pan: {
-					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					instrument.pan = clamp(0, Config.panMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					if (beforeNine) {
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+						instrument.pan = clamp(0, Config.panMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					} else {
+						// Do nothing? This song tag code is deprecated for now.
+					}
 				} break;
 				case SongTagCode.algorithm: {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].algorithm = clamp(0, Config.algorithms.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
