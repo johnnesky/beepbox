@@ -2944,8 +2944,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public flushedSamples: number = 0; // How many delay line samples have been flushed to zero.
 		public readonly releasedTones: Deque<Tone> = new Deque<Tone>(); // Tones that are in the process of fading out after the corresponding notes ended.
 		
-		public volumeStart: number = 1.0;
-		public volumeDelta: number = 0.0;
+		public eqFilterVolumeStart: number = 1.0;
+		public eqFilterVolumeDelta: number = 0.0;
+		public mixVolumeStart: number = 1.0;
+		public mixVolumeDelta: number = 0.0;
 		public delayInputMultStart: number = 0.0;
 		public delayInputMultDelta: number = 0.0;
 		
@@ -3169,9 +3171,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.eqFilterCount = eqFilterSettings.controlPointCount;
 			eqFilterVolume = Math.min(3.0, eqFilterVolume);
 			
-			const instrumentVolumeMult: number = Synth.instrumentVolumeToVolumeMult(instrument.volume);
-			let volumeStart: number = instrumentVolumeMult * eqFilterVolume;
-			let volumeEnd: number = instrumentVolumeMult * eqFilterVolume;
+			// TODO: Automation.
+			this.mixVolumeStart = Synth.instrumentVolumeToVolumeMult(instrument.volume);
+			this.mixVolumeDelta = 0.0;
+			
+			let eqFilterVolumeStart: number = eqFilterVolume;
+			let eqFilterVolumeEnd: number = eqFilterVolume;
 			let delayInputMultStart: number = 1.0;
 			let delayInputMultEnd: number = 1.0;
 			
@@ -3234,11 +3239,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				// continue past the end of the tone but they should have mostly dissipated by the
 				// end of the tick anyway.
 				if (this.attentuationProgress == 0.0) {
-					volumeStart *= tickRemainingStart;
-					volumeEnd *= tickRemainingEnd;
+					eqFilterVolumeStart *= tickRemainingStart;
+					eqFilterVolumeEnd *= tickRemainingEnd;
 				} else {
-					volumeStart = 0.0;
-					volumeEnd = 0.0;
+					eqFilterVolumeStart = 0.0;
+					eqFilterVolumeEnd = 0.0;
 				}
 				
 				const attenuationThreshold: number = 1.0 / 256.0; // when the delay line signal has attenuated this much, it should be inaudible and should be flushed to zero.
@@ -3281,8 +3286,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 			} else {
 				// Flushing delay lines to zero since the signal has mostly dissipated.
-				volumeStart = 0.0;
-				volumeEnd = 0.0;
+				eqFilterVolumeStart = 0.0;
+				eqFilterVolumeEnd = 0.0;
 				delayInputMultStart = 0.0;
 				delayInputMultEnd = 0.0;
 				
@@ -3297,8 +3302,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 			}
 			
-			this.volumeStart = volumeStart;
-			this.volumeDelta = (volumeEnd - volumeStart) / runLength;
+			this.eqFilterVolumeStart = eqFilterVolumeStart;
+			this.eqFilterVolumeDelta = (eqFilterVolumeEnd - eqFilterVolumeStart) / runLength;
 			this.delayInputMultStart = delayInputMultStart;
 			this.delayInputMultDelta = (delayInputMultEnd - delayInputMultStart) / runLength;
 		}
@@ -5033,8 +5038,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				effectsSource += `
 					const tempMonoInstrumentSampleBuffer = synth.tempMonoInstrumentSampleBuffer;
 					
-					let volume = +instrumentState.volumeStart;
-					let volumeDelta = +instrumentState.volumeDelta;`
+					let mixVolume = +instrumentState.mixVolumeStart;
+					const mixVolumeDelta = +instrumentState.mixVolumeDelta;`
 				
 				if (usesDelays) {
 					effectsSource += `
@@ -5107,7 +5112,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					const filterCount = instrumentState.eqFilterCount|0;
 					let initialFilterInput1 = +instrumentState.initialEqFilterInput1;
 					let initialFilterInput2 = +instrumentState.initialEqFilterInput2;
-					const applyFilters = beepbox.Synth.applyFilters;`
+					const applyFilters = beepbox.Synth.applyFilters;
+					let eqFilterVolume = +instrumentState.eqFilterVolumeStart;
+					const eqFilterVolumeDelta = +instrumentState.eqFilterVolumeDelta;`
 				}
 				
 				if (usesPanning) {
@@ -5271,13 +5278,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						const inputSample = sample;
 						sample = applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
 						initialFilterInput2 = initialFilterInput1;
-						initialFilterInput1 = inputSample;`
-				}
-				
-				effectsSource += `
+						initialFilterInput1 = inputSample;
 						
-						sample *= volume;
-						volume += volumeDelta;`
+						sample *= eqFilterVolume;
+						eqFilterVolume += eqFilterVolumeDelta;`
+				}
 				
 				if (usesPanning) {
 					effectsSource += `
@@ -5411,8 +5416,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				
 				effectsSource += `
 						
-						outputDataL[sampleIndex] += sampleL;
-						outputDataR[sampleIndex] += sampleR;`
+						outputDataL[sampleIndex] += sampleL * mixVolume;
+						outputDataR[sampleIndex] += sampleR * mixVolume;
+						mixVolume += mixVolumeDelta;`
 				
 				if (usesDelays) {
 					effectsSource += `
