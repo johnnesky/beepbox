@@ -1,4 +1,4 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import {Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config} from "../synth/SynthConfig";
 import {ColorConfig} from "../editor/ColorConfig";

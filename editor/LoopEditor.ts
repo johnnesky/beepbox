@@ -1,4 +1,4 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import {SongDocument} from "./SongDocument";
 import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";

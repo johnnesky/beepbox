@@ -1,4 +1,4 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import {InstrumentType, /*EnvelopeType,*/ Config, getArpeggioPitchIndex} from "../synth/SynthConfig";
 import {Instrument, Pattern, Note, Song, Synth} from "../synth/synth";

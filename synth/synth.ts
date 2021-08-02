@@ -1,4 +1,4 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, InstrumentAutomationIndex, Transition, Unison, Chord, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";

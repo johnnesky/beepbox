@@ -1,4 +1,4 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";

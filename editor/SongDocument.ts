@@ -1,4 +1,4 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import {Pattern, Song, Synth} from "../synth/synth";
 import {SongRecovery, generateUid} from "./SongRecovery";
