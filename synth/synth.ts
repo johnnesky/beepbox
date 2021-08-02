@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, Transition, Chord, Envelope, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
+import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, InstrumentAutomationIndex, Transition, Unison, Chord, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
 import {Deque} from "./Deque";
 import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter} from "./filtering";
@@ -103,7 +103,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		loopEnd             = CharCode.e, // added in 2
 		eqFilter            = CharCode.f, // added in 3
 		barCount            = CharCode.g, // added in 3
-		interval            = CharCode.h, // added in 2
+		unison              = CharCode.h, // added in 2
 		instrumentCount     = CharCode.i, // added in 3
 		patternCount        = CharCode.j, // added in 3
 		key                 = CharCode.k, // added in 2
@@ -121,12 +121,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		wave                = CharCode.w, // added in 2
 		
 		filterResonance     = CharCode.y, // added in 7, DEPRECATED
-		filterEnvelope      = CharCode.z, // added in 7, DEPRECATED (or replace with general envelope?)
+		drumsetEnvelopes    = CharCode.z, // added in 7 for filter envelopes, still used for drumset envelopes
 		algorithm           = CharCode.A, // added in 6
 		feedbackAmplitude   = CharCode.B, // added in 6
 		chord               = CharCode.C, // added in 7
 		
-		operatorEnvelopes   = CharCode.E, // added in 6, DEPRECATED
+		envelopes           = CharCode.E, // added in 6 for FM operator envelopes, repurposed in 9 for general envelopes.
 		feedbackType        = CharCode.F, // added in 6
 		
 		harmonics           = CharCode.H, // added in 7
@@ -282,11 +282,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 	export interface NotePin {
 		interval: number;
 		time: number;
-		expression: number;
+		size: number;
 	}
 	
-	export function makeNotePin(interval: number, time: number, expression: number): NotePin {
-		return {interval: interval, time: time, expression: expression};
+	export function makeNotePin(interval: number, time: number, size: number): NotePin {
+		return {interval: interval, time: time, size: size};
 	}
 	
 	function clamp(min: number, max: number, val: number): number {
@@ -310,9 +310,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public start: number;
 		public end: number;
 		
-		public constructor(pitch: number, start: number, end: number, expression: number, fadeout: boolean = false) {
+		public constructor(pitch: number, start: number, end: number, size: number, fadeout: boolean = false) {
 			this.pitches = [pitch];
-			this.pins = [makeNotePin(0, 0, expression), makeNotePin(0, end - start, fadeout ? 0 : expression)];
+			this.pins = [makeNotePin(0, 0, size), makeNotePin(0, end - start, fadeout ? 0 : size)];
 			this.start = start;
 			this.end = end;
 		}
@@ -332,11 +332,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 			}
 			if (longestFlatIntervalDuration == 0) {
-				let loudestExpression: number = 0;
+				let loudestSize: number = 0;
 				for (let pinIndex: number = 0; pinIndex < this.pins.length; pinIndex++) {
 					const pin: NotePin = this.pins[pinIndex];
-					if (loudestExpression < pin.expression) {
-						loudestExpression = pin.expression;
+					if (loudestSize < pin.size) {
+						loudestSize = pin.size;
 						mainInterval = pin.interval;
 					}
 				}
@@ -345,13 +345,21 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		}
 		
 		public clone(): Note {
-			const newNote: Note = new Note(-1, this.start, this.end, 3);
+			const newNote: Note = new Note(-1, this.start, this.end, Config.noteSizeMax);
 			newNote.pitches = this.pitches.concat();
 			newNote.pins = [];
 			for (const pin of this.pins) {
-				newNote.pins.push(makeNotePin(pin.interval, pin.time, pin.expression));
+				newNote.pins.push(makeNotePin(pin.interval, pin.time, pin.size));
 			}
 			return newNote;
+		}
+		
+		public getEndPinIndex(part: number): number {
+			let endPinIndex: number;
+			for (endPinIndex = 1; endPinIndex < this.pins.length - 1; endPinIndex++) {
+				if (this.pins[endPinIndex].time + this.start > part) break;
+			}
+			return endPinIndex;
 		}
 	}
 	
@@ -376,7 +384,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 	export class Operator {
 		public frequency: number = 0;
 		public amplitude: number = 0;
-		public envelope: number = 0;
 		
 		constructor(index: number) {
 			this.reset(index);
@@ -385,7 +392,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public reset(index: number): void {
 			this.frequency = 0;
 			this.amplitude = (index <= 1) ? Config.operatorAmplitudeMax : 0;
-			this.envelope = (index == 0) ? 0 : 1;
 		}
 	}
 	
@@ -569,16 +575,19 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			return Math.max(0, Math.min(Config.filterFreqRange - 1, Math.round(FilterControlPoint.getSettingValueFromHz(hz))));
 		}
 		
-		public getLinearGain(gainRangeMult: number = 1.0): number {
-			return Math.pow(2.0, (this.gain - Config.filterGainCenter) * Config.filterGainStep * gainRangeMult);
+		public getLinearGain(peakMult: number = 1.0): number {
+			const power: number = (this.gain - Config.filterGainCenter) * Config.filterGainStep;
+			const neutral: number = (this.type == FilterType.peak) ? 0.0 : -0.5;
+			const interpolatedPower: number = neutral + (power - neutral) * peakMult;
+			return Math.pow(2.0, interpolatedPower);
 		}
 		public static getRoundedSettingValueFromLinearGain(linearGain: number): number {
 			return Math.max(0, Math.min(Config.filterGainRange - 1, Math.round(Math.log2(linearGain) / Config.filterGainStep + Config.filterGainCenter)));
 		}
 		
-		public toCoefficients(filter: FilterCoefficients, sampleRate: number, freqMult: number = 1.0, gainMult: number = 1.0, gainRangeMult: number = 1.0): void {
+		public toCoefficients(filter: FilterCoefficients, sampleRate: number, freqMult: number = 1.0, peakMult: number = 1.0): void {
 			const cornerRadiansPerSample: number = 2.0 * Math.PI * Math.max(Config.filterFreqMinHz, Math.min(Config.filterFreqMaxHz, freqMult * this.getHz())) / sampleRate;
-			const linearGain: number = gainMult * this.getLinearGain(gainRangeMult);
+			const linearGain: number = this.getLinearGain(peakMult);
 			switch (this.type) {
 				case FilterType.lowPass:
 					filter.lowPass2ndOrderButterworth(cornerRadiansPerSample, linearGain);
@@ -661,12 +670,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					const point: FilterControlPoint = new FilterControlPoint();
 					point.type = Config.filterTypeNames.indexOf(pointObject["type"]);
 					if (point.type == -1) point.type = FilterType.peak;
-					if (pointObject["cutoffHz"]) {
+					if (pointObject["cutoffHz"] != undefined) {
 						point.freq = FilterControlPoint.getRoundedSettingValueFromHz(pointObject["cutoffHz"]);
 					} else {
 						point.freq = 0;
 					}
-					if (pointObject["linearGain"]) {
+					if (pointObject["linearGain"] != undefined) {
 						point.gain = FilterControlPoint.getRoundedSettingValueFromLinearGain(pointObject["linearGain"]);
 					} else {
 						point.gain = Config.filterGainCenter;
@@ -690,7 +699,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const resonant: boolean = (legacyResonanceSetting > 1);
 			const firstOrder: boolean = (legacyResonanceSetting == 0);
 			const cutoffAtMax: boolean = (legacyCutoffSetting == legacyFilterCutoffRange - 1);
-			const envDecays: boolean = (legacyEnv.type == EnvelopeType.flare || legacyEnv.type == EnvelopeType.twang || legacyEnv.type == EnvelopeType.decay || legacyEnv.type == EnvelopeType.custom);
+			const envDecays: boolean = (legacyEnv.type == EnvelopeType.flare || legacyEnv.type == EnvelopeType.twang || legacyEnv.type == EnvelopeType.decay || legacyEnv.type == EnvelopeType.noteSize);
 			
 			const standardSampleRate: number = 48000;
 			const legacyHz: number = legacyFilterCutoffMaxHz * Math.pow(2.0, (legacyCutoffSetting - (legacyFilterCutoffRange - 1)) * 0.5);
@@ -760,6 +769,63 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		}
 	}
 	
+	export class EnvelopeSettings {
+		public target: number = 0;
+		public index: number = 0;
+		public envelope: number = 0;
+		
+		constructor() {
+			this.reset();
+		}
+		
+		reset(): void {
+			this.target = 0;
+			this.index = 0;
+			this.envelope = 0;
+		}
+		
+		public toJsonObject(): Object {
+			const envelopeObject: any = {
+				"target": Config.instrumentAutomationTargets[this.target].name,
+				"envelope": Config.envelopes[this.envelope].name,
+			};
+			if (Config.instrumentAutomationTargets[this.target].maxCount > 1) {
+				envelopeObject["index"] = this.index;
+			}
+			return envelopeObject;
+		}
+		
+		public fromJsonObject(envelopeObject: any): void {
+			this.reset();
+			
+			let target: AutomationTarget = Config.instrumentAutomationTargets.dictionary[envelopeObject["target"]];
+			if (target == null) target = Config.instrumentAutomationTargets.dictionary["noteVolume"];
+			this.target = target.index;
+			
+			let envelope: Envelope = Config.envelopes.dictionary[envelopeObject["envelope"]];
+			if (envelope == null) envelope = Config.envelopes.dictionary["none"];
+			this.envelope = envelope.index;
+			
+			if (envelopeObject["index"] != undefined) {
+				this.index = clamp(0, Config.instrumentAutomationTargets[this.target].maxCount, envelopeObject["index"] | 0);
+			} else {
+				this.index = 0;
+			}
+		}
+	}
+	
+	// Settings that were available to old versions of BeepBox but are no longer available in the
+	// current version that need to be reinterpreted as a group to determine the best way to
+	// represent them in the current version.
+	interface LegacySettings {
+		filterCutoff?: number;
+		filterResonance?: number;
+		filterEnvelope?: Envelope;
+		pulseEnvelope?: Envelope;
+		operatorEnvelopes?: Envelope[];
+		feedbackEnvelope?: Envelope;
+	}
+	
 	export class Instrument {
 		public type: InstrumentType = InstrumentType.chip;
 		public preset: number = 0;
@@ -767,16 +833,16 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public chipNoise: number = 1;
 		public eqFilter: FilterSettings = new FilterSettings();
 		public noteFilter: FilterSettings = new FilterSettings();
-		public filterEnvelope: number = 1; // DEPRECATED
+		public envelopes: EnvelopeSettings[] = [];
+		public envelopeCount: number = 0;
 		public transition: number = 1;
 		public vibrato: number = 0;
-		public interval: number = 0;
+		public unison: number = 0;
 		public effects: number = 0;
 		public chord: number = 1;
 		public volume: number = 0;
 		public pan: number = Config.panCenter;
 		public pulseWidth: number = Config.pulseWidthRange - 1;
-		public pulseEnvelope: number = 1;
 		public stringSustain: number = 6;
 		public distortion: number = 0;
 		public bitcrusherFreq: number = 0;
@@ -787,7 +853,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public algorithm: number = 0;
 		public feedbackType: number = 0;
 		public feedbackAmplitude: number = 0;
-		public feedbackEnvelope: number = 1;
 		public readonly operators: Operator[] = [];
 		public readonly spectrumWave: SpectrumWave;
 		public readonly harmonicsWave: HarmonicsWave = new HarmonicsWave();
@@ -820,9 +885,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.bitcrusherQuantization = Math.floor((Config.bitcrusherQuantizationRange - 1) * 0.5);
 			this.pan = Config.panCenter;
 			this.vibrato = 0;
-			this.interval = 0;
+			this.unison = 0;
 			this.transition = Config.transitions.dictionary["hard"].index;
-			this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
+			this.envelopeCount = 0;
 			switch (type) {
 				case InstrumentType.chip:
 					this.chipWave = 2;
@@ -833,7 +898,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					this.algorithm = 0;
 					this.feedbackType = 0;
 					this.feedbackAmplitude = 0;
-					this.feedbackEnvelope = Config.envelopes.dictionary["steady"].index;
 					for (let i: number = 0; i < this.operators.length; i++) {
 						this.operators[i].reset(i);
 					}
@@ -859,7 +923,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				case InstrumentType.pwm:
 					this.chord = Config.chords.dictionary["arpeggio"].index;
 					this.pulseWidth = Config.pulseWidthRange - 1;
-					this.pulseEnvelope = Config.envelopes.dictionary["twang 2"].index;
 					break;
 				case InstrumentType.pickedString:
 					this.chord = Config.chords.dictionary["strum"].index;
@@ -871,21 +934,78 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			}
 		}
 		
-		public convertLegacyFilterSettings(legacyCutoffSetting: number | undefined, legacyResonanceSetting: number | undefined, legacyEnv: Envelope | undefined): void {
+		public convertLegacySettings(legacySettings: LegacySettings): void {
+			let legacyCutoffSetting: number | undefined = legacySettings.filterCutoff;
+			let legacyResonanceSetting: number | undefined = legacySettings.filterResonance;
+			let legacyFilterEnv: Envelope | undefined = legacySettings.filterEnvelope;
+			let legacyPulseEnv: Envelope | undefined = legacySettings.pulseEnvelope;
+			let legacyOperatorEnvelopes: Envelope[] | undefined = legacySettings.operatorEnvelopes;
+			let legacyFeedbackEnv: Envelope | undefined = legacySettings.feedbackEnvelope;
+			
 			// legacy defaults:
 			if (legacyCutoffSetting == undefined) legacyCutoffSetting = (this.type == InstrumentType.chip) ? 6 : 10;
 			if (legacyResonanceSetting == undefined) legacyResonanceSetting = 0;
-			if (legacyEnv == undefined) legacyEnv = Config.envelopes.dictionary["steady"];
+			if (legacyFilterEnv == undefined) legacyFilterEnv = Config.envelopes.dictionary["none"];
+			if (legacyPulseEnv == undefined) legacyPulseEnv = Config.envelopes.dictionary[(this.type == InstrumentType.pwm) ? "twang 2" : "none"];
+			if (legacyOperatorEnvelopes == undefined) legacyOperatorEnvelopes = [Config.envelopes.dictionary[(this.type == InstrumentType.fm) ? "note size" : "none"], Config.envelopes.dictionary["none"], Config.envelopes.dictionary["none"], Config.envelopes.dictionary["none"]];
+			if (legacyFeedbackEnv == undefined) legacyFeedbackEnv = Config.envelopes.dictionary["none"];
 			
-			// TODO: If chord doesn't have strum, use eqFilter. Apply filterEnvelope to corresponding filter and control point.
-			if (Config.envelopes[this.filterEnvelope].type == EnvelopeType.steady/* || Config.chords[this.chord].strumParts == 0*/) {
+			const carrierCount: number = Config.algorithms[this.algorithm].carrierCount;
+			let noCarriersControlledByNoteSize: boolean = true;
+			let allCarriersControlledByNoteSize: boolean = true;
+			let noteSizeControlsSomethingElse: boolean = (legacyFilterEnv.type == EnvelopeType.noteSize) || (legacyPulseEnv.type == EnvelopeType.noteSize);
+			if (this.type == InstrumentType.fm) {
+				noteSizeControlsSomethingElse = noteSizeControlsSomethingElse || (legacyFeedbackEnv.type == EnvelopeType.noteSize);
+				for (let i: number = 0; i < legacyOperatorEnvelopes.length; i++) {
+					if (i < carrierCount) {
+						if (legacyOperatorEnvelopes[i].type != EnvelopeType.noteSize) {
+							allCarriersControlledByNoteSize = false;
+						} else {
+							noCarriersControlledByNoteSize = false;
+						}
+					} else {
+						noteSizeControlsSomethingElse = noteSizeControlsSomethingElse || (legacyOperatorEnvelopes[i].type == EnvelopeType.noteSize);
+					}
+				}
+			}
+			
+			this.envelopeCount = 0;
+			
+			if (this.type == InstrumentType.fm) {
+				if (allCarriersControlledByNoteSize && noteSizeControlsSomethingElse) {
+					this.addEnvelope(Config.instrumentAutomationTargets.dictionary["noteVolume"].index, 0, Config.envelopes.dictionary["note size"].index);
+				} else if (noCarriersControlledByNoteSize && !noteSizeControlsSomethingElse) {
+					this.addEnvelope(Config.instrumentAutomationTargets.dictionary["none"].index, 0, Config.envelopes.dictionary["note size"].index);
+				}
+			}
+			
+			if (legacyFilterEnv.type == EnvelopeType.none || legacyFilterEnv.type == EnvelopeType.tremolo || legacyFilterEnv.type == EnvelopeType.tremolo2) {
 				this.noteFilter.reset();
-				this.eqFilter.convertLegacySettings(legacyCutoffSetting, legacyResonanceSetting, legacyEnv);
+				this.eqFilter.convertLegacySettings(legacyCutoffSetting, legacyResonanceSetting, legacyFilterEnv);
 				this.effects = (this.effects & (~(1 << EffectType.noteFilter)));
+				if (legacyFilterEnv.type != EnvelopeType.none) {
+					this.addEnvelope(Config.instrumentAutomationTargets.dictionary["eqFilterAllFreqs"].index, 0, legacyFilterEnv.index);
+				}
 			} else {
 				this.eqFilter.reset();
-				this.noteFilter.convertLegacySettings(legacyCutoffSetting, legacyResonanceSetting, legacyEnv);
+				this.noteFilter.convertLegacySettings(legacyCutoffSetting, legacyResonanceSetting, legacyFilterEnv);
 				this.effects = (this.effects | (1 << EffectType.noteFilter));
+				this.addEnvelope(Config.instrumentAutomationTargets.dictionary["noteFilterAllFreqs"].index, 0, legacyFilterEnv.index);
+			}
+			
+			if (legacyPulseEnv.type != EnvelopeType.none) {
+				this.addEnvelope(Config.instrumentAutomationTargets.dictionary["pulseWidth"].index, 0, legacyPulseEnv.index);
+			}
+			
+			for (let i: number = 0; i < legacyOperatorEnvelopes.length; i++) {
+				if (i < carrierCount && allCarriersControlledByNoteSize) continue;
+				if (legacyOperatorEnvelopes[i].type != EnvelopeType.none) {
+					this.addEnvelope(Config.instrumentAutomationTargets.dictionary["operatorAmplitude"].index, i, legacyOperatorEnvelopes[i].index);
+				}
+			}
+			
+			if (legacyFeedbackEnv.type != EnvelopeType.none) {
+				this.addEnvelope(Config.instrumentAutomationTargets.dictionary["feedbackAmplitude"].index, 0, legacyFeedbackEnv.index);
 			}
 		}
 		
@@ -932,7 +1052,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			if (this.type != InstrumentType.drumset) {
 				instrumentObject["transition"] = Config.transitions[this.transition].name;
 				instrumentObject["chord"] = this.getChord().name;
-				instrumentObject["filterEnvelope"] = this.getFilterEnvelope().name; // DEPRECATED
 			}
 			
 			if (this.type == InstrumentType.harmonics || this.type == InstrumentType.pickedString) {
@@ -963,18 +1082,17 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 			} else if (this.type == InstrumentType.chip) {
 				instrumentObject["wave"] = Config.chipWaves[this.chipWave].name;
-				instrumentObject["interval"] = Config.intervals[this.interval].name;
+				instrumentObject["unison"] = Config.unisons[this.unison].name;
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 			} else if (this.type == InstrumentType.pwm) {
 				instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
-				instrumentObject["pulseEnvelope"] = Config.envelopes[this.pulseEnvelope].name;
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 			} else if (this.type == InstrumentType.pickedString) {
 				instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
 				instrumentObject["stringSustain"] = Math.round(100 * this.stringSustain / (Config.stringSustainRange - 1));
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 			} else if (this.type == InstrumentType.harmonics) {
-				instrumentObject["interval"] = Config.intervals[this.interval].name;
+				instrumentObject["unison"] = Config.unisons[this.unison].name;
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 			} else if (this.type == InstrumentType.fm) {
 				const operatorArray: Object[] = [];
@@ -982,18 +1100,23 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					operatorArray.push({
 						"frequency": Config.operatorFrequencies[operator.frequency].name,
 						"amplitude": operator.amplitude,
-						"envelope": Config.envelopes[operator.envelope].name,
 					});
 				}
 				instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 				instrumentObject["algorithm"] = Config.algorithms[this.algorithm].name;
 				instrumentObject["feedbackType"] = Config.feedbacks[this.feedbackType].name;
 				instrumentObject["feedbackAmplitude"] = this.feedbackAmplitude;
-				instrumentObject["feedbackEnvelope"] = Config.envelopes[this.feedbackEnvelope].name;
 				instrumentObject["operators"] = operatorArray;
 			} else {
 				throw new Error("Unrecognized instrument type");
 			}
+			
+			const envelopes: any[] = [];
+			for (let i = 0; i < this.envelopeCount; i++) {
+				envelopes.push(this.envelopes[i].toJsonObject());
+			}
+			instrumentObject["envelopes"] = envelopes;
+			
 			return instrumentObject;
 		}
 		
@@ -1014,13 +1137,15 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				this.volume = 0;
 			}
 			
-			const oldTransitionNames: Dictionary<number> = {"binary": 0, "sudden": 1, "smooth": 2};
-			const transitionObject = instrumentObject["transition"] || instrumentObject["envelope"]; // the transition property used to be called envelope, so try that too.
-			this.transition = oldTransitionNames[transitionObject] != undefined ? oldTransitionNames[transitionObject] : Config.transitions.findIndex(transition=>transition.name==transitionObject);
-			if (this.transition == -1) this.transition = 1;
+			this.transition = Config.transitions.dictionary["hard"].index; // default value.
+			const transitionProperty: any = instrumentObject["transition"] || instrumentObject["envelope"]; // the transition property used to be called envelope, so check that too.
+			if (transitionProperty != undefined) {
+				const legacyTransitionNames: Dictionary<string> = {"binary": "instant", "seamless": "instant", "sudden": "hard", "smooth": "soft"};
+				const transition: Transition | undefined = Config.transitions.dictionary[legacyTransitionNames[transitionProperty]] || Config.transitions.dictionary[transitionProperty];
+				if (transition != undefined) this.transition = transition.index;
+			}
 			
 			// Note that the chord setting may be overridden by instrumentObject["chorus"] below.
-			// Also the chord setting is used by legacy filter importing below.
 			this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject["chord"]);
 			if (this.chord == -1) {
 				// Different instruments have different default chord types based on historical behaviour.
@@ -1037,21 +1162,18 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 			}
 			
-			if (instrumentObject["interval"] != undefined) {
-				this.interval = Config.intervals.findIndex(interval=>interval.name==instrumentObject["interval"]);
-			} else if (instrumentObject["chorus"] != undefined) {
-				const legacyChorusNames: Dictionary<number> = {"fifths": 5, "octaves": 6};
-				this.interval = legacyChorusNames[instrumentObject["chorus"]] != undefined
-					? legacyChorusNames[instrumentObject["chorus"]]
-					: Config.intervals.findIndex(interval=>interval.name==instrumentObject["chorus"]);
-				
-				// The original chorus setting had an option that now maps to two different settings. Override those if necessary.
-				if (instrumentObject["chorus"] == "custom harmony") {
-					this.interval = Config.intervals.dictionary["hum"].index;
-					this.chord = Config.chords.dictionary["custom interval"].index;
-				}
+			this.unison = Config.unisons.dictionary["none"].index; // default value.
+			const unisonProperty: any = instrumentObject["unison"] || instrumentObject["interval"] || instrumentObject["chorus"]; // The unison property has gone by various names in the past.
+			if (unisonProperty != undefined) {
+				const legacyChorusNames: Dictionary<string> = {"union": "none", "fifths": "fifth", "octaves": "octave"};
+				const unison: Unison | undefined = Config.unisons.dictionary[legacyChorusNames[unisonProperty]] || Config.unisons.dictionary[unisonProperty];
+				if (unison != undefined) this.unison = unison.index;
 			}
-			if (this.interval == -1) this.interval = Config.intervals.dictionary["union"].index;
+			if (instrumentObject["chorus"] == "custom harmony") {
+				// The original chorus setting had an option that now maps to two different settings. Override those if necessary.
+				this.unison = Config.unisons.dictionary["hum"].index;
+				this.chord = Config.chords.dictionary["custom interval"].index;
+			}
 			
 			if (Array.isArray(instrumentObject["effects"])) {
 				let effects: number = 0;
@@ -1063,53 +1185,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				const legacyEffectsNames: string[] = ["none", "reverb", "chorus", "chorus & reverb"];
 				this.effects = legacyEffectsNames.indexOf(instrumentObject["effects"]);
 				if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
-			}
-			
-			// DEPRECATED:
-			this.filterEnvelope = Config.envelopes.findIndex(envelope=>envelope.name == instrumentObject["filterEnvelope"]);
-			if (this.filterEnvelope == -1) this.filterEnvelope = Config.envelopes.dictionary["steady"].index;
-			
-			if (instrumentObject["noteFilter"] != undefined) {
-				this.noteFilter.fromJsonObject(instrumentObject["noteFilter"]);
-			} else {
-				this.noteFilter.reset();
-			}
-			if (Array.isArray(instrumentObject["eqFilter"])) {
-				this.eqFilter.fromJsonObject(instrumentObject["eqFilter"]);
-			} else {
-				this.eqFilter.reset();
-				
-				// Try converting from legacy filter settings.
-				let legacyCutoffSetting: number | undefined = undefined;
-				let legacyResonanceSetting: number | undefined = undefined;
-				const filterCutoffMaxHz: number = 8000;
-				const filterCutoffRange: number = 11;
-				const filterResonanceRange: number = 8;
-				if (instrumentObject["filterCutoffHz"] != undefined) {
-					legacyCutoffSetting = clamp(0, filterCutoffRange, Math.round((filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject["filterCutoffHz"] | 0) / filterCutoffMaxHz) / Math.LN2));
-				} else {
-					legacyCutoffSetting = (this.type == InstrumentType.chip) ? 6 : 10;
-				}
-				if (instrumentObject["filterResonance"] != undefined) {
-					legacyResonanceSetting = clamp(0, filterResonanceRange, Math.round((filterResonanceRange - 1) * (instrumentObject["filterResonance"] | 0) / 100));
-				} else {
-					legacyResonanceSetting = 0;
-				}
-				
-				// Try converting from even older legacy filter settings.
-				if (instrumentObject["filter"] != undefined) {
-					const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
-					const legacyToEnvelope: string[] = ["steady", "steady", "steady", "steady", "decay 1", "decay 2", "decay 3"];
-					const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
-					const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
-					let legacyFilter: number = oldFilterNames[instrumentObject["filter"]] != undefined ? oldFilterNames[instrumentObject["filter"]] : filterNames.indexOf(instrumentObject["filter"]);
-					if (legacyFilter == -1) legacyFilter = 0;
-					legacyCutoffSetting = legacyToCutoff[legacyFilter];
-					this.filterEnvelope = Config.envelopes.dictionary[legacyToEnvelope[legacyFilter]].index;
-					legacyResonanceSetting = 0;
-				}
-				
-				this.convertLegacyFilterSettings(legacyCutoffSetting, legacyResonanceSetting, Config.envelopes[this.filterEnvelope]);
 			}
 			
 			if (instrumentObject["vibrato"] != undefined) {
@@ -1195,15 +1270,19 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (this.chipNoise == -1) this.chipNoise = 1;
 			}
 			
+			const legacyEnvelopeNames: Dictionary<string> = {"custom": "note size", "steady": "none", "pluck 1": "twang 1", "pluck 2": "twang 2", "pluck 3": "twang 3"};
+			const getEnvelope = (name: any): Envelope | undefined => (legacyEnvelopeNames[name] != undefined) ? Config.envelopes.dictionary[legacyEnvelopeNames[name]] : Config.envelopes.dictionary[name];
+			
 			if (this.type == InstrumentType.drumset) {
 				if (instrumentObject["drums"] != undefined) {
 					for (let j: number = 0; j < Config.drumCount; j++) {
 						const drum: any = instrumentObject["drums"][j];
 						if (drum == undefined) continue;
 						
+						this.drumsetEnvelopes[j] = Config.envelopes.dictionary["twang 2"].index; // default value.
 						if (drum["filterEnvelope"] != undefined) {
-							this.drumsetEnvelopes[j] = Config.envelopes.findIndex(envelope=>envelope.name == drum["filterEnvelope"]);
-							if (this.drumsetEnvelopes[j] == -1) this.drumsetEnvelopes[j] = Config.envelopes.dictionary["twang 2"].index;
+							const envelope: Envelope | undefined = getEnvelope(drum["filterEnvelope"]);
+							if (envelope != undefined) this.drumsetEnvelopes[j] = envelope.index;
 						}
 						if (drum["spectrum"] != undefined) {
 							for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
@@ -1211,13 +1290,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							}
 						}
 					}
-				}
-			}
-			
-			if (this.type == InstrumentType.pwm) {
-				if (instrumentObject["pulseEnvelope"] != undefined) {
-					this.pulseEnvelope = Config.envelopes.findIndex(envelope=>envelope.name == instrumentObject["pulseEnvelope"]);
-					if (this.pulseEnvelope == -1) this.pulseEnvelope = Config.envelopes.dictionary["steady"].index;
 				}
 			}
 			
@@ -1238,14 +1310,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					this.feedbackAmplitude = 0;
 				}
 				
-				const legacyEnvelopeNames: Dictionary<number> = {"pluck 1": 6, "pluck 2": 7, "pluck 3": 8};
-				this.feedbackEnvelope = legacyEnvelopeNames[instrumentObject["feedbackEnvelope"]] != undefined ? legacyEnvelopeNames[instrumentObject["feedbackEnvelope"]] : Config.envelopes.findIndex(envelope=>envelope.name==instrumentObject["feedbackEnvelope"]);
-				if (this.feedbackEnvelope == -1) this.feedbackEnvelope = 0;
-				
 				for (let j: number = 0; j < Config.operatorCount; j++) {
 					const operator: Operator = this.operators[j];
 					let operatorObject: any = undefined;
-					if (instrumentObject["operators"]) operatorObject = instrumentObject["operators"][j];
+					if (instrumentObject["operators"] != undefined) operatorObject = instrumentObject["operators"][j];
 					if (operatorObject == undefined) operatorObject = {};
 					
 					operator.frequency = Config.operatorFrequencies.findIndex(freq=>freq.name==operatorObject["frequency"]);
@@ -1255,8 +1323,73 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					} else {
 						operator.amplitude = 0;
 					}
-					operator.envelope = legacyEnvelopeNames[operatorObject["envelope"]] != undefined ? legacyEnvelopeNames[operatorObject["envelope"]] : Config.envelopes.findIndex(envelope=>envelope.name==operatorObject["envelope"]);
-					if (operator.envelope == -1) operator.envelope = 0;
+				}
+			}
+			
+			if (instrumentObject["noteFilter"] != undefined) {
+				this.noteFilter.fromJsonObject(instrumentObject["noteFilter"]);
+			} else {
+				this.noteFilter.reset();
+			}
+			if (Array.isArray(instrumentObject["eqFilter"])) {
+				this.eqFilter.fromJsonObject(instrumentObject["eqFilter"]);
+			} else {
+				this.eqFilter.reset();
+				
+				const legacySettings: LegacySettings = {};
+				
+				// Try converting from legacy filter settings.
+				const filterCutoffMaxHz: number = 8000;
+				const filterCutoffRange: number = 11;
+				const filterResonanceRange: number = 8;
+				if (instrumentObject["filterCutoffHz"] != undefined) {
+					legacySettings.filterCutoff = clamp(0, filterCutoffRange, Math.round((filterCutoffRange - 1) + 2.0 * Math.log((instrumentObject["filterCutoffHz"] | 0) / filterCutoffMaxHz) / Math.LN2));
+				} else {
+					legacySettings.filterCutoff = (this.type == InstrumentType.chip) ? 6 : 10;
+				}
+				if (instrumentObject["filterResonance"] != undefined) {
+					legacySettings.filterResonance = clamp(0, filterResonanceRange, Math.round((filterResonanceRange - 1) * (instrumentObject["filterResonance"] | 0) / 100));
+				} else {
+					legacySettings.filterResonance = 0;
+				}
+				
+				legacySettings.filterEnvelope = getEnvelope(instrumentObject["filterEnvelope"]);
+				legacySettings.pulseEnvelope = getEnvelope(instrumentObject["pulseEnvelope"]);
+				legacySettings.feedbackEnvelope = getEnvelope(instrumentObject["feedbackEnvelope"]);
+				if (Array.isArray(instrumentObject["operators"])) {
+					legacySettings.operatorEnvelopes = [];
+					for (let j: number = 0; j < Config.operatorCount; j++) {
+						let envelope: Envelope | undefined;
+						if (instrumentObject["operators"][j] != undefined) {
+							envelope = getEnvelope(instrumentObject["operators"][j]["envelope"]);
+						}
+						legacySettings.operatorEnvelopes[j] = (envelope != undefined) ? envelope : Config.envelopes.dictionary["none"];
+					}
+				}
+				
+				// Try converting from even older legacy filter settings.
+				if (instrumentObject["filter"] != undefined) {
+					const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
+					const legacyToEnvelope: string[] = ["none", "none", "none", "none", "decay 1", "decay 2", "decay 3"];
+					const filterNames: string[] = ["none", "bright", "medium", "soft", "decay bright", "decay medium", "decay soft"];
+					const oldFilterNames: Dictionary<number> = {"sustain sharp": 1, "sustain medium": 2, "sustain soft": 3, "decay sharp": 4};
+					let legacyFilter: number = oldFilterNames[instrumentObject["filter"]] != undefined ? oldFilterNames[instrumentObject["filter"]] : filterNames.indexOf(instrumentObject["filter"]);
+					if (legacyFilter == -1) legacyFilter = 0;
+					legacySettings.filterCutoff = legacyToCutoff[legacyFilter];
+					legacySettings.filterEnvelope = getEnvelope(legacyToEnvelope[legacyFilter]);
+					legacySettings.filterResonance = 0;
+				}
+				
+				this.convertLegacySettings(legacySettings);
+			}
+			
+			if (Array.isArray(instrumentObject["envelopes"])) {
+				const envelopeArray: any[] = instrumentObject["envelopes"];
+				for (let i = 0; i < envelopeArray.length; i++) {
+					if (this.envelopeCount >= Config.maxEnvelopeCount) break;
+					const tempEnvelope: EnvelopeSettings = new EnvelopeSettings();
+					tempEnvelope.fromJsonObject(envelopeArray[i]);
+					this.addEnvelope(tempEnvelope.target, tempEnvelope.index, tempEnvelope.envelope);
 				}
 			}
 		}
@@ -1271,6 +1404,49 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		
 		private static _drumsetIndexToSpectrumOctave(index: number) {
 			return 15 + Math.log2(Instrument.drumsetIndexReferenceDelta(index));
+		}
+		
+		public addEnvelope(target: number, index: number, envelope: number): void {
+			if (!this.supportsEnvelopeTarget(target, index)) throw new Error();
+			if (this.envelopeCount >= Config.maxEnvelopeCount) throw new Error();
+			while (this.envelopes.length <= this.envelopeCount) this.envelopes[this.envelopes.length] = new EnvelopeSettings();
+			const envelopeSettings: EnvelopeSettings = this.envelopes[this.envelopeCount];
+			envelopeSettings.target = target;
+			envelopeSettings.index = index;
+			envelopeSettings.envelope = envelope;
+			this.envelopeCount++;
+		}
+		
+		public supportsEnvelopeTarget(target: number, index: number): boolean {
+			const automationTarget: AutomationTarget = Config.instrumentAutomationTargets[target];
+			if (index >= automationTarget.maxCount) {
+				return false;
+			}
+			if (automationTarget.compatibleInstruments != null && automationTarget.compatibleInstruments.indexOf(this.type) == -1) {
+				return false;
+			}
+			if (automationTarget.effect != null && (this.effects & (1 << automationTarget.effect)) == 0) {
+				return false;
+			}
+			if (automationTarget.isFilter) {
+				if (automationTarget.perNote) {
+					if (index >= this.noteFilter.controlPointCount) return false;
+				} else {
+					if (index >= this.eqFilter.controlPointCount)   return false;
+				}
+			}
+			return true;
+		}
+		
+		public clearInvalidEnvelopeTargets(): void {
+			for (let envelopeIndex: number = 0; envelopeIndex < this.envelopeCount; envelopeIndex++) {
+				const target: number = this.envelopes[envelopeIndex].target;
+				const index: number = this.envelopes[envelopeIndex].index;
+				if (!this.supportsEnvelopeTarget(target, index)) {
+					this.envelopes[envelopeIndex].target = Config.instrumentAutomationTargets.dictionary["none"].index;
+					this.envelopes[envelopeIndex].index = 0;
+				}
+			}
 		}
 		
 		public warmUp(samplesPerSecond: number): void {
@@ -1310,13 +1486,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public getTransition(): Transition {
 			return this.type == InstrumentType.drumset ? Config.transitions.dictionary["hard fade"] : Config.transitions[this.transition];
 		}
+		
 		public getChord(): Chord {
 			return this.type == InstrumentType.drumset ? Config.chords.dictionary["harmony"] : Config.chords[this.chord];
 		}
-		public getFilterEnvelope(): Envelope {
-			if (this.type == InstrumentType.drumset) throw new Error("Can't getFilterEnvelope() for drumset.");
-			return Config.envelopes[this.filterEnvelope];
-		}
+		
 		public getDrumsetEnvelope(pitch: number): Envelope {
 			if (this.type != InstrumentType.drumset) throw new Error("Can't getDrumsetEnvelope() for non-drumset.");
 			return Config.envelopes[this.drumsetEnvelopes[pitch]];
@@ -1476,7 +1650,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					
 					if (instrument.type != InstrumentType.drumset) {
 						buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
-						buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]); // DEPRECATED
 						buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 					}
 					
@@ -1492,13 +1665,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					if (instrument.type == InstrumentType.chip) {
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipWave]);
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
-						buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
+						buffer.push(SongTagCode.unison, base64IntToCharCode[instrument.unison]);
 					} else if (instrument.type == InstrumentType.fm) {
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.algorithm, base64IntToCharCode[instrument.algorithm]);
 						buffer.push(SongTagCode.feedbackType, base64IntToCharCode[instrument.feedbackType]);
 						buffer.push(SongTagCode.feedbackAmplitude, base64IntToCharCode[instrument.feedbackAmplitude]);
-						buffer.push(SongTagCode.feedbackEnvelope, base64IntToCharCode[instrument.feedbackEnvelope]);
 						
 						buffer.push(SongTagCode.operatorFrequencies);
 						for (let o: number = 0; o < Config.operatorCount; o++) {
@@ -1507,10 +1679,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						buffer.push(SongTagCode.operatorAmplitudes);
 						for (let o: number = 0; o < Config.operatorCount; o++) {
 							buffer.push(base64IntToCharCode[instrument.operators[o].amplitude]);
-						}
-						buffer.push(SongTagCode.operatorEnvelopes);
-						for (let o: number = 0; o < Config.operatorCount; o++) {
-							buffer.push(base64IntToCharCode[instrument.operators[o].envelope]);
 						}
 					} else if (instrument.type == InstrumentType.noise) {
 						buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipNoise]);
@@ -1522,7 +1690,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						}
 						spectrumBits.encodeBase64(buffer);
 					} else if (instrument.type == InstrumentType.drumset) {
-						buffer.push(SongTagCode.filterEnvelope);
+						buffer.push(SongTagCode.drumsetEnvelopes);
 						for (let j: number = 0; j < Config.drumCount; j++) {
 							buffer.push(base64IntToCharCode[instrument.drumsetEnvelopes[j]]);
 						}
@@ -1537,16 +1705,23 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						spectrumBits.encodeBase64(buffer);
 					} else if (instrument.type == InstrumentType.harmonics) {
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
-						buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
+						buffer.push(SongTagCode.unison, base64IntToCharCode[instrument.unison]);
 					} else if (instrument.type == InstrumentType.pwm) {
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
-						// TODO: The envelope should be saved separately.
-						buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth], base64IntToCharCode[instrument.pulseEnvelope]);
 					} else if (instrument.type == InstrumentType.pickedString) {
 						buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 						buffer.push(SongTagCode.stringSustain, base64IntToCharCode[instrument.stringSustain]);
 					} else {
 						throw new Error("Unknown instrument type.");
+					}
+					
+					buffer.push(SongTagCode.envelopes, base64IntToCharCode[instrument.envelopeCount]);
+					for (let envelopeIndex: number = 0; envelopeIndex < instrument.envelopeCount; envelopeIndex++) {
+						buffer.push(base64IntToCharCode[instrument.envelopes[envelopeIndex].target]);
+						if (Config.instrumentAutomationTargets[instrument.envelopes[envelopeIndex].target].maxCount > 1) {
+							buffer.push(base64IntToCharCode[instrument.envelopes[envelopeIndex].index]);
+						}
+						buffer.push(base64IntToCharCode[instrument.envelopes[envelopeIndex].envelope]);
 					}
 				}
 			}
@@ -1563,8 +1738,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			buffer.push(SongTagCode.patterns);
 			bits = new BitFieldWriter();
 			const shapeBits: BitFieldWriter = new BitFieldWriter();
-			let neededInstrumentBits: number = 0;
-			while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
+			const neededInstrumentBits: number = Song.getNeededBits(this.instrumentsPerChannel - 1);
+			const bitsPerNoteSize: number = Song.getNeededBits(Config.noteSizeMax);
 			for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 				const isNoiseChannel: boolean = this.getChannelIsNoise(channel);
 				const octaveOffset: number = isNoiseChannel ? 0 : this.channels[channel].octave * 12;
@@ -1595,7 +1770,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							
 							shapeBits.writePinCount(note.pins.length - 1);
 							
-							shapeBits.write(2, note.pins[0].expression);
+							shapeBits.write(bitsPerNoteSize, note.pins[0].size);
 							
 							let shapePart: number = 0;
 							let startPitch: number = note.pitches[0];
@@ -1613,7 +1788,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 								}
 								shapeBits.writePartDuration(pin.time - shapePart);
 								shapePart = pin.time;
-								shapeBits.write(2, pin.expression);
+								shapeBits.write(bitsPerNoteSize, pin.size);
 							}
 							
 							const shapeString: string = String.fromCharCode.apply(null, shapeBits.encodeBase64([]));
@@ -1698,6 +1873,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			}
 		}
 		
+		private static _envelopeFromLegacyIndex(legacyIndex: number): Envelope {
+			// I swapped the order of "custom"/"steady", now "none"/"note size".
+			if (legacyIndex == 0) legacyIndex = 1; else if (legacyIndex == 1) legacyIndex = 0;
+			return Config.envelopes[clamp(0, Config.envelopes.length, legacyIndex)];
+		}
+		
 		public fromBase64String(compressed: string): void {
 			if (compressed == null || compressed == "") {
 				this.initToDefault(true);
@@ -1731,19 +1912,18 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				this.channels[3].instruments[0].chipNoise = 0;
 			}
 			
-			interface LegacyFilterSettings { cutoff?: number; resonance?: number; envelope?: Envelope }
-			let legacyFilterSettings: LegacyFilterSettings[][] | null = null;
+			let legacySettingsCache: LegacySettings[][] | null = null;
 			if (beforeNine) {
-				// Unfortunately, old versions of BeepBox had a variety of different ways of
-				// saving filter-related parameters in the URL, and none of them directly
-				// correspond to the new way of saving filter parameters. We can approximate
-				// old filters by collecting all the old settings for an instrument and
-				// passing them to convertLegacyFilterSettings(), so I use this data structure to
-				// collect the settings for each instrument if necessary.
-				legacyFilterSettings = [];
-				for (let i: number = legacyFilterSettings.length; i < this.getChannelCount(); i++) {
-					legacyFilterSettings[i] = [];
-					for (let j: number = 0; j < this.instrumentsPerChannel; j++) legacyFilterSettings[i][j] = {};
+				// Unfortunately, old versions of BeepBox had a variety of different ways of saving
+				// filter-and-envelope-related parameters in the URL, and none of them directly
+				// correspond to the new way of saving these parameters. We can approximate the old
+				// settings by collecting all the old settings for an instrument and passing them to
+				// convertLegacySettings(), so I use this data structure to collect the settings
+				// for each instrument if necessary.
+				legacySettingsCache = [];
+				for (let i: number = legacySettingsCache.length; i < this.getChannelCount(); i++) {
+					legacySettingsCache[i] = [];
+					for (let j: number = 0; j < this.instrumentsPerChannel; j++) legacySettingsCache[i][j] = {};
 				}
 			}
 			
@@ -1763,9 +1943,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					}
 					this.channels.length = this.getChannelCount();
 					if (beforeNine) {
-						for (let i: number = legacyFilterSettings!.length; i < this.getChannelCount(); i++) {
-							legacyFilterSettings![i] = [];
-							for (let j: number = 0; j < this.instrumentsPerChannel; j++) legacyFilterSettings![i][j] = {};
+						for (let i: number = legacySettingsCache!.length; i < this.getChannelCount(); i++) {
+							legacySettingsCache![i] = [];
+							for (let j: number = 0; j < this.instrumentsPerChannel; j++) legacySettingsCache![i][j] = {};
 						}
 					}
 				} break;
@@ -1860,7 +2040,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							}
 						}
 						if (beforeNine) {
-							for (let j: number = legacyFilterSettings![channel].length; j < this.instrumentsPerChannel; j++) legacyFilterSettings![channel][j] = {};
+							for (let j: number = legacySettingsCache![channel].length; j < this.instrumentsPerChannel; j++) legacySettingsCache![channel][j] = {};
 						}
 					}
 				} break;
@@ -1909,9 +2089,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						const instrument: Instrument = this.channels[channel].instruments[0];
 						instrument.chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
 						
-						// Version 2 didn't save any settings for settings for filters,
-						// just waves, so initialize the filters here I guess.
-						instrument.convertLegacyFilterSettings(undefined, undefined, undefined);
+						// Version 2 didn't save any settings for settings for filters or
+						// envelopes, just waves, so initialize them here I guess.
+						instrument.convertLegacySettings(legacySettingsCache![channel][0]);
 						
 					} else if (beforeSix) {
 						const legacyWaves: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0];
@@ -1943,52 +2123,49 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					if (beforeNine) {
 						if (beforeSeven) {
 							const legacyToCutoff: number[] = [10, 6, 3, 0, 8, 5, 2];
-							const legacyToEnvelope: number[] = [1, 1, 1, 1, 18, 19, 20];
+							const legacyToEnvelope: string[] = ["none", "none", "none", "none", "decay 1", "decay 2", "decay 3"];
 							
 							if (beforeThree) {
 								const channel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 								const instrument: Instrument = this.channels[channel].instruments[0];
-								const legacySettings: LegacyFilterSettings = legacyFilterSettings![channel][0];
+								const legacySettings: LegacySettings = legacySettingsCache![channel][0];
 								const legacyFilter: number = [1, 3, 4, 5][clamp(0, legacyToCutoff.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
-								legacySettings.cutoff = legacyToCutoff[legacyFilter];
-								legacySettings.resonance = 0;
-								instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
-								legacySettings.envelope = Config.envelopes[instrument.filterEnvelope];
-								instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
+								legacySettings.filterCutoff = legacyToCutoff[legacyFilter];
+								legacySettings.filterResonance = 0;
+								legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyToEnvelope[legacyFilter]];
+								instrument.convertLegacySettings(legacySettings);
 							} else if (beforeSix) {
 								for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 									for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 										const instrument: Instrument = this.channels[channel].instruments[i];
-										const legacySettings: LegacyFilterSettings = legacyFilterSettings![channel][i];
+										const legacySettings: LegacySettings = legacySettingsCache![channel][i];
 										const legacyFilter: number = clamp(0, legacyToCutoff.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
 										if (channel < this.pitchChannelCount) {
-											legacySettings.cutoff = legacyToCutoff[legacyFilter];
-											legacySettings.resonance = 0;
-											instrument.filterEnvelope = legacyToEnvelope[legacyFilter];
+											legacySettings.filterCutoff = legacyToCutoff[legacyFilter];
+											legacySettings.filterResonance = 0;
+											legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyToEnvelope[legacyFilter]];
 										} else {
-											legacySettings.cutoff = 10;
-											legacySettings.resonance = 0;
-											instrument.filterEnvelope = 1;
+											legacySettings.filterCutoff = 10;
+											legacySettings.filterResonance = 0;
+											legacySettings.filterEnvelope = Config.envelopes.dictionary["none"];
 										}
-										legacySettings.envelope = Config.envelopes[instrument.filterEnvelope];
-										instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
+										instrument.convertLegacySettings(legacySettings);
 									}
 								}
 							} else {
 								const legacyFilter: number = clamp(0, legacyToCutoff.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 								const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-								const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
-								legacySettings.cutoff = legacyToCutoff[legacyFilter];
-								legacySettings.resonance = 0;
-								legacySettings.envelope = Config.envelopes[instrument.filterEnvelope];
-								instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
+								const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+								legacySettings.filterCutoff = legacyToCutoff[legacyFilter];
+								legacySettings.filterResonance = 0;
+								instrument.convertLegacySettings(legacySettings);
 							}
 						} else {
 							const filterCutoffRange: number = 11;
 							const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-							const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
-							legacySettings.cutoff = clamp(0, filterCutoffRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-							instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
+							const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+							legacySettings.filterCutoff = clamp(0, filterCutoffRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							instrument.convertLegacySettings(legacySettings);
 						}
 					} else {
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -2012,38 +2189,43 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					if (beforeNine) {
 						const filterResonanceRange: number = 8;
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-						const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
-						legacySettings.resonance = clamp(0, filterResonanceRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
+						const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+						legacySettings.filterResonance = clamp(0, filterResonanceRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						instrument.convertLegacySettings(legacySettings);
 					} else {
 						// Do nothing? This song tag code is deprecated for now.
 					}
 				} break;
-				case SongTagCode.filterEnvelope: {
+				case SongTagCode.drumsetEnvelopes: {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					if (instrument.type == InstrumentType.drumset) {
+					if (beforeNine) {
+						if (instrument.type == InstrumentType.drumset) {
+							for (let i: number = 0; i < Config.drumCount; i++) {
+								instrument.drumsetEnvelopes[i] = Song._envelopeFromLegacyIndex(base64CharCodeToInt[compressed.charCodeAt(charIndex++)]).index;
+							}
+						} else {
+							// This used to be used for general filter envelopes.
+							// The presence of an envelope affects how convertLegacySettings
+							// decides the closest possible approximation, so update it.
+							const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+							legacySettings.filterEnvelope = Song._envelopeFromLegacyIndex(base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							instrument.convertLegacySettings(legacySettings);
+						}
+					} else {
+						// This tag is now only used for drumset filter envelopes.
 						for (let i: number = 0; i < Config.drumCount; i++) {
 							instrument.drumsetEnvelopes[i] = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						}
-					} else {
-						instrument.filterEnvelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					}
-					
-					if (beforeNine) {
-						// The presence of an envelope affects how convertLegacySettings
-						// decides the closest possible approximation, so update it.
-						const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
-						legacySettings.envelope = Config.envelopes[instrument.filterEnvelope];
-						instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
 					}
 				} break;
 				case SongTagCode.pulseWidth: {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 					instrument.pulseWidth = clamp(0, Config.pulseWidthRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					
-					if (instrument.type == InstrumentType.pwm) {
-						// TODO: The envelope should be saved separately, check beforeNine.
-						instrument.pulseEnvelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					if (beforeNine) {
+						const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+						legacySettings.pulseEnvelope = Song._envelopeFromLegacyIndex(base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						instrument.convertLegacySettings(legacySettings);
 					}
 				} break;
 				case SongTagCode.stringSustain: {
@@ -2068,96 +2250,84 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					if (beforeSeven) {
 						if (beforeThree) {
 							const legacyEffects: number[] = [0, 3, 2, 0];
-							const legacyEnvelopes: string[] = ["steady", "steady", "steady", "tremolo2"];
+							const legacyEnvelopes: string[] = ["none", "none", "none", "tremolo2"];
 							const channel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 							const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							const instrument: Instrument = this.channels[channel].instruments[0];
+							const legacySettings: LegacySettings = legacySettingsCache![channel][0];
 							instrument.vibrato = legacyEffects[effect];
-							if (Config.envelopes[instrument.filterEnvelope].type == EnvelopeType.steady) {
+							if (legacySettings.filterEnvelope == undefined || legacySettings.filterEnvelope.type == EnvelopeType.none) {
 								// Imitate the legacy tremolo with a filter envelope.
-								instrument.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]].index;
+								legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]];
+								instrument.convertLegacySettings(legacySettings);
 							}
 						} else if (beforeSix) {
 							const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
-							const legacyEnvelopes: string[] = ["steady", "steady", "steady", "steady", "tremolo5", "tremolo2"];
+							const legacyEnvelopes: string[] = ["none", "none", "none", "none", "tremolo5", "tremolo2"];
 							for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 								for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 									const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 									const instrument: Instrument = this.channels[channel].instruments[i];
+									const legacySettings: LegacySettings = legacySettingsCache![channel][i];
 									instrument.vibrato = legacyEffects[effect];
-									if (Config.envelopes[instrument.filterEnvelope].type == EnvelopeType.steady) {
+									if (legacySettings.filterEnvelope == undefined || legacySettings.filterEnvelope.type == EnvelopeType.none) {
 										// Imitate the legacy tremolo with a filter envelope.
-										instrument.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]].index;
+										legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]];
+										instrument.convertLegacySettings(legacySettings);
 									}
 								}
 							}
 						} else {
 							const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
-							const legacyEnvelopes: string[] = ["steady", "steady", "steady", "steady", "tremolo5", "tremolo2"];
+							const legacyEnvelopes: string[] = ["none", "none", "none", "none", "tremolo5", "tremolo2"];
 							const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 							const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+							const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
 							instrument.vibrato = legacyEffects[effect];
-							if (Config.envelopes[instrument.filterEnvelope].type == EnvelopeType.steady) {
+							if (legacySettings.filterEnvelope == undefined || legacySettings.filterEnvelope.type == EnvelopeType.none) {
 								// Imitate the legacy tremolo with a filter envelope.
-								instrument.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]].index;
+								legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]];
+								instrument.convertLegacySettings(legacySettings);
 							}
 						}
-						
-						// TODO: consider updating the above code to update the appropriate
-						// legacy settings for the affected instrument(s) and reconvert
-						// legacy filter settings. Make sure to get the channel and instrument index right!
-						/*
-						// The above vibrato versions may also affect "filterEnvelope", which
-						// affects legacy filter conversion, so redo the conversion here.
-						const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
-						legacySettings.envelope = Config.envelopes[instrument.filterEnvelope];
-						instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
-						*/
 					} else {
 						const vibrato: number = clamp(0, Config.vibratos.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].vibrato = vibrato;
 					}
 				} break;
-				case SongTagCode.interval: {
+				case SongTagCode.unison: {
 					if (beforeThree) {
 						const channel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						this.channels[channel].instruments[0].interval = clamp(0, Config.intervals.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].instruments[0].unison = clamp(0, Config.unisons.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					} else if (beforeSix) {
 						for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
 								const originalValue: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-								let interval: number = clamp(0, Config.intervals.length, originalValue);
+								let unison: number = clamp(0, Config.unisons.length, originalValue);
 								if (originalValue == 8) {
 									// original "custom harmony" now maps to "hum" and "custom interval".
-									interval = 2;
+									unison = 2;
 									this.channels[channel].instruments[i].chord = 3;
 								}
-								this.channels[channel].instruments[i].interval = interval;
+								this.channels[channel].instruments[i].unison = unison;
 							}
 						}
 					} else if (beforeSeven) {
 						const originalValue: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						let interval: number = clamp(0, Config.intervals.length, originalValue);
+						let unison: number = clamp(0, Config.unisons.length, originalValue);
 						if (originalValue == 8) {
 							// original "custom harmony" now maps to "hum" and "custom interval".
-							interval = 2;
+							unison = 2;
 							this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chord = 3;
 						}
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].interval = interval;
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].unison = unison;
 					} else {
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].interval = clamp(0, Config.intervals.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].unison = clamp(0, Config.unisons.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				} break;
 				case SongTagCode.chord: {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 					instrument.chord = clamp(0, Config.chords.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					
-					if (beforeNine) {
-						// The chord setting affects how convertLegacyFilterSettings
-						// decides the closest possible approximation, so update it.
-						const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
-						instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
-					}
 				} break;
 				case SongTagCode.effects: {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -2174,10 +2344,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							instrument.effects = (instrument.effects | (1 << EffectType.panning));
 						}
 						
-						// convertLegacyFilterSettings may need to override effects, call
-						// it again here to make sure that the override takes precedence.
-						const legacySettings: LegacyFilterSettings = legacyFilterSettings![instrumentChannelIterator][instrumentIndexIterator];
-						instrument.convertLegacyFilterSettings(legacySettings.cutoff, legacySettings.resonance, legacySettings.envelope);
+						// convertLegacySettings may need to force-enable note filter, call
+						// it again here to make sure that this override takes precedence.
+						const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+						instrument.convertLegacySettings(legacySettings);
 					} else {
 						instrument.effects = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						
@@ -2254,7 +2424,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					}
 				} break;
 				case SongTagCode.algorithm: {
-					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].algorithm = clamp(0, Config.algorithms.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					instrument.algorithm = clamp(0, Config.algorithms.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					if (beforeNine) {
+						// The algorithm determines the carrier count, which affects how legacy settings are imported.
+						const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+						instrument.convertLegacySettings(legacySettings);
+					}
 				} break;
 				case SongTagCode.feedbackType: {
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].feedbackType = clamp(0, Config.feedbacks.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -2263,7 +2439,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].feedbackAmplitude = clamp(0, Config.operatorAmplitudeMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				} break;
 				case SongTagCode.feedbackEnvelope: {
-					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].feedbackEnvelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					if (beforeNine) {
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+						const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+						legacySettings.feedbackEnvelope = Song._envelopeFromLegacyIndex(base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						instrument.convertLegacySettings(legacySettings);
+					} else {
+						// Do nothing? This song tag code is deprecated for now.
+					}
 				} break;
 				case SongTagCode.operatorFrequencies: {
 					for (let o: number = 0; o < Config.operatorCount; o++) {
@@ -2275,9 +2458,27 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].operators[o].amplitude = clamp(0, Config.operatorAmplitudeMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				} break;
-				case SongTagCode.operatorEnvelopes: {
-					for (let o: number = 0; o < Config.operatorCount; o++) {
-						this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].operators[o].envelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				case SongTagCode.envelopes: {
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					if (beforeNine) {
+						const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+						legacySettings.operatorEnvelopes = [];
+						for (let o: number = 0; o < Config.operatorCount; o++) {
+							legacySettings.operatorEnvelopes[o] = Song._envelopeFromLegacyIndex(base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						}
+						instrument.convertLegacySettings(legacySettings);
+					} else {
+						const envelopeCount: number = clamp(0, Config.maxEnvelopeCount + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						for (let i: number = 0; i < envelopeCount; i++) {
+							const target: number = clamp(0, Config.instrumentAutomationTargets.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							let index: number = 0;
+							const maxCount: number = Config.instrumentAutomationTargets[target].maxCount;
+							if (maxCount > 1) {
+								index = clamp(0, maxCount, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							}
+							const envelope: number = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							instrument.addEnvelope(target, index, envelope);
+						}
 					}
 				} break;
 				case SongTagCode.spectrum: {
@@ -2372,8 +2573,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					const bits: BitFieldReader = new BitFieldReader(compressed, charIndex, charIndex + bitStringLength);
 					charIndex += bitStringLength;
 					
-					let neededInstrumentBits: number = 0;
-					while ((1 << neededInstrumentBits) < this.instrumentsPerChannel) neededInstrumentBits++;
+					const bitsPerNoteSize: number = Song.getNeededBits(Config.noteSizeMax);
+					const neededInstrumentBits: number = Song.getNeededBits(this.instrumentsPerChannel - 1);
 					while (true) {
 						const isNoiseChannel: boolean = this.getChannelIsNoise(channel);
 						
@@ -2425,7 +2626,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 										while (shape.pitchCount < Config.maxChordSize && bits.read(1) == 1) shape.pitchCount++;
 										
 										shape.pinCount = bits.readPinCount();
-										shape.initialExpression = bits.read(2);
+										shape.initialSize = bits.read(bitsPerNoteSize);
 										
 										shape.pins = [];
 										shape.length = 0;
@@ -2438,14 +2639,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 												? bits.readLegacyPartDuration() * Config.partsPerBeat / Config.rhythms[this.rhythm].stepsPerBeat
 												: bits.readPartDuration();
 											pinObj.time = shape.length;
-											pinObj.expression = bits.read(2);
+											pinObj.size = bits.read(bitsPerNoteSize);
 											shape.pins.push(pinObj);
 										}
 									}
 									recentShapes.unshift(shape);
 									if (recentShapes.length > 10) recentShapes.pop();
 									
-									note = new Note(0,curPart,curPart + shape.length, shape.initialExpression);
+									note = new Note(0,curPart,curPart + shape.length, shape.initialSize);
 									note.pitches = [];
 									note.pins.length = 1;
 									const pitchBends: number[] = [];
@@ -2491,7 +2692,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 									
 									for (const pinObj of shape.pins) {
 										if (pinObj.pitchBend) pitchBends.shift();
-										pin = makeNotePin(pitchBends[0] - note.pitches[0], pinObj.time, pinObj.expression);
+										pin = makeNotePin(pitchBends[0] - note.pitches[0], pinObj.time, pinObj.size);
 										note.pins.push(pin);
 									}
 									curPart = validateRange(0, this.beatsPerBar * Config.partsPerBeat, note.end);
@@ -2532,7 +2733,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							pointArray.push({
 								"tick": (pin.time + note.start) * Config.rhythms[this.rhythm].stepsPerBeat / Config.partsPerBeat,
 								"pitchBend": pin.interval,
-								"volume": Math.round(pin.expression * 100 / 3),
+								"volume": Math.round(pin.size * 100 / 3),
 							});
 						}
 						
@@ -2649,7 +2850,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			let maxInstruments: number = 1;
 			let maxPatterns: number = 1;
 			let maxBars: number = 1;
-			if (jsonObject["channels"]) {
+			if (jsonObject["channels"] != undefined) {
 				for (const channelObject of jsonObject["channels"]) {
 					if (channelObject["instruments"]) maxInstruments = Math.max(maxInstruments, channelObject["instruments"].length | 0);
 					if (channelObject["patterns"]) maxPatterns = Math.max(maxPatterns, channelObject["patterns"].length | 0);
@@ -2670,7 +2871,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			
 			const newPitchChannels: Channel[] = [];
 			const newNoiseChannels: Channel[] = [];
-			if (jsonObject["channels"]) {
+			if (jsonObject["channels"] != undefined) {
 				for (let channelIndex: number = 0; channelIndex < jsonObject["channels"].length; channelIndex++) {
 					let channelObject: any = jsonObject["channels"][channelIndex];
 					
@@ -2756,7 +2957,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 									
 									const time: number = Math.round((+pointObject["tick"]) * Config.partsPerBeat / importedPartsPerBeat);
 									
-									const expression: number = (pointObject["volume"] == undefined) ? 3 : Math.max(0, Math.min(3, Math.round((pointObject["volume"] | 0) * 3 / 100)));
+									const size: number = (pointObject["volume"] == undefined) ? 3 : Math.max(0, Math.min(3, Math.round((pointObject["volume"] | 0) * 3 / 100)));
 								
 									if (time > this.beatsPerBar * Config.partsPerBeat) continue;
 									if (note.pins.length == 0) {
@@ -2768,7 +2969,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 									}
 									noteClock = time;
 								
-									note.pins.push(makeNotePin(interval - startInterval, time - note.start, expression));
+									note.pins.push(makeNotePin(interval - startInterval, time - note.start, size));
 								}
 								if (note.pins.length < 2) continue;
 							
@@ -2795,8 +2996,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 									if (k >= 2) {
 										if (pin.interval == note.pins[k-1].interval && 
 											pin.interval == note.pins[k-2].interval && 
-											pin.expression == note.pins[k-1].expression && 
-											pin.expression == note.pins[k-2].expression)
+											pin.size == note.pins[k-1].size && 
+											pin.size == note.pins[k-2].size)
 										{
 											note.pins.splice(k-1, 1);
 											k--;
@@ -2840,6 +3041,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public getBeatsPerMinute(): number {
 			return this.tempo;
 		}
+		
+		public static getNeededBits(maxValue: number): number {
+			return 32 - Math.clz32(Math.ceil(maxValue + 1) - 1);
+		}
 	}
 	
 	class PickedString {
@@ -2869,6 +3074,251 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		}
 	}
 	
+	class EnvelopeComputer {
+		public noteSecondsStart: number = 0.0;
+		public noteSecondsEnd: number = 0.0;
+		public noteTicksStart: number = 0.0;
+		public noteTicksEnd: number = 0.0;
+		public noteSizeStart: number = Config.noteSizeMax;
+		public noteSizeEnd: number = Config.noteSizeMax;
+		private _noteSizeFinal: number = Config.noteSizeMax;
+		private _prevNoteSecondsEnd: number = 0.0;
+		public prevNoteTicksStart: number = 0.0;
+		public prevNoteTicksEnd: number = 0.0;
+		private _prevNoteSizeFinal: number = Config.noteSizeMax;
+		
+		public prevSlideStart: boolean = false;
+		public prevSlideEnd: boolean = false;
+		public nextSlideStart: boolean = false;
+		public nextSlideEnd: boolean = false;
+		public prevSlideRatioStart: number = 0.0;
+		public prevSlideRatioEnd: number = 0.0;
+		public nextSlideRatioStart: number = 0.0;
+		public nextSlideRatioEnd: number = 0.0;
+		
+		public readonly envelopeStarts: number[] = [];
+		public readonly envelopeEnds: number[] = [];
+		public lowpassCutoffDecayVolumeCompensation: number = 1.0;
+		
+		constructor(private _perNote: boolean) {
+			const length: number = this._perNote ? NoteAutomationIndex.length : InstrumentAutomationIndex.length;
+			for (let i: number = 0; i < length; i++) {
+				this.envelopeStarts[i] = 1.0;
+				this.envelopeEnds[i] = 1.0;
+			}
+			
+			this.reset();
+		}
+		
+		public reset(): void {
+			this.noteSecondsEnd = 0.0;
+			this.noteTicksEnd = 0.0;
+			this._noteSizeFinal = Config.noteSizeMax;
+			this._prevNoteSecondsEnd = 0.0;
+			this.prevNoteTicksEnd = 0.0;
+			this._prevNoteSizeFinal = Config.noteSizeMax;
+		}
+		
+		public computeEnvelopes(instrument: Instrument, currentPart: number, tickTimeStart: number, tickTimeEnd: number, secondsPassing: number, tone: Tone | null, released: boolean): void {
+			if (tone != null && tone.atNoteStart) {
+				this._prevNoteSecondsEnd = this.noteSecondsEnd;
+				this.prevNoteTicksEnd = this.noteTicksEnd;
+				this._prevNoteSizeFinal = this._noteSizeFinal;
+				this.noteSecondsEnd = 0.0;
+				this.noteTicksEnd = 0.0;
+			}
+			if (tone != null) {
+				if (tone.note != null) {
+					this._noteSizeFinal = tone.note.pins[tone.note.pins.length - 1].size;
+				} else {
+					this._noteSizeFinal = Config.noteSizeMax;
+				}
+			}
+			
+			const ticksPassing: number = tickTimeEnd - tickTimeStart;
+			const noteSecondsStart: number = this.noteSecondsEnd;
+			const noteSecondsEnd: number = noteSecondsStart + secondsPassing;
+			const noteTicksStart: number = this.noteTicksEnd;
+			const noteTicksEnd: number = noteTicksStart + ticksPassing;
+			const prevNoteSecondsStart: number = this._prevNoteSecondsEnd;
+			const prevNoteSecondsEnd: number = prevNoteSecondsStart + secondsPassing;
+			const prevNoteTicksStart: number = this.prevNoteTicksEnd;
+			const prevNoteTicksEnd: number = prevNoteTicksStart + ticksPassing;
+			
+			const beatsPerTick: number = 1.0 / (Config.ticksPerPart * Config.partsPerBeat);
+			const beatTimeStart: number = beatsPerTick * tickTimeStart;
+			const beatTimeEnd:   number = beatsPerTick * tickTimeEnd;
+			
+			let noteSizeStart: number = this._noteSizeFinal;
+			let noteSizeEnd: number = this._noteSizeFinal;
+			let prevNoteSize: number = this._prevNoteSizeFinal;
+			let nextNoteSize: number = 0;
+			let prevSlideStart: boolean = false;
+			let prevSlideEnd: boolean = false;
+			let nextSlideStart: boolean = false;
+			let nextSlideEnd: boolean = false;
+			let prevSlideRatioStart: number = 0.0;
+			let prevSlideRatioEnd: number = 0.0;
+			let nextSlideRatioStart: number = 0.0;
+			let nextSlideRatioEnd: number = 0.0;
+			if (tone != null && tone.note != null && !released) {
+				const endPinIndex: number = tone.note.getEndPinIndex(currentPart);
+				const startPin: NotePin = tone.note.pins[endPinIndex-1];
+				const endPin:   NotePin = tone.note.pins[endPinIndex];
+				const startPinTick: number = (tone.note.start + startPin.time) * Config.ticksPerPart;
+				const endPinTick:   number = (tone.note.start + endPin.time)   * Config.ticksPerPart;
+				const ratioStart: number = (tickTimeStart - startPinTick) / (endPinTick - startPinTick);
+				const ratioEnd:   number = (tickTimeEnd   - startPinTick) / (endPinTick - startPinTick);
+				noteSizeStart = startPin.size + (endPin.size - startPin.size) * ratioStart;
+				noteSizeEnd   = startPin.size + (endPin.size - startPin.size) * ratioEnd;
+				
+				const transition: Transition = instrument.getTransition();
+				if (transition.slides) {
+					const noteStartTick: number = tone.noteStart * Config.ticksPerPart;
+					const noteEndTick:   number = tone.noteEnd   * Config.ticksPerPart;
+					const noteLengthTicks: number = noteEndTick - noteStartTick;
+					const maximumSlideTicks: number = noteLengthTicks * 0.5;
+					const slideTicks: number = Math.min(maximumSlideTicks, transition.slideTicks);
+					if (tone.prevNote != null) {
+						if (tickTimeStart - noteStartTick < slideTicks) {
+							prevSlideStart = true;
+							prevSlideRatioStart = 0.5 * (1.0 - (tickTimeStart - noteStartTick) / slideTicks);
+						}
+						if (tickTimeEnd - noteStartTick < slideTicks) {
+							prevSlideEnd = true;
+							prevSlideRatioEnd = 0.5 * (1.0 - (tickTimeEnd - noteStartTick) / slideTicks);
+						}
+					}
+					if (tone.nextNote != null) {
+						nextNoteSize = tone.nextNote.pins[0].size
+						if (noteEndTick - tickTimeStart < slideTicks) {
+							nextSlideStart = true;
+							nextSlideRatioStart = 0.5 * (1.0 - (noteEndTick - tickTimeStart) / slideTicks);
+						}
+						if (noteEndTick - tickTimeEnd < slideTicks) {
+							nextSlideEnd = true;
+							nextSlideRatioEnd = 0.5 * (1.0 - (noteEndTick - tickTimeEnd) / slideTicks);
+						}
+					}
+				}
+			}
+			
+			let lowpassCutoffDecayVolumeCompensation: number = 1.0;
+			let usedNoteSize: boolean = false;
+			for (let envelopeIndex: number = 0; envelopeIndex <= instrument.envelopeCount; envelopeIndex++) {
+				let automationTarget: AutomationTarget;
+				let targetIndex: number;
+				let envelope: Envelope;
+				if (envelopeIndex == instrument.envelopeCount) {
+					if (usedNoteSize || !this._perNote) break;
+					// Special case: if no other envelopes used note size, default to applying it to note volume.
+					automationTarget = Config.instrumentAutomationTargets.dictionary["noteVolume"];
+					targetIndex = 0;
+					envelope = Config.envelopes.dictionary["note size"];
+				} else {
+					let envelopeSettings: EnvelopeSettings = instrument.envelopes[envelopeIndex];
+					automationTarget = Config.instrumentAutomationTargets[envelopeSettings.target];
+					targetIndex = envelopeSettings.index;
+					envelope = Config.envelopes[envelopeSettings.envelope];
+					if (envelope.type == EnvelopeType.noteSize) usedNoteSize = true;
+				}
+				if (automationTarget.perNote == this._perNote && automationTarget.computeIndex != null) {
+					const computeIndex: number = automationTarget.computeIndex + targetIndex;
+					let envelopeStart: number = EnvelopeComputer.computeEnvelope(envelope, noteSecondsStart, beatTimeStart, noteSizeStart);
+					let envelopeEnd:   number = EnvelopeComputer.computeEnvelope(envelope, noteSecondsEnd,   beatTimeEnd,   noteSizeEnd);
+					
+					if (prevSlideStart) {
+						const other: number = EnvelopeComputer.computeEnvelope(envelope, prevNoteSecondsStart, beatTimeStart, prevNoteSize);
+						envelopeStart += (other - envelopeStart) * prevSlideRatioStart;
+					}
+					if (prevSlideEnd) {
+						const other: number = EnvelopeComputer.computeEnvelope(envelope, prevNoteSecondsEnd, beatTimeEnd, prevNoteSize);
+						envelopeEnd += (other - envelopeEnd) * prevSlideRatioEnd;
+					}
+					if (nextSlideStart) {
+						const other: number = EnvelopeComputer.computeEnvelope(envelope, 0.0, beatTimeStart, nextNoteSize);
+						envelopeStart += (other - envelopeStart) * nextSlideRatioStart;
+					}
+					if (nextSlideEnd) {
+						const other: number = EnvelopeComputer.computeEnvelope(envelope, 0.0, beatTimeEnd, nextNoteSize);
+						envelopeEnd += (other - envelopeEnd) * nextSlideRatioEnd;
+					}
+					
+					this.envelopeStarts[computeIndex] *= envelopeStart;
+					this.envelopeEnds[computeIndex]   *= envelopeEnd;
+					
+					if (automationTarget.isFilter) {
+						const filterSettings: FilterSettings = this._perNote ? instrument.noteFilter : instrument.eqFilter;
+						if (filterSettings.controlPointCount > targetIndex && filterSettings.controlPoints[targetIndex].type == FilterType.lowPass) {
+							lowpassCutoffDecayVolumeCompensation = Math.max(lowpassCutoffDecayVolumeCompensation, EnvelopeComputer.getLowpassCutoffDecayVolumeCompensation(envelope));
+						}
+					}
+				}
+			}
+			
+			this.noteSecondsStart = noteSecondsStart;
+			this.noteSecondsEnd = noteSecondsEnd;
+			this.noteTicksStart = noteTicksStart;
+			this.noteTicksEnd = noteTicksEnd;
+			this._prevNoteSecondsEnd = prevNoteSecondsEnd;
+			this.prevNoteTicksStart = prevNoteTicksStart;
+			this.prevNoteTicksEnd = prevNoteTicksEnd;
+			this.noteSizeStart = noteSizeStart;
+			this.noteSizeEnd = noteSizeEnd;
+			this.prevSlideStart = prevSlideStart;
+			this.prevSlideEnd = prevSlideEnd;
+			this.nextSlideStart = nextSlideStart;
+			this.nextSlideEnd = nextSlideEnd;
+			this.prevSlideRatioStart = prevSlideRatioStart;
+			this.prevSlideRatioEnd = prevSlideRatioEnd;
+			this.nextSlideRatioStart = nextSlideRatioStart;
+			this.nextSlideRatioEnd = nextSlideRatioEnd;
+			this.lowpassCutoffDecayVolumeCompensation = lowpassCutoffDecayVolumeCompensation;
+		}
+		
+		public clearEnvelopes(instrument: Instrument): void {
+			for (let envelopeIndex: number = 0; envelopeIndex < instrument.envelopeCount; envelopeIndex++) {
+				const envelopeSettings: EnvelopeSettings = instrument.envelopes[envelopeIndex];
+				const automationTarget: AutomationTarget = Config.instrumentAutomationTargets[envelopeSettings.target];
+				if (automationTarget.perNote == this._perNote && automationTarget.computeIndex != null) {
+					const computeIndex: number = automationTarget.computeIndex + envelopeSettings.index;
+					this.envelopeStarts[computeIndex] = 1.0;
+					this.envelopeEnds[computeIndex]   = 1.0;
+				}
+			}
+			if (this._perNote) {
+				// As a special case, note volume may be altered even if there was no envelope for it.
+				this.envelopeStarts[NoteAutomationIndex.noteVolume] = 1.0;
+				this.envelopeEnds[  NoteAutomationIndex.noteVolume] = 1.0;
+			}
+		}
+		
+		public static computeEnvelope(envelope: Envelope, time: number, beats: number, noteSize: number): number {
+			switch(envelope.type) {
+				case EnvelopeType.noteSize: return Synth.noteSizeToVolumeMult(noteSize);
+				case EnvelopeType.none:     return 1.0;
+				case EnvelopeType.twang:    return 1.0 / (1.0 + time * envelope.speed);
+				case EnvelopeType.swell:    return 1.0 - 1.0 / (1.0 + time * envelope.speed);
+				case EnvelopeType.tremolo:  return 0.5 - Math.cos(beats * 2.0 * Math.PI * envelope.speed) * 0.5;
+				case EnvelopeType.tremolo2: return 0.75 - Math.cos(beats * 2.0 * Math.PI * envelope.speed) * 0.25;
+				case EnvelopeType.punch:    return Math.max(1.0, 2.0 - time * 10.0);
+				case EnvelopeType.flare:    const attack: number = 0.25 / Math.sqrt(envelope.speed); return time < attack ? time / attack : 1.0 / (1.0 + (time - attack) * envelope.speed);
+				case EnvelopeType.decay:    return Math.pow(2, -envelope.speed * time);
+				default: throw new Error("Unrecognized operator envelope type.");
+			}
+		}
+		
+		public static getLowpassCutoffDecayVolumeCompensation(envelope: Envelope): number {
+			// This is a little hokey in the details, but I designed it a while ago and keep it 
+			// around for compatibility. This decides how much to increase the volume (or
+			// expression) to compensate for a decaying lowpass cutoff to maintain perceived
+			// volume overall.
+			if (envelope.type == EnvelopeType.decay) return 1.25 + 0.025 * envelope.speed;
+			if (envelope.type == EnvelopeType.twang) return 1.0  + 0.02  * envelope.speed;
+			return 1.0;
+		}
+	}
+	
 	class Tone {
 		public instrumentIndex: number;
 		public readonly pitches: number[] = [0, 0, 0, 0];
@@ -2880,7 +3330,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public nextNote: Note | null = null;
 		public prevNotePitchIndex: number = 0;
 		public nextNotePitchIndex: number = 0;
-		public active: boolean = false;
+		public atNoteStart: boolean = false;
 		public isOnLastTick: boolean = false;
 		public noteStart: number = 0;
 		public noteEnd: number = 0;
@@ -2888,13 +3338,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public ticksSinceReleased: number = 0;
 		public liveInputSamplesHeld: number = 0;
 		public lastInterval: number = 0;
-		public lastNoteExpression: number = 0;
+		public lastNoteSize: number = 0;
 		public sample: number = 0.0;
 		public readonly phases: number[] = [];
 		public readonly phaseDeltas: number[] = [];
 		public readonly expressionStarts: number[] = [];
 		public readonly expressionDeltas: number[] = [];
-		public phaseDeltaScale: number = 0.0;
+		public readonly phaseDeltaScales: number[] = [];
 		public pulseWidth: number = 0.0;
 		public pulseWidthDelta: number = 0.0;
 		public pickedString: PickedString | null = null;
@@ -2905,11 +3355,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public initialNoteFilterInput2: number = 0.0;
 		
 		public vibratoScale: number = 0.0;
-		public intervalMult: number = 0.0;
-		public intervalExpressionMult: number = 1.0;
-		public feedbackOutputs: number[] = [];
+		public specialIntervalMult: number = 0.0;
+		public specialIntervalExpressionMult: number = 1.0;
+		public readonly feedbackOutputs: number[] = [];
 		public feedbackMult: number = 0.0;
 		public feedbackDelta: number = 0.0;
+		
+		public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(true);
 		
 		constructor() {
 			this.reset();
@@ -2917,7 +3369,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		
 		public reset(): void {
 			this.sample = 0.0;
-			for (let i: number = 0; i < Config.operatorCount; i++) {
+			const maxWaves: number = Math.max(Config.maxChordSize, Config.operatorCount);
+			for (let i: number = 0; i < maxWaves; i++) {
 				this.phases[i] = 0.0;
 				this.feedbackOutputs[i] = 0.0;
 			}
@@ -2929,6 +3382,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.initialNoteFilterInput2 = 0.0;
 			this.liveInputSamplesHeld = 0;
 			if (this.pickedString != null) this.pickedString.reset();
+			this.envelopeComputer.reset();
 		}
 	}
 	
@@ -2951,6 +3405,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public delayInputMultStart: number = 0.0;
 		public delayInputMultDelta: number = 0.0;
 		
+		public distortionStart: number = 0.0;
+		public distortionEnd: number = 0.0;
 		public distortionFractionalInput1: number = 0.0;
 		public distortionFractionalInput2: number = 0.0;
 		public distortionFractionalInput3: number = 0.0;
@@ -2963,8 +3419,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public bitcrusherPhaseDelta: number = 0.0;
 		public bitcrusherPhaseDeltaScale: number = 1.0;
 		public bitcrusherScale: number = 1.0;
-		public bitcrusherScaleDelta: number = 0.0;
+		public bitcrusherScaleScale: number = 1.0;
 		public bitcrusherFoldLevel: number = 1.0;
+		public bitcrusherFoldLevelScale: number = 1.0;
 		
 		public readonly eqFilters: DynamicBiquadFilter[] = [];
 		public eqFilterCount: number = 0;
@@ -2998,7 +3455,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public echoDelayOffsetRatio: number = 0.0;
 		public echoDelayOffsetRatioDelta: number = 0.0;
 		public echoDelayOffsetLastTickIsComputed: boolean = false;
-		public echoMult: number = 0.0;
+		public echoMultStart: number = 0.0;
+		public echoMultDelta: number = 0.0;
 		public echoShelfA1: number = 0.0;
 		public echoShelfB0: number = 0.0;
 		public echoShelfB1: number = 0.0;
@@ -3010,7 +3468,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public reverbDelayLine: Float32Array | null = null;
 		public reverbDelayLineDirty: boolean = false;
 		public reverbDelayPos: number = 0;
-		public reverbMult: number = 0.0;
+		public reverbMultStart: number = 0.0;
+		public reverbMultDelta: number = 0.0;
 		public reverbShelfA1: number = 0.0;
 		public reverbShelfB0: number = 0.0;
 		public reverbShelfB1: number = 0.0;
@@ -3022,6 +3481,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public reverbShelfPrevInput1: number = 0.0;
 		public reverbShelfPrevInput2: number = 0.0;
 		public reverbShelfPrevInput3: number = 0.0;
+		
+		public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(false);
 		
 		public allocateNecessaryBuffers(synth: Synth, instrument: Instrument, samplesPerTick: number): void {
 			if (effectsIncludePanning(instrument.effects)) {
@@ -3128,7 +3589,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.chorusPhase = 0.0;
 		}
 		
-		public compute(synth: Synth, instrument: Instrument, samplesPerTick: number, runLength: number): void {
+		public compute(synth: Synth, instrument: Instrument, samplesPerTick: number, runLength: number, tone: Tone | null, released: boolean): void {
 			this.computed = true;
 			
 			this.allocateNecessaryBuffers(synth, instrument, samplesPerTick);
@@ -3138,32 +3599,63 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const tickRemainingStart: number = (tickSampleCountdown            ) / samplesPerTick;
 			const tickRemainingEnd:   number = (tickSampleCountdown - runLength) / samplesPerTick;
 			const tickIsEnding: boolean = (runLength >= tickSampleCountdown);
+			const ticksIntoBar: number = synth.getTicksIntoBar();
+			const tickTimeStart: number = ticksIntoBar + (1.0 - tickRemainingStart);
+			const tickTimeEnd:   number = ticksIntoBar + (1.0 - tickRemainingEnd);
+			const secondsPerTick: number = samplesPerTick / synth.samplesPerSecond;
+			const currentPart: number = synth.getCurrentPart();
 			
+			this.envelopeComputer.computeEnvelopes(instrument, currentPart, tickTimeStart, tickTimeEnd, secondsPerTick * (tickTimeEnd - tickTimeStart), tone, released);
+			const envelopeStarts: number[] = this.envelopeComputer.envelopeStarts;
+			const envelopeEnds: number[] = this.envelopeComputer.envelopeEnds;
+			
+			const usesDistortion: boolean = effectsIncludeDistortion(instrument.effects);
 			const usesBitcrusher: boolean = effectsIncludeBitcrusher(instrument.effects);
 			const usesPanning: boolean = effectsIncludePanning(instrument.effects);
 			const usesChorus: boolean = effectsIncludeChorus(instrument.effects);
 			const usesEcho: boolean = effectsIncludeEcho(instrument.effects);
 			const usesReverb: boolean = effectsIncludeReverb(instrument.effects);
 			
-			if (usesBitcrusher) {
-				const basePitch: number = Config.keys[synth.song!.key].basePitch; // TODO: What if there's a key change mid-song?
-				const freq: number = Instrument.frequencyFromPitch(basePitch + 60) * Math.pow(2.0, (Config.bitcrusherFreqRange - 1 - instrument.bitcrusherFreq) * Config.bitcrusherOctaveStep);
-				this.bitcrusherPhaseDelta = Math.min(1.0, freq / samplesPerSecond);
-				this.bitcrusherScale = 2.0 * Config.bitcrusherBaseVolume * Math.pow(2.0, 1.0 - Math.pow(2.0, (Config.bitcrusherQuantizationRange - 1 - instrument.bitcrusherQuantization) * 0.5));
-				this.bitcrusherFoldLevel = 2.0 * Config.bitcrusherBaseVolume * Math.pow(1.5, Config.bitcrusherQuantizationRange - 1 - instrument.bitcrusherQuantization);
-				
-				// TODO: Automation.
-				this.bitcrusherPhaseDeltaScale = 1.0;
-				this.bitcrusherScaleDelta = 0.0;
+			if (usesDistortion) {
+				this.distortionStart = Math.min(1.0, envelopeStarts[InstrumentAutomationIndex.distortion] * instrument.distortion / (Config.distortionRange - 1));
+				this.distortionEnd   = Math.min(1.0, envelopeEnds[  InstrumentAutomationIndex.distortion] * instrument.distortion / (Config.distortionRange - 1));
 			}
 			
-			// TODO: Automation.
-			let eqFilterVolume: number = 1.0;
+			if (usesBitcrusher) {
+				const freqSettingStart: number = instrument.bitcrusherFreq * Math.sqrt(envelopeStarts[InstrumentAutomationIndex.bitcrusherFrequency]);
+				const freqSettingEnd:   number = instrument.bitcrusherFreq * Math.sqrt(envelopeEnds[  InstrumentAutomationIndex.bitcrusherFrequency]);
+				const quantizationSettingStart: number = instrument.bitcrusherQuantization * Math.sqrt(envelopeStarts[InstrumentAutomationIndex.bitcrusherQuantization]);
+				const quantizationSettingEnd:   number = instrument.bitcrusherQuantization * Math.sqrt(envelopeEnds[  InstrumentAutomationIndex.bitcrusherQuantization]);
+				
+				const basePitch: number = Config.keys[synth.song!.key].basePitch; // TODO: What if there's a key change mid-song?
+				const freqStart: number = Instrument.frequencyFromPitch(basePitch + 60) * Math.pow(2.0, (Config.bitcrusherFreqRange - 1 - freqSettingStart) * Config.bitcrusherOctaveStep);
+				const freqEnd:   number = Instrument.frequencyFromPitch(basePitch + 60) * Math.pow(2.0, (Config.bitcrusherFreqRange - 1 - freqSettingEnd)   * Config.bitcrusherOctaveStep);
+				const phaseDeltaStart: number = Math.min(1.0, freqStart / samplesPerSecond);
+				const phaseDeltaEnd:   number = Math.min(1.0, freqEnd   / samplesPerSecond);
+				this.bitcrusherPhaseDelta = phaseDeltaStart;
+				this.bitcrusherPhaseDeltaScale = Math.pow(phaseDeltaEnd / phaseDeltaStart, 1.0 / runLength);
+				
+				const scaleStart: number = 2.0 * Config.bitcrusherBaseVolume * Math.pow(2.0, 1.0 - Math.pow(2.0, (Config.bitcrusherQuantizationRange - 1 - quantizationSettingStart) * 0.5));
+				const scaleEnd:   number = 2.0 * Config.bitcrusherBaseVolume * Math.pow(2.0, 1.0 - Math.pow(2.0, (Config.bitcrusherQuantizationRange - 1 - quantizationSettingEnd)   * 0.5));
+				this.bitcrusherScale = scaleStart;
+				this.bitcrusherScaleScale = Math.pow(scaleEnd / scaleStart, 1.0 / runLength);
+				
+				const foldLevelStart: number = 2.0 * Config.bitcrusherBaseVolume * Math.pow(1.5, Config.bitcrusherQuantizationRange - 1 - quantizationSettingStart);
+				const foldLevelEnd:   number = 2.0 * Config.bitcrusherBaseVolume * Math.pow(1.5, Config.bitcrusherQuantizationRange - 1 - quantizationSettingEnd);
+				this.bitcrusherFoldLevel = foldLevelStart;
+				this.bitcrusherFoldLevelScale = Math.pow(foldLevelEnd / foldLevelStart, 1.0 / runLength);
+			}
+			
+			let eqFilterVolume: number = this.envelopeComputer.lowpassCutoffDecayVolumeCompensation;
 			const eqFilterSettings: FilterSettings = instrument.eqFilter;
 			for (let i: number = 0; i < eqFilterSettings.controlPointCount; i++) {
+				const eqFreqEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterFreq0 + i];
+				const eqFreqEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterFreq0 + i];
+				const eqPeakEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterPeak0 + i];
+				const eqPeakEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterPeak0 + i];
 				const point: FilterControlPoint = eqFilterSettings.controlPoints[i];
-				point.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, 1.0, 1.0, 1.0);
-				point.toCoefficients(Synth.tempFilterEndCoefficients, samplesPerSecond, 1.0, 1.0, 1.0);
+				point.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, eqFreqEnvelopeStart, eqPeakEnvelopeStart);
+				point.toCoefficients(Synth.tempFilterEndCoefficients,   samplesPerSecond, eqFreqEnvelopeEnd,   eqPeakEnvelopeEnd);
 				if (this.eqFilters.length <= i) this.eqFilters[i] = new DynamicBiquadFilter();
 				this.eqFilters[i].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength);
 				eqFilterVolume *= point.getVolumeCompensationMult();
@@ -3171,9 +3663,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.eqFilterCount = eqFilterSettings.controlPointCount;
 			eqFilterVolume = Math.min(3.0, eqFilterVolume);
 			
-			// TODO: Automation.
-			this.mixVolumeStart = Synth.instrumentVolumeToVolumeMult(instrument.volume);
-			this.mixVolumeDelta = 0.0;
+			const mainInstrumentVolume: number = Synth.instrumentVolumeToVolumeMult(instrument.volume);
+			this.mixVolumeStart = mainInstrumentVolume * envelopeStarts[InstrumentAutomationIndex.mixVolume];
+			const mixVolumeEnd  = mainInstrumentVolume * envelopeEnds[  InstrumentAutomationIndex.mixVolume];
+			this.mixVolumeDelta = (mixVolumeEnd - this.mixVolumeStart) / runLength;
 			
 			let eqFilterVolumeStart: number = eqFilterVolume;
 			let eqFilterVolumeEnd: number = eqFilterVolume;
@@ -3181,23 +3674,49 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			let delayInputMultEnd: number = 1.0;
 			
 			if (usesPanning) {
+				const panEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.panning] * 2.0 - 1.0;
+				const panEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.panning] * 2.0 - 1.0;
 				const pan: number = (instrument.pan - Config.panCenter) / Config.panCenter;
+				const panStart: number = Math.max(-1.0, Math.min(1.0, pan * panEnvelopeStart));
+				const panEnd:   number = Math.max(-1.0, Math.min(1.0, pan * panEnvelopeEnd));
+				const volumeStartL: number = Math.cos((1 + panStart) * Math.PI * 0.25) * 1.414;
+				const volumeStartR: number = Math.cos((1 - panStart) * Math.PI * 0.25) * 1.414;
+				const volumeEndL:   number = Math.cos((1 + panEnd)   * Math.PI * 0.25) * 1.414;
+				const volumeEndR:   number = Math.cos((1 - panEnd)   * Math.PI * 0.25) * 1.414;
 				const maxDelaySamples: number = samplesPerSecond * Config.panDelaySecondsMax;
-				const delaySamples: number = pan * maxDelaySamples * 2.0;
-				this.panningVolumeStartL = Math.cos((1 + pan) * Math.PI * 0.25) * 1.414;
-				this.panningVolumeStartR = Math.cos((1 - pan) * Math.PI * 0.25) * 1.414;
-				this.panningVolumeDeltaL = 0.0; // TODO: Automation.
-				this.panningVolumeDeltaR = 0.0; // TODO: Automation.
-				this.panningOffsetStartL = Math.max(0.0, delaySamples);
-				this.panningOffsetStartR = Math.max(0.0, -delaySamples);
-				this.panningOffsetDeltaL = 0.0; // TODO: Automation.
-				this.panningOffsetDeltaR = 0.0; // TODO: Automation.
+				const delayStart: number = panStart * maxDelaySamples;
+				const delayEnd:   number = panEnd   * maxDelaySamples;
+				const delayStartL: number = Math.max(0.0,  delayStart);
+				const delayStartR: number = Math.max(0.0, -delayStart);
+				const delayEndL:   number = Math.max(0.0,  delayEnd);
+				const delayEndR:   number = Math.max(0.0, -delayEnd);
+				
+				this.panningVolumeStartL = volumeStartL;
+				this.panningVolumeStartR = volumeStartR;
+				this.panningVolumeDeltaL = (volumeEndL - volumeStartL) / runLength;
+				this.panningVolumeDeltaR = (volumeEndR - volumeStartR) / runLength;
+				this.panningOffsetStartL = delayStartL;
+				this.panningOffsetStartR = delayStartR;
+				this.panningOffsetDeltaL = (delayEndL - delayStartL) / runLength;
+				this.panningOffsetDeltaR = (delayEndR - delayStartR) / runLength;
 			}
 			
+			let maxEchoMult = 0.0;
 			if (usesEcho) {
-				this.echoMult = Math.pow(instrument.echoSustain / Config.echoSustainRange, 1.1) * 0.9;
-				const echoDelayOffset: number = Math.round((instrument.echoDelay + 1) * Config.echoDelayStepTicks * samplesPerTick);
+				const echoSustainEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.echoSustain];
+				const echoSustainEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.echoSustain];
+				const echoMultStart: number = Math.min(1.0, Math.pow(echoSustainEnvelopeStart * instrument.echoSustain / Config.echoSustainRange, 1.1)) * 0.9;
+				const echoMultEnd:   number = Math.min(1.0, Math.pow(echoSustainEnvelopeEnd   * instrument.echoSustain / Config.echoSustainRange, 1.1)) * 0.9;
+				this.echoMultStart = echoMultStart;
+				this.echoMultDelta = (echoMultEnd - echoMultStart) / runLength;
+				maxEchoMult = Math.max(echoMultStart, echoMultEnd);
 				
+				// TODO: After computing a tick's settings once for multiple run lengths (which is
+				// good for audio worklet threads), compute the echo delay envelopes at tick (or
+				// part) boundaries to interpolate between two delay taps.
+				//const echoDelayEnvelopeStart:   number = envelopeStarts[InstrumentAutomationIndex.echoDelay];
+				//const echoDelayEnvelopeEnd:     number = envelopeEnds[  InstrumentAutomationIndex.echoDelay];
+				const echoDelayOffset: number = Math.round((instrument.echoDelay + 1) * Config.echoDelayStepTicks * samplesPerTick);
 				if (this.echoDelayOffsetLastTickIsComputed) {
 					this.echoDelayOffsetStart = this.echoDelayOffsetLastTick;
 				} else {
@@ -3219,8 +3738,15 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				this.echoShelfB1 = Synth.tempFilterStartCoefficients.b[1];
 			}
 			
+			let maxReverbMult = 0.0;
 			if (usesReverb) {
-				this.reverbMult = Math.pow(instrument.reverb / Config.reverbRange, 0.667) * 0.425;
+				const reverbEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.reverb];
+				const reverbEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.reverb];
+				const reverbStart: number = Math.min(1.0, Math.pow(reverbEnvelopeStart * instrument.reverb / Config.reverbRange, 0.667)) * 0.425;
+				const reverbEnd:   number = Math.min(1.0, Math.pow(reverbEnvelopeEnd   * instrument.reverb / Config.reverbRange, 0.667)) * 0.425;
+				this.reverbMultStart = reverbStart;
+				this.reverbMultDelta = (reverbEnd - reverbStart) / runLength;
+				maxReverbMult = Math.max(reverbStart, reverbEnd);
 				
 				const shelfRadians: number = 2.0 * Math.PI * Config.reverbShelfHz / synth.samplesPerSecond;
 				Synth.tempFilterStartCoefficients.highShelf1stOrder(shelfRadians, Config.reverbShelfGain);
@@ -3256,14 +3782,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				
 				if (usesEcho) {
 					const averageDelaySeconds: number = (this.echoDelayOffsetStart + this.echoDelayOffsetEnd) * 0.5 / samplesPerSecond;
-					const attenuationPerSecond: number = Math.pow(this.echoMult, 1.0 / averageDelaySeconds);
+					const attenuationPerSecond: number = Math.pow(maxEchoMult, 1.0 / averageDelaySeconds);
 					const halfLife: number = -1.0 / Math.log2(attenuationPerSecond);
 					const echoDuration: number = halfLife * halfLifeMult;
 					delayDuration += echoDuration;
 				}
 				
 				if (usesReverb) {
-					const averageMult: number = this.reverbMult * 2.0;
+					const averageMult: number = maxReverbMult * 2.0;
 					const averageDelaySeconds: number = (Config.reverbDelayBufferSize / 4.0) / samplesPerSecond;
 					const attenuationPerSecond: number = Math.pow(averageMult, 1.0 / averageDelaySeconds);
 					const halfLife: number = -1.0 / Math.log2(attenuationPerSecond);
@@ -3375,6 +3901,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		private beat: number = 0;
 		private part: number = 0;
 		private tick: number = 0;
+		public isAtStartOfTick: boolean = true;
 		public tickSampleCountdown: number = 0;
 		private isPlayingSong: boolean = false;
 		private liveInputEndTime: number = 0.0;
@@ -3426,6 +3953,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public getSamplesPerBar(): number {
 			if (this.song == null) throw new Error();
 			return this.getSamplesPerTick() * Config.ticksPerPart * Config.partsPerBeat * this.song.beatsPerBar;
+		}
+		
+		public getTicksIntoBar(): number {
+			return (this.beat * Config.partsPerBeat + this.part) * Config.ticksPerPart + this.tick;
+		}
+		public getCurrentPart(): number {
+			return (this.beat * Config.partsPerBeat + this.part);
 		}
 		
 		public getTotalBars(enableIntro: boolean, enableOutro: boolean): number {
@@ -3515,6 +4049,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			this.part = 0;
 			this.tick = 0;
 			this.tickSampleCountdown = 0;
+			this.isAtStartOfTick = true;
 		}
 		
 		public resetEffects(): void {
@@ -3645,6 +4180,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						const instrumentState: InstrumentState = channelState.instruments[instrumentIndex];
 						
 						if (instrumentIndex == currentPatternInstrumentIndex) {
+							this.determineCurrentActiveTones(song, channelIndex, playSong);
+							for (let i: number = 0; i < channelState.activeTones.count(); i++) {
+								const tone: Tone = channelState.activeTones.get(i);
+								this.playTone(song, channelIndex, samplesPerTick, bufferIndex, runLength, tone, false, false);
+								tonesPlayedInThisChannel++;
+							}
+							
 							if (channelIndex == this.liveInputChannel) {
 								this.determineLiveInputTones(song);
 								
@@ -3653,13 +4195,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 									this.playTone(song, channelIndex, samplesPerTick, bufferIndex, runLength, tone, false, false);
 									tonesPlayedInThisChannel++;
 								}
-							}
-							
-							this.determineCurrentActiveTones(song, channelIndex, playSong);
-							for (let i: number = 0; i < channelState.activeTones.count(); i++) {
-								const tone: Tone = channelState.activeTones.get(i);
-								this.playTone(song, channelIndex, samplesPerTick, bufferIndex, runLength, tone, false, false);
-								tonesPlayedInThisChannel++;
 							}
 						}
 						
@@ -3679,12 +4214,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						
 						if (instrumentState.awake) {
 							if (!instrumentState.computed) {
-								instrumentState.compute(this, instrument, samplesPerTick, runLength);
+								instrumentState.compute(this, instrument, samplesPerTick, runLength, null, true);
 							}
 							
 							Synth.effectsSynth(this, outputDataL, outputDataR, bufferIndex, runLength, instrument, instrumentState);
 							
 							instrumentState.computed = false;
+							instrumentState.envelopeComputer.clearEnvelopes(instrument);
 						}
 					}
 				}
@@ -3704,8 +4240,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				
 				bufferIndex += runLength;
 				
+				this.isAtStartOfTick = false;
 				this.tickSampleCountdown -= runLength;
 				if (this.tickSampleCountdown <= 0) {
+					this.isAtStartOfTick = true;
 					
 					// Track how long tones have been released, and free ones that are marked as ending.
 					// Also reset awake InstrumentStates that didn't have any Tones during this tick.
@@ -3817,7 +4355,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			if (this.tonePool.count() > 0) {
 				const tone: Tone = this.tonePool.popBack();
 				tone.reset();
-				tone.active = false;
 				return tone;
 			}
 			return new Tone();
@@ -3825,6 +4362,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		
 		private releaseTone(instrumentState: InstrumentState, tone: Tone): void {
 			instrumentState.releasedTones.pushFront(tone);
+			tone.atNoteStart = false;
 		}
 		
 		private freeReleasedTone(instrumentState: InstrumentState, toneIndex: number): void {
@@ -3857,7 +4395,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			if (this.liveInputDuration > 0) {
 				const instrument: Instrument = song.channels[this.liveInputChannel].instruments[instrumentIndex];
 				
-				if (instrument.getChord().arpeggiates) {
+				if (instrument.getChord().singleTone) {
 					let tone: Tone;
 					if (toneList.count() == 0) {
 						tone = this.newTone();
@@ -3878,6 +4416,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					tone.chordSize = 1;
 					tone.instrumentIndex = instrumentIndex;
 					tone.note = tone.prevNote = tone.nextNote = null;
+					tone.atNoteStart = this.liveInputStarted;
 				} else {
 					//const transition: Transition = instrument.getTransition();
 					for (let i: number = 0; i < pitches.length; i++) {
@@ -3901,6 +4440,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						tone.chordSize = pitches.length;
 						tone.instrumentIndex = instrumentIndex;
 						tone.note = tone.prevNote = tone.nextNote = null;
+						tone.atNoteStart = this.liveInputStarted;
 					}
 				}
 			}
@@ -3916,18 +4456,18 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const channel: Channel = song.channels[channelIndex];
 			const instrumentIndex: number = song.getPatternInstrument(channelIndex, this.bar);
 			const pattern: Pattern | null = song.getPattern(channelIndex, this.bar);
-			const time: number = this.part + this.beat * Config.partsPerBeat;
+			const currentPart: number = this.getCurrentPart();
 			let note: Note | null = null;
 			let prevNote: Note | null = null;
 			let nextNote: Note | null = null;
 			
 			if (playSong && pattern != null && !channel.muted && instrumentIndex < song.instrumentsPerChannel) {
 				for (let i: number = 0; i < pattern.notes.length; i++) {
-					if (pattern.notes[i].end <= time) {
+					if (pattern.notes[i].end <= currentPart) {
 						prevNote = pattern.notes[i];
-					} else if (pattern.notes[i].start <= time && pattern.notes[i].end > time) {
+					} else if (pattern.notes[i].start <= currentPart && pattern.notes[i].end > currentPart) {
 						note = pattern.notes[i];
-					} else if (pattern.notes[i].start > time) {
+					} else if (pattern.notes[i].start > currentPart) {
 						nextNote = pattern.notes[i];
 						break;
 					}
@@ -3938,7 +4478,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			if (note != null) {
 				if (prevNote != null && prevNote.end != note.start) prevNote = null;
 				if (nextNote != null && nextNote.start != note.end) nextNote = null;
-				this.syncTones(channelIndex, instrumentIndex, toneList, song, note.pitches, note, prevNote, nextNote, time);
+				this.syncTones(channelIndex, instrumentIndex, toneList, song, note.pitches, note, prevNote, nextNote, currentPart);
 			} else {
 				this.releaseOrFreeUnusedTones(toneList, 0, song, channelIndex);
 			}
@@ -3947,6 +4487,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		private syncTones(channelIndex: number, instrumentIndex: number, toneList: Deque<Tone>, song: Song, pitches: number[], note: Note, prevNote: Note | null, nextNote: Note | null, currentPart: number): void {
 			const channel: Channel = song.channels[channelIndex];
 			const instrument: Instrument = channel.instruments[instrumentIndex];
+			const currentTick: number = this.tick + Config.ticksPerPart * currentPart;
 			let toneCount: number = 0;
 			const chord: Chord = instrument.getChord();
 			if (chord.singleTone) {
@@ -3958,7 +4499,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					tone = toneList.get(0);
 				}
 				toneCount = 1;
-
+				
 				for (let i: number = 0; i < pitches.length; i++) {
 					tone.pitches[i] = pitches[i];
 				}
@@ -3972,16 +4513,17 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				tone.nextNote = nextNote;
 				tone.prevNotePitchIndex = 0;
 				tone.nextNotePitchIndex = 0;
+				tone.atNoteStart = (Config.ticksPerPart * note.start == currentTick) && this.isAtStartOfTick;
 			} else {
 				const transition: Transition = instrument.getTransition();
 				for (let i: number = 0; i < pitches.length; i++) {
-
+					
 					const strumOffsetParts: number = i * instrument.getChord().strumParts;
 					let prevNoteForThisTone: Note | null = (prevNote && prevNote.pitches.length > i) ? prevNote : null;
 					let noteForThisTone: Note = note;
 					let nextNoteForThisTone: Note | null = (nextNote && nextNote.pitches.length > i) ? nextNote : null;
 					let noteStart: number = noteForThisTone.start + strumOffsetParts;
-
+					
 					if (noteStart > currentPart) {
 						if (toneList.count() > i && transition.isSeamless && prevNoteForThisTone != null) {
 							nextNoteForThisTone = noteForThisTone;
@@ -3992,12 +4534,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							break;
 						}
 					}
-
+					
 					let noteEnd: number = noteForThisTone.end;
 					if (transition.isSeamless && nextNoteForThisTone != null) {
 						noteEnd = Math.min(Config.partsPerBeat * this.song!.beatsPerBar, noteEnd + strumOffsetParts);
 					}
-
+					
 					let tone: Tone;
 					if (toneList.count() <= i) {
 						tone = this.newTone();
@@ -4006,7 +4548,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						tone = toneList.get(i);
 					}
 					toneCount++;
-
+					
 					tone.pitches[0] = noteForThisTone.pitches[i];
 					tone.pitchCount = 1;
 					tone.chordSize = noteForThisTone.pitches.length;
@@ -4018,6 +4560,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					tone.nextNote = nextNoteForThisTone;
 					tone.prevNotePitchIndex = i;
 					tone.nextNotePitchIndex = i;
+					tone.atNoteStart = (Config.ticksPerPart * noteStart == currentTick) && this.isAtStartOfTick;
 				}
 			}
 			this.releaseOrFreeUnusedTones(toneList, toneCount, song, channelIndex);
@@ -4046,36 +4589,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			instrumentState.awake = true;
 			instrumentState.tonesAddedInThisTick = true;
 			if (!instrumentState.computed) {
-				instrumentState.compute(this, instrument, samplesPerTick, runLength);
+				instrumentState.compute(this, instrument, samplesPerTick, runLength, tone, released);
 			}
 			
 			Synth.computeTone(this, song, channelIndex, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
 			const synthesizer: Function = Synth.getInstrumentSynthFunction(instrument);
 			synthesizer(this, bufferIndex, runLength, tone, instrument);
-		}
-		
-		private static computeEnvelope(envelope: Envelope, time: number, beats: number, noteExpression: number): number {
-			switch(envelope.type) {
-				case EnvelopeType.custom: return noteExpression;
-				case EnvelopeType.steady: return 1.0;
-				case EnvelopeType.twang:
-					return 1.0 / (1.0 + time * envelope.speed);
-				case EnvelopeType.swell:
-					return 1.0 - 1.0 / (1.0 + time * envelope.speed);
-				case EnvelopeType.tremolo: 
-					return 0.5 - Math.cos(beats * 2.0 * Math.PI * envelope.speed) * 0.5;
-				case EnvelopeType.tremolo2: 
-					return 0.75 - Math.cos(beats * 2.0 * Math.PI * envelope.speed) * 0.25;
-				case EnvelopeType.punch: 
-					return Math.max(1.0, 2.0 - time * 10.0);
-				case EnvelopeType.flare:
-					const speed: number = envelope.speed;
-					const attack: number = 0.25 / Math.sqrt(speed);
-					return time < attack ? time / attack : 1.0 / (1.0 + (time - attack) * speed);
-				case EnvelopeType.decay:
-					return Math.pow(2, -envelope.speed * time);
-				default: throw new Error("Unrecognized operator envelope type.");
-			}
+			tone.envelopeComputer.clearEnvelopes(instrument);
 		}
 		
 		private static computeChordExpression(chordSize: number): number {
@@ -4087,29 +4607,27 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const instrument: Instrument = channel.instruments[tone.instrumentIndex];
 			const transition: Transition = instrument.getTransition();
 			const chord: Chord = instrument.getChord();
-			const chordExpression: number = chord.arpeggiates ? 1.0 : Synth.computeChordExpression(tone.chordSize);
+			const chordExpression: number = chord.singleTone ? 1.0 : Synth.computeChordExpression(tone.chordSize);
 			const isNoiseChannel: boolean = song.getChannelIsNoise(channelIndex);
 			const intervalScale: number = isNoiseChannel ? Config.noiseInterval : 1;
 			const secondsPerPart: number = Config.ticksPerPart * samplesPerTick / synth.samplesPerSecond;
+			const sampleTime: number = 1.0 / synth.samplesPerSecond;
 			const beatsPerPart: number = 1.0 / Config.partsPerBeat;
-			const toneWasActive: boolean = tone.active;
 			const tickSampleCountdown: number = synth.tickSampleCountdown;
 			const startRatio: number = 1.0 - (tickSampleCountdown            ) / samplesPerTick;
 			const endRatio:   number = 1.0 - (tickSampleCountdown - runLength) / samplesPerTick;
-			const ticksIntoBar: number = (synth.beat * Config.partsPerBeat + synth.part) * Config.ticksPerPart + synth.tick;
+			const ticksIntoBar: number = synth.getTicksIntoBar();
 			const partTimeTickStart: number = (ticksIntoBar    ) / Config.ticksPerPart;
 			const partTimeTickEnd:   number = (ticksIntoBar + 1) / Config.ticksPerPart;
 			const partTimeStart: number = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * startRatio;
 			const partTimeEnd: number   = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * endRatio;
 			const partsPerBar: number = Config.partsPerBeat * song.beatsPerBar;
+			const currentPart: number = synth.getCurrentPart();
 			
-			tone.phaseDeltaScale = 0.0;
 			tone.vibratoScale = 0.0;
-			tone.intervalMult = 1.0;
-			tone.intervalExpressionMult = 1.0;
-			tone.active = false;
+			tone.specialIntervalMult = 1.0;
+			tone.specialIntervalExpressionMult = 1.0;
 			
-			let resetPhases: boolean = true;
 			let toneIsOnLastTick: boolean = shouldFadeOutFast;
 			let intervalStart: number = 0.0;
 			let intervalEnd: number = 0.0;
@@ -4117,10 +4635,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			let transitionExpressionEnd: number = 1.0;
 			let chordExpressionStart: number = chordExpression;
 			let chordExpressionEnd:   number = chordExpression;
-			let noteExpressionStart: number = 0.0;
-			let noteExpressionEnd: number = 0.0;
-			let decayTimeStart: number = 0.0;
-			let decayTimeEnd:   number = 0.0;
 			
 			let expressionReferencePitch: number = 16; // A low "E" as a MIDI pitch.
 			let basePitch: number = Config.keys[song.key].basePitch;
@@ -4157,62 +4671,44 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				throw new Error("Unknown instrument type in computeTone.");
 			}
 			
-			for (let i: number = 0; i < Config.operatorCount; i++) {
+			const maxWaves: number = Math.max(Config.maxChordSize, Config.operatorCount);
+			for (let i: number = 0; i < maxWaves; i++) {
 				tone.phaseDeltas[i] = 0.0;
 				tone.expressionStarts[i] = 0.0;
 				tone.expressionDeltas[i] = 0.0;
+				tone.phaseDeltaScales[i] = 0.0;
 			}
 
 			if (released) {
 				const startTicksSinceReleased: number = tone.ticksSinceReleased + startRatio;
 				const endTicksSinceReleased:   number = tone.ticksSinceReleased + endRatio;
-				const startTick: number = tone.noteLengthTicks + startTicksSinceReleased;
-				const endTick:   number = tone.noteLengthTicks + endTicksSinceReleased;
-				const toneTransition: Transition = instrument.getTransition();
-				resetPhases = false;
 				intervalStart = intervalEnd = tone.lastInterval;
-				noteExpressionStart = noteExpressionEnd = Synth.expressionToVolumeMult(tone.lastNoteExpression);
-				transitionExpressionStart = Synth.expressionToVolumeMult((1.0 - startTicksSinceReleased / toneTransition.releaseTicks) * 3.0);
-				transitionExpressionEnd   = Synth.expressionToVolumeMult((1.0 - endTicksSinceReleased / toneTransition.releaseTicks) * 3.0);
-				decayTimeStart = startTick / Config.ticksPerPart;
-				decayTimeEnd   = endTick / Config.ticksPerPart;
+				transitionExpressionStart = Synth.noteSizeToVolumeMult((1.0 - startTicksSinceReleased / transition.releaseTicks) * Config.noteSizeMax);
+				transitionExpressionEnd   = Synth.noteSizeToVolumeMult((1.0 - endTicksSinceReleased / transition.releaseTicks) * Config.noteSizeMax);
 
 				if (shouldFadeOutFast) {
 					transitionExpressionStart *= 1.0 - startRatio;
 					transitionExpressionEnd *= 1.0 - endRatio;
 				}
 				
-				if (tone.ticksSinceReleased + 1 >= toneTransition.releaseTicks) toneIsOnLastTick = true;
+				if (tone.ticksSinceReleased + 1 >= transition.releaseTicks) toneIsOnLastTick = true;
 			} else if (tone.note == null) {
 				transitionExpressionStart = transitionExpressionEnd = 1;
-				noteExpressionStart = noteExpressionEnd = 1;
 				tone.lastInterval = 0;
-				tone.lastNoteExpression = 3;
+				tone.lastNoteSize = 3;
 				tone.ticksSinceReleased = 0;
-				resetPhases = false;
 				
-				const heldTicksStart: number = tone.liveInputSamplesHeld / samplesPerTick;
 				tone.liveInputSamplesHeld += runLength;
 				const heldTicksEnd: number = tone.liveInputSamplesHeld / samplesPerTick;
 				tone.noteLengthTicks = heldTicksEnd;
-				const heldPartsStart: number = heldTicksStart / Config.ticksPerPart;
-				const heldPartsEnd: number = heldTicksEnd / Config.ticksPerPart;
-				
-				decayTimeStart = heldPartsStart;
-				decayTimeEnd   = heldPartsEnd;
 			} else {
 				const note: Note = tone.note;
-				const prevNote: Note | null = tone.prevNote;
 				const nextNote: Note | null = tone.nextNote;
 
-				const time: number = synth.part + synth.beat * Config.partsPerBeat;
 				const noteStart: number = tone.noteStart;
 				const noteEnd: number = tone.noteEnd;
 				
-				let endPinIndex: number;
-				for (endPinIndex = 1; endPinIndex < note.pins.length - 1; endPinIndex++) {
-					if (note.pins[endPinIndex].time + note.start > time) break;
-				}
+				const endPinIndex: number = note.getEndPinIndex(currentPart);
 				const startPin: NotePin = note.pins[endPinIndex-1];
 				const endPin: NotePin = note.pins[endPinIndex];
 				const noteStartTick: number = noteStart * Config.ticksPerPart;
@@ -4222,105 +4718,72 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				const pinEnd:   number  = (note.start +   endPin.time) * Config.ticksPerPart;
 				
 				tone.lastInterval = note.pins[note.pins.length - 1].interval;
-				tone.lastNoteExpression = note.pins[note.pins.length - 1].expression;
+				tone.lastNoteSize = note.pins[note.pins.length - 1].size;
 				tone.ticksSinceReleased = 0;
 				tone.noteLengthTicks = noteLengthTicks;
 				
-				const tickTimeStart: number = time * Config.ticksPerPart + synth.tick;
-				const tickTimeEnd:   number = time * Config.ticksPerPart + synth.tick + 1;
+				const tickTimeStart: number = currentPart * Config.ticksPerPart + synth.tick;
+				const tickTimeEnd:   number = currentPart * Config.ticksPerPart + synth.tick + 1;
 				const noteTicksPassedTickStart: number = tickTimeStart - noteStartTick;
 				const noteTicksPassedTickEnd: number = tickTimeEnd - noteStartTick;
 				const pinRatioStart: number = Math.min(1.0, (tickTimeStart - pinStart) / (pinEnd - pinStart));
 				const pinRatioEnd:   number = Math.min(1.0, (tickTimeEnd   - pinStart) / (pinEnd - pinStart));
-				let noteExpressionTickStart: number = startPin.expression + (endPin.expression - startPin.expression) * pinRatioStart;
-				let noteExpressionTickEnd:   number = startPin.expression + (endPin.expression - startPin.expression) * pinRatioEnd;
 				let transitionExpressionTickStart: number = 1.0;
 				let transitionExpressionTickEnd:   number = 1.0;
-				let chordExpressionTickStart: number = chordExpression;
-				let chordExpressionTickEnd:   number = chordExpression;
 				let intervalTickStart: number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioStart;
 				let intervalTickEnd:   number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioEnd;
-				let decayTimeTickStart: number = partTimeTickStart - noteStart;
-				let decayTimeTickEnd:   number = partTimeTickEnd - noteStart;
 				
-				resetPhases = (tickTimeStart + startRatio - noteStartTick == 0.0) || !toneWasActive;
-				
-				// if seamless, don't reset phases at start. (it's probably not necessary to constantly reset phases if there are no notes? Just do it once when note starts? But make sure that reset phases doesn't also reset stuff that this function did to set up the tone. Remember when the first run length was lost!
-				// if slide, average the interval, decayTime, and custom expression at the endpoints and interpolate between over slide duration.
-				// note that currently seamless and slide make different assumptions about whether a note at the end of a bar will connect with the next bar!
-				const maximumSlideTicks: number = noteLengthTicks * 0.5;
-				if (transition.isSeamless && !transition.slides && note.start == 0) {
-					// Special case for seamless, no-slide transition: assume the previous bar ends with another seamless note, don't reset tone history.
-					resetPhases = !toneWasActive;
-				} else if (transition.isSeamless && prevNote != null) {
-					resetPhases = !toneWasActive;
-					if (transition.slides) {
-						const slideTicks: number = Math.min(maximumSlideTicks, transition.slideTicks);
-						const slideRatioStartTick: number = Math.max(0.0, 1.0 - noteTicksPassedTickStart / slideTicks);
-						const slideRatioEndTick:   number = Math.max(0.0, 1.0 - noteTicksPassedTickEnd / slideTicks);
-						const intervalDiff: number = ((prevNote.pitches[tone.prevNotePitchIndex] + prevNote.pins[prevNote.pins.length-1].interval) - tone.pitches[0]) * 0.5;
-						const expressionDiff: number = (prevNote.pins[prevNote.pins.length-1].expression - note.pins[0].expression) * 0.5;
-						const decayTimeDiff: number = (prevNote.end - prevNote.start) * 0.5;
-						intervalTickStart += slideRatioStartTick * intervalDiff;
-						intervalTickEnd += slideRatioEndTick * intervalDiff;
-						noteExpressionTickStart += slideRatioStartTick * expressionDiff;
-						noteExpressionTickEnd += slideRatioEndTick * expressionDiff;
-						decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
-						decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
-						
-						if (!chord.arpeggiates) {
-							const chordSizeDiff: number = (prevNote.pitches.length - tone.chordSize) * 0.5;
-							chordExpressionTickStart = Synth.computeChordExpression(tone.chordSize + slideRatioStartTick * chordSizeDiff);
-							chordExpressionTickEnd = Synth.computeChordExpression(tone.chordSize + slideRatioEndTick * chordSizeDiff);
-						}
-					}
-				}
 				if (transition.isSeamless && !transition.slides && note.end == partsPerBar) {
-					// Special case for seamless, no-slide transition: assume the next bar starts with another seamless note, don't fade out.
+					// Special case hack for seamless, no-slide transition: assume the next bar starts with another seamless note, don't fade out.
+					// Note that currently seamless and slide make different assumptions about whether a note at the end of a bar will connect with a note at the start of the next bar!
 				} else if (transition.isSeamless && nextNote != null) {
-					if (transition.slides) {
-						const slideTicks: number = Math.min(maximumSlideTicks, transition.slideTicks);
-						const slideRatioStartTick: number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickStart) / slideTicks);
-						const slideRatioEndTick:   number = Math.max(0.0, 1.0 - (noteLengthTicks - noteTicksPassedTickEnd) / slideTicks);
-						const intervalDiff: number = (nextNote.pitches[tone.nextNotePitchIndex] - (tone.pitches[0] + note.pins[note.pins.length-1].interval)) * 0.5;
-						const expressionDiff: number = (nextNote.pins[0].expression - note.pins[note.pins.length-1].expression) * 0.5;
-						const decayTimeDiff: number = -(noteEnd - noteStart) * 0.5;
-						intervalTickStart += slideRatioStartTick * intervalDiff;
-						intervalTickEnd += slideRatioEndTick * intervalDiff;
-						noteExpressionTickStart += slideRatioStartTick * expressionDiff;
-						noteExpressionTickEnd += slideRatioEndTick * expressionDiff;
-						decayTimeTickStart += slideRatioStartTick * decayTimeDiff;
-						decayTimeTickEnd += slideRatioEndTick * decayTimeDiff;
-						
-						if (!chord.arpeggiates) {
-							const chordSizeDiff: number = (nextNote.pitches.length - tone.chordSize) * 0.5;
-							chordExpressionTickStart = Synth.computeChordExpression(tone.chordSize + slideRatioStartTick * chordSizeDiff);
-							chordExpressionTickEnd = Synth.computeChordExpression(tone.chordSize + slideRatioEndTick * chordSizeDiff);
-						}
-					}
-				} else if (!transition.releases) {
-					const releaseTicks: number = transition.releaseTicks;
-					if (releaseTicks > 0.0) {
-						transitionExpressionTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / releaseTicks);
-						transitionExpressionTickEnd   *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickEnd) / releaseTicks);
-						if (tickTimeEnd >= noteStartTick + noteLengthTicks) toneIsOnLastTick = true;
-					}
+					// For seamless transitions, if this note is immediately followed by another, don't fade out yet and let the next note take over this tone.
+				} else if (!transition.releases && transition.releaseTicks > 0.0) {
+					// If the tone should fade out before the end of the note, do so here.
+					transitionExpressionTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / transition.releaseTicks);
+					transitionExpressionTickEnd   *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickEnd) / transition.releaseTicks);
+					if (tickTimeEnd >= noteStartTick + noteLengthTicks) toneIsOnLastTick = true;
 				}
 				
 				intervalStart = intervalTickStart + (intervalTickEnd - intervalTickStart) * startRatio;
 				intervalEnd   = intervalTickStart + (intervalTickEnd - intervalTickStart) * endRatio;
-				noteExpressionStart = Synth.expressionToVolumeMult(noteExpressionTickStart + (noteExpressionTickEnd - noteExpressionTickStart) * startRatio);
-				noteExpressionEnd   = Synth.expressionToVolumeMult(noteExpressionTickStart + (noteExpressionTickEnd - noteExpressionTickStart) * endRatio);
 				transitionExpressionStart = transitionExpressionTickStart + (transitionExpressionTickEnd - transitionExpressionTickStart) * startRatio;
 				transitionExpressionEnd   = transitionExpressionTickStart + (transitionExpressionTickEnd - transitionExpressionTickStart) * endRatio;
-				chordExpressionStart = chordExpressionTickStart + (chordExpressionTickEnd - chordExpressionTickStart) * startRatio;
-				chordExpressionEnd = chordExpressionTickStart + (chordExpressionTickEnd - chordExpressionTickStart) * endRatio;
-				decayTimeStart = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * startRatio;
-				decayTimeEnd   = decayTimeTickStart + (decayTimeTickEnd - decayTimeTickStart) * endRatio;
 			}
 			
-			const sampleTime: number = 1.0 / synth.samplesPerSecond;
-			tone.active = true;
+			tone.isOnLastTick = toneIsOnLastTick;
+			
+			// Compute envelopes *after* resetting the tone, otherwise the envelope computer gets reset too!
+			const envelopeComputer: EnvelopeComputer = tone.envelopeComputer;
+			envelopeComputer.computeEnvelopes(instrument, currentPart, Config.ticksPerPart * partTimeStart, Config.ticksPerPart * partTimeEnd, secondsPerPart * (partTimeEnd - partTimeStart), tone, released);
+			const envelopeStarts: number[] = tone.envelopeComputer.envelopeStarts;
+			const envelopeEnds: number[] = tone.envelopeComputer.envelopeEnds;
+			
+			if (tone.note != null && transition.slides) {
+				// Slide interval and chordExpression at the start and/or end of the note if necessary.
+				const prevNote: Note | null = tone.prevNote;
+				const nextNote: Note | null = tone.nextNote;
+				if (prevNote != null) {
+					const intervalDiff: number = prevNote.pitches[tone.prevNotePitchIndex] - tone.pitches[0] + prevNote.pins[prevNote.pins.length-1].interval;
+					if (envelopeComputer.prevSlideStart) intervalStart += intervalDiff * envelopeComputer.prevSlideRatioStart;
+					if (envelopeComputer.prevSlideEnd)   intervalEnd   += intervalDiff * envelopeComputer.prevSlideRatioEnd;
+					if (!chord.singleTone) {
+						const chordSizeDiff: number = prevNote.pitches.length - tone.chordSize;
+						if (envelopeComputer.prevSlideStart) chordExpressionStart = Synth.computeChordExpression(tone.chordSize + chordSizeDiff * envelopeComputer.prevSlideRatioStart);
+						if (envelopeComputer.prevSlideEnd)   chordExpressionEnd   = Synth.computeChordExpression(tone.chordSize + chordSizeDiff * envelopeComputer.prevSlideRatioEnd);
+					}
+				}
+				if (nextNote != null) {
+					const intervalDiff: number = nextNote.pitches[tone.nextNotePitchIndex] - (tone.pitches[0] + tone.note.pins[tone.note.pins.length-1].interval);
+					if (envelopeComputer.nextSlideStart) intervalStart += intervalDiff * envelopeComputer.nextSlideRatioStart;
+					if (envelopeComputer.nextSlideEnd)   intervalEnd   += intervalDiff * envelopeComputer.nextSlideRatioEnd;
+					if (!chord.singleTone) {
+						const chordSizeDiff: number = nextNote.pitches.length - tone.chordSize;
+						if (envelopeComputer.nextSlideStart) chordExpressionStart = Synth.computeChordExpression(tone.chordSize + chordSizeDiff * envelopeComputer.nextSlideRatioStart);
+						if (envelopeComputer.nextSlideEnd)   chordExpressionEnd   = Synth.computeChordExpression(tone.chordSize + chordSizeDiff * envelopeComputer.nextSlideRatioEnd);
+					}
+				}
+			}
 			
 			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.pickedString) {
 				// Smoothly interpolate between the vibrato LFO curve at the end of the bar and the beginning of the next one. (Mostly to avoid a discontinuous frequency which retriggers string plucking.)
@@ -4334,28 +4797,32 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					lfoEnd += (lfoWrappedEnd - lfoEnd) * wrapT;
 				}
 				
-				const ticksUntilVibratoStart: number = Config.vibratos[instrument.vibrato].delayTicks - decayTimeStart;
-				const ticksUntilVibratoEnd: number = Config.vibratos[instrument.vibrato].delayTicks - decayTimeEnd;
-				const vibratoScaleStart: number = Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoStart / 2.0));
-				const vibratoScaleEnd: number = Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoEnd / 2.0));
+				const vibratoDepthEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.vibratoDepth];
+				const vibratoDepthEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.vibratoDepth];
 				
 				const vibratoAmplitude: number = Config.vibratos[instrument.vibrato].amplitude;
-				const vibratoStart: number = vibratoScaleStart * lfoStart * vibratoAmplitude;
-				const vibratoEnd:   number = vibratoScaleEnd * lfoEnd * vibratoAmplitude;
+				let vibratoStart: number = vibratoAmplitude * lfoStart * vibratoDepthEnvelopeStart;
+				let vibratoEnd:   number = vibratoAmplitude * lfoEnd   * vibratoDepthEnvelopeEnd;
+				const delayTicks: number = Config.vibratos[instrument.vibrato].delayTicks;
+				if (delayTicks > 0.0) {
+					const ticksUntilVibratoStart: number = delayTicks - envelopeComputer.noteTicksStart;
+					const ticksUntilVibratoEnd:   number = delayTicks - envelopeComputer.noteTicksEnd;
+					vibratoStart *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoStart / 2.0));
+					vibratoEnd   *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoEnd   / 2.0));
+				}
 				intervalStart += vibratoStart;
 				intervalEnd   += vibratoEnd;
 			}
+			// TODO: This is unused for FM instruments, but is used by both picked string and everything else, maybe those two cases can be combined and this can be moved into the common part of them:
+			const basePhaseDeltaScale: number = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
 			
 			if (!transition.isSeamless || (!(!transition.slides && tone.note != null && tone.note.start == 0) && !(tone.prevNote != null))) {
+				// Fade in the beginning of the note.
 				const attackSeconds: number = transition.attackSeconds;
 				if (attackSeconds > 0.0) {
-					transitionExpressionStart *= Math.min(1.0, secondsPerPart * decayTimeStart / attackSeconds);
-					transitionExpressionEnd   *= Math.min(1.0, secondsPerPart * decayTimeEnd / attackSeconds);
+					transitionExpressionStart *= Math.min(1.0, envelopeComputer.noteSecondsStart / attackSeconds);
+					transitionExpressionEnd   *= Math.min(1.0, envelopeComputer.noteSecondsEnd   / attackSeconds);
 				}
-			}
-			
-			if (resetPhases) {
-				tone.reset();
 			}
 			
 			if (instrument.type == InstrumentType.drumset) {
@@ -4367,32 +4834,22 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				tone.drumsetPitch = Math.max(0, Math.min(Config.drumCount - 1, tone.drumsetPitch));
 			}
 			
-			let noteFilterExpression: number = 1.0;
-			let noteFilterEnvelope: Envelope = Config.envelopes.dictionary["steady"];
+			let noteFilterExpression: number = envelopeComputer.lowpassCutoffDecayVolumeCompensation;
 			if (!effectsIncludeNoteFilter(instrument.effects)) {
 				tone.noteFilterCount = 0;
 			} else {
-				// TODO: Oh dear this is gonna be awkward to handle... And it should be inverted for highpass?
-				// I guess the envelope type and speed should be passed in to getVolumeCompensationMult()...
-				// Oh but there may be an unbounded number of these! And they may be multiplied by other envelopes!
-				// And the envelope should have no effect if there's no filter control points!
-				// And how does it interact with drumset?
-				noteFilterEnvelope = instrument.getFilterEnvelope();
-				if (noteFilterEnvelope.type == EnvelopeType.decay) {
-					noteFilterExpression *= (1.25 + .025 * noteFilterEnvelope.speed);
-				} else if (noteFilterEnvelope.type == EnvelopeType.twang) {
-					noteFilterExpression *= (1 + .02 * noteFilterEnvelope.speed);
-				}
-				
-				// TODO: separate envelopes for each control point's freq or gain.
-				const noteFilterEnvelopeStart: number = Synth.computeEnvelope(noteFilterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, noteExpressionStart);
-				const noteFilterEnvelopeEnd: number = Synth.computeEnvelope(noteFilterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, noteExpressionEnd);
-				
 				const noteFilterSettings: FilterSettings = instrument.noteFilter;
+				
+				const noteAllFreqsEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.noteFilterAllFreqs];
+				const noteAllFreqsEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.noteFilterAllFreqs];
 				for (let i: number = 0; i < noteFilterSettings.controlPointCount; i++) {
+					const noteFreqEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.noteFilterFreq0 + i];
+					const noteFreqEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.noteFilterFreq0 + i];
+					const notePeakEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.noteFilterPeak0 + i];
+					const notePeakEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.noteFilterPeak0 + i];
 					const point: FilterControlPoint = noteFilterSettings.controlPoints[i];
-					point.toCoefficients(Synth.tempFilterStartCoefficients, synth.samplesPerSecond, noteFilterEnvelopeStart, 1.0, 1.0);
-					point.toCoefficients(Synth.tempFilterEndCoefficients, synth.samplesPerSecond, noteFilterEnvelopeEnd, 1.0, 1.0);
+					point.toCoefficients(Synth.tempFilterStartCoefficients, synth.samplesPerSecond, noteAllFreqsEnvelopeStart * noteFreqEnvelopeStart, notePeakEnvelopeStart);
+					point.toCoefficients(Synth.tempFilterEndCoefficients,   synth.samplesPerSecond, noteAllFreqsEnvelopeEnd   * noteFreqEnvelopeEnd,   notePeakEnvelopeEnd);
 					if (tone.noteFilters.length <= i) tone.noteFilters[i] = new DynamicBiquadFilter();
 					tone.noteFilters[i].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength);
 					noteFilterExpression *= point.getVolumeCompensationMult();
@@ -4402,21 +4859,20 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			
 			if (instrument.type == InstrumentType.drumset) {
 				const drumsetFilterEnvelope: Envelope = instrument.getDrumsetEnvelope(tone.drumsetPitch);
-				if (drumsetFilterEnvelope.type == EnvelopeType.decay) {
-					noteFilterExpression *= (1.25 + .025 * drumsetFilterEnvelope.speed);
-				} else if (drumsetFilterEnvelope.type == EnvelopeType.twang) {
-					noteFilterExpression *= (1 + .02 * drumsetFilterEnvelope.speed);
-				}
-				const drumsetFilterEnvelopeStart: number = Synth.computeEnvelope(drumsetFilterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, noteExpressionStart);
-				const drumsetFilterEnvelopeEnd: number = Synth.computeEnvelope(drumsetFilterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, noteExpressionEnd);
+				// If the drumset lowpass cutoff decays, compensate by increasing expression.
+				noteFilterExpression *= EnvelopeComputer.getLowpassCutoffDecayVolumeCompensation(drumsetFilterEnvelope)
+				
+				// Drumset filters use the same envelope timing as the rest of the envelopes, but do not include support for slide transitions.
+				const drumsetFilterEnvelopeStart: number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, envelopeComputer.noteSecondsStart, beatsPerPart * partTimeStart, envelopeComputer.noteSizeStart);
+				const drumsetFilterEnvelopeEnd:   number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, envelopeComputer.noteSecondsEnd,   beatsPerPart * partTimeEnd,   envelopeComputer.noteSizeEnd);
 				
 				const point: FilterControlPoint = synth.tempDrumSetControlPoint;
 				point.type = FilterType.lowPass;
 				point.gain = FilterControlPoint.getRoundedSettingValueFromLinearGain(0.5);
 				point.freq = FilterControlPoint.getRoundedSettingValueFromHz(8000.0);
 				// Drumset envelopes are warped to better imitate the legacy simplified 2nd order lowpass at ~48000Hz that I used to use.
-				point.toCoefficients(Synth.tempFilterStartCoefficients, synth.samplesPerSecond, drumsetFilterEnvelopeStart * (1.0 + drumsetFilterEnvelopeStart), 1.0, 1.0);
-				point.toCoefficients(Synth.tempFilterEndCoefficients, synth.samplesPerSecond, drumsetFilterEnvelopeEnd * (1.0 + drumsetFilterEnvelopeEnd), 1.0, 1.0);
+				point.toCoefficients(Synth.tempFilterStartCoefficients, synth.samplesPerSecond, drumsetFilterEnvelopeStart * (1.0 + drumsetFilterEnvelopeStart), 1.0);
+				point.toCoefficients(Synth.tempFilterEndCoefficients, synth.samplesPerSecond, drumsetFilterEnvelopeEnd * (1.0 + drumsetFilterEnvelopeEnd), 1.0);
 				if (tone.noteFilters.length == tone.noteFilterCount) tone.noteFilters[tone.noteFilterCount] = new DynamicBiquadFilter();
 				tone.noteFilters[tone.noteFilterCount].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength);
 				tone.noteFilterCount++;
@@ -4431,7 +4887,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				let totalCarrierExpression: number = 0.0;
 
 				let arpeggioInterval: number = 0;
-				const arpeggiates: boolean = chord.arpeggiates && !chord.customInterval;
+				const arpeggiates: boolean = chord.arpeggiates;
 				if (tone.pitchCount > 1 && arpeggiates) {
 					const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.rhythms[song.rhythm].ticksPerArpeggio);
 					arpeggioInterval = tone.pitches[getArpeggioPitchIndex(tone.pitchCount, song.rhythm, arpeggio)] - tone.pitches[0];
@@ -4443,10 +4899,27 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					const pitch: number = tone.pitches[arpeggiates ? 0 : ((i < tone.pitchCount) ? i : ((associatedCarrierIndex < tone.pitchCount) ? associatedCarrierIndex : 0))];
 					const freqMult = Config.operatorFrequencies[instrument.operators[i].frequency].mult;
 					const interval = Config.operatorCarrierInterval[associatedCarrierIndex] + arpeggioInterval;
-					const startPitch: number = basePitch + (pitch + intervalStart) * intervalScale + interval;
-					const startFreq: number = freqMult * (Instrument.frequencyFromPitch(startPitch)) + Config.operatorFrequencies[instrument.operators[i].frequency].hzOffset;
+					const pitchStart: number = basePitch + (pitch + intervalStart) * intervalScale + interval;
+					const pitchEnd: number = basePitch + (pitch + intervalEnd) * intervalScale + interval;
+					const baseFreqStart: number = Instrument.frequencyFromPitch(pitchStart);
+					const baseFreqEnd:   number = Instrument.frequencyFromPitch(pitchEnd);
+					const hzOffset: number = Config.operatorFrequencies[instrument.operators[i].frequency].hzOffset;
+					const targetFreqStart: number = freqMult * baseFreqStart + hzOffset;
+					const targetFreqEnd:   number = freqMult * baseFreqEnd   + hzOffset;
 					
-					tone.phaseDeltas[i] = startFreq * sampleTime * Config.sineWaveLength;
+					const freqEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.operatorFrequency0 + i];
+					const freqEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.operatorFrequency0 + i];
+					let freqStart: number;
+					let freqEnd:   number;
+					if (freqEnvelopeStart != 1.0 || freqEnvelopeEnd != 1.0) {
+						freqStart = Math.pow(2.0, Math.log2(targetFreqStart / baseFreqStart) * freqEnvelopeStart) * baseFreqStart;
+						freqEnd   = Math.pow(2.0, Math.log2(targetFreqEnd   / baseFreqEnd)   * freqEnvelopeEnd)   * baseFreqEnd;
+					} else {
+						freqStart = targetFreqStart;
+						freqEnd   = targetFreqEnd;
+					}
+					tone.phaseDeltas[i] = freqStart * sampleTime * Config.sineWaveLength;
+					tone.phaseDeltaScales[i] = Math.pow(freqEnd / freqStart, 1.0 / runLength);
 					
 					const amplitudeCurve: number = Synth.operatorAmplitudeCurve(instrument.operators[i].amplitude);
 					const amplitudeMult: number = amplitudeCurve * Config.operatorFrequencies[instrument.operators[i].frequency].amplitudeSign;
@@ -4454,11 +4927,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					let expressionEnd: number = amplitudeMult;
 					if (i < carrierCount) {
 						// carrier
-						const endPitch: number = basePitch + (pitch + intervalEnd) * intervalScale + interval;
-						const pitchExpressionStart: number = Math.pow(2.0, -(startPitch - expressionReferencePitch) / pitchDamping);
-						const pitchExpressionEnd: number   = Math.pow(2.0,   -(endPitch - expressionReferencePitch) / pitchDamping);
+						const pitchExpressionStart: number = Math.pow(2.0, -(pitchStart - expressionReferencePitch) / pitchDamping);
+						const pitchExpressionEnd: number   = Math.pow(2.0, -(pitchEnd   - expressionReferencePitch) / pitchDamping);
 						expressionStart *= baseExpression * pitchExpressionStart * transitionExpressionStart * noteFilterExpression * chordExpressionStart;
 						expressionEnd *= baseExpression * pitchExpressionEnd * transitionExpressionEnd * noteFilterExpression * chordExpressionEnd;
+						expressionStart *= envelopeStarts[NoteAutomationIndex.noteVolume];
+						expressionEnd *= envelopeEnds[NoteAutomationIndex.noteVolume];
 						
 						totalCarrierExpression += amplitudeCurve;
 					} else {
@@ -4468,10 +4942,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						
 						sineExpressionBoost *= 1.0 - Math.min(1.0, instrument.operators[i].amplitude / 15);
 					}
-					const operatorEnvelope: Envelope = Config.envelopes[instrument.operators[i].envelope];
 					
-					expressionStart *= Synth.computeEnvelope(operatorEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, noteExpressionStart);
-					expressionEnd *= Synth.computeEnvelope(operatorEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, noteExpressionEnd);
+					expressionStart *= envelopeStarts[NoteAutomationIndex.operatorAmplitude0 + i];
+					expressionEnd   *= envelopeEnds[  NoteAutomationIndex.operatorAmplitude0 + i];
 					
 					tone.expressionStarts[i] = expressionStart;
 					tone.expressionDeltas[i] = (expressionEnd - expressionStart) / runLength;
@@ -4485,16 +4958,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					tone.expressionDeltas[i] *= sineExpressionBoost;
 				}
 				
-				// TODO: Default to applying noteExpression to carrier tone.expression if
-				// not otherwise used, like other instruments. Currently it's only applied
-				// to carriers if the "custom" envelope is explicitly used. Need to
-				// preserve the existing behavior if there aren't any existing "custom"
-				// envelopes by redirecting the noteExpression to an empty target.
-				
 				const feedbackAmplitude: number = Config.sineWaveLength * 0.3 * instrument.feedbackAmplitude / 15.0;
-				const feedbackEnvelope: Envelope = Config.envelopes[instrument.feedbackEnvelope];
-				let feedbackStart: number = feedbackAmplitude * Synth.computeEnvelope(feedbackEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, noteExpressionStart);
-				let feedbackEnd: number = feedbackAmplitude * Synth.computeEnvelope(feedbackEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, noteExpressionEnd);
+				let feedbackStart: number = feedbackAmplitude * envelopeStarts[NoteAutomationIndex.feedbackAmplitude];
+				let feedbackEnd:   number = feedbackAmplitude * envelopeEnds[  NoteAutomationIndex.feedbackAmplitude];
 				tone.feedbackMult = feedbackStart;
 				tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 			} else if (instrument.type == InstrumentType.pickedString) {
@@ -4508,18 +4974,18 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				}
 				
 				const startPitch: number = basePitch + (pitch + intervalStart) * intervalScale;
-				const endPitch: number = basePitch + (pitch + intervalEnd) * intervalScale;
+				const endPitch:   number = basePitch + (pitch + intervalEnd)   * intervalScale;
 				tone.phaseDeltas[0] = Instrument.frequencyFromPitch(startPitch) * sampleTime;
+				tone.phaseDeltaScales[0] = basePhaseDeltaScale;
 				const pitchExpressionStart: number = Math.pow(2.0, -(startPitch - expressionReferencePitch) / pitchDamping);
-				const pitchExpressionEnd: number   = Math.pow(2.0,   -(endPitch - expressionReferencePitch) / pitchDamping);
+				const pitchExpressionEnd:   number = Math.pow(2.0,   -(endPitch - expressionReferencePitch) / pitchDamping);
 				
 				let expressionStart: number = baseExpression * chordExpressionStart * transitionExpressionStart * noteFilterExpression * pitchExpressionStart * decayExpression;
-				let expressionEnd: number = baseExpression * chordExpressionEnd * transitionExpressionEnd * noteFilterExpression * pitchExpressionEnd * decayExpression;
-				// TODO: Generalize this special case of noteFilterEnvelope.
-				if (noteFilterEnvelope.type != EnvelopeType.custom) {
-					expressionStart *= noteExpressionStart;
-					expressionEnd *= noteExpressionEnd;
-				}
+				let expressionEnd:   number = baseExpression * chordExpressionEnd   * transitionExpressionEnd   * noteFilterExpression * pitchExpressionEnd   * decayExpression;
+				
+				expressionStart *= envelopeStarts[NoteAutomationIndex.noteVolume];
+				expressionEnd   *= envelopeEnds[  NoteAutomationIndex.noteVolume];
+				
 				tone.expressionStarts[0] = expressionStart;
 				tone.expressionDeltas[0] = (expressionEnd - expressionStart) / runLength;
 				
@@ -4527,12 +4993,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			} else {
 				let pitch: number = tone.pitches[0];
 
-				if (tone.pitchCount > 1 && chord.arpeggiates) {
+				if (tone.pitchCount > 1 && (chord.arpeggiates || chord.customInterval)) {
 					const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.rhythms[song.rhythm].ticksPerArpeggio);
 					if (chord.customInterval) {
 						const intervalOffset: number = tone.pitches[1 + getArpeggioPitchIndex(tone.pitchCount - 1, song.rhythm, arpeggio)] - tone.pitches[0];
-						tone.intervalMult = Math.pow(2.0, intervalOffset / 12.0);
-						tone.intervalExpressionMult = Math.pow(2.0, -intervalOffset / pitchDamping);
+						tone.specialIntervalMult = Math.pow(2.0, intervalOffset / 12.0);
+						tone.specialIntervalExpressionMult = Math.pow(2.0, -intervalOffset / pitchDamping);
 					} else {
 						pitch = tone.pitches[getArpeggioPitchIndex(tone.pitchCount, song.rhythm, arpeggio)];
 					}
@@ -4541,9 +5007,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				const startPitch: number = basePitch + (pitch + intervalStart) * intervalScale;
 				const endPitch: number = basePitch + (pitch + intervalEnd) * intervalScale;
 				const startFreq: number = Instrument.frequencyFromPitch(startPitch);
-				
-				tone.phaseDeltas[0] = startFreq * sampleTime;
-				
 				const pitchExpressionStart: number = Math.pow(2.0, -(startPitch - expressionReferencePitch) / pitchDamping);
 				const pitchExpressionEnd: number   = Math.pow(2.0,   -(endPitch - expressionReferencePitch) / pitchDamping);
 				let settingsExpressionMult: number = baseExpression;
@@ -4554,32 +5017,40 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					settingsExpressionMult *= Config.chipWaves[instrument.chipWave].expression;
 				}
 				if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics) {
-					settingsExpressionMult *= Config.intervals[instrument.interval].expression;
+					// The chip and harmonics instruments have two waves at different frequencies for the unison feature.
+					settingsExpressionMult *= Config.unisons[instrument.unison].expression;
+					const unisonEnvelopeStart = envelopeStarts[NoteAutomationIndex.unison];
+					const unisonEnvelopeEnd   = envelopeEnds[  NoteAutomationIndex.unison];
+					const offset: number = Config.unisons[instrument.unison].offset;
+					const spread: number = Config.unisons[instrument.unison].spread;
+					const unisonAStart: number = Math.pow(2.0, (offset + spread) * unisonEnvelopeStart / 12.0);
+					const unisonAEnd:   number = Math.pow(2.0, (offset + spread) * unisonEnvelopeEnd   / 12.0);
+					const unisonBStart: number = Math.pow(2.0, (offset - spread) * unisonEnvelopeStart / 12.0) * tone.specialIntervalMult;
+					const unisonBEnd:   number = Math.pow(2.0, (offset - spread) * unisonEnvelopeEnd   / 12.0) * tone.specialIntervalMult;
+					tone.phaseDeltas[0] = startFreq * sampleTime * unisonAStart;
+					tone.phaseDeltas[1] = startFreq * sampleTime * unisonBStart;
+					tone.phaseDeltaScales[0] = basePhaseDeltaScale * Math.pow(unisonAEnd / unisonAStart, 1.0 / runLength);
+					tone.phaseDeltaScales[1] = basePhaseDeltaScale * Math.pow(unisonBEnd / unisonBStart, 1.0 / runLength);
+				} else {
+					tone.phaseDeltas[0] = startFreq * sampleTime;
+					tone.phaseDeltaScales[0] = basePhaseDeltaScale;
 				}
 				if (instrument.type == InstrumentType.pwm) {
-					const pulseEnvelope: Envelope = Config.envelopes[instrument.pulseEnvelope];
 					const basePulseWidth: number = getPulseWidthRatio(instrument.pulseWidth);
-					const pulseWidthStart: number = basePulseWidth * Synth.computeEnvelope(pulseEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, noteExpressionStart);
-					const pulseWidthEnd: number = basePulseWidth * Synth.computeEnvelope(pulseEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, noteExpressionEnd);
-					
+					const pulseWidthStart: number = basePulseWidth * envelopeStarts[NoteAutomationIndex.pulseWidth];
+					const pulseWidthEnd:   number = basePulseWidth * envelopeEnds[  NoteAutomationIndex.pulseWidth];
 					tone.pulseWidth = pulseWidthStart;
 					tone.pulseWidthDelta = (pulseWidthEnd - pulseWidthStart) / runLength;
 				}
 				
 				let expressionStart: number = settingsExpressionMult * transitionExpressionStart * chordExpressionStart * pitchExpressionStart * noteFilterExpression;
 				let expressionEnd: number = settingsExpressionMult * transitionExpressionEnd * chordExpressionEnd * pitchExpressionEnd * noteFilterExpression;
-				// TODO: Generalize this special case of noteFilterEnvelope.
-				if (noteFilterEnvelope.type != EnvelopeType.custom && (instrument.type != InstrumentType.pwm || Config.envelopes[instrument.pulseEnvelope].type != EnvelopeType.custom)) {
-					expressionStart *= noteExpressionStart;
-					expressionEnd *= noteExpressionEnd;
-				}
+				expressionStart *= envelopeStarts[NoteAutomationIndex.noteVolume];
+				expressionEnd   *= envelopeEnds[  NoteAutomationIndex.noteVolume];
 				
 				tone.expressionStarts[0] = expressionStart;
 				tone.expressionDeltas[0] = (expressionEnd - expressionStart) / runLength;
 			}
-			
-			tone.phaseDeltaScale = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
-			tone.isOnLastTick = toneIsOnLastTick;
 		}
 		
 		public static getLFOAmplitude(instrument: Instrument, secondsIntoBar: number): number {
@@ -4665,14 +5136,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const wave: Float64Array = Config.chipWaves[instrument.chipWave].samples;
 			const waveLength: number = wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
-			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
-			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.intervalMult;
-			const intervalSign: number = tone.intervalExpressionMult * Config.intervals[instrument.interval].sign;
-			if (instrument.interval == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
-			const deltaRatio: number = intervalB / intervalA;
-			let phaseDeltaA: number = tone.phaseDeltas[0] * intervalA * waveLength;
-			let phaseDeltaB: number = phaseDeltaA * deltaRatio;
-			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			const unisonSign: number = tone.specialIntervalExpressionMult * Config.unisons[instrument.unison].sign;
+			if (instrument.unison == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
+			let phaseDeltaA: number = tone.phaseDeltas[0] * waveLength;
+			let phaseDeltaB: number = tone.phaseDeltas[1] * waveLength;
+			const phaseDeltaScaleA: number = +tone.phaseDeltaScales[0];
+			const phaseDeltaScaleB: number = +tone.phaseDeltaScales[1];
 			let expression: number = +tone.expressionStarts[0];
 			const expressionDelta: number = +tone.expressionDeltas[0];
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
@@ -4716,13 +5185,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				prevWaveIntegralA = nextWaveIntegralA;
 				prevWaveIntegralB = nextWaveIntegralB;
 				
-				const inputSample: number = waveA + waveB * intervalSign;
+				const inputSample: number = waveA + waveB * unisonSign;
 				const sample: number = applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
 				initialFilterInput2 = initialFilterInput1;
 				initialFilterInput1 = inputSample;
 				
-				phaseDeltaA *= phaseDeltaScale;
-				phaseDeltaB *= phaseDeltaScale;
+				phaseDeltaA *= phaseDeltaScaleA;
+				phaseDeltaB *= phaseDeltaScaleB;
 				
 				const output: number = sample * expression;
 				expression += expressionDelta;
@@ -4743,14 +5212,12 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const wave: Float32Array = instrument.harmonicsWave.getCustomWave(instrument.type);
 			const waveLength: number = wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 			
-			const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
-			const intervalB: number =  Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.intervalMult;
-			const intervalSign: number = tone.intervalExpressionMult * Config.intervals[instrument.interval].sign;
-			if (instrument.interval == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
-			const deltaRatio: number = intervalB / intervalA;
-			let phaseDeltaA: number = tone.phaseDeltas[0] * intervalA * waveLength;
-			let phaseDeltaB: number = phaseDeltaA * deltaRatio;
-			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			const unisonSign: number = tone.specialIntervalExpressionMult * Config.unisons[instrument.unison].sign;
+			if (instrument.unison == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
+			let phaseDeltaA: number = tone.phaseDeltas[0] * waveLength;
+			let phaseDeltaB: number = tone.phaseDeltas[1] * waveLength;
+			const phaseDeltaScaleA: number = +tone.phaseDeltaScales[0];
+			const phaseDeltaScaleB: number = +tone.phaseDeltaScales[1];
 			let expression: number = +tone.expressionStarts[0];
 			const expressionDelta: number = +tone.expressionDeltas[0];
 			let phaseA: number = (tone.phases[0] % 1) * waveLength;
@@ -4794,13 +5261,13 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				prevWaveIntegralA = nextWaveIntegralA;
 				prevWaveIntegralB = nextWaveIntegralB;
 				
-				const inputSample: number = waveA + waveB * intervalSign;
+				const inputSample: number = waveA + waveB * unisonSign;
 				const sample: number = applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
 				initialFilterInput2 = initialFilterInput1;
 				initialFilterInput1 = inputSample;
 				
-				phaseDeltaA *= phaseDeltaScale;
-				phaseDeltaB *= phaseDeltaScale;
+				phaseDeltaA *= phaseDeltaScaleA;
+				phaseDeltaB *= phaseDeltaScaleB;
 				
 				const output: number = sample * expression;
 				expression += expressionDelta;
@@ -4824,7 +5291,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			
 			const delayBufferMask: number = synth.stringDelayBufferMask >>> 0;
 			
-			const stringDecay: number = 1.0 - instrument.stringSustain / (Config.stringSustainRange - 1);
+			const sustainEnvelopeStart: number = tone.envelopeComputer.envelopeStarts[NoteAutomationIndex.stringSustain];
+			const sustainEnvelopeEnd:   number = tone.envelopeComputer.envelopeEnds[  NoteAutomationIndex.stringSustain];
+			const stringDecayStart: number = 1.0 - Math.min(1.0, sustainEnvelopeStart * instrument.stringSustain / (Config.stringSustainRange - 1));
+			const stringDecayEnd:   number = 1.0 - Math.min(1.0, sustainEnvelopeEnd   * instrument.stringSustain / (Config.stringSustainRange - 1));
 			
 			if (tone.pickedString == null) tone.pickedString = new PickedString();
 			let pickedString: PickedString | null = tone.pickedString;
@@ -4845,7 +5315,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const expressionDelta: number = +tone.expressionDeltas[0];
 			
 			const phaseDeltaStart: number = +tone.phaseDeltas[0];
-			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 			const phaseDeltaEnd: number = phaseDeltaStart * Math.pow(phaseDeltaScale, runLength);
 			
 			const radiansPerSampleStart: number = Math.PI * 2.0 * phaseDeltaStart;
@@ -4869,13 +5339,14 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const allPassPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
 			
 			const shelfRadians: number = 2.0 * Math.PI * Config.pickedStringShelfHz / synth.samplesPerSecond;
-			const decayCurve: number = 0.2 * stringDecay + 0.8 * Math.pow(stringDecay, 4.0);
-			const decayRateStart: number = Math.pow(0.5, decayCurve * shelfRadians / radiansPerSampleStart);
-			const decayRateEnd: number = Math.pow(0.5, decayCurve * shelfRadians / radiansPerSampleEnd);
-			const shelfGainStart: number = Math.pow(decayRateStart, 0.06);
-			const shelfGainEnd: number = Math.pow(decayRateEnd, 0.06);
+			const decayCurveStart: number = 0.1 * stringDecayStart + 0.9 * Math.pow(stringDecayStart, 3.5);
+			const decayCurveEnd:   number = 0.1 * stringDecayEnd   + 0.9 * Math.pow(stringDecayEnd,   3.5);
+			const decayRateStart: number = Math.pow(0.5, decayCurveStart * shelfRadians / radiansPerSampleStart);
+			const decayRateEnd:   number = Math.pow(0.5, decayCurveEnd   * shelfRadians / radiansPerSampleEnd);
+			const shelfGainStart: number = Math.pow(decayRateStart, Config.stringDecayRate);
+			const shelfGainEnd:   number = Math.pow(decayRateEnd,   Config.stringDecayRate);
 			const expressionDecayStart: number = Math.pow(decayRateStart, 0.001);
-			const expressionDecayEnd: number = Math.pow(decayRateEnd, 0.001);
+			const expressionDecayEnd:   number = Math.pow(decayRateEnd,   0.001);
 			
 			Synth.tempFilterStartCoefficients.highShelf1stOrder(shelfRadians, shelfGainStart);
 			synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart);
@@ -5063,11 +5534,15 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					
 					effectsSource += `
 					
-					const distortionSlider = instrument.distortion / (beepbox.Config.distortionRange - 1);
-					const distortion = +Math.pow(1.0 - 0.95 * distortionSlider, 1.5);
-					const distortionReverse = 1.0 - distortion;
 					const distortionBaseVolume = +beepbox.Config.distortionBaseVolume;
-					const distortionDrive = (1.0 + 2.0 * distortionSlider) / distortionBaseVolume;
+					const distortionStart = +Math.pow(1.0 - 0.95 * instrumentState.distortionStart, 1.5);
+					const distortionEnd   = +Math.pow(1.0 - 0.95 * instrumentState.distortionEnd,   1.5);
+					let distortion = distortionStart;
+					const distortionDelta = (distortionEnd - distortionStart) / runLength;
+					const distortionDriveStart = (1.0 + 2.0 * instrumentState.distortionStart) / distortionBaseVolume;
+					const distortionDriveEnd   = (1.0 + 2.0 * instrumentState.distortionEnd)   / distortionBaseVolume;
+					let distortionDrive = distortionDriveStart;
+					const distortionDriveDelta = (distortionDriveEnd - distortionDriveStart) / runLength;
 					const distortionFractionalResolution = 4.0;
 					const distortionOversampleCompensation = distortionBaseVolume / distortionFractionalResolution;
 					const distortionFractionalDelay1 = 1.0 / distortionFractionalResolution;
@@ -5099,10 +5574,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					let bitcrusherPhaseDelta = +instrumentState.bitcrusherPhaseDelta;
 					const bitcrusherPhaseDeltaScale = +instrumentState.bitcrusherPhaseDeltaScale;
 					let bitcrusherScale = +instrumentState.bitcrusherScale;
-					const bitcrusherScaleDelta = +instrumentState.bitcrusherScaleDelta;
-					const bitcrusherFoldLevel = +instrumentState.bitcrusherFoldLevel;
-					const bitcrusherWrapMiddle = bitcrusherFoldLevel * 2.0;
-					const bitcrusherWrapLevel = bitcrusherFoldLevel * 4.0;`
+					const bitcrusherScaleScale = +instrumentState.bitcrusherScaleScale;
+					let bitcrusherFoldLevel = +instrumentState.bitcrusherFoldLevel;
+					const bitcrusherFoldLevelScale = +instrumentState.bitcrusherFoldLevelScale;`
 				}
 				
 				if (usesEqFilter) {
@@ -5129,8 +5603,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					const panningVolumeDeltaR = +instrumentState.panningVolumeDeltaR;
 					let   panningOffsetL      = panningDelayPos - instrumentState.panningOffsetStartL + synth.panningDelayBufferSize;
 					let   panningOffsetR      = panningDelayPos - instrumentState.panningOffsetStartR + synth.panningDelayBufferSize;
-					const panningOffsetDeltaL = instrumentState.panningOffsetDeltaL + 1.0;
-					const panningOffsetDeltaR = instrumentState.panningOffsetDeltaR + 1.0;`
+					const panningOffsetDeltaL = 1.0 - instrumentState.panningOffsetDeltaL;
+					const panningOffsetDeltaR = 1.0 - instrumentState.panningOffsetDeltaR;`
 				}
 				
 				if (usesChorus) {
@@ -5176,7 +5650,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (usesEcho) {
 					effectsSource += `
 					
-					const echoMult = +instrumentState.echoMult;
+					let echoMult = +instrumentState.echoMultStart;
+					const echoMultDelta = +instrumentState.echoMultDelta;
+					
 					const echoDelayLineL = instrumentState.echoDelayLineL;
 					const echoDelayLineR = instrumentState.echoDelayLineR;
 					const echoMask = (echoDelayLineL.length - 1) >>> 0;
@@ -5205,6 +5681,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					instrumentState.reverbDelayLineDirty = true;
 					let reverbDelayPos = instrumentState.reverbDelayPos & reverbMask;
 					
+					let reverb = +instrumentState.reverbMultStart;
+					const reverbDelta = +instrumentState.reverbMultDelta;
+					
 					const reverbShelfA1 = +instrumentState.reverbShelfA1;
 					const reverbShelfB0 = +instrumentState.reverbShelfB0;
 					const reverbShelfB1 = +instrumentState.reverbShelfB1;
@@ -5215,9 +5694,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 					let reverbShelfPrevInput0 = +instrumentState.reverbShelfPrevInput0;
 					let reverbShelfPrevInput1 = +instrumentState.reverbShelfPrevInput1;
 					let reverbShelfPrevInput2 = +instrumentState.reverbShelfPrevInput2;
-					let reverbShelfPrevInput3 = +instrumentState.reverbShelfPrevInput3;
-					
-					const reverb = +instrumentState.reverbMult;`
+					let reverbShelfPrevInput3 = +instrumentState.reverbShelfPrevInput3;`
 				}
 				
 				effectsSource += `
@@ -5230,6 +5707,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (usesDistortion) {
 					effectsSource += `
 						
+						const distortionReverse = 1.0 - distortion;
 						const distortionNextInput = sample * distortionDrive;
 						sample = distortionNextOutput;
 						distortionNextOutput = distortionNextInput / (distortionReverse * Math.abs(distortionNextInput) + distortion);
@@ -5242,7 +5720,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						distortionNextOutput += distortionOutput1 * distortionNextOutputWeight1 + distortionOutput2 * distortionNextOutputWeight2 + distortionOutput3 * distortionNextOutputWeight3;
 						sample += distortionOutput1 * distortionPrevOutputWeight1 + distortionOutput2 * distortionPrevOutputWeight2 + distortionOutput3 * distortionPrevOutputWeight3;
 						sample *= distortionOversampleCompensation;
-						distortionPrevInput = distortionNextInput;`
+						distortionPrevInput = distortionNextInput;
+						distortion += distortionDelta;
+						distortionDrive += distortionDriveDelta;`
 				}
 				
 				if (usesBitcrusher) {
@@ -5259,8 +5739,9 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							const lerpedInput = sample + (bitcrusherPrevInput - sample) * ratio;
 							bitcrusherPrevInput = sample;
 							
+							const bitcrusherWrapLevel = bitcrusherFoldLevel * 4.0;
 							const wrappedSample = (((lerpedInput + bitcrusherFoldLevel) % bitcrusherWrapLevel) + bitcrusherWrapLevel) % bitcrusherWrapLevel;
-							const foldedSample = bitcrusherFoldLevel - Math.abs(bitcrusherWrapMiddle - wrappedSample);
+							const foldedSample = bitcrusherFoldLevel - Math.abs(bitcrusherFoldLevel * 2.0 - wrappedSample);
 							const scaledSample = foldedSample / bitcrusherScale;
 							const oldValue = bitcrusherCurrentOutput;
 							const newValue = (((scaledSample > 0 ? scaledSample + 1 : scaledSample)|0)-.5) * bitcrusherScale;
@@ -5269,7 +5750,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 							bitcrusherCurrentOutput = newValue;
 						}
 						bitcrusherPhaseDelta *= bitcrusherPhaseDeltaScale;
-						bitcrusherScale += bitcrusherScaleDelta;`
+						bitcrusherScale *= bitcrusherScaleScale;
+						bitcrusherFoldLevel *= bitcrusherFoldLevelScale;`
 				}
 				
 				if (usesEqFilter) {
@@ -5287,6 +5769,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				if (usesPanning) {
 					effectsSource += `
 						
+						panningDelayLine[panningDelayPos] = sample;
 						const panningRatioL  = panningOffsetL % 1;
 						const panningRatioR  = panningOffsetR % 1;
 						const panningTapLA   = panningDelayLine[(panningOffsetL) & panningMask];
@@ -5297,7 +5780,6 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						const panningTapR    = panningTapRA + (panningTapRB - panningTapRA) * panningRatioR;
 						let sampleL = panningTapL * panningVolumeL;
 						let sampleR = panningTapR * panningVolumeR;
-						panningDelayLine[panningDelayPos] = sample;
 						panningDelayPos = (panningDelayPos + 1) & panningMask;
 						panningVolumeL += panningVolumeDeltaL;
 						panningVolumeR += panningVolumeDeltaR;
@@ -5372,7 +5854,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						echoDelayLineL[echoDelayPos] = sampleL * delayInputMult;
 						echoDelayLineR[echoDelayPos] = sampleR * delayInputMult;
 						echoDelayPos = (echoDelayPos + 1) & echoMask;
-						echoDelayOffsetRatio += echoDelayOffsetRatioDelta;`
+						echoDelayOffsetRatio += echoDelayOffsetRatioDelta;
+						echoMult += echoMultDelta;`
 				}
 				
 				if (usesReverb) {
@@ -5411,7 +5894,8 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 						reverbDelayLine[reverbDelayPos ] = reverbShelfSample3 * delayInputMult;
 						reverbDelayPos = (reverbDelayPos + 1) & reverbMask;
 						sampleL += reverbSample1 + reverbSample2 + reverbSample3;
-						sampleR += reverbSample0 + reverbSample2 - reverbSample3;`
+						sampleR += reverbSample0 + reverbSample2 - reverbSample3;
+						reverb += reverbDelta;`
 				}
 				
 				effectsSource += `
@@ -5546,7 +6030,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			
 			let phaseDelta: number = tone.phaseDeltas[0];
-			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 			let expression: number = +tone.expressionStarts[0];
 			const expressionDelta: number = +tone.expressionDeltas[0];
 			let phase: number = (tone.phases[0] % 1);
@@ -5610,10 +6094,10 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const data = synth.tempMonoInstrumentSampleBuffer;
 			const sineWave = beepbox.Config.sineWave;
 			
-			let phaseDeltaScale = +tone.phaseDeltaScale;
 			// I'm adding 1000 to the phase to ensure that it's never negative even when modulated by other waves because negative numbers don't work with the modulus operator very well.
 			let operator#Phase       = +((tone.phases[#] % 1) + 1000) * beepbox.Config.sineWaveLength;
 			let operator#PhaseDelta  = +tone.phaseDeltas[#];
+			let operator#PhaseDeltaScale = +tone.phaseDeltaScales[#];
 			let operator#OutputMult  = +tone.expressionStarts[#];
 			const operator#OutputDelta = +tone.expressionDeltas[#];
 			let operator#Output      = +tone.feedbackOutputs[#];
@@ -5639,7 +6123,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 				feedbackMult += feedbackDelta;
 				operator#OutputMult += operator#OutputDelta;
 				operator#Phase += operator#PhaseDelta;
-				operator#PhaseDelta *= phaseDeltaScale;
+				operator#PhaseDelta *= operator#PhaseDeltaScale;
 				
 				data[sampleIndex] += sample;
 			}
@@ -5665,7 +6149,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = +tone.phaseDeltas[0];
-			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 			let expression: number = +tone.expressionStarts[0];
 			const expressionDelta: number = +tone.expressionDeltas[0];
 			let phase: number = (tone.phases[0] % 1) * Config.chipNoiseLength;
@@ -5718,7 +6202,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			let wave: Float32Array = instrument.getDrumWave();
 			let phaseDelta: number = tone.phaseDeltas[0] * (1 << 7);
-			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 			let expression: number = +tone.expressionStarts[0];
 			const expressionDelta: number = +tone.expressionDeltas[0];
 			let noiseSample: number = +tone.sample;
@@ -5774,7 +6258,7 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 			const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 			let wave: Float32Array = instrument.getDrumsetWave(tone.drumsetPitch);
 			let phaseDelta: number = tone.phaseDeltas[0] / Instrument.drumsetIndexReferenceDelta(tone.drumsetPitch);;
-			const phaseDeltaScale: number = +tone.phaseDeltaScale;
+			const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 			let expression: number = +tone.expressionStarts[0];
 			const expressionDelta: number = +tone.expressionDeltas[0];
 			
@@ -5865,11 +6349,11 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 		public static volumeMultToInstrumentVolume(volumeMult: number): number {
 			return (volumeMult <= 0.0) ? Config.volumeRange - 1 : Math.min(Config.volumeRange - 2, Math.log2(volumeMult) / Config.volumeLogScale);
 		}
-		public static expressionToVolumeMult(expression: number): number {
-			return Math.pow(Math.max(0.0, expression) / 3.0, 1.5);
+		public static noteSizeToVolumeMult(size: number): number {
+			return Math.pow(Math.max(0.0, size) / Config.noteSizeMax, 1.5);
 		}
-		public static volumeMultToExpression(volumeMult: number): number {
-			return Math.pow(Math.max(0.0, volumeMult), 1/1.5) * 3.0;
+		public static volumeMultToNoteSize(volumeMult: number): number {
+			return Math.pow(Math.max(0.0, volumeMult), 1/1.5) * Config.noteSizeMax;
 		}
 		
 		private getSamplesPerTick(): number {

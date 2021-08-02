@@ -362,3 +362,4 @@
 √ Allow any instrument to add the distortion effect. Make effects applied per-instrument.
 √ Added Bitcrusher effect.
 √ Added Echo effect.
+√ Generalized envelopes.

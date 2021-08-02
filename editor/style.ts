@@ -47,7 +47,8 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 			</g> \
 		</svg>');
 	--export-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"/></svg>');
-	--close-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"/></svg>');
+	--close-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -7.07 -5.66 L -5.66 -7.07 L 0 -1.4 L 5.66 -7.07 L 7.07 -5.66 L 1.4 0 L 7.07 5.66 L 5.66 7.07 L 0 1.4 L -5.66 7.07 L -7.07 5.66 L -1.4 0 z"/></svg>');
+	--add-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 -1 L -1 -1 L -1 -8  L 1 -8 L 1 -1 L 8 -1 L 8 1 L 1 1 L 1 8 L -1 8 L -1 1 L -8 1 z"/></svg>');
 	--checkmark-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"/></svg>');
 	--drum-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40"> \
 			<defs> \
@@ -271,6 +272,65 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	mask-image: var(--customize-dial-symbol);
 	mask-repeat: no-repeat;
 	mask-position: center;
+}
+
+.beepboxEditor .envelopeEditor {
+	display: flex;
+	flex-direction: column;
+}
+
+.beepboxEditor .envelope-row {
+	display: flex;
+	margin: 2px 0;
+	gap: 2px;
+}
+
+.beepboxEditor .add-envelope {
+	width: 2em;
+}
+.beepboxEditor .add-envelope::before {
+	content: "";
+	position: absolute;
+	width: 2em;
+	height: 2em;
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--add-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--add-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+.beepboxEditor .add-envelope:disabled {
+	visibility: hidden;
+}
+
+.beepboxEditor .delete-envelope {
+	width: 2em;
+	flex-shrink: 0;
+	flex-grow: 0;
+}
+.beepboxEditor .delete-envelope::before {
+	content: "";
+	position: absolute;
+	width: 2em;
+	height: 2em;
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--close-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--close-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+.beepboxEditor .delete-envelope:disabled {
+	visibility: hidden;
 }
 
 .beepboxEditor .menu.file::before {
@@ -677,21 +737,9 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	color: ${ColorConfig.secondaryText};
 }
 
-.beepboxEditor .selectRow > :nth-child(2) {
+.beepboxEditor .selectRow > :last-child {
 	width: 61.5%;
-}
-
-.beepboxEditor .operatorRow {
-	margin: 2px 0;
-	height: 2em;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-}
-
-.beepboxEditor .operatorRow > * {
-	flex-grow: 1;
-	flex-shrink: 1;
+	flex-shrink: 0;
 }
 
 .beepboxEditor .menu-area {

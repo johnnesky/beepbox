@@ -147,9 +147,9 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 				midiTick: number;
 				interval: number;
 			}
-			interface ExpressionEvent {
+			interface NoteSizeEvent {
 				midiTick: number;
-				expression: number;
+				size: number;
 			}
 			
 			// To read a MIDI file we have to simulate state changing over time.
@@ -165,7 +165,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 			const currentInstrumentPans: number[] = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64];
 			const noteEvents: NoteEvent[][] = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
 			const pitchBendEvents: PitchBendEvent[][] = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
-			const expressionEvents: ExpressionEvent[][] = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
+			const noteSizeEvents: NoteSizeEvent[][] = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]];
 			let microsecondsPerBeat: number = 500000; // Tempo in microseconds per "quarter" note, commonly known as a "beat", default is equivalent to 120 beats per minute.
 			let beatsPerBar: number = 8;
 			let numSharps: number = 0;
@@ -248,7 +248,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 										currentInstrumentPans[eventChannel] = value;
 									} break;
 									case MidiControlEventMessage.expressionMSB: {
-										expressionEvents[eventChannel].push({midiTick: currentMidiTick, expression: Synth.volumeMultToExpression(midiExpressionToVolumeMult(value))});
+										noteSizeEvents[eventChannel].push({midiTick: currentMidiTick, size: Synth.volumeMultToNoteSize(midiExpressionToVolumeMult(value))});
 									} break;
 									case MidiControlEventMessage.setParameterLSB: {
 										if (channelRPNMSB[eventChannel] == MidiRegisteredParameterNumberMSB.pitchBendRange && channelRPNLSB[eventChannel] == MidiRegisteredParameterNumberLSB.pitchBendRange) {
@@ -465,13 +465,13 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 							const drumFreqs: number[] = [];
 							let minDuration: number = channelMaxPitch;
 							let maxDuration: number = 0;
-							let expression: number = 1;
+							let noteSize: number = 1; // the minimum non-zero note size.
 							for (const pitch of heldPitches) {
 								const drum: AnalogousDrum | undefined = analogousDrumMap[pitch];
 								if (drumFreqs.indexOf(drum.frequency) == -1) {
 									drumFreqs.push(drum.frequency);
 								}
-								expression = Math.max(expression, Math.round(drum.volume * currentVelocity));
+								noteSize = Math.max(noteSize, Math.round(drum.volume * currentVelocity));
 								minDuration = Math.min(minDuration, drum.duration);
 								maxDuration = Math.max(maxDuration, drum.duration);
 							}
@@ -479,7 +479,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 							const noteStartPart: number = prevEventPart - barStartPart;
 							const noteEndPart: number = Math.min(partsPerBar, Math.min(nextEventPart - barStartPart, noteStartPart + duration * 6));
 							
-							const note: Note = new Note(-1, noteStartPart, noteEndPart, expression, true);
+							const note: Note = new Note(-1, noteStartPart, noteEndPart, noteSize, true);
 							
 							note.pitches.length = 0;
 							for (let pitchIndex: number = 0; pitchIndex < Math.min(Config.maxChordSize, drumFreqs.length); pitchIndex++) {
@@ -505,23 +505,23 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 				} else {
 					// If not a drumset, handle as a tonal instrument.
 					
-					// Advance the pitch bend and expression timelines to the given midiTick, 
-					// changing the value of currentMidiInterval or currentMidiExpression.
+					// Advance the pitch bend and note size timelines to the given midiTick, 
+					// changing the value of currentMidiInterval or currentMidiNoteSize.
 					// IMPORTANT: These functions can't rewind!
 					let currentMidiInterval: number = 0.0;
-					let currentMidiExpression: number = 3.0;
+					let currentMidiNoteSize: number = Config.noteSizeMax;
 					let pitchBendEventIndex: number = 0;
-					let expressionEventIndex: number = 0;
+					let noteSizeEventIndex: number = 0;
 					function updateCurrentMidiInterval(midiTick: number) {
 						while (pitchBendEventIndex < pitchBendEvents[midiChannel].length && pitchBendEvents[midiChannel][pitchBendEventIndex].midiTick <= midiTick) {
 							currentMidiInterval = pitchBendEvents[midiChannel][pitchBendEventIndex].interval;
 							pitchBendEventIndex++;
 						}
 					}
-					function updateCurrentMidiExpression(midiTick: number) {
-						while (expressionEventIndex < expressionEvents[midiChannel].length && expressionEvents[midiChannel][expressionEventIndex].midiTick <= midiTick) {
-							currentMidiExpression = expressionEvents[midiChannel][expressionEventIndex].expression;
-							expressionEventIndex++;
+					function updateCurrentMidiNoteSize(midiTick: number) {
+						while (noteSizeEventIndex < noteSizeEvents[midiChannel].length && noteSizeEvents[midiChannel][noteSizeEventIndex].midiTick <= midiTick) {
+							currentMidiNoteSize = noteSizeEvents[midiChannel][noteSizeEventIndex].size;
+							noteSizeEventIndex++;
 						}
 					}
 					
@@ -601,45 +601,45 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 										instrumentByProgram[currentProgram].pan = Math.min(instrumentByProgram[currentProgram].pan, currentInstrumentPan);
 									}
 									
-									// Create a new note, and interpret the pitch bend and expression events
-									// to determine where we need to insert pins to control interval and expression.
-									const note: Note = new Note(-1, noteStartPart, noteEndPart, 3, false);
+									// Create a new note, and interpret the pitch bend and note size events
+									// to determine where we need to insert pins to control interval and size.
+									const note: Note = new Note(-1, noteStartPart, noteEndPart, Config.noteSizeMax, false);
 									note.pins.length = 0;
 									
 									updateCurrentMidiInterval(noteStartMidiTick);
-									updateCurrentMidiExpression(noteStartMidiTick);
+									updateCurrentMidiNoteSize(noteStartMidiTick);
 									const shiftedHeldPitch: number = heldPitches[0] * midiIntervalScale - channelBasePitch;
 									const initialBeepBoxPitch: number = Math.round((shiftedHeldPitch + currentMidiInterval) / intervalScale);
 									const heldPitchOffset: number = Math.round(currentMidiInterval - channelBasePitch);
-									let firstPin: NotePin = makeNotePin(0, 0, Math.round(currentVelocity * currentMidiExpression));
+									let firstPin: NotePin = makeNotePin(0, 0, Math.round(currentVelocity * currentMidiNoteSize));
 									note.pins.push(firstPin);
 									
 									interface PotentialPin {
 										part: number;
 										pitch: number;
-										expression: number;
+										size: number;
 										keyPitch: boolean;
-										keyExpression: boolean;
+										keySize: boolean;
 									}
 									const potentialPins: PotentialPin[] = [
-										{part: 0, pitch: initialBeepBoxPitch, expression: firstPin.expression, keyPitch: false, keyExpression: false}
+										{part: 0, pitch: initialBeepBoxPitch, size: firstPin.size, keyPitch: false, keySize: false}
 									];
 									let prevPinIndex: number = 0;
 									
 									let prevPartPitch: number = (shiftedHeldPitch + currentMidiInterval) / intervalScale;
-									let prevPartExpression: number = currentVelocity * currentMidiExpression;
+									let prevPartSize: number = currentVelocity * currentMidiNoteSize;
 									for (let part: number = noteStartPart + 1; part <= noteEndPart; part++) {
 										const midiTick: number = Math.max(noteStartMidiTick, Math.min(noteEndMidiTick - 1, Math.round(midiTicksPerPart * (part + barStartPart))));
 										const noteRelativePart: number = part - noteStartPart;
 										const lastPart: boolean = (part == noteEndPart);
 										
-										// BeepBox can only add pins at whole number intervals and expressions. Detect places where
-										// the interval or expression are at or cross whole numbers, and add these to the list of
+										// BeepBox can only add pins at whole number intervals and sizes. Detect places where
+										// the interval or size are at or cross whole numbers, and add these to the list of
 										// potential places to insert pins.
 										updateCurrentMidiInterval(midiTick);
-										updateCurrentMidiExpression(midiTick);
+										updateCurrentMidiNoteSize(midiTick);
 										const partPitch: number = (currentMidiInterval + shiftedHeldPitch) / intervalScale;
-										const partExpression: number = currentVelocity * currentMidiExpression;
+										const partSize: number = currentVelocity * currentMidiNoteSize;
 										
 										const nearestPitch: number = Math.round(partPitch);
 										const pitchIsNearInteger: boolean = Math.abs(partPitch - nearestPitch) < 0.01;
@@ -648,18 +648,18 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 											: Math.floor(partPitch) != Math.floor(prevPartPitch);
 										const keyPitch: boolean = pitchIsNearInteger || pitchCrossedInteger;
 										
-										const nearestExpression: number = Math.round(partExpression);
-										const expressionIsNearInteger: boolean = Math.abs(partExpression - nearestExpression) < 0.01;
-										const expressionCrossedInteger: boolean = (Math.abs(prevPartExpression - Math.round(prevPartExpression)))
-											? Math.abs(partExpression - prevPartExpression) >= 1.0
-											: Math.floor(partExpression) != Math.floor(prevPartExpression);
-										const keyExpression: boolean = expressionIsNearInteger || expressionCrossedInteger;
+										const nearestSize: number = Math.round(partSize);
+										const sizeIsNearInteger: boolean = Math.abs(partSize - nearestSize) < 0.01;
+										const sizeCrossedInteger: boolean = (Math.abs(prevPartSize - Math.round(prevPartSize)))
+											? Math.abs(partSize - prevPartSize) >= 1.0
+											: Math.floor(partSize) != Math.floor(prevPartSize);
+										const keySize: boolean = sizeIsNearInteger || sizeCrossedInteger;
 										
 										prevPartPitch = partPitch;
-										prevPartExpression = partExpression;
+										prevPartSize = partSize;
 										
-										if (keyPitch || keyExpression || lastPart) {
-											const currentPin: PotentialPin = {part: noteRelativePart, pitch: nearestPitch, expression: nearestExpression, keyPitch: keyPitch || lastPart, keyExpression: keyExpression || lastPart};
+										if (keyPitch || keySize || lastPart) {
+											const currentPin: PotentialPin = {part: noteRelativePart, pitch: nearestPitch, size: nearestSize, keyPitch: keyPitch || lastPart, keySize: keySize || lastPart};
 											const prevPin: PotentialPin = potentialPins[prevPinIndex];
 											
 											// At all key points in the list of potential pins, check to see if they
@@ -691,32 +691,32 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 												}
 											}
 											
-											if (currentPin.keyExpression) {
-												const slope: number = (currentPin.expression - prevPin.expression) / (currentPin.part - prevPin.part);
-												let furthestExpressionDistance: number = Math.abs(slope); // minimum distance to make a new pin.
-												let addExpressionPin: boolean = false;
-												let addExpressionPinAtIndex: number = Number.MAX_VALUE;
+											if (currentPin.keySize) {
+												const slope: number = (currentPin.size - prevPin.size) / (currentPin.part - prevPin.part);
+												let furthestSizeDistance: number = Math.abs(slope); // minimum distance to make a new pin.
+												let addSizePin: boolean = false;
+												let addSizePinAtIndex: number = Number.MAX_VALUE;
 												for (let potentialIndex: number = prevPinIndex + 1; potentialIndex < potentialPins.length; potentialIndex++) {
 													const potentialPin: PotentialPin = potentialPins[potentialIndex];
-													if (potentialPin.keyExpression) {
-														const interpolatedExpression: number = prevPin.expression + slope * (potentialPin.part - prevPin.part);
-														const distance: number = Math.abs(interpolatedExpression - potentialPin.expression);
-														if (furthestExpressionDistance < distance) {
-															furthestExpressionDistance = distance;
-															addExpressionPin = true;
-															addExpressionPinAtIndex = potentialIndex;
+													if (potentialPin.keySize) {
+														const interpolatedSize: number = prevPin.size + slope * (potentialPin.part - prevPin.part);
+														const distance: number = Math.abs(interpolatedSize - potentialPin.size);
+														if (furthestSizeDistance < distance) {
+															furthestSizeDistance = distance;
+															addSizePin = true;
+															addSizePinAtIndex = potentialIndex;
 														}
 													}
 												}
-												if (addExpressionPin) {
+												if (addSizePin) {
 													addPin = true;
-													addPinAtIndex = Math.min(addPinAtIndex, addExpressionPinAtIndex);
+													addPinAtIndex = Math.min(addPinAtIndex, addSizePinAtIndex);
 												}
 											}
 											
 											if (addPin) {
 												const toBePinned: PotentialPin = potentialPins[addPinAtIndex];
-												note.pins.push(makeNotePin(toBePinned.pitch - initialBeepBoxPitch, toBePinned.part, toBePinned.expression));
+												note.pins.push(makeNotePin(toBePinned.pitch - initialBeepBoxPitch, toBePinned.part, toBePinned.size));
 												prevPinIndex = addPinAtIndex;
 											}
 											
@@ -726,7 +726,7 @@ import {ArrayBufferReader} from "./ArrayBufferReader";
 									
 									// And always add a pin at the end of the note.
 									const lastToBePinned: PotentialPin = potentialPins[potentialPins.length - 1];
-									note.pins.push(makeNotePin(lastToBePinned.pitch - initialBeepBoxPitch, lastToBePinned.part, lastToBePinned.expression));
+									note.pins.push(makeNotePin(lastToBePinned.pitch - initialBeepBoxPitch, lastToBePinned.part, lastToBePinned.size));
 									
 									// Use interval range to constrain min/max pitches so no pin is out of bounds.
 									let maxPitch: number = channelMaxPitch;

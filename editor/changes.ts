@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {Algorithm, Dictionary, FilterType, InstrumentType, EffectType, Config, effectsIncludePanning} from "../synth/SynthConfig";
+import {Algorithm, Dictionary, FilterType, InstrumentType, EffectType, AutomationTarget, Config, effectsIncludePanning} from "../synth/SynthConfig";
 import {NotePin, Note, makeNotePin, Pattern, FilterSettings, FilterControlPoint, SpectrumWave, HarmonicsWave, Instrument, Channel, Song} from "../synth/synth";
 import {Preset, PresetCategory, EditorConfig} from "./EditorConfig";
 import {Change, ChangeGroup, ChangeSequence, UndoableChange} from "./Change";
@@ -109,9 +109,9 @@ import {SongDocument} from "./SongDocument";
 	}
 	
 	function projectNoteIntoBar(oldNote: Note, timeOffset: number, noteStartPart: number, noteEndPart: number, newNotes: Note[]): void {
-		// Create a new note, and interpret the pitch bend and expression events
+		// Create a new note, and interpret the pitch bend and size events
 		// to determine where we need to insert pins to control interval and volume.
-		const newNote: Note = new Note(-1, noteStartPart, noteEndPart, 3, false);
+		const newNote: Note = new Note(-1, noteStartPart, noteEndPart, Config.noteSizeMax, false);
 		newNotes.push(newNote);
 		newNote.pins.length = 0;
 		newNote.pitches.length = 0;
@@ -131,10 +131,10 @@ import {SongDocument} from "./SongDocument";
 				if (nextPinTime > 0) {
 					// Insert an interpolated pin at the start of the new note.
 					const ratio: number = (-newPinTime) / (nextPinTime - newPinTime);
-					newNote.pins.push(makeNotePin(Math.round(pin.interval + ratio * (nextPin.interval - pin.interval)), 0, Math.round(pin.expression + ratio * (nextPin.expression - pin.expression))));
+					newNote.pins.push(makeNotePin(Math.round(pin.interval + ratio * (nextPin.interval - pin.interval)), 0, Math.round(pin.size + ratio * (nextPin.size - pin.size))));
 				}
 			} else if (newPinTime <= newNoteLength) {
-				newNote.pins.push(makeNotePin(pin.interval, newPinTime, pin.expression));
+				newNote.pins.push(makeNotePin(pin.interval, newPinTime, pin.size));
 			} else {
 				if (pinIndex < 1) throw new Error("Error converting pins in note overflow.");
 				const prevPin: NotePin = oldNote.pins[pinIndex - 1];
@@ -142,7 +142,7 @@ import {SongDocument} from "./SongDocument";
 				if (prevPinTime < newNoteLength) {
 					// Insert an interpolated pin at the end of the new note.
 					const ratio: number = (newNoteLength - prevPinTime) / (newPinTime - prevPinTime);
-					newNote.pins.push(makeNotePin(Math.round(prevPin.interval + ratio * (pin.interval - prevPin.interval)), newNoteLength, Math.round(prevPin.expression + ratio * (pin.expression - prevPin.expression))));
+					newNote.pins.push(makeNotePin(Math.round(prevPin.interval + ratio * (pin.interval - prevPin.interval)), newNoteLength, Math.round(prevPin.size + ratio * (pin.size - prevPin.size))));
 				}
 			}
 		}
@@ -259,10 +259,10 @@ import {SongDocument} from "./SongDocument";
 			}
 			
 			for (let i: number = 1; i < this._newPins.length - 1; ) {
-				if (this._newPins[i-1].interval == this._newPins[i].interval && 
-				    this._newPins[i].interval == this._newPins[i+1].interval && 
-				    this._newPins[i-1].expression == this._newPins[i].expression && 
-				    this._newPins[i].expression == this._newPins[i+1].expression)
+				if (this._newPins[i-1].interval == this._newPins[i].interval &&
+				    this._newPins[i].interval == this._newPins[i+1].interval &&
+				    this._newPins[i-1].size == this._newPins[i].size &&
+				    this._newPins[i].size == this._newPins[i+1].size)
 				{
 					this._newPins.splice(i, 1);
 				} else {
@@ -328,6 +328,7 @@ import {SongDocument} from "./SongDocument";
 						if (!Config.instrumentTypeHasSpecialInterval[instrument.type] && Config.chords[instrument.chord].customInterval) {
 							instrument.chord = 0;
 						}
+						instrument.clearInvalidEnvelopeTargets();
 					} else if (preset.settings != undefined) {
 						const tempVolume: number = instrument.volume;
 						const tempPan: number = instrument.pan;
@@ -429,8 +430,9 @@ import {SongDocument} from "./SongDocument";
 					{item: InstrumentType.spectrum, weight: 3},
 				]);
 				instrument.preset = instrument.type = type;
+				/*
 				instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-					{item: "steady"  , weight: 2},
+					{item: "none"    , weight: 2},
 					{item: "punch"   , weight: 4},
 					{item: "flare 1" , weight: 2},
 					{item: "flare 2" , weight: 2},
@@ -451,8 +453,9 @@ import {SongDocument} from "./SongDocument";
 					{item: "decay 2" , weight: 4},
 					{item: "decay 3" , weight: 4},
 				])].index;
+				*/
 				instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
-					{item: "seamless"   , weight: 1},
+					{item: "instant"    , weight: 1}, // TODO: add hard overlap?
 					{item: "hard"       , weight: 4},
 					{item: "soft"       , weight: 2},
 					{item: "slide"      , weight: 1},
@@ -532,8 +535,9 @@ import {SongDocument} from "./SongDocument";
 					{item: InstrumentType.fm,        weight: 4},
 				]);
 				instrument.preset = instrument.type = type;
+				/*
 				instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-					{item: "steady"  , weight: 10},
+					{item: "none"    , weight: 10},
 					{item: "punch"   , weight: 6},
 					{item: "flare 1" , weight: 2},
 					{item: "flare 2" , weight: 4},
@@ -554,8 +558,9 @@ import {SongDocument} from "./SongDocument";
 					{item: "decay 2" , weight: 2},
 					{item: "decay 3" , weight: 2},
 				])].index;
+				*/
 				instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
-					{item: "seamless"   , weight: 1},
+					{item: "instant"    , weight: 1}, // TODO: add hard overlap?
 					{item: "hard"       , weight: 4},
 					{item: "soft"       , weight: 4},
 					{item: "slide"      , weight: 2},
@@ -586,8 +591,8 @@ import {SongDocument} from "./SongDocument";
 					])].index;
 				}
 				if (type == InstrumentType.chip || type == InstrumentType.harmonics) {
-					instrument.interval = Config.intervals.dictionary[selectWeightedRandom([
-						{item: "union"     , weight: 10},
+					instrument.unison = Config.unisons.dictionary[selectWeightedRandom([
+						{item: "none"      , weight: 10},
 						{item: "shimmer"   , weight: 5},
 						{item: "hum"       , weight: 4},
 						{item: "honky tonk", weight: 3},
@@ -612,8 +617,9 @@ import {SongDocument} from "./SongDocument";
 						instrument.chipWave = (Math.random() * Config.chipWaves.length)|0;
 					} break;
 					case InstrumentType.pwm: {
+						/*
 						instrument.pulseEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-							{item: "steady"  , weight: 10},
+							{item: "none"    , weight: 10},
 							{item: "punch"   , weight: 6},
 							{item: "flare 1" , weight: 2},
 							{item: "flare 2" , weight: 4},
@@ -634,6 +640,7 @@ import {SongDocument} from "./SongDocument";
 							{item: "decay 2" , weight: 2},
 							{item: "decay 3" , weight: 2},
 						])].index;
+						*/
 						instrument.pulseWidth = selectCurvedDistribution(0, Config.pulseWidthRange - 1, Config.pulseWidthRange - 1, 2);
 					} break;
 					case InstrumentType.harmonics: {
@@ -696,13 +703,14 @@ import {SongDocument} from "./SongDocument";
 						for (let i: number = 0; i < algorithm.carrierCount; i++) {
 							instrument.operators[i].frequency = selectCurvedDistribution(0, Config.operatorFrequencies.length - 1, 0, 3);
 							instrument.operators[i].amplitude = selectCurvedDistribution(0, Config.operatorAmplitudeMax, Config.operatorAmplitudeMax - 1, 2);
-							instrument.operators[i].envelope = Config.envelopes.dictionary["custom"].index;
+							//instrument.operators[i].envelope = Config.envelopes.dictionary["custom"].index;
 						}
 						for (let i: number = algorithm.carrierCount; i < Config.operatorCount; i++) {
 							instrument.operators[i].frequency = selectCurvedDistribution(3, Config.operatorFrequencies.length - 1, 0, 3);
 							instrument.operators[i].amplitude = (Math.pow(Math.random(), 2) * Config.operatorAmplitudeMax)|0;
+							/*
 							instrument.operators[i].envelope = Config.envelopes.dictionary[selectWeightedRandom([
-								{item: "steady"  , weight: 6},
+								{item: "none"    , weight: 6},
 								{item: "punch"   , weight: 2},
 								{item: "flare 1" , weight: 2},
 								{item: "flare 2" , weight: 2},
@@ -723,10 +731,12 @@ import {SongDocument} from "./SongDocument";
 								{item: "decay 2" , weight: 1},
 								{item: "decay 3" , weight: 1},
 							])].index;
+							*/
 						}
 						instrument.feedbackAmplitude = (Math.pow(Math.random(), 3) * Config.operatorAmplitudeMax)|0;
+						/*
 						instrument.feedbackEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-							{item: "steady"  , weight: 4},
+							{item: "none"    , weight: 4},
 							{item: "punch"   , weight: 2},
 							{item: "flare 1" , weight: 2},
 							{item: "flare 2" , weight: 2},
@@ -747,6 +757,7 @@ import {SongDocument} from "./SongDocument";
 							{item: "decay 2" , weight: 1},
 							{item: "decay 3" , weight: 1},
 						])].index;
+						*/
 					} break;
 					default: throw new Error("Unhandled pitched instrument type in random generator.");
 				}
@@ -776,13 +787,12 @@ import {SongDocument} from "./SongDocument";
 			super();
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
 			const oldValue: number = instrument.effects;
-			const selected: boolean = ((oldValue & (1 << toggleFlag)) != 0);
-			const newValue: number = selected ? (oldValue & (~(1 << toggleFlag))) : (oldValue | (1 << toggleFlag));
+			const wasSelected: boolean = ((oldValue & (1 << toggleFlag)) != 0);
+			const newValue: number = wasSelected ? (oldValue & (~(1 << toggleFlag))) : (oldValue | (1 << toggleFlag));
 			instrument.effects = newValue;
 			// As a special case, toggling the panning effect doesn't remove the preset.
-			if (toggleFlag != EffectType.panning) {
-				instrument.preset = instrument.type;
-			}
+			if (toggleFlag != EffectType.panning) instrument.preset = instrument.type;
+			if (wasSelected) instrument.clearInvalidEnvelopeTargets();
 			this._didSomething();
 			doc.notifier.changed();
 		}
@@ -967,14 +977,14 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
-	export class ChangeInterval extends Change {
+	export class ChangeUnison extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
-			const oldValue: number = instrument.interval;
+			const oldValue: number = instrument.unison;
 			if (oldValue != newValue) {
 				this._didSomething();
-				instrument.interval = newValue;
+				instrument.unison = newValue;
 				instrument.preset = instrument.type;
 				doc.notifier.changed();
 			}
@@ -1103,20 +1113,6 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
-	export class ChangePulseEnvelope extends Change {
-		constructor(doc: SongDocument, newValue: number) {
-			super();
-			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
-			const oldValue: number = instrument.pulseEnvelope;
-			if (oldValue != newValue) {
-				instrument.pulseEnvelope = newValue;
-				instrument.preset = instrument.type;
-				doc.notifier.changed();
-				this._didSomething();
-			}
-		}
-	}
-	
 	export class ChangeFilterAddPoint extends UndoableChange {
 		private _doc: SongDocument;
 		private _instrument: Instrument;
@@ -1125,7 +1121,11 @@ import {SongDocument} from "./SongDocument";
 		private _filterSettings: FilterSettings;
 		private _point: FilterControlPoint;
 		private _index: number;
-		constructor(doc: SongDocument, filterSettings: FilterSettings, point: FilterControlPoint, index: number, deletion: boolean = false) {
+		private _envelopeTargetsAdd: number[] = [];
+		private _envelopeIndicesAdd: number[] = [];
+		private _envelopeTargetsRemove: number[] = [];
+		private _envelopeIndicesRemove: number[] = [];
+		constructor(doc: SongDocument, filterSettings: FilterSettings, point: FilterControlPoint, index: number, isNoteFilter: boolean, deletion: boolean = false) {
 			super(deletion);
 			this._doc = doc;
 			this._instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
@@ -1134,6 +1134,30 @@ import {SongDocument} from "./SongDocument";
 			this._filterSettings = filterSettings;
 			this._point = point;
 			this._index = index;
+			
+			for (let envelopeIndex: number = 0; envelopeIndex < this._instrument.envelopeCount; envelopeIndex++) {
+				let target: number = this._instrument.envelopes[envelopeIndex].target;
+				let targetIndex: number = this._instrument.envelopes[envelopeIndex].index;
+				this._envelopeTargetsAdd.push(target);
+				this._envelopeIndicesAdd.push(targetIndex);
+				if (deletion) {
+					// When deleting a filter control point, find all envelopes that targeted that
+					// point and clear them, and all envelopes that targeted later points and
+					// decrement those to keep them in sync with the new list of points.
+					const automationTarget: AutomationTarget = Config.instrumentAutomationTargets[target];
+					if (automationTarget.isFilter && automationTarget.maxCount == Config.filterMaxPoints && (automationTarget.effect == EffectType.noteFilter) == isNoteFilter) {
+						if (targetIndex == index) {
+							target = Config.instrumentAutomationTargets.dictionary["none"].index;
+							targetIndex = 0;
+						} else if (targetIndex > index) {
+							targetIndex--;
+						}
+					}
+				}
+				this._envelopeTargetsRemove.push(target);
+				this._envelopeIndicesRemove.push(targetIndex);
+			}
+			
 			this._didSomething();
 			this.redo();
 		}
@@ -1143,6 +1167,10 @@ import {SongDocument} from "./SongDocument";
 			this._filterSettings.controlPointCount++;
 			this._filterSettings.controlPoints.length = this._filterSettings.controlPointCount;
 			this._instrument.preset = this._instrumentNextPreset;
+			for (let envelopeIndex: number = 0; envelopeIndex < this._instrument.envelopeCount; envelopeIndex++) {
+				this._instrument.envelopes[envelopeIndex].target = this._envelopeTargetsAdd[envelopeIndex];
+				this._instrument.envelopes[envelopeIndex].index  = this._envelopeIndicesAdd[envelopeIndex];
+			}
 			this._doc.notifier.changed();
 		}
 		
@@ -1151,6 +1179,10 @@ import {SongDocument} from "./SongDocument";
 			this._filterSettings.controlPointCount--;
 			this._filterSettings.controlPoints.length = this._filterSettings.controlPointCount;
 			this._instrument.preset = this._instrumentPrevPreset;
+			for (let envelopeIndex: number = 0; envelopeIndex < this._instrument.envelopeCount; envelopeIndex++) {
+				this._instrument.envelopes[envelopeIndex].target = this._envelopeTargetsRemove[envelopeIndex];
+				this._instrument.envelopes[envelopeIndex].index  = this._envelopeIndicesRemove[envelopeIndex];
+			}
 			this._doc.notifier.changed();
 		}
 	}
@@ -1195,20 +1227,6 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
-	export class ChangeFilterEnvelope extends Change {
-		constructor(doc: SongDocument, newValue: number) {
-			super();
-			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
-			const oldValue: number = instrument.filterEnvelope;
-			if (oldValue != newValue) {
-				instrument.filterEnvelope = newValue;
-				instrument.preset = instrument.type;
-				doc.notifier.changed();
-				this._didSomething();
-			}
-		}
-	}
-	
 	export class ChangeAlgorithm extends Change {
 		constructor(doc: SongDocument, newValue: number) {
 			super();
@@ -1230,34 +1248,6 @@ import {SongDocument} from "./SongDocument";
 			const oldValue: number = instrument.feedbackType;
 			if (oldValue != newValue) {
 				instrument.feedbackType = newValue;
-				instrument.preset = instrument.type;
-				doc.notifier.changed();
-				this._didSomething();
-			}
-		}
-	}
-	
-	export class ChangeFeedbackEnvelope extends Change {
-		constructor(doc: SongDocument, newValue: number) {
-			super();
-			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
-			const oldValue: number = instrument.feedbackEnvelope;
-			if (oldValue != newValue) {
-				instrument.feedbackEnvelope = newValue;
-				instrument.preset = instrument.type;
-				doc.notifier.changed();
-				this._didSomething();
-			}
-		}
-	}
-	
-	export class ChangeOperatorEnvelope extends Change {
-		constructor(doc: SongDocument, operatorIndex: number, newValue: number) {
-			super();
-			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
-			const oldValue: number = instrument.operators[operatorIndex].envelope;
-			if (oldValue != newValue) {
-				instrument.operators[operatorIndex].envelope = newValue;
 				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();
@@ -1421,14 +1411,14 @@ import {SongDocument} from "./SongDocument";
 					const noteStart: number = noteObject["start"] + selectionStart;
 					const noteEnd: number = noteObject["end"] + selectionStart;
 					if (noteStart >= selectionEnd) break;
-					const note: Note = new Note(noteObject["pitches"][0], noteStart, noteEnd, noteObject["pins"][0]["expression"], false);
+					const note: Note = new Note(noteObject["pitches"][0], noteStart, noteEnd, noteObject["pins"][0]["size"], false);
 					note.pitches.length = 0;
 					for (const pitch of noteObject["pitches"]) {
 						note.pitches.push(pitch);
 					}
 					note.pins.length = 0;
 					for (const pin of noteObject["pins"]) {
-						note.pins.push(makeNotePin(pin.interval, pin.time, pin.expression));
+						note.pins.push(makeNotePin(pin.interval, pin.time, pin.size));
 					}
 					pattern.notes.splice(noteInsertionIndex++, 0, note);
 					if (note.end > selectionEnd) {
@@ -1583,17 +1573,17 @@ import {SongDocument} from "./SongDocument";
 				const oldPin: NotePin = note.pins[i];
 				const time: number = oldPin.time;
 				if (time < skipStart) {
-					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.expression));
+					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.size));
 				} else if (time > skipEnd) {
 					if (!setPin) {
-						this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].expression));
+						this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].size));
 						setPin = true;
 					}
-					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.expression));
+					this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.size));
 				}
 			}
 			if (!setPin) {
-				this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].expression));
+				this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].size));
 			}
 			
 			this._finishSetup();
@@ -1611,7 +1601,7 @@ import {SongDocument} from "./SongDocument";
 			let setStart: boolean = false;
 			let setEnd: boolean   = false;
 			let prevInterval: number = 0;
-			let prevExpression: number = 3;
+			let prevSize: number = Config.noteSizeMax;
 			let persist: boolean = true;
 			let i: number;
 			let direction: number;
@@ -1635,24 +1625,24 @@ import {SongDocument} from "./SongDocument";
 					if (!setStart) {
 						if (time * direction <= bendStart * direction) {
 							prevInterval = oldPin.interval;
-							prevExpression = oldPin.expression;
+							prevSize = oldPin.size;
 						}
 						if (time * direction < bendStart * direction) {
-							push(makeNotePin(oldPin.interval, time, oldPin.expression));
+							push(makeNotePin(oldPin.interval, time, oldPin.size));
 							break;
 						} else {
-							push(makeNotePin(prevInterval, bendStart, prevExpression));
+							push(makeNotePin(prevInterval, bendStart, prevSize));
 							setStart = true;
 						}
 					} else if (!setEnd) {
 						if (time * direction <= bendEnd * direction) {
 							prevInterval = oldPin.interval;
-							prevExpression = oldPin.expression;
+							prevSize = oldPin.size;
 						}
 						if (time * direction < bendEnd * direction) {
 							break;
 						} else {
-							push(makeNotePin(bendTo, bendEnd, prevExpression));
+							push(makeNotePin(bendTo, bendEnd, prevSize));
 							setEnd = true;
 						}
 					} else {
@@ -1660,14 +1650,14 @@ import {SongDocument} from "./SongDocument";
 							break;
 						} else {
 							if (oldPin.interval != prevInterval) persist = false;
-							push(makeNotePin(persist ? bendTo : oldPin.interval, time, oldPin.expression));
+							push(makeNotePin(persist ? bendTo : oldPin.interval, time, oldPin.size));
 							break;
 						}
 					}
 				}
 			}
 			if (!setEnd) {
-				push(makeNotePin(bendTo, bendEnd, prevExpression));
+				push(makeNotePin(bendTo, bendEnd, prevSize));
 			}
 			
 			this._finishSetup();
@@ -1716,7 +1706,7 @@ import {SongDocument} from "./SongDocument";
 			super(doc, note);
 			
 			for (const oldPin of this._oldPins) {
-				this._newPins.push(makeNotePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.expression));
+				this._newPins.push(makeNotePin(oldPin.interval, changeRhythm(oldPin.time + this._oldStart) - this._oldStart, oldPin.size));
 			}
 			
 			this._finishSetup();
@@ -1875,7 +1865,7 @@ import {SongDocument} from "./SongDocument";
 								if (prevPin.interval == nextPin.interval) {
 									let weight: number = nextPin.time - prevPin.time;
 									weight += Math.max(0, Math.min(Config.partsPerBeat, nextPin.time + note.start) - (prevPin.time + note.start));
-									weight *= nextPin.expression + prevPin.expression;
+									weight *= nextPin.size + prevPin.size;
 									for (const pitch of note.pitches) {
 										const key = (basePitch + prevPin.interval + pitch) % 12;
 										keyWeights[key] += weight;
@@ -2084,7 +2074,7 @@ import {SongDocument} from "./SongDocument";
 			}
 			
 			for (let pinIndex: number = 0; pinIndex < oldNote.pins.length; pinIndex++) {
-				if (newNote.pins[pinIndex].interval != oldNote.pins[pinIndex].interval || newNote.pins[pinIndex].time != oldNote.pins[pinIndex].time || newNote.pins[pinIndex].expression != oldNote.pins[pinIndex].expression) {
+				if (newNote.pins[pinIndex].interval != oldNote.pins[pinIndex].interval || newNote.pins[pinIndex].time != oldNote.pins[pinIndex].time || newNote.pins[pinIndex].size != oldNote.pins[pinIndex].size) {
 					return false;
 				}
 			}
@@ -2197,20 +2187,20 @@ import {SongDocument} from "./SongDocument";
 			truncStart -= this._oldStart;
 			truncEnd   -= this._oldStart;
 			let setStart: boolean = false;
-			let prevExpression: number = this._oldPins[0].expression;
+			let prevSize: number = this._oldPins[0].size;
 			let prevInterval: number = this._oldPins[0].interval;
 			let pushLastPin: boolean = true;
 			let i: number;
 			for (i = 0; i < this._oldPins.length; i++) {
 				const oldPin: NotePin = this._oldPins[i];
 				if (oldPin.time < truncStart) {
-					prevExpression = oldPin.expression;
+					prevSize = oldPin.size;
 					prevInterval = oldPin.interval;
 				} else if (oldPin.time <= truncEnd) {
 					if (oldPin.time > truncStart && !setStart) {
-						this._newPins.push(makeNotePin(prevInterval, truncStart, prevExpression));
+						this._newPins.push(makeNotePin(prevInterval, truncStart, prevSize));
 					}
-					this._newPins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.expression));
+					this._newPins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.size));
 					setStart = true;
 					if (oldPin.time == truncEnd) {
 						pushLastPin = false;
@@ -2222,7 +2212,7 @@ import {SongDocument} from "./SongDocument";
 				
 			}
 			
-			if (pushLastPin) this._newPins.push(makeNotePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].expression));
+			if (pushLastPin) this._newPins.push(makeNotePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].size));
 			
 			this._finishSetup();
 		}
@@ -2389,16 +2379,16 @@ import {SongDocument} from "./SongDocument";
 					}
 				}
 				interval -= this._newPitches[0];
-				this._newPins.push(makeNotePin(interval, oldPin.time, oldPin.expression));
+				this._newPins.push(makeNotePin(interval, oldPin.time, oldPin.size));
 			}
 			
 			if (this._newPins[0].interval != 0) throw new Error("wrong pin start interval");
 			
 			for (let i: number = 1; i < this._newPins.length - 1; ) {
-				if (this._newPins[i-1].interval == this._newPins[i].interval && 
-				    this._newPins[i].interval == this._newPins[i+1].interval && 
-				    this._newPins[i-1].expression == this._newPins[i].expression && 
-				    this._newPins[i].expression == this._newPins[i+1].expression)
+				if (this._newPins[i-1].interval == this._newPins[i].interval &&
+				    this._newPins[i].interval == this._newPins[i+1].interval &&
+				    this._newPins[i-1].size == this._newPins[i].size &&
+				    this._newPins[i].size == this._newPins[i+1].size)
 				{
 					this._newPins.splice(i, 1);
 				} else {
@@ -2624,16 +2614,16 @@ import {SongDocument} from "./SongDocument";
 					if (interval < min) interval = min;
 					if (interval > max) interval = max;
 					const transformedInterval: number = scaleMap[interval % 12] + (interval - (interval % 12));
-					newPins.push(makeNotePin(transformedInterval - newPitches[0], oldPin.time, oldPin.expression));
+					newPins.push(makeNotePin(transformedInterval - newPitches[0], oldPin.time, oldPin.size));
 				}
 			
 				if (newPins[0].interval != 0) throw new Error("wrong pin start interval");
 			
 				for (let i: number = 1; i < newPins.length - 1; ) {
-					if (newPins[i-1].interval == newPins[i].interval && 
-						newPins[i].interval == newPins[i+1].interval && 
-						newPins[i-1].expression == newPins[i].expression && 
-						newPins[i].expression == newPins[i+1].expression)
+					if (newPins[i-1].interval == newPins[i].interval &&
+						newPins[i].interval == newPins[i+1].interval &&
+						newPins[i-1].size == newPins[i].size &&
+						newPins[i].size == newPins[i+1].size)
 					{
 						newPins.splice(i, 1);
 					} else {
@@ -2667,12 +2657,12 @@ import {SongDocument} from "./SongDocument";
 		}
 	}
 	
-	export class ChangeExpressionBend extends UndoableChange {
+	export class ChangeSizeBend extends UndoableChange {
 		private _doc: SongDocument;
 		private _note: Note;
 		private _oldPins: NotePin[];
 		private _newPins: NotePin[];
-		constructor(doc: SongDocument, note: Note, bendPart: number, bendExpression: number, bendInterval: number) {
+		constructor(doc: SongDocument, note: Note, bendPart: number, bendSize: number, bendInterval: number) {
 			super(false);
 			this._doc = doc;
 			this._note = note;
@@ -2685,11 +2675,11 @@ import {SongDocument} from "./SongDocument";
 				if (pin.time < bendPart) {
 					this._newPins.push(pin);
 				} else if (pin.time == bendPart) {
-					this._newPins.push(makeNotePin(bendInterval, bendPart, bendExpression));
+					this._newPins.push(makeNotePin(bendInterval, bendPart, bendSize));
 					inserted = true;
 				} else {
 					if (!inserted) {
-						this._newPins.push(makeNotePin(bendInterval, bendPart, bendExpression));
+						this._newPins.push(makeNotePin(bendInterval, bendPart, bendSize));
 						inserted = true;
 					}
 					this._newPins.push(pin);
@@ -2697,10 +2687,10 @@ import {SongDocument} from "./SongDocument";
 			}
 			
 			for (let i: number = 1; i < this._newPins.length - 1; ) {
-				if (this._newPins[i-1].interval == this._newPins[i].interval && 
-				    this._newPins[i].interval == this._newPins[i+1].interval && 
-				    this._newPins[i-1].expression == this._newPins[i].expression && 
-				    this._newPins[i].expression == this._newPins[i+1].expression)
+				if (this._newPins[i-1].interval == this._newPins[i].interval &&
+				    this._newPins[i].interval == this._newPins[i+1].interval &&
+				    this._newPins[i-1].size == this._newPins[i].size &&
+				    this._newPins[i].size == this._newPins[i+1].size)
 				{
 					this._newPins.splice(i, 1);
 				} else {
@@ -2742,6 +2732,64 @@ import {SongDocument} from "./SongDocument";
 			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
 			if (instrument.chipNoise != newValue) {
 				instrument.chipNoise = newValue;
+				instrument.preset = instrument.type;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeAddEnvelope extends Change {
+		constructor(doc: SongDocument) {
+			super();
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			instrument.addEnvelope(0,0,0);
+			instrument.preset = instrument.type;
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+	
+	export class ChangeRemoveEnvelope extends Change {
+		constructor(doc: SongDocument, index: number) {
+			super();
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			instrument.envelopeCount--;
+			for (let i: number = index; i < instrument.envelopeCount; i++) {
+				instrument.envelopes[i].target   = instrument.envelopes[i+1].target;
+				instrument.envelopes[i].index    = instrument.envelopes[i+1].index;
+				instrument.envelopes[i].envelope = instrument.envelopes[i+1].envelope;
+			}
+			// TODO: Shift any envelopes that were targeting other envelope indices after the removed one.
+			instrument.preset = instrument.type;
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+	
+	export class ChangeSetEnvelopeTarget extends Change {
+		constructor(doc: SongDocument, envelopeIndex: number, target: number, targetIndex: number) {
+			super();
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldTarget: number = instrument.envelopes[envelopeIndex].target;
+			const oldIndex: number = instrument.envelopes[envelopeIndex].index;
+			if (oldTarget != target || oldIndex != targetIndex) {
+				instrument.envelopes[envelopeIndex].target = target;
+				instrument.envelopes[envelopeIndex].index = targetIndex;
+				instrument.preset = instrument.type;
+				doc.notifier.changed();
+				this._didSomething();
+			}
+		}
+	}
+	
+	export class ChangeSetEnvelopeType extends Change {
+		constructor(doc: SongDocument, envelopeIndex: number, newValue: number) {
+			super();
+			const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+			const oldValue: number = instrument.envelopes[envelopeIndex].envelope;
+			if (oldValue != newValue) {
+				instrument.envelopes[envelopeIndex].envelope = newValue;
 				instrument.preset = instrument.type;
 				doc.notifier.changed();
 				this._didSomething();

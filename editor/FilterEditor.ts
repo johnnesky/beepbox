@@ -201,7 +201,7 @@ export class FilterEditor {
 					point.type = this._addedType;
 					point.freq = freq;
 					point.gain = gain;
-					sequence.append(new ChangeFilterAddPoint(this._doc, this._filterSettings, point, this._filterSettings.controlPointCount));
+					sequence.append(new ChangeFilterAddPoint(this._doc, this._filterSettings, point, this._filterSettings.controlPointCount, this._useNoteFilter));
 				} else {
 					this._deletingPoint = true;
 				}
@@ -222,7 +222,7 @@ export class FilterEditor {
 				if (freq >= 0 && freq < Config.filterFreqRange) {
 					sequence.append(new ChangeFilterMovePoint(this._doc, point, point.freq, freq, point.gain, gain));
 				} else {
-					sequence.append(new ChangeFilterAddPoint(this._doc, this._filterSettings, point, this._selectedIndex, true));
+					sequence.append(new ChangeFilterAddPoint(this._doc, this._filterSettings, point, this._selectedIndex, this._useNoteFilter, true));
 					this._deletingPoint = true;
 				}
 			}
@@ -238,7 +238,7 @@ export class FilterEditor {
 			if (!this._addingPoint && !this._mouseDragging && !this._touchMode) {
 				if (this._selectedIndex < this._filterSettings.controlPointCount && this._selectedIndex != -1) {
 					const point: FilterControlPoint = this._filterSettings.controlPoints[this._selectedIndex];
-					this._doc.record(new ChangeFilterAddPoint(this._doc, this._filterSettings, point, this._selectedIndex, true));
+					this._doc.record(new ChangeFilterAddPoint(this._doc, this._filterSettings, point, this._selectedIndex, this._useNoteFilter, true));
 				}
 			} else {
 				this._doc.record(this._dragChange);

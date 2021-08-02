@@ -437,19 +437,19 @@ import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 	}
 	
 	function drawNote(pitch: number, start: number, pins: NotePin[], radius: number, offsetX: number, offsetY: number, partWidth: number, pitchHeight: number): string {
-		let d: string = `M ${offsetX + partWidth * (start + pins[0].time)} ${offsetY - pitch * pitchHeight + radius * (pins[0].volume / 3.0)} `; 
+		let d: string = `M ${offsetX + partWidth * (start + pins[0].time)} ${offsetY - pitch * pitchHeight + radius * (pins[0].size / Config.noteSizeMax)} `; 
 		for (let i: number = 0; i < pins.length; i++) {
 			const pin: NotePin = pins[i];
 			const x:   number = offsetX + partWidth * (start + pin.time);
 			const y: number = offsetY - pitchHeight * (pitch + pin.interval);
-			const expression: number = pin.volume / 3.0;
+			const expression: number = pin.size / Config.noteSizeMax;
 			d += `L ${x} ${y - radius * expression} `;
 		}
 		for (let i: number = pins.length - 1; i >= 0; i--) {
 			const pin: NotePin = pins[i];
 			const x:   number = offsetX + partWidth * (start + pin.time);
 			const y: number = offsetY - pitchHeight * (pitch + pin.interval);
-			const expression: number = pin.volume / 3.0;
+			const expression: number = pin.size / Config.noteSizeMax;
 			d += `L ${x} ${y + radius * expression} `;
 		}
 		return d;

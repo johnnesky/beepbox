@@ -10,6 +10,7 @@ import {SongDocument} from "./SongDocument";
 import {Prompt} from "./Prompt";
 import {TipPrompt} from "./TipPrompt";
 import {PatternEditor} from "./PatternEditor";
+import {EnvelopeEditor} from "./EnvelopeEditor";
 import {FilterEditor} from "./FilterEditor";
 import {MuteEditor} from "./MuteEditor";
 import {TrackEditor} from "./TrackEditor";
@@ -27,7 +28,7 @@ import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
-import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeFilterEnvelope, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeFeedbackEnvelope, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangePulseEnvelope, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeInterval, ChangeChord, ChangeSong, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization} from "./changes";
+import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeUnison, ChangeChord, ChangeSong, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization, ChangeAddEnvelope} from "./changes";
 
 //namespace beepbox {
 	const {button, div, input, select, span, optgroup, option} = HTML;
@@ -208,10 +209,6 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 		private readonly _eqFilterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("eqFilter")}, "EQ Filter:"), this._eqFilterEditor.container);
 		private readonly _noteFilterEditor: FilterEditor = new FilterEditor(this._doc, true);
 		private readonly _noteFilterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("noteFilter")}, "Note Filter:"), this._noteFilterEditor.container);
-		private readonly _filterEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
-		private _filterEnvelopeRow: HTMLDivElement = div({class: "selectRow", title: "Low-pass Filter Envelope"}, span({class: "tip", onclick: ()=>this._openPrompt("filterEnvelope")}, "Filter Env:"), div({class: "selectContainer"}, this._filterEnvelopeSelect));
-		private readonly _pulseEnvelopeSelect: HTMLSelectElement = buildOptions(select(), Config.envelopes.map(envelope=>envelope.name));
-		private _pulseEnvelopeRow: HTMLDivElement = div({class: "selectRow", title: "Pulse Width Modulator Envelope"}, span({class: "tip", onclick: ()=>this._openPrompt("pulseEnvelope")}, "Pulse Env:"), div({class: "selectContainer"}, this._pulseEnvelopeSelect));
 		private readonly _pulseWidthSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.pulseWidthRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangePulseWidth(this._doc, oldValue, newValue));
 		private _pulseWidthRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pulseWidth")}, "Pulse Width:"), this._pulseWidthSlider.input);
 		private readonly _distortionSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.distortionRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeDistortion(this._doc, oldValue, newValue));
@@ -222,8 +219,8 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 		private _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Freq Crush:"), this._bitcrusherFreqSlider.input);
 		private readonly _stringSustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.stringSustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeStringSustain(this._doc, oldValue, newValue));
 		private _stringSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("stringSustain")}, "Sustain:"), this._stringSustainSlider.input);
-		private readonly _intervalSelect: HTMLSelectElement = buildOptions(select(), Config.intervals.map(interval=>interval.name));
-		private readonly _intervalSelectRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("interval")}, "Interval:"), div({class: "selectContainer"}, this._intervalSelect));
+		private readonly _unisonSelect: HTMLSelectElement = buildOptions(select(), Config.unisons.map(unison=>unison.name));
+		private readonly _unisonSelectRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("unison")}, "Unison:"), div({class: "selectContainer"}, this._unisonSelect));
 		private readonly _chordSelect: HTMLSelectElement = buildOptions(select(), Config.chords.map(chord=>chord.name));
 		private readonly _chordSelectRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chords")}, "Chords:"), div({class: "selectContainer"}, this._chordSelect));
 		private readonly _vibratoSelect: HTMLSelectElement = buildOptions(select(), Config.vibratos.map(vibrato=>vibrato.name));
@@ -235,19 +232,15 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 		private readonly _spectrumRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("spectrum")}, "Spectrum:"), this._spectrumEditor.container);
 		private readonly _harmonicsEditor: HarmonicsEditor = new HarmonicsEditor(this._doc);
 		private readonly _harmonicsRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("harmonics")}, "Harmonics:"), this._harmonicsEditor.container);
+		private readonly _envelopeEditor: EnvelopeEditor = new EnvelopeEditor(this._doc);
 		private readonly _drumsetGroup: HTMLElement = div({class: "editor-controls"});
 		
-		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
-		private readonly _feedbackEnvelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Feedback Envelope"}), Config.envelopes.map(envelope=>envelope.name));
-		private readonly _feedbackRow2: HTMLDivElement = div({class: "operatorRow"},
-			div({style: "margin-right: .1em; visibility: hidden;"}, 1 + "."),
-			div({style: "width: 3em; margin-right: .3em;"}),
-			this._feedbackAmplitudeSlider.input,
-			div({class: "selectContainer", style: "width: 5em; margin-left: .3em;"}, this._feedbackEnvelopeSelect),
-		);
+		private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this._doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this._doc, oldValue, newValue));
+		private readonly _feedbackRow2: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("feedbackVolumeType")}, "Fdback Vol:"), this._feedbackAmplitudeSlider.input);
 		private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", class: "customize-instrument"},
 			"Customize Instrument",
 		);
+		private readonly _addEnvelopeButton: HTMLButtonElement = button({type: "button", class: "add-envelope"});
 		private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({class: "editor-controls"},
 			this._eqFilterRow,
 			this._transitionRow,
@@ -263,15 +256,13 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 			this._harmonicsRow,
 			this._drumsetGroup,
 			this._pulseWidthRow,
-			this._pulseEnvelopeRow,
 			this._stringSustainRow,
-			this._intervalSelectRow,
+			this._unisonSelectRow,
 			div({class: "selectRow"},
 				span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects:"),
 				div({class: "selectContainer"}, this._effectsSelect),
 			),
 			this._noteFilterRow,
-			this._filterEnvelopeRow,
 			this._distortionRow,
 			this._bitcrusherQuantizationRow,
 			this._bitcrusherFreqRow,
@@ -279,6 +270,11 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 			this._echoSustainRow,
 			this._echoDelayRow,
 			this._reverbRow,
+			div({style: `margin: 2px 0; margin-left: 2em; display: flex; align-items: center;`},
+				span({class: "tip", onclick: ()=>this._openPrompt("envelopes"), style: `flex-grow: 1; text-align: center;`}, "Envelopes:"),
+				this._addEnvelopeButton,
+			),
+			this._envelopeEditor.container,
 		);
 		private readonly _instrumentSettingsGroup: HTMLDivElement = div({class: "editor-controls"},
 			div({style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};`},
@@ -386,7 +382,6 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 		private _currentPromptName: string | null = null;
 		private readonly _operatorRows: HTMLDivElement[] = []
 		private readonly _operatorAmplitudeSliders: Slider[] = []
-		private readonly _operatorEnvelopeSelects: HTMLSelectElement[] = []
 		private readonly _operatorFrequencySelects: HTMLSelectElement[] = []
 		private readonly _drumsetSpectrumEditors: SpectrumEditor[] = [];
 		private readonly _drumsetEnvelopeSelects: HTMLSelectElement[] = [];
@@ -409,33 +404,26 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 				option({value: "forceRhythm"}, "Snap Notes To Rhythm"),
 			));
 			
-			this._phaseModGroup.appendChild(div({class: "operatorRow", style: `color: ${ColorConfig.secondaryText}; height: 1em; margin-top: 0.5em;`},
+			this._phaseModGroup.appendChild(div({class: "selectRow", style: `color: ${ColorConfig.secondaryText}; height: 1em; margin-top: 0.5em;`},
 				div({style: "margin-right: .1em; visibility: hidden;"}, 1 + "."),
 				div({style: "width: 3em; margin-right: .3em;", class: "tip", onclick: ()=>this._openPrompt("operatorFrequency")}, "Freq:"),
-				div({style: "width: 4em; margin: 0;", class: "tip", onclick: ()=>this._openPrompt("operatorVolume")}, "Volume:"),
-				div({style: "width: 5em; margin-left: .3em;", class: "tip", onclick: ()=>this._openPrompt("operatorEnvelope")}, "Envelope:"),
+				div({class: "tip", onclick: ()=>this._openPrompt("operatorVolume")}, "Volume:"),
 			));
 			for (let i: number = 0; i < Config.operatorCount; i++) {
 				const operatorIndex: number = i;
 				const operatorNumber: HTMLDivElement = div({style: `margin-right: .1em; color: ${ColorConfig.secondaryText};`}, i + 1 + ".");
 				const frequencySelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Frequency"}), Config.operatorFrequencies.map(freq=>freq.name));
-				const amplitudeSlider: Slider = new Slider(input({style: "margin: 0; width: 4em;", type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Volume"}), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue));
-				const envelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Envelope"}), Config.envelopes.map(envelope=>envelope.name));
-				const row: HTMLDivElement = div({class: "operatorRow"},
+				const amplitudeSlider: Slider = new Slider(input({type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Volume"}), this._doc, (oldValue: number, newValue: number) => new ChangeOperatorAmplitude(this._doc, operatorIndex, oldValue, newValue));
+				const row: HTMLDivElement = div({class: "selectRow"},
 					operatorNumber,
 					div({class: "selectContainer", style: "width: 3em; margin-right: .3em;"}, frequencySelect),
 					amplitudeSlider.input,
-					div({class: "selectContainer", style: "width: 5em; margin-left: .3em;"}, envelopeSelect),
 				);
 				this._phaseModGroup.appendChild(row);
 				this._operatorRows[i] = row;
 				this._operatorAmplitudeSliders[i] = amplitudeSlider;
-				this._operatorEnvelopeSelects[i] = envelopeSelect;
 				this._operatorFrequencySelects[i] = frequencySelect;
 				
-				envelopeSelect.addEventListener("change", () => {
-					this._doc.record(new ChangeOperatorEnvelope(this._doc, operatorIndex, envelopeSelect.selectedIndex));
-				});
 				frequencySelect.addEventListener("change", () => {
 					this._doc.record(new ChangeOperatorFrequency(this._doc, operatorIndex, frequencySelect.selectedIndex));
 				});
@@ -479,14 +467,11 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 			this._instrumentSelect.addEventListener("change", this._whenSetInstrument);
 			this._customizeInstrumentButton.addEventListener("click", this._whenCustomizePressed);
 			this._feedbackTypeSelect.addEventListener("change", this._whenSetFeedbackType);
-			this._feedbackEnvelopeSelect.addEventListener("change", this._whenSetFeedbackEnvelope);
 			this._chipWaveSelect.addEventListener("change", this._whenSetChipWave);
 			this._chipNoiseSelect.addEventListener("change", this._whenSetNoiseWave);
 			this._transitionSelect.addEventListener("change", this._whenSetTransition);
 			this._effectsSelect.addEventListener("change", this._whenSetEffects);
-			this._filterEnvelopeSelect.addEventListener("change", this._whenSetFilterEnvelope);
-			this._pulseEnvelopeSelect.addEventListener("change", this._whenSetPulseEnvelope);
-			this._intervalSelect.addEventListener("change", this._whenSetInterval);
+			this._unisonSelect.addEventListener("change", this._whenSetUnison);
 			this._chordSelect.addEventListener("change", this._whenSetChord);
 			this._vibratoSelect.addEventListener("change", this._whenSetVibrato);
 			this._playButton.addEventListener("click", this._togglePlay);
@@ -501,6 +486,7 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 			this._noteFilterEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
 			this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
+			this._addEnvelopeButton.addEventListener("click", this._addNewEnvelope);
 			this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
 			
 			this._promptContainer.addEventListener("click", (event) => {
@@ -744,19 +730,14 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 					setSelectedValue(this._algorithmSelect, instrument.algorithm);
 					setSelectedValue(this._feedbackTypeSelect, instrument.feedbackType);
 					this._feedbackAmplitudeSlider.updateValue(instrument.feedbackAmplitude);
-					setSelectedValue(this._feedbackEnvelopeSelect, instrument.feedbackEnvelope);
-					this._feedbackEnvelopeSelect.parentElement!.style.color = (instrument.feedbackAmplitude > 0) ? "" : ColorConfig.secondaryText;
 					for (let i: number = 0; i < Config.operatorCount; i++) {
 						const isCarrier: boolean = (i < Config.algorithms[instrument.algorithm].carrierCount);
 						this._operatorRows[i].style.color = isCarrier ? ColorConfig.primaryText : "";
 						setSelectedValue(this._operatorFrequencySelects[i], instrument.operators[i].frequency);
 						this._operatorAmplitudeSliders[i].updateValue(instrument.operators[i].amplitude);
-						setSelectedValue(this._operatorEnvelopeSelects[i], instrument.operators[i].envelope);
 						const operatorName: string = (isCarrier ? "Voice " : "Modulator ") + (i + 1);
 						this._operatorFrequencySelects[i].title = operatorName + " Frequency";
 						this._operatorAmplitudeSliders[i].input.title = operatorName + (isCarrier ? " Volume" : " Amplitude");
-						this._operatorEnvelopeSelects[i].title = operatorName + " Envelope";
-						this._operatorEnvelopeSelects[i].parentElement!.style.color = (instrument.operators[i].amplitude > 0) ? "" : ColorConfig.secondaryText;
 					}
 				} else {
 					this._algorithmSelectRow.style.display = "none";
@@ -765,24 +746,18 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 					this._feedbackRow2.style.display = "none";
 				}
 				if (instrument.type == InstrumentType.pwm) {
-					this._pulseEnvelopeRow.style.display = "";
-					setSelectedValue(this._pulseEnvelopeSelect, instrument.pulseEnvelope);
 					this._pulseWidthRow.style.display = "";
 					this._pulseWidthSlider.input.title = prettyNumber(getPulseWidthRatio(instrument.pulseWidth) * 100) + "%";
 					this._pulseWidthSlider.updateValue(instrument.pulseWidth);
 				} else {
-					this._pulseEnvelopeRow.style.display = "none";
 					this._pulseWidthRow.style.display = "none";
 				}
 				
 				if (effectsIncludeNoteFilter(instrument.effects)) {
 					this._noteFilterRow.style.display = "";
 					this._noteFilterEditor.render();
-					this._filterEnvelopeRow.style.display = "";
-					setSelectedValue(this._filterEnvelopeSelect, instrument.filterEnvelope);
 				} else {
 					this._noteFilterRow.style.display = "none";
-					this._filterEnvelopeRow.style.display = "none";
 				}
 				
 				if (effectsIncludeDistortion(instrument.effects)) {
@@ -828,31 +803,33 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 				
 				if (instrument.type == InstrumentType.noise) {
 					this._vibratoSelectRow.style.display = "none";
-					this._intervalSelectRow.style.display = "none";
+					this._unisonSelectRow.style.display = "none";
 				} else if (instrument.type == InstrumentType.spectrum) {
 					this._vibratoSelectRow.style.display = "none";
-					this._intervalSelectRow.style.display = "none";
+					this._unisonSelectRow.style.display = "none";
 				} else if (instrument.type == InstrumentType.drumset) {
 					this._vibratoSelectRow.style.display = "none";
-					this._intervalSelectRow.style.display = "none";
+					this._unisonSelectRow.style.display = "none";
 				} else if (instrument.type == InstrumentType.chip) {
 					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "";
+					this._unisonSelectRow.style.display = "";
 				} else if (instrument.type == InstrumentType.fm) {
 					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "none";
+					this._unisonSelectRow.style.display = "none";
 				} else if (instrument.type == InstrumentType.harmonics) {
 					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "";
+					this._unisonSelectRow.style.display = "";
 				} else if (instrument.type == InstrumentType.pwm) {
 					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "none";
+					this._unisonSelectRow.style.display = "none";
 				} else if (instrument.type == InstrumentType.pickedString) {
 					this._vibratoSelectRow.style.display = "";
-					this._intervalSelectRow.style.display = "none";
+					this._unisonSelectRow.style.display = "none";
 				} else {
 					throw new Error("Unrecognized instrument type: " + instrument.type);
 				}
+				
+				this._envelopeEditor.render();
 			}
 			
 			for (let chordIndex: number = 0; chordIndex < Config.chords.length; chordIndex++) {
@@ -883,10 +860,11 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 			this._eqFilterEditor.render();
 			setSelectedValue(this._transitionSelect, instrument.transition);
 			setSelectedValue(this._vibratoSelect, instrument.vibrato);
-			setSelectedValue(this._intervalSelect, instrument.interval);
+			setSelectedValue(this._unisonSelect, instrument.unison);
 			setSelectedValue(this._chordSelect, instrument.chord);
 			this._instrumentVolumeSlider.updateValue(-instrument.volume);
 			setSelectedValue(this._instrumentSelect, instrumentIndex);
+			this._addEnvelopeButton.disabled = (instrument.envelopeCount >= Config.maxEnvelopeCount);
 			
 			this._volumeSlider.value = String(this._doc.volume);
 			
@@ -959,6 +937,7 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 				case 32: // space
 					this._togglePlay();
 					event.preventDefault();
+					this._refocusStage();
 					break;
 				case 90: // z
 					if (event.shiftKey) {
@@ -1031,7 +1010,14 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 						delete instrumentObject["pan"];
 						const panningEffectIndex: number = instrumentObject["effects"].indexOf(Config.effectsNames[EffectType.panning]);
 						if (panningEffectIndex != -1) instrumentObject["effects"].splice(panningEffectIndex, 1);
-						// TODO: If the instrument has any envelopes or automation targetting panning, remove those too.
+						for (let i: number = 0; i < instrumentObject["envelopes"].length; i++) {
+							const envelope: any = instrumentObject["envelopes"][i];
+							// If there are any envelopes targeting panning or none, remove those too.
+							if (envelope["target"] == "panning" || envelope["target"] == "none" || envelope["envelope"] == "none") {
+								instrumentObject["envelopes"].splice(i, 1);
+								i--;
+							}
+						}
 						this._copyTextToClipboard(JSON.stringify(instrumentObject));
 					}
 					event.preventDefault();
@@ -1304,10 +1290,6 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 			this._doc.record(new ChangeFeedbackType(this._doc, this._feedbackTypeSelect.selectedIndex));
 		}
 		
-		private _whenSetFeedbackEnvelope = (): void => {
-			this._doc.record(new ChangeFeedbackEnvelope(this._doc, this._feedbackEnvelopeSelect.selectedIndex));
-		}
-		
 		private _whenSetAlgorithm = (): void => {
 			this._doc.record(new ChangeAlgorithm(this._doc, this._algorithmSelect.selectedIndex));
 		}
@@ -1327,15 +1309,6 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 		private _whenSetNoiseWave = (): void => {
 			this._doc.record(new ChangeNoiseWave(this._doc, this._chipNoiseSelect.selectedIndex));
 		}
-		
-		private _whenSetFilterEnvelope = (): void => {
-			this._doc.record(new ChangeFilterEnvelope(this._doc, this._filterEnvelopeSelect.selectedIndex));
-		}
-		
-		private _whenSetPulseEnvelope = (): void => {
-			this._doc.record(new ChangePulseEnvelope(this._doc, this._pulseEnvelopeSelect.selectedIndex));
-		}
-		
 		private _whenSetTransition = (): void => {
 			this._doc.record(new ChangeTransition(this._doc, this._transitionSelect.selectedIndex));
 		}
@@ -1350,12 +1323,17 @@ import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVol
 			this._doc.record(new ChangeVibrato(this._doc, this._vibratoSelect.selectedIndex));
 		}
 		
-		private _whenSetInterval = (): void => {
-			this._doc.record(new ChangeInterval(this._doc, this._intervalSelect.selectedIndex));
+		private _whenSetUnison = (): void => {
+			this._doc.record(new ChangeUnison(this._doc, this._unisonSelect.selectedIndex));
 		}
 		
 		private _whenSetChord = (): void => {
 			this._doc.record(new ChangeChord(this._doc, this._chordSelect.selectedIndex));
+		}
+		
+		private _addNewEnvelope = (): void => {
+			this._doc.record(new ChangeAddEnvelope(this._doc));
+			this._refocusStage();
 		}
 		
 		private _fileMenuHandler = (event:Event): void => {

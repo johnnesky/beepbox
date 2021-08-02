@@ -1,6 +1,6 @@
 // Copyright (C) 2020 John Nesky, distributed under the MIT license.
 
-import {InstrumentType, EnvelopeType, Config, getArpeggioPitchIndex} from "../synth/SynthConfig";
+import {InstrumentType, /*EnvelopeType,*/ Config, getArpeggioPitchIndex} from "../synth/SynthConfig";
 import {Instrument, Pattern, Note, Song, Synth} from "../synth/synth";
 import {ColorConfig} from "./ColorConfig";
 import {Preset, EditorConfig} from "./EditorConfig";
@@ -53,7 +53,7 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 		);
 		private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
 		private readonly _exportButton: HTMLButtonElement = button({class: "exportButton", style: "width:45%;"}, "Export");
-		private static readonly midiSustainInstruments: number[] = [
+		private static readonly midiChipInstruments: number[] = [
 			0x4A, // rounded -> recorder
 			0x47, // triangle -> clarinet
 			0x50, // square -> square wave
@@ -67,21 +67,6 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 			0x51, // double saw -> sawtooth wave
 			0x51, // double pulse -> sawtooth wave
 			0x51, // spiky -> sawtooth wave
-		];
-		private static readonly midiDecayInstruments: number[] = [
-			0x21, // rounded -> fingered bass
-			0x2E, // triangle -> harp
-			0x2E, // square -> harp
-			0x06, // ¹/₃ pulse -> harpsichord
-			0x06, // ¹/₄ pulse -> harpsichord
-			0x18, // ¹/₆ pulse -> nylon guitar
-			0x18, // ¹/₈ pulse -> nylon guitar
-			0x19, // ¹/₁₂ pulse -> steel guitar
-			0x19, // ¹/₁₆ pulse -> steel guitar
-			0x19, // sawtooth -> steel guitar
-			0x19, // double saw -> steel guitar
-			0x6A, // double pulse -> shamisen
-			0x6A, // spiky -> shamisen
 		];
 		
 		public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 200px;"},
@@ -488,27 +473,21 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 									// The first BeepBox drumset channel is handled as a Midi drumset channel and doesn't need a program, but any subsequent drumsets will just be set to taiko.
 									instrumentProgram = 116; // taiko
 								} else {
-									const envelopeType: EnvelopeType = instrument.getFilterEnvelope().type;
-									const instrumentDecays: boolean = envelopeType == EnvelopeType.decay || envelopeType == EnvelopeType.twang;
 									if (instrument.type == InstrumentType.noise || instrument.type == InstrumentType.spectrum) {
 										if (isNoise) {
 											instrumentProgram = 116; // taiko
 										} else {
-											instrumentProgram = instrumentDecays ? 47 : 75; // timpani : pan flute
+											instrumentProgram = 75; // pan flute
 										}
 									} else if (instrument.type == InstrumentType.chip) {
-										const filterInstruments: number[] = instrumentDecays
-											? ExportPrompt.midiDecayInstruments
-											: ExportPrompt.midiSustainInstruments;
-										if (filterInstruments.length > instrument.chipWave) {
-											instrumentProgram = filterInstruments[instrument.chipWave];
+										if (ExportPrompt.midiChipInstruments.length > instrument.chipWave) {
+											instrumentProgram = ExportPrompt.midiChipInstruments[instrument.chipWave];
 										}
-									} else if (instrument.type == InstrumentType.pwm) {
-										instrumentProgram = instrumentDecays ? 0x19 : 81; // steel guitar : sawtooth
-									} else if (instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics) {
-										instrumentProgram = instrumentDecays ? 2 : 81; // electric grand : sawtooth
+									} else if (instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics) {
+										instrumentProgram = 81; // sawtooth
+									} else if (instrument.type == InstrumentType.pickedString) {
+										instrumentProgram = 0x19; // steel guitar
 									} else {
-										// TODO: Handle electric guitar instruments.
 										throw new Error("Unrecognized instrument type.");
 									}
 								}
@@ -554,19 +533,16 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 							writeInstrumentSettings(instrumentIndex);
 							
 							let usesArpeggio: boolean = instrument.getChord().arpeggiates;
-							let polyphony: number = 1;
-							if (usesArpeggio) {
-								if (instrument.getChord().customInterval) {
-									if (instrument.type == InstrumentType.chip) {
-										polyphony = 2;
-									} else if (instrument.type == InstrumentType.fm) {
-										polyphony = Config.operatorCount;
-									} else {
-										console.error("Unrecognized instrument type for harmonizing arpeggio: " + instrument.type);
-									}
+							let polyphony: number = usesArpeggio ? 1 : Config.maxChordSize;
+							if (instrument.getChord().customInterval) {
+								if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics) {
+									polyphony = 2;
+									usesArpeggio = true;
+								} else if (instrument.type == InstrumentType.fm) {
+									polyphony = Config.operatorCount;
+								} else {
+									console.error("Unrecognized instrument type for harmonizing arpeggio: " + instrument.type);
 								}
-							} else {
-								polyphony = Config.maxChordSize;
 							}
 							
 							for (let noteIndex: number = 0; noteIndex < pattern.notes.length; noteIndex++) {
@@ -574,12 +550,12 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 								
 								const noteStartTime: number = barStartTime + note.start * midiTicksPerPart;
 								let pinTime: number = noteStartTime;
-								let pinExpression: number = note.pins[0].expression;
+								let pinSize: number = note.pins[0].size;
 								let pinInterval: number = note.pins[0].interval;
 								const prevPitches: number[] = [-1, -1, -1, -1];
 								const nextPitches: number[] = [-1, -1, -1, -1];
 								const toneCount: number = Math.min(polyphony, note.pitches.length);
-								const velocity: number = isDrumset ? Math.max(1, Math.round(defaultNoteVelocity * note.pins[0].expression / 3)) : defaultNoteVelocity;
+								const velocity: number = isDrumset ? Math.max(1, Math.round(defaultNoteVelocity * note.pins[0].size / Config.noteSizeMax)) : defaultNoteVelocity;
 								
 								// The maximum midi pitch bend range is +/- 24 semitones from the base pitch. 
 								// To make the most of this, choose a base pitch that is within 24 semitones from as much of the note as possible.
@@ -613,20 +589,20 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 								
 								for (let pinIndex: number = 1; pinIndex < note.pins.length; pinIndex++) {
 									const nextPinTime: number = noteStartTime + note.pins[pinIndex].time * midiTicksPerPart;
-									const nextPinExpression: number = note.pins[pinIndex].expression;
+									const nextPinSize: number = note.pins[pinIndex].size;
 									const nextPinInterval: number = note.pins[pinIndex].interval;
 									
 									const length: number = nextPinTime - pinTime;
 									for (let midiTick: number = 0; midiTick < length; midiTick++) {
 										const midiTickTime: number = pinTime + midiTick;
-										const linearExpression: number = lerp(pinExpression, nextPinExpression, midiTick / length);
+										const linearSize: number = lerp(pinSize, nextPinSize, midiTick / length);
 										const linearInterval: number = lerp(pinInterval, nextPinInterval, midiTick / length);
 										
 										const interval: number = linearInterval * intervalScale - pitchOffset;
 										
 										const pitchBend: number = Math.max(0, Math.min(0x3fff, Math.round(0x2000 * (1.0 + interval / pitchBendRange))));
 										
-										const expression: number = Math.min(0x7f, Math.round(volumeMultToMidiExpression(Synth.expressionToVolumeMult(linearExpression))));
+										const expression: number = Math.min(0x7f, Math.round(volumeMultToMidiExpression(Synth.noteSizeToVolumeMult(linearSize))));
 										
 										if (pitchBend != prevPitchBend) {
 											writeEventTime(midiTickTime);
@@ -702,7 +678,7 @@ import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, M
 									}
 									
 									pinTime = nextPinTime;
-									pinExpression = nextPinExpression;
+									pinSize = nextPinSize;
 									pinInterval = nextPinInterval;
 								}
 
