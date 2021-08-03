@@ -33,42 +33,62 @@ export class ColorConfig {
 				--fifth-note: #468;
 				--white-piano-key: #bbb;
 				--black-piano-key: #444;
-				--pitch1-secondary-channel: #0099a1;
-				--pitch1-primary-channel:   #25f3ff;
-				--pitch1-secondary-note:    #00bdc7;
-				--pitch1-primary-note:      #92f9ff;
-				--pitch2-secondary-channel: #a1a100;
-				--pitch2-primary-channel:   #ffff25;
-				--pitch2-secondary-note:    #c7c700;
-				--pitch2-primary-note:      #ffff92;
-				--pitch3-secondary-channel: #c75000;
-				--pitch3-primary-channel:   #ff9752;
-				--pitch3-secondary-note:    #ff771c;
-				--pitch3-primary-note:      #ffcdab;
-				--pitch4-secondary-channel: #00a100;
-				--pitch4-primary-channel:   #50ff50;
-				--pitch4-secondary-note:    #00c700;
-				--pitch4-primary-note:      #a0ffa0;
-				--pitch5-secondary-channel: #d020d0;
-				--pitch5-primary-channel:   #ff90ff;
-				--pitch5-secondary-note:    #e040e0;
-				--pitch5-primary-note:      #ffc0ff;
-				--pitch6-secondary-channel: #7777b0;
-				--pitch6-primary-channel:   #a0a0ff;
-				--pitch6-secondary-note:    #8888d0;
-				--pitch6-primary-note:      #d0d0ff;
-				--noise1-secondary-channel: #6f6f6f;
-				--noise1-primary-channel:   #aaaaaa;
-				--noise1-secondary-note:    #a7a7a7;
-				--noise1-primary-note:      #e0e0e0;
+				--pitch1-secondary-channel: #0099A1;
+				--pitch1-primary-channel:   #25F3FF;
+				--pitch1-secondary-note:    #00BDC7;
+				--pitch1-primary-note:      #92F9FF;
+				--pitch2-secondary-channel: #A1A100;
+				--pitch2-primary-channel:   #FFFF25;
+				--pitch2-secondary-note:    #C7C700;
+				--pitch2-primary-note:      #FFFF92;
+				--pitch3-secondary-channel: #C75000;
+				--pitch3-primary-channel:   #FF9752;
+				--pitch3-secondary-note:    #FF771C;
+				--pitch3-primary-note:      #FFCDAB;
+				--pitch4-secondary-channel: #00A100;
+				--pitch4-primary-channel:   #50FF50;
+				--pitch4-secondary-note:    #00C700;
+				--pitch4-primary-note:      #A0FFA0;
+				--pitch5-secondary-channel: #D020D0;
+				--pitch5-primary-channel:   #FF90FF;
+				--pitch5-secondary-note:    #E040E0;
+				--pitch5-primary-note:      #FFC0FF;
+				--pitch6-secondary-channel: #7777B0;
+				--pitch6-primary-channel:   #A0A0FF;
+				--pitch6-secondary-note:    #8888D0;
+				--pitch6-primary-note:      #D0D0FF;
+				--pitch7-secondary-channel: #8AA100;
+				--pitch7-primary-channel:   #DEFF25;
+				--pitch7-secondary-note:    #AAC700;
+				--pitch7-primary-note:      #E6FF92;
+				--pitch8-secondary-channel: #DF0019;
+				--pitch8-primary-channel:   #FF98A4;
+				--pitch8-secondary-note:    #FF4E63;
+				--pitch8-primary-note:      #FFB2BB;
+				--pitch9-secondary-channel: #00A170;
+				--pitch9-primary-channel:   #50FFC9;
+				--pitch9-secondary-note:    #00C78A;
+				--pitch9-primary-note:      #83FFD9;
+				--pitch10-secondary-channel:#A11FFF;
+				--pitch10-primary-channel:  #CE8BFF;
+				--pitch10-secondary-note:   #B757FF;
+				--pitch10-primary-note:     #DFACFF;
+				--noise1-secondary-channel: #6F6F6F;
+				--noise1-primary-channel:   #AAAAAA;
+				--noise1-secondary-note:    #A7A7A7;
+				--noise1-primary-note:      #E0E0E0;
 				--noise2-secondary-channel: #996633;
-				--noise2-primary-channel:   #ddaa77;
-				--noise2-secondary-note:    #cc9966;
-				--noise2-primary-note:      #f0d0bb;
-				--noise3-secondary-channel: #4a6d8f;
-				--noise3-primary-channel:   #77aadd;
-				--noise3-secondary-note:    #6f9fcf;
-				--noise3-primary-note:      #bbd7ff;
+				--noise2-primary-channel:   #DDAA77;
+				--noise2-secondary-note:    #CC9966;
+				--noise2-primary-note:      #F0D0BB;
+				--noise3-secondary-channel: #4A6D8F;
+				--noise3-primary-channel:   #77AADD;
+				--noise3-secondary-note:    #6F9FCF;
+				--noise3-primary-note:      #BBD7FF;
+				--noise4-secondary-channel: #6B3E8E;
+				--noise4-primary-channel:   #AF82D2;
+				--noise4-secondary-note:    #9E71C1;
+				--noise4-primary-note:      #D4C1EA;
 			}
 		`,
 		"light classic": `
@@ -116,6 +136,22 @@ export class ColorConfig {
 				--pitch6-primary-channel:   #6969FD;
 				--pitch6-secondary-note:    #9393FE;
 				--pitch6-primary-note:      #4A4AD7;
+				--pitch7-secondary-channel: #CBE24B;
+				--pitch7-primary-channel:   #8EA800;
+				--pitch7-secondary-note:    #B0C82D;
+				--pitch7-primary-note:      #6C8000;
+				--pitch8-secondary-channel: #FF90A4;
+				--pitch8-primary-channel:   #E12E4D;
+				--pitch8-secondary-note:    #EC6E85;
+				--pitch8-primary-note:      #A6001D;
+				--pitch9-secondary-channel: #41E3B5;
+				--pitch9-primary-channel:   #00B481;
+				--pitch9-secondary-note:    #28D1A1;
+				--pitch9-primary-note:      #00835E;
+				--pitch10-secondary-channel:#CA77FF;
+				--pitch10-primary-channel:  #9609FF;
+				--pitch10-secondary-note:   #B54FFF;
+				--pitch10-primary-note:     #8400E3;
 				--noise1-secondary-channel: #C1C1C1;
 				--noise1-primary-channel:   #898989;
 				--noise1-secondary-note:    #ADADAD;
@@ -128,6 +164,10 @@ export class ColorConfig {
 				--noise3-primary-channel:   #4481BE;
 				--noise3-secondary-note:    #7CA7D3;
 				--noise3-primary-note:      #476685;
+				--noise4-secondary-channel: #C5A5E0;
+				--noise4-primary-channel:   #8553AE;
+				--noise4-secondary-note:    #AB87C8;
+				--noise4-primary-note:      #684F7D;
 			}
 			
 			.beepboxEditor button, .beepboxEditor select {
@@ -181,7 +221,7 @@ export class ColorConfig {
 			secondaryNote:    "var(--pitch4-secondary-note)",
 			primaryNote:      "var(--pitch4-primary-note)",
 		}, {
-			name: "pitch5", // purple
+			name: "pitch5", // magenta
 			secondaryChannel: "var(--pitch5-secondary-channel)",
 			primaryChannel:   "var(--pitch5-primary-channel)",
 			secondaryNote:    "var(--pitch5-secondary-note)",
@@ -192,6 +232,30 @@ export class ColorConfig {
 			primaryChannel:   "var(--pitch6-primary-channel)",
 			secondaryNote:    "var(--pitch6-secondary-note)",
 			primaryNote:      "var(--pitch6-primary-note)",
+		}, {
+			name: "pitch7", // olive
+			secondaryChannel: "var(--pitch7-secondary-channel)",
+			primaryChannel:   "var(--pitch7-primary-channel)",
+			secondaryNote:    "var(--pitch7-secondary-note)",
+			primaryNote:      "var(--pitch7-primary-note)",
+		}, {
+			name: "pitch8", // red
+			secondaryChannel: "var(--pitch8-secondary-channel)",
+			primaryChannel:   "var(--pitch8-primary-channel)",
+			secondaryNote:    "var(--pitch8-secondary-note)",
+			primaryNote:      "var(--pitch8-primary-note)",
+		}, {
+			name: "pitch9", // teal
+			secondaryChannel: "var(--pitch9-secondary-channel)",
+			primaryChannel:   "var(--pitch9-primary-channel)",
+			secondaryNote:    "var(--pitch9-secondary-note)",
+			primaryNote:      "var(--pitch9-primary-note)",
+		}, {
+			name: "pitch10", // purple
+			secondaryChannel: "var(--pitch10-secondary-channel)",
+			primaryChannel:   "var(--pitch10-primary-channel)",
+			secondaryNote:    "var(--pitch10-secondary-note)",
+			primaryNote:      "var(--pitch10-primary-note)",
 		},
 	]);
 	public static readonly noiseChannels: DictionaryArray<ChannelColors> = toNameMap([
@@ -213,6 +277,12 @@ export class ColorConfig {
 			primaryChannel:   "var(--noise3-primary-channel)",
 			secondaryNote:    "var(--noise3-secondary-note)",
 			primaryNote:      "var(--noise3-primary-note)",
+		}, {
+			name: "noise4", // purple
+			secondaryChannel: "var(--noise4-secondary-channel)",
+			primaryChannel:   "var(--noise4-primary-channel)",
+			secondaryNote:    "var(--noise4-secondary-note)",
+			primaryNote:      "var(--noise4-primary-note)",
 		},
 	]);
 	
