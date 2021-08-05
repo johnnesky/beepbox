@@ -67,6 +67,8 @@ export const enum EffectType {
 	bitcrusher,
 	noteFilter,
 	echo,
+	pitchShift,
+	detune,
 	length,
 }
 
@@ -75,6 +77,8 @@ export const enum NoteAutomationIndex {
 	noteFilterAllFreqs,
 	noteFilterFreq0, noteFilterFreq1, noteFilterFreq2, noteFilterFreq3, noteFilterFreq4, noteFilterFreq5, noteFilterFreq6, noteFilterFreq7,
 	noteFilterPeak0, noteFilterPeak1, noteFilterPeak2, noteFilterPeak3, noteFilterPeak4, noteFilterPeak5, noteFilterPeak6, noteFilterPeak7,
+	pitchShift,
+	detune,
 	vibratoDepth,
 	unison,
 	pulseWidth,
@@ -82,9 +86,6 @@ export const enum NoteAutomationIndex {
 	operatorFrequency0, operatorFrequency1, operatorFrequency2, operatorFrequency3,
 	operatorAmplitude0, operatorAmplitude1, operatorAmplitude2, operatorAmplitude3,
 	feedbackAmplitude,
-	//detune, // not implemented yet, slider is symmetrical but envelope *isn't*?
-	//semitone, // not implemented yet
-	//octave, // not implemented yet
 	length,
 }
 
@@ -332,8 +333,8 @@ export class Config {
 		{name: "bowed",      spread: 0.02, offset: 0.0, expression: 1.0, sign:-1.0},
 		{name: "piano",      spread: 0.01, offset: 0.0, expression: 1.0, sign: 0.7},
 	]);
-	public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher", "note filter", "echo"];
-	public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.noteFilter, EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.echo, EffectType.reverb];
+	public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher", "note filter", "echo", "pitch shift", "detune"];
+	public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.pitchShift, EffectType.detune, EffectType.noteFilter, EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.echo, EffectType.reverb];
 	public static readonly noteSizeMax: number = 3;
 	public static readonly volumeRange: number = 8;
 	public static readonly volumeLogScale: number = -0.5;
@@ -458,6 +459,11 @@ export class Config {
 	public static readonly windowPitchCount: number = Config.windowOctaves * Config.pitchesPerOctave + 1;
 	public static readonly maxPitch: number = Config.pitchOctaves * Config.pitchesPerOctave;
 	public static readonly maximumTonesPerChannel: number = Config.maxChordSize * 2;
+	public static readonly justIntonationSemitones: number[] = [1.0/2.0, 8.0/15.0, 9.0/16.0, 3.0/5.0, 5.0/8.0, 2.0/3.0, 32.0/45.0, 3.0/4.0, 4.0/5.0, 5.0/6.0, 8.0/9.0, 15.0/16.0, 1.0, 16.0/15.0, 9.0/8.0, 6.0/5.0, 5.0/4.0, 4.0/3.0, 45.0/32.0, 3.0/2.0, 8.0/5.0, 5.0/3.0, 16.0/9.0, 15.0/8.0, 2.0].map(x=>Math.log2(x) * Config.pitchesPerOctave);
+	public static readonly pitchShiftRange: number = Config.justIntonationSemitones.length;
+	public static readonly pitchShiftCenter: number = Config.pitchShiftRange >> 1;
+	public static readonly detuneCenter: number = 9;
+	public static readonly detuneMax: number = Config.detuneCenter * 2;
 	public static readonly sineWaveLength: number = 1 << 8; // 256
 	public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
 	public static readonly sineWave: Float64Array = generateSineWave();
@@ -494,9 +500,8 @@ export class Config {
 		{name: "operatorFrequency",      computeIndex:       NoteAutomationIndex.operatorFrequency0,     displayName: "fm# freq",         perNote:  true, interleave:  true, isFilter: false, range: Config.defaultAutomationRange,      maxCount: Config.operatorCount, effect: null,    compatibleInstruments: [InstrumentType.fm]},
 		{name: "operatorAmplitude",      computeIndex:       NoteAutomationIndex.operatorAmplitude0,     displayName: "fm# volume",       perNote:  true, interleave: false, isFilter: false, range: Config.operatorAmplitudeMax + 1,    maxCount: Config.operatorCount, effect: null,    compatibleInstruments: [InstrumentType.fm]},
 		{name: "feedbackAmplitude",      computeIndex:       NoteAutomationIndex.feedbackAmplitude,      displayName: "fm feedback",      perNote:  true, interleave: false, isFilter: false, range: Config.operatorAmplitudeMax + 1,    maxCount: 1,    effect: null,                    compatibleInstruments: [InstrumentType.fm]},
-		//detune, // not implemented yet, slider is symmetrical but envelope *isn't*!
-		//semitone, // not implemented yet
-		//octave, // not implemented yet
+		{name: "pitchShift",             computeIndex:       NoteAutomationIndex.pitchShift,             displayName: "pitch shift",      perNote:  true, interleave: false, isFilter: false, range: Config.pitchShiftRange,             maxCount: 1,    effect: EffectType.pitchShift,   compatibleInstruments: null},
+		{name: "detune",                 computeIndex:       NoteAutomationIndex.detune,                 displayName: "detune",           perNote:  true, interleave: false, isFilter: false, range: Config.detuneMax + 1,               maxCount: 1,    effect: EffectType.detune,       compatibleInstruments: null},
 		{name: "distortion",             computeIndex: InstrumentAutomationIndex.distortion,             displayName: "distortion",       perNote: false, interleave: false, isFilter: false, range: Config.distortionRange,             maxCount: 1,    effect: EffectType.distortion,   compatibleInstruments: null},
 		{name: "bitcrusherQuantization", computeIndex: InstrumentAutomationIndex.bitcrusherQuantization, displayName: "bit crush",        perNote: false, interleave: false, isFilter: false, range: Config.bitcrusherQuantizationRange, maxCount: 1,    effect: EffectType.bitcrusher,   compatibleInstruments: null},
 		{name: "bitcrusherFrequency",    computeIndex: InstrumentAutomationIndex.bitcrusherFrequency,    displayName: "freq crush",       perNote: false, interleave: false, isFilter: false, range: Config.bitcrusherFreqRange,         maxCount: 1,    effect: EffectType.bitcrusher,   compatibleInstruments: null},
@@ -661,30 +666,30 @@ export function toNameMap<T extends BeepBoxOption>(array: Array<Pick<T, Exclude<
 	return result;
 }
 
+export function effectsIncludePitchShift(effects: number): boolean {
+	return (effects & (1 << EffectType.pitchShift)) != 0;
+}
+export function effectsIncludeDetune(effects: number): boolean {
+	return (effects & (1 << EffectType.detune)) != 0;
+}
 export function effectsIncludeNoteFilter(effects: number): boolean {
 	return (effects & (1 << EffectType.noteFilter)) != 0;
 }
-
 export function effectsIncludeDistortion(effects: number): boolean {
 	return (effects & (1 << EffectType.distortion)) != 0;
 }
-
 export function effectsIncludeBitcrusher(effects: number): boolean {
 	return (effects & (1 << EffectType.bitcrusher)) != 0;
 }
-
 export function effectsIncludePanning(effects: number): boolean {
 	return (effects & (1 << EffectType.panning)) != 0;
 }
-
 export function effectsIncludeChorus(effects: number): boolean {
 	return (effects & (1 << EffectType.chorus)) != 0;
 }
-
 export function effectsIncludeEcho(effects: number): boolean {
 	return (effects & (1 << EffectType.echo)) != 0;
 }
-
 export function effectsIncludeReverb(effects: number): boolean {
 	return (effects & (1 << EffectType.reverb)) != 0;
 }

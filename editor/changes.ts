@@ -1076,6 +1076,24 @@ export class ChangePulseWidth extends ChangeInstrumentSlider {
 	}
 }
 
+export class ChangePitchShift extends ChangeInstrumentSlider {
+	constructor(doc: SongDocument, oldValue: number, newValue: number) {
+		super(doc);
+		this._instrument.pitchShift = newValue;
+		doc.notifier.changed();
+		if (oldValue != newValue) this._didSomething();
+	}
+}
+
+export class ChangeDetune extends ChangeInstrumentSlider {
+	constructor(doc: SongDocument, oldValue: number, newValue: number) {
+		super(doc);
+		this._instrument.detune = newValue;
+		doc.notifier.changed();
+		if (oldValue != newValue) this._didSomething();
+	}
+}
+
 export class ChangeDistortion extends ChangeInstrumentSlider {
 	constructor(doc: SongDocument, oldValue: number, newValue: number) {
 		super(doc);

@@ -1,6 +1,6 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, InstrumentAutomationIndex, Transition, Unison, Chord, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
+import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, InstrumentAutomationIndex, Transition, Unison, Chord, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
 import {Deque} from "./Deque";
 import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter} from "./filtering";
@@ -835,6 +835,8 @@ export class Instrument {
 	public envelopes: EnvelopeSettings[] = [];
 	public envelopeCount: number = 0;
 	public transition: number = 1;
+	public pitchShift: number = 0;
+	public detune: number = 0;
 	public vibrato: number = 0;
 	public unison: number = 0;
 	public effects: number = 0;
@@ -883,6 +885,8 @@ export class Instrument {
 		this.bitcrusherFreq = Math.floor((Config.bitcrusherFreqRange - 1) * 0.5)
 		this.bitcrusherQuantization = Math.floor((Config.bitcrusherQuantizationRange - 1) * 0.5);
 		this.pan = Config.panCenter;
+		this.pitchShift = Config.pitchShiftCenter;
+		this.detune = Config.detuneCenter;
 		this.vibrato = 0;
 		this.unison = 0;
 		this.transition = Config.transitions.dictionary["hard"].index;
@@ -1027,6 +1031,13 @@ export class Instrument {
 		}
 		instrumentObject["effects"] = effects;
 		
+		
+		if (effectsIncludePitchShift(this.effects)) {
+			instrumentObject["pitchShiftSemitones"] = this.pitchShift;
+		}
+		if (effectsIncludeDetune(this.effects)) {
+			instrumentObject["detuneCents"] = Synth.detuneToCents(this.detune - Config.detuneCenter);
+		}
 		if (effectsIncludeNoteFilter(this.effects)) {
 			instrumentObject["noteFilter"] = this.noteFilter.toJsonObject();
 		}
@@ -1184,6 +1195,13 @@ export class Instrument {
 			const legacyEffectsNames: string[] = ["none", "reverb", "chorus", "chorus & reverb"];
 			this.effects = legacyEffectsNames.indexOf(instrumentObject["effects"]);
 			if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
+		}
+		
+		if (instrumentObject["pitchShiftSemitones"] != undefined) {
+			this.pitchShift = clamp(0, Config.pitchShiftRange, Math.round(+instrumentObject["pitchShiftSemitones"]));
+		}
+		if (instrumentObject["detuneCents"] != undefined) {
+			this.detune = clamp(0, Config.detuneMax + 1, Math.round(Config.detuneCenter + Synth.centsToDetune(+instrumentObject["detuneCents"])));
 		}
 		
 		if (instrumentObject["vibrato"] != undefined) {
@@ -1630,6 +1648,12 @@ export class Song {
 						const point: FilterControlPoint = instrument.noteFilter.controlPoints[j];
 						buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
 					}
+				}
+				if (effectsIncludePitchShift(instrument.effects)) {
+					buffer.push(base64IntToCharCode[instrument.pitchShift]);
+				}
+				if (effectsIncludeDetune(instrument.effects)) {
+					buffer.push(base64IntToCharCode[instrument.detune]);
 				}
 				if (effectsIncludeDistortion(instrument.effects)) {
 					buffer.push(base64IntToCharCode[instrument.distortion]);
@@ -2365,6 +2389,12 @@ export class Song {
 						for (let i: number = instrument.noteFilter.controlPointCount; i < originalControlPointCount; i++) {
 							charIndex += 3;
 						}
+					}
+					if (effectsIncludePitchShift(instrument.effects)) {
+						instrument.pitchShift = clamp(0, Config.pitchShiftRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					}
+					if (effectsIncludeDetune(instrument.effects)) {
+						instrument.detune = clamp(0, Config.detuneMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 					if (effectsIncludeDistortion(instrument.effects)) {
 						instrument.distortion = clamp(0, Config.distortionRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -3353,7 +3383,6 @@ class Tone {
 	public initialNoteFilterInput1: number = 0.0;
 	public initialNoteFilterInput2: number = 0.0;
 	
-	public vibratoScale: number = 0.0;
 	public specialIntervalMult: number = 0.0;
 	public specialIntervalExpressionMult: number = 1.0;
 	public readonly feedbackOutputs: number[] = [];
@@ -4623,7 +4652,6 @@ export class Synth {
 		const partsPerBar: number = Config.partsPerBeat * song.beatsPerBar;
 		const currentPart: number = synth.getCurrentPart();
 		
-		tone.vibratoScale = 0.0;
 		tone.specialIntervalMult = 1.0;
 		tone.specialIntervalExpressionMult = 1.0;
 		
@@ -4782,6 +4810,20 @@ export class Synth {
 					if (envelopeComputer.nextSlideEnd)   chordExpressionEnd   = Synth.computeChordExpression(tone.chordSize + chordSizeDiff * envelopeComputer.nextSlideRatioEnd);
 				}
 			}
+		}
+		
+		if (effectsIncludePitchShift(instrument.effects)) {
+			const pitchShift: number = Config.justIntonationSemitones[instrument.pitchShift] / intervalScale;
+			const envelopeStart: number = envelopeStarts[NoteAutomationIndex.pitchShift];
+			const envelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.pitchShift];
+			intervalStart += pitchShift * envelopeStart;
+			intervalEnd   += pitchShift * envelopeEnd;
+		}
+		if (effectsIncludeDetune(instrument.effects)) {
+			const envelopeStart: number = envelopeStarts[NoteAutomationIndex.detune];
+			const envelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.detune];
+			intervalStart += Synth.detuneToCents((instrument.detune - Config.detuneCenter) * envelopeStart) * Config.pitchesPerOctave / (12.0 * 100.0);
+			intervalEnd   += Synth.detuneToCents((instrument.detune - Config.detuneCenter) * envelopeEnd  ) * Config.pitchesPerOctave / (12.0 * 100.0);
 		}
 		
 		if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.pickedString) {
@@ -6353,6 +6395,13 @@ export class Synth {
 	}
 	public static volumeMultToNoteSize(volumeMult: number): number {
 		return Math.pow(Math.max(0.0, volumeMult), 1/1.5) * Config.noteSizeMax;
+	}
+	
+	public static detuneToCents(detune: number): number {
+		return detune * (Math.abs(detune)+1) / 2;
+	}
+	public static centsToDetune(cents: number): number {
+		return Math.sign(cents) * (Math.sqrt(1 + 8 * Math.abs(cents)) - 1) / 2.0;
 	}
 	
 	private getSamplesPerTick(): number {

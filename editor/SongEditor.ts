@@ -1,10 +1,10 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
+import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
-import {Pattern, Instrument, Channel} from "../synth/synth";
+import {Pattern, Instrument, Channel, Synth} from "../synth/synth";
 import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {SongDocument} from "./SongDocument";
 import {Prompt} from "./Prompt";
@@ -28,7 +28,7 @@ import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
-import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeUnison, ChangeChord, ChangeSong, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization, ChangeAddEnvelope} from "./changes";
+import {ChangeTempo, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeUnison, ChangeChord, ChangeSong, ChangePitchShift, ChangeDetune, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization, ChangeAddEnvelope} from "./changes";
 
 const {button, div, input, select, span, optgroup, option} = HTML;
 
@@ -209,15 +209,19 @@ export class SongEditor {
 	private readonly _noteFilterEditor: FilterEditor = new FilterEditor(this._doc, true);
 	private readonly _noteFilterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("noteFilter")}, "Note Filter:"), this._noteFilterEditor.container);
 	private readonly _pulseWidthSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.pulseWidthRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangePulseWidth(this._doc, oldValue, newValue));
-	private _pulseWidthRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pulseWidth")}, "Pulse Width:"), this._pulseWidthSlider.input);
+	private readonly _pulseWidthRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pulseWidth")}, "Pulse Width:"), this._pulseWidthSlider.input);
+	private readonly _pitchShiftSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.pitchShiftRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangePitchShift(this._doc, oldValue, newValue));
+	private readonly _pitchShiftRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pitchShift")}, "Pitch Shift:"), this._pitchShiftSlider.input);
+	private readonly _detuneSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.detuneMax, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeDetune(this._doc, oldValue, newValue));
+	private readonly _detuneRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("detune")}, "Detune:"), this._detuneSlider.input);
 	private readonly _distortionSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.distortionRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeDistortion(this._doc, oldValue, newValue));
-	private _distortionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("distortion")}, "Distortion:"), this._distortionSlider.input);
+	private readonly _distortionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("distortion")}, "Distortion:"), this._distortionSlider.input);
 	private readonly _bitcrusherQuantizationSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherQuantizationRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeBitcrusherQuantization(this._doc, oldValue, newValue));
-	private _bitcrusherQuantizationRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherQuantization")}, "Bit Crush:"), this._bitcrusherQuantizationSlider.input);
+	private readonly _bitcrusherQuantizationRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherQuantization")}, "Bit Crush:"), this._bitcrusherQuantizationSlider.input);
 	private readonly _bitcrusherFreqSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherFreqRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeBitcrusherFreq(this._doc, oldValue, newValue));
-	private _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Freq Crush:"), this._bitcrusherFreqSlider.input);
+	private readonly _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Freq Crush:"), this._bitcrusherFreqSlider.input);
 	private readonly _stringSustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.stringSustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeStringSustain(this._doc, oldValue, newValue));
-	private _stringSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("stringSustain")}, "Sustain:"), this._stringSustainSlider.input);
+	private readonly _stringSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("stringSustain")}, "Sustain:"), this._stringSustainSlider.input);
 	private readonly _unisonSelect: HTMLSelectElement = buildOptions(select(), Config.unisons.map(unison=>unison.name));
 	private readonly _unisonSelectRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("unison")}, "Unison:"), div({class: "selectContainer"}, this._unisonSelect));
 	private readonly _chordSelect: HTMLSelectElement = buildOptions(select(), Config.chords.map(chord=>chord.name));
@@ -261,6 +265,8 @@ export class SongEditor {
 			span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects:"),
 			div({class: "selectContainer"}, this._effectsSelect),
 		),
+		this._pitchShiftRow,
+		this._detuneRow,
 		this._noteFilterRow,
 		this._distortionRow,
 		this._bitcrusherQuantizationRow,
@@ -752,6 +758,22 @@ export class SongEditor {
 				this._pulseWidthRow.style.display = "none";
 			}
 			
+			if (effectsIncludePitchShift(instrument.effects)) {
+				this._pitchShiftRow.style.display = "";
+				this._pitchShiftSlider.updateValue(instrument.pitchShift);
+				this._pitchShiftSlider.input.title = (instrument.pitchShift - Config.pitchShiftCenter) + " semitone(s)";
+			} else {
+				this._pitchShiftRow.style.display = "none";
+			}
+			
+			if (effectsIncludeDetune(instrument.effects)) {
+				this._detuneRow.style.display = "";
+				this._detuneSlider.updateValue(instrument.detune);
+				this._detuneSlider.input.title = (Synth.detuneToCents(instrument.detune - Config.detuneCenter)) + " cent(s)";
+			} else {
+				this._detuneRow.style.display = "none";
+			}
+			
 			if (effectsIncludeNoteFilter(instrument.effects)) {
 				this._noteFilterRow.style.display = "";
 				this._noteFilterEditor.render();
@@ -788,6 +810,7 @@ export class SongEditor {
 				this._echoSustainSlider.updateValue(instrument.echoSustain);
 				this._echoDelayRow.style.display = "";
 				this._echoDelaySlider.updateValue(instrument.echoDelay);
+				this._echoDelaySlider.input.title = (Math.round((instrument.echoDelay + 1) * Config.echoDelayStepTicks / (Config.ticksPerPart * Config.partsPerBeat) * 1000) / 1000) + " beat(s)";
 			} else {
 				this._echoSustainRow.style.display = "none";
 				this._echoDelayRow.style.display = "none";
