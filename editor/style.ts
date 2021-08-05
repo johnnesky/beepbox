@@ -19,6 +19,8 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 
 /* Note: "#" symbols need to be encoded as "%23" in SVG data urls, otherwise they are interpreted as fragment identifiers! */
 :root {
+	--button-size: 26px;
+	--settings-area-width: 182px;
 	--play-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -8 L -4 8 L 9 0 z" fill="gray"/></svg>');
 	--pause-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-4" y="-8" width="4" height="16" fill="gray"/><rect x="5" y="-8" width="4" height="16" fill="gray"/></svg>');
 	--prev-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-6" y="-6" width="2" height="12" fill="gray"/><path d="M 6 -6 L 6 6 L -3 0 z" fill="gray"/></svg>');
@@ -138,7 +140,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: relative;
 	touch-action: manipulation;
 	cursor: default;
-	font-size: small;
+	font-size: 13px;
 	overflow: hidden;
 	color: ${ColorConfig.primaryText};
 	background: ${ColorConfig.editorBackground};
@@ -197,8 +199,8 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 
 .beepboxEditor .volume-speaker {
 	flex-shrink: 0;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: ${ColorConfig.secondaryText};
 	-webkit-mask-image: var(--volume-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -261,10 +263,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--customize-dial-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -286,13 +288,13 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 .beepboxEditor .add-envelope {
-	width: 2em;
+	width: var(--button-size);
 }
 .beepboxEditor .add-envelope::before {
 	content: "";
 	position: absolute;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	left: 0;
 	top: 0;
 	pointer-events: none;
@@ -309,15 +311,15 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 .beepboxEditor .delete-envelope {
-	width: 2em;
+	width: var(--button-size);
 	flex-shrink: 0;
 	flex-grow: 0;
 }
 .beepboxEditor .delete-envelope::before {
 	content: "";
 	position: absolute;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	left: 0;
 	top: 0;
 	pointer-events: none;
@@ -339,10 +341,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--file-page-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -358,10 +360,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--edit-pencil-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -377,10 +379,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--preferences-gear-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -474,10 +476,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	right: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 1.1em;
-	height: 2em;
+	width: 14px;
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--select-arrows-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -492,10 +494,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	right: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--menu-down-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -506,11 +508,11 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 .beepboxEditor select {
 	margin: 0;
-	padding: 0 0.3em;
+	padding: 0 4px;
 	display: block;
-	height: 2em;
+	height: var(--button-size);
 	border: none;
-	border-radius: 0.4em;
+	border-radius: 5px;
 	background: ${ColorConfig.uiWidgetBackground};
 	color: inherit;
 	font-size: inherit;
@@ -523,7 +525,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	appearance: none;
 }
 .beepboxEditor .menu select {
-	padding: 0 2em;
+	padding: 0 var(--button-size);
 }
 .beepboxEditor select:focus {
 	background: ${ColorConfig.uiWidgetFocus};
@@ -545,9 +547,9 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 .beepboxEditor button {
 	margin: 0;
 	position: relative;
-	height: 2em;
+	height: var(--button-size);
 	border: none;
-	border-radius: 0.4em;
+	border-radius: 5px;
 	background: ${ColorConfig.uiWidgetBackground};
 	color: inherit;
 	font-size: inherit;
@@ -562,14 +564,14 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 
 .beepboxEditor button.cancelButton {
 	float: right;
-	width: 2em;
+	width: var(--button-size);
 	position: absolute;
 	top: 8px;
 	right: 8px;
 }
 
 .beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.okayButton, .beepboxEditor button.exportButton {
-	padding-left: 2em;
+	padding-left: var(--button-size);
 }
 .beepboxEditor button.playButton::before {
 	content: "";
@@ -577,10 +579,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--play-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -595,10 +597,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--pause-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -614,11 +616,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	margin-left: -1em;
-	margin-top: -1em;
+	transform: translate(-50%, -50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--prev-bar-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -634,11 +635,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	margin-left: -1em;
-	margin-top: -1em;
+	transform: translate(-50%, -50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--next-bar-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -651,8 +651,8 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 .beepboxEditor button.cancelButton::before {
 	content: "";
 	position: absolute;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	left: 0;
 	top: 0;
 	pointer-events: none;
@@ -668,8 +668,8 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 .beepboxEditor button.okayButton::before {
 	content: "";
 	position: absolute;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	left: 0;
 	top: 0;
 	pointer-events: none;
@@ -685,8 +685,8 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 .beepboxEditor button.exportButton::before {
 	content: "";
 	position: absolute;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	left: 0;
 	top: 0;
 	pointer-events: none;
@@ -726,7 +726,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 
 .beepboxEditor .selectRow {
 	margin: 2px 0;
-	height: 2em;
+	height: var(--button-size);
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -750,7 +750,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	margin: 2px 0;
 }
 .beepboxEditor .menu-area > button {
-	padding: 0 2em;
+	padding: 0 var(--button-size);
 	white-space: nowrap;
 }
 
@@ -772,6 +772,33 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 
 .beepboxEditor .editor-right-side-top > *, .beepboxEditor .editor-right-side-bottom > * {
 	flex-shrink: 0;
+}
+
+.beepboxEditor .pitchShiftMarkerContainer {
+	box-sizing: border-box;
+	display: flex;
+	height: 100%;
+	left: 3px;
+	right: 3px;
+	position: absolute;
+	align-items: center;
+	pointer-events: none;
+}
+
+.beepboxEditor .pitchShiftMarker {
+	width: 0;
+	height: 0;
+	position: absolute;
+}
+
+.beepboxEditor .pitchShiftMarker::before {
+	content: "";
+	width: 2px;
+	height: 20px;
+	transform: translate(-50%, -50%);
+	position: absolute;
+	background: currentColor;
+	border-radius: 3px;
 }
 
 .beepboxEditor input[type=text], .beepboxEditor input[type=number] {
@@ -796,11 +823,11 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	-webkit-appearance: none;
 	color: inherit;
 	width: 100%;
-	height: 2em;
+	height: var(--button-size);
 	font-size: inherit;
 	margin: 0;
 	cursor: pointer;
-	background-color: ${ColorConfig.editorBackground};
+	background: none;
 	touch-action: pan-y;
 }
 .beepboxEditor input[type=range]:focus {
@@ -808,25 +835,25 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 .beepboxEditor input[type=range]::-webkit-slider-runnable-track {
 	width: 100%;
-	height: 0.5em;
+	height: 6px;
 	cursor: pointer;
 	background: ${ColorConfig.uiWidgetBackground};
 }
 .beepboxEditor input[type=range]::-webkit-slider-thumb {
-	height: 2em;
-	width: 0.5em;
-	border-radius: 0.25em;
+	height: var(--button-size);
+	width: 6px;
+	border-radius: 3px;
 	background: currentColor;
 	cursor: pointer;
 	-webkit-appearance: none;
-	margin-top: -0.75em;
+	margin-top: -10px;
 }
 .beepboxEditor input[type=range]:focus::-webkit-slider-runnable-track {
 	background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-moz-range-track {
 	width: 100%;
-	height: 0.5em;
+	height: 6px;
 	cursor: pointer;
 	background: ${ColorConfig.uiWidgetBackground};
 }
@@ -834,16 +861,16 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-moz-range-thumb {
-	height: 2em;
-	width: 0.5em;
-	border-radius: 0.25em;
+	height: var(--button-size);
+	width: 6px;
+	border-radius: 3px;
 	border: none;
 	background: currentColor;
 	cursor: pointer;
 }
 .beepboxEditor input[type=range]::-ms-track {
 	width: 100%;
-	height: 0.5em;
+	height: 6px;
 	cursor: pointer;
 	background: ${ColorConfig.uiWidgetBackground};
 	border-color: transparent;
@@ -852,21 +879,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-ms-thumb {
-	height: 2em;
-	width: 0.5em;
-	border-radius: 0.25em;
+	height: var(--button-size);
+	width: 6px;
+	border-radius: 3px;
 	background: currentColor;
-	cursor: pointer;
-}
-.beepboxEditor .hintButton {
-	border: 1px solid currentColor;
-	border-radius: 50%;
-	text-decoration: none;
-	width: 1em;
-	height: 1em;
-	text-align: center;
-	margin-left: auto;
-	margin-right: .4em;
 	cursor: pointer;
 }
 
@@ -907,7 +923,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		margin-left: 10px;
 	}
 	.beepboxEditor .settings-area {
-		width: 14em;
+		width: var(--settings-area-width);
 	}
 }
 

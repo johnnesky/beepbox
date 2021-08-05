@@ -27,7 +27,7 @@ export class FilterEditor {
 	);
 	private readonly _label: HTMLDivElement = HTML.div({style: "position: absolute; bottom: 0; left: 2px; font-size: 8px; line-height: 1; pointer-events: none;"});
 	
-	public readonly container: HTMLElement = HTML.div({class: "filterEditor", style: "height: 2em; position: relative;"},
+	public readonly container: HTMLElement = HTML.div({class: "filterEditor", style: "height: 100%; position: relative;"},
 		this._svg,
 		this._label,
 	);

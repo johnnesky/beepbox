@@ -24,7 +24,7 @@ export class SpectrumEditor {
 		this._arrow,
 	);
 	
-	public readonly container: HTMLElement = HTML.div({class: "spectrum", style: "height: 2em;"}, this._svg);
+	public readonly container: HTMLElement = HTML.div({class: "spectrum", style: "height: 100%;"}, this._svg);
 	
 	private _mouseX: number = 0;
 	private _mouseY: number = 0;
