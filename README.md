@@ -22,7 +22,7 @@ The source code is available under the MIT license. The code is written in
 build this project, open the command line and run:
 
 ```
-git clone https://github.com/johnnesky/beepbox.git
+git clone https://github.com/jummbus/jummbox.git
 cd beepbox
 npm install
 npm run build
