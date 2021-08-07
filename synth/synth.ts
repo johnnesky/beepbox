@@ -4879,6 +4879,15 @@ export class Synth {
 				const ticksUntilVibratoEnd:   number = delayTicks - envelopeComputer.noteTicksEnd;
 				vibratoStart *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoStart / 2.0));
 				vibratoEnd   *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoEnd   / 2.0));
+				
+				if (transition.isSeamless && tone.note != null && tone.nextNote != null) {
+					// fade out the very end of the vibrato so that it lines up with the beginning of the next note with delayed vibrato.
+					const noteEndTick:   number = tone.noteEnd   * Config.ticksPerPart;
+					const ticksUntilNextNoteStart: number = noteEndTick - (ticksIntoBar + startRatio);
+					const ticksUntilNextNoteEnd:   number = noteEndTick - (ticksIntoBar + endRatio);
+					vibratoStart *= Math.max(0.0, Math.min(1.0, ticksUntilNextNoteStart));
+					vibratoEnd   *= Math.max(0.0, Math.min(1.0, ticksUntilNextNoteEnd  ));
+				}
 			}
 			intervalStart += vibratoStart;
 			intervalEnd   += vibratoEnd;
