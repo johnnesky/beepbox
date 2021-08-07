@@ -1,6 +1,6 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, InstrumentAutomationIndex, Transition, Unison, Chord, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
+import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, InstrumentAutomationIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
 import {Deque} from "./Deque";
 import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter} from "./filtering";
@@ -97,7 +97,7 @@ const enum CharCode {
 const enum SongTagCode {
 	beatCount           = CharCode.a, // added in song url version 2
 	bars                = CharCode.b, // added in 2
-	vibrato             = CharCode.c, // added in 2
+	vibrato             = CharCode.c, // added in 2, DEPRECATED
 	transition          = CharCode.d, // added in 3
 	loopEnd             = CharCode.e, // added in 2
 	eqFilter            = CharCode.f, // added in 3
@@ -1038,6 +1038,9 @@ export class Instrument {
 		if (effectsIncludeDetune(this.effects)) {
 			instrumentObject["detuneCents"] = Synth.detuneToCents(this.detune - Config.detuneCenter);
 		}
+		if (effectsIncludeVibrato(this.effects)) {
+			instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
+		}
 		if (effectsIncludeNoteFilter(this.effects)) {
 			instrumentObject["noteFilter"] = this.noteFilter.toJsonObject();
 		}
@@ -1093,17 +1096,13 @@ export class Instrument {
 		} else if (this.type == InstrumentType.chip) {
 			instrumentObject["wave"] = Config.chipWaves[this.chipWave].name;
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
-			instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 		} else if (this.type == InstrumentType.pwm) {
 			instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
-			instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 		} else if (this.type == InstrumentType.pickedString) {
 			instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
 			instrumentObject["stringSustain"] = Math.round(100 * this.stringSustain / (Config.stringSustainRange - 1));
-			instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 		} else if (this.type == InstrumentType.harmonics) {
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
-			instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 		} else if (this.type == InstrumentType.fm) {
 			const operatorArray: Object[] = [];
 			for (const operator of this.operators) {
@@ -1112,7 +1111,6 @@ export class Instrument {
 					"amplitude": operator.amplitude,
 				});
 			}
-			instrumentObject["vibrato"] = Config.vibratos[this.vibrato].name;
 			instrumentObject["algorithm"] = Config.algorithms[this.algorithm].name;
 			instrumentObject["feedbackType"] = Config.feedbacks[this.feedbackType].name;
 			instrumentObject["feedbackAmplitude"] = this.feedbackAmplitude;
@@ -1204,20 +1202,23 @@ export class Instrument {
 			this.detune = clamp(0, Config.detuneMax + 1, Math.round(Config.detuneCenter + Synth.centsToDetune(+instrumentObject["detuneCents"])));
 		}
 		
-		if (instrumentObject["vibrato"] != undefined) {
-			this.vibrato = Config.vibratos.findIndex(vibrato=>vibrato.name==instrumentObject["vibrato"]);
-			if (this.vibrato == -1) this.vibrato = 0;
-		} else if (instrumentObject["effect"] != undefined) {
-			// Not to be confused with "effects" which is still used.
-			const legacyEffectNames: ReadonlyArray<string> = ["none", "vibrato light", "vibrato delayed", "vibrato heavy"];
-			this.vibrato = legacyEffectNames.indexOf(instrumentObject["effect"]);
-			if (this.vibrato == -1) this.vibrato = 0;
+		this.vibrato = Config.vibratos.dictionary["none"].index; // default value.
+		const vibratoProperty: any = instrumentObject["vibrato"] || instrumentObject["effect"]; // The vibrato property was previously called "effect", not to be confused with the current "effects".
+		if (vibratoProperty != undefined) {
+			const legacyVibratoNames: Dictionary<string> = {"vibrato light": "light", "vibrato delayed": "delayed", "vibrato heavy": "heavy"};
+			const vibrato: Vibrato | undefined = Config.vibratos.dictionary[legacyVibratoNames[unisonProperty]] || Config.vibratos.dictionary[vibratoProperty];
+			if (vibrato != undefined) this.vibrato = vibrato.index;
+			
+			// Old songs may have a vibrato effect without explicitly enabling it.
+			if (vibrato != Config.vibratos.dictionary["none"]) {
+				this.effects = (this.effects | (1 << EffectType.vibrato));
+			}
 		}
 		
 		if (instrumentObject["pan"] != undefined) {
 			this.pan = clamp(0, Config.panMax + 1, Math.round(Config.panCenter + (instrumentObject["pan"] | 0) * Config.panCenter / 100));
 			
-			// Old songs may have a panning value without explicitly enabling it.
+			// Old songs may have a panning effect without explicitly enabling it.
 			if (this.pan != Config.panCenter) {
 				this.effects = (this.effects | (1 << EffectType.panning));
 			}
@@ -1655,6 +1656,9 @@ export class Song {
 				if (effectsIncludeDetune(instrument.effects)) {
 					buffer.push(base64IntToCharCode[instrument.detune]);
 				}
+				if (effectsIncludeVibrato(instrument.effects)) {
+					buffer.push(base64IntToCharCode[instrument.vibrato]);
+				}
 				if (effectsIncludeDistortion(instrument.effects)) {
 					buffer.push(base64IntToCharCode[instrument.distortion]);
 				}
@@ -1687,10 +1691,8 @@ export class Song {
 				
 				if (instrument.type == InstrumentType.chip) {
 					buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipWave]);
-					buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 					buffer.push(SongTagCode.unison, base64IntToCharCode[instrument.unison]);
 				} else if (instrument.type == InstrumentType.fm) {
-					buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 					buffer.push(SongTagCode.algorithm, base64IntToCharCode[instrument.algorithm]);
 					buffer.push(SongTagCode.feedbackType, base64IntToCharCode[instrument.feedbackType]);
 					buffer.push(SongTagCode.feedbackAmplitude, base64IntToCharCode[instrument.feedbackAmplitude]);
@@ -1727,12 +1729,10 @@ export class Song {
 					}
 					spectrumBits.encodeBase64(buffer);
 				} else if (instrument.type == InstrumentType.harmonics) {
-					buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 					buffer.push(SongTagCode.unison, base64IntToCharCode[instrument.unison]);
 				} else if (instrument.type == InstrumentType.pwm) {
-					buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
+					buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth]);
 				} else if (instrument.type == InstrumentType.pickedString) {
-					buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
 					buffer.push(SongTagCode.stringSustain, base64IntToCharCode[instrument.stringSustain]);
 				} else {
 					throw new Error("Unknown instrument type.");
@@ -2270,52 +2270,73 @@ export class Song {
 				}
 			} break;
 			case SongTagCode.vibrato: {
-				if (beforeSeven) {
-					if (beforeThree) {
-						const legacyEffects: number[] = [0, 3, 2, 0];
-						const legacyEnvelopes: string[] = ["none", "none", "none", "tremolo2"];
-						const channel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-						const instrument: Instrument = this.channels[channel].instruments[0];
-						const legacySettings: LegacySettings = legacySettingsCache![channel][0];
-						instrument.vibrato = legacyEffects[effect];
-						if (legacySettings.filterEnvelope == undefined || legacySettings.filterEnvelope.type == EnvelopeType.none) {
-							// Imitate the legacy tremolo with a filter envelope.
-							legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]];
-							instrument.convertLegacySettings(legacySettings);
-						}
-					} else if (beforeSix) {
-						const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
-						const legacyEnvelopes: string[] = ["none", "none", "none", "none", "tremolo5", "tremolo2"];
-						for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
-							for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
-								const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-								const instrument: Instrument = this.channels[channel].instruments[i];
-								const legacySettings: LegacySettings = legacySettingsCache![channel][i];
-								instrument.vibrato = legacyEffects[effect];
-								if (legacySettings.filterEnvelope == undefined || legacySettings.filterEnvelope.type == EnvelopeType.none) {
-									// Imitate the legacy tremolo with a filter envelope.
-									legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]];
-									instrument.convertLegacySettings(legacySettings);
+				if (beforeNine) {
+					if (beforeSeven) {
+						if (beforeThree) {
+							const legacyEffects: number[] = [0, 3, 2, 0];
+							const legacyEnvelopes: string[] = ["none", "none", "none", "tremolo2"];
+							const channel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+							const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							const instrument: Instrument = this.channels[channel].instruments[0];
+							const legacySettings: LegacySettings = legacySettingsCache![channel][0];
+							instrument.vibrato = legacyEffects[effect];
+							if (legacySettings.filterEnvelope == undefined || legacySettings.filterEnvelope.type == EnvelopeType.none) {
+								// Imitate the legacy tremolo with a filter envelope.
+								legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]];
+								instrument.convertLegacySettings(legacySettings);
+							}
+							if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
+								// Enable vibrato if it was used.
+								instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
+							}
+						} else if (beforeSix) {
+							const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
+							const legacyEnvelopes: string[] = ["none", "none", "none", "none", "tremolo5", "tremolo2"];
+							for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
+								for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
+									const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+									const instrument: Instrument = this.channels[channel].instruments[i];
+									const legacySettings: LegacySettings = legacySettingsCache![channel][i];
+									instrument.vibrato = legacyEffects[effect];
+									if (legacySettings.filterEnvelope == undefined || legacySettings.filterEnvelope.type == EnvelopeType.none) {
+										// Imitate the legacy tremolo with a filter envelope.
+										legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]];
+										instrument.convertLegacySettings(legacySettings);
+									}
+									if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
+										// Enable vibrato if it was used.
+										instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
+									}
 								}
+							}
+						} else {
+							const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
+							const legacyEnvelopes: string[] = ["none", "none", "none", "none", "tremolo5", "tremolo2"];
+							const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+							const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+							const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
+							instrument.vibrato = legacyEffects[effect];
+							if (legacySettings.filterEnvelope == undefined || legacySettings.filterEnvelope.type == EnvelopeType.none) {
+								// Imitate the legacy tremolo with a filter envelope.
+								legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]];
+								instrument.convertLegacySettings(legacySettings);
+							}
+							if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
+								// Enable vibrato if it was used.
+								instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
 							}
 						}
 					} else {
-						const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
-						const legacyEnvelopes: string[] = ["none", "none", "none", "none", "tremolo5", "tremolo2"];
-						const effect: number = clamp(0, legacyEffects.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-						const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
-						instrument.vibrato = legacyEffects[effect];
-						if (legacySettings.filterEnvelope == undefined || legacySettings.filterEnvelope.type == EnvelopeType.none) {
-							// Imitate the legacy tremolo with a filter envelope.
-							legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyEnvelopes[effect]];
-							instrument.convertLegacySettings(legacySettings);
+						const vibrato: number = clamp(0, Config.vibratos.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						instrument.vibrato = vibrato;
+						if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
+							// Enable vibrato if it was used.
+							instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
 						}
 					}
 				} else {
-					const vibrato: number = clamp(0, Config.vibratos.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].vibrato = vibrato;
+					// Do nothing? This song tag code is deprecated for now.
 				}
 			} break;
 			case SongTagCode.unison: {
@@ -2366,12 +2387,17 @@ export class Song {
 						// Enable panning if panning slider isn't centered.
 						instrument.effects = (instrument.effects | (1 << EffectType.panning));
 					}
+					if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
+						// Enable vibrato if it was used.
+						instrument.effects = (instrument.effects | (1 << EffectType.panning));
+					}
 					
 					// convertLegacySettings may need to force-enable note filter, call
 					// it again here to make sure that this override takes precedence.
 					const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
 					instrument.convertLegacySettings(legacySettings);
 				} else {
+					if (EffectType.length > 12) throw new Error(); // BeepBox currently uses two base64 characters at 6 bits each for a bitfield representing all the enabled effects.
 					instrument.effects = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					
 					if (effectsIncludeNoteFilter(instrument.effects)) {
@@ -2395,6 +2421,9 @@ export class Song {
 					}
 					if (effectsIncludeDetune(instrument.effects)) {
 						instrument.detune = clamp(0, Config.detuneMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					}
+					if (effectsIncludeVibrato(instrument.effects)) {
+						instrument.vibrato = clamp(0, Config.vibratos.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 					if (effectsIncludeDistortion(instrument.effects)) {
 						instrument.distortion = clamp(0, Config.distortionRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -4826,7 +4855,7 @@ export class Synth {
 			intervalEnd   += Synth.detuneToCents((instrument.detune - Config.detuneCenter) * envelopeEnd  ) * Config.pitchesPerOctave / (12.0 * 100.0);
 		}
 		
-		if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.pickedString) {
+		if (effectsIncludeVibrato(instrument.effects)) {
 			// Smoothly interpolate between the vibrato LFO curve at the end of the bar and the beginning of the next one. (Mostly to avoid a discontinuous frequency which retriggers string plucking.)
 			let lfoStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeStart);
 			let lfoEnd:   number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeEnd);

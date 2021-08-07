@@ -1,6 +1,6 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
+import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
@@ -251,7 +251,6 @@ export class SongEditor {
 		this._eqFilterRow,
 		this._transitionRow,
 		this._chordSelectRow,
-		this._vibratoSelectRow,
 		this._chipWaveSelectRow,
 		this._chipNoiseSelectRow,
 		this._algorithmSelectRow,
@@ -270,6 +269,7 @@ export class SongEditor {
 		),
 		this._pitchShiftRow,
 		this._detuneRow,
+		this._vibratoSelectRow,
 		this._noteFilterRow,
 		this._distortionRow,
 		this._bitcrusherQuantizationRow,
@@ -780,6 +780,13 @@ export class SongEditor {
 				this._detuneRow.style.display = "none";
 			}
 			
+			if (effectsIncludeVibrato(instrument.effects)) {
+				this._vibratoSelectRow.style.display = "";
+				setSelectedValue(this._vibratoSelect, instrument.vibrato);
+			} else {
+				this._vibratoSelectRow.style.display = "none";
+			}
+			
 			if (effectsIncludeNoteFilter(instrument.effects)) {
 				this._noteFilterRow.style.display = "";
 				this._noteFilterEditor.render();
@@ -829,32 +836,11 @@ export class SongEditor {
 				this._reverbRow.style.display = "none";
 			}
 			
-			if (instrument.type == InstrumentType.noise) {
-				this._vibratoSelectRow.style.display = "none";
-				this._unisonSelectRow.style.display = "none";
-			} else if (instrument.type == InstrumentType.spectrum) {
-				this._vibratoSelectRow.style.display = "none";
-				this._unisonSelectRow.style.display = "none";
-			} else if (instrument.type == InstrumentType.drumset) {
-				this._vibratoSelectRow.style.display = "none";
-				this._unisonSelectRow.style.display = "none";
-			} else if (instrument.type == InstrumentType.chip) {
-				this._vibratoSelectRow.style.display = "";
+			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics) {
 				this._unisonSelectRow.style.display = "";
-			} else if (instrument.type == InstrumentType.fm) {
-				this._vibratoSelectRow.style.display = "";
-				this._unisonSelectRow.style.display = "none";
-			} else if (instrument.type == InstrumentType.harmonics) {
-				this._vibratoSelectRow.style.display = "";
-				this._unisonSelectRow.style.display = "";
-			} else if (instrument.type == InstrumentType.pwm) {
-				this._vibratoSelectRow.style.display = "";
-				this._unisonSelectRow.style.display = "none";
-			} else if (instrument.type == InstrumentType.pickedString) {
-				this._vibratoSelectRow.style.display = "";
-				this._unisonSelectRow.style.display = "none";
+				setSelectedValue(this._unisonSelect, instrument.unison);
 			} else {
-				throw new Error("Unrecognized instrument type: " + instrument.type);
+				this._unisonSelectRow.style.display = "none";
 			}
 			
 			this._envelopeEditor.render();
@@ -887,8 +873,6 @@ export class SongEditor {
 		
 		this._eqFilterEditor.render();
 		setSelectedValue(this._transitionSelect, instrument.transition);
-		setSelectedValue(this._vibratoSelect, instrument.vibrato);
-		setSelectedValue(this._unisonSelect, instrument.unison);
 		setSelectedValue(this._chordSelect, instrument.chord);
 		this._instrumentVolumeSlider.updateValue(-instrument.volume);
 		setSelectedValue(this._instrumentSelect, instrumentIndex);
