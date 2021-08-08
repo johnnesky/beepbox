@@ -99,10 +99,10 @@ export const enum InstrumentAutomationIndex {
 	bitcrusherQuantization,
 	bitcrusherFrequency,
 	panning,
+	chorus,
 	echoSustain,
 	//echoDelay, // Wait until tick settings can be computed once for multiple run lengths.
 	reverb,
-	//chorus, // not implemented yet
 	length,
 }
 
@@ -342,6 +342,7 @@ export class Config {
 	public static readonly panCenter: number = 4;
 	public static readonly panMax: number = Config.panCenter * 2;
 	public static readonly panDelaySecondsMax: number = 0.00065;
+	public static readonly chorusRange: number = 4;
 	public static readonly chorusPeriodSeconds: number = 2.0;
 	public static readonly chorusDelayRange: number = 0.0034;
 	public static readonly chorusDelayOffsets: ReadonlyArray<ReadonlyArray<number>> = [[1.51, 2.10, 3.35], [1.47, 2.15, 3.25]];
@@ -507,10 +508,10 @@ export class Config {
 		{name: "bitcrusherQuantization", computeIndex: InstrumentAutomationIndex.bitcrusherQuantization, displayName: "bit crush",        perNote: false, interleave: false, isFilter: false, range: Config.bitcrusherQuantizationRange, maxCount: 1,    effect: EffectType.bitcrusher,   compatibleInstruments: null},
 		{name: "bitcrusherFrequency",    computeIndex: InstrumentAutomationIndex.bitcrusherFrequency,    displayName: "freq crush",       perNote: false, interleave: false, isFilter: false, range: Config.bitcrusherFreqRange,         maxCount: 1,    effect: EffectType.bitcrusher,   compatibleInstruments: null},
 		{name: "panning",                computeIndex: InstrumentAutomationIndex.panning,                displayName: "panning",          perNote: false, interleave: false, isFilter: false, range: Config.panMax + 1,                  maxCount: 1,    effect: EffectType.panning,      compatibleInstruments: null}, // symmetrical? separate panAcross target for envelopes but not automators?
+		{name: "chorus",                 computeIndex: InstrumentAutomationIndex.chorus,                 displayName: "chorus",           perNote: false, interleave: false, isFilter: false, range: Config.chorusRange,                 maxCount: 1,    effect: EffectType.chorus,       compatibleInstruments: null},
 		{name: "echoSustain",            computeIndex: InstrumentAutomationIndex.echoSustain,            displayName: "echo",             perNote: false, interleave: false, isFilter: false, range: Config.echoSustainRange,            maxCount: 1,    effect: EffectType.echo,         compatibleInstruments: null},
 		//{name: "echoDelay",              computeIndex: InstrumentAutomationIndex.echoDelay,              displayName: "echo delay",       perNote: false, interleave: false, isFilter: false, range: Config.echoDelayRange,              maxCount: 1,    effect: EffectType.echo,         compatibleInstruments: null}, // wait until after we're computing a tick's settings for multiple run lengths.
 		{name: "reverb",                 computeIndex: InstrumentAutomationIndex.reverb,                 displayName: "reverb",           perNote: false, interleave: false, isFilter: false, range: Config.reverbRange,                 maxCount: 1,    effect: EffectType.reverb,       compatibleInstruments: null},
-		//chorus, // not implemented yet
 		//{name: "envelope#",             computeIndex: null,                                             displayName: "envelope",         perNote: false, isFilter: false, range: Config.defaultAutomationRange,      maxCount: Config.maxEnvelopeCount, effect: null, compatibleInstruments: null}, // maxCount special case for envelopes to be allowed to target earlier ones.
 	]);
 }

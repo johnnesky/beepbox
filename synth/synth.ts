@@ -107,7 +107,7 @@ const enum SongTagCode {
 	patternCount        = CharCode.j, // added in 3
 	key                 = CharCode.k, // added in 2
 	loopStart           = CharCode.l, // added in 2
-	reverb              = CharCode.m, // added in 6, DEPRECATED
+	reverb              = CharCode.m, // added in 5, DEPRECATED
 	channelCount        = CharCode.n, // added in 6
 	channelOctave       = CharCode.o, // added in 3
 	patterns            = CharCode.p, // added in 2
@@ -848,6 +848,7 @@ export class Instrument {
 	public distortion: number = 0;
 	public bitcrusherFreq: number = 0;
 	public bitcrusherQuantization: number = 0;
+	public chorus: number = 0;
 	public reverb: number = 0;
 	public echoSustain: number = 0;
 	public echoDelay: number = 0;
@@ -876,6 +877,7 @@ export class Instrument {
 		this.preset = type;
 		this.volume = 0;
 		this.effects = 0;
+		this.chorus = Config.chorusRange - 1;
 		this.reverb = 2;
 		this.echoSustain = Math.floor((Config.echoSustainRange - 1) * 0.5);
 		this.echoDelay = Math.floor((Config.echoDelayRange - 1) * 0.5);
@@ -1053,6 +1055,9 @@ export class Instrument {
 		}
 		if (effectsIncludePanning(this.effects)) {
 			instrumentObject["pan"] = Math.round(100 * (this.pan - Config.panCenter) / Config.panCenter);
+		}
+		if (effectsIncludeChorus(this.effects)) {
+			instrumentObject["chorus"] = Math.round(100 * this.chorus / (Config.chorusRange - 1));
 		}
 		if (effectsIncludeEcho(this.effects)) {
 			instrumentObject["echoSustain"] = Math.round(100 * this.echoSustain / (Config.echoSustainRange - 1));
@@ -1242,6 +1247,10 @@ export class Instrument {
 		}
 		if (instrumentObject["echoDelayBeats"] != undefined) {
 			this.echoDelay = clamp(0, Config.echoDelayRange, Math.round((+instrumentObject["echoDelayBeats"]) * (Config.ticksPerPart * Config.partsPerBeat) / Config.echoDelayStepTicks - 1.0));
+		}
+		
+		if (instrumentObject["chorus"] != undefined) {
+			this.chorus = clamp(0, Config.chorusRange, Math.round((Config.chorusRange - 1) * (instrumentObject["chorus"] | 0) / 100));
 		}
 		
 		if (instrumentObject["reverb"] != undefined) {
@@ -1667,6 +1676,9 @@ export class Song {
 				}
 				if (effectsIncludePanning(instrument.effects)) {
 					buffer.push(base64IntToCharCode[instrument.pan]);
+				}
+				if (effectsIncludeChorus(instrument.effects)) {
+					buffer.push(base64IntToCharCode[instrument.chorus]);
 				}
 				if (effectsIncludeEcho(instrument.effects)) {
 					buffer.push(base64IntToCharCode[instrument.echoSustain], base64IntToCharCode[instrument.echoDelay]);
@@ -2307,6 +2319,11 @@ export class Song {
 										// Enable vibrato if it was used.
 										instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
 									}
+									if (legacyGlobalReverb != 0 && !this.getChannelIsNoise(channel)) {
+										// Enable reverb if it was used globaly before. (Global reverb was added before the effects option so I need to pick somewhere else to initialize instrument reverb, and I picked the vibrato command.)
+										instrument.effects = (instrument.effects | (1 << EffectType.reverb));
+										instrument.reverb = legacyGlobalReverb;
+									}
 								}
 							}
 						} else {
@@ -2324,6 +2341,11 @@ export class Song {
 							if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
 								// Enable vibrato if it was used.
 								instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
+							}
+							if (legacyGlobalReverb != 0) {
+								// Enable reverb if it was used globaly before. (Global reverb was added before the effects option so I need to pick somewhere else to initialize instrument reverb, and I picked the vibrato command.)
+								instrument.effects = (instrument.effects | (1 << EffectType.reverb));
+								instrument.reverb = legacyGlobalReverb;
 							}
 						}
 					} else {
@@ -2435,13 +2457,15 @@ export class Song {
 					if (effectsIncludePanning(instrument.effects)) {
 						instrument.pan = clamp(0, Config.panMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
+					if (effectsIncludeChorus(instrument.effects)) {
+						instrument.chorus = clamp(0, Config.chorusRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					}
 					if (effectsIncludeEcho(instrument.effects)) {
 						instrument.echoSustain = clamp(0, Config.echoSustainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 						instrument.echoDelay = clamp(0, Config.echoDelayRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 					if (effectsIncludeReverb(instrument.effects)) {
-						instrument.reverb = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-						instrument.reverb = clamp(0, Config.reverbRange, instrument.reverb);
+						instrument.reverb = clamp(0, Config.reverbRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				}
 				// Clamp the range.
@@ -3501,6 +3525,8 @@ class InstrumentState {
 	public chorusDelayLineDirty: boolean = false;
 	public chorusDelayPos: number = 0;
 	public chorusPhase: number = 0;
+	public chorusStart: number = 0;
+	public chorusEnd: number = 0;
 	
 	public echoDelayLineL: Float32Array | null = null;
 	public echoDelayLineR: Float32Array | null = null;
@@ -3756,6 +3782,15 @@ class InstrumentState {
 			this.panningOffsetStartR = delayStartR;
 			this.panningOffsetDeltaL = (delayEndL - delayStartL) / runLength;
 			this.panningOffsetDeltaR = (delayEndR - delayStartR) / runLength;
+		}
+		
+		if (usesChorus) {
+			const chorusEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.chorus];
+			const chorusEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.chorus];
+			const chorusStart: number = Math.min(1.0, chorusEnvelopeStart * instrument.chorus / (Config.chorusRange - 1));
+			const chorusEnd:   number = Math.min(1.0, chorusEnvelopeEnd   * instrument.chorus / (Config.chorusRange - 1));
+			this.chorusStart = chorusStart * 0.6 + (Math.pow(chorusStart, 6.0)) * 0.4;
+			this.chorusEnd   = chorusEnd   * 0.6 + (Math.pow(chorusEnd,   6.0)) * 0.4;
 		}
 		
 		let maxEchoMult = 0.0;
@@ -5568,7 +5603,7 @@ export class Synth {
 		const usesBitcrusher: boolean = effectsIncludeBitcrusher(instrument.effects);
 		const usesEqFilter: boolean = instrumentState.eqFilterCount > 0;
 		const usesPanning: boolean = effectsIncludePanning(instrument.effects) && instrument.pan != Config.panCenter;
-		const usesChorus: boolean = effectsIncludeChorus(instrument.effects);
+		const usesChorus: boolean = effectsIncludeChorus(instrument.effects) && instrument.chorus != 0;
 		const usesEcho: boolean = effectsIncludeEcho(instrument.effects) && instrument.echoSustain != 0;
 		const usesReverb: boolean = effectsIncludeReverb(instrument.effects) && instrument.reverb != 0;
 		let signature: number = 0;  if (usesDistortion) signature = signature | 1;
@@ -5694,6 +5729,14 @@ export class Synth {
 				const chorusDelayLineR = instrumentState.chorusDelayLineR;
 				instrumentState.chorusDelayLineDirty = true;
 				let chorusDelayPos = instrumentState.chorusDelayPos & chorusMask;
+				
+				const chorusStart = +instrumentState.chorusStart;
+				const chorusEnd   = +instrumentState.chorusEnd;
+				let chorusVoiceMult = chorusStart;
+				const chorusVoiceMultDelta = (chorusEnd - chorusStart) / runLength;
+				let chorusCombinedMult = 1.0 / Math.sqrt(3.0 * chorusStart * chorusStart + 1.0);
+				const chorusCombinedMultEnd = 1.0 / Math.sqrt(3.0 * chorusEnd * chorusEnd + 1.0);
+				const chorusCombinedMultDelta = (chorusCombinedMultEnd - chorusCombinedMult) / runLength;
 				
 				const chorusDuration = +beepbox.Config.chorusPeriodSeconds;
 				const chorusAngle = Math.PI * 2.0 / (chorusDuration * synth.samplesPerSecond);
@@ -5900,15 +5943,17 @@ export class Synth {
 					const chorusTap5 = chorusTap5A + (chorusTap5B - chorusTap5A) * chorusTap5Ratio;
 					chorusDelayLineL[chorusDelayPos] = sampleL * delayInputMult;
 					chorusDelayLineR[chorusDelayPos] = sampleR * delayInputMult;
-					sampleL = 0.5 * (sampleL - chorusTap0 + chorusTap1 - chorusTap2);
-					sampleR = 0.5 * (sampleR - chorusTap3 + chorusTap4 - chorusTap5);
+					sampleL = chorusCombinedMult * (sampleL + chorusVoiceMult * (chorusTap1 - chorusTap0 - chorusTap2));
+					sampleR = chorusCombinedMult * (sampleR + chorusVoiceMult * (chorusTap4 - chorusTap3 - chorusTap5));
 					chorusDelayPos = (chorusDelayPos + 1) & chorusMask;
 					chorusTap0Index += chorusTap0Delta;
 					chorusTap1Index += chorusTap1Delta;
 					chorusTap2Index += chorusTap2Delta;
 					chorusTap3Index += chorusTap3Delta;
 					chorusTap4Index += chorusTap4Delta;
-					chorusTap5Index += chorusTap5Delta;`
+					chorusTap5Index += chorusTap5Delta;
+					chorusVoiceMult += chorusVoiceMultDelta;
+					chorusCombinedMult += chorusCombinedMultDelta;`
 			}
 			
 			if (usesEcho) {
