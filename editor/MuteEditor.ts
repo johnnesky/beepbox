@@ -2,12 +2,15 @@
 
 import {SongDocument} from "./SongDocument";
 import {HTML} from "imperative-html/dist/esm/elements-strict";
+import {ColorConfig} from "./ColorConfig";
 
 export class MuteEditor {
-	public readonly container: HTMLElement = HTML.div({class: "muteEditor"});
+	private _cornerFiller: HTMLDivElement = HTML.div({style: `background: ${ColorConfig.editorBackground}; position: sticky; bottom: 0; left: 0; width: 32px; height: 30px;`});
+	
+	public readonly container: HTMLElement = HTML.div({class: "muteEditor"},
+	);
 	
 	private readonly _buttons: HTMLButtonElement[] = [];
-	private _editorHeight: number = 128;
 	private _renderedChannelCount: number = 0;
 	private _renderedChannelHeight: number = -1;
 	
@@ -39,6 +42,8 @@ export class MuteEditor {
 			}
 			
 			this._buttons.length = this._doc.song.getChannelCount();
+			
+			this.container.appendChild(this._cornerFiller);
 		}
 		
 		for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
@@ -58,8 +63,6 @@ export class MuteEditor {
 		if (this._renderedChannelHeight != channelHeight || this._renderedChannelCount != this._doc.song.getChannelCount()) {
 			this._renderedChannelHeight = channelHeight;
 			this._renderedChannelCount = this._doc.song.getChannelCount();
-			this._editorHeight = this._doc.song.getChannelCount() * channelHeight;
-			this.container.style.height = this._editorHeight + "px";
 		}
 	}
 }

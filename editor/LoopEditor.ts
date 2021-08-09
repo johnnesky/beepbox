@@ -24,12 +24,12 @@ export class LoopEditor {
 	private readonly _loop: SVGPathElement = SVG.path({fill: "none", stroke: ColorConfig.loopAccent, "stroke-width": 4});
 	private readonly _highlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
 	
-	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: pan-y; position: absolute;`, height: this._editorHeight},
+	private readonly _svg: SVGSVGElement = SVG.svg({style: `touch-action: pan-y; position: absolute;`, height: this._editorHeight},
 		this._loop,
 		this._highlight,
 	);
 	
-	public readonly container: HTMLElement = HTML.div({style: "height: 20px; position: relative; margin: 5px 0;"}, this._svg);
+	public readonly container: HTMLElement = HTML.div({class: "loopEditor"}, this._svg);
 	
 	private _barWidth: number = 32;
 	private _change: ChangeLoop | null = null;

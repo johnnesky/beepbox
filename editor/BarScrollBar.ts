@@ -60,6 +60,7 @@ export class BarScrollBar {
 	
 	private _onScroll = (event: Event): void => {
 		this._doc.barScrollPos = (this._trackContainer.scrollLeft / this._doc.getBarWidth());
+		//this._doc.notifier.changed();
 	}
 	
 	private _whenMouseOver = (event: MouseEvent): void => {

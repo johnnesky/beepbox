@@ -319,7 +319,7 @@ export class SongEditor {
 		this._muteEditor.container,
 		this._trackContainer,
 	);
-	private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackContainer);
+	private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackAndMuteContainer);
 	private readonly _trackArea: HTMLDivElement = div({class: "track-area"},
 		this._trackAndMuteContainer,
 		this._barScrollBar.container,
@@ -585,8 +585,8 @@ export class SongEditor {
 	
 	public whenUpdated = (): void => {
 		this._muteEditor.container.style.display = this._doc.enableChannelMuting ? "" : "none";
-		const trackBounds = this._trackContainer.getBoundingClientRect();
-		this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left) / this._doc.getBarWidth());
+		const trackBounds: DOMRect = this._trackAndMuteContainer.getBoundingClientRect();
+		this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left - (this._doc.enableChannelMuting ? 32 : 0)) / this._doc.getBarWidth());
 		this._barScrollBar.render();
 		this._muteEditor.render();
 		this._trackEditor.render();

@@ -170,6 +170,14 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	grid-area: track-area;
 }
 
+.beepboxEditor .loopEditor {
+	height: 20px;
+	position: sticky;
+	bottom: 0;
+	padding: 5px 0;
+	background-color: ${ColorConfig.editorBackground};
+}
+
 .beepboxEditor .settings-area {
 	grid-area: settings-area;
 	display: grid;
@@ -706,22 +714,28 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 .beepboxEditor .trackContainer {
-	overflow-x: hidden;
 	flex-grow: 1;
 }
 
 .beepboxEditor .trackAndMuteContainer {
 	display: flex;
 	align-items: flex-start;
+	width: 100%;
+	min-height: 0;
+	flex: 1;
+	overflow: hidden;
 }
 
 .beepboxEditor .muteEditor {
-	height: 128px;
 	width: 32px;
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
+	position: sticky;
+	left: 0;
+	z-index: 1;
+	background: ${ColorConfig.editorBackground};
 }
 
 .beepboxEditor .selectRow {
@@ -952,7 +966,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	.beepboxEditor .pattern-area {
 		max-height: 75vh;
 	}
-	.beepboxEditor .trackContainer {
+	.beepboxEditor .trackAndMuteContainer {
 		overflow-x: auto;
 	}
 	.beepboxEditor .barScrollBar {

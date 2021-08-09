@@ -16,9 +16,9 @@ export class Layout {
 			}
 			.beepboxEditor {
 				width: 100%;
-				min-height: 100vh;
+				height: 100vh;
 				grid-template-columns: minmax(0, 1fr) 30em; /* minmax(0, 1fr) min-content; Chrome 80 grid layout regression. https://bugs.chromium.org/p/chromium/issues/detail?id=1050307 */
-				grid-template-rows: minmax(481px, 1fr) min-content;
+				grid-template-rows: minmax(481px, 1fr) minmax(0, min-content);
 				grid-template-areas: "pattern-area settings-area" "track-area track-area";
 			}
 			.beepboxEditor .pattern-area {
@@ -27,13 +27,17 @@ export class Layout {
 			}
 			.beepboxEditor .track-area {
 				width: 100%;
-				overflow-y: auto;
+				display: flex;
+				flex-direction: column;
 			}
 			.beepboxEditor .editor-widget-column {
 				flex: 0;
 			}
 			.beepboxEditor .trackAndMuteContainer {
 				width: 100%;
+				min-height: 0;
+				flex: 1;
+				overflow: auto;
 			}
 			.beepboxEditor .instrument-settings-area {
 				overflow-y: auto;
@@ -62,20 +66,25 @@ export class Layout {
 				display: none;
 			}
 			.beepboxEditor .trackContainer {
-				overflow-x: auto;
+				overflow: visible;
+			}
+			.beepboxEditor .trackAndMuteContainer {
 				scrollbar-width: auto;
 				scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
 			}
-			.beepboxEditor .trackContainer::-webkit-scrollbar {
+			.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar {
 				width: 20px;
 				height: 20px;
 			}
-			.beepboxEditor .trackContainer::-webkit-scrollbar-track {
+			.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-track {
 				background: ${ColorConfig.editorBackground};
 			}
-			.beepboxEditor .trackContainer::-webkit-scrollbar-thumb {
+			.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-thumb {
 				background-color: ${ColorConfig.uiWidgetBackground};
 				border: 3px solid ${ColorConfig.editorBackground};
+			}
+			.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-corner {
+				background-color: ${ColorConfig.editorBackground};
 			}
 		}
 	`;
