@@ -3,7 +3,7 @@
 import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig} from "./ColorConfig";
-import {Layout} from "./Layout";
+import "./Layout"; // Imported here for the sake of ensuring this code is transpiled early.
 import {Pattern, Instrument, Channel, Synth} from "../synth/synth";
 import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {SongDocument} from "./SongDocument";
@@ -14,6 +14,7 @@ import {EnvelopeEditor} from "./EnvelopeEditor";
 import {FilterEditor} from "./FilterEditor";
 import {MuteEditor} from "./MuteEditor";
 import {TrackEditor} from "./TrackEditor";
+import {LayoutPrompt} from "./LayoutPrompt";
 import {LoopEditor} from "./LoopEditor";
 import {SpectrumEditor} from "./SpectrumEditor";
 import {HarmonicsEditor} from "./HarmonicsEditor";
@@ -172,7 +173,7 @@ export class SongEditor {
 		option({value: "alwaysShowSettings"}, "Customize All Instruments"),
 		option({value: "enableChannelMuting"}, "Enable Channel Muting"),
 		option({value: "displayBrowserUrl"}, "Display Song Data in URL"),
-		option({value: "fullScreen"}, "Full-Screen Layout"),
+		option({value: "layout"}, "Choose Layout..."),
 		option({value: "colorTheme"}, "Light Theme"),
 	);
 	private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale=>scale.name));
@@ -315,9 +316,11 @@ export class SongEditor {
 		this._trackEditor.container,
 		this._loopEditor.container,
 	);
+	private readonly _trackVisibleArea: HTMLDivElement = div({style: "position: absolute; width: 100%; height: 100%; pointer-events: none;"});
 	private readonly _trackAndMuteContainer: HTMLDivElement = div({class: "trackAndMuteContainer"},
 		this._muteEditor.container,
 		this._trackContainer,
+		this._trackVisibleArea,
 	);
 	private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackAndMuteContainer);
 	private readonly _trackArea: HTMLDivElement = div({class: "track-area"},
@@ -513,9 +516,9 @@ export class SongEditor {
 		}
 		
 		if (window.screen.availWidth < 700 || window.screen.availHeight < 700) {
-			const fullScreenOption: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.querySelector("[value=fullScreen]");
-			fullScreenOption.disabled = true;
-			fullScreenOption.setAttribute("hidden", "");
+			const layoutOption: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.querySelector("[value=layout]");
+			layoutOption.disabled = true;
+			layoutOption.setAttribute("hidden", "");
 		}
 	}
 	
@@ -563,6 +566,9 @@ export class SongEditor {
 				case "channelSettings":
 					this.prompt = new ChannelSettingsPrompt(this._doc);
 					break;
+				case "layout":
+					this.prompt = new LayoutPrompt(this._doc);
+					break;
 				default:
 					this.prompt = new TipPrompt(this._doc, promptName);
 					break;
@@ -585,8 +591,9 @@ export class SongEditor {
 	
 	public whenUpdated = (): void => {
 		this._muteEditor.container.style.display = this._doc.enableChannelMuting ? "" : "none";
-		const trackBounds: DOMRect = this._trackAndMuteContainer.getBoundingClientRect();
+		const trackBounds: DOMRect = this._trackVisibleArea.getBoundingClientRect();
 		this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left - (this._doc.enableChannelMuting ? 32 : 0)) / this._doc.getBarWidth());
+		this._doc.trackVisibleChannels = Math.floor((trackBounds.bottom - trackBounds.top - 30) / this._doc.getChannelHeight());
 		this._barScrollBar.render();
 		this._muteEditor.render();
 		this._trackEditor.render();
@@ -632,7 +639,7 @@ export class SongEditor {
 			(this._doc.alwaysShowSettings ? "✓ " : "　") + "Customize All Instruments",
 			(this._doc.enableChannelMuting ? "✓ " : "　") + "Enable Channel Muting",
 			(this._doc.displayBrowserUrl ? "✓ " : "　") + "Display Song Data in URL",
-			(this._doc.fullScreen ? "✓ " : "　") + "Full-Screen Layout",
+			"　Choose Layout...",
 			(this._doc.colorTheme == "light classic" ? "✓ " : "　") + "Light Theme",
 		];
 		for (let i: number = 0; i < optionCommands.length; i++) {
@@ -1071,6 +1078,7 @@ export class SongEditor {
 			case 38: // up
 				if (event.shiftKey) {
 					this._doc.selection.boxSelectionY1 = Math.max(0, this._doc.selection.boxSelectionY1 - 1);
+					this._doc.selection.scrollToSelection();
 					this._doc.selection.selectionUpdated();
 				} else {
 					this._doc.selection.setChannelBar((this._doc.channel - 1 + this._doc.song.getChannelCount()) % this._doc.song.getChannelCount(), this._doc.bar);
@@ -1081,6 +1089,7 @@ export class SongEditor {
 			case 40: // down
 				if (event.shiftKey) {
 					this._doc.selection.boxSelectionY1 = Math.min(this._doc.song.getChannelCount() - 1, this._doc.selection.boxSelectionY1 + 1);
+					this._doc.selection.scrollToSelection();
 					this._doc.selection.selectionUpdated();
 				} else {
 					this._doc.selection.setChannelBar((this._doc.channel + 1) % this._doc.song.getChannelCount(), this._doc.bar);
@@ -1480,9 +1489,8 @@ export class SongEditor {
 			case "displayBrowserUrl":
 				this._doc.toggleDisplayBrowserUrl();
 				break;
-			case "fullScreen":
-				this._doc.fullScreen = !this._doc.fullScreen;
-				Layout.setFullScreen(this._doc.fullScreen);
+			case "layout":
+				this._openPrompt("layout");
 				break;
 			case "colorTheme":
 				this._doc.colorTheme = this._doc.colorTheme == "light classic" ? "dark classic" : "light classic";

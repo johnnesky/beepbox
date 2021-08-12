@@ -432,6 +432,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	z-index: 100;
 }
 
 .beepboxEditor .promptContainer::before {
@@ -473,6 +474,22 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 .beepboxEditor .prompt p {
 	text-align: left;
 	margin: 1em 0;
+}
+
+.beepboxEditor .layout-option {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	cursor: pointer;
+	color: ${ColorConfig.uiWidgetFocus};
+}
+
+.beepboxEditor .layout-option input {
+	display: none;
+}
+
+.beepboxEditor .layout-option input:checked ~ * {
+	color: ${ColorConfig.primaryText};
 }
 
 .beepboxEditor .selectContainer {
@@ -723,7 +740,8 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	width: 100%;
 	min-height: 0;
 	flex: 1;
-	overflow: hidden;
+	overflow-x: hidden;
+	position: relative;
 }
 
 .beepboxEditor .muteEditor {

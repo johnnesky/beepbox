@@ -80,6 +80,8 @@ export class Selection {
 	public scrollToSelection(): void {
 		this._doc.barScrollPos = Math.min(this._doc.barScrollPos, this.boxSelectionX1);
 		this._doc.barScrollPos = Math.max(this._doc.barScrollPos, this.boxSelectionX1 - (this._doc.trackVisibleBars - 1));
+		this._doc.channelScrollPos = Math.min(this._doc.channelScrollPos, this.boxSelectionY1);
+		this._doc.channelScrollPos = Math.max(this._doc.channelScrollPos, this.boxSelectionY1 - (this._doc.trackVisibleChannels - 1));
 	}
 	
 	public setChannelBar(channel: number, bar: number): void {

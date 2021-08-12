@@ -194,14 +194,15 @@ export class BarScrollBar {
 		
 		if (resized || this._renderedBarPos != this._doc.barScrollPos) {
 			this._renderedBarPos = this._doc.barScrollPos;
-			this._handle.setAttribute("x", "" + (this._notchSpace * this._doc.barScrollPos));
-			this._handle.setAttribute("width", "" + (this._notchSpace * this._doc.trackVisibleBars));
-			this._handleHighlight.setAttribute("x", "" + (this._notchSpace * this._doc.barScrollPos));
-			this._handleHighlight.setAttribute("width", "" + (this._notchSpace * this._doc.trackVisibleBars));
+			this._handle.setAttribute("x", String(this._notchSpace * this._doc.barScrollPos));
+			this._handle.setAttribute("width", String(this._notchSpace * this._doc.trackVisibleBars));
+			this._handleHighlight.setAttribute("x", String(this._notchSpace * this._doc.barScrollPos));
+			this._handleHighlight.setAttribute("width", String(this._notchSpace * this._doc.trackVisibleBars));
 		}
 		
 		this._updatePreview();
 		
 		this._trackContainer.scrollLeft = this._doc.barScrollPos * this._doc.getBarWidth();
+		this._trackContainer.scrollTop = this._doc.channelScrollPos * this._doc.getChannelHeight();
 	}
 }

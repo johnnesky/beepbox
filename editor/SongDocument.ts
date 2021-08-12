@@ -36,11 +36,13 @@ export class SongDocument {
 	public alwaysShowSettings: boolean;
 	public enableChannelMuting: boolean;
 	public colorTheme: string;
-	public fullScreen: boolean;
+	public layout: string;
 	public displayBrowserUrl: boolean;
 	public volume: number = 75;
 	public trackVisibleBars: number = 16;
+	public trackVisibleChannels: number = 4;
 	public barScrollPos: number = 0;
+	public channelScrollPos: number = 0;
 	public prompt: string | null = null;
 	
 	private static readonly _maximumUndoHistory: number = 100;
@@ -66,15 +68,20 @@ export class SongDocument {
 		this.alwaysShowSettings = window.localStorage.getItem("alwaysShowSettings") == "true";
 		this.enableChannelMuting = window.localStorage.getItem("enableChannelMuting") == "true";
 		this.displayBrowserUrl = window.localStorage.getItem("displayBrowserUrl") != "false";
-		this.fullScreen = window.localStorage.getItem("fullScreen") == "true";
+		this.layout = window.localStorage.getItem("layout") || "small";
 		this.colorTheme = window.localStorage.getItem("colorTheme") || "dark classic";
-		
-		ColorConfig.setTheme(this.colorTheme);
-		Layout.setFullScreen(this.fullScreen);
 		
 		if (window.localStorage.getItem("volume") != null) {
 			this.volume = Math.min(<any>window.localStorage.getItem("volume") >>> 0, 75);
 		}
+		
+		if (window.localStorage.getItem("fullScreen") != null) {
+			if (window.localStorage.getItem("fullScreen") == "true") this.layout = "long";
+			window.localStorage.removeItem("fullScreen");
+		}
+		
+		ColorConfig.setTheme(this.colorTheme);
+		Layout.setLayout(this.layout);
 		
 		if (window.sessionStorage.getItem("currentUndoIndex") == null) {
 			window.sessionStorage.setItem("currentUndoIndex", "0");
@@ -105,7 +112,7 @@ export class SongDocument {
 		this.bar = state.bar;
 		this.channel = state.channel;
 		this._recoveryUid = state.recoveryUid;
-		this.barScrollPos = Math.max(0, this.bar - (this.trackVisibleBars - 6));
+		//this.barScrollPos = Math.max(0, this.bar - (this.trackVisibleBars - 6));
 		this.prompt = state.prompt;
 		this.selection.fromJSON(state.selection);
 		
@@ -351,7 +358,7 @@ export class SongDocument {
 		window.localStorage.setItem("alwaysShowSettings", this.alwaysShowSettings ? "true" : "false");
 		window.localStorage.setItem("enableChannelMuting", this.enableChannelMuting ? "true" : "false");
 		window.localStorage.setItem("displayBrowserUrl", this.displayBrowserUrl ? "true" : "false");
-		window.localStorage.setItem("fullScreen", this.fullScreen ? "true" : "false");
+		window.localStorage.setItem("layout", this.layout);
 		window.localStorage.setItem("colorTheme", this.colorTheme);
 		window.localStorage.setItem("volume", String(this.volume));
 	}
@@ -384,11 +391,10 @@ export class SongDocument {
 	}
 	
 	public getChannelHeight(): number {
-		const squashed: boolean = this.getMobileLayout() || this.song.getChannelCount() > 4 || (this.song.barCount > this.trackVisibleBars && this.song.getChannelCount() > 3);
-		return squashed ? 27 : 32;
+		return 27;
 	}
 	
 	public getFullScreen(): boolean {
-		return !this.getMobileLayout() && this.fullScreen;
+		return !this.getMobileLayout() && (this.layout != "small");
 	}
 }

@@ -952,6 +952,7 @@ export class ChangeChannelCount extends Change {
 			doc.song.channels.length = doc.song.getChannelCount();
 			
 			doc.channel = Math.min(doc.channel, newPitchChannelCount + newNoiseChannelCount - 1);
+			doc.channelScrollPos = Math.max(0, Math.min(doc.song.getChannelCount() - doc.trackVisibleChannels, doc.channelScrollPos));
 			doc.notifier.changed();
 			
 			this._didSomething();
@@ -968,6 +969,7 @@ export class ChangeChannelBar extends Change {
 		doc.bar = newBar;
 		if (!silently) {
 			doc.barScrollPos = Math.min(doc.bar, Math.max(doc.bar - (doc.trackVisibleBars - 1), doc.barScrollPos));
+			doc.channelScrollPos = Math.min(doc.channel, Math.max(doc.channel - (doc.trackVisibleChannels - 1), doc.channelScrollPos));
 		}
 		doc.notifier.changed();
 		if (oldChannel != newChannel || oldBar != newBar) {
@@ -1974,8 +1976,10 @@ export class ChangeValidateTrackSelection extends Change {
 		const channel: number = Math.min(doc.channel, doc.song.getChannelCount() - 1);
 		const bar: number = Math.max(0, Math.min(doc.song.barCount - 1, doc.bar));
 		const barScrollPos: number = Math.min(doc.bar, Math.max(doc.bar - (doc.trackVisibleBars - 1), Math.max(0, Math.min(doc.song.barCount - doc.trackVisibleBars, doc.barScrollPos))));
-		if (doc.channel != channel || doc.bar != bar || doc.barScrollPos != barScrollPos) {
+		const channelScrollPos: number = Math.min(doc.channel, Math.max(doc.channel - (doc.trackVisibleChannels - 1), Math.max(0, Math.min(doc.song.getChannelCount() - doc.trackVisibleChannels, doc.channelScrollPos))));
+		if (doc.channel != channel || doc.bar != bar || doc.channelScrollPos != channelScrollPos || doc.barScrollPos != barScrollPos) {
 			doc.channel = channel;
+			doc.channel = channelScrollPos;
 			doc.bar = bar;
 			doc.barScrollPos = barScrollPos;
 			doc.notifier.changed();
