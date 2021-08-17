@@ -1682,14 +1682,32 @@ export class SongEditor {
 				}
 
 				// Build options for modulator instruments (make sure it has the right number).
-				if (this._modInstrumentBoxes[mod].children.length != this._doc.song.instrumentsPerChannel + 1) {
+				if (this._modInstrumentBoxes[mod].children.length != this._doc.song.instrumentsPerChannel) {
 					while (this._modInstrumentBoxes[mod].firstChild) this._modInstrumentBoxes[mod].remove(0);
 					const instrumentList: number[] = [];
 					for (let i: number = 0; i < this._doc.song.instrumentsPerChannel; i++) {
 						instrumentList.push(i + 1);
 					}
 					buildOptions(this._modInstrumentBoxes[mod], instrumentList);
-					this._modInstrumentBoxes[mod].appendChild(option({ value: this._doc.song.instrumentsPerChannel }, '⏎'));
+				}
+
+				// If non-zero pattern, point to which instrument is the current
+				if ( this._doc.song.channels[modChannel].bars[this._doc.bar] > 0 ) {
+					let usedInstrument: number = this._doc.song.getPatternInstrument(modChannel, this._doc.bar);
+
+					for (let i: number = 0; i < this._doc.song.instrumentsPerChannel; i++) {
+						if ( i == usedInstrument ) {
+							this._modInstrumentBoxes[mod].options[i].label = "🢒" + (i + 1);
+						}
+						else {
+							this._modInstrumentBoxes[mod].options[i].label = "" + (i + 1);
+						}
+					}
+				}
+				else {
+					for (let i: number = 0; i < this._doc.song.instrumentsPerChannel; i++) {
+						this._modInstrumentBoxes[mod].options[i].label = "" + (i + 1);
+					}
 				}
 
 				// Set selected index based on instrument info.
@@ -2650,16 +2668,8 @@ export class SongEditor {
 	}
 
 	private _whenSetModInstrument = (mod: number): void => {
-		// Select current instrument, if special option was selected
-		if ( this._modInstrumentBoxes[mod].selectedIndex >= this._doc.song.instrumentsPerChannel ) {
-			// Offset for 'song' and 'none'
-			let channel: number = this._modChannelBoxes[mod].selectedIndex - 2;
-			this._doc.selection.setModInstrument(mod, this._doc.song.getPatternInstrument(channel, this._doc.bar));
-			this._modInstrumentBoxes[mod].selectedIndex = this._doc.song.getPatternInstrument(channel, this._doc.bar);
-		}
-		else {
-			this._doc.selection.setModInstrument(mod, this._modInstrumentBoxes[mod].selectedIndex);
-		}
+		this._doc.selection.setModInstrument(mod, this._modInstrumentBoxes[mod].selectedIndex);
+
 		// Force piano to re-show
 		this._piano.forceRender();
 	}
