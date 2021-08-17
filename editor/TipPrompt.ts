@@ -312,6 +312,7 @@ export class TipPrompt implements Prompt {
 					h2("Modulator Instrument"),
 					p("Modulators can be used to change settings in your song automatically over time. This technique is also known as automation."),
 					p("This setting controls which instrument your modulator will apply to within the given channel you've chosen."),
+					p("Selecting the special option '⏎' will choose the current instrument for the target channel in this bar."),
 				);
 			} break;
 			case "modSet": {

@@ -1682,13 +1682,14 @@ export class SongEditor {
 				}
 
 				// Build options for modulator instruments (make sure it has the right number).
-				if (this._modInstrumentBoxes[mod].children.length != this._doc.song.instrumentsPerChannel) {
+				if (this._modInstrumentBoxes[mod].children.length != this._doc.song.instrumentsPerChannel + 1) {
 					while (this._modInstrumentBoxes[mod].firstChild) this._modInstrumentBoxes[mod].remove(0);
 					const instrumentList: number[] = [];
 					for (let i: number = 0; i < this._doc.song.instrumentsPerChannel; i++) {
 						instrumentList.push(i + 1);
 					}
 					buildOptions(this._modInstrumentBoxes[mod], instrumentList);
+					this._modInstrumentBoxes[mod].appendChild(option({ value: this._doc.song.instrumentsPerChannel }, '⏎'));
 				}
 
 				// Set selected index based on instrument info.
@@ -2649,8 +2650,16 @@ export class SongEditor {
 	}
 
 	private _whenSetModInstrument = (mod: number): void => {
-		this._doc.selection.setModInstrument(mod, this._modInstrumentBoxes[mod].selectedIndex);
-
+		// Select current instrument, if special option was selected
+		if ( this._modInstrumentBoxes[mod].selectedIndex >= this._doc.song.instrumentsPerChannel ) {
+			// Offset for 'song' and 'none'
+			let channel: number = this._modChannelBoxes[mod].selectedIndex - 2;
+			this._doc.selection.setModInstrument(mod, this._doc.song.getPatternInstrument(channel, this._doc.bar));
+			this._modInstrumentBoxes[mod].selectedIndex = this._doc.song.getPatternInstrument(channel, this._doc.bar);
+		}
+		else {
+			this._doc.selection.setModInstrument(mod, this._modInstrumentBoxes[mod].selectedIndex);
+		}
 		// Force piano to re-show
 		this._piano.forceRender();
 	}
@@ -2719,7 +2728,10 @@ export class SongEditor {
 		switch (this._fileMenu.value) {
 			case "new":
 				this._doc.goBackToStart();
-				for (const channel of this._doc.song.channels) channel.muted = false;
+				for (const channel of this._doc.song.channels) {
+					channel.muted = false;
+					channel.name = "";
+				}
 				this._doc.record(new ChangeSong(this._doc, ""), false, true);
 				break;
 			case "export":
