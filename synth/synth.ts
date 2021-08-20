@@ -3108,6 +3108,7 @@ export class Song {
 
             channelArray.push({
                 "type": isModChannel ? "mod" : (isNoiseChannel ? "drum" : "pitch"),
+                "name": this.channels[channel].name,
                 "octaveScrollBar": this.channels[channel].octave,
                 "instruments": instrumentArray,
                 "patterns": patternArray,
@@ -3127,6 +3128,13 @@ export class Song {
             "ticksPerBeat": Config.rhythms[this.rhythm].stepsPerBeat,
             "beatsPerMinute": this.tempo,
             "reverb": this.reverb,
+            "masterGain": this.masterGain,
+            "compressionThreshold": this.compressionThreshold,
+            "limitThreshold": this.limitThreshold,
+            "limitDecay": this.limitDecay,
+            "limitRise": this.limitRise,
+            "limitRatio": this.limitRatio,
+            "compressionRatio": this.compressionRatio,
             //"outroBars": this.barCount - this.loopStart - this.loopLength; // derive this from bar arrays?
             //"patternCount": this.patternsPerChannel, // derive this from pattern arrays?
             //"instrumentsPerChannel": this.instrumentsPerChannel, //derive this from instrument arrays?
@@ -3198,6 +3206,56 @@ export class Song {
             }
         }
 
+        // Read limiter settings. Ranges and defaults are based on slider settings
+
+        if (jsonObject["masterGain"] != undefined) {
+            this.masterGain = Math.max(0.0, Math.min(5.0, jsonObject["masterGain"] || 0));
+        } else {
+            this.masterGain = 1.0;
+        }
+
+        if (jsonObject["limitThreshold"] != undefined) {
+            this.limitThreshold = Math.max(0.0, Math.min(2.0, jsonObject["limitThreshold"] || 0));
+        }
+        else {
+            this.limitThreshold = 1.0;
+        }
+
+        if (jsonObject["compressionThreshold"] != undefined) {
+            this.compressionThreshold = Math.max(0.0, Math.min(1.1, jsonObject["compressionThreshold"] || 0));
+        }
+        else {
+            this.compressionThreshold = 1.0;
+        }
+
+        if (jsonObject["limitRise"] != undefined) {
+            this.limitRise = Math.max(2000.0, Math.min(10000.0, jsonObject["limitRise"] || 0));
+        }
+        else {
+            this.limitRise = 4000.0;
+        }
+
+        if (jsonObject["limitDecay"] != undefined) {
+            this.limitDecay = Math.max(1.0, Math.min(30.0, jsonObject["limitDecay"] || 0));
+        }
+        else {
+            this.limitDecay = 4.0;
+        }
+
+        if (jsonObject["limitRatio"] != undefined) {
+            this.limitRatio = Math.max(0.0, Math.min(11.0, jsonObject["limitRatio"] || 0));
+        }
+        else {
+            this.limitRatio = 1.0;
+        }
+
+        if (jsonObject["compressionRatio"] != undefined) {
+            this.compressionRatio = Math.max(0.0, Math.min(1.168, jsonObject["compressionRatio"] || 0));
+        }
+        else {
+            this.compressionRatio = 1.0;
+        }
+
         let maxInstruments: number = 1;
         let maxPatterns: number = 1;
         let maxBars: number = 1;
@@ -3265,6 +3323,13 @@ export class Song {
                     channel.bars[i] = 1;
                 }
                 channel.bars.length = this.barCount;
+
+                if (channelObject["name"]) {
+                    channel.name = channelObject["name"];
+                }
+                else {
+                    channel.name = "";
+                }
 
                 for (let i: number = 0; i < this.instrumentsPerChannel; i++) {
                     const instrument: Instrument = channel.instruments[i];
