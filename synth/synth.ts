@@ -3735,14 +3735,16 @@ class InstrumentState {
 		
 		let eqFilterVolume: number = this.envelopeComputer.lowpassCutoffDecayVolumeCompensation;
 		const eqFilterSettings: FilterSettings = instrument.eqFilter;
+		const eqAllFreqsEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterAllFreqs];
+		const eqAllFreqsEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterAllFreqs];
 		for (let i: number = 0; i < eqFilterSettings.controlPointCount; i++) {
 			const eqFreqEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterFreq0 + i];
 			const eqFreqEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterFreq0 + i];
 			const eqPeakEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterPeak0 + i];
 			const eqPeakEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterPeak0 + i];
 			const point: FilterControlPoint = eqFilterSettings.controlPoints[i];
-			point.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, eqFreqEnvelopeStart, eqPeakEnvelopeStart);
-			point.toCoefficients(Synth.tempFilterEndCoefficients,   samplesPerSecond, eqFreqEnvelopeEnd,   eqPeakEnvelopeEnd);
+			point.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, eqAllFreqsEnvelopeStart * eqFreqEnvelopeStart, eqPeakEnvelopeStart);
+			point.toCoefficients(Synth.tempFilterEndCoefficients,   samplesPerSecond, eqAllFreqsEnvelopeEnd   * eqFreqEnvelopeEnd,   eqPeakEnvelopeEnd);
 			if (this.eqFilters.length <= i) this.eqFilters[i] = new DynamicBiquadFilter();
 			this.eqFilters[i].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength);
 			eqFilterVolume *= point.getVolumeCompensationMult();

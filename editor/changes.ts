@@ -1164,12 +1164,19 @@ export class ChangeFilterAddPoint extends UndoableChange {
 				// point and clear them, and all envelopes that targeted later points and
 				// decrement those to keep them in sync with the new list of points.
 				const automationTarget: AutomationTarget = Config.instrumentAutomationTargets[target];
-				if (automationTarget.isFilter && automationTarget.maxCount == Config.filterMaxPoints && (automationTarget.effect == EffectType.noteFilter) == isNoteFilter) {
-					if (targetIndex == index) {
-						target = Config.instrumentAutomationTargets.dictionary["none"].index;
-						targetIndex = 0;
-					} else if (targetIndex > index) {
-						targetIndex--;
+				if (automationTarget.isFilter && (automationTarget.effect == EffectType.noteFilter) == isNoteFilter) {
+					if (automationTarget.maxCount == Config.filterMaxPoints) {
+						if (targetIndex == index) {
+							target = Config.instrumentAutomationTargets.dictionary["none"].index;
+							targetIndex = 0;
+						} else if (targetIndex > index) {
+							targetIndex--;
+						}
+					} else {
+						if (filterSettings.controlPointCount <= 1) {
+							target = Config.instrumentAutomationTargets.dictionary["none"].index;
+							targetIndex = 0;
+						}
 					}
 				}
 			}
