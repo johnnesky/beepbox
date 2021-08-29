@@ -1,5 +1,6 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
+import {Config} from "../synth/SynthConfig";
 import {Pattern, Song, Synth} from "../synth/synth";
 import {SongRecovery, generateUid} from "./SongRecovery";
 import {ColorConfig} from "./ColorConfig";
@@ -20,6 +21,8 @@ interface HistoryState {
 }
 
 export class SongDocument {
+	public static readonly defaultVisibleOctaves: number = 3;
+	
 	public song: Song;
 	public synth: Synth;
 	public notifier: ChangeNotifier = new ChangeNotifier();
@@ -39,6 +42,8 @@ export class SongDocument {
 	public layout: string;
 	public displayBrowserUrl: boolean;
 	public volume: number = 75;
+	public visibleOctaves: number = SongDocument.defaultVisibleOctaves;
+	
 	public trackVisibleBars: number = 16;
 	public trackVisibleChannels: number = 4;
 	public barScrollPos: number = 0;
@@ -70,6 +75,7 @@ export class SongDocument {
 		this.displayBrowserUrl = window.localStorage.getItem("displayBrowserUrl") != "false";
 		this.layout = window.localStorage.getItem("layout") || "small";
 		this.colorTheme = window.localStorage.getItem("colorTheme") || "dark classic";
+		this.visibleOctaves = ((<any>window.localStorage.getItem("visibleOctaves")) >>> 0) || SongDocument.defaultVisibleOctaves;
 		
 		if (window.localStorage.getItem("volume") != null) {
 			this.volume = Math.min(<any>window.localStorage.getItem("volume") >>> 0, 75);
@@ -361,6 +367,7 @@ export class SongDocument {
 		window.localStorage.setItem("layout", this.layout);
 		window.localStorage.setItem("colorTheme", this.colorTheme);
 		window.localStorage.setItem("volume", String(this.volume));
+		window.localStorage.setItem("visibleOctaves", String(this.visibleOctaves));
 	}
 	
 	public setVolume(val: number): void {
@@ -396,5 +403,18 @@ export class SongDocument {
 	
 	public getFullScreen(): boolean {
 		return !this.getMobileLayout() && (this.layout != "small");
+	}
+	
+	public getVisibleOctaveCount(): number {
+		return this.getFullScreen() ? this.visibleOctaves : SongDocument.defaultVisibleOctaves;
+	}
+	
+	public getVisiblePitchCount(): number {
+		 return this.getVisibleOctaveCount() * Config.pitchesPerOctave + 1;
+	}
+	
+	public getBaseVisibleOctave(channel: number): number {
+		const visibleOctaveCount: number = this.getVisibleOctaveCount();
+		return Math.max(0, Math.min(Config.pitchOctaves - visibleOctaveCount, Math.ceil(this.song.channels[channel].octave - visibleOctaveCount * 0.5)));
 	}
 }

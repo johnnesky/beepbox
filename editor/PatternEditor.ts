@@ -997,9 +997,9 @@ export class PatternEditor {
 		this._editorWidth = this.container.clientWidth;
 		this._editorHeight = this.container.clientHeight;
 		this._partWidth = this._editorWidth / (this._doc.song.beatsPerBar * Config.partsPerBeat);
-		this._pitchCount = this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount : Config.windowPitchCount;
+		this._pitchCount = this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount : this._doc.getVisiblePitchCount();
 		this._pitchHeight = this._editorHeight / this._pitchCount;
-		this._octaveOffset = this._doc.song.channels[this._doc.channel].octave * Config.pitchesPerOctave;
+		this._octaveOffset = this._doc.getBaseVisibleOctave(this._doc.channel) * Config.pitchesPerOctave;
 		
 		if (this._renderedRhythm != this._doc.song.rhythm || 
 			this._renderedPitchChannelCount != this._doc.song.pitchChannelCount || 
@@ -1078,12 +1078,14 @@ export class PatternEditor {
 				
 				const pattern2: Pattern | null = this._doc.song.getPattern(channel, this._doc.bar + this._barOffset);
 				if (pattern2 == null) continue;
+				
+				const octaveOffset: number = this._doc.getBaseVisibleOctave(channel) * Config.pitchesPerOctave;
 				for (const note of pattern2.notes) {
 					for (const pitch of note.pitches) {
 						const notePath: SVGPathElement = SVG.path();
 						notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, channel).secondaryNote);
 						notePath.setAttribute("pointer-events", "none");
-						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, this._doc.song.channels[channel].octave * Config.pitchesPerOctave);
+						this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight * 0.19, false, octaveOffset);
 						this._svgNoteContainer.appendChild(notePath);
 					}
 				}

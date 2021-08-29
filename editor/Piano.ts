@@ -29,16 +29,9 @@ export class Piano {
 	private _renderedScale: number = -1;
 	private _renderedDrums: boolean = false;
 	private _renderedKey: number = -1;
+	private _renderedPitchCount: number = -1;
 	
 	constructor(private _doc: SongDocument) {
-		for (let i: number = 0; i < Config.windowPitchCount; i++) {
-			const pianoLabel: HTMLDivElement = HTML.div({class: "piano-label", style: "font-weight: bold; -webkit-text-stroke-width: 0; font-size: 11px; font-family: sans-serif; position: absolute; padding-left: 15px;"});
-			const pianoKey: HTMLDivElement = HTML.div({class: "piano-button", style: "background: gray;"}, pianoLabel);
-			this._pianoContainer.appendChild(pianoKey);
-			this._pianoLabels.push(pianoLabel);
-			this._pianoKeys.push(pianoKey);
-		}
-		
 		for (let i: number = 0; i < Config.drumCount; i++) {
 			const scale: number = (1.0 - (i / Config.drumCount) * 0.35) * 100;
 			const brightness: number = 1.0 + ((i - Config.drumCount / 2.0) / Config.drumCount) * 0.5;
@@ -63,23 +56,23 @@ export class Piano {
 	private _updateCursorPitch(): void {
 		const scale: ReadonlyArray<boolean> = Config.scales[this._doc.song.scale].flags;
 		const mousePitch: number = Math.max(0, Math.min(this._pitchCount-1, this._pitchCount - (this._mouseY / this._pitchHeight)));
-		if (scale[Math.floor(mousePitch) % 12] || this._doc.song.getChannelIsNoise(this._doc.channel)) {
+		if (scale[Math.floor(mousePitch) % Config.pitchesPerOctave] || this._doc.song.getChannelIsNoise(this._doc.channel)) {
 			this._cursorPitch = Math.floor(mousePitch);
 		} else {
 			let topPitch: number = Math.floor(mousePitch) + 1;
 			let bottomPitch: number = Math.floor(mousePitch) - 1;
-			while (!scale[topPitch % 12]) {
+			while (!scale[topPitch % Config.pitchesPerOctave]) {
 				topPitch++;
 			}
-			while (!scale[(bottomPitch) % 12]) {
+			while (!scale[(bottomPitch) % Config.pitchesPerOctave]) {
 				bottomPitch--;
 			}
 			let topRange: number = topPitch;
 			let bottomRange: number = bottomPitch + 1;
-			if (topPitch % 12 == 0 || topPitch % 12 == 7) {
+			if (topPitch % Config.pitchesPerOctave == 0 || topPitch % Config.pitchesPerOctave == 7) {
 				topRange -= 0.5;
 			}
-			if (bottomPitch % 12 == 0 || bottomPitch % 12 == 7) {
+			if (bottomPitch % Config.pitchesPerOctave == 0 || bottomPitch % Config.pitchesPerOctave == 7) {
 				bottomRange += 0.5;
 			}
 			this._cursorPitch = mousePitch - bottomRange > topRange - mousePitch ? topPitch : bottomPitch;
@@ -87,7 +80,8 @@ export class Piano {
 	}
 	
 	private _playLiveInput(): void {
-		const currentPitch: number = this._cursorPitch + this._doc.song.channels[this._doc.channel].octave * 12;
+		const octaveOffset: number = this._doc.getBaseVisibleOctave(this._doc.channel) * Config.pitchesPerOctave;
+		const currentPitch: number = this._cursorPitch + octaveOffset;
 		if (this._playedPitch == currentPitch) return;
 		this._playedPitch = currentPitch;
 		this._doc.synth.liveInputDuration = Number.MAX_SAFE_INTEGER;
@@ -183,19 +177,15 @@ export class Piano {
 	
 	private _documentChanged = (): void => {
 		const isDrum: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
-		this._pitchHeight = isDrum ? 40 : 13;
-		this._pitchCount = isDrum ? Config.drumCount : Config.windowPitchCount;
+		this._pitchCount = isDrum ? Config.drumCount : this._doc.getVisiblePitchCount();
+		this._pitchHeight = this._editorHeight / this._pitchCount;
 		this._updateCursorPitch();
 		if (this._mouseDown) this._playLiveInput();
 		this._doc.synth.liveInputChannel = this._doc.channel;
-		this._render();
-	}
-	
-	private _render = (): void => {
-		if (!this._doc.showLetters) return;
 		
-		const isDrum = this._doc.song.getChannelIsNoise(this._doc.channel);
-		if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key && this._renderedDrums == isDrum) return;
+		if (!this._doc.showLetters) return;
+		if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key && this._renderedDrums == isDrum && this._renderedPitchCount == this._pitchCount) return;
+		
 		this._renderedScale = this._doc.song.scale;
 		this._renderedKey = this._doc.song.key;
 		this._renderedDrums = isDrum;
@@ -204,11 +194,25 @@ export class Piano {
 		this._drumContainer.style.display = isDrum ? "flex" : "none";
 		
 		if (!isDrum) {
+			if (this._renderedPitchCount != this._pitchCount) {
+				this._pianoContainer.innerHTML = "";
+				for (let i: number = 0; i < this._pitchCount; i++) {
+					const pianoLabel: HTMLDivElement = HTML.div({class: "piano-label", style: "font-weight: bold; -webkit-text-stroke-width: 0; font-size: 11px; font-family: sans-serif; position: absolute; padding-left: 15px;"});
+					const pianoKey: HTMLDivElement = HTML.div({class: "piano-button", style: "background: gray;"}, pianoLabel);
+					this._pianoContainer.appendChild(pianoKey);
+					this._pianoLabels[i] = pianoLabel;
+					this._pianoKeys[i] = pianoKey;
+				}
+				this._pianoLabels.length = this._pitchCount;
+				this._pianoKeys.length = this._pitchCount;
+				this._renderedPitchCount = this._pitchCount;
+			}
+			
 			for (let j: number = 0; j < this._pitchCount; j++) {
-				const pitchNameIndex: number = (j + Config.keys[this._doc.song.key].basePitch) % 12;
+				const pitchNameIndex: number = (j + Config.keys[this._doc.song.key].basePitch) % Config.pitchesPerOctave;
 				const isWhiteKey: boolean = Config.keys[pitchNameIndex].isWhiteKey;
 				this._pianoKeys[j].style.background = isWhiteKey ? ColorConfig.whitePianoKey : ColorConfig.blackPianoKey;
-				if (!Config.scales[this._doc.song.scale].flags[j%12]) {
+				if (!Config.scales[this._doc.song.scale].flags[j % Config.pitchesPerOctave]) {
 					this._pianoKeys[j].classList.add("disabled");
 					this._pianoLabels[j].style.display = "none";
 				} else {
@@ -220,8 +224,8 @@ export class Piano {
 					if (Config.keys[pitchNameIndex].isWhiteKey) {
 						text = Config.keys[pitchNameIndex].name;
 					} else {
-						const shiftDir: number = Config.blackKeyNameParents[j%12];
-						text = Config.keys[(pitchNameIndex + 12 + shiftDir) % 12].name;
+						const shiftDir: number = Config.blackKeyNameParents[j % Config.pitchesPerOctave];
+						text = Config.keys[(pitchNameIndex + Config.pitchesPerOctave + shiftDir) % Config.pitchesPerOctave].name;
 						if (shiftDir == 1) {
 							text += "♭";
 						} else if (shiftDir == -1) {

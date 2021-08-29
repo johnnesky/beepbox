@@ -12,10 +12,9 @@ export class OctaveScrollBar {
 	private readonly _notchHeight: number = 4.0;
 	private readonly _octaveCount: number = Config.pitchOctaves;
 	private readonly _octaveHeight: number = (this._editorHeight - this._notchHeight) / this._octaveCount;
-	private readonly _barHeight: number = (this._octaveHeight * Config.windowOctaves + this._notchHeight);
 	
-	private readonly _handle: SVGRectElement = SVG.rect({fill: ColorConfig.uiWidgetBackground, x: 2, y: 0, width: this._editorWidth - 4, height: this._barHeight});
-	private readonly _handleHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2, height: this._barHeight});
+	private readonly _handle: SVGRectElement = SVG.rect({fill: ColorConfig.uiWidgetBackground, x: 2, y: 0, width: this._editorWidth - 4});
+	private readonly _handleHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 0, width: this._editorWidth - 2});
 	private readonly _upHighlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
 	private readonly _downHighlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
 	
@@ -29,7 +28,9 @@ export class OctaveScrollBar {
 	private _dragging: boolean = false;
 	private _dragStart: number;
 	private _barBottom: number;
+	private _barHeight: number;
 	private _renderedBarBottom: number = -1;
+	private _renderedVisibleOctaveCount: number = -1;
 	private _change: ChangeOctave | null = null;
 	
 	constructor(private _doc: SongDocument) {
@@ -133,13 +134,15 @@ export class OctaveScrollBar {
 	private _whenCursorMoved(): void {
 		if (this._doc.song.getChannelIsNoise(this._doc.channel)) return;
 		if (this._dragging) {
-			const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
+			const visibleOctaveCount: number = this._doc.getVisibleOctaveCount();
+			const scrollableOctaves: number = Config.pitchOctaves - visibleOctaveCount;
 			const continuingProspectiveChange: boolean = this._doc.lastChangeWas(this._change);
-			const oldValue: number = continuingProspectiveChange ? this._change!.oldValue : currentOctave;
+			const oldValue: number = continuingProspectiveChange ? this._change!.oldValue : this._doc.song.channels[this._doc.channel].octave;
 			
+			const currentOctave: number = this._doc.getBaseVisibleOctave(this._doc.channel);
 			let octave: number = currentOctave;
 			while (this._mouseY - this._dragStart < -this._octaveHeight * 0.5) {
-				if (octave < Config.scrollableOctaves) {
+				if (octave < scrollableOctaves) {
 					octave++;
 					this._dragStart -= this._octaveHeight;
 				} else {
@@ -155,7 +158,7 @@ export class OctaveScrollBar {
 				}
 			}
 			
-			this._change = new ChangeOctave(this._doc, oldValue, octave);
+			this._change = new ChangeOctave(this._doc, oldValue, Math.floor(octave + visibleOctaveCount * 0.5));
 			this._doc.setProspectiveChange(this._change);
 		}
 		
@@ -167,18 +170,20 @@ export class OctaveScrollBar {
 			if (this._dragging) {
 				if (this._change != null) this._doc.record(this._change);
 			} else {
+				const visibleOctaveCount: number = this._doc.getVisibleOctaveCount();
+				const scrollableOctaves: number = Config.pitchOctaves - visibleOctaveCount;
 				const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._change);
 				const oldValue: number = canReplaceLastChange ? this._change!.oldValue : this._doc.song.channels[this._doc.channel].octave;
-				const currentOctave: number = this._doc.song.channels[this._doc.channel].octave;
 			
+				const currentOctave: number = this._doc.getBaseVisibleOctave(this._doc.channel);
 				if (this._mouseY < this._barBottom - this._barHeight * 0.5) {
-					if (currentOctave < Config.scrollableOctaves) {
-						this._change = new ChangeOctave(this._doc, oldValue, currentOctave + 1);
+					if (currentOctave < scrollableOctaves) {
+						this._change = new ChangeOctave(this._doc, oldValue, Math.floor(currentOctave + 1 + visibleOctaveCount * 0.5));
 						this._doc.record(this._change, canReplaceLastChange);
 					}
 				} else {
 					if (currentOctave > 0) {
-						this._change = new ChangeOctave(this._doc, oldValue, currentOctave - 1);
+						this._change = new ChangeOctave(this._doc, oldValue, Math.floor(currentOctave - 1 + visibleOctaveCount * 0.5));
 						this._doc.record(this._change, canReplaceLastChange);
 					}
 				}
@@ -211,16 +216,17 @@ export class OctaveScrollBar {
 	}
 	
 	private _documentChanged = (): void => {
-		this._barBottom = this._editorHeight - (this._octaveHeight * this._doc.song.channels[this._doc.channel].octave);
-		this._render();
-	}
-	
-	private _render(): void {
+		this._barBottom = this._editorHeight - (this._octaveHeight * this._doc.getBaseVisibleOctave(this._doc.channel));
 		this._svg.style.visibility = (this._doc.song.getChannelIsNoise(this._doc.channel)) ? "hidden" : "visible";
-		if (this._renderedBarBottom != this._barBottom) {
+		const visibleOctaveCount: number = this._doc.getVisibleOctaveCount();
+		if (this._renderedBarBottom != this._barBottom || this._renderedVisibleOctaveCount != visibleOctaveCount) {
 			this._renderedBarBottom = this._barBottom;
-			this._handle.setAttribute("y", "" + (this._barBottom - this._barHeight));
-			this._handleHighlight.setAttribute("y", "" + (this._barBottom - this._barHeight));
+			this._renderedVisibleOctaveCount = visibleOctaveCount;
+			this._barHeight = (this._octaveHeight * visibleOctaveCount + this._notchHeight);
+			this._handle.setAttribute("height", String(this._barHeight));
+			this._handleHighlight.setAttribute("height", String(this._barHeight));
+			this._handle.setAttribute("y", String(this._barBottom - this._barHeight));
+			this._handleHighlight.setAttribute("y", String(this._barBottom - this._barHeight));
 		}
 		this._updatePreview();
 	}

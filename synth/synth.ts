@@ -1583,11 +1583,12 @@ export class Song {
 			this.pitchChannelCount = 3;
 			this.noiseChannelCount = 1;
 			for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
+				const isNoiseChannel: boolean = channelIndex >= this.pitchChannelCount;
 				if (this.channels.length <= channelIndex) {
 					this.channels[channelIndex] = new Channel();
 				}
 				const channel: Channel = this.channels[channelIndex];
-				channel.octave = 3 - channelIndex; // [3, 2, 1, 0]; Descending octaves with drums at zero in last channel.
+				channel.octave = isNoiseChannel ? 0 : 4 - channelIndex; // [4, 3, 2, 0]: Descending octaves with drums at zero in last channel.
 			
 				for (let pattern: number = 0; pattern < this.patternsPerChannel; pattern++) {
 					if (channel.patterns.length <= pattern) {
@@ -1598,7 +1599,6 @@ export class Song {
 				}
 				channel.patterns.length = this.patternsPerChannel;
 			
-				const isNoiseChannel: boolean = channelIndex >= this.pitchChannelCount;
 				for (let instrument: number = 0; instrument < this.instrumentsPerChannel; instrument++) {
 					if (channel.instruments.length <= instrument) {
 						channel.instruments[instrument] = new Instrument(isNoiseChannel);
@@ -1777,9 +1777,9 @@ export class Song {
 		const bitsPerNoteSize: number = Song.getNeededBits(Config.noteSizeMax);
 		for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
 			const isNoiseChannel: boolean = this.getChannelIsNoise(channel);
-			const octaveOffset: number = isNoiseChannel ? 0 : this.channels[channel].octave * 12;
-			let lastPitch: number = (isNoiseChannel ? 4 : 12) + octaveOffset;
-			const recentPitches: number[] = isNoiseChannel ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+			const octaveOffset: number = isNoiseChannel ? 0 : this.channels[channel].octave * Config.pitchesPerOctave;
+			let lastPitch: number = (isNoiseChannel ? 4 : octaveOffset);
+			const recentPitches: number[] = isNoiseChannel ? [4,6,7,2,3,8,0,10] : [0, 7, 12, 19, 24, -5, -12];
 			const recentShapes: string[] = [];
 			for (let i: number = 0; i < recentPitches.length; i++) {
 				recentPitches[i] += octaveOffset;
@@ -2085,10 +2085,14 @@ export class Song {
 			case SongTagCode.channelOctave: {
 				if (beforeThree) {
 					const channel: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					this.channels[channel].octave = clamp(0, Config.scrollableOctaves + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					this.channels[channel].octave = clamp(0, Config.pitchOctaves, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
+				} else if (beforeNine) {
+					for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
+						this.channels[channel].octave = clamp(0, Config.pitchOctaves, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
+					}
 				} else {
 					for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
-						this.channels[channel].octave = clamp(0, Config.scrollableOctaves + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+						this.channels[channel].octave = clamp(0, Config.pitchOctaves, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				}
 			} break;
@@ -2663,8 +2667,8 @@ export class Song {
 					const octaveOffset: number = isNoiseChannel ? 0 : this.channels[channel].octave * 12;
 					let note: Note | null = null;
 					let pin: NotePin | null = null;
-					let lastPitch: number = (isNoiseChannel ? 4 : 12) + octaveOffset;
-					const recentPitches: number[] = isNoiseChannel ? [4,6,7,2,3,8,0,10] : [12, 19, 24, 31, 36, 7, 0];
+					let lastPitch: number = (isNoiseChannel ? 4 : octaveOffset);
+					const recentPitches: number[] = isNoiseChannel ? [4,6,7,2,3,8,0,10] : [0, 7, 12, 19, 24, -5, -12];
 					const recentShapes: any[] = [];
 					for (let i: number = 0; i < recentPitches.length; i++) {
 						recentPitches[i] += octaveOffset;
@@ -2844,7 +2848,7 @@ export class Song {
 			
 			channelArray.push({
 				"type": isNoiseChannel ? "drum" : "pitch",
-				"octaveScrollBar": this.channels[channel].octave,
+				"octaveScrollBar": this.channels[channel].octave - 1,
 				"instruments": instrumentArray,
 				"patterns": patternArray,
 				"sequence": sequenceArray,
@@ -2973,7 +2977,7 @@ export class Song {
 				}
 				
 				if (channelObject["octaveScrollBar"] != undefined) {
-					channel.octave = clamp(0, Config.scrollableOctaves + 1, channelObject["octaveScrollBar"] | 0);
+					channel.octave = clamp(0, Config.pitchOctaves, (channelObject["octaveScrollBar"] | 0) + 1);
 				}
 				
 				for (let i: number = channel.instruments.length; i < this.instrumentsPerChannel; i++) {

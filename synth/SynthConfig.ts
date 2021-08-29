@@ -456,9 +456,6 @@ export class Config {
 	public static readonly pitchesPerOctave: number = 12; // TODO: Use this for converting pitch to frequency.
 	public static readonly drumCount: number = 12;
 	public static readonly pitchOctaves: number = 7;
-	public static readonly windowOctaves: number = 3;
-	public static readonly scrollableOctaves: number = Config.pitchOctaves - Config.windowOctaves;
-	public static readonly windowPitchCount: number = Config.windowOctaves * Config.pitchesPerOctave + 1;
 	public static readonly maxPitch: number = Config.pitchOctaves * Config.pitchesPerOctave;
 	public static readonly maximumTonesPerChannel: number = Config.maxChordSize * 2;
 	public static readonly justIntonationSemitones: number[] = [1.0/2.0, 8.0/15.0, 9.0/16.0, 3.0/5.0, 5.0/8.0, 2.0/3.0, 32.0/45.0, 3.0/4.0, 4.0/5.0, 5.0/6.0, 8.0/9.0, 15.0/16.0, 1.0, 16.0/15.0, 9.0/8.0, 6.0/5.0, 5.0/4.0, 4.0/3.0, 45.0/32.0, 3.0/2.0, 8.0/5.0, 5.0/3.0, 16.0/9.0, 15.0/8.0, 2.0].map(x=>Math.log2(x) * Config.pitchesPerOctave);

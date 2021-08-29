@@ -941,7 +941,7 @@ export class ChangeChannelCount extends Change {
 				}
 			}
 			
-			changeGroup(newPitchChannelCount, doc.song.pitchChannelCount, 0, 0, 2, false);
+			changeGroup(newPitchChannelCount, doc.song.pitchChannelCount, 0, 0, 3, false);
 			changeGroup(newNoiseChannelCount, doc.song.noiseChannelCount, newPitchChannelCount, doc.song.pitchChannelCount, 0, true);
 			
 			doc.song.pitchChannelCount = newPitchChannelCount;

@@ -302,6 +302,8 @@ export class SongEditor {
 		this._customInstrumentSettingsGroup,
 	);
 	private readonly _promptContainer: HTMLDivElement = div({class: "promptContainer", style: "display: none;"});
+	private readonly _zoomInButton: HTMLButtonElement = button({class: "zoomInButton", type: "button", title: "Zoom In"});
+	private readonly _zoomOutButton: HTMLButtonElement = button({class: "zoomOutButton", type: "button", title: "Zoom Out"});
 	private readonly _patternEditorRow: HTMLDivElement = div({style: "flex: 1; height: 100%; display: flex; overflow: hidden; justify-content: center;"},
 		this._patternEditorPrev.container,
 		this._patternEditor.container,
@@ -311,6 +313,8 @@ export class SongEditor {
 		this._piano.container,
 		this._patternEditorRow,
 		this._octaveScrollBar.container,
+		this._zoomInButton,
+		this._zoomOutButton,
 	);
 	private readonly _trackContainer: HTMLDivElement = div({class: "trackContainer"},
 		this._trackEditor.container,
@@ -492,6 +496,8 @@ export class SongEditor {
 		this._prevBarButton.addEventListener("click", this._whenPrevBarPressed);
 		this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
 		this._volumeSlider.addEventListener("input", this._setVolumeSlider);
+		this._zoomInButton.addEventListener("click", this._zoomIn);
+		this._zoomOutButton.addEventListener("click", this._zoomOut);
 		
 		this._patternArea.addEventListener("mousedown", this._refocusStage);
 		this._trackArea.addEventListener("mousedown", this._refocusStage);
@@ -603,7 +609,7 @@ export class SongEditor {
 		this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
 		
 		if (this._doc.getFullScreen()) {
-			const semitoneHeight: number = this._patternEditorRow.clientHeight / Config.windowPitchCount;
+			const semitoneHeight: number = this._patternEditorRow.clientHeight / this._doc.getVisiblePitchCount();
 			const targetBeatWidth: number = semitoneHeight * 5;
 			const minBeatWidth: number = this._patternEditorRow.clientWidth / (this._doc.song.beatsPerBar * 3);
 			const maxBeatWidth: number = this._patternEditorRow.clientWidth / (this._doc.song.beatsPerBar + 2);
@@ -620,11 +626,17 @@ export class SongEditor {
 			this._patternEditorNext.container.style.display = "";
 			this._patternEditorPrev.render();
 			this._patternEditorNext.render();
+			this._zoomInButton.style.display = "";
+			this._zoomOutButton.style.display = "";
+			this._zoomInButton.style.right = this._doc.showScrollBar ? "24px" : "4px";
+			this._zoomOutButton.style.right = this._doc.showScrollBar ? "24px" : "4px";
 		} else {
 			this._patternEditor.container.style.width = "";
 			this._patternEditor.container.style.flexShrink = "";
 			this._patternEditorPrev.container.style.display = "none";
 			this._patternEditorNext.container.style.display = "none";
+			this._zoomInButton.style.display = "none";
+			this._zoomOutButton.style.display = "none";
 		}
 		this._patternEditor.render();
 		
@@ -1364,6 +1376,20 @@ export class SongEditor {
 	
 	private _addNewEnvelope = (): void => {
 		this._doc.record(new ChangeAddEnvelope(this._doc));
+		this._refocusStage();
+	}
+	
+	private _zoomIn = (): void => {
+		this._doc.visibleOctaves = Math.max(1, this._doc.visibleOctaves - 1);
+		this._doc.savePreferences();
+		this._doc.notifier.changed();
+		this._refocusStage();
+	}
+	
+	private _zoomOut = (): void => {
+		this._doc.visibleOctaves = Math.min(Config.pitchOctaves, this._doc.visibleOctaves + 1);
+		this._doc.savePreferences();
+		this._doc.notifier.changed();
 		this._refocusStage();
 	}
 	

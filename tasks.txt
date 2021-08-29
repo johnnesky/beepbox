@@ -363,3 +363,5 @@
 √ Added Bitcrusher effect.
 √ Added Echo effect.
 √ Generalized envelopes.
+√ Allow zooming pattern editor in fullscreen layouts.
+√ Added another fullscreen layout option.

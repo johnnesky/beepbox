@@ -772,7 +772,7 @@ export class ImportPrompt implements Prompt {
 				}
 				
 				const averagePitch: number = pitchSum / pitchCount;
-				channel.octave = isNoiseChannel ? 0 : Math.max(0, Math.min(Config.scrollableOctaves, Math.round((averagePitch / 12) - 1.5)));
+				channel.octave = isNoiseChannel ? 0 : Math.max(0, Math.min(Config.pitchOctaves - 1, Math.floor(averagePitch / 12)));
 			}
 				
 			while (channel.bars.length < songTotalBars) {
