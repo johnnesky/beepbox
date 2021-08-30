@@ -3942,6 +3942,7 @@ class InstrumentState {
 class ChannelState {
 	public readonly instruments: InstrumentState[] = [];
 	public readonly activeTones: Deque<Tone> = new Deque<Tone>();
+	public muted: boolean = false;
 }
 
 export class Synth {
@@ -3958,6 +3959,16 @@ export class Synth {
 				channelState.instruments[j] = new InstrumentState();
 			}
 			channelState.instruments.length = this.song!.instrumentsPerChannel;
+			
+			const muted: boolean = this.song!.channels[i].muted;
+			if (channelState.muted != muted) {
+				channelState.muted = muted;
+				if (muted) {
+					for (const instrumentState of channelState.instruments) {
+						instrumentState.resetAllEffects();
+					}
+				}
+			}
 		}
 	}
 	
