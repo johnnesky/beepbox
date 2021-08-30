@@ -521,7 +521,7 @@ export class SongEditor {
 			autoPlayOption.setAttribute("hidden", "");
 		}
 		
-		if (window.screen.availWidth < 700 || window.screen.availHeight < 700) {
+		if (window.screen.availWidth < 710 || window.screen.availHeight < 710) {
 			const layoutOption: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.querySelector("[value=layout]");
 			layoutOption.disabled = true;
 			layoutOption.setAttribute("hidden", "");

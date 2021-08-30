@@ -32,13 +32,13 @@
 			overflow: auto;
 			background: var(--editor-background, black);
 			width: 100%;
-			max-width: 700px;
+			max-width: 710px;
 			padding-left: 30px;
 			padding-right: 30px;
 		}
 		
 		/* wide screen */
-		@media (min-width: 701px) {
+		@media (min-width: 711px) {
 			html {
 				width: 100%;
 			}
@@ -46,20 +46,21 @@
 				width: 100%;
 			}
 			.column-container {
-				width: 700px;
+				width: 710px;
 				display: flex;
-				justify-content: space-between;
+				gap: 25px;
 			}
 			.instructions-column {
-				width: 375px;
+				min-width: 0;
 			}
 			.twitter-column {
 				width: 300px;
+				flex-shrink: 0;
 			}
 		}
 		
 		/* narrow screen */
-		@media (max-width: 700px) {
+		@media (max-width: 710px) {
 			body {
 				width: 100%;
 			}

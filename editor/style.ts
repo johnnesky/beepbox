@@ -20,7 +20,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 /* Note: "#" symbols need to be encoded as "%23" in SVG data urls, otherwise they are interpreted as fragment identifiers! */
 :root {
 	--button-size: 26px;
-	--settings-area-width: 182px;
+	--settings-area-width: 192px;
 	--play-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -8 L -4 8 L 9 0 z" fill="gray"/></svg>');
 	--pause-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-4" y="-8" width="4" height="16" fill="gray"/><rect x="5" y="-8" width="4" height="16" fill="gray"/></svg>');
 	--prev-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-6" y="-6" width="2" height="12" fill="gray"/><path d="M 6 -6 L 6 6 L -3 0 z" fill="gray"/></svg>');
@@ -817,7 +817,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 .beepboxEditor .selectRow > :last-child {
-	width: 61.5%;
+	width: 62.5%;
 	flex-shrink: 0;
 }
 
@@ -966,7 +966,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 /* wide screen */
-@media (min-width: 701px) {
+@media (min-width: 711px) {
 	#beepboxEditorContainer {
 		display: table;
 	}
@@ -1007,7 +1007,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 /* narrow screen */
-@media (max-width: 700px) {
+@media (max-width: 710px) {
 	.beepboxEditor {
 		grid-template-columns: minmax(0, 1fr);
 		grid-template-rows: min-content 6px min-content min-content;

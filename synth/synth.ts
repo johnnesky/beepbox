@@ -912,7 +912,7 @@ export class Instrument {
 				this.chord = Config.chords.dictionary["arpeggio"].index;
 				break;
 			case InstrumentType.spectrum:
-				this.chord = Config.chords.dictionary["harmony"].index;
+				this.chord = Config.chords.dictionary["simultaneous"].index;
 				this.spectrumWave.reset(isNoiseChannel);
 				break;
 			case InstrumentType.drumset:
@@ -922,7 +922,7 @@ export class Instrument {
 				}
 				break;
 			case InstrumentType.harmonics:
-				this.chord = Config.chords.dictionary["harmony"].index;
+				this.chord = Config.chords.dictionary["simultaneous"].index;
 				this.harmonicsWave.reset();
 				break;
 			case InstrumentType.pwm:
@@ -1158,20 +1158,26 @@ export class Instrument {
 			if (transition != undefined) this.transition = transition.index;
 		}
 		
-		// Note that the chord setting may be overridden by instrumentObject["chorus"] below.
-		this.chord = Config.chords.findIndex(chord=>chord.name==instrumentObject["chord"]);
-		if (this.chord == -1) {
-			// Different instruments have different default chord types based on historical behaviour.
-			if (this.type == InstrumentType.noise) {
-				this.chord = Config.chords.dictionary["arpeggio"].index;
-			} else if (this.type == InstrumentType.pickedString) {
-				this.chord = Config.chords.dictionary["strum"].index;
-			} else if (this.type == InstrumentType.chip) {
-				this.chord = Config.chords.dictionary["arpeggio"].index;
-			} else if (this.type == InstrumentType.fm) {
-				this.chord = Config.chords.dictionary["custom interval"].index;
+		{
+			// Note that the chord setting may be overridden by instrumentObject["chorus"] below.
+			const chordProperty: any = instrumentObject["chord"];
+			const legacyChordNames: Dictionary<string> = {"harmony": "simultaneous"};
+			const chord: Chord | undefined = Config.chords.dictionary[legacyChordNames[chordProperty]] || Config.chords.dictionary[chordProperty];
+			if (chord != undefined) {
+				this.chord = chord.index;
 			} else {
-				this.chord = Config.chords.dictionary["harmony"].index;
+				// Different instruments have different default chord types based on historical behaviour.
+				if (this.type == InstrumentType.noise) {
+					this.chord = Config.chords.dictionary["arpeggio"].index;
+				} else if (this.type == InstrumentType.pickedString) {
+					this.chord = Config.chords.dictionary["strum"].index;
+				} else if (this.type == InstrumentType.chip) {
+					this.chord = Config.chords.dictionary["arpeggio"].index;
+				} else if (this.type == InstrumentType.fm) {
+					this.chord = Config.chords.dictionary["custom interval"].index;
+				} else {
+					this.chord = Config.chords.dictionary["simultaneous"].index;
+				}
 			}
 		}
 		
@@ -1515,7 +1521,7 @@ export class Instrument {
 	}
 	
 	public getChord(): Chord {
-		return this.type == InstrumentType.drumset ? Config.chords.dictionary["harmony"] : Config.chords[this.chord];
+		return this.type == InstrumentType.drumset ? Config.chords.dictionary["simultaneous"] : Config.chords[this.chord];
 	}
 	
 	public getDrumsetEnvelope(pitch: number): Envelope {
@@ -3740,8 +3746,8 @@ class InstrumentState {
 		for (let i: number = 0; i < eqFilterSettings.controlPointCount; i++) {
 			const eqFreqEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterFreq0 + i];
 			const eqFreqEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterFreq0 + i];
-			const eqPeakEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterPeak0 + i];
-			const eqPeakEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterPeak0 + i];
+			const eqPeakEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterGain0 + i];
+			const eqPeakEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterGain0 + i];
 			const point: FilterControlPoint = eqFilterSettings.controlPoints[i];
 			point.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, eqAllFreqsEnvelopeStart * eqFreqEnvelopeStart, eqPeakEnvelopeStart);
 			point.toCoefficients(Synth.tempFilterEndCoefficients,   samplesPerSecond, eqAllFreqsEnvelopeEnd   * eqFreqEnvelopeEnd,   eqPeakEnvelopeEnd);
@@ -4965,8 +4971,8 @@ export class Synth {
 			for (let i: number = 0; i < noteFilterSettings.controlPointCount; i++) {
 				const noteFreqEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.noteFilterFreq0 + i];
 				const noteFreqEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.noteFilterFreq0 + i];
-				const notePeakEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.noteFilterPeak0 + i];
-				const notePeakEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.noteFilterPeak0 + i];
+				const notePeakEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.noteFilterGain0 + i];
+				const notePeakEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.noteFilterGain0 + i];
 				const point: FilterControlPoint = noteFilterSettings.controlPoints[i];
 				point.toCoefficients(Synth.tempFilterStartCoefficients, synth.samplesPerSecond, noteAllFreqsEnvelopeStart * noteFreqEnvelopeStart, notePeakEnvelopeStart);
 				point.toCoefficients(Synth.tempFilterEndCoefficients,   synth.samplesPerSecond, noteAllFreqsEnvelopeEnd   * noteFreqEnvelopeEnd,   notePeakEnvelopeEnd);

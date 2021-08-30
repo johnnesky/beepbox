@@ -11,7 +11,7 @@ import {ChangeFilterAddPoint, ChangeFilterMovePoint} from "./changes";
 import {prettyNumber} from "./EditorConfig";
 
 export class FilterEditor {
-	private readonly _editorWidth: number = 112;
+	private readonly _editorWidth: number = 120;
 	private readonly _editorHeight: number = 26;
 	private readonly _responsePath: SVGPathElement = SVG.path({fill: ColorConfig.uiWidgetBackground, "pointer-events": "none"});
 	//private readonly _octaves: SVGSVGElement = SVG.svg({"pointer-events": "none", overflow: "visible"});

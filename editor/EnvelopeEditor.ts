@@ -92,7 +92,7 @@ export class EnvelopeEditor {
 			
 			const row: HTMLDivElement = HTML.div({class: "envelope-row"},
 				HTML.div({class: "selectContainer", style: "width: 0; flex: 1;"}, targetSelect),
-				HTML.div({class: "selectContainer", style: "width: 0; flex: 0.75;"}, envelopeSelect),
+				HTML.div({class: "selectContainer", style: "width: 0; flex: 0.7;"}, envelopeSelect),
 				deleteButton,
 			);
 			

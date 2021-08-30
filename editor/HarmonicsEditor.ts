@@ -9,7 +9,7 @@ import {ChangeHarmonics} from "./changes";
 import {prettyNumber} from "./EditorConfig";
 
 export class HarmonicsEditor {
-	private readonly _editorWidth: number = 112;
+	private readonly _editorWidth: number = 120;
 	private readonly _editorHeight: number = 26;
 	private readonly _octaves: SVGSVGElement = SVG.svg({"pointer-events": "none"});
 	private readonly _fifths: SVGSVGElement = SVG.svg({"pointer-events": "none"});

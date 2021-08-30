@@ -390,7 +390,7 @@ export class SongDocument {
 	}
 	
 	public getMobileLayout(): boolean {
-		return window.innerWidth <= 700;
+		return window.innerWidth <= 710;
 	}
 	
 	public getBarWidth(): number {

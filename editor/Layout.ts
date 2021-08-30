@@ -8,7 +8,7 @@ export class Layout {
 		"small": "",
 		"long": `\
 			/* long layout */
-			@media (min-width: 701px) {
+			@media (min-width: 711px) {
 				#beepboxEditorContainer {
 					max-width: initial;
 					height: 100vh;
@@ -86,7 +86,7 @@ export class Layout {
 		`,
 		"tall": `\
 			/* tall layout */
-			@media (min-width: 701px) {
+			@media (min-width: 711px) {
 				#beepboxEditorContainer {
 					max-width: initial;
 					height: 100vh;
