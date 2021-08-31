@@ -4914,9 +4914,15 @@ export class Synth {
 		}
 		
 		if (effectsIncludeVibrato(instrument.effects)) {
-			// Smoothly interpolate between the vibrato LFO curve at the end of the bar and the beginning of the next one. (Mostly to avoid a discontinuous frequency which retriggers string plucking.)
+			// TODO: Remember vibratoEnd, use it as the next tick's vibratoStart, in order to
+			// support seamless ties across bars with picked string instruments which can't have
+			// discontinuities in pitch... or maybe just keep track of the time passed since the
+			// start of the bar that contained the original note and use that as the LFO input?
+			
 			let lfoStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeStart);
 			let lfoEnd:   number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeEnd);
+			/*
+			// Smoothly interpolate between the vibrato LFO curve at the end of the bar and the beginning of the next one. (Mostly to avoid a discontinuous frequency which retriggers string plucking.)
 			const wrapT: number = Math.max(0.0, Math.min(1.0, 1.0 - (partsPerBar - partTimeStart) / 2.0));
 			if (wrapT > 0.0) {
 				const lfoWrappedStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * (partTimeStart - partsPerBar));
@@ -4924,10 +4930,9 @@ export class Synth {
 				lfoStart += (lfoWrappedStart - lfoStart) * wrapT;
 				lfoEnd += (lfoWrappedEnd - lfoEnd) * wrapT;
 			}
-			
+			*/
 			const vibratoDepthEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.vibratoDepth];
 			const vibratoDepthEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.vibratoDepth];
-			
 			const vibratoAmplitude: number = Config.vibratos[instrument.vibrato].amplitude;
 			let vibratoStart: number = vibratoAmplitude * lfoStart * vibratoDepthEnvelopeStart;
 			let vibratoEnd:   number = vibratoAmplitude * lfoEnd   * vibratoDepthEnvelopeEnd;
@@ -4937,7 +4942,7 @@ export class Synth {
 				const ticksUntilVibratoEnd:   number = delayTicks - envelopeComputer.noteTicksEnd;
 				vibratoStart *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoStart / 2.0));
 				vibratoEnd   *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoEnd   / 2.0));
-				
+				/*
 				if (transition.isSeamless && tone.note != null && tone.nextNote != null) {
 					// fade out the very end of the vibrato so that it lines up with the beginning of the next note with delayed vibrato.
 					const noteEndTick:   number = tone.noteEnd   * Config.ticksPerPart;
@@ -4945,7 +4950,7 @@ export class Synth {
 					const ticksUntilNextNoteEnd:   number = noteEndTick - (ticksIntoBar + endRatio);
 					vibratoStart *= Math.max(0.0, Math.min(1.0, ticksUntilNextNoteStart));
 					vibratoEnd   *= Math.max(0.0, Math.min(1.0, ticksUntilNextNoteEnd  ));
-				}
+				}*/
 			}
 			intervalStart += vibratoStart;
 			intervalEnd   += vibratoEnd;
@@ -5127,6 +5132,11 @@ export class Synth {
 			tone.expressionDeltas[0] = (expressionEnd - expressionStart) / runLength;
 			
 			tone.pulseWidth = getPulseWidthRatio(instrument.pulseWidth);
+			
+			if (tone.atNoteStart && tone.pickedString != null) {
+				// Force the picked string to retrigger the attack impulse at the start of the note.
+				tone.pickedString.delayIndex = -1;
+			}
 		} else {
 			let pitch: number = tone.pitches[0];
 
