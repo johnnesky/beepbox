@@ -78,7 +78,7 @@ export interface Rhythm extends BeepBoxOption {
 
 export interface ChipWave extends BeepBoxOption {
 	readonly volume: number;
-	readonly samples: Float64Array;
+	samples: Float64Array;
 }
 
 export interface ChipNoise extends BeepBoxOption {
@@ -217,7 +217,7 @@ export class Config {
 
 	public static readonly instrumentTypeNames: ReadonlyArray<string> = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "custom chip", "mod"];
 	public static readonly instrumentTypeHasSpecialInterval: ReadonlyArray<boolean> = [true, true, false, false, false, true, false, true];
-	public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
+	public static readonly rawChipWaves: DictionaryArray<ChipWave> = toNameMap([
 		{ name: "rounded", volume: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2]) },
 		{ name: "triangle", volume: 1.0, samples: centerWave([1.0 / 15.0, 3.0 / 15.0, 5.0 / 15.0, 7.0 / 15.0, 9.0 / 15.0, 11.0 / 15.0, 13.0 / 15.0, 15.0 / 15.0, 15.0 / 15.0, 13.0 / 15.0, 11.0 / 15.0, 9.0 / 15.0, 7.0 / 15.0, 5.0 / 15.0, 3.0 / 15.0, 1.0 / 15.0, -1.0 / 15.0, -3.0 / 15.0, -5.0 / 15.0, -7.0 / 15.0, -9.0 / 15.0, -11.0 / 15.0, -13.0 / 15.0, -15.0 / 15.0, -15.0 / 15.0, -13.0 / 15.0, -11.0 / 15.0, -9.0 / 15.0, -7.0 / 15.0, -5.0 / 15.0, -3.0 / 15.0, -1.0 / 15.0]) },
 		{ name: "square", volume: 0.5, samples: centerWave([1.0, -1.0]) },
@@ -240,6 +240,7 @@ export class Config {
 		{ name: "pan flute", volume: 0.35, samples: centerAndNormalizeWave([1.0, 4.0, 7.0, 6.0, 7.0, 9.0, 7.0, 7.0, 11.0, 12.0, 13.0, 15.0, 13.0, 11.0, 11.0, 12.0, 13.0, 10.0, 7.0, 5.0, 3.0, 6.0, 10.0, 7.0, 3.0, 3.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0]) },
 		{ name: "glitch", volume: 0.5, samples: centerWave([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0]) },
 	]);
+	public static readonly chipWaves: DictionaryArray<ChipWave> = rawChipToIntegrated(Config.rawChipWaves);
 	// Noise waves have too many samples to write by hand, they're generated on-demand by getDrumWave instead.
 	public static readonly chipNoises: DictionaryArray<ChipNoise> = toNameMap([
 		{ name: "retro", volume: 0.25, basePitch: 69, pitchFilterMult: 1024.0, isSoft: false, samples: null },
@@ -432,16 +433,10 @@ function centerWave(wave: Array<number>): Float64Array {
 	}
 	const average: number = sum / wave.length;
 
-	// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
-	let cumulative: number = 0;
-	let wavePrev: number = 0;
 	for (let i: number = 0; i < wave.length; i++) {
-		cumulative += wavePrev;
-		wavePrev = wave[i] - average;
-		wave[i] = cumulative;
+		wave[i] -= average;
 	}
-	// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
-	wave.push(0);
+
 	return new Float64Array(wave);
 }
 
@@ -455,17 +450,31 @@ function centerAndNormalizeWave(wave: Array<number>): Float64Array {
 	const average: number = sum / wave.length;
 	const magnAvg: number = magn / wave.length;
 
+	for (let i: number = 0; i < wave.length; i++) {
+		wave[i] = (wave[i] - average) / magnAvg;
+	}
+
+	return new Float64Array(wave);
+
+}
+
+function integrateWave(wave: Float64Array): Float64Array {
 	// Perform the integral on the wave. The chipSynth will perform the derivative to get the original wave back but with antialiasing.
 	let cumulative: number = 0;
 	let wavePrev: number = 0;
+	// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
+	let newWave: Float64Array = new Float64Array(wave.length + 1);
+	for (let i: number = 0; i < wave.length; i++) {
+		newWave[i] = wave[i];
+	}
+	newWave[wave.length] = 0.0;
+
 	for (let i: number = 0; i < wave.length; i++) {
 		cumulative += wavePrev;
-		wavePrev = (wave[i] - average) / (magnAvg);
-		wave[i] = cumulative;
+		wavePrev = newWave[i];
+		newWave[i] = cumulative;
 	}
-	// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
-	wave.push(0);
-	return new Float64Array(wave);
+	return newWave;
 }
 
 
@@ -636,6 +645,23 @@ export function toNameMap<T extends BeepBoxOption>(array: Array<Pick<T, Exclude<
 		dictionary[value.name] = <T>value;
 	}
 	const result: DictionaryArray<T> = <DictionaryArray<T>><any>array;
+	result.dictionary = dictionary;
+	return result;
+}
+
+export function rawChipToIntegrated(raw: DictionaryArray<ChipWave>): DictionaryArray<ChipWave> {
+	const newArray: Array<ChipWave> = new Array<ChipWave>(raw.length);
+	const dictionary: Dictionary<ChipWave> = {};
+	for (let i: number = 0; i < newArray.length; i++) {
+		newArray[i] = Object.assign([], raw[i]);
+		const value: any = newArray[i];
+		value.index = i;
+		dictionary[value.name] = <ChipWave>value;
+    }
+	for (let key in dictionary) {
+		dictionary[key].samples = integrateWave(dictionary[key].samples);
+	}
+	const result: DictionaryArray<ChipWave> = <DictionaryArray<ChipWave>><any>newArray;
 	result.dictionary = dictionary;
 	return result;
 }

@@ -334,6 +334,13 @@ export class TipPrompt implements Prompt {
 					p("Sometimes, seamless and other transition types can make audible 'clicks' when changing between notes. Ticking this option will cause those clicks to be silenced as much as possible."),
 				);
 			} break;
+			case "aliases": {
+				message = div(
+					h2("Aliasing"),
+					p("JummBox applies a technique called 'anti-aliasing' to instruments normally to help them sound cleaner even at high frequencies and low sample rates."),
+					p("When this setting is ticked that technique is disabled, so you may hear strange audio artifacts especially at high pitches and when bending notes. However, this can lend a grungy sound to an instrument that could be desirable."),
+				);
+			} break;
 
 			default: throw new Error("Unhandled TipPrompt type: " + type);
 		}

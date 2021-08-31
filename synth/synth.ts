@@ -142,6 +142,7 @@ const enum SongTagCode {
     channelNames = CharCode.U,
     feedbackEnvelope = CharCode.V,
     pulseWidth = CharCode.W,
+    aliases = CharCode.X,
 }
 
 const base64IntToCharCode: ReadonlyArray<number> = [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 45, 95];
@@ -575,6 +576,7 @@ export class Instrument {
     public fastTwoNoteArp: boolean = false;
     public tieNoteTransition: boolean = false;
     public clicklessTransition: boolean = false;
+    public aliases: boolean = false;
     public detune: number = 0;
     public pulseWidth: number = Config.pulseWidthRange;
     public pulseEnvelope: number = 1;
@@ -653,6 +655,7 @@ export class Instrument {
         this.detune = 0;
         this.tieNoteTransition = false;
         this.clicklessTransition = false;
+        this.aliases = false;
         switch (type) {
             case InstrumentType.chip:
                 this.chipWave = 2;
@@ -795,6 +798,7 @@ export class Instrument {
             "fastTwoNoteArp": this.fastTwoNoteArp,
             "tieNoteTransition": this.tieNoteTransition,
             "clicklessTransition": this.clicklessTransition,
+            "aliases": this.aliases,
             "vibrato": this.vibrato,
             "vibratoDepth": this.vibratoDepth,
             "vibratoDelay": this.vibratoDelay,
@@ -1283,6 +1287,13 @@ export class Instrument {
             }
             else {
                 this.clicklessTransition = false;
+            }
+
+            if (instrumentObject["aliases"] != undefined) {
+                this.aliases = instrumentObject["aliases"];
+            }
+            else {
+                this.aliases = false;
             }
         }
     }
@@ -1790,6 +1801,7 @@ export class Song {
                     // Transition info follows transition song tag
                     buffer.push(base64IntToCharCode[+instrument.tieNoteTransition]);
                     buffer.push(base64IntToCharCode[+instrument.clicklessTransition]);
+                    buffer.push(SongTagCode.aliases, base64IntToCharCode[+instrument.aliases]);
                     buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
                     buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
                     buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]);
@@ -2505,6 +2517,9 @@ export class Song {
                     this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].tieNoteTransition = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] ? true : false;
                     this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].clicklessTransition = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] ? true : false;
                 }
+            } break;
+            case SongTagCode.aliases: {
+                this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].aliases = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] ? true : false;
             } break;
             case SongTagCode.vibrato: {
                 if (beforeThree && variant == "beepbox") {
@@ -5630,11 +5645,13 @@ export class Synth {
         const filterCutoffHzEnd: number = Config.filterCutoffMaxHz * Math.pow(2.0, cutoffOctavesModEnd);
         const filterBaseStart: number = 2.0 * Math.sin(Math.PI * filterCutoffHzStart / synth.samplesPerSecond);
         const filterBaseEnd: number = 2.0 * Math.sin(Math.PI * filterCutoffHzEnd / synth.samplesPerSecond);
+        // The reason for the abnormal max is that the filter 'blows up' at high resonance near 1.0.
+        const filterMax: number = instrument.aliases ? ( 0.999 - ( instrument.filterResonance / (Config.filterResonanceRange-1) ) * 0.049 ) : Config.filterMax;
         const filterMin: number = 2.0 * Math.sin(Math.PI * Config.filterCutoffMinHz / synth.samplesPerSecond);
         tone.filter = filterBaseStart * Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeStart, beatsPerPart * partTimeStart, customVolumeStart);
         let endFilter: number = filterBaseEnd * Synth.computeEnvelope(filterEnvelope, secondsPerPart * decayTimeEnd, beatsPerPart * partTimeEnd, customVolumeEnd);
-        tone.filter = Math.min(Config.filterMax, Math.max(filterMin, tone.filter));
-        endFilter = Math.min(Config.filterMax, Math.max(filterMin, endFilter));
+        tone.filter = Math.min(filterMax, Math.max(filterMin, tone.filter));
+        endFilter = Math.min(filterMax, Math.max(filterMin, endFilter));
         tone.filterScale = Math.pow(endFilter / tone.filter, 1.0 / runLength);
 
         let filterVolumeStart: number = Math.pow(0.5, cutoffOctavesModStart * 0.35);
@@ -5995,18 +6012,30 @@ export class Synth {
         var volumeScale: number;
 
         const isCustomWave: boolean = (instrument.type == InstrumentType.customChipWave);
-
+        
         if (!isCustomWave) {
-            wave = Config.chipWaves[instrument.chipWave].samples;
-            volumeScale = 1.0;
+            if (instrument.aliases) {
+                wave = Config.rawChipWaves[instrument.chipWave].samples;
+                volumeScale = 1.0;
+            }
+            else {
+                wave = Config.chipWaves[instrument.chipWave].samples;
+                volumeScale = 1.0;
+            }
         }
         else {
-            wave = instrument.customChipWaveIntegral;
-            // Integrals for custom chip wave can get rather big. This "zero point" can be config'ed later.
-            volumeScale = 0.1;
+            if (!instrument.aliases) {
+                wave = instrument.customChipWaveIntegral;
+                // Integrals for custom chip wave can get rather big. This "zero point" can be config'ed later.
+                volumeScale = 0.1;
+            }
+            else {
+                wave = instrument.customChipWave;
+                volumeScale = 0.1;
+            }
         }
 
-        const waveLength: number = +wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
+        const waveLength: number = +wave.length - (instrument.aliases ? 0 : 1); // The first sample is duplicated at the end, don't double-count it.
 
         const intervalA: number = +Math.pow(2.0, (Config.intervals[instrument.interval].offset + Config.intervals[instrument.interval].spread) / 12.0);
         const intervalB: number = Math.pow(2.0, (Config.intervals[instrument.interval].offset - Config.intervals[instrument.interval].spread) / 12.0) * tone.intervalMult;
@@ -6030,17 +6059,21 @@ export class Synth {
         let filterResonanceDelta: number = tone.filterResonanceDelta;
         let filterSample0: number = +tone.filterSample0;
         let filterSample1: number = +tone.filterSample1;
+        let prevWaveIntegralA: number = 0;
+        let prevWaveIntegralB: number = 0;
 
-        const phaseAInt: number = phaseA | 0;
-        const phaseBInt: number = phaseB | 0;
-        const indexA: number = phaseAInt % waveLength;
-        const indexB: number = phaseBInt % waveLength;
-        const phaseRatioA: number = phaseA - phaseAInt;
-        const phaseRatioB: number = phaseB - phaseBInt;
-        let prevWaveIntegralA: number = wave[indexA];
-        let prevWaveIntegralB: number = wave[indexB];
-        prevWaveIntegralA += (wave[indexA + 1] - prevWaveIntegralA) * phaseRatioA;
-        prevWaveIntegralB += (wave[indexB + 1] - prevWaveIntegralB) * phaseRatioB;
+        if (!instrument.aliases) {
+            const phaseAInt: number = phaseA | 0;
+            const phaseBInt: number = phaseB | 0;
+            const indexA: number = phaseAInt % waveLength;
+            const indexB: number = phaseBInt % waveLength;
+            const phaseRatioA: number = phaseA - phaseAInt;
+            const phaseRatioB: number = phaseB - phaseBInt;
+            prevWaveIntegralA = wave[indexA];
+            prevWaveIntegralB = wave[indexB];
+            prevWaveIntegralA += (wave[indexA + 1] - prevWaveIntegralA) * phaseRatioA;
+            prevWaveIntegralB += (wave[indexB + 1] - prevWaveIntegralB) * phaseRatioB;
+        }
 
         const stopIndex: number = stereoBufferIndex + runLength;
         stereoBufferIndex += tone.stereoOffset;
@@ -6060,22 +6093,34 @@ export class Synth {
             phaseA += phaseDeltaA;
             phaseB += phaseDeltaB;
 
-            const phaseAInt: number = phaseA | 0;
-            const phaseBInt: number = phaseB | 0;
-            const indexA: number = phaseAInt % waveLength;
-            const indexB: number = phaseBInt % waveLength;
-            let nextWaveIntegralA: number = wave[indexA];
-            let nextWaveIntegralB: number = wave[indexB];
-            const phaseRatioA: number = phaseA - phaseAInt;
-            const phaseRatioB: number = phaseB - phaseBInt;
-            nextWaveIntegralA += (wave[indexA + 1] - nextWaveIntegralA) * phaseRatioA;
-            nextWaveIntegralB += (wave[indexB + 1] - nextWaveIntegralB) * phaseRatioB;
-            let waveA: number = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
-            let waveB: number = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
-            prevWaveIntegralA = nextWaveIntegralA;
-            prevWaveIntegralB = nextWaveIntegralB;
+            let waveA: number;
+            let waveB: number;
+            let combinedWave: number;
 
-            const combinedWave: number = (waveA + waveB * intervalSign);
+            if (instrument.aliases) {
+                waveA = wave[(0 | phaseA) % waveLength];
+                waveB = wave[(0 | phaseB) % waveLength];
+                combinedWave = (waveA + waveB);
+            }
+            else {
+                const phaseAInt: number = phaseA | 0;
+                const phaseBInt: number = phaseB | 0;
+                const indexA: number = phaseAInt % waveLength;
+                const indexB: number = phaseBInt % waveLength;
+                let nextWaveIntegralA: number = wave[indexA];
+                let nextWaveIntegralB: number = wave[indexB];
+                const phaseRatioA: number = phaseA - phaseAInt;
+                const phaseRatioB: number = phaseB - phaseBInt;
+                nextWaveIntegralA += (wave[indexA + 1] - nextWaveIntegralA) * phaseRatioA;
+                nextWaveIntegralB += (wave[indexB + 1] - nextWaveIntegralB) * phaseRatioB;
+
+                waveA = (nextWaveIntegralA - prevWaveIntegralA) / phaseDeltaA;
+                waveB = (nextWaveIntegralB - prevWaveIntegralB) / phaseDeltaB;
+                combinedWave = (waveA + waveB * intervalSign);
+
+                prevWaveIntegralA = nextWaveIntegralA;
+                prevWaveIntegralB = nextWaveIntegralB;
+            }
 
             const feedback: number = filterResonance + filterResonance / (1.0 - filter1);
             filterSample0 += filter1 * (combinedWave - filterSample0 + feedback * (filterSample0 - filterSample1));
@@ -6280,19 +6325,21 @@ export class Synth {
             let pulseWave: number = sawPhaseB - sawPhaseA;
 
             // This a PolyBLEP, which smooths out discontinuities at any frequency to reduce aliasing.
-            if (sawPhaseA < phaseDelta) {
-                var t = sawPhaseA / phaseDelta;
-                pulseWave += (t + t - t * t - 1) * 0.5;
-            } else if (sawPhaseA > 1.0 - phaseDelta) {
-                var t = (sawPhaseA - 1.0) / phaseDelta;
-                pulseWave += (t + t + t * t + 1) * 0.5;
-            }
-            if (sawPhaseB < phaseDelta) {
-                var t = sawPhaseB / phaseDelta;
-                pulseWave -= (t + t - t * t - 1) * 0.5;
-            } else if (sawPhaseB > 1.0 - phaseDelta) {
-                var t = (sawPhaseB - 1.0) / phaseDelta;
-                pulseWave -= (t + t + t * t + 1) * 0.5;
+            if (!instrument.aliases) {
+                if (sawPhaseA < phaseDelta) {
+                    var t = sawPhaseA / phaseDelta;
+                    pulseWave += (t + t - t * t - 1) * 0.5;
+                } else if (sawPhaseA > 1.0 - phaseDelta) {
+                    var t = (sawPhaseA - 1.0) / phaseDelta;
+                    pulseWave += (t + t + t * t + 1) * 0.5;
+                }
+                if (sawPhaseB < phaseDelta) {
+                    var t = sawPhaseB / phaseDelta;
+                    pulseWave -= (t + t - t * t - 1) * 0.5;
+                } else if (sawPhaseB > 1.0 - phaseDelta) {
+                    var t = (sawPhaseB - 1.0) / phaseDelta;
+                    pulseWave -= (t + t + t * t + 1) * 0.5;
+                }
             }
 
             const feedback: number = filterResonance + filterResonance / (1.0 - filter1);

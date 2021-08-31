@@ -6,7 +6,7 @@ import { Config, InstrumentType } from "../synth/SynthConfig";
 import { BarScrollBar } from "./BarScrollBar";
 import { BeatsPerBarPrompt } from "./BeatsPerBarPrompt";
 import { Change, ChangeGroup } from "./Change";
-import { ChangeAlgorithm, ChangeChannelBar, ChangeChipWave, ChangeChannelOrder, ChangeChord, ChangeCustomWave, ChangeDetectKey, ChangeDetune, ChangeDrumsetEnvelope, ChangeEffects, ChangeFeedbackAmplitude, ChangeFeedbackEnvelope, ChangeFeedbackType, ChangeFilterCutoff, ChangeFilterEnvelope, ChangeFilterResonance, ChangeInterval, ChangeKey, ChangeNoiseWave, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangePan, ChangePasteInstrument, ChangePatternNumbers, ChangePatternsPerChannel, ChangePreset, ChangePulseEnvelope, ChangePulseWidth, ChangeRandomGeneratedInstrument, ChangeReverb, ChangeRhythm, ChangeScale, ChangeSong, ChangeSongTitle, ChangeTempo, ChangeTransition, ChangeVibrato, ChangeVibratoType, ChangeVolume, ChangeVibratoDepth, ChangeVibratoSpeed, ChangeVibratoDelay, ChangePanDelay, ChangeArpeggioSpeed, pickRandomPresetValue, ChangeFastTwoNoteArp, ChangeClicklessTransition, ChangeTieNoteTransition, ChangePatternSelection } from "./changes";
+import { ChangeAlgorithm, ChangeChannelBar, ChangeChipWave, ChangeChannelOrder, ChangeChord, ChangeCustomWave, ChangeDetectKey, ChangeDetune, ChangeDrumsetEnvelope, ChangeEffects, ChangeFeedbackAmplitude, ChangeFeedbackEnvelope, ChangeFeedbackType, ChangeFilterCutoff, ChangeFilterEnvelope, ChangeFilterResonance, ChangeInterval, ChangeKey, ChangeNoiseWave, ChangeOperatorAmplitude, ChangeOperatorEnvelope, ChangeOperatorFrequency, ChangePan, ChangePasteInstrument, ChangePatternNumbers, ChangePatternsPerChannel, ChangePreset, ChangePulseEnvelope, ChangePulseWidth, ChangeRandomGeneratedInstrument, ChangeReverb, ChangeRhythm, ChangeScale, ChangeSong, ChangeSongTitle, ChangeTempo, ChangeTransition, ChangeVibrato, ChangeVibratoType, ChangeVolume, ChangeVibratoDepth, ChangeVibratoSpeed, ChangeVibratoDelay, ChangePanDelay, ChangeArpeggioSpeed, pickRandomPresetValue, ChangeFastTwoNoteArp, ChangeClicklessTransition, ChangeAliasing, ChangeTieNoteTransition, ChangePatternSelection } from "./changes";
 import { ChannelSettingsPrompt } from "./ChannelSettingsPrompt";
 import { ColorConfig } from "./ColorConfig";
 import { CustomChipPrompt } from "./CustomChipPrompt";
@@ -417,7 +417,9 @@ export class SongEditor {
 	private readonly _tieNoteTransitionRow: HTMLElement = div({ class: "selectRow" }, span({ class: "tip", style: "margin-left:10px;", onclick: () => this._openPrompt("transitionBar") }, "Tie Over Bars:"), this._tieNoteTransitionBox);
 	private readonly _clicklessTransitionBox: HTMLInputElement = input({ type: "checkbox", style: "width: 1em; padding: 0; margin-right: 4em;" });
 	private readonly _clicklessTransitionRow: HTMLElement = div({ class: "selectRow" }, span({ class: "tip", style: "margin-left:10px;", onclick: () => this._openPrompt("clicklessTransition") }, "Clickless:"), this._clicklessTransitionBox);
-	private readonly _transitionDropdownGroup: HTMLElement = div({ class: "editor-controls" }, this._tieNoteTransitionRow, this._clicklessTransitionRow);
+	private readonly _aliasingBox: HTMLInputElement = input({ type: "checkbox", style: "width: 1em; padding: 0; margin-right: 4em;" });
+	private readonly _aliasingRow: HTMLElement = div({ class: "selectRow" }, span({ class: "tip", style: "margin-left:10px;", onclick: () => this._openPrompt("aliases") }, "Aliasing:"), this._aliasingBox);
+	private readonly _transitionDropdownGroup: HTMLElement = div({ class: "editor-controls" }, this._tieNoteTransitionRow, this._clicklessTransitionRow, this._aliasingRow);
 	private readonly _effectsSelect: HTMLSelectElement = buildOptions(select(), Config.effectsNames);
 	private readonly _filterCutoffSlider: Slider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: Config.filterCutoffRange - 1, value: "6", step: "1" }), this._doc, (oldValue: number, newValue: number) => new ChangeFilterCutoff(this._doc, oldValue, newValue), false);
 	private _filterCutoffRow: HTMLDivElement = div({ class: "selectRow", title: "Low-pass Filter Cutoff Frequency" }, span({ class: "tip", onclick: () => this._openPrompt("filterCutoff") }, "Filter Cut:"), this._filterCutoffSlider.container);
@@ -890,6 +892,7 @@ export class SongEditor {
 		this._twoNoteArpBox.addEventListener("input", () => { this._doc.record(new ChangeFastTwoNoteArp(this._doc, this._twoNoteArpBox.checked)) });
 		this._tieNoteTransitionBox.addEventListener("input", () => { this._doc.record(new ChangeTieNoteTransition(this._doc, this._tieNoteTransitionBox.checked)) });
 		this._clicklessTransitionBox.addEventListener("input", () => { this._doc.record(new ChangeClicklessTransition(this._doc, this._clicklessTransitionBox.checked)) });
+		this._aliasingBox.addEventListener("input", () => { this._doc.record(new ChangeAliasing(this._doc, this._aliasingBox.checked)) });
 
 		this._promptContainer.addEventListener("click", (event) => {
 			if (event.target == this._promptContainer) {
@@ -937,13 +940,15 @@ export class SongEditor {
 		}
 
 		if (target.textContent == "▼") {
+			let instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 			target.textContent = "▲";
 			if (group != this._chordDropdownGroup) {
 				group.style.display = "";
 			} // Only show arpeggio dropdown if chord arpeggiates
-			else if (this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()].chord == 2) {
+			else if (instrument.chord == 2) {
 				group.style.display = "";
 			}
+
 		}
 		else {
 			target.textContent = "▼";
@@ -1403,6 +1408,12 @@ export class SongEditor {
 					this._filterCutoffRow.style.display = "";
 					this._filterResonanceRow.style.display = "";
 					this._filterEnvelopeRow.style.display = "";
+					if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.customChipWave) {
+						this._aliasingRow.style.display = "";
+					}
+					else {
+						this._aliasingRow.style.display = "none";
+					}
 				}
 				if (instrument.type == InstrumentType.chip) {
 					this._chipWaveSelectRow.style.display = "";
@@ -2004,6 +2015,7 @@ export class SongEditor {
 		this._twoNoteArpBox.checked = instrument.fastTwoNoteArp ? true : false;
 		this._tieNoteTransitionBox.checked = instrument.tieNoteTransition ? true : false;
 		this._clicklessTransitionBox.checked = instrument.clicklessTransition ? true : false;
+		this._aliasingBox.checked = instrument.aliases ? true : false;
 		setSelectedValue(this._instrumentSelect, instrumentIndex);
 
 		this._volumeSlider.updateValue(this._doc.volume);
