@@ -451,7 +451,7 @@ export class Config {
 	public static readonly pitchChannelCountMin: number = 1;
 	public static readonly pitchChannelCountMax: number = 10;
 	public static readonly noiseChannelCountMin: number = 0;
-	public static readonly noiseChannelCountMax: number = 4;
+	public static readonly noiseChannelCountMax: number = 5;
 	public static readonly noiseInterval: number = 6;
 	public static readonly pitchesPerOctave: number = 12; // TODO: Use this for converting pitch to frequency.
 	public static readonly drumCount: number = 12;

@@ -85,10 +85,14 @@ export class ColorConfig {
 				--noise3-primary-channel:   #77AADD;
 				--noise3-secondary-note:    #6F9FCF;
 				--noise3-primary-note:      #BBD7FF;
-				--noise4-secondary-channel: #6B3E8E;
+				--noise4-secondary-channel: #7A4F9A;
 				--noise4-primary-channel:   #AF82D2;
 				--noise4-secondary-note:    #9E71C1;
 				--noise4-primary-note:      #D4C1EA;
+				--noise5-secondary-channel: #607837;
+				--noise5-primary-channel:   #A2BB77;
+				--noise5-secondary-note:    #91AA66;
+				--noise5-primary-note:      #C5E2B2;
 			}
 		`,
 		"light classic": `
@@ -136,7 +140,7 @@ export class ColorConfig {
 				--pitch6-primary-channel:   #6969FD;
 				--pitch6-secondary-note:    #9393FE;
 				--pitch6-primary-note:      #4A4AD7;
-				--pitch7-secondary-channel: #CBE24B;
+				--pitch7-secondary-channel: #C2D848;
 				--pitch7-primary-channel:   #8EA800;
 				--pitch7-secondary-note:    #B0C82D;
 				--pitch7-primary-note:      #6C8000;
@@ -166,8 +170,12 @@ export class ColorConfig {
 				--noise3-primary-note:      #476685;
 				--noise4-secondary-channel: #C5A5E0;
 				--noise4-primary-channel:   #8553AE;
-				--noise4-secondary-note:    #AB87C8;
+				--noise4-secondary-note:    #B290CC;
 				--noise4-primary-note:      #684F7D;
+				--noise5-secondary-channel: #B8CE93;
+				--noise5-primary-channel:   #87A74F;
+				--noise5-secondary-note:    #ABC183;
+				--noise5-primary-note:      #68784C;
 			}
 			
 			.beepboxEditor button, .beepboxEditor select {
@@ -283,6 +291,12 @@ export class ColorConfig {
 			primaryChannel:   "var(--noise4-primary-channel)",
 			secondaryNote:    "var(--noise4-secondary-note)",
 			primaryNote:      "var(--noise4-primary-note)",
+		}, {
+			name: "noise5", // sage
+			secondaryChannel: "var(--noise5-secondary-channel)",
+			primaryChannel:   "var(--noise5-primary-channel)",
+			secondaryNote:    "var(--noise5-secondary-note)",
+			primaryNote:      "var(--noise5-primary-note)",
 		},
 	]);
 	
