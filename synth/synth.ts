@@ -704,7 +704,7 @@ export class FilterSettings {
 		const legacyHz: number = legacyFilterCutoffMaxHz * Math.pow(2.0, (legacyCutoffSetting - (legacyFilterCutoffRange - 1)) * 0.5);
 		const legacyRadians: number = Math.min(legacyFilterMaxRadians, 2 * Math.PI * legacyHz / standardSampleRate);
 		
-		if (!envDecays && !resonant && cutoffAtMax) {
+		if (legacyEnv.type == EnvelopeType.none && !resonant && cutoffAtMax) {
 			// The response is flat and there's no envelopes, so don't even bother adding any control points.
 		} else if (firstOrder) {
 			// In general, a 1st order lowpass can be approximated by a 2nd order lowpass
