@@ -361,7 +361,7 @@ function renderTimeline(): void {
 	
 	if (zoomEnabled) {
 		timelineHeight = boundingRect.height;
-		windowOctaves = Math.max(Config.windowOctaves, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * 2))));
+		windowOctaves = Math.max(1, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * 2))));
 		windowPitchCount = windowOctaves * 12 + 1;
 		const semitoneHeight: number = (timelineHeight - 1) / windowPitchCount;
 		const targetBeatWidth: number = Math.max(8, semitoneHeight * 4);
@@ -370,7 +370,7 @@ function renderTimeline(): void {
 		timelineWidth = boundingRect.width;
 		const targetSemitoneHeight: number = Math.max(1, timelineWidth / (synth.song.barCount * synth.song.beatsPerBar) / 3);
 		timelineHeight = Math.min(boundingRect.height, targetSemitoneHeight * (Config.maxPitch + 1) + 1);
-		windowOctaves = Math.max(Config.windowOctaves, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * targetSemitoneHeight))));
+		windowOctaves = Math.max(3, Math.min(Config.pitchOctaves, Math.round(timelineHeight / (12 * targetSemitoneHeight))));
 		windowPitchCount = windowOctaves * 12 + 1;
 	}
 	
@@ -398,19 +398,7 @@ function renderTimeline(): void {
 		const pitchHeight: number = isNoise ? drumPitchHeight : wavePitchHeight;
 		
 		const configuredOctaveScroll: number = synth.song.channels[channel].octave;
-		const octavesToMove: number = (windowOctaves - Config.windowOctaves) / 2;
-		const newScrollableOctaves: number = Config.pitchOctaves - windowOctaves;
-		const oldCenter: number = Config.scrollableOctaves / 2;
-		const newCenter: number = newScrollableOctaves / 2;
-		let distanceFromCenter: number = configuredOctaveScroll - oldCenter;
-		if (Math.abs(distanceFromCenter) <= octavesToMove) {
-			distanceFromCenter = 0;
-		} else if (distanceFromCenter < 0) {
-			distanceFromCenter += octavesToMove;
-		} else {
-			distanceFromCenter -= octavesToMove;
-		}
-		const newOctaveScroll = Math.max(0, Math.min(newScrollableOctaves, Math.round(newCenter + distanceFromCenter)));
+		const newOctaveScroll: number = Math.max(0, Math.min(Config.pitchOctaves - windowOctaves, Math.ceil(configuredOctaveScroll - windowOctaves * 0.5)));
 		
 		const offsetY: number = newOctaveScroll * pitchHeight * 12 + timelineHeight - pitchHeight * 0.5 - 0.5;
 		
