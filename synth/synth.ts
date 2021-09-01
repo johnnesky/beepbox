@@ -5486,14 +5486,14 @@ export class Synth {
 		const allPassPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
 		
 		const shelfRadians: number = 2.0 * Math.PI * Config.pickedStringShelfHz / synth.samplesPerSecond;
-		const decayCurveStart: number = 0.1 * stringDecayStart + 0.9 * Math.pow(stringDecayStart, 3.5);
-		const decayCurveEnd:   number = 0.1 * stringDecayEnd   + 0.9 * Math.pow(stringDecayEnd,   3.5);
+		const decayCurveStart: number = (Math.pow(100.0, stringDecayStart) - 1.0) / 100.0;
+		const decayCurveEnd:   number = (Math.pow(100.0, stringDecayEnd  ) - 1.0) / 100.0;
 		const decayRateStart: number = Math.pow(0.5, decayCurveStart * shelfRadians / radiansPerSampleStart);
 		const decayRateEnd:   number = Math.pow(0.5, decayCurveEnd   * shelfRadians / radiansPerSampleEnd);
 		const shelfGainStart: number = Math.pow(decayRateStart, Config.stringDecayRate);
 		const shelfGainEnd:   number = Math.pow(decayRateEnd,   Config.stringDecayRate);
-		const expressionDecayStart: number = Math.pow(decayRateStart, 0.001);
-		const expressionDecayEnd:   number = Math.pow(decayRateEnd,   0.001);
+		const expressionDecayStart: number = Math.pow(decayRateStart, 0.002);
+		const expressionDecayEnd:   number = Math.pow(decayRateEnd,   0.002);
 		
 		Synth.tempFilterStartCoefficients.highShelf1stOrder(shelfRadians, shelfGainStart);
 		synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart);

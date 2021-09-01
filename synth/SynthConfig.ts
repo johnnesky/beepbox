@@ -442,7 +442,7 @@ export class Config {
 	public static readonly spectrumMax: number = (1 << Config.spectrumControlPointBits) - 1;
 	public static readonly harmonicsControlPoints: number = 28;
 	public static readonly harmonicsRendered: number = 64;
-	public static readonly harmonicsRenderedForPickedString: number = 1 << 9; // 512
+	public static readonly harmonicsRenderedForPickedString: number = 1 << 8; // 256
 	public static readonly harmonicsControlPointBits: number = 3;
 	public static readonly harmonicsMax: number = (1 << Config.harmonicsControlPointBits) - 1;
 	public static readonly harmonicsWavelength: number = 1 << 11; // 2048
@@ -475,7 +475,7 @@ export class Config {
 	
 	public static readonly distortionRange: number = 8;
 	public static readonly stringSustainRange: number = 8;
-	public static readonly stringDecayRate: number = 0.06;
+	public static readonly stringDecayRate: number = 0.12;
 	public static readonly bitcrusherFreqRange: number = 14;
 	public static readonly bitcrusherOctaveStep: number = 0.5;
 	public static readonly bitcrusherQuantizationRange: number = 8;
