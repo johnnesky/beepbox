@@ -5486,8 +5486,8 @@ export class Synth {
 		const allPassPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
 		
 		const shelfRadians: number = 2.0 * Math.PI * Config.pickedStringShelfHz / synth.samplesPerSecond;
-		const decayCurveStart: number = (Math.pow(100.0, stringDecayStart) - 1.0) / 100.0;
-		const decayCurveEnd:   number = (Math.pow(100.0, stringDecayEnd  ) - 1.0) / 100.0;
+		const decayCurveStart: number = (Math.pow(100.0, stringDecayStart) - 1.0) / 99.0;
+		const decayCurveEnd:   number = (Math.pow(100.0, stringDecayEnd  ) - 1.0) / 99.0;
 		const decayRateStart: number = Math.pow(0.5, decayCurveStart * shelfRadians / radiansPerSampleStart);
 		const decayRateEnd:   number = Math.pow(0.5, decayCurveEnd   * shelfRadians / radiansPerSampleEnd);
 		const shelfGainStart: number = Math.pow(decayRateStart, Config.stringDecayRate);
@@ -5682,8 +5682,8 @@ export class Synth {
 				effectsSource += `
 				
 				const distortionBaseVolume = +beepbox.Config.distortionBaseVolume;
-				const distortionStart = +Math.pow(1.0 - 0.95 * instrumentState.distortionStart, 1.5);
-				const distortionEnd   = +Math.pow(1.0 - 0.95 * instrumentState.distortionEnd,   1.5);
+				const distortionStart = +Math.pow(1.0 - 0.895 * (Math.pow(20.0, instrumentState.distortionStart) - 1.0) / 19.0, 2.0)
+				const distortionEnd   = +Math.pow(1.0 - 0.895 * (Math.pow(20.0, instrumentState.distortionEnd  ) - 1.0) / 19.0, 2.0)
 				let distortion = distortionStart;
 				const distortionDelta = (distortionEnd - distortionStart) / runLength;
 				const distortionDriveStart = (1.0 + 2.0 * instrumentState.distortionStart) / distortionBaseVolume;
