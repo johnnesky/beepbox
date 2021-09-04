@@ -1818,7 +1818,8 @@ export class Song {
                     buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
                     // Transition info follows transition song tag
                     buffer.push(base64IntToCharCode[+instrument.tieNoteTransition]);
-                    buffer.push(base64IntToCharCode[+instrument.clicklessTransition]);buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
+                    buffer.push(base64IntToCharCode[+instrument.clicklessTransition]);
+                    buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
                     buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
                     buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]);
                     buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
