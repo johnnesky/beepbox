@@ -603,6 +603,7 @@ export class ChangeRandomGeneratedInstrument extends Change {
 					{ item: "octave", weight: 2 },
 					{ item: "bowed", weight: 2 },
 					{ item: "piano", weight: 5 },
+					{ item: "warbled", weight: 3 },
 				])].index;
 			}
 			function normalize(harmonics: number[]): void {
@@ -704,6 +705,29 @@ export class ChangeRandomGeneratedInstrument extends Change {
 						instrument.operators[i].frequency = selectCurvedDistribution(0, Config.operatorFrequencies.length - 1, 0, 3);
 						instrument.operators[i].amplitude = selectCurvedDistribution(0, Config.operatorAmplitudeMax, Config.operatorAmplitudeMax - 1, 2);
 						instrument.operators[i].envelope = Config.envelopes.dictionary["custom"].index;
+						instrument.operators[i].waveform = Config.operatorWaves.dictionary[selectWeightedRandom([
+							{ item: "sine", weight: 10 },
+							{ item: "triangle", weight: 6 },
+							{ item: "sawtooth", weight: 3 },
+							{ item: "pulse width", weight: 6 },
+							{ item: "ramp", weight: 3 },
+							{ item: "trapezoid", weight: 4 },
+						])].index;
+						if (instrument.operators[i].waveform == 3/*"pulse width"*/) {
+							instrument.operators[i].pulseWidth = selectWeightedRandom([
+								{ item: 0, weight: 3 },
+								{ item: 1, weight: 5 },
+								{ item: 2, weight: 7 },
+								{ item: 3, weight: 10 },
+								{ item: 4, weight: 15 },
+								{ item: 5, weight: 25 }, // 50%
+								{ item: 6, weight: 15 },
+								{ item: 7, weight: 10 },
+								{ item: 8, weight: 7 },
+								{ item: 9, weight: 5 },
+								{ item: 9, weight: 3 },
+							]);
+                        }
 					}
 					for (let i: number = algorithm.carrierCount; i < Config.operatorCount; i++) {
 						instrument.operators[i].frequency = selectCurvedDistribution(3, Config.operatorFrequencies.length - 1, 0, 3);
@@ -730,6 +754,29 @@ export class ChangeRandomGeneratedInstrument extends Change {
 							{ item: "decay 2", weight: 1 },
 							{ item: "decay 3", weight: 1 },
 						])].index;
+						instrument.operators[i].waveform = Config.operatorWaves.dictionary[selectWeightedRandom([
+							{ item: "sine", weight: 10 },
+							{ item: "triangle", weight: 6 },
+							{ item: "sawtooth", weight: 3 },
+							{ item: "pulse width", weight: 6 },
+							{ item: "ramp", weight: 3 },
+							{ item: "trapezoid", weight: 4 },
+						])].index;
+						if (instrument.operators[i].waveform == 3) {
+							instrument.operators[i].pulseWidth = selectWeightedRandom([
+								{ item: 0, weight: 3 },
+								{ item: 1, weight: 5 },
+								{ item: 2, weight: 7 },
+								{ item: 3, weight: 10 },
+								{ item: 4, weight: 15 },
+								{ item: 5, weight: 25 }, // 50%
+								{ item: 6, weight: 15 },
+								{ item: 7, weight: 10 },
+								{ item: 8, weight: 7 },
+								{ item: 9, weight: 5 },
+								{ item: 9, weight: 3 },
+							]);
+						}
 					}
 					instrument.feedbackAmplitude = (Math.pow(Math.random(), 3) * Config.operatorAmplitudeMax) | 0;
 					instrument.feedbackEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
@@ -1392,6 +1439,33 @@ export class ChangeOperatorEnvelope extends Change {
 			instrument.operators[operatorIndex].envelope = newValue;
 			instrument.preset = instrument.type;
 			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+}
+
+export class ChangeOperatorWaveform extends Change {
+	constructor(doc: SongDocument, operatorIndex: number, newValue: number) {
+		super();
+		const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+		const oldValue: number = instrument.operators[operatorIndex].waveform;
+		if (oldValue != newValue) {
+			instrument.operators[operatorIndex].waveform = newValue;
+			instrument.preset = instrument.type;
+			doc.notifier.changed();
+			this._didSomething();
+		}
+	}
+}
+
+export class ChangeOperatorPulseWidth extends Change {
+	constructor(doc: SongDocument, operatorIndex: number, oldValue: number, newValue: number) {
+		super();
+		const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+		instrument.operators[operatorIndex].pulseWidth = newValue;
+		instrument.preset = instrument.type;
+		doc.notifier.changed();
+		if (oldValue != newValue) {
 			this._didSomething();
 		}
 	}

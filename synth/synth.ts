@@ -136,7 +136,7 @@ const enum SongTagCode {
     limiterSettings = CharCode.O,
     operatorAmplitudes = CharCode.P,
     operatorFrequencies = CharCode.Q,
-
+    operatorWaves = CharCode.R,
     spectrum = CharCode.S,
     startInstrument = CharCode.T,
     channelNames = CharCode.U,
@@ -379,6 +379,8 @@ export class Operator {
     public frequency: number = 0;
     public amplitude: number = 0;
     public envelope: number = 0;
+    public waveform: number = 0;
+    public pulseWidth: number = 0.5;
 
     constructor(index: number) {
         this.reset(index);
@@ -388,12 +390,16 @@ export class Operator {
         this.frequency = 0;
         this.amplitude = (index <= 1) ? Config.operatorAmplitudeMax : 0;
         this.envelope = (index == 0) ? 0 : 1;
+        this.waveform = 0;
+        this.pulseWidth = 5;
     }
 
     public copy(other: Operator): void {
         this.frequency = other.frequency;
         this.amplitude = other.amplitude;
         this.envelope = other.envelope;
+        this.waveform = other.waveform;
+        this.pulseWidth = other.pulseWidth;
     }
 }
 
@@ -890,6 +896,8 @@ export class Instrument {
                     "frequency": Config.operatorFrequencies[operator.frequency].name,
                     "amplitude": operator.amplitude,
                     "envelope": Config.envelopes[operator.envelope].name,
+                    "waveform": Config.operatorWaves[operator.waveform].name,
+                    "pulseWidth": operator.pulseWidth,
                 });
             }
             if (this.vibrato != 5) {
@@ -1177,6 +1185,16 @@ export class Instrument {
                     operator.amplitude = clamp(0, Config.operatorAmplitudeMax + 1, operatorObject["amplitude"] | 0);
                 } else {
                     operator.amplitude = 0;
+                }
+                if (operatorObject["waveform"] != undefined) {
+                    operator.waveform = Config.operatorWaves.findIndex(wave => wave.name == operatorObject["waveform"]);
+                } else {
+                    operator.waveform = 0;
+                }
+                if (operatorObject["pulseWidth"] != undefined) {
+                    operator.pulseWidth = operatorObject["pulseWidth"] | 0;
+                } else {
+                    operator.pulseWidth = 5;
                 }
                 operator.envelope = legacyEnvelopeNames[operatorObject["envelope"]] != undefined ? legacyEnvelopeNames[operatorObject["envelope"]] : Config.envelopes.findIndex(envelope => envelope.name == operatorObject["envelope"]);
                 if (operator.envelope == -1) operator.envelope = 0;
@@ -1800,9 +1818,7 @@ export class Song {
                     buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
                     // Transition info follows transition song tag
                     buffer.push(base64IntToCharCode[+instrument.tieNoteTransition]);
-                    buffer.push(base64IntToCharCode[+instrument.clicklessTransition]);
-                    buffer.push(SongTagCode.aliases, base64IntToCharCode[+instrument.aliases]);
-                    buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
+                    buffer.push(base64IntToCharCode[+instrument.clicklessTransition]);buffer.push(SongTagCode.filterCutoff, base64IntToCharCode[instrument.filterCutoff]);
                     buffer.push(SongTagCode.filterResonance, base64IntToCharCode[instrument.filterResonance]);
                     buffer.push(SongTagCode.filterEnvelope, base64IntToCharCode[instrument.filterEnvelope]);
                     buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
@@ -1824,6 +1840,7 @@ export class Song {
                         buffer.push(base64IntToCharCode[+instrument.fastTwoNoteArp]); // Two note arp setting piggybacks on this
                     }
                     buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
+                    buffer.push(SongTagCode.aliases, base64IntToCharCode[+instrument.aliases]);
                 } else if (instrument.type == InstrumentType.fm) {
                     buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
                     // Custom vibrato settings
@@ -1856,6 +1873,15 @@ export class Song {
                     for (let o: number = 0; o < Config.operatorCount; o++) {
                         buffer.push(base64IntToCharCode[instrument.operators[o].envelope]);
                     }
+                    buffer.push(SongTagCode.operatorWaves);
+                    for (let o: number = 0; o < Config.operatorCount; o++) {
+                        buffer.push(base64IntToCharCode[instrument.operators[o].waveform]);
+                        // Push pulse width if that type is used
+                        if (instrument.operators[o].waveform == 3) {
+                            buffer.push(base64IntToCharCode[instrument.operators[o].pulseWidth]);
+                        }
+                    }
+                    
                 } else if (instrument.type == InstrumentType.customChipWave) {
                     buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipWave]);
                     buffer.push(SongTagCode.vibrato, base64IntToCharCode[instrument.vibrato]);
@@ -1872,7 +1898,7 @@ export class Song {
                         buffer.push(base64IntToCharCode[+instrument.fastTwoNoteArp]); // Two note arp setting piggybacks on this
                     }
                     buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
-
+                    buffer.push(SongTagCode.aliases, base64IntToCharCode[+instrument.aliases]);
                     buffer.push(SongTagCode.customChipWave);
                     // Push custom wave values
                     for (let j: number = 0; j < 64; j++) {
@@ -1958,6 +1984,8 @@ export class Song {
                     }
                     buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth], base64IntToCharCode[instrument.pulseEnvelope]);
                     buffer.push(SongTagCode.interval, base64IntToCharCode[instrument.interval]);
+                    buffer.push(SongTagCode.aliases, base64IntToCharCode[+instrument.aliases]);
+
                 } else if (instrument.type == InstrumentType.mod) {
                     // Handled down below. Could be moved, but meh.
                 }
@@ -2389,6 +2417,10 @@ export class Song {
                 const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
                 const instrumentType: number = clamp(0, InstrumentType.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                 instrument.setTypeAndReset(instrumentType, instrumentChannelIterator >= this.pitchChannelCount && instrumentChannelIterator < this.pitchChannelCount + this.noiseChannelCount, instrumentChannelIterator >= this.pitchChannelCount + this.noiseChannelCount);
+                // Anti-aliasing was added in BeepBox 3.0 (v6->v7) and JummBox 1.3 (v1->v2 roughly but some leakage possible)
+                if (((beforeSeven && variant == "beepbox") || (beforeTwo && variant == "jummbox")) && (instrumentType == InstrumentType.chip || instrumentType == InstrumentType.customChipWave || instrumentType == InstrumentType.pwm)) {
+                    instrument.aliases = true;
+                }
                 if (useSlowerArpSpeed) {
                     instrument.arpeggioSpeed = 9; // x3/4 speed. This used to be tied to rhythm, but now it is decoupled to each instrument's arp speed slider. This flag gets set when importing older songs to keep things consistent.
                 }
@@ -2753,6 +2785,16 @@ export class Song {
             case SongTagCode.operatorEnvelopes: {
                 for (let o: number = 0; o < Config.operatorCount; o++) {
                     this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].operators[o].envelope = clamp(0, Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                }
+            } break;
+            case SongTagCode.operatorWaves: {
+                const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+                for (let o: number = 0; o < Config.operatorCount; o++) {
+                    instrument.operators[o].waveform = clamp(0, Config.operatorWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                    // Pulse width follows, if it is a pulse width operator wave
+                    if (instrument.operators[o].waveform == 3) {
+                        instrument.operators[o].pulseWidth = clamp(0, Config.pwmOperatorWaves.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                    }
                 }
             } break;
             case SongTagCode.spectrum: {
@@ -5521,7 +5563,7 @@ export class Synth {
                         chordVolumeTickEnd = Synth.computeChordVolume(tone.chordSize + slideRatioEndTick * chordSizeDiff);
                     }
                 }
-            } else if (!(transition.releases && synth.tyingOver[channel] < 0 )) {
+            } else if (!transition.releases) {
                 const releaseTicks: number = transition.releaseTicks;
                 if (releaseTicks > 0.0) {
                     transitionVolumeTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / releaseTicks);
@@ -6472,11 +6514,12 @@ tone.filterSample1 = filterSample1;
 `).split("\n");
 
     private static operatorSourceTemplate: string[] = (`
+const operator#Wave     = beepbox.Synth.getOperatorWave(instrument.operators[#].waveform, instrument.operators[#].pulseWidth).samples;
 const operator#PhaseMix = operator#Phase/* + operator@Scaled*/;
 const operator#PhaseInt = operator#PhaseMix|0;
 const operator#Index    = operator#PhaseInt & ` + Config.sineWaveMask + `;
-const operator#Sample   = sineWave[operator#Index];
-operator#Output       = operator#Sample + (sineWave[operator#Index + 1] - operator#Sample) * (operator#PhaseMix - operator#PhaseInt);
+const operator#Sample   = operator#Wave[operator#Index];
+operator#Output       = operator#Sample + (operator#Wave[operator#Index + 1] - operator#Sample) * (operator#PhaseMix - operator#PhaseInt);
 const operator#Scaled   = operator#OutputMult * operator#Output;
 `).split("\n");
 
@@ -6802,6 +6845,15 @@ const operator#Scaled   = operator#OutputMult * operator#Output;
     }
     public static volumeMultToExpression(volumeMult: number): number {
         return Math.pow(Math.max(0.0, volumeMult), 1 / 1.5) * 6.0;
+    }
+
+    public static getOperatorWave(waveform: number, pulseWidth: number) {
+        if (waveform != 3) {
+            return Config.operatorWaves[waveform];
+        }
+        else {
+            return Config.pwmOperatorWaves[pulseWidth];
+        }
     }
 
     private getSamplesPerTick(): number {

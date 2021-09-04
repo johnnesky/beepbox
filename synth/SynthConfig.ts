@@ -54,6 +54,15 @@ export const enum InstrumentType {
 	length,
 }
 
+export const enum DropdownID {
+	Vibrato = 0,
+	Pan = 1,
+	Chord = 2,
+	Transition = 3,
+	FM = 4,
+
+}
+
 export interface BeepBoxOption {
 	readonly index: number;
 	readonly name: string;
@@ -78,6 +87,10 @@ export interface Rhythm extends BeepBoxOption {
 
 export interface ChipWave extends BeepBoxOption {
 	readonly volume: number;
+	samples: Float64Array;
+}
+
+export interface OperatorWave extends BeepBoxOption {
 	samples: Float64Array;
 }
 
@@ -294,6 +307,7 @@ export class Config {
 		{ name: "octave", spread: 6.0, offset: 6.0, volume: 0.8, sign: 1.0 },
 		{ name: "bowed", spread: 0.02, offset: 0.0, volume: 1.0, sign: -1.0 },
 		{ name: "piano", spread: 0.01, offset: 0.0, volume: 1.0, sign: 0.7 },
+		{ name: "warbled", spread: 0.25, offset: 0.05, volume: 0.9, sign: -0.8 },
 	]);
 	public static readonly effectsNames: ReadonlyArray<string> = ["none", "reverb", "chorus", "chorus & reverb"];
 	public static readonly volumeRange: number = 50;
@@ -420,6 +434,28 @@ export class Config {
 	public static readonly sineWaveLength: number = 1 << 8; // 256
 	public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
 	public static readonly sineWave: Float64Array = generateSineWave();
+	public static readonly operatorWaves: DictionaryArray<OperatorWave> = toNameMap([
+		{ name: "sine", samples: Config.sineWave },
+		{ name: "triangle", samples: generateTriWave() },
+		{ name: "sawtooth", samples: generateSawWave() },
+		{ name: "pulse width", samples: generateSquareWave() },
+		{ name: "ramp", samples: generateSawWave(true) },
+		{ name: "trapezoid", samples: generateTrapezoidWave(2) },
+	]);
+	public static readonly pwmOperatorWaves: DictionaryArray<OperatorWave> = toNameMap([
+		{ name: "1%", samples: generateSquareWave(0.01) },
+		{ name: "5%", samples: generateSquareWave(0.05) },
+		{ name: "12.5%", samples: generateSquareWave(0.125) },
+		{ name: "25%", samples: generateSquareWave(0.25) },
+		{ name: "33%", samples: generateSquareWave(1/3) },
+		{ name: "50%", samples: generateSquareWave(0.5) },
+		{ name: "66%", samples: generateSquareWave(2/3) },
+		{ name: "75%", samples: generateSquareWave(0.75) },
+		{ name: "87.5%", samples: generateSquareWave(0.875) },
+		{ name: "95%", samples: generateSquareWave(0.95) },
+		{ name: "99%", samples: generateSquareWave(0.99) },
+	]);
+
 
 	// Height of the small editor column for inserting/deleting rows, in pixels.
 	public static readonly barEditorHeight: number = 10;
@@ -620,6 +656,41 @@ function generateSineWave(): Float64Array {
 	const wave: Float64Array = new Float64Array(Config.sineWaveLength + 1);
 	for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
 		wave[i] = Math.sin(i * Math.PI * 2.0 / Config.sineWaveLength);
+	}
+	return wave;
+}
+
+function generateTriWave(): Float64Array {
+	const wave: Float64Array = new Float64Array(Config.sineWaveLength + 1);
+	for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
+		wave[i] = Math.asin(Math.sin(i * Math.PI * 2.0 / Config.sineWaveLength)) / (Math.PI / 2);
+	}
+	return wave;
+}
+
+function generateTrapezoidWave(drive: number = 2): Float64Array {
+	const wave: Float64Array = new Float64Array(Config.sineWaveLength + 1);
+	for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
+		wave[i] = Math.max( -1.0, Math.min( 1.0, Math.asin(Math.sin(i * Math.PI * 2.0 / Config.sineWaveLength)) * drive ) );
+	}
+	return wave;
+}
+
+function generateSquareWave(phaseWidth: number = 0): Float64Array {
+	const wave: Float64Array = new Float64Array(Config.sineWaveLength + 1);
+	const centerPoint: number = Config.sineWaveLength / 4;
+	for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
+		wave[i] = +((Math.abs(i - centerPoint) < phaseWidth * Config.sineWaveLength / 2)
+			|| ((Math.abs(i - Config.sineWaveLength - centerPoint) < phaseWidth * Config.sineWaveLength / 2))) * 2 - 1;
+	}
+	return wave;
+}
+
+function generateSawWave(inverse: boolean = false): Float64Array {
+	const wave: Float64Array = new Float64Array(Config.sineWaveLength + 1);
+	for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
+		wave[i] = ((i + (Config.sineWaveLength / 4.0)) * 2.0 / Config.sineWaveLength) % 2 - 1;
+		wave[i] = inverse ? -wave[i] : wave[i];
 	}
 	return wave;
 }
