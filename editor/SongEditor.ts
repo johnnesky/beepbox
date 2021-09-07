@@ -60,8 +60,8 @@ function buildPresetOptions(isNoise: boolean): HTMLSelectElement {
 		customTypeGroup.appendChild(option({value: InstrumentType.chip}, EditorConfig.valueToPreset(InstrumentType.chip)!.name));
 		customTypeGroup.appendChild(option({value: InstrumentType.pwm}, EditorConfig.valueToPreset(InstrumentType.pwm)!.name));
 		customTypeGroup.appendChild(option({value: InstrumentType.harmonics}, EditorConfig.valueToPreset(InstrumentType.harmonics)!.name));
-		customTypeGroup.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
 		customTypeGroup.appendChild(option({value: InstrumentType.pickedString}, EditorConfig.valueToPreset(InstrumentType.pickedString)!.name));
+		customTypeGroup.appendChild(option({value: InstrumentType.spectrum}, EditorConfig.valueToPreset(InstrumentType.spectrum)!.name));
 		customTypeGroup.appendChild(option({value: InstrumentType.fm}, EditorConfig.valueToPreset(InstrumentType.fm)!.name));
 	}
 	menu.appendChild(customTypeGroup);
@@ -865,7 +865,7 @@ export class SongEditor {
 				this._reverbRow.style.display = "none";
 			}
 			
-			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics) {
+			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pickedString) {
 				this._unisonSelectRow.style.display = "";
 				setSelectedValue(this._unisonSelect, instrument.unison);
 			} else {

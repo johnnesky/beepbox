@@ -157,6 +157,7 @@ export interface Vibrato extends BeepBoxOption {
 }
 
 export interface Unison extends BeepBoxOption {
+	readonly voices: number;
 	readonly spread: number;
 	readonly offset: number;
 	readonly expression: number;
@@ -270,7 +271,7 @@ export class Config {
 	public static readonly drumsetBaseExpression:   number = 0.45; // Drums tend to be loud but brief!
 	public static readonly harmonicsBaseExpression: number = 0.025;
 	public static readonly pwmBaseExpression:       number = 0.04725; // It's actually closer to half of this, the synthesized pulse amplitude range is only .5 to -.5, but also note that the fundamental sine partial amplitude of a square wave is 4/π times the measured square wave amplitude.
-	public static readonly pickedStringBaseExpression: number = 0.035; // Same as harmonics, but compensate for lacking the "unison" feature.
+	public static readonly pickedStringBaseExpression: number = 0.025; // Same as harmonics.
 	public static readonly distortionBaseVolume:    number = 0.015; // Distortion is not affected by pitchDamping, which otherwise approximately halves expression for notes around the middle of the range.
 	public static readonly bitcrusherBaseVolume:    number = 0.0125; // Also not affected by pitchDamping, used when bit crushing is maxed out (aka "1-bit" output).
 	
@@ -324,15 +325,15 @@ export class Config {
 		{name: "shaky",   amplitude: 0.1,  periodsSeconds: [0.11, 1.618*0.11, 3*0.11], delayTicks: 0},
 	]);
 	public static readonly unisons: DictionaryArray<Unison> = toNameMap([
-		{name: "none",       spread: 0.0,  offset: 0.0, expression: 0.7, sign: 1.0},
-		{name: "shimmer",    spread: 0.018,offset: 0.0, expression: 0.8, sign: 1.0},
-		{name: "hum",        spread: 0.045,offset: 0.0, expression: 1.0, sign: 1.0},
-		{name: "honky tonk", spread: 0.09, offset: 0.0, expression: 1.0, sign: 1.0},
-		{name: "dissonant",  spread: 0.25, offset: 0.0, expression: 0.9, sign: 1.0},
-		{name: "fifth",      spread: 3.5,  offset: 3.5, expression: 0.9, sign: 1.0},
-		{name: "octave",     spread: 6.0,  offset: 6.0, expression: 0.8, sign: 1.0},
-		{name: "bowed",      spread: 0.02, offset: 0.0, expression: 1.0, sign:-1.0},
-		{name: "piano",      spread: 0.01, offset: 0.0, expression: 1.0, sign: 0.7},
+		{name: "none",       voices: 1, spread: 0.0,  offset: 0.0, expression: 1.4, sign: 1.0},
+		{name: "shimmer",    voices: 2, spread: 0.018,offset: 0.0, expression: 0.8, sign: 1.0},
+		{name: "hum",        voices: 2, spread: 0.045,offset: 0.0, expression: 1.0, sign: 1.0},
+		{name: "honky tonk", voices: 2, spread: 0.09, offset: 0.0, expression: 1.0, sign: 1.0},
+		{name: "dissonant",  voices: 2, spread: 0.25, offset: 0.0, expression: 0.9, sign: 1.0},
+		{name: "fifth",      voices: 2, spread: 3.5,  offset: 3.5, expression: 0.9, sign: 1.0},
+		{name: "octave",     voices: 2, spread: 6.0,  offset: 6.0, expression: 0.8, sign: 1.0},
+		{name: "bowed",      voices: 2, spread: 0.02, offset: 0.0, expression: 1.0, sign:-1.0},
+		{name: "piano",      voices: 2, spread: 0.01, offset: 0.0, expression: 1.0, sign: 0.7},
 	]);
 	public static readonly effectsNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher", "note filter", "echo", "pitch shift", "detune", "vibrato"];
 	public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.pitchShift, EffectType.detune, EffectType.vibrato, EffectType.noteFilter, EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.echo, EffectType.reverb];

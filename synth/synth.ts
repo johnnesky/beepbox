@@ -1104,6 +1104,7 @@ export class Instrument {
 		} else if (this.type == InstrumentType.pwm) {
 			instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
 		} else if (this.type == InstrumentType.pickedString) {
+			instrumentObject["unison"] = Config.unisons[this.unison].name;
 			instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
 			instrumentObject["stringSustain"] = Math.round(100 * this.stringSustain / (Config.stringSustainRange - 1));
 		} else if (this.type == InstrumentType.harmonics) {
@@ -1751,6 +1752,7 @@ export class Song {
 				} else if (instrument.type == InstrumentType.pwm) {
 					buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth]);
 				} else if (instrument.type == InstrumentType.pickedString) {
+					buffer.push(SongTagCode.unison, base64IntToCharCode[instrument.unison]);
 					buffer.push(SongTagCode.stringSustain, base64IntToCharCode[instrument.stringSustain]);
 				} else {
 					throw new Error("Unknown instrument type.");
@@ -3439,7 +3441,7 @@ class Tone {
 	public readonly phaseDeltaScales: number[] = [];
 	public pulseWidth: number = 0.0;
 	public pulseWidthDelta: number = 0.0;
-	public pickedString: PickedString | null = null;
+	public readonly pickedStrings: PickedString[] = [];
 	
 	public readonly noteFilters: DynamicBiquadFilter[] = [];
 	public noteFilterCount: number = 0;
@@ -3472,7 +3474,9 @@ class Tone {
 		this.initialNoteFilterInput1 = 0.0;
 		this.initialNoteFilterInput2 = 0.0;
 		this.liveInputSamplesHeld = 0;
-		if (this.pickedString != null) this.pickedString.reset();
+		for (const pickedString of this.pickedStrings) {
+			pickedString.reset();
+		}
 		this.envelopeComputer.reset();
 	}
 }
@@ -4024,10 +4028,11 @@ export class Synth {
 	public static readonly tempFilterStartCoefficients: FilterCoefficients = new FilterCoefficients();
 	public static readonly tempFilterEndCoefficients: FilterCoefficients = new FilterCoefficients();
 	private tempDrumSetControlPoint: FilterControlPoint = new FilterControlPoint();
-	private tempFrequencyResponse: FrequencyResponse = new FrequencyResponse();
+	public tempFrequencyResponse: FrequencyResponse = new FrequencyResponse();
 	
 	private static readonly fmSynthFunctionCache: Dictionary<Function> = {};
-	private static readonly effectsFunctionCache: Function[] = Array(1 << 5).fill(undefined); // keep in sync with the number of post-process effects.
+	private static readonly effectsFunctionCache: Function[] = Array(1 << 7).fill(undefined); // keep in sync with the number of post-process effects.
+	private static readonly pickedStringFunctionCache: Function[] = Array(3).fill(undefined); // keep in sync with the number of unison voices.
 	
 	private readonly channels: ChannelState[] = [];
 	private readonly tonePool: Deque<Tone> = new Deque<Tone>();
@@ -4955,8 +4960,6 @@ export class Synth {
 			intervalStart += vibratoStart;
 			intervalEnd   += vibratoEnd;
 		}
-		// TODO: This is unused for FM instruments, but is used by both picked string and everything else, maybe those two cases can be combined and this can be moved into the common part of them:
-		const basePhaseDeltaScale: number = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
 		
 		if (!transition.isSeamless || (!(!transition.slides && tone.note != null && tone.note.start == 0) && !(tone.prevNote != null))) {
 			// Fade in the beginning of the note.
@@ -5105,41 +5108,10 @@ export class Synth {
 			let feedbackEnd:   number = feedbackAmplitude * envelopeEnds[  NoteAutomationIndex.feedbackAmplitude];
 			tone.feedbackMult = feedbackStart;
 			tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
-		} else if (instrument.type == InstrumentType.pickedString) {
-			// Increase expression to compensate for string decay.
-			const decayExpression: number = Math.pow(2.0, 0.7 * (1.0 - instrument.stringSustain / (Config.stringSustainRange - 1)));
-			
-			let pitch: number = tone.pitches[0];
-			if (chord.arpeggiates) {
-				const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.rhythms[song.rhythm].ticksPerArpeggio);
-				pitch = tone.pitches[getArpeggioPitchIndex(tone.pitchCount, song.rhythm, arpeggio)];
-			}
-			
-			const startPitch: number = basePitch + (pitch + intervalStart) * intervalScale;
-			const endPitch:   number = basePitch + (pitch + intervalEnd)   * intervalScale;
-			tone.phaseDeltas[0] = Instrument.frequencyFromPitch(startPitch) * sampleTime;
-			tone.phaseDeltaScales[0] = basePhaseDeltaScale;
-			const pitchExpressionStart: number = Math.pow(2.0, -(startPitch - expressionReferencePitch) / pitchDamping);
-			const pitchExpressionEnd:   number = Math.pow(2.0,   -(endPitch - expressionReferencePitch) / pitchDamping);
-			
-			let expressionStart: number = baseExpression * chordExpressionStart * transitionExpressionStart * noteFilterExpression * pitchExpressionStart * decayExpression;
-			let expressionEnd:   number = baseExpression * chordExpressionEnd   * transitionExpressionEnd   * noteFilterExpression * pitchExpressionEnd   * decayExpression;
-			
-			expressionStart *= envelopeStarts[NoteAutomationIndex.noteVolume];
-			expressionEnd   *= envelopeEnds[  NoteAutomationIndex.noteVolume];
-			
-			tone.expressionStarts[0] = expressionStart;
-			tone.expressionDeltas[0] = (expressionEnd - expressionStart) / runLength;
-			
-			tone.pulseWidth = getPulseWidthRatio(instrument.pulseWidth);
-			
-			if (tone.atNoteStart && tone.pickedString != null) {
-				// Force the picked string to retrigger the attack impulse at the start of the note.
-				tone.pickedString.delayIndex = -1;
-			}
 		} else {
+			const basePhaseDeltaScale: number = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / runLength);
+			
 			let pitch: number = tone.pitches[0];
-
 			if (tone.pitchCount > 1 && (chord.arpeggiates || chord.customInterval)) {
 				const arpeggio: number = Math.floor((synth.tick + synth.part * Config.ticksPerPart) / Config.rhythms[song.rhythm].ticksPerArpeggio);
 				if (chord.customInterval) {
@@ -5152,35 +5124,16 @@ export class Synth {
 			}
 			
 			const startPitch: number = basePitch + (pitch + intervalStart) * intervalScale;
-			const endPitch: number = basePitch + (pitch + intervalEnd) * intervalScale;
-			const startFreq: number = Instrument.frequencyFromPitch(startPitch);
+			const endPitch:   number = basePitch + (pitch + intervalEnd)   * intervalScale;
 			const pitchExpressionStart: number = Math.pow(2.0, -(startPitch - expressionReferencePitch) / pitchDamping);
-			const pitchExpressionEnd: number   = Math.pow(2.0,   -(endPitch - expressionReferencePitch) / pitchDamping);
-			let settingsExpressionMult: number = baseExpression;
+			const pitchExpressionEnd:   number = Math.pow(2.0,   -(endPitch - expressionReferencePitch) / pitchDamping);
+			let settingsExpressionMult: number = baseExpression * noteFilterExpression;
+			
 			if (instrument.type == InstrumentType.noise) {
 				settingsExpressionMult *= Config.chipNoises[instrument.chipNoise].expression;
 			}
 			if (instrument.type == InstrumentType.chip) {
 				settingsExpressionMult *= Config.chipWaves[instrument.chipWave].expression;
-			}
-			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics) {
-				// The chip and harmonics instruments have two waves at different frequencies for the unison feature.
-				settingsExpressionMult *= Config.unisons[instrument.unison].expression;
-				const unisonEnvelopeStart = envelopeStarts[NoteAutomationIndex.unison];
-				const unisonEnvelopeEnd   = envelopeEnds[  NoteAutomationIndex.unison];
-				const offset: number = Config.unisons[instrument.unison].offset;
-				const spread: number = Config.unisons[instrument.unison].spread;
-				const unisonAStart: number = Math.pow(2.0, (offset + spread) * unisonEnvelopeStart / 12.0);
-				const unisonAEnd:   number = Math.pow(2.0, (offset + spread) * unisonEnvelopeEnd   / 12.0);
-				const unisonBStart: number = Math.pow(2.0, (offset - spread) * unisonEnvelopeStart / 12.0) * tone.specialIntervalMult;
-				const unisonBEnd:   number = Math.pow(2.0, (offset - spread) * unisonEnvelopeEnd   / 12.0) * tone.specialIntervalMult;
-				tone.phaseDeltas[0] = startFreq * sampleTime * unisonAStart;
-				tone.phaseDeltas[1] = startFreq * sampleTime * unisonBStart;
-				tone.phaseDeltaScales[0] = basePhaseDeltaScale * Math.pow(unisonAEnd / unisonAStart, 1.0 / runLength);
-				tone.phaseDeltaScales[1] = basePhaseDeltaScale * Math.pow(unisonBEnd / unisonBStart, 1.0 / runLength);
-			} else {
-				tone.phaseDeltas[0] = startFreq * sampleTime;
-				tone.phaseDeltaScales[0] = basePhaseDeltaScale;
 			}
 			if (instrument.type == InstrumentType.pwm) {
 				const basePulseWidth: number = getPulseWidthRatio(instrument.pulseWidth);
@@ -5189,12 +5142,46 @@ export class Synth {
 				tone.pulseWidth = pulseWidthStart;
 				tone.pulseWidthDelta = (pulseWidthEnd - pulseWidthStart) / runLength;
 			}
+			if (instrument.type == InstrumentType.pickedString) {
+				// Increase expression to compensate for string decay.
+				settingsExpressionMult *= Math.pow(2.0, 0.7 * (1.0 - instrument.stringSustain / (Config.stringSustainRange - 1)));
+				
+				const unison: Unison = Config.unisons[instrument.unison];
+				for (let i: number = tone.pickedStrings.length; i < unison.voices; i++) {
+					tone.pickedStrings[i] = new PickedString();
+				}
+				
+				if (tone.atNoteStart) {
+					for (const pickedString of tone.pickedStrings) {
+						// Force the picked string to retrigger the attack impulse at the start of the note.
+						pickedString.delayIndex = -1;
+					}
+				}
+			}
 			
-			let expressionStart: number = settingsExpressionMult * transitionExpressionStart * chordExpressionStart * pitchExpressionStart * noteFilterExpression;
-			let expressionEnd: number = settingsExpressionMult * transitionExpressionEnd * chordExpressionEnd * pitchExpressionEnd * noteFilterExpression;
-			expressionStart *= envelopeStarts[NoteAutomationIndex.noteVolume];
-			expressionEnd   *= envelopeEnds[  NoteAutomationIndex.noteVolume];
+			const startFreq: number = Instrument.frequencyFromPitch(startPitch);
+			if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pickedString) {
+				// These instruments have two waves at different frequencies for the unison feature.
+				const unison: Unison = Config.unisons[instrument.unison];
+				const voiceCountExpression: number = (instrument.type == InstrumentType.pickedString) ? 1 : unison.voices / 2.0;
+				settingsExpressionMult *= unison.expression * voiceCountExpression;
+				const unisonEnvelopeStart = envelopeStarts[NoteAutomationIndex.unison];
+				const unisonEnvelopeEnd   = envelopeEnds[  NoteAutomationIndex.unison];
+				const unisonAStart: number = Math.pow(2.0, (unison.offset + unison.spread) * unisonEnvelopeStart / 12.0);
+				const unisonAEnd:   number = Math.pow(2.0, (unison.offset + unison.spread) * unisonEnvelopeEnd   / 12.0);
+				const unisonBStart: number = Math.pow(2.0, (unison.offset - unison.spread) * unisonEnvelopeStart / 12.0) * tone.specialIntervalMult;
+				const unisonBEnd:   number = Math.pow(2.0, (unison.offset - unison.spread) * unisonEnvelopeEnd   / 12.0) * tone.specialIntervalMult;
+				tone.phaseDeltas[0] = startFreq * sampleTime * unisonAStart;
+				tone.phaseDeltas[1] = startFreq * sampleTime * unisonBStart;
+				tone.phaseDeltaScales[0] = basePhaseDeltaScale * Math.pow(unisonAEnd / unisonAStart, 1.0 / runLength);
+				tone.phaseDeltaScales[1] = basePhaseDeltaScale * Math.pow(unisonBEnd / unisonBStart, 1.0 / runLength);
+			} else {
+				tone.phaseDeltas[0] = startFreq * sampleTime;
+				tone.phaseDeltaScales[0] = basePhaseDeltaScale;
+			}
 			
+			let expressionStart: number = settingsExpressionMult * transitionExpressionStart * chordExpressionStart * pitchExpressionStart * envelopeStarts[NoteAutomationIndex.noteVolume];
+			let expressionEnd:   number = settingsExpressionMult * transitionExpressionEnd   * chordExpressionEnd   * pitchExpressionEnd   * envelopeEnds[  NoteAutomationIndex.noteVolume];
 			tone.expressionStarts[0] = expressionStart;
 			tone.expressionDeltas[0] = (expressionEnd - expressionStart) / runLength;
 		}
@@ -5431,203 +5418,251 @@ export class Synth {
 	}
 	
 	private static pickedStringSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
-		// This algorithm is similar to the Karpluss-Strong algorithm in principle,
-		// but an all-pass filter for dispersion and with more control over the impulse.
+		// This algorithm is similar to the Karpluss-Strong algorithm in principle, but with an
+		// all-pass filter for dispersion and with more control over the impulse.
 		
-		const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
-		
-		const delayBufferMask: number = synth.stringDelayBufferMask >>> 0;
-		
-		const sustainEnvelopeStart: number = tone.envelopeComputer.envelopeStarts[NoteAutomationIndex.stringSustain];
-		const sustainEnvelopeEnd:   number = tone.envelopeComputer.envelopeEnds[  NoteAutomationIndex.stringSustain];
-		const stringDecayStart: number = 1.0 - Math.min(1.0, sustainEnvelopeStart * instrument.stringSustain / (Config.stringSustainRange - 1));
-		const stringDecayEnd:   number = 1.0 - Math.min(1.0, sustainEnvelopeEnd   * instrument.stringSustain / (Config.stringSustainRange - 1));
-		
-		if (tone.pickedString == null) tone.pickedString = new PickedString();
-		let pickedString: PickedString | null = tone.pickedString;
-		
-		if (pickedString.delayLine == null || pickedString.delayLine.length < synth.stringDelayBufferSize) {
-			pickedString.delayLine = new Float32Array(synth.stringDelayBufferSize);
-		}
-		
-		const delayLine: Float32Array = pickedString.delayLine;
-		const prevDelayLength: number = +pickedString.prevDelayLength;
-		let allPassSample: number = +pickedString.allPassSample;
-		let allPassPrevInput: number = +pickedString.allPassPrevInput;
-		let shelfSample: number = +pickedString.shelfSample;
-		let shelfPrevInput: number = +pickedString.shelfPrevInput;
-		let fractionalDelaySample: number = +pickedString.fractionalDelaySample;
-		
-		let expression: number = +tone.expressionStarts[0];
-		const expressionDelta: number = +tone.expressionDeltas[0];
-		
-		const phaseDeltaStart: number = +tone.phaseDeltas[0];
-		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
-		const phaseDeltaEnd: number = phaseDeltaStart * Math.pow(phaseDeltaScale, runLength);
-		
-		const radiansPerSampleStart: number = Math.PI * 2.0 * phaseDeltaStart;
-		const radiansPerSampleEnd:   number = Math.PI * 2.0 * phaseDeltaEnd;
-		
-		const centerHarmonicStart: number = radiansPerSampleStart * 2.0;
-		const centerHarmonicEnd: number = radiansPerSampleEnd * 2.0;
-		
-		const allPassCenter: number = 2.0 * Math.PI * Config.pickedStringDispersionCenterFreq / synth.samplesPerSecond;
-		const allPassRadiansStart: number = Math.min(Math.PI, radiansPerSampleStart * Config.pickedStringDispersionFreqMult * Math.pow(allPassCenter / radiansPerSampleStart, Config.pickedStringDispersionFreqScale));
-		const allPassRadiansEnd: number = Math.min(Math.PI, radiansPerSampleEnd * Config.pickedStringDispersionFreqMult * Math.pow(allPassCenter / radiansPerSampleEnd, Config.pickedStringDispersionFreqScale));
-		
-		Synth.tempFilterStartCoefficients.allPass1stOrderInvertPhaseAbove(allPassRadiansStart);
-		synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart);
-		let allPassG: number = +Synth.tempFilterStartCoefficients.b[0]; // same as a[1]
-		const allPassPhaseDelayStart: number = -synth.tempFrequencyResponse.angle() / centerHarmonicStart;
-		
-		Synth.tempFilterEndCoefficients.allPass1stOrderInvertPhaseAbove(allPassRadiansEnd);
-		synth.tempFrequencyResponse.analyze(Synth.tempFilterEndCoefficients, centerHarmonicEnd);
-		const allPassGEnd: number = +Synth.tempFilterEndCoefficients.b[0]; // same as a[1]
-		const allPassPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
-		
-		const shelfRadians: number = 2.0 * Math.PI * Config.pickedStringShelfHz / synth.samplesPerSecond;
-		const decayCurveStart: number = (Math.pow(100.0, stringDecayStart) - 1.0) / 99.0;
-		const decayCurveEnd:   number = (Math.pow(100.0, stringDecayEnd  ) - 1.0) / 99.0;
-		const decayRateStart: number = Math.pow(0.5, decayCurveStart * shelfRadians / radiansPerSampleStart);
-		const decayRateEnd:   number = Math.pow(0.5, decayCurveEnd   * shelfRadians / radiansPerSampleEnd);
-		const shelfGainStart: number = Math.pow(decayRateStart, Config.stringDecayRate);
-		const shelfGainEnd:   number = Math.pow(decayRateEnd,   Config.stringDecayRate);
-		const expressionDecayStart: number = Math.pow(decayRateStart, 0.002);
-		const expressionDecayEnd:   number = Math.pow(decayRateEnd,   0.002);
-		
-		Synth.tempFilterStartCoefficients.highShelf1stOrder(shelfRadians, shelfGainStart);
-		synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart);
-		let shelfA1: number = +Synth.tempFilterStartCoefficients.a[1];
-		let shelfB0: number = Synth.tempFilterStartCoefficients.b[0] * expressionDecayStart;
-		let shelfB1: number = Synth.tempFilterStartCoefficients.b[1] * expressionDecayStart;
-		const shelfPhaseDelayStart: number = -synth.tempFrequencyResponse.angle() / centerHarmonicStart;
-		
-		Synth.tempFilterEndCoefficients.highShelf1stOrder(shelfRadians, shelfGainEnd);
-		synth.tempFrequencyResponse.analyze(Synth.tempFilterEndCoefficients, centerHarmonicEnd);
-		const shelfA1End: number = +Synth.tempFilterEndCoefficients.a[1];
-		const shelfB0End: number = Synth.tempFilterEndCoefficients.b[0] * expressionDecayEnd;
-		const shelfB1End: number = Synth.tempFilterEndCoefficients.b[1] * expressionDecayEnd;
-		const shelfPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
-		
-		const periodLengthStart: number = 1.0 / phaseDeltaStart;
-		const periodLengthEnd: number = 1.0 / phaseDeltaEnd;
-		let delayLength: number = periodLengthStart - allPassPhaseDelayStart - shelfPhaseDelayStart;
-		const delayLengthEnd: number = periodLengthEnd - allPassPhaseDelayEnd - shelfPhaseDelayEnd;
-		
-		const delayLengthDelta: number = (delayLengthEnd - delayLength) / runLength;
-		const allPassGDelta: number = (allPassGEnd - allPassG) / runLength;
-		const shelfA1Delta: number = (shelfA1End - shelfA1) / runLength;
-		const shelfB0Delta: number = (shelfB0End - shelfB0) / runLength;
-		const shelfB1Delta: number = (shelfB1End - shelfB1) / runLength;
-		
-		const filters: DynamicBiquadFilter[] = tone.noteFilters;
-		const filterCount: number = tone.noteFilterCount|0;
-		let initialFilterInput1: number = +tone.initialNoteFilterInput1;
-		let initialFilterInput2: number = +tone.initialNoteFilterInput2;
-		const applyFilters: Function = Synth.applyFilters;
-		
-		const pitchChanged: boolean = Math.abs(Math.log2(delayLength / prevDelayLength)) > 0.01;
-		let delayIndex: number = pickedString.delayIndex|0;
-		if (delayIndex == -1 || pitchChanged)  {
-			// -1 delay index means the tone was reset.
-			// Also, if the pitch changed suddenly (e.g. from seamless or arpeggio) then reset the wave.
+		const voiceCount: number = Config.unisons[instrument.unison].voices;
+		let pickedStringFunction: Function = Synth.pickedStringFunctionCache[voiceCount];
+		if (pickedStringFunction == undefined) {
+			let pickedStringSource: string = "";
 			
-			delayIndex = 0;
-			allPassSample = 0.0;
-			allPassPrevInput = 0.0;
-			shelfSample = 0.0;
-			shelfPrevInput = 0.0;
-			fractionalDelaySample = 0.0;
+			pickedStringSource += `
+				
+				const Config = beepbox.Config;
+				const Synth = beepbox.Synth;
+				const NoteAutomationStringSustainIndex = ${NoteAutomationIndex.stringSustain};
+				const voiceCount = ${voiceCount};
+				const data = synth.tempMonoInstrumentSampleBuffer;
+				
+				const delayBufferMask = synth.stringDelayBufferMask >>> 0;
+				
+				const sustainEnvelopeStart = tone.envelopeComputer.envelopeStarts[NoteAutomationStringSustainIndex];
+				const sustainEnvelopeEnd   = tone.envelopeComputer.envelopeEnds[  NoteAutomationStringSustainIndex];
+				const stringDecayStart = 1.0 - Math.min(1.0, sustainEnvelopeStart * instrument.stringSustain / (Config.stringSustainRange - 1));
+				const stringDecayEnd   = 1.0 - Math.min(1.0, sustainEnvelopeEnd   * instrument.stringSustain / (Config.stringSustainRange - 1));
+				
+				let pickedString# = tone.pickedStrings[#];
+				
+				if (pickedString#.delayLine == null || pickedString#.delayLine.length < synth.stringDelayBufferSize) pickedString#.delayLine = new Float32Array(synth.stringDelayBufferSize);
+				const delayLine# = pickedString#.delayLine;
+				const prevDelayLength# = +pickedString#.prevDelayLength;
+				let allPassSample# = +pickedString#.allPassSample;
+				let allPassPrevInput# = +pickedString#.allPassPrevInput;
+				let shelfSample# = +pickedString#.shelfSample;
+				let shelfPrevInput# = +pickedString#.shelfPrevInput;
+				let fractionalDelaySample# = +pickedString#.fractionalDelaySample;
+				
+				let expression = +tone.expressionStarts[0];
+				const expressionDelta = +tone.expressionDeltas[0];
+				
+				const phaseDeltaStart# = +tone.phaseDeltas[#];
+				const phaseDeltaScale# = +tone.phaseDeltaScales[#];
+				const phaseDeltaEnd# = phaseDeltaStart# * Math.pow(phaseDeltaScale#, runLength);
+				
+				const radiansPerSampleStart# = Math.PI * 2.0 * phaseDeltaStart#;
+				const radiansPerSampleEnd#   = Math.PI * 2.0 * phaseDeltaEnd#;
+				
+				const centerHarmonicStart# = radiansPerSampleStart# * 2.0;
+				const centerHarmonicEnd#   = radiansPerSampleEnd# * 2.0;
+				
+				const allPassCenter = 2.0 * Math.PI * Config.pickedStringDispersionCenterFreq / synth.samplesPerSecond;
+				const allPassRadiansStart# = Math.min(Math.PI, radiansPerSampleStart# * Config.pickedStringDispersionFreqMult * Math.pow(allPassCenter / radiansPerSampleStart#, Config.pickedStringDispersionFreqScale));
+				const allPassRadiansEnd# = Math.min(Math.PI, radiansPerSampleEnd# * Config.pickedStringDispersionFreqMult * Math.pow(allPassCenter / radiansPerSampleEnd#, Config.pickedStringDispersionFreqScale));
+				
+				const shelfRadians = 2.0 * Math.PI * Config.pickedStringShelfHz / synth.samplesPerSecond;
+				const decayCurveStart = (Math.pow(100.0, stringDecayStart) - 1.0) / 99.0;
+				const decayCurveEnd   = (Math.pow(100.0, stringDecayEnd  ) - 1.0) / 99.0;
+				const decayRateStart# = Math.pow(0.5, decayCurveStart * shelfRadians / radiansPerSampleStart#);
+				const decayRateEnd#   = Math.pow(0.5, decayCurveEnd   * shelfRadians / radiansPerSampleEnd#);
+				const shelfGainStart# = Math.pow(decayRateStart#, Config.stringDecayRate);
+				const shelfGainEnd#   = Math.pow(decayRateEnd#,   Config.stringDecayRate);
+				const expressionDecayStart# = Math.pow(decayRateStart#, 0.002);
+				const expressionDecayEnd#   = Math.pow(decayRateEnd#,   0.002);`
 			
-			// Clear away a region of the delay buffer for the new impulse.
-			const startImpulseFrom: number = -delayLength;
-			const startZerosFrom: number = Math.floor(startImpulseFrom - periodLengthStart / 2);
-			const stopZerosAt: number = Math.ceil(startZerosFrom + periodLengthStart * 2);
-			pickedString.delayResetOffset = stopZerosAt; // And continue clearing the area in front of the delay line.
-			for (let i: number = startZerosFrom; i <= stopZerosAt; i++) {
-				delayLine[i & delayBufferMask] = 0.0;
+			for (let voice: number = 0; voice < voiceCount; voice++) {
+				pickedStringSource += `
+				
+				Synth.tempFilterStartCoefficients.allPass1stOrderInvertPhaseAbove(allPassRadiansStart#);
+				synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart#);
+				let allPassG# = +Synth.tempFilterStartCoefficients.b[0]; /* same as a[1] */
+				const allPassPhaseDelayStart# = -synth.tempFrequencyResponse.angle() / centerHarmonicStart#;
+				
+				Synth.tempFilterEndCoefficients.allPass1stOrderInvertPhaseAbove(allPassRadiansEnd#);
+				synth.tempFrequencyResponse.analyze(Synth.tempFilterEndCoefficients, centerHarmonicEnd#);
+				const allPassGEnd# = +Synth.tempFilterEndCoefficients.b[0]; /* same as a[1] */
+				const allPassPhaseDelayEnd# = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd#;
+				
+				Synth.tempFilterStartCoefficients.highShelf1stOrder(shelfRadians, shelfGainStart#);
+				synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart#)
+				let shelfA1# = +Synth.tempFilterStartCoefficients.a[1]
+				let shelfB0# = Synth.tempFilterStartCoefficients.b[0] * expressionDecayStart#
+				let shelfB1# = Synth.tempFilterStartCoefficients.b[1] * expressionDecayStart#
+				const shelfPhaseDelayStart# = -synth.tempFrequencyResponse.angle() / centerHarmonicStart#;
+				
+				Synth.tempFilterEndCoefficients.highShelf1stOrder(shelfRadians, shelfGainEnd#)
+				synth.tempFrequencyResponse.analyze(Synth.tempFilterEndCoefficients, centerHarmonicEnd#)
+				const shelfA1End# = +Synth.tempFilterEndCoefficients.a[1]
+				const shelfB0End# = Synth.tempFilterEndCoefficients.b[0] * expressionDecayEnd#
+				const shelfB1End# = Synth.tempFilterEndCoefficients.b[1] * expressionDecayEnd#
+				const shelfPhaseDelayEnd# = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd#;`.replace(/\#/g, String(voice));
 			}
 			
-			const impulseWave: Float32Array = instrument.harmonicsWave.getCustomWave(instrument.type);
-			const impulseWaveLength: number = impulseWave.length - 1; // The first sample is duplicated at the end, don't double-count it.
-			const impulsePhaseDelta: number = impulseWaveLength / periodLengthStart;
-			if (impulseWaveLength <= Math.ceil(periodLengthStart)) {
-				throw new Error("Picked string delay buffer too small to contain wave, buffer: " + impulseWaveLength + ", period: " + periodLengthStart);
+			pickedStringSource += `
+				
+				const periodLengthStart# = 1.0 / phaseDeltaStart#;
+				const periodLengthEnd# = 1.0 / phaseDeltaEnd#;
+				let delayLength# = periodLengthStart# - allPassPhaseDelayStart# - shelfPhaseDelayStart#;
+				const delayLengthEnd# = periodLengthEnd# - allPassPhaseDelayEnd# - shelfPhaseDelayEnd#;
+				
+				const delayLengthDelta# = (delayLengthEnd# - delayLength#) / runLength;
+				const allPassGDelta# = (allPassGEnd# - allPassG#) / runLength;
+				const shelfA1Delta# = (shelfA1End# - shelfA1#) / runLength;
+				const shelfB0Delta# = (shelfB0End# - shelfB0#) / runLength;
+				const shelfB1Delta# = (shelfB1End# - shelfB1#) / runLength;
+				
+				const filters = tone.noteFilters;
+				const filterCount = tone.noteFilterCount|0;
+				let initialFilterInput1 = +tone.initialNoteFilterInput1;
+				let initialFilterInput2 = +tone.initialNoteFilterInput2;
+				const applyFilters = Synth.applyFilters;
+				
+				const pitchChanged# = Math.abs(Math.log2(delayLength# / prevDelayLength#)) > 0.01;
+				let delayIndex# = pickedString#.delayIndex|0;`
+			
+			for (let voice: number = 0; voice < voiceCount; voice++) {
+				pickedStringSource += `
+					
+				if (delayIndex# == -1 || pitchChanged#)  {
+					// -1 delay index means the tone was reset.
+					// Also, if the pitch changed suddenly (e.g. from seamless or arpeggio) then reset the wave.
+					
+					delayIndex# = 0;
+					allPassSample# = 0.0;
+					allPassPrevInput# = 0.0;
+					shelfSample# = 0.0;
+					shelfPrevInput# = 0.0;
+					fractionalDelaySample# = 0.0;
+					
+					// Clear away a region of the delay buffer for the new impulse.
+					const startImpulseFrom = -delayLength#;
+					const startZerosFrom = Math.floor(startImpulseFrom - periodLengthStart# / 2);
+					const stopZerosAt = Math.ceil(startZerosFrom + periodLengthStart# * 2);
+					pickedString#.delayResetOffset = stopZerosAt; // And continue clearing the area in front of the delay line.
+					for (let i = startZerosFrom; i <= stopZerosAt; i++) {
+						delayLine#[i & delayBufferMask] = 0.0;
+					}
+					
+					const impulseWave = instrument.harmonicsWave.getCustomWave(instrument.type);
+					const impulseWaveLength = impulseWave.length - 1; // The first sample is duplicated at the end, don't double-count it.
+					const impulsePhaseDelta = impulseWaveLength / periodLengthStart#;
+					if (impulseWaveLength <= Math.ceil(periodLengthStart#)) {
+						throw new Error("Picked string delay buffer too small to contain wave, buffer: " + impulseWaveLength + ", period: " + periodLengthStart#);
+					}
+					
+					const startImpulseFromSample = Math.ceil(startImpulseFrom);
+					const stopImpulseAtSample = Math.floor(startImpulseFrom + periodLengthStart#);
+					const startImpulsePhase = (startImpulseFromSample - startImpulseFrom) * impulsePhaseDelta;
+		
+					let impulsePhase = startImpulsePhase;
+					let prevWaveIntegral = 0.0;
+					for (let i = startImpulseFromSample; i <= stopImpulseAtSample; i++) {
+						const impulsePhaseInt = impulsePhase|0;
+						const index = impulsePhaseInt % impulseWaveLength;
+						let nextWaveIntegral = impulseWave[index];
+						const phaseRatio = impulsePhase - impulsePhaseInt;
+						nextWaveIntegral += (impulseWave[index+1] - nextWaveIntegral) * phaseRatio;
+						const sample = (nextWaveIntegral - prevWaveIntegral) / impulsePhaseDelta;
+						delayLine#[i & delayBufferMask] += sample;
+						prevWaveIntegral = nextWaveIntegral;
+						impulsePhase += impulsePhaseDelta;
+					}
+				}
+				delayIndex# = (delayIndex# & delayBufferMask) + synth.stringDelayBufferSize;`.replace(/\#/g, String(voice));
 			}
 			
-			const startImpulseFromSample: number = Math.ceil(startImpulseFrom);
-			const stopImpulseAtSample: number = Math.floor(startImpulseFrom + periodLengthStart);
-			const startImpulsePhase: number = (startImpulseFromSample - startImpulseFrom) * impulsePhaseDelta;
-
-			let impulsePhase: number = startImpulsePhase;
-			let prevWaveIntegral: number = 0.0;
-			for (let i: number = startImpulseFromSample; i <= stopImpulseAtSample; i++) {
-				const impulsePhaseInt: number = impulsePhase|0;
-				const index: number = impulsePhaseInt % impulseWaveLength;
-				let nextWaveIntegral: number = impulseWave[index];
-				const phaseRatio: number = impulsePhase - impulsePhaseInt;
-				nextWaveIntegral += (impulseWave[index+1] - nextWaveIntegral) * phaseRatio;
-				const sample: number = (nextWaveIntegral - prevWaveIntegral) / impulsePhaseDelta;
-				delayLine[i & delayBufferMask] += sample;
-				prevWaveIntegral = nextWaveIntegral;
-				impulsePhase += impulsePhaseDelta;
+			pickedStringSource += `
+				
+				const unisonSign = tone.specialIntervalExpressionMult * Config.unisons[instrument.unison].sign;
+				const delayResetOffset# = pickedString#.delayResetOffset|0;
+				
+				const stopIndex = bufferIndex + runLength;
+				for (let sampleIndex = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
+					const targetSampleTime# = delayIndex# - delayLength#;
+					const lowerIndex# = (targetSampleTime# + 0.125) | 0; // Offset to improve stability of all-pass filter.
+					const upperIndex# = lowerIndex# + 1;
+					const fractionalDelay# = upperIndex# - targetSampleTime#;
+					const fractionalDelayG# = (1.0 - fractionalDelay#) / (1.0 + fractionalDelay#); // Inlined version of FilterCoefficients.prototype.allPass1stOrderFractionalDelay
+					const prevInput# = delayLine#[lowerIndex# & delayBufferMask];
+					const input# = delayLine#[upperIndex# & delayBufferMask];
+					fractionalDelaySample# = fractionalDelayG# * input# + prevInput# - fractionalDelayG# * fractionalDelaySample#;
+					
+					allPassSample# = fractionalDelaySample# * allPassG# + allPassPrevInput# - allPassG# * allPassSample#;
+					allPassPrevInput# = fractionalDelaySample#;
+					
+					shelfSample# = shelfB0# * allPassSample# + shelfB1# * shelfPrevInput# - shelfA1# * shelfSample#;
+					shelfPrevInput# = allPassSample#;
+					
+					delayLine#[delayIndex# & delayBufferMask] += shelfSample#;
+					delayLine#[(delayIndex# + delayResetOffset#) & delayBufferMask] = 0.0;
+					delayIndex#++;
+					
+					const inputSample = (`
+			
+			const sampleList: string[] = [];
+			for (let voice: number = 0; voice < voiceCount; voice++) {
+				sampleList.push("fractionalDelaySample" + voice + (voice == 1 ? " * unisonSign" : ""));
 			}
+			
+			pickedStringSource += sampleList.join(" + ");
+			
+			pickedStringSource += `) * expression;
+					const sample = applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+					initialFilterInput2 = initialFilterInput1;
+					initialFilterInput1 = inputSample;
+					data[sampleIndex] += sample;
+					
+					expression += expressionDelta;
+					delayLength# += delayLengthDelta#;
+					allPassG# += allPassGDelta#;
+					shelfA1# += shelfA1Delta#;
+					shelfB0# += shelfB0Delta#;
+					shelfB1# += shelfB1Delta#;
+				}
+				
+				// Avoid persistent denormal or NaN values in the delay buffers and filter history.
+				const epsilon = (1.0e-24);
+				if (!Number.isFinite(allPassSample#) || Math.abs(allPassSample#) < epsilon) allPassSample# = 0.0;
+				if (!Number.isFinite(allPassPrevInput#) || Math.abs(allPassPrevInput#) < epsilon) allPassPrevInput# = 0.0;
+				if (!Number.isFinite(shelfSample#) || Math.abs(shelfSample#) < epsilon) shelfSample# = 0.0;
+				if (!Number.isFinite(shelfPrevInput#) || Math.abs(shelfPrevInput#) < epsilon) shelfPrevInput# = 0.0;
+				if (!Number.isFinite(fractionalDelaySample#) || Math.abs(fractionalDelaySample#) < epsilon) fractionalDelaySample# = 0.0;
+				pickedString#.allPassSample = allPassSample#;
+				pickedString#.allPassPrevInput = allPassPrevInput#;
+				pickedString#.shelfSample = shelfSample#;
+				pickedString#.shelfPrevInput = shelfPrevInput#;
+				pickedString#.fractionalDelaySample = fractionalDelaySample#;
+				pickedString#.delayIndex = delayIndex#;
+				pickedString#.prevDelayLength = delayLength#;
+				
+				synth.sanitizeFilters(filters);
+				tone.initialNoteFilterInput1 = initialFilterInput1;
+				tone.initialNoteFilterInput2 = initialFilterInput2;`
+			
+			// Duplicate lines containing "#" for each voice and replace the "#" with the voice index.
+			pickedStringSource = pickedStringSource.replace(/^.*\#.*$/mg, line => {
+				const lines = [];
+				for (let voice: number = 0; voice < voiceCount; voice++) {
+					lines.push(line.replace(/\#/g, String(voice)));
+				}
+				return lines.join("\n");
+			});
+			
+			//console.log(pickedStringSource);
+			pickedStringFunction = new Function("synth", "bufferIndex", "runLength", "tone", "instrument", pickedStringSource);
+			Synth.pickedStringFunctionCache[voiceCount] = pickedStringFunction;
 		}
-		delayIndex = (delayIndex & delayBufferMask) + synth.stringDelayBufferSize;
 		
-		const delayResetOffset: number = pickedString.delayResetOffset|0;
-		
-		const stopIndex: number = bufferIndex + runLength;
-		for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
-			const targetSampleTime: number = delayIndex - delayLength;
-			const lowerIndex: number = (targetSampleTime + 0.125) | 0; // Offset to improve stability of all-pass filter.
-			const upperIndex: number = lowerIndex + 1;
-			const fractionalDelay: number = upperIndex - targetSampleTime;
-			const fractionalDelayG: number = (1.0 - fractionalDelay) / (1.0 + fractionalDelay); // Inlined version of FilterCoefficients.prototype.allPass1stOrderFractionalDelay
-			const prevInput: number = delayLine[lowerIndex & delayBufferMask];
-			const input: number = delayLine[upperIndex & delayBufferMask];
-			fractionalDelaySample = fractionalDelayG * input + prevInput - fractionalDelayG * fractionalDelaySample;
-			
-			allPassSample = fractionalDelaySample * allPassG + allPassPrevInput - allPassG * allPassSample;
-			allPassPrevInput = fractionalDelaySample;
-			
-			shelfSample = shelfB0 * allPassSample + shelfB1 * shelfPrevInput - shelfA1 * shelfSample;
-			shelfPrevInput = allPassSample;
-			
-			delayLine[delayIndex & delayBufferMask] += shelfSample;
-			delayLine[(delayIndex + delayResetOffset) & delayBufferMask] = 0.0;
-			delayIndex++;
-			
-			const inputSample: number = fractionalDelaySample * expression;
-			const sample: number = applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
-			initialFilterInput2 = initialFilterInput1;
-			initialFilterInput1 = inputSample;
-			data[sampleIndex] += sample;
-			
-			expression += expressionDelta;
-			delayLength += delayLengthDelta;
-			allPassG += allPassGDelta;
-			shelfA1 += shelfA1Delta;
-			shelfB0 += shelfB0Delta;
-			shelfB1 += shelfB1Delta;
-		}
-		
-		if (!Number.isFinite(allPassSample) || Math.abs(allPassSample) < epsilon) allPassSample = 0.0;
-		if (!Number.isFinite(allPassPrevInput) || Math.abs(allPassPrevInput) < epsilon) allPassPrevInput = 0.0;
-		if (!Number.isFinite(shelfSample) || Math.abs(shelfSample) < epsilon) shelfSample = 0.0;
-		if (!Number.isFinite(shelfPrevInput) || Math.abs(shelfPrevInput) < epsilon) shelfPrevInput = 0.0;
-		if (!Number.isFinite(fractionalDelaySample) || Math.abs(fractionalDelaySample) < epsilon) fractionalDelaySample = 0.0;
-		pickedString.allPassSample = allPassSample;
-		pickedString.allPassPrevInput = allPassPrevInput;
-		pickedString.shelfSample = shelfSample;
-		pickedString.shelfPrevInput = shelfPrevInput;
-		pickedString.fractionalDelaySample = fractionalDelaySample;
-		pickedString.delayIndex = delayIndex;
-		pickedString.prevDelayLength = delayLength;
-		
-		synth.sanitizeFilters(filters);
-		tone.initialNoteFilterInput1 = initialFilterInput1;
-		tone.initialNoteFilterInput2 = initialFilterInput2;
+		pickedStringFunction(synth, bufferIndex, runLength, tone, instrument);
 	}
 	
 	private static effectsSynth(synth: Synth, outputDataL: Float32Array, outputDataR: Float32Array, bufferIndex: number, runLength: number, instrument: Instrument, instrumentState: InstrumentState): void {
