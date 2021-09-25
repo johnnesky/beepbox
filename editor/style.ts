@@ -771,6 +771,85 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	-webkit-mask-position: center;
 }
 
+.beepboxEditor .instrument-bar {
+	display: flex;
+	gap: 2px;
+}
+
+.beepboxEditor .instrument-bar button {
+	flex-grow: 1;
+	min-width: 0;
+	padding: 0;
+	flex-basis: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-color-lit);
+}
+
+.beepboxEditor .instrument-bar .remove-instrument, .beepboxEditor .instrument-bar .add-instrument {
+	max-width: var(--button-size);
+}
+
+.beepboxEditor .instrument-bar > :not(:first-child) {
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+}
+
+.beepboxEditor .instrument-bar > :not(.last-button) {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.beepboxEditor .instrument-bar .selected-instrument {
+	background: var(--background-color-lit);
+	color: ${ColorConfig.invertedText};
+}
+
+.beepboxEditor .instrument-bar .deactivated {
+	background: ${ColorConfig.editorBackground};
+	color: var(--text-color-dim);
+}
+
+.beepboxEditor .instrument-bar .deactivated.selected-instrument {
+	background: var(--background-color-dim);
+	color: ${ColorConfig.invertedText};
+}
+
+.beepboxEditor .instrument-bar .remove-instrument::before {
+	content: "";
+	position: absolute;
+	width: 100%;
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--close-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--close-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+
+.beepboxEditor .instrument-bar .add-instrument::before {
+	content: "";
+	position: absolute;
+	width: 100%;
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--add-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--add-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+
 .beepboxEditor canvas {
 	overflow: hidden;
 	position: absolute;

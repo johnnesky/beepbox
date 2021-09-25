@@ -1,20 +1,21 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import {Config} from "../synth/SynthConfig";
-import {Pattern, Song, Synth} from "../synth/synth";
+import {Pattern, Channel, Song, Synth} from "../synth/synth";
 import {SongRecovery, generateUid} from "./SongRecovery";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
 import {Selection} from "./Selection";
 import {Change} from "./Change";
 import {ChangeNotifier} from "./ChangeNotifier";
-import {ChangeSong, setDefaultInstruments} from "./changes";
+import {ChangeSong, setDefaultInstruments, discardInvalidPatternInstruments} from "./changes";
 
 interface HistoryState {
 	canUndo: boolean;
 	sequenceNumber: number;
 	bar: number;
 	channel: number;
+	instrument: number;
 	recoveryUid: string;
 	prompt: string | null;
 	selection: {x0: number, x1: number, y0: number, y1: number, start: number, end: number};
@@ -43,6 +44,8 @@ export class SongDocument {
 	public displayBrowserUrl: boolean;
 	public volume: number = 75;
 	public visibleOctaves: number = SongDocument.defaultVisibleOctaves;
+	public recentPatternInstruments: number[][] = [];
+	public viewedInstrument: number[] = [];
 	
 	public trackVisibleBars: number = 16;
 	public trackVisibleChannels: number = 4;
@@ -61,7 +64,7 @@ export class SongDocument {
 	private _waitingToUpdateState: boolean = false;
 	
 	constructor() {
-		this.notifier.watch(this._normalizeSelection);
+		this.notifier.watch(this._validateDocState);
 		
 		this.autoPlay = window.localStorage.getItem("autoPlay") == "true";
 		this.autoFollow = window.localStorage.getItem("autoFollow") == "true";
@@ -108,15 +111,17 @@ export class SongDocument {
 		let state: HistoryState | null = this._getHistoryState();
 		if (state == null) {
 			// When the page is first loaded, indicate that undo is NOT possible.
-			state = {canUndo: false, sequenceNumber: 0, bar: 0, channel: 0, recoveryUid: generateUid(), prompt: null, selection: this.selection.toJSON()};
+			state = {canUndo: false, sequenceNumber: 0, bar: 0, channel: 0, instrument: 0, recoveryUid: generateUid(), prompt: null, selection: this.selection.toJSON()};
 		}
 		if (state.recoveryUid == undefined) state.recoveryUid = generateUid();
 		this._replaceState(state, songString);
 		window.addEventListener("hashchange", this._whenHistoryStateChanged);
 		window.addEventListener("popstate", this._whenHistoryStateChanged);
 		
-		this.bar = state.bar;
-		this.channel = state.channel;
+		this.bar = state.bar | 0;
+		this.channel = state.channel | 0;
+		for (let i: number = 0; i <= this.channel; i++) this.viewedInstrument[i] = 0;
+		this.viewedInstrument[this.channel] = state.instrument | 0;
 		this._recoveryUid = state.recoveryUid;
 		//this.barScrollPos = Math.max(0, this.bar - (this.trackVisibleBars - 6));
 		this.prompt = state.prompt;
@@ -129,6 +134,8 @@ export class SongDocument {
 		for (const eventName of ["input", "change", "click", "keyup", "keydown", "mousedown", "mousemove", "mouseup", "touchstart", "touchmove", "touchend", "touchcancel"]) {
 			window.addEventListener(eventName, this._cleanDocument);
 		}
+		
+		this._validateDocState();
 	}
 	
 	public toggleDisplayBrowserUrl() {
@@ -220,7 +227,7 @@ export class SongDocument {
 			// The user changed the hash directly.
 			this._sequenceNumber++;
 			this._resetSongRecoveryUid();
-			const state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: null, selection: this.selection.toJSON()};
+			const state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, instrument: this.viewedInstrument[this.channel], recoveryUid: this._recoveryUid, prompt: null, selection: this.selection.toJSON()};
 			new ChangeSong(this, window.location.hash);
 			this.prompt = state.prompt;
 			if (this.displayBrowserUrl) {
@@ -241,6 +248,7 @@ export class SongDocument {
 		
 		this.bar = state.bar;
 		this.channel = state.channel;
+		this.viewedInstrument[this.channel] = state.instrument;
 		this._sequenceNumber = state.sequenceNumber;
 		this.prompt = state.prompt;
 		new ChangeSong(this, this._getHash());
@@ -258,7 +266,50 @@ export class SongDocument {
 		this.notifier.notifyWatchers();
 	}
 	
-	private _normalizeSelection = (): void => {
+	private _validateDocState = (): void => {
+		const channelCount: number = this.song.getChannelCount();
+		for (let i: number = this.recentPatternInstruments.length; i < channelCount; i++) {
+			this.recentPatternInstruments[i] = [0];
+		}
+		this.recentPatternInstruments.length = channelCount;
+		for (let i: number = 0; i < channelCount; i++) {
+			if (i == this.channel) {
+				if (this.song.patternInstruments) {
+					const pattern: Pattern | null = this.song.getPattern(this.channel, this.bar);
+					if (pattern != null) {
+						this.recentPatternInstruments[i] = pattern.instruments.concat();
+					}
+				} else {
+					const channel: Channel = this.song.channels[this.channel];
+					for (let j: number = 0; j < channel.instruments.length; j++) {
+						this.recentPatternInstruments[i][j] = j;
+					}
+					this.recentPatternInstruments[i].length = channel.instruments.length;
+				}
+			}
+			discardInvalidPatternInstruments(this.recentPatternInstruments[i], this.song, i);
+		}
+		
+		for (let i: number = this.viewedInstrument.length; i < channelCount; i++) {
+			this.viewedInstrument[i] = 0;
+		}
+		this.viewedInstrument.length = channelCount;
+		for (let i: number = 0; i < channelCount; i++) {
+			if (this.song.patternInstruments && !this.song.layeredInstruments && i == this.channel) {
+				const pattern: Pattern | null = this.song.getPattern(this.channel, this.bar);
+				if (pattern != null) {
+					this.viewedInstrument[i] = pattern.instruments[0];
+				}
+			}
+			this.viewedInstrument[i] = Math.min(this.viewedInstrument[i], this.song.channels[i].instruments.length - 1);
+		}
+		
+		const highlightedPattern: Pattern | null = this.getCurrentPattern();
+		if (highlightedPattern != null) {
+			this.recentPatternInstruments[this.channel] = highlightedPattern.instruments.concat();
+		}
+		
+		// Normalize selection.
 		// I'm allowing the doc.bar to drift outside the box selection while playing
 		// because it may auto-follow the playhead outside the selection but it would
 		// be annoying to lose your selection just because the song is playing.
@@ -266,7 +317,7 @@ export class SongDocument {
 			this.channel < this.selection.boxSelectionChannel ||
 			this.selection.boxSelectionChannel + this.selection.boxSelectionHeight <= this.channel ||
 			this.song.barCount < this.selection.boxSelectionBar + this.selection.boxSelectionWidth ||
-			this.song.getChannelCount() < this.selection.boxSelectionChannel + this.selection.boxSelectionHeight ||
+			channelCount < this.selection.boxSelectionChannel + this.selection.boxSelectionHeight ||
 			(this.selection.boxSelectionWidth == 1 && this.selection.boxSelectionHeight == 1))
 		{
 			this.selection.resetBoxSelection();
@@ -282,7 +333,7 @@ export class SongDocument {
 		} else {
 			this._recovery.saveVersion(this._recoveryUid, hash);
 		}
-		let state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: this.prompt, selection: this.selection.toJSON()};
+		let state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, instrument: this.viewedInstrument[this.channel], recoveryUid: this._recoveryUid, prompt: this.prompt, selection: this.selection.toJSON()};
 		if (this._stateShouldBePushed) {
 			this._pushState(state, hash);
 		} else {
@@ -319,7 +370,7 @@ export class SongDocument {
 		this.prompt = prompt;
 		const hash: string = this.song.toBase64String();
 		this._sequenceNumber++;
-		const state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, recoveryUid: this._recoveryUid, prompt: this.prompt, selection: this.selection.toJSON()};
+		const state = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, instrument: this.viewedInstrument[this.channel], recoveryUid: this._recoveryUid, prompt: this.prompt, selection: this.selection.toJSON()};
 		this._pushState(state, hash);
 	}
 	
@@ -385,8 +436,7 @@ export class SongDocument {
 	}
 	
 	public getCurrentInstrument(barOffset: number = 0): number {
-		const pattern: Pattern | null = this.getCurrentPattern(barOffset);
-		return pattern == null ? 0 : pattern.instrument;
+		return this.viewedInstrument[this.channel];
 	}
 	
 	public getMobileLayout(): boolean {

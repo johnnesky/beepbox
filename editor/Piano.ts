@@ -182,6 +182,7 @@ export class Piano {
 		this._updateCursorPitch();
 		if (this._mouseDown) this._playLiveInput();
 		this._doc.synth.liveInputChannel = this._doc.channel;
+		this._doc.synth.liveInputInstruments = this._doc.recentPatternInstruments[this._doc.channel];
 		
 		if (!this._doc.showLetters) return;
 		if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key && this._renderedDrums == isDrum && this._renderedPitchCount == this._pitchCount) return;

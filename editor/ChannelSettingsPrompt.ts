@@ -5,19 +5,20 @@ import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {SongDocument} from "./SongDocument";
 import {Prompt} from "./Prompt";
 import {ChangeGroup} from "./Change";
-import {ChangePatternsPerChannel, ChangeInstrumentsPerChannel, ChangeChannelCount} from "./changes";
+import {ChangePatternsPerChannel, ChangeInstrumentsFlags, ChangeChannelCount} from "./changes";
 
-const {button, div, h2, input} = HTML;
+const {button, div, br, h2, input} = HTML;
 
 export class ChannelSettingsPrompt implements Prompt {
 	private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
-	private readonly _instrumentsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 	private readonly _pitchChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
 	private readonly _drumChannelStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
+	private readonly _layeredInstrumentsBox: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "checkbox"});
+	private readonly _patternInstrumentsBox: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "checkbox"});
 	private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
 	private readonly _okayButton: HTMLButtonElement = button({class: "okayButton", style: "width:45%;"}, "Okay");
 	
-	public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 250px;"},
+	public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 250px; text-align: right;"},
 		h2("Channel Settings"),
 		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 			"Pitch channels:",
@@ -28,12 +29,20 @@ export class ChannelSettingsPrompt implements Prompt {
 			this._drumChannelStepper,
 		),
 		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Patterns per channel:",
+			"Available patterns per channel:",
 			this._patternsStepper,
 		),
 		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Instruments per channel:",
-			this._instrumentsStepper,
+			"Simultaneous instruments",
+			br(),
+			"per channel:",
+			this._layeredInstrumentsBox,
+		),
+		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+			"Different instruments",
+			br(),
+			"per pattern:",
+			this._patternInstrumentsBox,
 		),
 		div({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
 			this._okayButton,
@@ -46,10 +55,6 @@ export class ChannelSettingsPrompt implements Prompt {
 		this._patternsStepper.min = "1";
 		this._patternsStepper.max = Config.barCountMax + "";
 		
-		this._instrumentsStepper.value = this._doc.song.instrumentsPerChannel + "";
-		this._instrumentsStepper.min = Config.instrumentsPerChannelMin + "";
-		this._instrumentsStepper.max = Config.instrumentsPerChannelMax + "";
-		
 		this._pitchChannelStepper.value = this._doc.song.pitchChannelCount + "";
 		this._pitchChannelStepper.min = Config.pitchChannelCountMin + "";
 		this._pitchChannelStepper.max = Config.pitchChannelCountMax + "";
@@ -58,19 +63,20 @@ export class ChannelSettingsPrompt implements Prompt {
 		this._drumChannelStepper.min = Config.noiseChannelCountMin + "";
 		this._drumChannelStepper.max = Config.noiseChannelCountMax + "";
 		
+		this._layeredInstrumentsBox.checked = this._doc.song.layeredInstruments;
+		this._patternInstrumentsBox.checked = this._doc.song.patternInstruments;
+		
 		this._pitchChannelStepper.select();
 		setTimeout(()=>this._pitchChannelStepper.focus());
 		
 		this._okayButton.addEventListener("click", this._saveChanges);
 		this._cancelButton.addEventListener("click", this._close);
 		this._patternsStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
-		this._instrumentsStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
 		this._pitchChannelStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
 		this._drumChannelStepper.addEventListener("keypress", ChannelSettingsPrompt._validateKey);
-		this._patternsStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
-		this._instrumentsStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
-		this._pitchChannelStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
-		this._drumChannelStepper.addEventListener("blur", ChannelSettingsPrompt._validateNumber);
+		this._patternsStepper.addEventListener("blur", this._validateNumber);
+		this._pitchChannelStepper.addEventListener("blur", this._validateNumber);
+		this._drumChannelStepper.addEventListener("blur", this._validateNumber);
 		this.container.addEventListener("keydown", this._whenKeyPressed);
 	}
 	
@@ -82,13 +88,11 @@ export class ChannelSettingsPrompt implements Prompt {
 		this._okayButton.removeEventListener("click", this._saveChanges);
 		this._cancelButton.removeEventListener("click", this._close);
 		this._patternsStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
-		this._instrumentsStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
 		this._pitchChannelStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
 		this._drumChannelStepper.removeEventListener("keypress", ChannelSettingsPrompt._validateKey);
-		this._patternsStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
-		this._instrumentsStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
-		this._pitchChannelStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
-		this._drumChannelStepper.removeEventListener("blur", ChannelSettingsPrompt._validateNumber);
+		this._patternsStepper.removeEventListener("blur", this._validateNumber);
+		this._pitchChannelStepper.removeEventListener("blur", this._validateNumber);
+		this._drumChannelStepper.removeEventListener("blur", this._validateNumber);
 		this.container.removeEventListener("keydown", this._whenKeyPressed);
 	}
 	
@@ -107,7 +111,7 @@ export class ChannelSettingsPrompt implements Prompt {
 		return false;
 	}
 	
-	private static _validateNumber(event: Event): void {
+	private _validateNumber = (event: Event): void => {
 		const input: HTMLInputElement = <HTMLInputElement>event.target;
 		input.value = String(ChannelSettingsPrompt._validate(input));
 	}
@@ -118,8 +122,8 @@ export class ChannelSettingsPrompt implements Prompt {
 	
 	private _saveChanges = (): void => {
 		const group: ChangeGroup = new ChangeGroup();
+		group.append(new ChangeInstrumentsFlags(this._doc, this._layeredInstrumentsBox.checked, this._patternInstrumentsBox.checked));
 		group.append(new ChangePatternsPerChannel(this._doc, ChannelSettingsPrompt._validate(this._patternsStepper)));
-		group.append(new ChangeInstrumentsPerChannel(this._doc, ChannelSettingsPrompt._validate(this._instrumentsStepper)));
 		group.append(new ChangeChannelCount(this._doc, ChannelSettingsPrompt._validate(this._pitchChannelStepper), ChannelSettingsPrompt._validate(this._drumChannelStepper)));
 		this._doc.prompt = null;
 		this._doc.record(group, true);

@@ -448,7 +448,8 @@ export class ImportPrompt implements Prompt {
 							pattern = new Pattern();
 							channel.patterns.push(pattern);
 							channel.bars[currentBar] = channel.patterns.length;
-							pattern.instrument = 0;
+							pattern.instruments[0] = 0;
+							pattern.instruments.length = 1;
 						}
 						
 						// Use the loudest volume setting for the instrument, since 
@@ -588,7 +589,8 @@ export class ImportPrompt implements Prompt {
 										channel.instruments.push(instrument);
 									}
 									
-									pattern.instrument = channel.instruments.indexOf(instrumentByProgram[currentProgram]);
+									pattern.instruments[0] = channel.instruments.indexOf(instrumentByProgram[currentProgram]);
+									pattern.instruments.length = 1;
 								}
 								
 								// Use the loudest volume setting for the instrument, since 
@@ -818,7 +820,7 @@ export class ImportPrompt implements Prompt {
 					channelA.instruments.push(instrument);
 				}
 				for (const pattern of channelB.patterns) {
-					pattern.instrument += channelAInstrumentCount;
+					pattern.instruments[0] += channelAInstrumentCount;
 					channelA.patterns.push(pattern);
 				}
 				for (let barIndex: number = 0; barIndex < channelA.bars.length && barIndex < channelB.bars.length; barIndex++) {
@@ -844,6 +846,8 @@ export class ImportPrompt implements Prompt {
 				song.key = key;
 				song.scale = 11;
 				song.rhythm = 1;
+				song.layeredInstruments = false;
+				song.patternInstruments = pitchChannels.some(channel => channel.instruments.length > 1) || noiseChannels.some(channel => channel.instruments.length > 1);
 				
 				removeDuplicatePatterns(pitchChannels);
 				removeDuplicatePatterns(noiseChannels);

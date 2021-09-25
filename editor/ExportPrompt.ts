@@ -526,7 +526,7 @@ export class ExportPrompt implements Prompt {
 					
 					if (pattern != null) {
 						
-						const instrumentIndex: number = pattern.instrument;
+						const instrumentIndex: number = pattern.instruments[0]; // Don't bother trying to export multiple instruments per pattern to midi, just pick the first one.
 						const instrument: Instrument = song.channels[channel].instruments[instrumentIndex];
 						const preset: Preset | null = EditorConfig.valueToPreset(instrument.preset);
 						writeInstrumentSettings(instrumentIndex);

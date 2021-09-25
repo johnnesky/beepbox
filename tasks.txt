@@ -365,3 +365,4 @@
 √ Generalized envelopes.
 √ Allow zooming pattern editor in fullscreen layouts.
 √ Added another fullscreen layout option.
+√ Added an option for layered instruments in a single channel.

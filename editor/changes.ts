@@ -6,6 +6,30 @@ import {Preset, PresetCategory, EditorConfig} from "./EditorConfig";
 import {Change, ChangeGroup, ChangeSequence, UndoableChange} from "./Change";
 import {SongDocument} from "./SongDocument";
 
+export function patternsContainSameInstruments(pattern1Instruments: number[], pattern2Instruments: number[]): boolean {
+	const pattern2Has1Instruments: boolean = pattern1Instruments.every(instrument => pattern2Instruments.indexOf(instrument) != -1);
+	const pattern1Has2Instruments: boolean = pattern2Instruments.every(instrument => pattern1Instruments.indexOf(instrument) != -1);
+	return pattern2Has1Instruments && pattern1Has2Instruments && pattern2Instruments.length == pattern1Instruments.length;
+}
+
+export function discardInvalidPatternInstruments(instruments: number[], song: Song, channelIndex: number) {
+	const uniqueInstruments: Set<number> = new Set(instruments);
+	instruments.length = 0;
+	instruments.push(...uniqueInstruments);
+	for (let i: number = 0; i < instruments.length; i++) {
+		if (instruments[i] >= song.channels[channelIndex].instruments.length) {
+			instruments.splice(i, 1);
+			i--;
+		}
+	}
+	if (instruments.length > song.getMaxInstrumentsPerPattern(channelIndex)) {
+		instruments.length = song.getMaxInstrumentsPerPattern(channelIndex);
+	}
+	if (instruments.length <= 0) {
+		instruments[0] = 0;
+	}
+}
+
 export function unionOfUsedNotes(pattern: Pattern, flags: boolean[]): void {
 	for (const note of pattern.notes) {
 		for (const pitch of note.pitches) {
@@ -210,7 +234,8 @@ export class ChangeMoveAndOverflowNotes extends ChangeGroup {
 									pattern = new Pattern();
 									newChannel.patterns.push(pattern);
 									newChannel.bars[currentBar] = newChannel.patterns.length;
-									pattern.instrument = oldPattern.instrument;
+									pattern.instruments.length = 0;
+									pattern.instruments.push(...oldPattern.instruments);
 								}
 								
 								projectNoteIntoBar(oldNote, absoluteNoteStart - barStartPart - noteStartPart, noteStartPart, noteEndPart, pattern.notes);
@@ -803,9 +828,9 @@ export class ChangePatternNumbers extends Change {
 		if (value > doc.song.patternsPerChannel) throw new Error("invalid pattern");
 		
 		for (let bar: number = startBar; bar < startBar + width; bar++) {
-			for (let channel: number = startChannel; channel < startChannel + height; channel++) {
-				if (doc.song.channels[channel].bars[bar] != value) {
-					doc.song.channels[channel].bars[bar] = value;
+			for (let channelIndex: number = startChannel; channelIndex < startChannel + height; channelIndex++) {
+				if (doc.song.channels[channelIndex].bars[bar] != value) {
+					doc.song.channels[channelIndex].bars[bar] = value;
 					this._didSomething();
 				}
 			}
@@ -915,27 +940,27 @@ export class ChangeChannelCount extends Change {
 			
 			function changeGroup(newCount: number, oldCount: number, newStart: number, oldStart: number, octave: number, isNoise: boolean): void {
 				for (let i: number = 0; i < newCount; i++) {
-					const channel = i + newStart;
+					const channelIndex = i + newStart;
 					const oldChannel = i + oldStart;
 					if (i < oldCount) {
-						newChannels[channel] = doc.song.channels[oldChannel]
+						newChannels[channelIndex] = doc.song.channels[oldChannel]
 					} else {
-						newChannels[channel] = new Channel();
-						newChannels[channel].octave = octave;
-						for (let j: number = 0; j < doc.song.instrumentsPerChannel; j++) {
+						newChannels[channelIndex] = new Channel();
+						newChannels[channelIndex].octave = octave;
+						for (let j: number = 0; j < Config.instrumentCountMin; j++) {
 							const instrument: Instrument = new Instrument(isNoise);
 							const presetValue: number = pickRandomPresetValue(isNoise);
 							const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
 							instrument.fromJsonObject(preset.settings, isNoise);
 							instrument.preset = presetValue;
 							instrument.volume = 1;
-							newChannels[channel].instruments[j] = instrument;
+							newChannels[channelIndex].instruments[j] = instrument;
 						}
 						for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
-							newChannels[channel].patterns[j] = new Pattern();
+							newChannels[channelIndex].patterns[j] = new Pattern();
 						}
 						for (let j: number = 0; j < doc.song.barCount; j++) {
-							newChannels[channel].bars[j] = 0;
+							newChannels[channelIndex].bars[j] = 0;
 						}
 					}
 				}
@@ -946,8 +971,8 @@ export class ChangeChannelCount extends Change {
 			
 			doc.song.pitchChannelCount = newPitchChannelCount;
 			doc.song.noiseChannelCount = newNoiseChannelCount;
-			for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
-				doc.song.channels[channel] = newChannels[channel];
+			for (let channelIndex: number = 0; channelIndex < doc.song.getChannelCount(); channelIndex++) {
+				doc.song.channels[channelIndex] = newChannels[channelIndex];
 			}
 			doc.song.channels.length = doc.song.getChannelCount();
 			
@@ -1313,34 +1338,93 @@ export class ChangeFeedbackAmplitude extends ChangeInstrumentSlider {
 	}
 }
 
-export class ChangeInstrumentsPerChannel extends Change {
-	constructor(doc: SongDocument, newInstrumentsPerChannel: number) {
+export class ChangeAddChannelInstrument extends Change {
+	constructor(doc: SongDocument) {
 		super();
-		if (doc.song.instrumentsPerChannel != newInstrumentsPerChannel) {
-			for (let channel: number = 0; channel < doc.song.getChannelCount(); channel++) {
-				const sampleInstrument: Instrument = doc.song.channels[channel].instruments[doc.song.instrumentsPerChannel - 1];
-				const sampleInstrumentJson: any = sampleInstrument.toJsonObject();
-				for (let j: number = doc.song.instrumentsPerChannel; j < newInstrumentsPerChannel; j++) {
-					const newInstrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channel));
-					if (sampleInstrument.type == InstrumentType.drumset) {
-						// Drumsets are kinda expensive in terms of url length, so don't just copy them willy-nilly.
-						newInstrument.setTypeAndReset(InstrumentType.spectrum, true);
-					} else {
-						newInstrument.fromJsonObject(sampleInstrumentJson, doc.song.getChannelIsNoise(channel));
+		const channel: Channel = doc.song.channels[doc.channel];
+		const isNoise: boolean = doc.song.getChannelIsNoise(doc.channel);
+		const maxInstruments: number = doc.song.getMaxInstrumentsPerChannel();
+		if (channel.instruments.length >= maxInstruments) return;
+		const presetValue: number = pickRandomPresetValue(isNoise);
+		const preset: Preset = EditorConfig.valueToPreset(presetValue)!;
+		const instrument: Instrument = new Instrument(isNoise);
+		instrument.fromJsonObject(preset.settings, isNoise, 1);
+		instrument.preset = presetValue;
+		instrument.volume = 1;
+		channel.instruments.push(instrument);
+		doc.viewedInstrument[doc.channel] = channel.instruments.length - 1;
+		doc.notifier.changed();
+		this._didSomething();
+	}
+}
+
+export class ChangeRemoveChannelInstrument extends Change {
+	constructor(doc: SongDocument) {
+		super();
+		const channel: Channel = doc.song.channels[doc.channel];
+		if (channel.instruments.length <= Config.instrumentCountMin) return;
+		const removedIndex: number = doc.viewedInstrument[doc.channel];
+		channel.instruments.splice(removedIndex, 1);
+		if (doc.song.patternInstruments) {
+			for (const pattern of channel.patterns) {
+				for (let i: number = 0; i < pattern.instruments.length; i++) {
+					if (pattern.instruments[i] == removedIndex) {
+						pattern.instruments.splice(i, 1);
+						i--;
+					} else if (pattern.instruments[i] > removedIndex) {
+						pattern.instruments[i]--;
 					}
-					doc.song.channels[channel].instruments[j] = newInstrument;
 				}
-				doc.song.channels[channel].instruments.length = newInstrumentsPerChannel;
-				for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
-					if (doc.song.channels[channel].patterns[j].instrument >= newInstrumentsPerChannel) {
-						doc.song.channels[channel].patterns[j].instrument = 0;
-					}
+				if (pattern.instruments.length <= 0) {
+					pattern.instruments[0] = 0;
 				}
 			}
-			doc.song.instrumentsPerChannel = newInstrumentsPerChannel;
+		}
+		doc.notifier.changed();
+		this._didSomething();
+	}
+}
+
+export class ChangeViewInstrument extends Change {
+	constructor(doc: SongDocument, index: number) {
+		super();
+		if (doc.viewedInstrument[doc.channel] != index) {
+			doc.viewedInstrument[doc.channel] = index;
 			doc.notifier.changed();
 			this._didSomething();
 		}
+	}
+}
+
+export class ChangeInstrumentsFlags extends Change {
+	constructor(doc: SongDocument, newLayeredInstruments: boolean, newPatternInstruments: boolean) {
+		super();
+		const oldLayeredInstruments: boolean = doc.song.layeredInstruments;
+		const oldPatternInstruments: boolean = doc.song.patternInstruments;
+		if (oldLayeredInstruments == newLayeredInstruments && oldPatternInstruments == newPatternInstruments) return;
+		doc.song.layeredInstruments = newLayeredInstruments;
+		doc.song.patternInstruments = newPatternInstruments;
+		
+		for (let channelIndex: number = 0; channelIndex < doc.song.getChannelCount(); channelIndex++) {
+			const channel: Channel = doc.song.channels[channelIndex];
+			if (channel.instruments.length > doc.song.getMaxInstrumentsPerChannel()) {
+				channel.instruments.length = doc.song.getMaxInstrumentsPerChannel();
+			}
+			for (let j: number = 0; j < doc.song.patternsPerChannel; j++) {
+				const pattern: Pattern = channel.patterns[j];
+				if (!oldPatternInstruments && newPatternInstruments) {
+					// patternInstruments was enabled, set up pattern instruments as appropriate.
+					for (let i: number = 0; i < channel.instruments.length; i++) {
+						pattern.instruments[i] = i;
+					}
+					pattern.instruments.length = channel.instruments.length;
+				}
+				discardInvalidPatternInstruments(pattern.instruments, doc.song, channelIndex);
+			}
+		}
+		
+		doc.notifier.changed();
+		this._didSomething();
 	}
 }
 
@@ -1469,13 +1553,15 @@ export class ChangePasteInstrument extends ChangeGroup {
 	}
 }
 
-export class ChangePatternInstrument extends Change {
-	constructor(doc: SongDocument, newValue: number, pattern: Pattern) {
+export class ChangeSetPatternInstruments extends Change {
+	constructor(doc: SongDocument, channelIndex: number, instruments: number[], pattern: Pattern) {
 		super();
-		if (pattern.instrument != newValue) {
-			pattern.instrument = newValue;
-			doc.notifier.changed();
+		if (!patternsContainSameInstruments(instruments, pattern.instruments)) {
+			pattern.instruments.length = 0;
+			pattern.instruments.push(...instruments);
+			discardInvalidPatternInstruments(pattern.instruments, doc.song, channelIndex);
 			this._didSomething();
+			doc.notifier.changed();
 		}
 	}
 }
@@ -1505,29 +1591,32 @@ export class ChangePatternsPerChannel extends Change {
 export class ChangeEnsurePatternExists extends UndoableChange {
 	private _doc: SongDocument;
 	private _bar: number;
-	private _channel: number;
+	private _channelIndex: number;
 	private _patternIndex: number;
 	private _patternOldNotes: Note[] | null = null;
 	private _oldPatternCount: number;
 	private _newPatternCount: number;
+	private _oldPatternInstruments: number[] | null = null;
+	private _newPatternInstruments: number[];
 	
-	constructor(doc: SongDocument, channel: number, bar: number) {
+	constructor(doc: SongDocument, channelIndex: number, bar: number) {
 		super(false);
 		const song: Song = doc.song;
-		if (song.channels[channel].bars[bar] != 0) return;
+		if (song.channels[channelIndex].bars[bar] != 0) return;
 		
 		this._doc = doc;
 		this._bar = bar;
-		this._channel = channel;
+		this._channelIndex = channelIndex;
 		this._oldPatternCount = song.patternsPerChannel;
 		this._newPatternCount = song.patternsPerChannel;
+		this._newPatternInstruments = doc.recentPatternInstruments[channelIndex].concat();
 		
 		let firstEmptyUnusedIndex: number | null = null;
 		let firstUnusedIndex: number | null = null;
 		for (let patternIndex: number = 1; patternIndex <= song.patternsPerChannel; patternIndex++) {
 			let used = false;
 			for (let barIndex: number = 0; barIndex < song.barCount; barIndex++) {
-				if (song.channels[channel].bars[barIndex] == patternIndex) {
+				if (song.channels[channelIndex].bars[barIndex] == patternIndex) {
 					used = true;
 					break;
 				}
@@ -1536,7 +1625,7 @@ export class ChangeEnsurePatternExists extends UndoableChange {
 			if (firstUnusedIndex == null) {
 				firstUnusedIndex = patternIndex;
 			}
-			const pattern: Pattern = song.channels[channel].patterns[patternIndex - 1];
+			const pattern: Pattern = song.channels[channelIndex].patterns[patternIndex - 1];
 			if (pattern.notes.length == 0) {
 				firstEmptyUnusedIndex = patternIndex;
 				break;
@@ -1545,12 +1634,14 @@ export class ChangeEnsurePatternExists extends UndoableChange {
 		
 		if (firstEmptyUnusedIndex != null) {
 			this._patternIndex = firstEmptyUnusedIndex;
+			this._oldPatternInstruments = song.channels[channelIndex].patterns[firstEmptyUnusedIndex - 1].instruments.concat();
 		} else if (song.patternsPerChannel < song.barCount) {
 			this._newPatternCount = song.patternsPerChannel + 1;
 			this._patternIndex = song.patternsPerChannel + 1;
 		} else if (firstUnusedIndex != null) {
 			this._patternIndex = firstUnusedIndex;
-			this._patternOldNotes = song.channels[channel].patterns[firstUnusedIndex - 1].notes;
+			this._patternOldNotes = song.channels[channelIndex].patterns[firstUnusedIndex - 1].notes;
+			this._oldPatternInstruments = song.channels[channelIndex].patterns[firstUnusedIndex - 1].instruments.concat();
 		} else {
 			throw new Error();
 		}
@@ -1567,17 +1658,23 @@ export class ChangeEnsurePatternExists extends UndoableChange {
 			}
 		}
 		song.patternsPerChannel = this._newPatternCount;
-		const pattern: Pattern = song.channels[this._channel].patterns[this._patternIndex - 1];
+		const pattern: Pattern = song.channels[this._channelIndex].patterns[this._patternIndex - 1];
 		pattern.notes = [];
-		song.channels[this._channel].bars[this._bar] = this._patternIndex;
+		pattern.instruments.length = 0;
+		pattern.instruments.push(...this._newPatternInstruments);
+		song.channels[this._channelIndex].bars[this._bar] = this._patternIndex;
 		this._doc.notifier.changed();
 	}
 	
 	protected _doBackwards(): void {
 		const song: Song = this._doc.song;
-		const pattern: Pattern = song.channels[this._channel].patterns[this._patternIndex - 1];
+		const pattern: Pattern = song.channels[this._channelIndex].patterns[this._patternIndex - 1];
 		if (this._patternOldNotes != null) pattern.notes = this._patternOldNotes;
-		song.channels[this._channel].bars[this._bar] = 0;
+		if (this._oldPatternInstruments != null) {
+			pattern.instruments.length = 0;
+			pattern.instruments.push(...this._oldPatternInstruments);
+		}
+		song.channels[this._channelIndex].bars[this._bar] = 0;
 		for (let i: number = 0; i < song.getChannelCount(); i++) {
 			song.channels[i].patterns.length = this._oldPatternCount;
 		}
@@ -1969,6 +2066,12 @@ export class ChangeSong extends ChangeGroup {
 			this.append(new ChangePatternSelection(doc, 0, 0));
 			doc.selection.resetBoxSelection();
 			setDefaultInstruments(doc.song);
+			
+			for (let i: number = 0; i <= doc.song.channels.length; i++) {
+				doc.viewedInstrument[i] = 0;
+				doc.recentPatternInstruments[i] = [0];
+			}
+			doc.viewedInstrument.length = doc.song.channels.length;
 		} else {
 			this.append(new ChangeValidateTrackSelection(doc));
 		}
@@ -1980,12 +2083,12 @@ export class ChangeSong extends ChangeGroup {
 export class ChangeValidateTrackSelection extends Change {
 	constructor(doc: SongDocument) {
 		super();
-		const channel: number = Math.min(doc.channel, doc.song.getChannelCount() - 1);
+		const channelIndex: number = Math.min(doc.channel, doc.song.getChannelCount() - 1);
 		const bar: number = Math.max(0, Math.min(doc.song.barCount - 1, doc.bar));
 		const barScrollPos: number = Math.min(doc.bar, Math.max(doc.bar - (doc.trackVisibleBars - 1), Math.max(0, Math.min(doc.song.barCount - doc.trackVisibleBars, doc.barScrollPos))));
 		const channelScrollPos: number = Math.min(doc.channel, Math.max(doc.channel - (doc.trackVisibleChannels - 1), Math.max(0, Math.min(doc.song.getChannelCount() - doc.trackVisibleChannels, doc.channelScrollPos))));
-		if (doc.channel != channel || doc.bar != bar || doc.channelScrollPos != channelScrollPos || doc.barScrollPos != barScrollPos) {
-			doc.channel = channel;
+		if (doc.channel != channelIndex || doc.bar != bar || doc.channelScrollPos != channelScrollPos || doc.barScrollPos != barScrollPos) {
+			doc.channel = channelIndex;
 			doc.channel = channelScrollPos;
 			doc.bar = bar;
 			doc.barScrollPos = barScrollPos;
@@ -2027,14 +2130,12 @@ export class ChangeReplacePatterns extends ChangeGroup {
 		
 		// Set minimum counts.
 		song.barCount = 1;
-		song.instrumentsPerChannel = 1;
 		song.patternsPerChannel = 8;
 		const combinedChannels: Channel[] = pitchChannels.concat(noiseChannels);
 		for (let channelIndex: number = 0; channelIndex < combinedChannels.length; channelIndex++) {
 			const channel: Channel = combinedChannels[channelIndex];
 			song.barCount = Math.max(song.barCount, channel.bars.length);
 			song.patternsPerChannel = Math.max(song.patternsPerChannel, channel.patterns.length);
-			song.instrumentsPerChannel = Math.max(song.instrumentsPerChannel, channel.instruments.length);
 			song.channels[channelIndex] = channel;
 		}
 		song.channels.length = combinedChannels.length;
@@ -2043,37 +2144,30 @@ export class ChangeReplacePatterns extends ChangeGroup {
 		
 		song.barCount = Math.min(Config.barCountMax, song.barCount);
 		song.patternsPerChannel = Math.min(Config.barCountMax, song.patternsPerChannel);
-		song.instrumentsPerChannel = Math.min(Config.instrumentsPerChannelMax, song.instrumentsPerChannel);
 		for (let channelIndex: number = 0; channelIndex < song.channels.length; channelIndex++) {
 			const channel: Channel = song.channels[channelIndex];
+			
 			for (let barIndex: number = 0; barIndex < channel.bars.length; barIndex++) {
 				if (channel.bars[barIndex] > song.patternsPerChannel || channel.bars[barIndex] < 0) {
 					channel.bars[barIndex] = 0;
 				}
 			}
-			for (const pattern of channel.patterns) {
-				if (pattern.instrument >= song.instrumentsPerChannel || pattern.instrument < 0) {
-					pattern.instrument = 0;
-				}
-			}
 			while (channel.bars.length < song.barCount) {
 				channel.bars.push(0);
+			}
+			channel.bars.length = song.barCount;
+			
+			if (channel.instruments.length > song.getMaxInstrumentsPerChannel()) {
+				channel.instruments.length = song.getMaxInstrumentsPerChannel();
+			}
+			
+			for (const pattern of channel.patterns) {
+				discardInvalidPatternInstruments(pattern.instruments, song, channelIndex);
 			}
 			while (channel.patterns.length < song.patternsPerChannel) {
 				channel.patterns.push(new Pattern());
 			}
-			while (channel.instruments.length < song.instrumentsPerChannel) {
-				const instrument: Instrument = new Instrument(doc.song.getChannelIsNoise(channelIndex)); 
-				if (song.getChannelIsNoise(channelIndex)) {
-					instrument.setTypeAndReset(InstrumentType.noise, true);
-				} else {
-					instrument.setTypeAndReset(InstrumentType.chip, false);
-				}
-				channel.instruments.push(instrument);
-			}
-			channel.bars.length = song.barCount;
 			channel.patterns.length = song.patternsPerChannel;
-			channel.instruments.length = song.instrumentsPerChannel;
 		}
 		
 		song.loopStart = Math.max(0, Math.min(song.barCount - 1, song.loopStart));
@@ -2122,7 +2216,8 @@ export function removeDuplicatePatterns(channels: Channel[]): void {
 			let foundMatchingPattern: boolean = false;
 			for (let newPatternIndex: number = 0; newPatternIndex < newPatterns.length; newPatternIndex++) {
 				const newPattern: Pattern = newPatterns[newPatternIndex];
-				if (newPattern.instrument != oldPattern.instrument || newPattern.notes.length != oldPattern.notes.length) {
+				
+				if (!patternsContainSameInstruments(oldPattern.instruments, newPattern.instruments) || newPattern.notes.length != oldPattern.notes.length) {
 					continue;
 				}
 				
@@ -2325,7 +2420,7 @@ class ChangeTransposeNote extends UndoableChange {
 	protected _newPins: NotePin[];
 	protected _oldPitches: number[];
 	protected _newPitches: number[];
-	constructor(doc: SongDocument, channel: number, note: Note, upward: boolean, ignoreScale: boolean = false, octave: boolean = false) {
+	constructor(doc: SongDocument, channelIndex: number, note: Note, upward: boolean, ignoreScale: boolean = false, octave: boolean = false) {
 		super(false);
 		this._doc = doc;
 		this._note = note;
@@ -2337,7 +2432,7 @@ class ChangeTransposeNote extends UndoableChange {
 		// I'm disabling pitch transposing for noise channels to avoid
 		// accidentally messing up noise channels when pitch shifting all
 		// channels at once.
-		const isNoise: boolean = doc.song.getChannelIsNoise(channel);
+		const isNoise: boolean = doc.song.getChannelIsNoise(channelIndex);
 		if (isNoise != doc.song.getChannelIsNoise(doc.channel)) return;
 		
 		const maxPitch: number = (isNoise ? Config.drumCount - 1 : Config.maxPitch);
@@ -2451,7 +2546,7 @@ class ChangeTransposeNote extends UndoableChange {
 }
 
 export class ChangeTranspose extends ChangeSequence {
-	constructor(doc: SongDocument, channel: number, pattern: Pattern, upward: boolean, ignoreScale: boolean = false, octave: boolean = false) {
+	constructor(doc: SongDocument, channelIndex: number, pattern: Pattern, upward: boolean, ignoreScale: boolean = false, octave: boolean = false) {
 		super();
 		if (doc.selection.patternSelectionActive) {
 			this.append(new ChangeSplitNotesAtSelection(doc, pattern));
@@ -2460,7 +2555,7 @@ export class ChangeTranspose extends ChangeSequence {
 			if (doc.selection.patternSelectionActive && (note.end <= doc.selection.patternSelectionStart || note.start >= doc.selection.patternSelectionEnd)) {
 				continue;
 			}
-			this.append(new ChangeTransposeNote(doc, channel, note, upward, ignoreScale, octave));
+			this.append(new ChangeTransposeNote(doc, channelIndex, note, upward, ignoreScale, octave));
 		}
 	}
 }
@@ -2515,7 +2610,7 @@ export class ChangePatternSelection extends UndoableChange {
 }
 
 export class ChangeDragSelectedNotes extends ChangeSequence {
-	constructor(doc: SongDocument, channel: number, pattern: Pattern, parts: number, transpose: number) {
+	constructor(doc: SongDocument, channelIndex: number, pattern: Pattern, parts: number, transpose: number) {
 		super();
 		
 		if (parts == 0 && transpose == 0) return;
@@ -2566,7 +2661,7 @@ export class ChangeDragSelectedNotes extends ChangeSequence {
 			note.end += parts;
 			
 			for (let i: number = 0; i < Math.abs(transpose); i++) {
-				this.append(new ChangeTransposeNote(doc, channel, note, transpose > 0));
+				this.append(new ChangeTransposeNote(doc, channelIndex, note, transpose > 0));
 			}
 			
 			this.append(new ChangeNoteAdded(doc, pattern, note, noteInsertionIndex++, false));
@@ -2577,18 +2672,18 @@ export class ChangeDragSelectedNotes extends ChangeSequence {
 export class ChangeDuplicateSelectedReusedPatterns extends ChangeGroup {
 	constructor(doc: SongDocument, barStart: number, barWidth: number, channelStart: number, channelHeight: number) {
 		super();
-		for (let channel: number = channelStart; channel < channelStart + channelHeight; channel++) {
+		for (let channelIndex: number = channelStart; channelIndex < channelStart + channelHeight; channelIndex++) {
 			const reusablePatterns: Dictionary<number> = {};
 			
 			for (let bar: number = barStart; bar < barStart + barWidth; bar++) {
-				const currentPatternIndex: number = doc.song.channels[channel].bars[bar];
+				const currentPatternIndex: number = doc.song.channels[channelIndex].bars[bar];
 				if (currentPatternIndex == 0) continue;
 				
 				if (reusablePatterns[String(currentPatternIndex)] == undefined) {
 					let isUsedElsewhere = false;
 					for (let bar2: number = 0; bar2 < doc.song.barCount; bar2++) {
 						if (bar2 < barStart || bar2 >= barStart + barWidth) {
-							if (doc.song.channels[channel].bars[bar2] == currentPatternIndex) {
+							if (doc.song.channels[channelIndex].bars[bar2] == currentPatternIndex) {
 								isUsedElsewhere = true;
 								break;
 							}
@@ -2596,20 +2691,24 @@ export class ChangeDuplicateSelectedReusedPatterns extends ChangeGroup {
 					}
 					if (isUsedElsewhere) {
 						// Need to duplicate the pattern.
-						const copiedPattern: Pattern = doc.song.getPattern(channel, bar)!;
-						this.append(new ChangePatternNumbers(doc, 0, bar, channel, 1, 1));
-						this.append(new ChangeEnsurePatternExists(doc, channel, bar));
-						const newPattern: Pattern | null = doc.song.getPattern(channel, bar);
+						const copiedPattern: Pattern = doc.song.getPattern(channelIndex, bar)!;
+						this.append(new ChangePatternNumbers(doc, 0, bar, channelIndex, 1, 1));
+						this.append(new ChangeEnsurePatternExists(doc, channelIndex, bar));
+						const newPattern: Pattern | null = doc.song.getPattern(channelIndex, bar);
 						if (newPattern == null) throw new Error();
 						this.append(new ChangePaste(doc, newPattern, copiedPattern.notes, 0, Config.partsPerBeat * doc.song.beatsPerBar, Config.partsPerBeat * doc.song.beatsPerBar));
-						this.append(new ChangePatternInstrument(doc, copiedPattern.instrument, newPattern));
-						reusablePatterns[String(currentPatternIndex)] = doc.song.channels[channel].bars[bar];
+						
+						// Copy the instruments into the new pattern.
+						newPattern.instruments.length = 0;
+						newPattern.instruments.push(...copiedPattern.instruments);
+						
+						reusablePatterns[String(currentPatternIndex)] = doc.song.channels[channelIndex].bars[bar];
 					} else {
 						reusablePatterns[String(currentPatternIndex)] = currentPatternIndex;
 					}
 				}
 				
-				this.append(new ChangePatternNumbers(doc, reusablePatterns[String(currentPatternIndex)], bar, channel, 1, 1));
+				this.append(new ChangePatternNumbers(doc, reusablePatterns[String(currentPatternIndex)], bar, channelIndex, 1, 1));
 			}
 		}
 	}

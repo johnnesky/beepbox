@@ -2,9 +2,9 @@
 
 import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
-import {ColorConfig} from "./ColorConfig";
+import {ColorConfig, ChannelColors} from "./ColorConfig";
 import "./Layout"; // Imported here for the sake of ensuring this code is transpiled early.
-import {Pattern, Instrument, Channel, Synth} from "../synth/synth";
+import {Instrument, Channel, Synth} from "../synth/synth";
 import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {SongDocument} from "./SongDocument";
 import {Prompt} from "./Prompt";
@@ -29,7 +29,7 @@ import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
-import {ChangeTempo, ChangeChorus, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeUnison, ChangeChord, ChangeSong, ChangePitchShift, ChangeDetune, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization, ChangeAddEnvelope} from "./changes";
+import {ChangeTempo, ChangeChorus, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeUnison, ChangeChord, ChangeSong, ChangePitchShift, ChangeDetune, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization, ChangeAddEnvelope, ChangeAddChannelInstrument, ChangeRemoveChannelInstrument} from "./changes";
 
 const {button, div, input, select, span, optgroup, option} = HTML;
 
@@ -181,28 +181,31 @@ export class SongEditor {
 	private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0; width: 4em; flex-grow: 1; vertical-align: middle;", type: "range", min: "0", max: "14", value: "7", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeTempo(this._doc, oldValue, Math.round(120.0 * Math.pow(2.0, (-4.0 + newValue) / 9.0))));
 	private readonly _tempoStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 0.4em; vertical-align: middle;", type: "number", step: "1"});
 	private readonly _chorusSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.chorusRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeChorus(this._doc, oldValue, newValue));
-	private readonly _chorusRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chorus")}, "Chorus: "), this._chorusSlider.input);
+	private readonly _chorusRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chorus")}, "Chorus:"), this._chorusSlider.input);
 	private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeReverb(this._doc, oldValue, newValue));
-	private readonly _reverbRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb: "), this._reverbSlider.input);
+	private readonly _reverbRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb:"), this._reverbSlider.input);
 	private readonly _echoSustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.echoSustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeEchoSustain(this._doc, oldValue, newValue));
-	private readonly _echoSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoSustain")}, "Echo: "), this._echoSustainSlider.input);
+	private readonly _echoSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoSustain")}, "Echo:"), this._echoSustainSlider.input);
 	private readonly _echoDelaySlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.echoDelayRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeEchoDelay(this._doc, oldValue, newValue));
-	private readonly _echoDelayRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoDelay")}, "Echo Delay: "), this._echoDelaySlider.input);
+	private readonly _echoDelayRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoDelay")}, "Echo Delay:"), this._echoDelaySlider.input);
 	private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select(), Config.rhythms.map(rhythm=>rhythm.name));
 	private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false);
 	private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true);
 	private readonly _algorithmSelect: HTMLSelectElement = buildOptions(select(), Config.algorithms.map(algorithm=>algorithm.name));
-	private readonly _algorithmSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("algorithm")}, "Algorithm: "), div({class: "selectContainer"}, this._algorithmSelect));
-	private readonly _instrumentSelect: HTMLSelectElement = select();
-	private readonly _instrumentSelectRow: HTMLDivElement = div({class: "selectRow", style: "display: none;"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentIndex")}, "Instrument: "), div({class: "selectContainer"}, this._instrumentSelect));
+	private readonly _algorithmSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("algorithm")}, "Algorithm:"), div({class: "selectContainer"}, this._algorithmSelect));
+	private readonly _instrumentButtons: HTMLButtonElement[] = [];
+	private readonly _instrumentAddButton: HTMLButtonElement = button({type: "button", class: "add-instrument last-button"});
+	private readonly _instrumentRemoveButton: HTMLButtonElement = button({type: "button", class: "remove-instrument"});
+	private readonly _instrumentsButtonBar: HTMLDivElement = div({class: "instrument-bar"}, this._instrumentRemoveButton, this._instrumentAddButton);
+	private readonly _instrumentsButtonRow: HTMLDivElement = div({class: "selectRow", style: "display: none;"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentIndex")}, "Instrument:"), this._instrumentsButtonBar);
 	private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: -(Config.volumeRange - 1), max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
-	private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume: "), this._instrumentVolumeSlider.input);
+	private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume:"), this._instrumentVolumeSlider.input);
 	private readonly _panSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.panMax, value: Config.panCenter, step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangePan(this._doc, oldValue, newValue));
-	private readonly _panSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pan")}, "Panning: "), this._panSlider.input);
+	private readonly _panSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pan")}, "Panning:"), this._panSlider.input);
 	private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select(), Config.chipWaves.map(wave=>wave.name));
 	private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select(), Config.chipNoises.map(wave=>wave.name));
-	private readonly _chipWaveSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipWave")}, "Wave: "), div({class: "selectContainer"}, this._chipWaveSelect));
-	private readonly _chipNoiseSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipNoise")}, "Noise: "), div({class: "selectContainer"}, this._chipNoiseSelect));
+	private readonly _chipWaveSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipWave")}, "Wave:"), div({class: "selectContainer"}, this._chipWaveSelect));
+	private readonly _chipNoiseSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipNoise")}, "Noise:"), div({class: "selectContainer"}, this._chipNoiseSelect));
 	private readonly _transitionSelect: HTMLSelectElement = buildOptions(select(), Config.transitions.map(transition=>transition.name));
 	private readonly _transitionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("transition")}, "Transition:"), div({class: "selectContainer"}, this._transitionSelect));
 	private readonly _effectsDisplayOption: HTMLOptionElement = option({selected: true, disabled: true, hidden: false}, "Preferences"); // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
@@ -292,10 +295,10 @@ export class SongEditor {
 		div({style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};`},
 			"Instrument Settings"
 		),
-		this._instrumentSelectRow,
+		this._instrumentsButtonRow,
 		this._instrumentVolumeSliderRow,
 		div({class: "selectRow"},
-			span({class: "tip", onclick: ()=>this._openPrompt("instrumentType")}, "Type: "),
+			span({class: "tip", onclick: ()=>this._openPrompt("instrumentType")}, "Type:"),
 			div({class: "selectContainer"}, this._pitchedPresetSelect, this._drumPresetSelect),
 		),
 		this._customizeInstrumentButton,
@@ -364,22 +367,22 @@ export class SongEditor {
 					"Song Settings",
 				),
 				div({class: "selectRow"},
-					span({class: "tip", onclick: ()=>this._openPrompt("scale")}, "Scale: "),
+					span({class: "tip", onclick: ()=>this._openPrompt("scale")}, "Scale:"),
 					div({class: "selectContainer"}, this._scaleSelect),
 				),
 				div({class: "selectRow"},
-					span({class: "tip", onclick: ()=>this._openPrompt("key")}, "Key: "),
+					span({class: "tip", onclick: ()=>this._openPrompt("key")}, "Key:"),
 					div({class: "selectContainer"}, this._keySelect),
 				),
 				div({class: "selectRow"},
-					span({class: "tip", onclick: ()=>this._openPrompt("tempo")}, "Tempo: "),
+					span({class: "tip", onclick: ()=>this._openPrompt("tempo")}, "Tempo:"),
 					span({style: "display: flex;"},
 						this._tempoSlider.input,
 						this._tempoStepper,
 					),
 				),
 				div({class: "selectRow"},
-					span({class: "tip", onclick: ()=>this._openPrompt("rhythm")}, "Rhythm: "),
+					span({class: "tip", onclick: ()=>this._openPrompt("rhythm")}, "Rhythm:"),
 					div({class: "selectContainer"}, this._rhythmSelect),
 				),
 			),
@@ -398,6 +401,9 @@ export class SongEditor {
 	
 	private _wasPlaying: boolean = false;
 	private _currentPromptName: string | null = null;
+	private _highlightedInstrumentIndex: number = -1;
+	private _renderedInstrumentCount: number = 0;
+	private _deactivatedInstruments: boolean = false;
 	private readonly _operatorRows: HTMLDivElement[] = []
 	private readonly _operatorAmplitudeSliders: Slider[] = []
 	private readonly _operatorFrequencySelects: HTMLSelectElement[] = []
@@ -482,7 +488,7 @@ export class SongEditor {
 		this._pitchedPresetSelect.addEventListener("change", this._whenSetPitchedPreset);
 		this._drumPresetSelect.addEventListener("change", this._whenSetDrumPreset);
 		this._algorithmSelect.addEventListener("change", this._whenSetAlgorithm);
-		this._instrumentSelect.addEventListener("change", this._whenSetInstrument);
+		this._instrumentsButtonBar.addEventListener("click", this._whenSelectInstrument);
 		this._customizeInstrumentButton.addEventListener("click", this._whenCustomizePressed);
 		this._feedbackTypeSelect.addEventListener("change", this._whenSetFeedbackType);
 		this._chipWaveSelect.addEventListener("change", this._whenSetChipWave);
@@ -660,11 +666,11 @@ export class SongEditor {
 		}
 		
 		const channel: Channel = this._doc.song.channels[this._doc.channel];
-		const pattern: Pattern | null = this._doc.getCurrentPattern();
 		const instrumentIndex: number = this._doc.getCurrentInstrument();
 		const instrument: Instrument = channel.instruments[instrumentIndex];
 		const wasActive: boolean = this.mainLayer.contains(document.activeElement);
 		const activeElement: Element | null = document.activeElement;
+		const colors: ChannelColors = ColorConfig.getChannelColor(this._doc.song, this._doc.channel);
 		
 		let effectDisplayLabel: string = "";
 		for (let i: number = this._effectsSelect.childElementCount - 1; i < Config.effectOrder.length; i++) {
@@ -887,24 +893,78 @@ export class SongEditor {
 			}
 		}
 		
-		this._instrumentSelectRow.style.display = (this._doc.song.instrumentsPerChannel > 1) ? "" : "none";
-		this._instrumentSelectRow.style.visibility = (pattern == null) ? "hidden" : "";
-		if (this._instrumentSelect.children.length != this._doc.song.instrumentsPerChannel) {
-			while (this._instrumentSelect.firstChild) this._instrumentSelect.removeChild(this._instrumentSelect.firstChild);
-			const instrumentList: number[] = [];
-			for (let i: number = 0; i < this._doc.song.instrumentsPerChannel; i++) {
-				instrumentList.push(i + 1);
+		if (this._doc.song.layeredInstruments || this._doc.song.patternInstruments) {
+			this._instrumentsButtonRow.style.display = "";
+			
+			this._instrumentsButtonBar.style.setProperty("--text-color-lit", colors.primaryNote);
+			this._instrumentsButtonBar.style.setProperty("--text-color-dim", colors.secondaryNote);
+			this._instrumentsButtonBar.style.setProperty("--background-color-lit", colors.primaryChannel);
+			this._instrumentsButtonBar.style.setProperty("--background-color-dim", colors.secondaryChannel);
+			
+			const maxInstrumentsPerChannel = this._doc.song.getMaxInstrumentsPerChannel();
+			while (this._instrumentButtons.length < channel.instruments.length) {
+				const instrumentButton: HTMLButtonElement = button(String(this._instrumentButtons.length + 1));
+				this._instrumentButtons.push(instrumentButton);
+				this._instrumentsButtonBar.insertBefore(instrumentButton, this._instrumentRemoveButton);
 			}
-			buildOptions(this._instrumentSelect, instrumentList);
+			for (let i: number = this._renderedInstrumentCount; i < channel.instruments.length; i++) {
+				this._instrumentButtons[i].style.display = "";
+			}
+			for (let i: number = channel.instruments.length; i < this._renderedInstrumentCount; i++) {
+				this._instrumentButtons[i].style.display = "none";
+			}
+			this._renderedInstrumentCount = channel.instruments.length;
+			while (this._instrumentButtons.length > maxInstrumentsPerChannel) {
+				this._instrumentsButtonBar.removeChild(this._instrumentButtons.pop()!);
+			}
+			
+			this._instrumentRemoveButton.style.display = (channel.instruments.length > Config.instrumentCountMin) ? "" : "none";
+			this._instrumentAddButton.style.display = (channel.instruments.length < maxInstrumentsPerChannel) ? "" : "none";
+			if (channel.instruments.length < maxInstrumentsPerChannel) {
+				this._instrumentRemoveButton.classList.remove("last-button");
+			} else {
+				this._instrumentRemoveButton.classList.add("last-button");
+			}
+			if (channel.instruments.length > 1) {
+				if (this._highlightedInstrumentIndex != instrumentIndex) {
+					const oldButton: HTMLButtonElement = this._instrumentButtons[this._highlightedInstrumentIndex];
+					if (oldButton != null) oldButton.classList.remove("selected-instrument");
+					const newButton: HTMLButtonElement = this._instrumentButtons[instrumentIndex];
+					newButton.classList.add("selected-instrument");
+					this._highlightedInstrumentIndex = instrumentIndex;
+				}
+			} else {
+				const oldButton: HTMLButtonElement = this._instrumentButtons[this._highlightedInstrumentIndex];
+				if (oldButton != null) oldButton.classList.remove("selected-instrument");
+				this._highlightedInstrumentIndex = -1;
+			}
+			
+			if (this._doc.song.layeredInstruments && this._doc.song.patternInstruments) {
+				//const pattern: Pattern | null = this._doc.getCurrentPattern();
+				for (let i: number = 0; i < channel.instruments.length; i++) {
+					if (this._doc.recentPatternInstruments[this._doc.channel].indexOf(i) != -1) {
+						this._instrumentButtons[i].classList.remove("deactivated");
+					} else {
+						this._instrumentButtons[i].classList.add("deactivated");
+					}
+				}
+				this._deactivatedInstruments = true;
+			} else if (this._deactivatedInstruments) {
+				for (let i: number = 0; i < channel.instruments.length; i++) {
+					this._instrumentButtons[i].classList.remove("deactivated");
+				}
+				this._deactivatedInstruments = false;
+			}
+		} else {
+			this._instrumentsButtonRow.style.display = "none";
 		}
 		
-		this._instrumentSettingsGroup.style.color = ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote;
+		this._instrumentSettingsGroup.style.color = colors.primaryNote;
 		
 		this._eqFilterEditor.render();
 		setSelectedValue(this._transitionSelect, instrument.transition);
 		setSelectedValue(this._chordSelect, instrument.chord);
 		this._instrumentVolumeSlider.updateValue(-instrument.volume);
-		setSelectedValue(this._instrumentSelect, instrumentIndex);
 		this._addEnvelopeButton.disabled = (instrument.envelopeCount >= Config.maxEnvelopeCount);
 		
 		this._volumeSlider.value = String(this._doc.volume);
@@ -1337,8 +1397,18 @@ export class SongEditor {
 		this._doc.record(new ChangeAlgorithm(this._doc, this._algorithmSelect.selectedIndex));
 	}
 	
-	private _whenSetInstrument = (): void => {
-		this._doc.selection.setInstrument(this._instrumentSelect.selectedIndex);
+	private _whenSelectInstrument = (event: MouseEvent): void => {
+		if (event.target == this._instrumentAddButton) {
+			this._doc.record(new ChangeAddChannelInstrument(this._doc));
+		} else if (event.target == this._instrumentRemoveButton) {
+			this._doc.record(new ChangeRemoveChannelInstrument(this._doc));
+		} else {
+			const index: number = this._instrumentButtons.indexOf(<any>event.target);
+			if (index != -1) {
+				this._doc.selection.selectInstrument(index);
+			}
+		}
+		this._refocusStage();
 	}
 	
 	private _whenCustomizePressed = (): void => {
