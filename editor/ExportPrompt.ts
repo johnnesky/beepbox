@@ -187,7 +187,7 @@ export class ExportPrompt implements Prompt {
 		synth.loopRepeatCount = Number(this._loopDropDown.value) - 1;
 		if (!this._enableIntro.checked) {
 			for (let introIter: number = 0; introIter < this._doc.song.loopStart; introIter++) {
-				synth.nextBar();
+				synth.goToNextBar();
 			}
 		}
 		const sampleFrames: number = Math.ceil(synth.getSamplesPerBar() * synth.getTotalBars(this._enableIntro.checked, this._enableOutro.checked));

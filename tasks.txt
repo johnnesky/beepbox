@@ -366,3 +366,4 @@
 √ Allow zooming pattern editor in fullscreen layouts.
 √ Added another fullscreen layout option.
 √ Added an option for layered instruments in a single channel.
+√ Move the fade in/out duration into a separate setting from transition, fixed slide across patterns, and added a new transition to avoid restarting envelopes between adjacent notes.

@@ -472,12 +472,12 @@ function onKeyPressed(event: KeyboardEvent): void {
 			event.preventDefault();
 			break;
 		case 219: // left brace
-			synth.prevBar();
+			synth.goToPrevBar();
 			renderPlayhead();
 			event.preventDefault();
 			break;
 		case 221: // right brace
-			synth.nextBar();
+			synth.goToNextBar();
 			renderPlayhead();
 			event.preventDefault();
 			break;

@@ -1278,6 +1278,44 @@ export class ChangeFilterMovePoint extends UndoableChange {
 	}
 }
 
+export class ChangeFadeInOut extends UndoableChange {
+	private _doc: SongDocument;
+	private _instrument: Instrument;
+	private _instrumentPrevPreset: number;
+	private _instrumentNextPreset: number;
+	private _oldFadeIn: number;
+	private _oldFadeOut: number;
+	private _newFadeIn: number;
+	private _newFadeOut: number;
+	constructor(doc: SongDocument, fadeIn: number, fadeOut: number) {
+		super(false);
+		this._doc = doc;
+		this._instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+		this._instrumentNextPreset = this._instrument.type;
+		this._instrumentPrevPreset = this._instrument.preset;
+		this._oldFadeIn = this._instrument.fadeIn;
+		this._oldFadeOut = this._instrument.fadeOut;
+		this._newFadeIn = fadeIn;
+		this._newFadeOut = fadeOut;
+		this._didSomething();
+		this.redo();
+	}
+	
+	protected _doForwards(): void {
+		this._instrument.fadeIn = this._newFadeIn;
+		this._instrument.fadeOut = this._newFadeOut;
+		this._instrument.preset = this._instrumentNextPreset;
+		this._doc.notifier.changed();
+	}
+	
+	protected _doBackwards(): void {
+		this._instrument.fadeIn = this._oldFadeIn;
+		this._instrument.fadeOut = this._oldFadeOut;
+		this._instrument.preset = this._instrumentPrevPreset;
+		this._doc.notifier.changed();
+	}
+}
+
 export class ChangeAlgorithm extends Change {
 	constructor(doc: SongDocument, newValue: number) {
 		super();

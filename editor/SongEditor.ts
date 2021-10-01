@@ -11,6 +11,7 @@ import {Prompt} from "./Prompt";
 import {TipPrompt} from "./TipPrompt";
 import {PatternEditor} from "./PatternEditor";
 import {EnvelopeEditor} from "./EnvelopeEditor";
+import {FadeInOutEditor} from "./FadeInOutEditor";
 import {FilterEditor} from "./FilterEditor";
 import {MuteEditor} from "./MuteEditor";
 import {TrackEditor} from "./TrackEditor";
@@ -206,6 +207,8 @@ export class SongEditor {
 	private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select(), Config.chipNoises.map(wave=>wave.name));
 	private readonly _chipWaveSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipWave")}, "Wave:"), div({class: "selectContainer"}, this._chipWaveSelect));
 	private readonly _chipNoiseSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipNoise")}, "Noise:"), div({class: "selectContainer"}, this._chipNoiseSelect));
+	private readonly _fadeInOutEditor: FadeInOutEditor = new FadeInOutEditor(this._doc);
+	private readonly _fadeInOutRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("fadeInOut")}, "Fade In/Out:"), this._fadeInOutEditor.container);
 	private readonly _transitionSelect: HTMLSelectElement = buildOptions(select(), Config.transitions.map(transition=>transition.name));
 	private readonly _transitionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("transition")}, "Transition:"), div({class: "selectContainer"}, this._transitionSelect));
 	private readonly _effectsDisplayOption: HTMLOptionElement = option({selected: true, disabled: true, hidden: false}, "Preferences"); // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
@@ -255,6 +258,7 @@ export class SongEditor {
 	private readonly _addEnvelopeButton: HTMLButtonElement = button({type: "button", class: "add-envelope"});
 	private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({class: "editor-controls"},
 		this._eqFilterRow,
+		this._fadeInOutRow,
 		this._transitionRow,
 		this._chordSelectRow,
 		this._chipWaveSelectRow,
@@ -507,6 +511,7 @@ export class SongEditor {
 		
 		this._patternArea.addEventListener("mousedown", this._refocusStage);
 		this._trackArea.addEventListener("mousedown", this._refocusStage);
+		this._fadeInOutEditor.container.addEventListener("mousedown", this._refocusStage);
 		this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
 		this._eqFilterEditor.container.addEventListener("mousedown", this._refocusStage);
 		this._noteFilterEditor.container.addEventListener("mousedown", this._refocusStage);
@@ -741,6 +746,7 @@ export class SongEditor {
 			}
 			if (instrument.type == InstrumentType.drumset) {
 				this._drumsetGroup.style.display = "";
+				this._fadeInOutRow.style.display = "none";
 				this._transitionRow.style.display = "none";
 				this._chordSelectRow.style.display = "none";
 				for (let i: number = 0; i < Config.drumCount; i++) {
@@ -749,8 +755,12 @@ export class SongEditor {
 				}
 			} else {
 				this._drumsetGroup.style.display = "none";
+				this._fadeInOutRow.style.display = "";
 				this._transitionRow.style.display = "";
 				this._chordSelectRow.style.display = "";
+				this._fadeInOutEditor.render();
+				setSelectedValue(this._transitionSelect, instrument.transition);
+				setSelectedValue(this._chordSelect, instrument.chord);
 			}
 			if (instrument.type == InstrumentType.chip) {
 				this._chipWaveSelectRow.style.display = "";
@@ -962,8 +972,6 @@ export class SongEditor {
 		this._instrumentSettingsGroup.style.color = colors.primaryNote;
 		
 		this._eqFilterEditor.render();
-		setSelectedValue(this._transitionSelect, instrument.transition);
-		setSelectedValue(this._chordSelect, instrument.chord);
 		this._instrumentVolumeSlider.updateValue(-instrument.volume);
 		this._addEnvelopeButton.disabled = (instrument.envelopeCount >= Config.maxEnvelopeCount);
 		
@@ -1124,14 +1132,14 @@ export class SongEditor {
 				event.preventDefault();
 				break;
 			case 219: // left brace
-				this._doc.synth.prevBar();
+				this._doc.synth.goToPrevBar();
 				if (this._doc.autoFollow) {
 					new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
 				}
 				event.preventDefault();
 				break;
 			case 221: // right brace
-				this._doc.synth.nextBar();
+				this._doc.synth.goToNextBar();
 				if (this._doc.autoFollow) {
 					new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
 				}
@@ -1255,11 +1263,11 @@ export class SongEditor {
 	}
 	
 	private _whenPrevBarPressed = (): void => {
-		this._doc.synth.prevBar();
+		this._doc.synth.goToPrevBar();
 	}
 	
 	private _whenNextBarPressed = (): void => {
-		this._doc.synth.nextBar();
+		this._doc.synth.goToNextBar();
 	}
 	
 	private _togglePlay = (): void => {

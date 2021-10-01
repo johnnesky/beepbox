@@ -130,6 +130,7 @@ const enum SongTagCode {
 	
 	harmonics           = CharCode.H, // added in 7
 	stringSustain       = CharCode.I, // added in 9
+	fadeInOut           = CharCode.J, // added in 9
 	
 	pan                 = CharCode.L, // added between 8 and 9, DEPRECATED
 	
@@ -288,7 +289,7 @@ export function makeNotePin(interval: number, time: number, size: number): NoteP
 	return {interval: interval, time: time, size: size};
 }
 
-function clamp(min: number, max: number, val: number): number {
+export function clamp(min: number, max: number, val: number): number {
 	max = max - 1;
 	if (val <= max) {
 		if (val >= min) return val;
@@ -835,7 +836,9 @@ export class Instrument {
 	public noteFilter: FilterSettings = new FilterSettings();
 	public envelopes: EnvelopeSettings[] = [];
 	public envelopeCount: number = 0;
-	public transition: number = 1;
+	public fadeIn: number = 0;
+	public fadeOut: number = Config.fadeOutNeutral;
+	public transition: number = Config.transitions.dictionary["normal"].index;
 	public pitchShift: number = 0;
 	public detune: number = 0;
 	public vibrato: number = 0;
@@ -892,7 +895,9 @@ export class Instrument {
 		this.detune = Config.detuneCenter;
 		this.vibrato = 0;
 		this.unison = 0;
-		this.transition = Config.transitions.dictionary["hard"].index;
+		this.fadeIn = 0;
+		this.fadeOut = Config.fadeOutNeutral;
+		this.transition = Config.transitions.dictionary["normal"].index;
 		this.envelopeCount = 0;
 		switch (type) {
 			case InstrumentType.chip:
@@ -1070,6 +1075,8 @@ export class Instrument {
 		
 		if (this.type != InstrumentType.drumset) {
 			instrumentObject["transition"] = Config.transitions[this.transition].name;
+			instrumentObject["fadeInSeconds"] = Math.round(10000 * Synth.fadeInSettingToSeconds(this.fadeIn)) / 10000;
+			instrumentObject["fadeOutTicks"] = Synth.fadeOutSettingToTicks(this.fadeOut);
 			instrumentObject["chord"] = this.getChord().name;
 		}
 		
@@ -1152,12 +1159,43 @@ export class Instrument {
 			this.volume = 0;
 		}
 		
-		this.transition = Config.transitions.dictionary["hard"].index; // default value.
+		this.transition = Config.transitions.dictionary["normal"].index; // default value.
 		const transitionProperty: any = instrumentObject["transition"] || instrumentObject["envelope"]; // the transition property used to be called envelope, so check that too.
 		if (transitionProperty != undefined) {
-			const legacyTransitionNames: Dictionary<string> = {"binary": "instant", "seamless": "instant", "sudden": "hard", "smooth": "soft"};
-			const transition: Transition | undefined = Config.transitions.dictionary[legacyTransitionNames[transitionProperty]] || Config.transitions.dictionary[transitionProperty];
+			let transition: Transition | undefined = Config.transitions.dictionary[transitionProperty];
+			if (instrumentObject["fadeInSeconds"] == undefined || instrumentObject["fadeOutTicks"] == undefined) {
+				const legacySettings = (<any>{
+					"binary":      {transition: "interrupt", fadeInSeconds: 0.0,    fadeOutTicks: -1},
+					"seamless":    {transition: "interrupt", fadeInSeconds: 0.0,    fadeOutTicks: -1},
+					"sudden":      {transition: "normal",    fadeInSeconds: 0.0,    fadeOutTicks: -3},
+					"hard":        {transition: "normal",    fadeInSeconds: 0.0,    fadeOutTicks: -3},
+					"smooth":      {transition: "normal",    fadeInSeconds: 0.025,  fadeOutTicks: -3},
+					"soft":        {transition: "normal",    fadeInSeconds: 0.025,  fadeOutTicks: -3},
+					// Note that the old slide transition has the same as a new slide transition that is different.
+					// Only apply legacy settings if the instrument JSON was created before, based on the presence
+					// of the fade in/out fields.
+					"slide":       {transition: "slide in pattern", fadeInSeconds: 0.025,  fadeOutTicks: -3},
+					"cross fade":  {transition: "normal",    fadeInSeconds: 0.04,   fadeOutTicks:  6},
+					"hard fade":   {transition: "normal",    fadeInSeconds: 0.0,    fadeOutTicks: 48},
+					"medium fade": {transition: "normal",    fadeInSeconds: 0.0125, fadeOutTicks: 72},
+					"soft fade":   {transition: "normal",    fadeInSeconds: 0.06,   fadeOutTicks: 96},
+				})[transitionProperty];
+				if (legacySettings != undefined) {
+					transition = Config.transitions.dictionary[legacySettings.transition];
+					// These may be overridden below.
+					this.fadeIn = Synth.secondsToFadeInSetting(legacySettings.fadeInSeconds);
+					this.fadeOut = Synth.ticksToFadeOutSetting(legacySettings.fadeOutTicks);
+				}
+			}
 			if (transition != undefined) this.transition = transition.index;
+		}
+		
+		// Overrides legacy settings in transition above.
+		if (instrumentObject["fadeInSeconds"] != undefined) {
+			this.fadeIn = Synth.secondsToFadeInSetting(+instrumentObject["fadeInSeconds"]);
+		}
+		if (instrumentObject["fadeOutTicks"] != undefined) {
+			this.fadeOut = Synth.ticksToFadeOutSetting(+instrumentObject["fadeOutTicks"]);
 		}
 		
 		{
@@ -1519,7 +1557,15 @@ export class Instrument {
 	}
 	
 	public getTransition(): Transition {
-		return this.type == InstrumentType.drumset ? Config.transitions.dictionary["hard fade"] : Config.transitions[this.transition];
+		return this.type == InstrumentType.drumset ? Config.transitions.dictionary["normal"] : Config.transitions[this.transition];
+	}
+	
+	public getFadeInSeconds(): number {
+		return (this.type == InstrumentType.drumset) ? 0.0 : Synth.fadeInSettingToSeconds(this.fadeIn);
+	}
+	
+	public getFadeOutTicks(): number {
+		return (this.type == InstrumentType.drumset) ? Config.drumsetFadeOutTicks : Synth.fadeOutSettingToTicks(this.fadeOut)
 	}
 	
 	public getChord(): Chord {
@@ -1716,6 +1762,7 @@ export class Song {
 				}
 				
 				if (instrument.type != InstrumentType.drumset) {
+					buffer.push(SongTagCode.fadeInOut, base64IntToCharCode[instrument.fadeIn], base64IntToCharCode[instrument.fadeOut]);
 					buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
 					buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 				}
@@ -2332,18 +2379,49 @@ export class Song {
 				const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 				instrument.stringSustain = clamp(0, Config.stringSustainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 			} break;
+			case SongTagCode.fadeInOut: {
+				const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+				instrument.fadeIn = clamp(0, Config.fadeInRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				instrument.fadeOut = clamp(0, Config.fadeOutTicks.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+			} break;
 			case SongTagCode.transition: {
-				if (beforeThree) {
-					const channelIndex: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-					this.channels[channelIndex].instruments[0].transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-				} else if (beforeSix) {
-					for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
-						for (const instrument of this.channels[channelIndex].instruments) {
-							instrument.transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				if (beforeNine) {
+					const legacySettings = [
+						{transition: "interrupt", fadeInSeconds: 0.0,    fadeOutTicks: -1},
+						{transition: "normal",    fadeInSeconds: 0.0,    fadeOutTicks: -3},
+						{transition: "normal",    fadeInSeconds: 0.025,  fadeOutTicks: -3},
+						{transition: "slide in pattern", fadeInSeconds: 0.025,  fadeOutTicks: -3},
+						{transition: "normal",    fadeInSeconds: 0.04,   fadeOutTicks:  6},
+						{transition: "normal",    fadeInSeconds: 0.0,    fadeOutTicks: 48},
+						{transition: "normal",    fadeInSeconds: 0.0125, fadeOutTicks: 72},
+						{transition: "normal",    fadeInSeconds: 0.06,   fadeOutTicks: 96},
+					];
+					if (beforeThree) {
+						const channelIndex: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+						const settings = legacySettings[clamp(0, legacySettings.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+						const instrument: Instrument = this.channels[channelIndex].instruments[0];
+						instrument.transition = Config.transitions.dictionary[settings.transition].index;
+						instrument.fadeIn = Synth.secondsToFadeInSetting(settings.fadeInSeconds);
+						instrument.fadeOut = Synth.ticksToFadeOutSetting(settings.fadeOutTicks);
+					} else if (beforeSix) {
+						for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
+							for (const instrument of this.channels[channelIndex].instruments) {
+								const settings = legacySettings[clamp(0, legacySettings.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+								instrument.transition = Config.transitions.dictionary[settings.transition].index;
+								instrument.fadeIn = Synth.secondsToFadeInSetting(settings.fadeInSeconds);
+								instrument.fadeOut = Synth.ticksToFadeOutSetting(settings.fadeOutTicks);
+							}
 						}
+					} else {
+						const settings = legacySettings[clamp(0, legacySettings.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
+						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+						instrument.transition = Config.transitions.dictionary[settings.transition].index;
+						instrument.fadeIn = Synth.secondsToFadeInSetting(settings.fadeInSeconds);
+						instrument.fadeOut = Synth.ticksToFadeOutSetting(settings.fadeOutTicks);
 					}
 				} else {
-					this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					instrument.transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				}
 			} break;
 			case SongTagCode.vibrato: {
@@ -3102,7 +3180,7 @@ export class Song {
 				
 				for (let i: number = 0; i < this.patternsPerChannel; i++) {
 					const pattern: Pattern = new Pattern();
-					channel.patterns[i] = channel.patterns[i];
+					channel.patterns[i] = pattern;
 					
 					let patternObject: any = undefined;
 					if (channelObject["patterns"]) patternObject = channelObject["patterns"][i];
@@ -3316,7 +3394,8 @@ class EnvelopeComputer {
 	}
 	
 	public computeEnvelopes(instrument: Instrument, currentPart: number, tickTimeStart: number, tickTimeEnd: number, secondsPassing: number, tone: Tone | null, released: boolean): void {
-		if (tone != null && tone.atNoteStart) {
+		const transition: Transition = instrument.getTransition();
+		if (tone != null && tone.atNoteStart && !transition.continues) {
 			this._prevNoteSecondsEnd = this.noteSecondsEnd;
 			this.prevNoteTicksEnd = this.noteTicksEnd;
 			this._prevNoteSizeFinal = this._noteSizeFinal;
@@ -3368,7 +3447,6 @@ class EnvelopeComputer {
 			noteSizeStart = startPin.size + (endPin.size - startPin.size) * ratioStart;
 			noteSizeEnd   = startPin.size + (endPin.size - startPin.size) * ratioEnd;
 			
-			const transition: Transition = instrument.getTransition();
 			if (transition.slides) {
 				const noteStartTick: number = tone.noteStart * Config.ticksPerPart;
 				const noteEndTick:   number = tone.noteEnd   * Config.ticksPerPart;
@@ -3526,6 +3604,7 @@ class Tone {
 	public nextNote: Note | null = null;
 	public prevNotePitchIndex: number = 0;
 	public nextNotePitchIndex: number = 0;
+	public freshlyAllocated: boolean = true;
 	public atNoteStart: boolean = false;
 	public isOnLastTick: boolean = false;
 	public noteStart: number = 0;
@@ -3541,6 +3620,7 @@ class Tone {
 	public readonly expressionStarts: number[] = [];
 	public readonly expressionDeltas: number[] = [];
 	public readonly phaseDeltaScales: number[] = [];
+	public prevVibrato: number | null = null;
 	public pulseWidth: number = 0.0;
 	public pulseWidthDelta: number = 0.0;
 	public readonly pickedStrings: PickedString[] = [];
@@ -3580,6 +3660,7 @@ class Tone {
 			pickedString.reset();
 		}
 		this.envelopeComputer.reset();
+		this.prevVibrato = null;
 	}
 }
 
@@ -4120,6 +4201,8 @@ export class Synth {
 	
 	private playheadInternal: number = 0.0;
 	private bar: number = 0;
+	private prevBar: number | null = null;
+	private nextBar: number | null = null;
 	private beat: number = 0;
 	private part: number = 0;
 	private tick: number = 0;
@@ -4169,6 +4252,7 @@ export class Synth {
 			const samplesPerTick: number = this.getSamplesPerTick();
 			remainder = samplesPerTick * (remainder - this.tick);
 			this.tickSampleCountdown = samplesPerTick - remainder;
+			this.prevBar = null;
 		}
 	}
 	
@@ -4203,6 +4287,7 @@ export class Synth {
 		} else if (song instanceof Song) {
 			this.song = song;
 		}
+		this.prevBar = null;
 	}
 	
 	private computeDelayBufferSizes(): void {
@@ -4263,6 +4348,7 @@ export class Synth {
 	public goToBar(bar: number): void {
 		this.bar = bar;
 		this.playheadInternal = this.bar;
+		this.prevBar = null;
 	}
 	
 	public snapToBar(): void {
@@ -4272,6 +4358,7 @@ export class Synth {
 		this.tick = 0;
 		this.tickSampleCountdown = 0;
 		this.isAtStartOfTick = true;
+		this.prevBar = null;
 	}
 	
 	public resetEffects(): void {
@@ -4292,11 +4379,13 @@ export class Synth {
 			const oldBar: number = this.bar;
 			this.bar = this.song.loopStart;
 			this.playheadInternal += this.bar - oldBar;
+			this.prevBar = null;
 		}
 	}
 	
-	public nextBar(): void {
+	public goToNextBar(): void {
 		if (!this.song) return;
+		this.prevBar = this.bar;
 		const oldBar: number = this.bar;
 		this.bar++;
 		if (this.bar >= this.song.barCount) {
@@ -4305,8 +4394,9 @@ export class Synth {
 		this.playheadInternal += this.bar - oldBar;
 	}
 	
-	public prevBar(): void {
+	public goToPrevBar(): void {
 		if (!this.song) return;
+		this.prevBar = null;
 		const oldBar: number = this.bar;
 		this.bar--;
 		if (this.bar < 0 || this.bar >= this.song.barCount) {
@@ -4388,6 +4478,12 @@ export class Synth {
 		let bufferIndex: number = 0;
 		while (bufferIndex < outputBufferLength && !ended) {
 			
+			this.nextBar = this.bar + 1;
+			if (this.loopRepeatCount != 0 && this.nextBar == song.loopStart + song.loopLength) {
+				this.nextBar = song.loopStart;
+			}
+			if (this.nextBar >= song.barCount) this.nextBar = null;
+			
 			const samplesLeftInBuffer: number = outputBufferLength - bufferIndex;
 			const samplesLeftInTick: number = Math.ceil(this.tickSampleCountdown);
 			const runLength: number = Math.min(samplesLeftInTick, samplesLeftInBuffer);
@@ -4417,13 +4513,11 @@ export class Synth {
 					
 					for (let i: number = 0; i < instrumentState.releasedTones.count(); i++) {
 						const tone: Tone = instrumentState.releasedTones.get(i);
-						
-						if (tone.ticksSinceReleased >= instrument.getTransition().releaseTicks) {
+						if (tone.ticksSinceReleased >= Math.abs(instrument.getFadeOutTicks())) {
 							this.freeReleasedTone(instrumentState, i);
 							i--;
 							continue;
 						}
-						
 						const shouldFadeOutFast: boolean = (tonesPlayedInThisInstrument >= Config.maximumTonesPerChannel);
 						this.playTone(song, channelIndex, samplesPerTick, bufferIndex, runLength, tone, true, shouldFadeOutFast);
 						tonesPlayedInThisInstrument++;
@@ -4489,29 +4583,6 @@ export class Synth {
 					this.part++;
 					this.liveInputDuration--;
 					
-					// Check if any active tones should be released.
-					for (let channelIndex: number = 0; channelIndex < song.getChannelCount(); channelIndex++) {
-						const channel: Channel = song.channels[channelIndex];
-						const channelState: ChannelState = this.channels[channelIndex];
-						for (let instrumentIndex: number = 0; instrumentIndex < channel.instruments.length; instrumentIndex++) {
-							const instrumentState: InstrumentState = channelState.instruments[instrumentIndex];
-							for (let i: number = 0; i < instrumentState.activeTones.count(); i++) {
-								const tone: Tone = instrumentState.activeTones.get(i);
-								const instrument: Instrument = channel.instruments[tone.instrumentIndex];
-								const transition: Transition = instrument.getTransition();
-								if (!transition.isSeamless && tone.note != null && tone.note.end == this.part + this.beat * Config.partsPerBeat) {
-									if (transition.releases) {
-										this.releaseTone(channelState.instruments[tone.instrumentIndex], tone);
-									} else {
-										this.freeTone(tone);
-									}
-									instrumentState.activeTones.remove(i);
-									i--;
-								}
-							}
-						}
-					}
-					
 					if (this.part == Config.partsPerBeat) {
 						this.part = 0;
 						
@@ -4520,6 +4591,7 @@ export class Synth {
 							if (this.beat == song.beatsPerBar) {
 								// bar changed, reset for next bar:
 								this.beat = 0;
+								this.prevBar = this.bar;
 								this.bar++;
 								if (this.loopRepeatCount != 0 && this.bar == song.loopStart + song.loopLength) {
 									this.bar = song.loopStart;
@@ -4572,7 +4644,7 @@ export class Synth {
 	private newTone(): Tone {
 		if (this.tonePool.count() > 0) {
 			const tone: Tone = this.tonePool.popBack();
-			tone.reset();
+			tone.freshlyAllocated = true;
 			return tone;
 		}
 		return new Tone();
@@ -4668,6 +4740,18 @@ export class Synth {
 		this.liveInputStarted = false;
 	}
 	
+	private adjacentPatternHasCompatibleInstrumentTransition(song: Song, channel: Channel, pattern: Pattern, otherPattern: Pattern, instrumentIndex: number, transition: Transition): boolean {
+		if (song.patternInstruments && otherPattern.instruments.indexOf(instrumentIndex) == -1) {
+			if (pattern.instruments.length > 1 || otherPattern.instruments.length > 1) {
+				return false;
+			} else {
+				const otherTransition: Transition = channel.instruments[otherPattern.instruments[0]].getTransition();
+				return otherTransition.includeAdjacentPatterns && otherTransition.slides == transition.slides;
+			}
+		}
+		return true;
+	}
+	
 	private determineCurrentActiveTones(song: Song, channelIndex: number, playSong: boolean): void {
 		const channel: Channel = song.channels[channelIndex];
 		const channelState: ChannelState = this.channels[channelIndex];
@@ -4700,7 +4784,6 @@ export class Synth {
 		if (pattern != null && (!song.layeredInstruments || channel.instruments.length == 1 || (song.patternInstruments && pattern.instruments.length == 1))) {
 			const newInstrumentIndex: number = song.patternInstruments ? pattern.instruments[0] : 0;
 			if (channelState.singleSeamlessInstrument != null && channelState.singleSeamlessInstrument != newInstrumentIndex && channelState.singleSeamlessInstrument < channelState.instruments.length) {
-				console.log(channelState.singleSeamlessInstrument, newInstrumentIndex);
 				const sourceInstrumentState: InstrumentState = channelState.instruments[channelState.singleSeamlessInstrument];
 				const destInstrumentState: InstrumentState = channelState.instruments[newInstrumentIndex];
 				while (sourceInstrumentState.activeTones.count() > 0) {
@@ -4717,11 +4800,47 @@ export class Synth {
 			const toneList: Deque<Tone> = instrumentState.activeTones;
 			if ((note != null) && (!song.patternInstruments || (pattern!.instruments.indexOf(instrumentIndex) != -1))) {
 				const instrument: Instrument = channel.instruments[instrumentIndex];
+				let prevNoteForThisInstrument: Note | null = prevNote;
+				let nextNoteForThisInstrument: Note | null = nextNote;
+				
+				const transition: Transition = instrument.getTransition();
+				if (transition.includeAdjacentPatterns) {
+					const partsPerBar: Number = Config.partsPerBeat * song.beatsPerBar;
+					if (note.start == 0) {
+						let prevPattern: Pattern | null = (this.prevBar == null) ? null : song.getPattern(channelIndex, this.prevBar);
+						if (prevPattern != null && this.adjacentPatternHasCompatibleInstrumentTransition(song, channel, pattern!, prevPattern, instrumentIndex, transition)) {
+							const lastNote: Note | null = (prevPattern.notes.length <= 0) ? null : prevPattern.notes[prevPattern.notes.length - 1];
+							if (lastNote != null && lastNote.end == partsPerBar) {
+								prevNoteForThisInstrument = lastNote;
+							}
+						}
+					}
+					if (note.end == partsPerBar) {
+						let nextPattern: Pattern | null = (this.nextBar == null) ? null : song.getPattern(channelIndex, this.nextBar);
+						if (nextPattern != null && this.adjacentPatternHasCompatibleInstrumentTransition(song, channel, pattern!, nextPattern, instrumentIndex, transition)) {
+							const firstNote: Note | null = (nextPattern.notes.length <= 0) ? null : nextPattern.notes[0];
+							if (firstNote != null && firstNote.start == 0) {
+								nextNoteForThisInstrument = firstNote;
+							}
+						}
+					}
+				}
+				
 				let toneCount: number = 0;
 				const chord: Chord = instrument.getChord();
 				if (chord.singleTone) {
+					const atNoteStart: boolean = (Config.ticksPerPart * note.start == currentTick) && this.isAtStartOfTick;
 					let tone: Tone;
 					if (toneList.count() == 0) {
+						tone = this.newTone();
+						toneList.pushBack(tone);
+					} else if (atNoteStart && (!instrument.getTransition().isSeamless || prevNoteForThisInstrument == null)) {
+						const oldTone: Tone = toneList.popFront();
+						if (oldTone.isOnLastTick) {
+							this.freeTone(oldTone);
+						} else {
+							this.releaseTone(instrumentState, oldTone);
+						}
 						tone = this.newTone();
 						toneList.pushBack(tone);
 					} else {
@@ -4738,19 +4857,19 @@ export class Synth {
 					tone.note = note;
 					tone.noteStart = note.start;
 					tone.noteEnd = note.end;
-					tone.prevNote = prevNote;
-					tone.nextNote = nextNote;
+					tone.prevNote = prevNoteForThisInstrument;
+					tone.nextNote = nextNoteForThisInstrument;
 					tone.prevNotePitchIndex = 0;
 					tone.nextNotePitchIndex = 0;
-					tone.atNoteStart = (Config.ticksPerPart * note.start == currentTick) && this.isAtStartOfTick;
+					tone.atNoteStart = atNoteStart;
 				} else {
 					const transition: Transition = instrument.getTransition();
 					for (let i: number = 0; i < note.pitches.length; i++) {
 						
 						const strumOffsetParts: number = i * instrument.getChord().strumParts;
-						let prevNoteForThisTone: Note | null = (prevNote && prevNote.pitches.length > i) ? prevNote : null;
+						let prevNoteForThisTone: Note | null = (prevNoteForThisInstrument && prevNoteForThisInstrument.pitches.length > i) ? prevNoteForThisInstrument : null;
 						let noteForThisTone: Note = note;
-						let nextNoteForThisTone: Note | null = (nextNote && nextNote.pitches.length > i) ? nextNote : null;
+						let nextNoteForThisTone: Note | null = (nextNoteForThisInstrument && nextNoteForThisInstrument.pitches.length > i) ? nextNoteForThisInstrument : null;
 						let noteStart: number = noteForThisTone.start + strumOffsetParts;
 						
 						if (noteStart > currentPart) {
@@ -4769,10 +4888,20 @@ export class Synth {
 							noteEnd = Math.min(Config.partsPerBeat * this.song!.beatsPerBar, noteEnd + strumOffsetParts);
 						}
 						
+						const atNoteStart: boolean = (Config.ticksPerPart * noteStart == currentTick) && this.isAtStartOfTick;
 						let tone: Tone;
 						if (toneList.count() <= i) {
 							tone = this.newTone();
 							toneList.pushBack(tone);
+						} else if (atNoteStart && (!instrument.getTransition().isSeamless || prevNoteForThisTone == null)) {
+							const oldTone: Tone = toneList.get(i);
+							if (oldTone.isOnLastTick) {
+								this.freeTone(oldTone);
+							} else {
+								this.releaseTone(instrumentState, oldTone);
+							}
+							tone = this.newTone();
+							toneList.set(i, tone);
 						} else {
 							tone = toneList.get(i);
 						}
@@ -4789,7 +4918,7 @@ export class Synth {
 						tone.nextNote = nextNoteForThisTone;
 						tone.prevNotePitchIndex = i;
 						tone.nextNotePitchIndex = i;
-						tone.atNoteStart = (Config.ticksPerPart * noteStart == currentTick) && this.isAtStartOfTick;
+						tone.atNoteStart = atNoteStart;
 					}
 				}
 				this.releaseOrFreeUnusedTones(toneList, toneCount, song, channelIndex);
@@ -4804,7 +4933,7 @@ export class Synth {
 			// Automatically free or release seamless tones if there's no new note to take over.
 			const tone: Tone = toneList.popBack();
 			const channel: Channel = song.channels[channelIndex];
-			if (tone.instrumentIndex < channel.instruments.length && channel.instruments[tone.instrumentIndex].getTransition().releases) {
+			if (tone.instrumentIndex < channel.instruments.length && !tone.isOnLastTick) {
 				const instrumentState: InstrumentState = this.channels[channelIndex].instruments[tone.instrumentIndex];
 				this.releaseTone(instrumentState, tone);
 			} else {
@@ -4854,7 +4983,6 @@ export class Synth {
 		const partTimeTickEnd:   number = (ticksIntoBar + 1) / Config.ticksPerPart;
 		const partTimeStart: number = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * startRatio;
 		const partTimeEnd: number   = partTimeTickStart + (partTimeTickEnd - partTimeTickStart) * endRatio;
-		const partsPerBar: number = Config.partsPerBeat * song.beatsPerBar;
 		const currentPart: number = synth.getCurrentPart();
 		
 		tone.specialIntervalMult = 1.0;
@@ -4903,6 +5031,11 @@ export class Synth {
 			throw new Error("Unknown instrument type in computeTone.");
 		}
 		
+		if ((tone.atNoteStart && !transition.isSeamless) || tone.freshlyAllocated) {
+			tone.reset();
+		}
+		tone.freshlyAllocated = false;
+		
 		const maxWaves: number = Math.max(Config.maxChordSize, Config.operatorCount);
 		for (let i: number = 0; i < maxWaves; i++) {
 			tone.phaseDeltas[i] = 0.0;
@@ -4915,15 +5048,16 @@ export class Synth {
 			const startTicksSinceReleased: number = tone.ticksSinceReleased + startRatio;
 			const endTicksSinceReleased:   number = tone.ticksSinceReleased + endRatio;
 			intervalStart = intervalEnd = tone.lastInterval;
-			transitionExpressionStart = Synth.noteSizeToVolumeMult((1.0 - startTicksSinceReleased / transition.releaseTicks) * Config.noteSizeMax);
-			transitionExpressionEnd   = Synth.noteSizeToVolumeMult((1.0 - endTicksSinceReleased / transition.releaseTicks) * Config.noteSizeMax);
-
+			const fadeOutTicks: number = Math.abs(instrument.getFadeOutTicks());
+			transitionExpressionStart = Synth.noteSizeToVolumeMult((1.0 - startTicksSinceReleased / fadeOutTicks) * Config.noteSizeMax);
+			transitionExpressionEnd   = Synth.noteSizeToVolumeMult((1.0 - endTicksSinceReleased / fadeOutTicks) * Config.noteSizeMax);
+			
 			if (shouldFadeOutFast) {
 				transitionExpressionStart *= 1.0 - startRatio;
 				transitionExpressionEnd *= 1.0 - endRatio;
 			}
 			
-			if (tone.ticksSinceReleased + 1 >= transition.releaseTicks) toneIsOnLastTick = true;
+			if (tone.ticksSinceReleased + 1 >= fadeOutTicks) toneIsOnLastTick = true;
 		} else if (tone.note == null) {
 			transitionExpressionStart = transitionExpressionEnd = 1;
 			tone.lastInterval = 0;
@@ -4965,16 +5099,14 @@ export class Synth {
 			let intervalTickStart: number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioStart;
 			let intervalTickEnd:   number = startPin.interval + (endPin.interval - startPin.interval) * pinRatioEnd;
 			
-			if (transition.isSeamless && !transition.slides && note.end == partsPerBar) {
-				// Special case hack for seamless, no-slide transition: assume the next bar starts with another seamless note, don't fade out.
-				// Note that currently seamless and slide make different assumptions about whether a note at the end of a bar will connect with a note at the start of the next bar!
-			} else if (transition.isSeamless && nextNote != null) {
-				// For seamless transitions, if this note is immediately followed by another, don't fade out yet and let the next note take over this tone.
-			} else if (!transition.releases && transition.releaseTicks > 0.0) {
-				// If the tone should fade out before the end of the note, do so here.
-				transitionExpressionTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / transition.releaseTicks);
-				transitionExpressionTickEnd   *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickEnd) / transition.releaseTicks);
-				if (tickTimeEnd >= noteStartTick + noteLengthTicks) toneIsOnLastTick = true;
+			if (!transition.isSeamless || nextNote == null) {
+				const fadeOutTicks: number = -instrument.getFadeOutTicks();
+				if (fadeOutTicks > 0.0) {
+					// If the tone should fade out before the end of the note, do so here.
+					transitionExpressionTickStart *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickStart) / fadeOutTicks);
+					transitionExpressionTickEnd   *= Math.min(1.0, (noteLengthTicks - noteTicksPassedTickEnd) / fadeOutTicks);
+					if (tickTimeEnd >= noteStartTick + noteLengthTicks) toneIsOnLastTick = true;
+				}
 			}
 			
 			intervalStart = intervalTickStart + (intervalTickEnd - intervalTickStart) * startRatio;
@@ -4996,7 +5128,7 @@ export class Synth {
 			const prevNote: Note | null = tone.prevNote;
 			const nextNote: Note | null = tone.nextNote;
 			if (prevNote != null) {
-				const intervalDiff: number = prevNote.pitches[tone.prevNotePitchIndex] - tone.pitches[0] + prevNote.pins[prevNote.pins.length-1].interval;
+				const intervalDiff: number = prevNote.pitches[tone.prevNotePitchIndex] + prevNote.pins[prevNote.pins.length-1].interval - tone.pitches[0];
 				if (envelopeComputer.prevSlideStart) intervalStart += intervalDiff * envelopeComputer.prevSlideRatioStart;
 				if (envelopeComputer.prevSlideEnd)   intervalEnd   += intervalDiff * envelopeComputer.prevSlideRatioEnd;
 				if (!chord.singleTone) {
@@ -5032,54 +5164,44 @@ export class Synth {
 		}
 		
 		if (effectsIncludeVibrato(instrument.effects)) {
-			// TODO: Remember vibratoEnd, use it as the next tick's vibratoStart, in order to
-			// support seamless ties across bars with picked string instruments which can't have
-			// discontinuities in pitch... or maybe just keep track of the time passed since the
-			// start of the bar that contained the original note and use that as the LFO input?
-			
-			let lfoStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeStart);
-			let lfoEnd:   number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeEnd);
-			/*
-			// Smoothly interpolate between the vibrato LFO curve at the end of the bar and the beginning of the next one. (Mostly to avoid a discontinuous frequency which retriggers string plucking.)
-			const wrapT: number = Math.max(0.0, Math.min(1.0, 1.0 - (partsPerBar - partTimeStart) / 2.0));
-			if (wrapT > 0.0) {
-				const lfoWrappedStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * (partTimeStart - partsPerBar));
-				const lfoWrappedEnd:   number = Synth.getLFOAmplitude(instrument, secondsPerPart * (partTimeEnd - partsPerBar));
-				lfoStart += (lfoWrappedStart - lfoStart) * wrapT;
-				lfoEnd += (lfoWrappedEnd - lfoEnd) * wrapT;
-			}
-			*/
-			const vibratoDepthEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.vibratoDepth];
-			const vibratoDepthEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.vibratoDepth];
-			const vibratoAmplitude: number = Config.vibratos[instrument.vibrato].amplitude;
-			let vibratoStart: number = vibratoAmplitude * lfoStart * vibratoDepthEnvelopeStart;
-			let vibratoEnd:   number = vibratoAmplitude * lfoEnd   * vibratoDepthEnvelopeEnd;
 			const delayTicks: number = Config.vibratos[instrument.vibrato].delayTicks;
-			if (delayTicks > 0.0) {
-				const ticksUntilVibratoStart: number = delayTicks - envelopeComputer.noteTicksStart;
-				const ticksUntilVibratoEnd:   number = delayTicks - envelopeComputer.noteTicksEnd;
-				vibratoStart *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoStart / 2.0));
-				vibratoEnd   *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoEnd   / 2.0));
-				/*
-				if (transition.isSeamless && tone.note != null && tone.nextNote != null) {
-					// fade out the very end of the vibrato so that it lines up with the beginning of the next note with delayed vibrato.
-					const noteEndTick:   number = tone.noteEnd   * Config.ticksPerPart;
-					const ticksUntilNextNoteStart: number = noteEndTick - (ticksIntoBar + startRatio);
-					const ticksUntilNextNoteEnd:   number = noteEndTick - (ticksIntoBar + endRatio);
-					vibratoStart *= Math.max(0.0, Math.min(1.0, ticksUntilNextNoteStart));
-					vibratoEnd   *= Math.max(0.0, Math.min(1.0, ticksUntilNextNoteEnd  ));
-				}*/
+			const vibratoAmplitude: number = Config.vibratos[instrument.vibrato].amplitude;
+			
+			// To maintain pitch continuity, (mostly for picked string which retriggers impulse
+			// otherwise) remember the vibrato at the end of this run and reuse it at the start
+			// of the next run if available.
+			let vibratoStart: number;
+			if (tone.prevVibrato != null) {
+				vibratoStart = tone.prevVibrato;
+			} else {
+				let lfoStart: number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeStart);
+				const vibratoDepthEnvelopeStart: number = envelopeStarts[NoteAutomationIndex.vibratoDepth];
+				vibratoStart = vibratoAmplitude * lfoStart * vibratoDepthEnvelopeStart;
+				if (delayTicks > 0.0) {
+					const ticksUntilVibratoStart: number = delayTicks - envelopeComputer.noteTicksStart;
+					vibratoStart *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoStart / 2.0));
+				}
 			}
+			
+			let lfoEnd:   number = Synth.getLFOAmplitude(instrument, secondsPerPart * partTimeEnd);
+			const vibratoDepthEnvelopeEnd:   number = envelopeEnds[  NoteAutomationIndex.vibratoDepth];
+			let vibratoEnd:   number = vibratoAmplitude * lfoEnd   * vibratoDepthEnvelopeEnd;
+			if (delayTicks > 0.0) {
+				const ticksUntilVibratoEnd:   number = delayTicks - envelopeComputer.noteTicksEnd;
+				vibratoEnd   *= Math.max(0.0, Math.min(1.0, 1.0 - ticksUntilVibratoEnd   / 2.0));
+			}
+			tone.prevVibrato = vibratoEnd;
+			
 			intervalStart += vibratoStart;
 			intervalEnd   += vibratoEnd;
 		}
 		
-		if (!transition.isSeamless || (!(!transition.slides && tone.note != null && tone.note.start == 0) && !(tone.prevNote != null))) {
+		if (!transition.isSeamless || tone.prevNote == null) {
 			// Fade in the beginning of the note.
-			const attackSeconds: number = transition.attackSeconds;
-			if (attackSeconds > 0.0) {
-				transitionExpressionStart *= Math.min(1.0, envelopeComputer.noteSecondsStart / attackSeconds);
-				transitionExpressionEnd   *= Math.min(1.0, envelopeComputer.noteSecondsEnd   / attackSeconds);
+			const fadeInSeconds: number = instrument.getFadeInSeconds();
+			if (fadeInSeconds > 0.0) {
+				transitionExpressionStart *= Math.min(1.0, envelopeComputer.noteSecondsStart / fadeInSeconds);
+				transitionExpressionEnd   *= Math.min(1.0, envelopeComputer.noteSecondsEnd   / fadeInSeconds);
 			}
 		}
 		
@@ -5264,7 +5386,7 @@ export class Synth {
 					tone.pickedStrings[i] = new PickedString();
 				}
 				
-				if (tone.atNoteStart) {
+				if (tone.atNoteStart && !transition.continues) {
 					for (const pickedString of tone.pickedStrings) {
 						// Force the picked string to retrigger the attack impulse at the start of the note.
 						pickedString.delayIndex = -1;
@@ -6659,6 +6781,26 @@ export class Synth {
 	}
 	public static volumeMultToNoteSize(volumeMult: number): number {
 		return Math.pow(Math.max(0.0, volumeMult), 1/1.5) * Config.noteSizeMax;
+	}
+	
+	public static fadeInSettingToSeconds(setting: number): number {
+		return 0.0125 * (0.95 * setting + 0.05 * setting * setting);
+	}
+	public static secondsToFadeInSetting(seconds: number): number {
+		return clamp(0, Config.fadeInRange, Math.round((-0.95 + Math.sqrt(0.9025 + 0.2 * seconds / 0.0125)) / 0.1));
+	}
+	public static fadeOutSettingToTicks(setting: number): number {
+		return Config.fadeOutTicks[setting];
+	}
+	public static ticksToFadeOutSetting(ticks: number): number {
+		let lower: number = Config.fadeOutTicks[0];
+		if (ticks <= lower) return 0;
+		for (let i: number = 1; i < Config.fadeOutTicks.length; i++) {
+			let upper: number = Config.fadeOutTicks[i];
+			if (ticks <= upper) return (ticks < (lower + upper) / 2) ? i - 1 : i;
+			lower = upper;
+		}
+		return Config.fadeOutTicks.length - 1;
 	}
 	
 	public static detuneToCents(detune: number): number {

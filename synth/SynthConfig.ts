@@ -143,11 +143,10 @@ export interface ChipNoise extends BeepBoxOption {
 
 export interface Transition extends BeepBoxOption {
 	readonly isSeamless: boolean;
-	readonly attackSeconds: number;
-	readonly releases: boolean;
-	readonly releaseTicks: number;
+	readonly continues: boolean;
 	readonly slides: boolean;
 	readonly slideTicks: number;
+	readonly includeAdjacentPatterns: boolean;
 }
 
 export interface Vibrato extends BeepBoxOption {
@@ -307,16 +306,16 @@ export class Config {
 	public static readonly filterMaxPoints: number = 8;
 	public static readonly filterTypeNames: ReadonlyArray<string> = ["low-pass", "high-pass", "peak"]; // See FilterType enum above.
 	
+	public static readonly fadeInRange: number = 10;
+	public static readonly fadeOutTicks: ReadonlyArray<number> = [-24, -12, -6, -3, -1, 6, 12, 24, 48, 72, 96];
+	public static readonly fadeOutNeutral: number = 4;
+	public static readonly drumsetFadeOutTicks: number = 48;
 	public static readonly transitions: DictionaryArray<Transition> = toNameMap([
-		{name: "instant",     isSeamless: true,  attackSeconds: 0.0,    releases: false, releaseTicks: 1,  slides: false, slideTicks: 3},
-		{name: "hard",        isSeamless: false, attackSeconds: 0.0,    releases: false, releaseTicks: 3,  slides: false, slideTicks: 3},
-		{name: "soft",        isSeamless: false, attackSeconds: 0.025,  releases: false, releaseTicks: 3,  slides: false, slideTicks: 3},
-		{name: "slide",       isSeamless: true,  attackSeconds: 0.025,  releases: false, releaseTicks: 3,  slides: true,  slideTicks: 3},
-		{name: "cross fade",  isSeamless: false, attackSeconds: 0.04,   releases: true,  releaseTicks: 6,  slides: false, slideTicks: 3},
-		{name: "hard fade",   isSeamless: false, attackSeconds: 0.0,    releases: true,  releaseTicks: 48, slides: false, slideTicks: 3},
-		{name: "medium fade", isSeamless: false, attackSeconds: 0.0125, releases: true,  releaseTicks: 72, slides: false, slideTicks: 3},
-		{name: "soft fade",   isSeamless: false, attackSeconds: 0.06,   releases: true,  releaseTicks: 96, slides: false, slideTicks: 6},
-		{name: "hard overlap",isSeamless: false, attackSeconds: 0.0,    releases: true,  releaseTicks: 12, slides: false, slideTicks: 3},
+		{name: "normal",        isSeamless: false, continues: false, slides: false, slideTicks: 3, includeAdjacentPatterns: false},
+		{name: "interrupt",     isSeamless: true,  continues: false, slides: false, slideTicks: 3, includeAdjacentPatterns: true},
+		{name: "continue",      isSeamless: true,  continues: true,  slides: false, slideTicks: 3, includeAdjacentPatterns: true},
+		{name: "slide",         isSeamless: true,  continues: false, slides: true,  slideTicks: 3, includeAdjacentPatterns: true},
+		{name: "slide in pattern", isSeamless: true,  continues: false, slides: true,  slideTicks: 3, includeAdjacentPatterns: false},
 	]);
 	public static readonly vibratos: DictionaryArray<Vibrato> = toNameMap([
 		{name: "none",    amplitude: 0.0,  periodsSeconds: [0.14], delayTicks: 0},
