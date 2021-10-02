@@ -3393,7 +3393,7 @@ class EnvelopeComputer {
 		this._prevNoteSizeFinal = Config.noteSizeMax;
 	}
 	
-	public computeEnvelopes(instrument: Instrument, currentPart: number, tickTimeStart: number, tickTimeEnd: number, secondsPassing: number, tone: Tone | null, released: boolean): void {
+	public computeEnvelopes(instrument: Instrument, currentPart: number, tickTimeStart: number, tickTimeEnd: number, secondsPassing: number, tone: Tone | null): void {
 		const transition: Transition = instrument.getTransition();
 		if (tone != null && tone.atNoteStart && !transition.continues) {
 			this._prevNoteSecondsEnd = this.noteSecondsEnd;
@@ -3436,7 +3436,7 @@ class EnvelopeComputer {
 		let prevSlideRatioEnd: number = 0.0;
 		let nextSlideRatioStart: number = 0.0;
 		let nextSlideRatioEnd: number = 0.0;
-		if (tone != null && tone.note != null && !released) {
+		if (tone != null && tone.note != null && !tone.passedEndOfNote) {
 			const endPinIndex: number = tone.note.getEndPinIndex(currentPart);
 			const startPin: NotePin = tone.note.pins[endPinIndex-1];
 			const endPin:   NotePin = tone.note.pins[endPinIndex];
@@ -3607,6 +3607,7 @@ class Tone {
 	public freshlyAllocated: boolean = true;
 	public atNoteStart: boolean = false;
 	public isOnLastTick: boolean = false;
+	public passedEndOfNote: boolean = false;
 	public noteStart: number = 0;
 	public noteEnd: number = 0;
 	public noteLengthTicks: number = 0;
@@ -3871,7 +3872,7 @@ class InstrumentState {
 		this.chorusPhase = 0.0;
 	}
 	
-	public compute(synth: Synth, instrument: Instrument, samplesPerTick: number, runLength: number, tone: Tone | null, released: boolean): void {
+	public compute(synth: Synth, instrument: Instrument, samplesPerTick: number, runLength: number, tone: Tone | null): void {
 		this.computed = true;
 		
 		this.allocateNecessaryBuffers(synth, instrument, samplesPerTick);
@@ -3887,7 +3888,7 @@ class InstrumentState {
 		const secondsPerTick: number = samplesPerTick / synth.samplesPerSecond;
 		const currentPart: number = synth.getCurrentPart();
 		
-		this.envelopeComputer.computeEnvelopes(instrument, currentPart, tickTimeStart, tickTimeEnd, secondsPerTick * (tickTimeEnd - tickTimeStart), tone, released);
+		this.envelopeComputer.computeEnvelopes(instrument, currentPart, tickTimeStart, tickTimeEnd, secondsPerTick * (tickTimeEnd - tickTimeStart), tone);
 		const envelopeStarts: number[] = this.envelopeComputer.envelopeStarts;
 		const envelopeEnds: number[] = this.envelopeComputer.envelopeEnds;
 		
@@ -4525,7 +4526,7 @@ export class Synth {
 					
 					if (instrumentState.awake) {
 						if (!instrumentState.computed) {
-							instrumentState.compute(this, instrument, samplesPerTick, runLength, null, true);
+							instrumentState.compute(this, instrument, samplesPerTick, runLength, null);
 						}
 						
 						Synth.effectsSynth(this, outputDataL, outputDataR, bufferIndex, runLength, instrument, instrumentState);
@@ -4653,6 +4654,7 @@ export class Synth {
 	private releaseTone(instrumentState: InstrumentState, tone: Tone): void {
 		instrumentState.releasedTones.pushFront(tone);
 		tone.atNoteStart = false;
+		tone.passedEndOfNote = true;
 	}
 	
 	private freeReleasedTone(instrumentState: InstrumentState, toneIndex: number): void {
@@ -4862,6 +4864,7 @@ export class Synth {
 					tone.prevNotePitchIndex = 0;
 					tone.nextNotePitchIndex = 0;
 					tone.atNoteStart = atNoteStart;
+					tone.passedEndOfNote = false;
 				} else {
 					const transition: Transition = instrument.getTransition();
 					for (let i: number = 0; i < note.pitches.length; i++) {
@@ -4871,6 +4874,7 @@ export class Synth {
 						let noteForThisTone: Note = note;
 						let nextNoteForThisTone: Note | null = (nextNoteForThisInstrument && nextNoteForThisInstrument.pitches.length > i) ? nextNoteForThisInstrument : null;
 						let noteStart: number = noteForThisTone.start + strumOffsetParts;
+						let passedEndOfNote: boolean = false;
 						
 						if (noteStart > currentPart) {
 							if (toneList.count() > i && transition.isSeamless && prevNoteForThisTone != null) {
@@ -4878,6 +4882,7 @@ export class Synth {
 								noteForThisTone = prevNoteForThisTone;
 								prevNoteForThisTone = null;
 								noteStart = noteForThisTone.start + strumOffsetParts;
+								passedEndOfNote = true;
 							} else {
 								break;
 							}
@@ -4919,6 +4924,7 @@ export class Synth {
 						tone.prevNotePitchIndex = i;
 						tone.nextNotePitchIndex = i;
 						tone.atNoteStart = atNoteStart;
+						tone.passedEndOfNote = passedEndOfNote;
 					}
 				}
 				this.releaseOrFreeUnusedTones(toneList, toneCount, song, channelIndex);
@@ -4951,7 +4957,7 @@ export class Synth {
 		instrumentState.awake = true;
 		instrumentState.tonesAddedInThisTick = true;
 		if (!instrumentState.computed) {
-			instrumentState.compute(this, instrument, samplesPerTick, runLength, tone, released);
+			instrumentState.compute(this, instrument, samplesPerTick, runLength, tone);
 		}
 		
 		Synth.computeTone(this, song, channelIndex, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
@@ -5119,7 +5125,7 @@ export class Synth {
 		
 		// Compute envelopes *after* resetting the tone, otherwise the envelope computer gets reset too!
 		const envelopeComputer: EnvelopeComputer = tone.envelopeComputer;
-		envelopeComputer.computeEnvelopes(instrument, currentPart, Config.ticksPerPart * partTimeStart, Config.ticksPerPart * partTimeEnd, secondsPerPart * (partTimeEnd - partTimeStart), tone, released);
+		envelopeComputer.computeEnvelopes(instrument, currentPart, Config.ticksPerPart * partTimeStart, Config.ticksPerPart * partTimeEnd, secondsPerPart * (partTimeEnd - partTimeStart), tone);
 		const envelopeStarts: number[] = tone.envelopeComputer.envelopeStarts;
 		const envelopeEnds: number[] = tone.envelopeComputer.envelopeEnds;
 		
