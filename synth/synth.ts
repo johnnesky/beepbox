@@ -3404,7 +3404,7 @@ export class Song {
                     pattern.instrument = clamp(0, this.instrumentsPerChannel, (patternObject["instrument"] | 0) - 1);
 
                     if (patternObject["notes"] && patternObject["notes"].length > 0) {
-                        const maxNoteCount: number = Math.min(this.beatsPerBar * Config.partsPerBeat, patternObject["notes"].length >>> 0);
+                        const maxNoteCount: number = Math.min(this.beatsPerBar * Config.partsPerBeat * ( isModChannel ? Config.modCount : 1 ), patternObject["notes"].length >>> 0);
 
                         //let tickClock: number = 0;
                         for (let j: number = 0; j < patternObject["notes"].length; j++) {
