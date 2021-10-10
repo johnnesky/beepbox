@@ -567,10 +567,10 @@ export class FilterControlPoint {
 	}
 	
 	public static getHzFromSettingValue(value: number): number {
-		return Config.filterFreqMaxHz * Math.pow(2.0, (value - (Config.filterFreqRange - 1)) * Config.filterFreqStep);
+		return Config.filterFreqReferenceHz * Math.pow(2.0, (value - Config.filterFreqReferenceSetting) * Config.filterFreqStep);
 	}
 	public static getSettingValueFromHz(hz: number): number {
-		return Math.log2(hz / Config.filterFreqMaxHz) / Config.filterFreqStep + (Config.filterFreqRange - 1);
+		return Math.log2(hz / Config.filterFreqReferenceHz) / Config.filterFreqStep + Config.filterFreqReferenceSetting;
 	}
 	public static getRoundedSettingValueFromHz(hz: number): number {
 		return Math.max(0, Math.min(Config.filterFreqRange - 1, Math.round(FilterControlPoint.getSettingValueFromHz(hz))));
@@ -605,19 +605,19 @@ export class FilterControlPoint {
 	}
 	
 	public getVolumeCompensationMult(): number {
-		const octave: number = (this.freq - (Config.filterFreqRange - 1)) * Config.filterFreqStep;
+		const octave: number = (this.freq - Config.filterFreqReferenceSetting) * Config.filterFreqStep;
 		const gainPow: number = (this.gain - Config.filterGainCenter) * Config.filterGainStep;
 		switch (this.type) {
 			case FilterType.lowPass:
-				const freqRelativeTo8khz: number = Math.pow(2.0, octave) * Config.filterFreqMaxHz / 8000.0;
+				const freqRelativeTo8khz: number = Math.pow(2.0, octave) * Config.filterFreqReferenceHz / 8000.0;
 				// Reverse the frequency warping from importing legacy simplified filters to imitate how the legacy filter cutoff setting affected volume.
 				const warpedFreq: number = (Math.sqrt(1.0 + 4.0 * freqRelativeTo8khz) - 1.0) / 2.0;
 				const warpedOctave: number = Math.log2(warpedFreq);
 				return Math.pow(0.5, 0.2 * Math.max(0.0, gainPow + 1.0) + Math.min(0.0, Math.max(-3.0, 0.595 * warpedOctave + 0.35 * Math.min(0.0, gainPow + 1.0))));
 			case FilterType.highPass:
-				return Math.pow(0.5, 0.125 * Math.max(0.0, gainPow + 1.0) + Math.min(0.0, 0.3 * (-octave - Math.log2(Config.filterFreqMaxHz / 125.0)) + 0.2 * Math.min(0.0, gainPow + 1.0)));
+				return Math.pow(0.5, 0.125 * Math.max(0.0, gainPow + 1.0) + Math.min(0.0, 0.3 * (-octave - Math.log2(Config.filterFreqReferenceHz / 125.0)) + 0.2 * Math.min(0.0, gainPow + 1.0)));
 			case FilterType.peak:
-				const distanceFromCenter: number = octave + Math.log2(Config.filterFreqMaxHz / 2000.0);
+				const distanceFromCenter: number = octave + Math.log2(Config.filterFreqReferenceHz / 2000.0);
 				const freqLoudness: number = Math.pow(1.0 / (1.0 + Math.pow(distanceFromCenter / 3.0, 2.0)), 2.0);
 				return Math.pow(0.5, 0.125 * Math.max(0.0, gainPow) + 0.1 * freqLoudness * Math.min(0.0, gainPow));
 			default:
@@ -716,7 +716,7 @@ export class FilterSettings {
 			// to guess at a perceptually appropriate new cutoff frequency and gain.
 			const extraOctaves: number = 3.5;
 			const targetRadians: number = legacyRadians * Math.pow(2.0, extraOctaves);
-			const curvedRadians: number = targetRadians / (1.0 + targetRadians / (Math.PI * 0.8));
+			const curvedRadians: number = targetRadians / (1.0 + targetRadians / Math.PI);
 			const curvedHz: number = standardSampleRate * curvedRadians / (2.0 * Math.PI)
 			const freqSetting: number = FilterControlPoint.getRoundedSettingValueFromHz(curvedHz);
 			const finalHz: number = FilterControlPoint.getHzFromSettingValue(freqSetting);
@@ -732,7 +732,7 @@ export class FilterSettings {
 			// Bias slightly toward 2^(-extraOctaves):
 			logGain = -extraOctaves + (logGain + extraOctaves) * 0.82;
 			// Decaying envelopes move the cutoff frequency back into an area where the best approximation of the first order slope requires a lower gain setting.
-			if (envDecays) logGain = Math.min(logGain, -2.0);
+			if (envDecays) logGain = Math.min(logGain, -1.0);
 			const convertedGain: number = Math.pow(2.0, logGain);
 			const gainSetting: number = FilterControlPoint.getRoundedSettingValueFromLinearGain(convertedGain);
 			

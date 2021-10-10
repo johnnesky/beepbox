@@ -296,10 +296,12 @@ export class Config {
 		{name: "hollow",  expression: 1.5,  basePitch: 96,  pitchFilterMult:    1.0, isSoft: true,  samples: null},
 	]);
 	
-	public static readonly filterFreqMaxHz: number = 16000.0;
-	public static readonly filterFreqMinHz: number = 1.0;
-	public static readonly filterFreqRange: number = 33;
 	public static readonly filterFreqStep: number = 1.0/4.0;
+	public static readonly filterFreqRange: number = 34;
+	public static readonly filterFreqReferenceSetting: number = 28;
+	public static readonly filterFreqReferenceHz: number = 8000.0;
+	public static readonly filterFreqMaxHz: number = Config.filterFreqReferenceHz * Math.pow(2.0, Config.filterFreqStep * (Config.filterFreqRange - 1 - Config.filterFreqReferenceSetting)); // ~19khz
+	public static readonly filterFreqMinHz: number = 1.0;
 	public static readonly filterGainRange: number = 15;
 	public static readonly filterGainCenter: number = 7;
 	public static readonly filterGainStep: number = 1.0/2.0;
