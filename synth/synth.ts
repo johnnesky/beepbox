@@ -848,7 +848,7 @@ export class Instrument {
 	public volume: number = 0;
 	public pan: number = Config.panCenter;
 	public pulseWidth: number = Config.pulseWidthRange - 1;
-	public stringSustain: number = 6;
+	public stringSustain: number = 10;
 	public distortion: number = 0;
 	public bitcrusherFreq: number = 0;
 	public bitcrusherQuantization: number = 0;
@@ -895,6 +895,7 @@ export class Instrument {
 		this.detune = Config.detuneCenter;
 		this.vibrato = 0;
 		this.unison = 0;
+		this.stringSustain = 10;
 		this.fadeIn = 0;
 		this.fadeOut = Config.fadeOutNeutral;
 		this.transition = Config.transitions.dictionary["normal"].index;
@@ -938,7 +939,6 @@ export class Instrument {
 			case InstrumentType.pickedString:
 				this.chord = Config.chords.dictionary["strum"].index;
 				this.harmonicsWave.reset();
-				this.stringSustain = 6;
 				break;
 			default:
 				throw new Error("Unrecognized instrument type: " + type);
@@ -990,7 +990,7 @@ export class Instrument {
 			}
 		}
 		
-		if (legacyFilterEnv.type == EnvelopeType.none || legacyFilterEnv.type == EnvelopeType.tremolo || legacyFilterEnv.type == EnvelopeType.tremolo2) {
+		if (legacyFilterEnv.type == EnvelopeType.none) {
 			this.noteFilter.reset();
 			this.eqFilter.convertLegacySettings(legacyCutoffSetting, legacyResonanceSetting, legacyFilterEnv);
 			this.effects = (this.effects & (~(1 << EffectType.noteFilter)));
@@ -1113,7 +1113,6 @@ export class Instrument {
 			instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
 		} else if (this.type == InstrumentType.pickedString) {
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
-			instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
 			instrumentObject["stringSustain"] = Math.round(100 * this.stringSustain / (Config.stringSustainRange - 1));
 		} else if (this.type == InstrumentType.harmonics) {
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
@@ -1335,7 +1334,7 @@ export class Instrument {
 		if (instrumentObject["stringSustain"] != undefined) {
 			this.stringSustain = clamp(0, Config.stringSustainRange, Math.round((Config.stringSustainRange - 1) * (instrumentObject["stringSustain"] | 0) / 100));
 		} else {
-			this.stringSustain = 6;
+			this.stringSustain = 10;
 		}
 		
 		if (this.type == InstrumentType.noise) {
@@ -5796,7 +5795,7 @@ export class Synth {
 					const impulseWave = instrument.harmonicsWave.getCustomWave(instrument.type);
 					const impulseWaveLength = impulseWave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 					const impulsePhaseDelta = impulseWaveLength / periodLengthStart#;
-					if (impulseWaveLength <= Math.ceil(periodLengthStart#)) {
+					if (delayLine#.length <= Math.ceil(periodLengthStart#)) {
 						throw new Error("Picked string delay buffer too small to contain wave, buffer: " + impulseWaveLength + ", period: " + periodLengthStart#);
 					}
 					

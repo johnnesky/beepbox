@@ -44,16 +44,16 @@ export class FadeInOutEditor {
 	}
 	
 	private _fadeInToX(fadeIn: number) {
-		return 1.0 + (this._editorWidth - 2.0) * 0.3 * fadeIn / (Config.fadeInRange - 1);
+		return 1.0 + (this._editorWidth - 2.0) * 0.4 * fadeIn / (Config.fadeInRange - 1);
 	}
 	private _xToFadeIn(x: number) {
-		return clamp(0, Config.fadeInRange, Math.round((x - 1.0) * (Config.fadeInRange - 1) / (0.3 * this._editorWidth - 2.0)));
+		return clamp(0, Config.fadeInRange, Math.round((x - 1.0) * (Config.fadeInRange - 1) / (0.4 * this._editorWidth - 2.0)));
 	}
 	private _fadeOutToX(fadeOut: number) {
-		return 1.0 + (this._editorWidth - 2.0) * (0.4 + 0.6 * fadeOut / (Config.fadeOutTicks.length - 1));
+		return 1.0 + (this._editorWidth - 2.0) * (0.5 + 0.5 * fadeOut / (Config.fadeOutTicks.length - 1));
 	}
 	private _xToFadeOut(x: number) {
-		return clamp(0, Config.fadeOutTicks.length, Math.round((Config.fadeOutTicks.length - 1) * ((x - 1.0) / (this._editorWidth - 2.0) - 0.4) / 0.6));
+		return clamp(0, Config.fadeOutTicks.length, Math.round((Config.fadeOutTicks.length - 1) * ((x - 1.0) / (this._editorWidth - 2.0) - 0.5) / 0.5));
 	}
 	
 	private _whenMousePressed = (event: MouseEvent): void => {

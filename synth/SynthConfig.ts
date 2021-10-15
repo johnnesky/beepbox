@@ -272,8 +272,8 @@ export class Config {
 	public static readonly harmonicsBaseExpression: number = 0.025;
 	public static readonly pwmBaseExpression:       number = 0.04725; // It's actually closer to half of this, the synthesized pulse amplitude range is only .5 to -.5, but also note that the fundamental sine partial amplitude of a square wave is 4/π times the measured square wave amplitude.
 	public static readonly pickedStringBaseExpression: number = 0.025; // Same as harmonics.
-	public static readonly distortionBaseVolume:    number = 0.015; // Distortion is not affected by pitchDamping, which otherwise approximately halves expression for notes around the middle of the range.
-	public static readonly bitcrusherBaseVolume:    number = 0.0125; // Also not affected by pitchDamping, used when bit crushing is maxed out (aka "1-bit" output).
+	public static readonly distortionBaseVolume:    number = 0.011; // Distortion is not affected by pitchDamping, which otherwise approximately halves expression for notes around the middle of the range.
+	public static readonly bitcrusherBaseVolume:    number = 0.010; // Also not affected by pitchDamping, used when bit crushing is maxed out (aka "1-bit" output).
 	
 	public static readonly chipWaves: DictionaryArray<ChipWave> = toNameMap([
 		{name: "rounded",      expression: 0.94, samples: centerWave([0.0, 0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.2, 0.0, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.85, -0.9, -0.95, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.95, -0.9, -0.85, -0.8, -0.7, -0.6, -0.5, -0.4, -0.2])},
@@ -477,7 +477,7 @@ export class Config {
 	public static readonly pickedStringShelfHz: number = 4000.0; // The cutoff freq of the shelf filter that is used to decay the high frequency energy in the picked string.
 	
 	public static readonly distortionRange: number = 8;
-	public static readonly stringSustainRange: number = 8;
+	public static readonly stringSustainRange: number = 15;
 	public static readonly stringDecayRate: number = 0.12;
 	public static readonly bitcrusherFreqRange: number = 14;
 	public static readonly bitcrusherOctaveStep: number = 0.5;
