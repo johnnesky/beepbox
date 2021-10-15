@@ -7,7 +7,7 @@ import {Prompt} from "./Prompt";
 import {ChangeGroup} from "./Change";
 import {ChangePatternsPerChannel, ChangeInstrumentsFlags, ChangeChannelCount} from "./changes";
 
-const {button, div, br, h2, input} = HTML;
+const {button, div, label, br, h2, input} = HTML;
 
 export class ChannelSettingsPrompt implements Prompt {
 	private readonly _patternsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
@@ -20,31 +20,31 @@ export class ChannelSettingsPrompt implements Prompt {
 	
 	public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 250px; text-align: right;"},
 		h2("Channel Settings"),
-		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 			"Pitch channels:",
 			this._pitchChannelStepper,
 		),
-		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 			"Drum channels:",
 			this._drumChannelStepper,
 		),
-		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 			"Available patterns per channel:",
 			this._patternsStepper,
 		),
-		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 			"Simultaneous instruments",
 			br(),
 			"per channel:",
 			this._layeredInstrumentsBox,
 		),
-		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 			"Different instruments",
 			br(),
 			"per pattern:",
 			this._patternInstrumentsBox,
 		),
-		div({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
+		label({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
 			this._okayButton,
 		),
 		this._cancelButton,
