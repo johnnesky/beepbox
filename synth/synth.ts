@@ -1,6 +1,6 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, InstrumentAutomationIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
+import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
 import {Deque} from "./Deque";
 import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter} from "./filtering";
@@ -1501,11 +1501,11 @@ export class Instrument {
 			return false;
 		}
 		if (automationTarget.isFilter) {
-			if (automationTarget.perNote) {
+			//if (automationTarget.perNote) {
 				if (index >= this.noteFilter.controlPointCount) return false;
-			} else {
-				if (index >= this.eqFilter.controlPointCount)   return false;
-			}
+			//} else {
+			//	if (index >= this.eqFilter.controlPointCount)   return false;
+			//}
 		}
 		return true;
 	}
@@ -3373,8 +3373,9 @@ class EnvelopeComputer {
 	public readonly envelopeEnds: number[] = [];
 	public lowpassCutoffDecayVolumeCompensation: number = 1.0;
 	
-	constructor(private _perNote: boolean) {
-		const length: number = this._perNote ? NoteAutomationIndex.length : InstrumentAutomationIndex.length;
+	constructor(/*private _perNote: boolean*/) {
+		//const length: number = this._perNote ? NoteAutomationIndex.length : InstrumentAutomationIndex.length;
+		const length: number = NoteAutomationIndex.length;
 		for (let i: number = 0; i < length; i++) {
 			this.envelopeStarts[i] = 1.0;
 			this.envelopeEnds[i] = 1.0;
@@ -3483,7 +3484,7 @@ class EnvelopeComputer {
 			let targetIndex: number;
 			let envelope: Envelope;
 			if (envelopeIndex == instrument.envelopeCount) {
-				if (usedNoteSize || !this._perNote) break;
+				if (usedNoteSize /*|| !this._perNote*/) break;
 				// Special case: if no other envelopes used note size, default to applying it to note volume.
 				automationTarget = Config.instrumentAutomationTargets.dictionary["noteVolume"];
 				targetIndex = 0;
@@ -3495,7 +3496,7 @@ class EnvelopeComputer {
 				envelope = Config.envelopes[envelopeSettings.envelope];
 				if (envelope.type == EnvelopeType.noteSize) usedNoteSize = true;
 			}
-			if (automationTarget.perNote == this._perNote && automationTarget.computeIndex != null) {
+			if (/*automationTarget.perNote == this._perNote &&*/ automationTarget.computeIndex != null) {
 				const computeIndex: number = automationTarget.computeIndex + targetIndex;
 				let envelopeStart: number = EnvelopeComputer.computeEnvelope(envelope, noteSecondsStart, beatTimeStart, noteSizeStart);
 				let envelopeEnd:   number = EnvelopeComputer.computeEnvelope(envelope, noteSecondsEnd,   beatTimeEnd,   noteSizeEnd);
@@ -3521,7 +3522,7 @@ class EnvelopeComputer {
 				this.envelopeEnds[computeIndex]   *= envelopeEnd;
 				
 				if (automationTarget.isFilter) {
-					const filterSettings: FilterSettings = this._perNote ? instrument.noteFilter : instrument.eqFilter;
+					const filterSettings: FilterSettings = /*this._perNote ?*/ instrument.noteFilter /*: instrument.eqFilter*/;
 					if (filterSettings.controlPointCount > targetIndex && filterSettings.controlPoints[targetIndex].type == FilterType.lowPass) {
 						lowpassCutoffDecayVolumeCompensation = Math.max(lowpassCutoffDecayVolumeCompensation, EnvelopeComputer.getLowpassCutoffDecayVolumeCompensation(envelope));
 					}
@@ -3553,17 +3554,17 @@ class EnvelopeComputer {
 		for (let envelopeIndex: number = 0; envelopeIndex < instrument.envelopeCount; envelopeIndex++) {
 			const envelopeSettings: EnvelopeSettings = instrument.envelopes[envelopeIndex];
 			const automationTarget: AutomationTarget = Config.instrumentAutomationTargets[envelopeSettings.target];
-			if (automationTarget.perNote == this._perNote && automationTarget.computeIndex != null) {
+			if (/*automationTarget.perNote == this._perNote &&*/ automationTarget.computeIndex != null) {
 				const computeIndex: number = automationTarget.computeIndex + envelopeSettings.index;
 				this.envelopeStarts[computeIndex] = 1.0;
 				this.envelopeEnds[computeIndex]   = 1.0;
 			}
 		}
-		if (this._perNote) {
+		//if (this._perNote) {
 			// As a special case, note volume may be altered even if there was no envelope for it.
 			this.envelopeStarts[NoteAutomationIndex.noteVolume] = 1.0;
 			this.envelopeEnds[  NoteAutomationIndex.noteVolume] = 1.0;
-		}
+		//}
 	}
 	
 	public static computeEnvelope(envelope: Envelope, time: number, beats: number, noteSize: number): number {
@@ -3636,7 +3637,7 @@ class Tone {
 	public feedbackMult: number = 0.0;
 	public feedbackDelta: number = 0.0;
 	
-	public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(true);
+	public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(/*true*/);
 	
 	constructor() {
 		this.reset();
@@ -3764,7 +3765,7 @@ class InstrumentState {
 	public reverbShelfPrevInput2: number = 0.0;
 	public reverbShelfPrevInput3: number = 0.0;
 	
-	public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(false);
+	//public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(false);
 	
 	public allocateNecessaryBuffers(synth: Synth, instrument: Instrument, samplesPerTick: number): void {
 		if (effectsIncludePanning(instrument.effects)) {
@@ -3881,15 +3882,15 @@ class InstrumentState {
 		const tickRemainingStart: number = (tickSampleCountdown            ) / samplesPerTick;
 		const tickRemainingEnd:   number = (tickSampleCountdown - runLength) / samplesPerTick;
 		const tickIsEnding: boolean = (runLength >= tickSampleCountdown);
-		const ticksIntoBar: number = synth.getTicksIntoBar();
-		const tickTimeStart: number = ticksIntoBar + (1.0 - tickRemainingStart);
-		const tickTimeEnd:   number = ticksIntoBar + (1.0 - tickRemainingEnd);
-		const secondsPerTick: number = samplesPerTick / synth.samplesPerSecond;
-		const currentPart: number = synth.getCurrentPart();
 		
-		this.envelopeComputer.computeEnvelopes(instrument, currentPart, tickTimeStart, tickTimeEnd, secondsPerTick * (tickTimeEnd - tickTimeStart), tone);
-		const envelopeStarts: number[] = this.envelopeComputer.envelopeStarts;
-		const envelopeEnds: number[] = this.envelopeComputer.envelopeEnds;
+		//const ticksIntoBar: number = synth.getTicksIntoBar();
+		//const tickTimeStart: number = ticksIntoBar + (1.0 - tickRemainingStart);
+		//const tickTimeEnd:   number = ticksIntoBar + (1.0 - tickRemainingEnd);
+		//const secondsPerTick: number = samplesPerTick / synth.samplesPerSecond;
+		//const currentPart: number = synth.getCurrentPart();
+		//this.envelopeComputer.computeEnvelopes(instrument, currentPart, tickTimeStart, tickTimeEnd, secondsPerTick * (tickTimeEnd - tickTimeStart), tone);
+		//const envelopeStarts: number[] = this.envelopeComputer.envelopeStarts;
+		//const envelopeEnds: number[] = this.envelopeComputer.envelopeEnds;
 		
 		const usesDistortion: boolean = effectsIncludeDistortion(instrument.effects);
 		const usesBitcrusher: boolean = effectsIncludeBitcrusher(instrument.effects);
@@ -3899,15 +3900,15 @@ class InstrumentState {
 		const usesReverb: boolean = effectsIncludeReverb(instrument.effects);
 		
 		if (usesDistortion) {
-			this.distortionStart = Math.min(1.0, envelopeStarts[InstrumentAutomationIndex.distortion] * instrument.distortion / (Config.distortionRange - 1));
-			this.distortionEnd   = Math.min(1.0, envelopeEnds[  InstrumentAutomationIndex.distortion] * instrument.distortion / (Config.distortionRange - 1));
+			this.distortionStart = Math.min(1.0, /*envelopeStarts[InstrumentAutomationIndex.distortion] **/ instrument.distortion / (Config.distortionRange - 1));
+			this.distortionEnd   = Math.min(1.0, /*envelopeEnds[  InstrumentAutomationIndex.distortion] **/ instrument.distortion / (Config.distortionRange - 1));
 		}
 		
 		if (usesBitcrusher) {
-			const freqSettingStart: number = instrument.bitcrusherFreq * Math.sqrt(envelopeStarts[InstrumentAutomationIndex.bitcrusherFrequency]);
-			const freqSettingEnd:   number = instrument.bitcrusherFreq * Math.sqrt(envelopeEnds[  InstrumentAutomationIndex.bitcrusherFrequency]);
-			const quantizationSettingStart: number = instrument.bitcrusherQuantization * Math.sqrt(envelopeStarts[InstrumentAutomationIndex.bitcrusherQuantization]);
-			const quantizationSettingEnd:   number = instrument.bitcrusherQuantization * Math.sqrt(envelopeEnds[  InstrumentAutomationIndex.bitcrusherQuantization]);
+			const freqSettingStart: number = instrument.bitcrusherFreq /** Math.sqrt(envelopeStarts[InstrumentAutomationIndex.bitcrusherFrequency])*/;
+			const freqSettingEnd:   number = instrument.bitcrusherFreq /** Math.sqrt(envelopeEnds[  InstrumentAutomationIndex.bitcrusherFrequency])*/;
+			const quantizationSettingStart: number = instrument.bitcrusherQuantization /** Math.sqrt(envelopeStarts[InstrumentAutomationIndex.bitcrusherQuantization])*/;
+			const quantizationSettingEnd:   number = instrument.bitcrusherQuantization /** Math.sqrt(envelopeEnds[  InstrumentAutomationIndex.bitcrusherQuantization])*/;
 			
 			const basePitch: number = Config.keys[synth.song!.key].basePitch; // TODO: What if there's a key change mid-song?
 			const freqStart: number = Instrument.frequencyFromPitch(basePitch + 60) * Math.pow(2.0, (Config.bitcrusherFreqRange - 1 - freqSettingStart) * Config.bitcrusherOctaveStep);
@@ -3928,18 +3929,18 @@ class InstrumentState {
 			this.bitcrusherFoldLevelScale = Math.pow(foldLevelEnd / foldLevelStart, 1.0 / runLength);
 		}
 		
-		let eqFilterVolume: number = this.envelopeComputer.lowpassCutoffDecayVolumeCompensation;
+		let eqFilterVolume: number = 1.0; //this.envelopeComputer.lowpassCutoffDecayVolumeCompensation;
 		const eqFilterSettings: FilterSettings = instrument.eqFilter;
-		const eqAllFreqsEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterAllFreqs];
-		const eqAllFreqsEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterAllFreqs];
+		//const eqAllFreqsEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterAllFreqs];
+		//const eqAllFreqsEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterAllFreqs];
 		for (let i: number = 0; i < eqFilterSettings.controlPointCount; i++) {
-			const eqFreqEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterFreq0 + i];
-			const eqFreqEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterFreq0 + i];
-			const eqPeakEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterGain0 + i];
-			const eqPeakEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterGain0 + i];
+			//const eqFreqEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterFreq0 + i];
+			//const eqFreqEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterFreq0 + i];
+			//const eqPeakEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.eqFilterGain0 + i];
+			//const eqPeakEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.eqFilterGain0 + i];
 			const point: FilterControlPoint = eqFilterSettings.controlPoints[i];
-			point.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, eqAllFreqsEnvelopeStart * eqFreqEnvelopeStart, eqPeakEnvelopeStart);
-			point.toCoefficients(Synth.tempFilterEndCoefficients,   samplesPerSecond, eqAllFreqsEnvelopeEnd   * eqFreqEnvelopeEnd,   eqPeakEnvelopeEnd);
+			point.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, /*eqAllFreqsEnvelopeStart * eqFreqEnvelopeStart*/ 1.0, /*eqPeakEnvelopeStart*/ 1.0);
+			point.toCoefficients(Synth.tempFilterEndCoefficients,   samplesPerSecond, /*eqAllFreqsEnvelopeEnd   * eqFreqEnvelopeEnd*/   1.0, /*eqPeakEnvelopeEnd*/   1.0);
 			if (this.eqFilters.length <= i) this.eqFilters[i] = new DynamicBiquadFilter();
 			this.eqFilters[i].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength);
 			eqFilterVolume *= point.getVolumeCompensationMult();
@@ -3948,8 +3949,8 @@ class InstrumentState {
 		eqFilterVolume = Math.min(3.0, eqFilterVolume);
 		
 		const mainInstrumentVolume: number = Synth.instrumentVolumeToVolumeMult(instrument.volume);
-		this.mixVolumeStart = mainInstrumentVolume * envelopeStarts[InstrumentAutomationIndex.mixVolume];
-		const mixVolumeEnd  = mainInstrumentVolume * envelopeEnds[  InstrumentAutomationIndex.mixVolume];
+		this.mixVolumeStart = mainInstrumentVolume /** envelopeStarts[InstrumentAutomationIndex.mixVolume]*/;
+		const mixVolumeEnd  = mainInstrumentVolume /** envelopeEnds[  InstrumentAutomationIndex.mixVolume]*/;
 		this.mixVolumeDelta = (mixVolumeEnd - this.mixVolumeStart) / runLength;
 		
 		let eqFilterVolumeStart: number = eqFilterVolume;
@@ -3958,11 +3959,11 @@ class InstrumentState {
 		let delayInputMultEnd: number = 1.0;
 		
 		if (usesPanning) {
-			const panEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.panning] * 2.0 - 1.0;
-			const panEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.panning] * 2.0 - 1.0;
+			//const panEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.panning] * 2.0 - 1.0;
+			//const panEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.panning] * 2.0 - 1.0;
 			const pan: number = (instrument.pan - Config.panCenter) / Config.panCenter;
-			const panStart: number = Math.max(-1.0, Math.min(1.0, pan * panEnvelopeStart));
-			const panEnd:   number = Math.max(-1.0, Math.min(1.0, pan * panEnvelopeEnd));
+			const panStart: number = Math.max(-1.0, Math.min(1.0, pan /** panEnvelopeStart*/));
+			const panEnd:   number = Math.max(-1.0, Math.min(1.0, pan /** panEnvelopeEnd  */));
 			const volumeStartL: number = Math.cos((1 + panStart) * Math.PI * 0.25) * 1.414;
 			const volumeStartR: number = Math.cos((1 - panStart) * Math.PI * 0.25) * 1.414;
 			const volumeEndL:   number = Math.cos((1 + panEnd)   * Math.PI * 0.25) * 1.414;
@@ -3986,20 +3987,20 @@ class InstrumentState {
 		}
 		
 		if (usesChorus) {
-			const chorusEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.chorus];
-			const chorusEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.chorus];
-			const chorusStart: number = Math.min(1.0, chorusEnvelopeStart * instrument.chorus / (Config.chorusRange - 1));
-			const chorusEnd:   number = Math.min(1.0, chorusEnvelopeEnd   * instrument.chorus / (Config.chorusRange - 1));
+			//const chorusEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.chorus];
+			//const chorusEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.chorus];
+			const chorusStart: number = Math.min(1.0, /*chorusEnvelopeStart **/ instrument.chorus / (Config.chorusRange - 1));
+			const chorusEnd:   number = Math.min(1.0, /*chorusEnvelopeEnd   **/ instrument.chorus / (Config.chorusRange - 1));
 			this.chorusStart = chorusStart * 0.6 + (Math.pow(chorusStart, 6.0)) * 0.4;
 			this.chorusEnd   = chorusEnd   * 0.6 + (Math.pow(chorusEnd,   6.0)) * 0.4;
 		}
 		
 		let maxEchoMult = 0.0;
 		if (usesEcho) {
-			const echoSustainEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.echoSustain];
-			const echoSustainEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.echoSustain];
-			const echoMultStart: number = Math.min(1.0, Math.pow(echoSustainEnvelopeStart * instrument.echoSustain / Config.echoSustainRange, 1.1)) * 0.9;
-			const echoMultEnd:   number = Math.min(1.0, Math.pow(echoSustainEnvelopeEnd   * instrument.echoSustain / Config.echoSustainRange, 1.1)) * 0.9;
+			//const echoSustainEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.echoSustain];
+			//const echoSustainEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.echoSustain];
+			const echoMultStart: number = Math.min(1.0, Math.pow(/*echoSustainEnvelopeStart **/ instrument.echoSustain / Config.echoSustainRange, 1.1)) * 0.9;
+			const echoMultEnd:   number = Math.min(1.0, Math.pow(/*echoSustainEnvelopeEnd   **/ instrument.echoSustain / Config.echoSustainRange, 1.1)) * 0.9;
 			this.echoMultStart = echoMultStart;
 			this.echoMultDelta = (echoMultEnd - echoMultStart) / runLength;
 			maxEchoMult = Math.max(echoMultStart, echoMultEnd);
@@ -4033,10 +4034,10 @@ class InstrumentState {
 		
 		let maxReverbMult = 0.0;
 		if (usesReverb) {
-			const reverbEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.reverb];
-			const reverbEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.reverb];
-			const reverbStart: number = Math.min(1.0, Math.pow(reverbEnvelopeStart * instrument.reverb / Config.reverbRange, 0.667)) * 0.425;
-			const reverbEnd:   number = Math.min(1.0, Math.pow(reverbEnvelopeEnd   * instrument.reverb / Config.reverbRange, 0.667)) * 0.425;
+			//const reverbEnvelopeStart: number = envelopeStarts[InstrumentAutomationIndex.reverb];
+			//const reverbEnvelopeEnd:   number = envelopeEnds[  InstrumentAutomationIndex.reverb];
+			const reverbStart: number = Math.min(1.0, Math.pow(/*reverbEnvelopeStart **/ instrument.reverb / Config.reverbRange, 0.667)) * 0.425;
+			const reverbEnd:   number = Math.min(1.0, Math.pow(/*reverbEnvelopeEnd   **/ instrument.reverb / Config.reverbRange, 0.667)) * 0.425;
 			this.reverbMultStart = reverbStart;
 			this.reverbMultDelta = (reverbEnd - reverbStart) / runLength;
 			maxReverbMult = Math.max(reverbStart, reverbEnd);
@@ -4531,7 +4532,7 @@ export class Synth {
 						Synth.effectsSynth(this, outputDataL, outputDataR, bufferIndex, runLength, instrument, instrumentState);
 						
 						instrumentState.computed = false;
-						instrumentState.envelopeComputer.clearEnvelopes(instrument);
+						//instrumentState.envelopeComputer.clearEnvelopes(instrument);
 					}
 				}
 			}
