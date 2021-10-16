@@ -4835,7 +4835,7 @@ export class Synth {
 					if (toneList.count() == 0) {
 						tone = this.newTone();
 						toneList.pushBack(tone);
-					} else if (atNoteStart && (!instrument.getTransition().isSeamless || prevNoteForThisInstrument == null)) {
+					} else if (atNoteStart && (!transition.isSeamless || prevNoteForThisInstrument == null)) {
 						const oldTone: Tone = toneList.popFront();
 						if (oldTone.isOnLastTick) {
 							this.freeTone(oldTone);
@@ -4866,9 +4866,9 @@ export class Synth {
 					tone.passedEndOfNote = false;
 				} else {
 					const transition: Transition = instrument.getTransition();
+					let strumOffsetParts: number = 0;
 					for (let i: number = 0; i < note.pitches.length; i++) {
 						
-						const strumOffsetParts: number = i * instrument.getChord().strumParts;
 						let prevNoteForThisTone: Note | null = (prevNoteForThisInstrument && prevNoteForThisInstrument.pitches.length > i) ? prevNoteForThisInstrument : null;
 						let noteForThisTone: Note = note;
 						let nextNoteForThisTone: Note | null = (nextNoteForThisInstrument && nextNoteForThisInstrument.pitches.length > i) ? nextNoteForThisInstrument : null;
@@ -4891,13 +4891,16 @@ export class Synth {
 						if (transition.isSeamless && nextNoteForThisTone != null) {
 							noteEnd = Math.min(Config.partsPerBeat * this.song!.beatsPerBar, noteEnd + strumOffsetParts);
 						}
+						if (!transition.continues || prevNoteForThisTone == null) {
+							strumOffsetParts += chord.strumParts;
+						}
 						
 						const atNoteStart: boolean = (Config.ticksPerPart * noteStart == currentTick) && this.isAtStartOfTick;
 						let tone: Tone;
 						if (toneList.count() <= i) {
 							tone = this.newTone();
 							toneList.pushBack(tone);
-						} else if (atNoteStart && (!instrument.getTransition().isSeamless || prevNoteForThisTone == null)) {
+						} else if (atNoteStart && (!transition.isSeamless || prevNoteForThisTone == null)) {
 							const oldTone: Tone = toneList.get(i);
 							if (oldTone.isOnLastTick) {
 								this.freeTone(oldTone);
