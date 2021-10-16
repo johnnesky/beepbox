@@ -4291,7 +4291,7 @@ export class Synth {
 	}
 	
 	private computeDelayBufferSizes(): void {
-		this.stringDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond / Instrument.frequencyFromPitch(12));
+		this.stringDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond / Instrument.frequencyFromPitch(0));
 		this.stringDelayBufferMask = this.stringDelayBufferSize - 1;
 		this.panningDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond * Config.panDelaySecondsMax);
 		this.panningDelayBufferMask = this.panningDelayBufferSize - 1;
@@ -5795,15 +5795,15 @@ export class Synth {
 					const impulseWave = instrument.harmonicsWave.getCustomWave(instrument.type);
 					const impulseWaveLength = impulseWave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 					const impulsePhaseDelta = impulseWaveLength / periodLengthStart#;
-					if (delayLine#.length <= Math.ceil(periodLengthStart#)) {
+					if (delayLine#.length <= Math.ceil(periodLengthStart# * 2)) {
 						throw new Error("Picked string delay buffer too small to contain wave, buffer: " + impulseWaveLength + ", period: " + periodLengthStart#);
 					}
 					
+					const fadeDuration = Math.min(periodLengthStart# * 0.2, synth.samplesPerSecond * 0.003);
 					const startImpulseFromSample = Math.ceil(startImpulseFrom);
-					const stopImpulseAtSample = Math.floor(startImpulseFrom + periodLengthStart#);
-					const startImpulsePhase = (startImpulseFromSample - startImpulseFrom) * impulsePhaseDelta;
-		
-					let impulsePhase = startImpulsePhase;
+					const stopImpulseAt = startImpulseFrom + periodLengthStart# + fadeDuration;
+					const stopImpulseAtSample = stopImpulseAt;
+					let impulsePhase = (startImpulseFromSample - startImpulseFrom) * impulsePhaseDelta;
 					let prevWaveIntegral = 0.0;
 					for (let i = startImpulseFromSample; i <= stopImpulseAtSample; i++) {
 						const impulsePhaseInt = impulsePhase|0;
@@ -5812,7 +5812,11 @@ export class Synth {
 						const phaseRatio = impulsePhase - impulsePhaseInt;
 						nextWaveIntegral += (impulseWave[index+1] - nextWaveIntegral) * phaseRatio;
 						const sample = (nextWaveIntegral - prevWaveIntegral) / impulsePhaseDelta;
-						delayLine#[i & delayBufferMask] += sample;
+						const fadeIn = Math.min(1.0, (i - startImpulseFrom) / fadeDuration);
+						const fadeOut = Math.min(1.0, (stopImpulseAt - i) / fadeDuration);
+						const combinedFade = fadeIn * fadeOut;
+						const curvedFade = combinedFade * combinedFade * (3.0 - 2.0 * combinedFade); // A cubic sigmoid from 0 to 1.
+						delayLine#[i & delayBufferMask] += sample * curvedFade;
 						prevWaveIntegral = nextWaveIntegral;
 						impulsePhase += impulsePhaseDelta;
 					}
