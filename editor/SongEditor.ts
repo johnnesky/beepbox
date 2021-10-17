@@ -685,12 +685,12 @@ export class SongEditor {
 		for (let i: number = 0; i < Config.effectOrder.length; i++) {
 			let effectFlag: number = Config.effectOrder[i];
 			const selected: boolean = ((instrument.effects & (1 << effectFlag)) != 0);
-			const label: string = (selected ? "✓ " : "　") + Config.effectsNames[effectFlag];
+			const label: string = (selected ? "✓ " : "　") + Config.effectNames[effectFlag];
 			const option: HTMLOptionElement = <HTMLOptionElement> this._effectsSelect.children[i + 1];
 			if (option.textContent != label) option.textContent = label;
 			if (selected) {
 				if (effectDisplayLabel != "") effectDisplayLabel += ", ";
-				effectDisplayLabel += Config.effectsNames[effectFlag];
+				effectDisplayLabel += Config.effectNames[effectFlag];
 			}
 		}
 		if (effectDisplayLabel == "") effectDisplayLabel = "none";
@@ -1117,7 +1117,7 @@ export class SongEditor {
 					// Volume and the panning effect are not included in presets.
 					delete instrumentObject["volume"];
 					delete instrumentObject["pan"];
-					const panningEffectIndex: number = instrumentObject["effects"].indexOf(Config.effectsNames[EffectType.panning]);
+					const panningEffectIndex: number = instrumentObject["effects"].indexOf(Config.effectNames[EffectType.panning]);
 					if (panningEffectIndex != -1) instrumentObject["effects"].splice(panningEffectIndex, 1);
 					for (let i: number = 0; i < instrumentObject["envelopes"].length; i++) {
 						const envelope: any = instrumentObject["envelopes"][i];

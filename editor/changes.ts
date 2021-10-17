@@ -1,6 +1,6 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {Algorithm, Dictionary, FilterType, InstrumentType, EffectType, AutomationTarget, Config, effectsIncludePanning} from "../synth/SynthConfig";
+import {Algorithm, Dictionary, FilterType, InstrumentType, EffectType, AutomationTarget, Config, effectsIncludePanning, effectsIncludeDistortion} from "../synth/SynthConfig";
 import {NotePin, Note, makeNotePin, Pattern, FilterSettings, FilterControlPoint, SpectrumWave, HarmonicsWave, Instrument, Channel, Song} from "../synth/synth";
 import {Preset, PresetCategory, EditorConfig} from "./EditorConfig";
 import {Change, ChangeGroup, ChangeSequence, UndoableChange} from "./Change";
@@ -401,52 +401,48 @@ export class ChangeRandomGeneratedInstrument extends Change {
 			return selectWeightedRandom(entries);
 		}
 		
+		class PotentialFilterPoint {
+			constructor(
+				public readonly chance: number,
+				public readonly type: FilterType,
+				public readonly minFreq: number,
+				public readonly maxFreq: number,
+				public readonly centerHz: number,
+				public readonly centerGain: number,
+			) {};
+		}
+		function applyFilterPoints(filter: FilterSettings, potentialPoints: ReadonlyArray<PotentialFilterPoint>): void {
+			filter.reset();
+			const usedFreqs: number[] = [];
+			for (const potentialPoint of potentialPoints) {
+				if (Math.random() > potentialPoint.chance) continue;
+				const point: FilterControlPoint = new FilterControlPoint();
+				point.type = potentialPoint.type;
+				point.freq = selectCurvedDistribution(potentialPoint.minFreq, potentialPoint.maxFreq, FilterControlPoint.getRoundedSettingValueFromHz(potentialPoint.centerHz), 1.0 / Config.filterFreqStep);
+				point.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter + potentialPoint.centerGain, 2.0 / Config.filterGainStep);
+				if (point.type == FilterType.peak && point.gain == Config.filterGainCenter) continue; // skip pointless points. :P
+				if (usedFreqs.includes(point.freq)) continue;
+				usedFreqs.push(point.freq);
+				filter.controlPoints[filter.controlPointCount] = point;
+				filter.controlPointCount++;
+			}
+		}
+		
 		const isNoise: boolean = doc.song.getChannelIsNoise(doc.channel);
 		const instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+		instrument.effects &= 1 << EffectType.panning; // disable all existing effects except panning.
+		instrument.envelopeCount = 0;
 		
-		const addingPoints: FilterControlPoint[] = [];
 		const midFreq: number = FilterControlPoint.getRoundedSettingValueFromHz(700.0);
-		const lowPassPoint: FilterControlPoint = new FilterControlPoint();
-		addingPoints.push(lowPassPoint);
-		lowPassPoint.type = FilterType.lowPass;
-		lowPassPoint.freq = selectCurvedDistribution(midFreq, Config.filterFreqRange - 1, FilterControlPoint.getRoundedSettingValueFromHz(4000.0), 1.0 / Config.filterFreqStep);
-		lowPassPoint.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter - 0.5 / Config.filterGainStep, 2.0 / Config.filterGainStep);
-		if (Math.random() > 0.5) {
-			const highPassPoint: FilterControlPoint = new FilterControlPoint();
-			addingPoints.push(highPassPoint);
-			highPassPoint.type = FilterType.highPass;
-			highPassPoint.freq = selectCurvedDistribution(0, midFreq - 1, FilterControlPoint.getRoundedSettingValueFromHz(250.0), 1.0 / Config.filterFreqStep);
-			highPassPoint.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter - 0.5 / Config.filterGainStep, 2.0 / Config.filterGainStep);
-		}
-		if (Math.random() > 0.5) {
-			const peakPoint: FilterControlPoint = new FilterControlPoint();
-			addingPoints.push(peakPoint);
-			peakPoint.type = FilterType.peak;
-			peakPoint.freq = selectCurvedDistribution(0, Config.filterFreqRange - 1, FilterControlPoint.getRoundedSettingValueFromHz(1400.0), 1.0 / Config.filterFreqStep);
-			peakPoint.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter, 2.0 / Config.filterGainStep);
-		}
-		if (Math.random() > 0.5) {
-			const peakPoint: FilterControlPoint = new FilterControlPoint();
-			addingPoints.push(peakPoint);
-			peakPoint.type = FilterType.peak;
-			peakPoint.freq = selectCurvedDistribution(0, Config.filterFreqRange - 1, FilterControlPoint.getRoundedSettingValueFromHz(500.0), 1.0 / Config.filterFreqStep);
-			peakPoint.gain = selectCurvedDistribution(0, Config.filterGainRange - 1, Config.filterGainCenter, 2.0 / Config.filterGainStep);
-		}
-		instrument.eqFilter.controlPointCount = 0;
-		for (let i: number = 0; i < addingPoints.length; i++) {
-			const point: FilterControlPoint = addingPoints[i];
-			let alreadyUsed: boolean = false;
-			for (let j: number = 0; j < i; j++) {
-				if (point.freq == addingPoints[j].freq) {
-					alreadyUsed = true;
-					break;
-				}
-			}
-			if (alreadyUsed) break;
-			if (point.type == FilterType.peak && point.gain == Config.filterGainCenter) break;
-			instrument.eqFilter.controlPoints[instrument.eqFilter.controlPointCount] = point;
-			instrument.eqFilter.controlPointCount++;
-		}
+		const maxFreq: number = Config.filterFreqRange - 1;
+		applyFilterPoints(instrument.eqFilter, [
+			new PotentialFilterPoint(0.8, FilterType.lowPass,  midFreq, maxFreq,     4000.0, -1),
+			new PotentialFilterPoint(0.4, FilterType.highPass, 0,       midFreq - 1,  250.0, -1),
+			new PotentialFilterPoint(0.5, FilterType.peak,     0,       maxFreq,     2000.0,  0),
+			new PotentialFilterPoint(0.4, FilterType.peak,     0,       maxFreq,     1400.0,  0),
+			new PotentialFilterPoint(0.3, FilterType.peak,     0,       maxFreq,     1000.0,  0),
+			new PotentialFilterPoint(0.2, FilterType.peak,     0,       maxFreq,      500.0,  0),
+		]);
 		
 		if (isNoise) {
 			const type: InstrumentType = selectWeightedRandom([
@@ -454,50 +450,102 @@ export class ChangeRandomGeneratedInstrument extends Change {
 				{item: InstrumentType.spectrum, weight: 3},
 			]);
 			instrument.preset = instrument.type = type;
-			/*
-			instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-				{item: "none"    , weight: 2},
-				{item: "punch"   , weight: 4},
-				{item: "flare 1" , weight: 2},
-				{item: "flare 2" , weight: 2},
-				{item: "flare 3" , weight: 2},
-				{item: "twang 1" , weight: 8},
-				{item: "twang 2" , weight: 8},
-				{item: "twang 3" , weight: 8},
-				{item: "swell 1" , weight: 2},
-				{item: "swell 2" , weight: 2},
-				{item: "swell 3" , weight: 1},
-				{item: "tremolo1", weight: 1},
-				{item: "tremolo2", weight: 1},
-				{item: "tremolo3", weight: 1},
-				{item: "tremolo4", weight: 1},
-				{item: "tremolo5", weight: 1},
-				{item: "tremolo6", weight: 1},
-				{item: "decay 1" , weight: 4},
-				{item: "decay 2" , weight: 4},
-				{item: "decay 3" , weight: 4},
-			])].index;
-			*/
+			
+			instrument.fadeIn = (Math.random() < 0.8) ? 0 : selectCurvedDistribution(0, Config.fadeInRange - 1, 0, 2);
+			instrument.fadeOut = selectCurvedDistribution(0, Config.fadeOutTicks.length - 1, Config.fadeOutNeutral, 2);
 			instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
-				{item: "instant"    , weight: 1}, // TODO: add hard overlap?
-				{item: "hard"       , weight: 4},
-				{item: "soft"       , weight: 2},
-				{item: "slide"      , weight: 1},
-				{item: "cross fade" , weight: 2},
-				{item: "hard fade"  , weight: 8},
-				{item: "medium fade", weight: 2},
-				{item: "soft fade"  , weight: 1},
+				{item: "normal"     , weight: 30},
+				{item: "interrupt"  , weight: 1},
+				{item: "slide"      , weight: 2},
 			])].index;
-			// TODO: randomly generate effects.
-			instrument.effects = Config.effectsNames.indexOf(selectWeightedRandom([
-				{item: "none"  , weight: 1},
-				{item: "reverb", weight: 3},
-			]));
 			instrument.chord = Config.chords.dictionary[selectWeightedRandom([
-				{item: "harmony" , weight: 4},
+				{item: "simultaneous" , weight: 10},
 				{item: "strum"   , weight: 2},
 				{item: "arpeggio", weight: 1},
 			])].index;
+			
+			if (Math.random() < 0.1) {
+				instrument.pitchShift = selectCurvedDistribution(0, Config.pitchShiftRange - 1, Config.pitchShiftCenter, 2);
+				if (instrument.pitchShift != Config.pitchShiftCenter) {
+					instrument.effects |= 1 << EffectType.pitchShift;
+					instrument.addEnvelope(Config.instrumentAutomationTargets.dictionary["pitchShift"].index, 0, Config.envelopes.dictionary[selectWeightedRandom([
+						{item: "flare 1" , weight: 2},
+						{item: "flare 2" , weight: 1},
+						{item: "flare 3" , weight: 1},
+						{item: "twang 1" , weight: 16},
+						{item: "twang 2" , weight: 8},
+						{item: "twang 3" , weight: 4},
+						{item: "tremolo1", weight: 1},
+						{item: "tremolo2", weight: 1},
+						{item: "tremolo3", weight: 1},
+						{item: "decay 1" , weight: 4},
+						{item: "decay 2" , weight: 2},
+						{item: "decay 3" , weight: 1},
+					])].index);
+				}
+			}
+			if (Math.random() < 0.1) {
+				instrument.effects |= 1 << EffectType.vibrato;
+				instrument.vibrato = selectCurvedDistribution(0, Config.echoSustainRange - 1, Config.echoSustainRange >> 1, 2);
+				instrument.vibrato = Config.vibratos.dictionary[selectWeightedRandom([
+					{item: "light"  , weight: 2},
+					{item: "delayed", weight: 2},
+					{item: "heavy"  , weight: 1},
+					{item: "shaky"  , weight: 2},
+				])].index;
+			}
+			if (Math.random() < 0.8) {
+				instrument.effects |= 1 << EffectType.noteFilter;
+				applyFilterPoints(instrument.noteFilter, [
+					new PotentialFilterPoint(1.0, FilterType.lowPass,  midFreq, maxFreq, 8000.0, -1),
+				]);
+				instrument.addEnvelope(Config.instrumentAutomationTargets.dictionary["noteFilterAllFreqs"].index, 0, Config.envelopes.dictionary[selectWeightedRandom([
+					{item: "punch"   , weight: 4},
+					{item: "flare 1" , weight: 2},
+					{item: "flare 2" , weight: 2},
+					{item: "flare 3" , weight: 2},
+					{item: "twang 1" , weight: 8},
+					{item: "twang 2" , weight: 8},
+					{item: "twang 3" , weight: 8},
+					{item: "swell 1" , weight: 2},
+					{item: "swell 2" , weight: 2},
+					{item: "swell 3" , weight: 1},
+					{item: "tremolo1", weight: 1},
+					{item: "tremolo2", weight: 1},
+					{item: "tremolo3", weight: 1},
+					{item: "tremolo4", weight: 1},
+					{item: "tremolo5", weight: 1},
+					{item: "tremolo6", weight: 1},
+					{item: "decay 1" , weight: 4},
+					{item: "decay 2" , weight: 4},
+					{item: "decay 3" , weight: 4},
+				])].index);
+			}
+			if (Math.random() < 0.1) {
+				instrument.effects |= 1 << EffectType.distortion;
+				instrument.distortion = selectCurvedDistribution(1, Config.distortionRange - 1, Config.distortionRange - 1, 2);
+			}
+			if (Math.random() < 0.1) {
+				instrument.effects |= 1 << EffectType.bitcrusher;
+				instrument.bitcrusherFreq = selectCurvedDistribution(0, Config.bitcrusherFreqRange - 1, Config.bitcrusherFreqRange >> 1, 2);
+				instrument.bitcrusherQuantization = selectCurvedDistribution(0, Config.bitcrusherQuantizationRange - 1, Config.bitcrusherQuantizationRange >> 1, 2);
+			}
+			if (Math.random() < 0.1) {
+				instrument.effects |= 1 << EffectType.chorus;
+				instrument.chorus = selectCurvedDistribution(1, Config.chorusRange - 1, Config.chorusRange - 1, 1);
+			}
+			if (Math.random() < 0.1) {
+				instrument.echoSustain = selectCurvedDistribution(0, Config.echoSustainRange - 1, Config.echoSustainRange >> 1, 2);
+				instrument.echoDelay = selectCurvedDistribution(0, Config.echoDelayRange - 1, Config.echoDelayRange >> 1, 2);
+				if (instrument.echoSustain != 0 || instrument.echoDelay != 0) {
+					instrument.effects |= 1 << EffectType.echo;
+				}
+			}
+			if (Math.random() < 0.5) {
+				instrument.effects |= 1 << EffectType.reverb;
+				instrument.reverb = selectCurvedDistribution(1, Config.reverbRange - 1, 1, 1);
+			}
+			
 			function normalize(harmonics: number[]): void {
 				let max: number = 0;
 				for (const value of harmonics) {
@@ -550,71 +598,29 @@ export class ChangeRandomGeneratedInstrument extends Change {
 				default: throw new Error("Unhandled noise instrument type in random generator.");
 			}
 		} else {
-			// TODO: Add support for picked string and distortion.
 			const type: InstrumentType = selectWeightedRandom([
-				{item: InstrumentType.chip,      weight: 4},
-				{item: InstrumentType.pwm,       weight: 4},
-				{item: InstrumentType.harmonics, weight: 6},
-				{item: InstrumentType.spectrum,  weight: 1},
-				{item: InstrumentType.fm,        weight: 4},
+				{item: InstrumentType.chip,         weight: 4},
+				{item: InstrumentType.pwm,          weight: 4},
+				{item: InstrumentType.harmonics,    weight: 5},
+				{item: InstrumentType.pickedString, weight: 5},
+				{item: InstrumentType.spectrum,     weight: 1},
+				{item: InstrumentType.fm,           weight: 5},
 			]);
 			instrument.preset = instrument.type = type;
-			/*
-			instrument.filterEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-				{item: "none"    , weight: 10},
-				{item: "punch"   , weight: 6},
-				{item: "flare 1" , weight: 2},
-				{item: "flare 2" , weight: 4},
-				{item: "flare 3" , weight: 2},
-				{item: "twang 1" , weight: 2},
-				{item: "twang 2" , weight: 4},
-				{item: "twang 3" , weight: 4},
-				{item: "swell 1" , weight: 4},
-				{item: "swell 2" , weight: 2},
-				{item: "swell 3" , weight: 1},
-				{item: "tremolo1", weight: 1},
-				{item: "tremolo2", weight: 1},
-				{item: "tremolo3", weight: 1},
-				{item: "tremolo4", weight: 1},
-				{item: "tremolo5", weight: 1},
-				{item: "tremolo6", weight: 1},
-				{item: "decay 1" , weight: 1},
-				{item: "decay 2" , weight: 2},
-				{item: "decay 3" , weight: 2},
-			])].index;
-			*/
+			
+			instrument.fadeIn = (Math.random() < 0.5) ? 0 : selectCurvedDistribution(0, Config.fadeInRange - 1, 0, 2);
+			instrument.fadeOut = selectCurvedDistribution(0, Config.fadeOutTicks.length - 1, Config.fadeOutNeutral, 2);
 			instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
-				{item: "instant"    , weight: 1}, // TODO: add hard overlap?
-				{item: "hard"       , weight: 4},
-				{item: "soft"       , weight: 4},
+				{item: "normal"     , weight: 30},
+				{item: "interrupt"  , weight: 1},
 				{item: "slide"      , weight: 2},
-				{item: "cross fade" , weight: 4},
-				{item: "hard fade"  , weight: 4},
-				{item: "medium fade", weight: 2},
-				{item: "soft fade"  , weight: 2},
 			])].index;
-			// TODO: randomly generate effects.
-			instrument.effects = Config.effectsNames.indexOf(selectWeightedRandom([
-				{item: "none"           , weight: 1},
-				{item: "reverb"         , weight: 10},
-				{item: "chorus"         , weight: 2},
-				{item: "chorus & reverb", weight: 2},
-			]));
 			instrument.chord = Config.chords.dictionary[selectWeightedRandom([
-				{item: "harmony" , weight: 7},
-				{item: "strum"   , weight: 2},
-				{item: "arpeggio", weight: 1},
+				{item: "simultaneous", weight: 7},
+				{item: "strum"   ,     weight: 2},
+				{item: "arpeggio",     weight: 1},
 			])].index;
-			if (type != InstrumentType.spectrum) {
-				instrument.vibrato = Config.vibratos.dictionary[selectWeightedRandom([
-					{item: "none"   , weight: 6},
-					{item: "light"  , weight: 2},
-					{item: "delayed", weight: 2},
-					{item: "heavy"  , weight: 1},
-					{item: "shaky"  , weight: 2},
-				])].index;
-			}
-			if (type == InstrumentType.chip || type == InstrumentType.harmonics) {
+			if (type == InstrumentType.chip || type == InstrumentType.harmonics || type == InstrumentType.pickedString) {
 				instrument.unison = Config.unisons.dictionary[selectWeightedRandom([
 					{item: "none"      , weight: 10},
 					{item: "shimmer"   , weight: 5},
@@ -627,6 +633,93 @@ export class ChangeRandomGeneratedInstrument extends Change {
 					{item: "piano"     , weight: 5},
 				])].index;
 			}
+			
+			if (Math.random() < 0.05) {
+				instrument.pitchShift = selectCurvedDistribution(0, Config.pitchShiftRange - 1, Config.pitchShiftCenter, 1);
+				if (instrument.pitchShift != Config.pitchShiftCenter) {
+					instrument.effects |= 1 << EffectType.pitchShift;
+					instrument.addEnvelope(Config.instrumentAutomationTargets.dictionary["pitchShift"].index, 0, Config.envelopes.dictionary[selectWeightedRandom([
+						{item: "flare 1" , weight: 2},
+						{item: "flare 2" , weight: 1},
+						{item: "flare 3" , weight: 1},
+						{item: "twang 1" , weight: 16},
+						{item: "twang 2" , weight: 8},
+						{item: "twang 3" , weight: 4},
+						{item: "decay 1" , weight: 4},
+						{item: "decay 2" , weight: 2},
+						{item: "decay 3" , weight: 1},
+					])].index);
+				}
+			}
+			if (Math.random() < 0.25) {
+				instrument.effects |= 1 << EffectType.vibrato;
+				instrument.vibrato = selectCurvedDistribution(0, Config.echoSustainRange - 1, Config.echoSustainRange >> 1, 2);
+				instrument.vibrato = Config.vibratos.dictionary[selectWeightedRandom([
+					{item: "light"  , weight: 2},
+					{item: "delayed", weight: 2},
+					{item: "heavy"  , weight: 1},
+					{item: "shaky"  , weight: 2},
+				])].index;
+			}
+			if (Math.random() < 0.1) {
+				instrument.effects |= 1 << EffectType.distortion;
+				instrument.distortion = selectCurvedDistribution(1, Config.distortionRange - 1, Config.distortionRange - 1, 2);
+			}
+			if (effectsIncludeDistortion(instrument.effects) && Math.random() < 0.8) {
+				instrument.effects |= 1 << EffectType.noteFilter;
+				applyFilterPoints(instrument.noteFilter, [
+					new PotentialFilterPoint(1.0, FilterType.lowPass,  midFreq, maxFreq,     2000.0, -1),
+					new PotentialFilterPoint(0.9, FilterType.highPass, 0,       midFreq - 1,  500.0, -1),
+					new PotentialFilterPoint(0.4, FilterType.peak,     0,       maxFreq,     1400.0,  0),
+				]);
+			} else if (Math.random() < 0.5) {
+				instrument.effects |= 1 << EffectType.noteFilter;
+				applyFilterPoints(instrument.noteFilter, [
+					new PotentialFilterPoint(1.0, FilterType.lowPass,  midFreq, maxFreq, 8000.0, -1),
+				]);
+				instrument.addEnvelope(Config.instrumentAutomationTargets.dictionary["noteFilterAllFreqs"].index, 0, Config.envelopes.dictionary[selectWeightedRandom([
+					{item: "punch"   , weight: 6},
+					{item: "flare 1" , weight: 2},
+					{item: "flare 2" , weight: 4},
+					{item: "flare 3" , weight: 2},
+					{item: "twang 1" , weight: 2},
+					{item: "twang 2" , weight: 4},
+					{item: "twang 3" , weight: 4},
+					{item: "swell 1" , weight: 4},
+					{item: "swell 2" , weight: 2},
+					{item: "swell 3" , weight: 1},
+					{item: "tremolo1", weight: 1},
+					{item: "tremolo2", weight: 1},
+					{item: "tremolo3", weight: 1},
+					{item: "tremolo4", weight: 1},
+					{item: "tremolo5", weight: 1},
+					{item: "tremolo6", weight: 1},
+					{item: "decay 1" , weight: 1},
+					{item: "decay 2" , weight: 2},
+					{item: "decay 3" , weight: 2},
+				])].index);
+			}
+			if (Math.random() < 0.1) {
+				instrument.effects |= 1 << EffectType.bitcrusher;
+				instrument.bitcrusherFreq = selectCurvedDistribution(0, Config.bitcrusherFreqRange - 1, 0, 2);
+				instrument.bitcrusherQuantization = selectCurvedDistribution(0, Config.bitcrusherQuantizationRange - 1, Config.bitcrusherQuantizationRange >> 1, 2);
+			}
+			if (Math.random() < 0.1) {
+				instrument.effects |= 1 << EffectType.chorus;
+				instrument.chorus = selectCurvedDistribution(1, Config.chorusRange - 1, Config.chorusRange - 1, 1);
+			}
+			if (Math.random() < 0.1) {
+				instrument.echoSustain = selectCurvedDistribution(0, Config.echoSustainRange - 1, Config.echoSustainRange >> 1, 2);
+				instrument.echoDelay = selectCurvedDistribution(0, Config.echoDelayRange - 1, Config.echoDelayRange >> 1, 2);
+				if (instrument.echoSustain != 0 || instrument.echoDelay != 0) {
+					instrument.effects |= 1 << EffectType.echo;
+				}
+			}
+			if (Math.random() < 0.5) {
+				instrument.effects |= 1 << EffectType.reverb;
+				instrument.reverb = selectCurvedDistribution(1, Config.reverbRange - 1, 1, 1);
+			}
+			
 			function normalize(harmonics: number[]): void {
 				let max: number = 0;
 				for (const value of harmonics) {
@@ -641,33 +734,38 @@ export class ChangeRandomGeneratedInstrument extends Change {
 					instrument.chipWave = (Math.random() * Config.chipWaves.length)|0;
 				} break;
 				case InstrumentType.pwm: {
-					/*
-					instrument.pulseEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-						{item: "none"    , weight: 10},
-						{item: "punch"   , weight: 6},
-						{item: "flare 1" , weight: 2},
-						{item: "flare 2" , weight: 4},
-						{item: "flare 3" , weight: 2},
-						{item: "twang 1" , weight: 4},
-						{item: "twang 2" , weight: 4},
-						{item: "twang 3" , weight: 4},
-						{item: "swell 1" , weight: 4},
-						{item: "swell 2" , weight: 4},
-						{item: "swell 3" , weight: 4},
-						{item: "tremolo1", weight: 1},
-						{item: "tremolo2", weight: 1},
-						{item: "tremolo3", weight: 1},
-						{item: "tremolo4", weight: 2},
-						{item: "tremolo5", weight: 2},
-						{item: "tremolo6", weight: 2},
-						{item: "decay 1" , weight: 2},
-						{item: "decay 2" , weight: 2},
-						{item: "decay 3" , weight: 2},
-					])].index;
-					*/
 					instrument.pulseWidth = selectCurvedDistribution(0, Config.pulseWidthRange - 1, Config.pulseWidthRange - 1, 2);
+					
+					if (Math.random() < 0.6) {
+						instrument.addEnvelope(Config.instrumentAutomationTargets.dictionary["pulseWidth"].index, 0, Config.envelopes.dictionary[selectWeightedRandom([
+							{item: "punch"   , weight: 6},
+							{item: "flare 1" , weight: 2},
+							{item: "flare 2" , weight: 4},
+							{item: "flare 3" , weight: 2},
+							{item: "twang 1" , weight: 2},
+							{item: "twang 2" , weight: 4},
+							{item: "twang 3" , weight: 4},
+							{item: "swell 1" , weight: 4},
+							{item: "swell 2" , weight: 2},
+							{item: "swell 3" , weight: 1},
+							{item: "tremolo1", weight: 1},
+							{item: "tremolo2", weight: 1},
+							{item: "tremolo3", weight: 1},
+							{item: "tremolo4", weight: 1},
+							{item: "tremolo5", weight: 1},
+							{item: "tremolo6", weight: 1},
+							{item: "decay 1" , weight: 1},
+							{item: "decay 2" , weight: 2},
+							{item: "decay 3" , weight: 2},
+						])].index);
+					}
 				} break;
+				case InstrumentType.pickedString:
 				case InstrumentType.harmonics: {
+					if (type == InstrumentType.pickedString) {
+						instrument.stringSustain = (Math.random() * Config.stringSustainRange)|0;
+					}
+					
 					const harmonicGenerators: Function[] = [
 						(): number[] => {
 							const harmonics: number[] = [];
@@ -727,14 +825,54 @@ export class ChangeRandomGeneratedInstrument extends Change {
 					for (let i: number = 0; i < algorithm.carrierCount; i++) {
 						instrument.operators[i].frequency = selectCurvedDistribution(0, Config.operatorFrequencies.length - 1, 0, 3);
 						instrument.operators[i].amplitude = selectCurvedDistribution(0, Config.operatorAmplitudeMax, Config.operatorAmplitudeMax - 1, 2);
-						//instrument.operators[i].envelope = Config.envelopes.dictionary["custom"].index;
 					}
 					for (let i: number = algorithm.carrierCount; i < Config.operatorCount; i++) {
 						instrument.operators[i].frequency = selectCurvedDistribution(3, Config.operatorFrequencies.length - 1, 0, 3);
 						instrument.operators[i].amplitude = (Math.pow(Math.random(), 2) * Config.operatorAmplitudeMax)|0;
-						/*
-						instrument.operators[i].envelope = Config.envelopes.dictionary[selectWeightedRandom([
-							{item: "none"    , weight: 6},
+						if (instrument.envelopeCount < Config.maxEnvelopeCount && Math.random() < 0.4) {
+							instrument.addEnvelope(Config.instrumentAutomationTargets.dictionary["operatorAmplitude"].index, i, Config.envelopes.dictionary[selectWeightedRandom([
+								{item: "punch"   , weight: 2},
+								{item: "flare 1" , weight: 2},
+								{item: "flare 2" , weight: 2},
+								{item: "flare 3" , weight: 2},
+								{item: "twang 1" , weight: 2},
+								{item: "twang 2" , weight: 2},
+								{item: "twang 3" , weight: 2},
+								{item: "swell 1" , weight: 2},
+								{item: "swell 2" , weight: 2},
+								{item: "swell 3" , weight: 2},
+								{item: "tremolo1", weight: 1},
+								{item: "tremolo2", weight: 1},
+								{item: "tremolo3", weight: 1},
+								{item: "tremolo4", weight: 1},
+								{item: "tremolo5", weight: 1},
+								{item: "tremolo6", weight: 1},
+								{item: "decay 1" , weight: 1},
+								{item: "decay 2" , weight: 1},
+								{item: "decay 3" , weight: 1},
+							])].index);
+						}
+						if (instrument.envelopeCount < Config.maxEnvelopeCount && Math.random() < 0.05) {
+							instrument.addEnvelope(Config.instrumentAutomationTargets.dictionary["operatorFrequency"].index, i, Config.envelopes.dictionary[selectWeightedRandom([
+								{item: "punch"   , weight: 4},
+								{item: "flare 1" , weight: 4},
+								{item: "flare 2" , weight: 2},
+								{item: "flare 3" , weight: 1},
+								{item: "twang 1" , weight: 16},
+								{item: "twang 2" , weight: 2},
+								{item: "twang 3" , weight: 1},
+								{item: "swell 1" , weight: 4},
+								{item: "swell 2" , weight: 2},
+								{item: "swell 3" , weight: 1},
+								{item: "decay 1" , weight: 2},
+								{item: "decay 2" , weight: 1},
+								{item: "decay 3" , weight: 1},
+							])].index);
+						}
+					}
+					instrument.feedbackAmplitude = (Math.pow(Math.random(), 3) * Config.operatorAmplitudeMax)|0;
+					if (instrument.envelopeCount < Config.maxEnvelopeCount && Math.random() < 0.4) {
+						instrument.addEnvelope(Config.instrumentAutomationTargets.dictionary["feedbackAmplitude"].index, 0, Config.envelopes.dictionary[selectWeightedRandom([
 							{item: "punch"   , weight: 2},
 							{item: "flare 1" , weight: 2},
 							{item: "flare 2" , weight: 2},
@@ -754,34 +892,8 @@ export class ChangeRandomGeneratedInstrument extends Change {
 							{item: "decay 1" , weight: 1},
 							{item: "decay 2" , weight: 1},
 							{item: "decay 3" , weight: 1},
-						])].index;
-						*/
+						])].index);
 					}
-					instrument.feedbackAmplitude = (Math.pow(Math.random(), 3) * Config.operatorAmplitudeMax)|0;
-					/*
-					instrument.feedbackEnvelope = Config.envelopes.dictionary[selectWeightedRandom([
-						{item: "none"    , weight: 4},
-						{item: "punch"   , weight: 2},
-						{item: "flare 1" , weight: 2},
-						{item: "flare 2" , weight: 2},
-						{item: "flare 3" , weight: 2},
-						{item: "twang 1" , weight: 2},
-						{item: "twang 2" , weight: 2},
-						{item: "twang 3" , weight: 2},
-						{item: "swell 1" , weight: 2},
-						{item: "swell 2" , weight: 2},
-						{item: "swell 3" , weight: 2},
-						{item: "tremolo1", weight: 1},
-						{item: "tremolo2", weight: 1},
-						{item: "tremolo3", weight: 1},
-						{item: "tremolo4", weight: 1},
-						{item: "tremolo5", weight: 1},
-						{item: "tremolo6", weight: 1},
-						{item: "decay 1" , weight: 1},
-						{item: "decay 2" , weight: 1},
-						{item: "decay 3" , weight: 1},
-					])].index;
-					*/
 				} break;
 				default: throw new Error("Unhandled pitched instrument type in random generator.");
 			}

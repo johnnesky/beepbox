@@ -993,14 +993,11 @@ export class Instrument {
 		if (legacyFilterEnv.type == EnvelopeType.none) {
 			this.noteFilter.reset();
 			this.eqFilter.convertLegacySettings(legacyCutoffSetting, legacyResonanceSetting, legacyFilterEnv);
-			this.effects = (this.effects & (~(1 << EffectType.noteFilter)));
-			if (legacyFilterEnv.type != EnvelopeType.none) {
-				this.addEnvelope(Config.instrumentAutomationTargets.dictionary["eqFilterAllFreqs"].index, 0, legacyFilterEnv.index);
-			}
+			this.effects &= ~(1 << EffectType.noteFilter);
 		} else {
 			this.eqFilter.reset();
 			this.noteFilter.convertLegacySettings(legacyCutoffSetting, legacyResonanceSetting, legacyFilterEnv);
-			this.effects = (this.effects | (1 << EffectType.noteFilter));
+			this.effects |= 1 << EffectType.noteFilter;
 			this.addEnvelope(Config.instrumentAutomationTargets.dictionary["noteFilterAllFreqs"].index, 0, legacyFilterEnv.index);
 		}
 		
@@ -1034,7 +1031,7 @@ export class Instrument {
 		const effects: string[] = [];
 		for (const effect of Config.effectOrder) {
 			if (this.effects & (1 << effect)) {
-				effects.push(Config.effectsNames[effect]);
+				effects.push(Config.effectNames[effect]);
 			}
 		}
 		instrumentObject["effects"] = effects;
@@ -1236,10 +1233,11 @@ export class Instrument {
 		if (Array.isArray(instrumentObject["effects"])) {
 			let effects: number = 0;
 			for (let i: number = 0; i < instrumentObject["effects"].length; i++) {
-				effects = effects | (1 << Config.effectsNames.indexOf(instrumentObject["effects"][i]));
+				effects = effects | (1 << Config.effectNames.indexOf(instrumentObject["effects"][i]));
 			}
 			this.effects = (effects & ((1 << EffectType.length) - 1));
 		} else {
+			// The index of these names is reinterpreted as a bitfield, which relies on reverb and chorus being the first effects!
 			const legacyEffectsNames: string[] = ["none", "reverb", "chorus", "chorus & reverb"];
 			this.effects = legacyEffectsNames.indexOf(instrumentObject["effects"]);
 			if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
