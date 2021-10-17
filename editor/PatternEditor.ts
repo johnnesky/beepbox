@@ -1,6 +1,6 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {Chord, Config} from "../synth/SynthConfig";
+import {Chord, Transition, Config} from "../synth/SynthConfig";
 import {NotePin, Note, makeNotePin, Pattern, Instrument} from "../synth/synth";
 import {ColorConfig} from "./ColorConfig";
 import {SongDocument} from "./SongDocument";
@@ -1093,6 +1093,10 @@ export class PatternEditor {
 		}
 		
 		if (this._pattern != null) {
+			const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+			const chord: Chord = instrument.getChord();
+			const transition: Transition = instrument.getTransition()
+			const displayNumberedChords: boolean = chord.customInterval || chord.arpeggiates || chord.strumParts > 0 || transition.isSeamless;
 			for (const note of this._pattern.notes) {
 				for (let i: number = 0; i < note.pitches.length; i++) {
 					const pitch: number = note.pitches[i];
@@ -1108,9 +1112,7 @@ export class PatternEditor {
 					this._svgNoteContainer.appendChild(notePath);
 					
 					if (note.pitches.length > 1) {
-						const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
-						const chord: Chord = instrument.getChord();
-						if (chord.customInterval || chord.arpeggiates || chord.strumParts > 0) {
+						if (displayNumberedChords) {
 							let oscillatorLabel: SVGTextElement = SVG.text();
 							oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
 							oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));

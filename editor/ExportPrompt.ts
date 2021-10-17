@@ -56,12 +56,8 @@ export class ExportPrompt implements Prompt {
 		0x4A, // rounded -> recorder
 		0x47, // triangle -> clarinet
 		0x50, // square -> square wave
-		0x46, // ¹/₃ pulse -> bassoon
 		0x46, // ¹/₄ pulse -> bassoon
-		0x44, // ¹/₆ pulse -> oboe
 		0x44, // ¹/₈ pulse -> oboe
-		0x51, // ¹/₁₂ pulse -> sawtooth wave
-		0x51, // ¹/₁₆ pulse -> sawtooth wave
 		0x51, // sawtooth -> sawtooth wave
 		0x51, // double saw -> sawtooth wave
 		0x51, // double pulse -> sawtooth wave

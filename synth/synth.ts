@@ -3200,7 +3200,7 @@ export class Song {
 					if (patternObject["notes"] && patternObject["notes"].length > 0) {
 						const maxNoteCount: number = Math.min(this.beatsPerBar * Config.partsPerBeat, patternObject["notes"].length >>> 0);
 						
-						///@TODO: Consider supporting notes specified in any timing order, sorting them and truncating as necessary. 
+						// TODO: Consider supporting notes specified in any timing order, sorting them and truncating as necessary. 
 						let tickClock: number = 0;
 						for (let j: number = 0; j < patternObject["notes"].length; j++) {
 							if (j >= maxNoteCount) break;
