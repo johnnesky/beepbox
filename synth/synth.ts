@@ -6014,10 +6014,14 @@ export class Synth {
 				const filterCount = instrumentState.eqFilterCount|0;
 				let initialFilterInput1 = +instrumentState.initialEqFilterInput1;
 				let initialFilterInput2 = +instrumentState.initialEqFilterInput2;
-				const applyFilters = beepbox.Synth.applyFilters;
+				const applyFilters = beepbox.Synth.applyFilters;`
+			}
+			
+			// The eq filter volume is also used to fade out the instrument state, so always include it.
+			effectsSource += `
+				
 				let eqFilterVolume = +instrumentState.eqFilterVolumeStart;
 				const eqFilterVolumeDelta = +instrumentState.eqFilterVolumeDelta;`
-			}
 			
 			if (usesPanning) {
 				effectsSource += `
@@ -6196,11 +6200,14 @@ export class Synth {
 					const inputSample = sample;
 					sample = applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
 					initialFilterInput2 = initialFilterInput1;
-					initialFilterInput1 = inputSample;
+					initialFilterInput1 = inputSample;`
+			}
+			
+			// The eq filter volume is also used to fade out the instrument state, so always include it.
+			effectsSource += `
 					
 					sample *= eqFilterVolume;
 					eqFilterVolume += eqFilterVolumeDelta;`
-			}
 			
 			if (usesPanning) {
 				effectsSource += `
