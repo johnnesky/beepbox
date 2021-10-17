@@ -339,6 +339,7 @@ export class SongEditor {
 		this._barScrollBar.container,
 	);
 	
+	private readonly _instrumentSettingsArea: HTMLDivElement = div({class: "instrument-settings-area"}, this._instrumentSettingsGroup);
 	private readonly _settingsArea: HTMLDivElement = div({class: "settings-area noSelection"},
 		div({class: "version-area"},
 			div({style: `text-align: center; margin: 3px 0; color: ${ColorConfig.secondaryText};`}, EditorConfig.versionDisplayName),
@@ -391,9 +392,7 @@ export class SongEditor {
 				),
 			),
 		),
-		div({class: "instrument-settings-area"},
-			this._instrumentSettingsGroup,
-		),
+		this._instrumentSettingsArea,
 	);
 	
 	public readonly mainLayer: HTMLDivElement = div({class: "beepboxEditor", tabIndex: "0"},
@@ -988,6 +987,22 @@ export class SongEditor {
 		if (this._doc.autoFollow && !this._doc.synth.playing) {
 			this._doc.synth.goToBar(this._doc.bar);
 		}
+		
+		// When adding effects or envelopes to an instrument in fullscreen modes,
+		// auto-scroll the settings areas to ensure the new settings are visible.
+		if (this._doc.addedEffect) {
+			const envButtonRect: DOMRect = this._addEnvelopeButton.getBoundingClientRect();
+			const instSettingsRect: DOMRect = this._instrumentSettingsArea.getBoundingClientRect();
+			const settingsRect: DOMRect = this._settingsArea.getBoundingClientRect();
+			this._instrumentSettingsArea.scrollTop += Math.max(0, envButtonRect.top - (instSettingsRect.top + instSettingsRect.height));
+			this._settingsArea.scrollTop += Math.max(0, envButtonRect.top - (settingsRect.top + settingsRect.height));
+			this._doc.addedEffect = false;
+		}
+		if (this._doc.addedEnvelope) {
+			this._instrumentSettingsArea.scrollTop = this._instrumentSettingsArea.scrollHeight;
+			this._settingsArea.scrollTop = this._settingsArea.scrollHeight;
+			this._doc.addedEnvelope = false;
+		}
 	}
 	
 	public updatePlayButton(): void {
@@ -1435,9 +1450,14 @@ export class SongEditor {
 	}
 	
 	private _whenSetEffects = (): void => {
+		const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
+		const oldValue: number = instrument.effects;
 		const toggleFlag: number = Config.effectOrder[this._effectsSelect.selectedIndex - 1];
 		this._doc.record(new ChangeToggleEffects(this._doc, toggleFlag));
 		this._effectsSelect.selectedIndex = 0;
+		if (instrument.effects > oldValue) {
+			this._doc.addedEffect = true;
+		}
 	}
 	
 	private _whenSetVibrato = (): void => {
@@ -1455,6 +1475,7 @@ export class SongEditor {
 	private _addNewEnvelope = (): void => {
 		this._doc.record(new ChangeAddEnvelope(this._doc));
 		this._refocusStage();
+		this._doc.addedEnvelope = true;
 	}
 	
 	private _zoomIn = (): void => {

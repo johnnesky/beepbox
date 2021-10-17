@@ -53,6 +53,9 @@ export class SongDocument {
 	public channelScrollPos: number = 0;
 	public prompt: string | null = null;
 	
+	public addedEffect: boolean = false;
+	public addedEnvelope: boolean = false;
+	
 	private static readonly _maximumUndoHistory: number = 100;
 	private _recovery: SongRecovery = new SongRecovery();
 	private _recoveryUid: string;
