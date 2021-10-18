@@ -1622,8 +1622,12 @@ export class Song {
 	}
 	
 	public getMaxInstrumentsPerPattern(channelIndex: number): number {
+		return this.getMaxInstrumentsPerPatternForChannel(this.channels[channelIndex]);
+	}
+	
+	public getMaxInstrumentsPerPatternForChannel(channel: Channel): number {
 		return this.layeredInstruments
-			? Math.min(Config.layeredInstrumentCountMax, this.channels[channelIndex].instruments.length)
+			? Math.min(Config.layeredInstrumentCountMax, channel.instruments.length)
 			: 1;
 	}
 	
@@ -3186,7 +3190,7 @@ export class Song {
 					if (this.patternInstruments) {
 						if (Array.isArray(patternObject["instruments"])) {
 							const instruments: any[] = patternObject["instruments"];
-							const instrumentCount: number = clamp(Config.instrumentCountMin, this.getMaxInstrumentsPerPattern(channelIndex), instruments.length);
+							const instrumentCount: number = clamp(Config.instrumentCountMin, this.getMaxInstrumentsPerPatternForChannel(channel) + 1, instruments.length);
 							for (let j: number = 0; j < instrumentCount; j++) {
 								pattern.instruments[j] = clamp(0, channel.instruments.length, (instruments[j] | 0) - 1);
 							}

@@ -346,7 +346,7 @@ export class Config {
 	public static readonly volumeLogScale: number = -0.5;
 	public static readonly panCenter: number = 4;
 	public static readonly panMax: number = Config.panCenter * 2;
-	public static readonly panDelaySecondsMax: number = 0.00065;
+	public static readonly panDelaySecondsMax: number = 0.0005;
 	public static readonly chorusRange: number = 4;
 	public static readonly chorusPeriodSeconds: number = 2.0;
 	public static readonly chorusDelayRange: number = 0.0034;
