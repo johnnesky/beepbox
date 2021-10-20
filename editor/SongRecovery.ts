@@ -77,7 +77,7 @@ export class SongRecovery {
 		clearTimeout(this._saveVersionTimeoutHandle);
 		this._saveVersionTimeoutHandle = setTimeout((): void => {
 			try {
-				// Ensure that the song is not corrupted before saving it.
+				// Ensure that the song is not corrupted.
 				this._song.fromBase64String(songData);
 			} catch (error) {
 				window.alert("Whoops, the song data appears to have been corrupted! Please try to recover the last working version of the song from the \"Recover Recent Song...\" option in BeepBox's \"File\" menu.");

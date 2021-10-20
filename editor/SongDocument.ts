@@ -329,7 +329,14 @@ export class SongDocument {
 	
 	private _updateHistoryState = (): void => {
 		this._waitingToUpdateState = false;
-		const hash: string = this.song.toBase64String();
+		let hash: string;
+		try {
+			// Ensure that the song is not corrupted before saving it.
+			hash = this.song.toBase64String();
+		} catch (error) {
+			window.alert("Whoops, the song data appears to have been corrupted! Please try to recover the last working version of the song from the \"Recover Recent Song...\" option in BeepBox's \"File\" menu.");
+			return;
+		}
 		if (this._stateShouldBePushed) this._sequenceNumber++;
 		if (this._recordedNewSong) {
 			this._resetSongRecoveryUid();
