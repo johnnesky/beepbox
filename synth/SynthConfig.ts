@@ -70,6 +70,9 @@ export const enum EffectType {
 	pitchShift,
 	detune,
 	vibrato,
+	transition,
+	chord,
+	// If you add more, you'll also have to extend the bitfield used in Base64 which currently uses two six-bit characters.
 	length,
 }
 
@@ -339,8 +342,8 @@ export class Config {
 		{name: "bowed",      voices: 2, spread: 0.02, offset: 0.0, expression: 1.0, sign:-1.0},
 		{name: "piano",      voices: 2, spread: 0.01, offset: 0.0, expression: 1.0, sign: 0.7},
 	]);
-	public static readonly effectNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher", "note filter", "echo", "pitch shift", "detune", "vibrato"];
-	public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.pitchShift, EffectType.detune, EffectType.vibrato, EffectType.noteFilter, EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.echo, EffectType.reverb];
+	public static readonly effectNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher", "note filter", "echo", "pitch shift", "detune", "vibrato", "transition type", "chord type"];
+	public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.transition, EffectType.chord, EffectType.pitchShift, EffectType.detune, EffectType.vibrato, EffectType.noteFilter, EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.echo, EffectType.reverb];
 	public static readonly noteSizeMax: number = 3;
 	public static readonly volumeRange: number = 8;
 	public static readonly volumeLogScale: number = -0.5;
@@ -673,6 +676,12 @@ export function toNameMap<T extends BeepBoxOption>(array: Array<Pick<T, Exclude<
 	return result;
 }
 
+export function effectsIncludeTransition(effects: number): boolean {
+	return (effects & (1 << EffectType.transition)) != 0;
+}
+export function effectsIncludeChord(effects: number): boolean {
+	return (effects & (1 << EffectType.chord)) != 0;
+}
 export function effectsIncludePitchShift(effects: number): boolean {
 	return (effects & (1 << EffectType.pitchShift)) != 0;
 }

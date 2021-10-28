@@ -1,6 +1,6 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
+import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, NoteAutomationIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
 import {Deque} from "./Deque";
 import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter} from "./filtering";
@@ -98,7 +98,7 @@ const enum SongTagCode {
 	beatCount           = CharCode.a, // added in song url version 2
 	bars                = CharCode.b, // added in 2
 	vibrato             = CharCode.c, // added in 2, DEPRECATED
-	transition          = CharCode.d, // added in 3
+	fadeInOut           = CharCode.d, // added in 3 for transition, switched to fadeInOut in 9
 	loopEnd             = CharCode.e, // added in 2
 	eqFilter            = CharCode.f, // added in 3
 	barCount            = CharCode.g, // added in 3
@@ -123,14 +123,13 @@ const enum SongTagCode {
 	drumsetEnvelopes    = CharCode.z, // added in 7 for filter envelopes, still used for drumset envelopes
 	algorithm           = CharCode.A, // added in 6
 	feedbackAmplitude   = CharCode.B, // added in 6
-	chord               = CharCode.C, // added in 7
+	chord               = CharCode.C, // added in 7, DEPRECATED
 	
 	envelopes           = CharCode.E, // added in 6 for FM operator envelopes, repurposed in 9 for general envelopes.
 	feedbackType        = CharCode.F, // added in 6
 	
 	harmonics           = CharCode.H, // added in 7
 	stringSustain       = CharCode.I, // added in 9
-	fadeInOut           = CharCode.J, // added in 9
 	
 	pan                 = CharCode.L, // added between 8 and 9, DEPRECATED
 	
@@ -903,6 +902,7 @@ export class Instrument {
 		switch (type) {
 			case InstrumentType.chip:
 				this.chipWave = 2;
+				// TODO: enable the chord effect?
 				this.chord = Config.chords.dictionary["arpeggio"].index;
 				break;
 			case InstrumentType.fm:
@@ -923,6 +923,7 @@ export class Instrument {
 				this.spectrumWave.reset(isNoiseChannel);
 				break;
 			case InstrumentType.drumset:
+				this.chord = Config.chords.dictionary["simultaneous"].index;
 				for (let i: number = 0; i < Config.drumCount; i++) {
 					this.drumsetEnvelopes[i] = Config.envelopes.dictionary["twang 2"].index;
 					this.drumsetSpectrumWaves[i].reset(isNoiseChannel);
@@ -942,6 +943,13 @@ export class Instrument {
 				break;
 			default:
 				throw new Error("Unrecognized instrument type: " + type);
+		}
+		// Chip/noise instruments had arpeggio and FM had custom interval but neither
+		// explicitly saved the chorus setting beforeSeven so enable it here. The effects
+		// will otherwise get overridden when reading SongTagCode.startInstrument.
+		if (this.chord != Config.chords.dictionary["simultaneous"].index) {
+			// Enable chord if it was used.
+			this.effects = (this.effects | (1 << EffectType.chord));
 		}
 	}
 	
@@ -1037,6 +1045,12 @@ export class Instrument {
 		instrumentObject["effects"] = effects;
 		
 		
+		if (effectsIncludeTransition(this.effects)) {
+			instrumentObject["transition"] = Config.transitions[this.transition].name;
+		}
+		if (effectsIncludeChord(this.effects)) {
+			instrumentObject["chord"] = this.getChord().name;
+		}
 		if (effectsIncludePitchShift(this.effects)) {
 			instrumentObject["pitchShiftSemitones"] = this.pitchShift;
 		}
@@ -1071,10 +1085,8 @@ export class Instrument {
 		}
 		
 		if (this.type != InstrumentType.drumset) {
-			instrumentObject["transition"] = Config.transitions[this.transition].name;
 			instrumentObject["fadeInSeconds"] = Math.round(10000 * Synth.fadeInSettingToSeconds(this.fadeIn)) / 10000;
 			instrumentObject["fadeOutTicks"] = Synth.fadeOutSettingToTicks(this.fadeOut);
-			instrumentObject["chord"] = this.getChord().name;
 		}
 		
 		if (this.type == InstrumentType.harmonics || this.type == InstrumentType.pickedString) {
@@ -1155,6 +1167,19 @@ export class Instrument {
 			this.volume = 0;
 		}
 		
+		if (Array.isArray(instrumentObject["effects"])) {
+			let effects: number = 0;
+			for (let i: number = 0; i < instrumentObject["effects"].length; i++) {
+				effects = effects | (1 << Config.effectNames.indexOf(instrumentObject["effects"][i]));
+			}
+			this.effects = (effects & ((1 << EffectType.length) - 1));
+		} else {
+			// The index of these names is reinterpreted as a bitfield, which relies on reverb and chorus being the first effects!
+			const legacyEffectsNames: string[] = ["none", "reverb", "chorus", "chorus & reverb"];
+			this.effects = legacyEffectsNames.indexOf(instrumentObject["effects"]);
+			if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
+		}
+		
 		this.transition = Config.transitions.dictionary["normal"].index; // default value.
 		const transitionProperty: any = instrumentObject["transition"] || instrumentObject["envelope"]; // the transition property used to be called envelope, so check that too.
 		if (transitionProperty != undefined) {
@@ -1184,6 +1209,11 @@ export class Instrument {
 				}
 			}
 			if (transition != undefined) this.transition = transition.index;
+			
+			if (this.transition != Config.transitions.dictionary["normal"].index) {
+				// Enable transition if it was used.
+				this.effects = (this.effects | (1 << EffectType.transition));
+			}
 		}
 		
 		// Overrides legacy settings in transition above.
@@ -1229,18 +1259,9 @@ export class Instrument {
 			this.unison = Config.unisons.dictionary["hum"].index;
 			this.chord = Config.chords.dictionary["custom interval"].index;
 		}
-		
-		if (Array.isArray(instrumentObject["effects"])) {
-			let effects: number = 0;
-			for (let i: number = 0; i < instrumentObject["effects"].length; i++) {
-				effects = effects | (1 << Config.effectNames.indexOf(instrumentObject["effects"][i]));
-			}
-			this.effects = (effects & ((1 << EffectType.length) - 1));
-		} else {
-			// The index of these names is reinterpreted as a bitfield, which relies on reverb and chorus being the first effects!
-			const legacyEffectsNames: string[] = ["none", "reverb", "chorus", "chorus & reverb"];
-			this.effects = legacyEffectsNames.indexOf(instrumentObject["effects"]);
-			if (this.effects == -1) this.effects = (this.type == InstrumentType.noise) ? 0 : 1;
+		if (this.chord != Config.chords.dictionary["simultaneous"].index) {
+			// Enable chord if it was used.
+			this.effects = (this.effects | (1 << EffectType.chord));
 		}
 		
 		if (instrumentObject["pitchShiftSemitones"] != undefined) {
@@ -1554,7 +1575,7 @@ export class Instrument {
 	}
 	
 	public getTransition(): Transition {
-		return this.type == InstrumentType.drumset ? Config.transitions.dictionary["normal"] : Config.transitions[this.transition];
+		return effectsIncludeTransition(this.effects) ? Config.transitions[this.transition] : Config.transitions.dictionary["normal"];
 	}
 	
 	public getFadeInSeconds(): number {
@@ -1566,7 +1587,7 @@ export class Instrument {
 	}
 	
 	public getChord(): Chord {
-		return this.type == InstrumentType.drumset ? Config.chords.dictionary["simultaneous"] : Config.chords[this.chord];
+		return effectsIncludeChord(this.effects) ? Config.chords[this.chord] : Config.chords.dictionary["simultaneous"];
 	}
 	
 	public getDrumsetEnvelope(pitch: number): Envelope {
@@ -1709,7 +1730,7 @@ export class Song {
 		}
 		
 		buffer.push(SongTagCode.channelOctave);
-		for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
+		for (let channelIndex: number = 0; channelIndex < this.pitchChannelCount; channelIndex++) {
 			buffer.push(base64IntToCharCode[this.channels[channelIndex].octave]);
 		}
 		
@@ -1726,6 +1747,7 @@ export class Song {
 					buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
 				}
 				
+				// The list of enabled effects is represented as a 12-bit bitfield using two six-bit characters.
 				buffer.push(SongTagCode.effects, base64IntToCharCode[instrument.effects >> 6], base64IntToCharCode[instrument.effects & 63]);
 				if (effectsIncludeNoteFilter(instrument.effects)) {
 					buffer.push(base64IntToCharCode[instrument.noteFilter.controlPointCount]);
@@ -1733,6 +1755,12 @@ export class Song {
 						const point: FilterControlPoint = instrument.noteFilter.controlPoints[j];
 						buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
 					}
+				}
+				if (effectsIncludeTransition(instrument.effects)) {
+					buffer.push(base64IntToCharCode[instrument.transition]);
+				}
+				if (effectsIncludeChord(instrument.effects)) {
+					buffer.push(base64IntToCharCode[instrument.chord]);
 				}
 				if (effectsIncludePitchShift(instrument.effects)) {
 					buffer.push(base64IntToCharCode[instrument.pitchShift]);
@@ -1764,8 +1792,6 @@ export class Song {
 				
 				if (instrument.type != InstrumentType.drumset) {
 					buffer.push(SongTagCode.fadeInOut, base64IntToCharCode[instrument.fadeIn], base64IntToCharCode[instrument.fadeOut]);
-					buffer.push(SongTagCode.transition, base64IntToCharCode[instrument.transition]);
-					buffer.push(SongTagCode.chord, base64IntToCharCode[instrument.chord]);
 				}
 				
 				if (instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pickedString) {
@@ -2029,7 +2055,10 @@ export class Song {
 		
 		if (beforeThree) {
 			// Originally, the only instrument transition was "instant" and the only drum wave was "retro".
-			for (const channel of this.channels) channel.instruments[0].transition = 0;
+			for (const channel of this.channels) {
+				channel.instruments[0].transition = Config.transitions.dictionary["interrupt"].index;
+				channel.instruments[0].effects |= 1 << EffectType.transition;
+			}
 			this.channels[3].instruments[0].chipNoise = 0;
 		}
 		
@@ -2195,12 +2224,14 @@ export class Song {
 				if (beforeThree) {
 					const channelIndex: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 					this.channels[channelIndex].octave = clamp(0, Config.pitchOctaves, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
+					if (channelIndex >= this.pitchChannelCount) this.channels[channelIndex].octave = 0;
 				} else if (beforeNine) {
 					for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
 						this.channels[channelIndex].octave = clamp(0, Config.pitchOctaves, base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1);
+						if (channelIndex >= this.pitchChannelCount) this.channels[channelIndex].octave = 0;
 					}
 				} else {
-					for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
+					for (let channelIndex: number = 0; channelIndex < this.pitchChannelCount; channelIndex++) {
 						this.channels[channelIndex].octave = clamp(0, Config.pitchOctaves, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 				}
@@ -2217,12 +2248,17 @@ export class Song {
 				instrument.setTypeAndReset(instrumentType, instrumentChannelIterator >= this.pitchChannelCount);
 				
 				if (beforeSeven) {
+					instrument.effects = 0;
 					// the reverb effect was applied to all pitched instruments if nonzero but never explicitly enabled if beforeSeven, so enable it here.
 					if (legacyGlobalReverb > 0 && !this.getChannelIsNoise(instrumentChannelIterator)) {
-						instrument.effects = (1 << EffectType.reverb);
 						instrument.reverb = legacyGlobalReverb;
-					} else {
-						instrument.effects = 0;
+						instrument.effects |= 1 << EffectType.reverb;
+					}
+					// Chip/noise instruments had arpeggio and FM had custom interval but neither
+					// explicitly saved the chorus setting beforeSeven so enable it here.
+					if (instrument.chord != Config.chords.dictionary["simultaneous"].index) {
+						// Enable chord if it was used.
+						instrument.effects |= 1 << EffectType.chord;
 					}
 				}
 			} break;
@@ -2237,8 +2273,8 @@ export class Song {
 					const instrument: Instrument = this.channels[channelIndex].instruments[0];
 					instrument.chipWave = clamp(0, Config.chipWaves.length, legacyWaves[base64CharCodeToInt[compressed.charCodeAt(charIndex++)]] | 0);
 					
-					// Version 2 didn't save any settings for settings for filters or
-					// envelopes, just waves, so initialize them here I guess.
+					// Version 2 didn't save any settings for settings for filters, or envelopes,
+					// just waves, so initialize them here I guess.
 					instrument.convertLegacySettings(legacySettingsCache![channelIndex][0]);
 					
 				} else if (beforeSix) {
@@ -2381,12 +2417,8 @@ export class Song {
 				instrument.stringSustain = clamp(0, Config.stringSustainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 			} break;
 			case SongTagCode.fadeInOut: {
-				const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-				instrument.fadeIn = clamp(0, Config.fadeInRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-				instrument.fadeOut = clamp(0, Config.fadeOutTicks.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-			} break;
-			case SongTagCode.transition: {
 				if (beforeNine) {
+					// this tag was used for a combination of transition and fade in/out.
 					const legacySettings = [
 						{transition: "interrupt", fadeInSeconds: 0.0,    fadeOutTicks: -1},
 						{transition: "normal",    fadeInSeconds: 0.0,    fadeOutTicks: -3},
@@ -2401,28 +2433,41 @@ export class Song {
 						const channelIndex: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 						const settings = legacySettings[clamp(0, legacySettings.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
 						const instrument: Instrument = this.channels[channelIndex].instruments[0];
-						instrument.transition = Config.transitions.dictionary[settings.transition].index;
 						instrument.fadeIn = Synth.secondsToFadeInSetting(settings.fadeInSeconds);
 						instrument.fadeOut = Synth.ticksToFadeOutSetting(settings.fadeOutTicks);
+						instrument.transition = Config.transitions.dictionary[settings.transition].index;
+						if (instrument.transition != Config.transitions.dictionary["normal"].index) {
+							// Enable transition if it was used.
+							instrument.effects |= 1 << EffectType.transition;
+						}
 					} else if (beforeSix) {
 						for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
 							for (const instrument of this.channels[channelIndex].instruments) {
 								const settings = legacySettings[clamp(0, legacySettings.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
-								instrument.transition = Config.transitions.dictionary[settings.transition].index;
 								instrument.fadeIn = Synth.secondsToFadeInSetting(settings.fadeInSeconds);
 								instrument.fadeOut = Synth.ticksToFadeOutSetting(settings.fadeOutTicks);
+								instrument.transition = Config.transitions.dictionary[settings.transition].index;
+								if (instrument.transition != Config.transitions.dictionary["normal"].index) {
+									// Enable transition if it was used.
+									instrument.effects |= 1 << EffectType.transition;
+								}
 							}
 						}
 					} else {
 						const settings = legacySettings[clamp(0, legacySettings.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
 						const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-						instrument.transition = Config.transitions.dictionary[settings.transition].index;
 						instrument.fadeIn = Synth.secondsToFadeInSetting(settings.fadeInSeconds);
 						instrument.fadeOut = Synth.ticksToFadeOutSetting(settings.fadeOutTicks);
+						instrument.transition = Config.transitions.dictionary[settings.transition].index;
+						if (instrument.transition != Config.transitions.dictionary["normal"].index) {
+							// Enable transition if it was used.
+							instrument.effects |= 1 << EffectType.transition;
+						}
 					}
 				} else {
 					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-					instrument.transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					instrument.fadeIn = clamp(0, Config.fadeInRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					instrument.fadeOut = clamp(0, Config.fadeOutTicks.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 				}
 			} break;
 			case SongTagCode.vibrato: {
@@ -2443,7 +2488,7 @@ export class Song {
 							}
 							if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
 								// Enable vibrato if it was used.
-								instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
+								instrument.effects |= 1 << EffectType.vibrato;
 							}
 						} else if (beforeSix) {
 							const legacyEffects: number[] = [0, 1, 2, 3, 0, 0];
@@ -2461,11 +2506,11 @@ export class Song {
 									}
 									if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
 										// Enable vibrato if it was used.
-										instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
+										instrument.effects |= 1 << EffectType.vibrato;
 									}
 									if (legacyGlobalReverb != 0 && !this.getChannelIsNoise(channelIndex)) {
 										// Enable reverb if it was used globaly before. (Global reverb was added before the effects option so I need to pick somewhere else to initialize instrument reverb, and I picked the vibrato command.)
-										instrument.effects = (instrument.effects | (1 << EffectType.reverb));
+										instrument.effects |= 1 << EffectType.reverb;
 										instrument.reverb = legacyGlobalReverb;
 									}
 								}
@@ -2484,11 +2529,11 @@ export class Song {
 							}
 							if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
 								// Enable vibrato if it was used.
-								instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
+								instrument.effects |= 1 << EffectType.vibrato;
 							}
 							if (legacyGlobalReverb != 0) {
 								// Enable reverb if it was used globaly before. (Global reverb was added before the effects option so I need to pick somewhere else to initialize instrument reverb, and I picked the vibrato command.)
-								instrument.effects = (instrument.effects | (1 << EffectType.reverb));
+								instrument.effects |= 1 << EffectType.reverb;
 								instrument.reverb = legacyGlobalReverb;
 							}
 						}
@@ -2498,7 +2543,7 @@ export class Song {
 						instrument.vibrato = vibrato;
 						if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
 							// Enable vibrato if it was used.
-							instrument.effects = (instrument.effects | (1 << EffectType.vibrato));
+							instrument.effects |= 1 << EffectType.vibrato;
 						}
 					}
 				} else {
@@ -2536,8 +2581,16 @@ export class Song {
 				}
 			} break;
 			case SongTagCode.chord: {
-				const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-				instrument.chord = clamp(0, Config.chords.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				if (beforeNine) {
+					const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+					instrument.chord = clamp(0, Config.chords.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					if (instrument.chord != Config.chords.dictionary["simultaneous"].index) {
+						// Enable chord if it was used.
+						instrument.effects |= 1 << EffectType.chord;
+					}
+				} else {
+					// Do nothing? This song tag code is deprecated for now.
+				}
 			} break;
 			case SongTagCode.effects: {
 				const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -2545,17 +2598,17 @@ export class Song {
 					instrument.effects = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] & ((1 << EffectType.length) - 1));
 					if (legacyGlobalReverb == 0) {
 						// Disable reverb if legacy song reverb was zero.
-						instrument.effects = (instrument.effects & (~(1 << EffectType.reverb)));
+						instrument.effects &= ~(1 << EffectType.reverb);
 					} else if (effectsIncludeReverb(instrument.effects)) {
 						instrument.reverb = legacyGlobalReverb;
 					}
 					if (instrument.pan != Config.panCenter) {
 						// Enable panning if panning slider isn't centered.
-						instrument.effects = (instrument.effects | (1 << EffectType.panning));
+						instrument.effects |= 1 << EffectType.panning;
 					}
 					if (instrument.vibrato != Config.vibratos.dictionary["none"].index) {
 						// Enable vibrato if it was used.
-						instrument.effects = (instrument.effects | (1 << EffectType.panning));
+						instrument.effects |= 1 << EffectType.panning;
 					}
 					
 					// convertLegacySettings may need to force-enable note filter, call
@@ -2563,7 +2616,8 @@ export class Song {
 					const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
 					instrument.convertLegacySettings(legacySettings);
 				} else {
-					if (EffectType.length > 12) throw new Error(); // BeepBox currently uses two base64 characters at 6 bits each for a bitfield representing all the enabled effects.
+					// BeepBox currently uses two base64 characters at 6 bits each for a bitfield representing all the enabled effects.
+					if (EffectType.length > 12) throw new Error();
 					instrument.effects = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					
 					if (effectsIncludeNoteFilter(instrument.effects)) {
@@ -2581,6 +2635,12 @@ export class Song {
 						for (let i: number = instrument.noteFilter.controlPointCount; i < originalControlPointCount; i++) {
 							charIndex += 3;
 						}
+					}
+					if (effectsIncludeTransition(instrument.effects)) {
+						instrument.transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+					}
+					if (effectsIncludeChord(instrument.effects)) {
+						instrument.chord = clamp(0, Config.chords.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
 					if (effectsIncludePitchShift(instrument.effects)) {
 						instrument.pitchShift = clamp(0, Config.pitchShiftRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -2613,7 +2673,7 @@ export class Song {
 					}
 				}
 				// Clamp the range.
-				instrument.effects = (instrument.effects & ((1 << EffectType.length) - 1));
+				instrument.effects &= (1 << EffectType.length) - 1;
 			} break;
 			case SongTagCode.volume: {
 				if (beforeThree) {
@@ -3026,13 +3086,17 @@ export class Song {
 				sequenceArray.push(channel.bars[i]);
 			}
 			
-			channelArray.push({
+			const channelObject: any = {
 				"type": isNoiseChannel ? "drum" : "pitch",
-				"octaveScrollBar": channel.octave - 1,
 				"instruments": instrumentArray,
 				"patterns": patternArray,
 				"sequence": sequenceArray,
-			});
+			};
+			if (!isNoiseChannel) {
+				// For compatibility with old versions the octave is offset by one.
+				channelObject["octaveScrollBar"] = channel.octave - 1;
+			}
+			channelArray.push(channelObject);
 		}
 		
 		return {
@@ -3167,6 +3231,7 @@ export class Song {
 				
 				if (channelObject["octaveScrollBar"] != undefined) {
 					channel.octave = clamp(0, Config.pitchOctaves, (channelObject["octaveScrollBar"] | 0) + 1);
+					if (isNoiseChannel) channel.octave = 0;
 				}
 				
 				if (Array.isArray(channelObject["instruments"])) {
@@ -3356,8 +3421,11 @@ class EnvelopeComputer {
 	public noteTicksEnd: number = 0.0;
 	public noteSizeStart: number = Config.noteSizeMax;
 	public noteSizeEnd: number = Config.noteSizeMax;
+	public prevNoteSize: number = Config.noteSizeMax;
+	public nextNoteSize: number = Config.noteSizeMax;
 	private _noteSizeFinal: number = Config.noteSizeMax;
-	private _prevNoteSecondsEnd: number = 0.0;
+	public prevNoteSecondsStart: number = 0.0;
+	public prevNoteSecondsEnd: number = 0.0;
 	public prevNoteTicksStart: number = 0.0;
 	public prevNoteTicksEnd: number = 0.0;
 	private _prevNoteSizeFinal: number = Config.noteSizeMax;
@@ -3390,7 +3458,7 @@ class EnvelopeComputer {
 		this.noteSecondsEnd = 0.0;
 		this.noteTicksEnd = 0.0;
 		this._noteSizeFinal = Config.noteSizeMax;
-		this._prevNoteSecondsEnd = 0.0;
+		this.prevNoteSecondsEnd = 0.0;
 		this.prevNoteTicksEnd = 0.0;
 		this._prevNoteSizeFinal = Config.noteSizeMax;
 	}
@@ -3398,7 +3466,7 @@ class EnvelopeComputer {
 	public computeEnvelopes(instrument: Instrument, currentPart: number, tickTimeStart: number, tickTimeEnd: number, secondsPassing: number, tone: Tone | null): void {
 		const transition: Transition = instrument.getTransition();
 		if (tone != null && tone.atNoteStart && !transition.continues) {
-			this._prevNoteSecondsEnd = this.noteSecondsEnd;
+			this.prevNoteSecondsEnd = this.noteSecondsEnd;
 			this.prevNoteTicksEnd = this.noteTicksEnd;
 			this._prevNoteSizeFinal = this._noteSizeFinal;
 			this.noteSecondsEnd = 0.0;
@@ -3417,7 +3485,7 @@ class EnvelopeComputer {
 		const noteSecondsEnd: number = noteSecondsStart + secondsPassing;
 		const noteTicksStart: number = this.noteTicksEnd;
 		const noteTicksEnd: number = noteTicksStart + ticksPassing;
-		const prevNoteSecondsStart: number = this._prevNoteSecondsEnd;
+		const prevNoteSecondsStart: number = this.prevNoteSecondsEnd;
 		const prevNoteSecondsEnd: number = prevNoteSecondsStart + secondsPassing;
 		const prevNoteTicksStart: number = this.prevNoteTicksEnd;
 		const prevNoteTicksEnd: number = prevNoteTicksStart + ticksPassing;
@@ -3536,9 +3604,12 @@ class EnvelopeComputer {
 		this.noteSecondsEnd = noteSecondsEnd;
 		this.noteTicksStart = noteTicksStart;
 		this.noteTicksEnd = noteTicksEnd;
-		this._prevNoteSecondsEnd = prevNoteSecondsEnd;
+		this.prevNoteSecondsStart = prevNoteSecondsStart;
+		this.prevNoteSecondsEnd = prevNoteSecondsEnd;
 		this.prevNoteTicksStart = prevNoteTicksStart;
 		this.prevNoteTicksEnd = prevNoteTicksEnd;
+		this.prevNoteSize = prevNoteSize;
+		this.nextNoteSize = nextNoteSize;
 		this.noteSizeStart = noteSizeStart;
 		this.noteSizeEnd = noteSizeEnd;
 		this.prevSlideStart = prevSlideStart;
@@ -3600,7 +3671,7 @@ class Tone {
 	public readonly pitches: number[] = [0, 0, 0, 0];
 	public pitchCount: number = 0;
 	public chordSize: number = 0;
-	public drumsetPitch: number = 0;
+	public drumsetPitch: number | null = null;
 	public note: Note | null = null;
 	public prevNote: Note | null = null;
 	public nextNote: Note | null = null;
@@ -3663,6 +3734,7 @@ class Tone {
 		}
 		this.envelopeComputer.reset();
 		this.prevVibrato = null;
+		this.drumsetPitch = null;
 	}
 }
 
@@ -5204,14 +5276,16 @@ export class Synth {
 			intervalEnd   += vibratoEnd;
 		}
 		
-		// Fade in the beginning of the note.
-		const fadeInSeconds: number = instrument.getFadeInSeconds();
-		if (fadeInSeconds > 0.0) {
-			transitionExpressionStart *= Math.min(1.0, envelopeComputer.noteSecondsStart / fadeInSeconds);
-			transitionExpressionEnd   *= Math.min(1.0, envelopeComputer.noteSecondsEnd   / fadeInSeconds);
+		if (!transition.isSeamless || tone.prevNote == null) {
+			// Fade in the beginning of the note.
+			const fadeInSeconds: number = instrument.getFadeInSeconds();
+			if (fadeInSeconds > 0.0) {
+				transitionExpressionStart *= Math.min(1.0, envelopeComputer.noteSecondsStart / fadeInSeconds);
+				transitionExpressionEnd   *= Math.min(1.0, envelopeComputer.noteSecondsEnd   / fadeInSeconds);
+			}
 		}
 		
-		if (instrument.type == InstrumentType.drumset) {
+		if (instrument.type == InstrumentType.drumset && tone.drumsetPitch == null) {
 			// It's possible that the note will change while the user is editing it,
 			// but the tone's pitches don't get updated because the tone has already
 			// ended and is fading out. To avoid an array index out of bounds error, clamp the pitch.
@@ -5244,13 +5318,31 @@ export class Synth {
 		}
 		
 		if (instrument.type == InstrumentType.drumset) {
-			const drumsetFilterEnvelope: Envelope = instrument.getDrumsetEnvelope(tone.drumsetPitch);
+			const drumsetFilterEnvelope: Envelope = instrument.getDrumsetEnvelope(tone.drumsetPitch!);
 			// If the drumset lowpass cutoff decays, compensate by increasing expression.
 			noteFilterExpression *= EnvelopeComputer.getLowpassCutoffDecayVolumeCompensation(drumsetFilterEnvelope)
 			
 			// Drumset filters use the same envelope timing as the rest of the envelopes, but do not include support for slide transitions.
-			const drumsetFilterEnvelopeStart: number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, envelopeComputer.noteSecondsStart, beatsPerPart * partTimeStart, envelopeComputer.noteSizeStart);
-			const drumsetFilterEnvelopeEnd:   number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, envelopeComputer.noteSecondsEnd,   beatsPerPart * partTimeEnd,   envelopeComputer.noteSizeEnd);
+			let drumsetFilterEnvelopeStart: number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, envelopeComputer.noteSecondsStart, beatsPerPart * partTimeStart, envelopeComputer.noteSizeStart);
+			let drumsetFilterEnvelopeEnd:   number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, envelopeComputer.noteSecondsEnd,   beatsPerPart * partTimeEnd,   envelopeComputer.noteSizeEnd);
+			
+			// Apply slide interpolation to drumset envelope.
+			if (envelopeComputer.prevSlideStart) {
+				const other: number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, envelopeComputer.prevNoteSecondsStart, beatsPerPart * partTimeStart, envelopeComputer.prevNoteSize);
+				drumsetFilterEnvelopeStart += (other - drumsetFilterEnvelopeStart) * envelopeComputer.prevSlideRatioStart;
+			}
+			if (envelopeComputer.prevSlideEnd) {
+				const other: number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, envelopeComputer.prevNoteSecondsEnd, beatsPerPart * partTimeEnd, envelopeComputer.prevNoteSize);
+				drumsetFilterEnvelopeEnd += (other - drumsetFilterEnvelopeEnd) * envelopeComputer.prevSlideRatioEnd;
+			}
+			if (envelopeComputer.nextSlideStart) {
+				const other: number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, 0.0, beatsPerPart * partTimeStart, envelopeComputer.nextNoteSize);
+				drumsetFilterEnvelopeStart += (other - drumsetFilterEnvelopeStart) * envelopeComputer.nextSlideRatioStart;
+			}
+			if (envelopeComputer.nextSlideEnd) {
+				const other: number = EnvelopeComputer.computeEnvelope(drumsetFilterEnvelope, 0.0, beatsPerPart * partTimeEnd, envelopeComputer.nextNoteSize);
+				drumsetFilterEnvelopeEnd += (other - drumsetFilterEnvelopeEnd) * envelopeComputer.nextSlideRatioEnd;
+			}
 			
 			const point: FilterControlPoint = synth.tempDrumSetControlPoint;
 			point.type = FilterType.lowPass;
@@ -6700,8 +6792,8 @@ export class Synth {
 	
 	private static drumsetSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 		const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
-		let wave: Float32Array = instrument.getDrumsetWave(tone.drumsetPitch);
-		let phaseDelta: number = tone.phaseDeltas[0] / Instrument.drumsetIndexReferenceDelta(tone.drumsetPitch);;
+		let wave: Float32Array = instrument.getDrumsetWave(tone.drumsetPitch!);
+		let phaseDelta: number = tone.phaseDeltas[0] / Instrument.drumsetIndexReferenceDelta(tone.drumsetPitch!);
 		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 		let expression: number = +tone.expressionStarts[0];
 		const expressionDelta: number = +tone.expressionDeltas[0];

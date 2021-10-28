@@ -321,6 +321,27 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	visibility: hidden;
 }
 
+.beepboxEditor .effects-menu {
+	width: var(--button-size);
+	position: relative;
+}
+.beepboxEditor .effects-menu::before {
+	content: "";
+	position: absolute;
+	width: var(--button-size);
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--menu-down-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--menu-down-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+
 .beepboxEditor .zoomInButton, .beepboxEditor .zoomOutButton {
 	width: var(--button-size);
 	position: absolute;

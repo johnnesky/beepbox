@@ -1,6 +1,6 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
+import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
 import {ColorConfig, ChannelColors} from "./ColorConfig";
 import "./Layout"; // Imported here for the sake of ensuring this code is transpiled early.
@@ -211,8 +211,7 @@ export class SongEditor {
 	private readonly _fadeInOutRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("fadeInOut")}, "Fade In/Out:"), this._fadeInOutEditor.container);
 	private readonly _transitionSelect: HTMLSelectElement = buildOptions(select(), Config.transitions.map(transition=>transition.name));
 	private readonly _transitionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("transition")}, "Transition:"), div({class: "selectContainer"}, this._transitionSelect));
-	private readonly _effectsDisplayOption: HTMLOptionElement = option({selected: true, disabled: true, hidden: false}, "Preferences"); // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
-	private readonly _effectsSelect: HTMLSelectElement = select(this._effectsDisplayOption);
+	private readonly _effectsSelect: HTMLSelectElement = select(option({selected: true, disabled: true, hidden: false})); // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
 	private readonly _eqFilterEditor: FilterEditor = new FilterEditor(this._doc);
 	private readonly _eqFilterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("eqFilter")}, "EQ Filter:"), this._eqFilterEditor.container);
 	private readonly _noteFilterEditor: FilterEditor = new FilterEditor(this._doc, true);
@@ -259,8 +258,6 @@ export class SongEditor {
 	private readonly _customInstrumentSettingsGroup: HTMLDivElement = div({class: "editor-controls"},
 		this._eqFilterRow,
 		this._fadeInOutRow,
-		this._transitionRow,
-		this._chordSelectRow,
 		this._chipWaveSelectRow,
 		this._chipNoiseSelectRow,
 		this._algorithmSelectRow,
@@ -273,10 +270,12 @@ export class SongEditor {
 		this._pulseWidthRow,
 		this._stringSustainRow,
 		this._unisonSelectRow,
-		div({class: "selectRow"},
-			span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects:"),
-			div({class: "selectContainer"}, this._effectsSelect),
+		div({style: `margin: 2px 0; margin-left: 2em; display: flex; align-items: center;`},
+			span({style: `flex-grow: 1; text-align: center;`}, span({class: "tip", onclick: ()=>this._openPrompt("effects")}, "Effects")),
+			div({class: "effects-menu"}, this._effectsSelect),
 		),
+		this._transitionRow,
+		this._chordSelectRow,
 		this._pitchShiftRow,
 		this._detuneRow,
 		this._vibratoSelectRow,
@@ -290,7 +289,7 @@ export class SongEditor {
 		this._echoDelayRow,
 		this._reverbRow,
 		div({style: `margin: 2px 0; margin-left: 2em; display: flex; align-items: center;`},
-			span({class: "tip", onclick: ()=>this._openPrompt("envelopes"), style: `flex-grow: 1; text-align: center;`}, "Envelopes:"),
+			span({style: `flex-grow: 1; text-align: center;`}, span({class: "tip", onclick: ()=>this._openPrompt("envelopes")}, "Envelopes")),
 			this._addEnvelopeButton,
 		),
 		this._envelopeEditor.container,
@@ -676,7 +675,6 @@ export class SongEditor {
 		const activeElement: Element | null = document.activeElement;
 		const colors: ChannelColors = ColorConfig.getChannelColor(this._doc.song, this._doc.channel);
 		
-		let effectDisplayLabel: string = "";
 		for (let i: number = this._effectsSelect.childElementCount - 1; i < Config.effectOrder.length; i++) {
 			this._effectsSelect.appendChild(option({value: i}));
 		}
@@ -687,13 +685,7 @@ export class SongEditor {
 			const label: string = (selected ? "✓ " : "　") + Config.effectNames[effectFlag];
 			const option: HTMLOptionElement = <HTMLOptionElement> this._effectsSelect.children[i + 1];
 			if (option.textContent != label) option.textContent = label;
-			if (selected) {
-				if (effectDisplayLabel != "") effectDisplayLabel += ", ";
-				effectDisplayLabel += Config.effectNames[effectFlag];
-			}
 		}
-		if (effectDisplayLabel == "") effectDisplayLabel = "none";
-		if (this._effectsDisplayOption.textContent != effectDisplayLabel) this._effectsDisplayOption.textContent = effectDisplayLabel;
 		
 		setSelectedValue(this._scaleSelect, this._doc.song.scale);
 		this._scaleSelect.title = Config.scales[this._doc.song.scale].realName;
@@ -746,8 +738,6 @@ export class SongEditor {
 			if (instrument.type == InstrumentType.drumset) {
 				this._drumsetGroup.style.display = "";
 				this._fadeInOutRow.style.display = "none";
-				this._transitionRow.style.display = "none";
-				this._chordSelectRow.style.display = "none";
 				for (let i: number = 0; i < Config.drumCount; i++) {
 					setSelectedValue(this._drumsetEnvelopeSelects[i], instrument.drumsetEnvelopes[i]);
 					this._drumsetSpectrumEditors[i].render();
@@ -755,12 +745,9 @@ export class SongEditor {
 			} else {
 				this._drumsetGroup.style.display = "none";
 				this._fadeInOutRow.style.display = "";
-				this._transitionRow.style.display = "";
-				this._chordSelectRow.style.display = "";
 				this._fadeInOutEditor.render();
-				setSelectedValue(this._transitionSelect, instrument.transition);
-				setSelectedValue(this._chordSelect, instrument.chord);
 			}
+			
 			if (instrument.type == InstrumentType.chip) {
 				this._chipWaveSelectRow.style.display = "";
 				setSelectedValue(this._chipWaveSelect, instrument.chipWave);
@@ -796,6 +783,20 @@ export class SongEditor {
 				this._pulseWidthSlider.updateValue(instrument.pulseWidth);
 			} else {
 				this._pulseWidthRow.style.display = "none";
+			}
+			
+			if (effectsIncludeTransition(instrument.effects)) {
+				this._transitionRow.style.display = "";
+				setSelectedValue(this._transitionSelect, instrument.transition);
+			} else {
+				this._transitionRow.style.display = "none";
+			}
+			
+			if (effectsIncludeChord(instrument.effects)) {
+				this._chordSelectRow.style.display = "";
+				setSelectedValue(this._chordSelect, instrument.chord);
+			} else {
+				this._chordSelectRow.style.display = "none";
 			}
 			
 			if (effectsIncludePitchShift(instrument.effects)) {

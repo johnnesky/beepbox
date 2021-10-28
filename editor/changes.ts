@@ -453,17 +453,22 @@ export class ChangeRandomGeneratedInstrument extends Change {
 			
 			instrument.fadeIn = (Math.random() < 0.8) ? 0 : selectCurvedDistribution(0, Config.fadeInRange - 1, 0, 2);
 			instrument.fadeOut = selectCurvedDistribution(0, Config.fadeOutTicks.length - 1, Config.fadeOutNeutral, 2);
-			instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
-				{item: "normal"     , weight: 30},
-				{item: "interrupt"  , weight: 1},
-				{item: "slide"      , weight: 2},
-			])].index;
-			instrument.chord = Config.chords.dictionary[selectWeightedRandom([
-				{item: "simultaneous" , weight: 10},
-				{item: "strum"   , weight: 2},
-				{item: "arpeggio", weight: 1},
-			])].index;
 			
+			if (Math.random() < 0.1) {
+				instrument.effects |= 1 << EffectType.transition;
+				instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
+					{item: "normal"     , weight: 30},
+					{item: "interrupt"  , weight: 1},
+					{item: "slide"      , weight: 2},
+				])].index;
+			}
+			if (Math.random() < 0.2) {
+				instrument.effects |= 1 << EffectType.chord;
+				instrument.chord = Config.chords.dictionary[selectWeightedRandom([
+					{item: "strum"   , weight: 2},
+					{item: "arpeggio", weight: 1},
+				])].index;
+			}
 			if (Math.random() < 0.1) {
 				instrument.pitchShift = selectCurvedDistribution(0, Config.pitchShiftRange - 1, Config.pitchShiftCenter, 2);
 				if (instrument.pitchShift != Config.pitchShiftCenter) {
@@ -610,16 +615,6 @@ export class ChangeRandomGeneratedInstrument extends Change {
 			
 			instrument.fadeIn = (Math.random() < 0.5) ? 0 : selectCurvedDistribution(0, Config.fadeInRange - 1, 0, 2);
 			instrument.fadeOut = selectCurvedDistribution(0, Config.fadeOutTicks.length - 1, Config.fadeOutNeutral, 2);
-			instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
-				{item: "normal"     , weight: 30},
-				{item: "interrupt"  , weight: 1},
-				{item: "slide"      , weight: 2},
-			])].index;
-			instrument.chord = Config.chords.dictionary[selectWeightedRandom([
-				{item: "simultaneous", weight: 7},
-				{item: "strum"   ,     weight: 2},
-				{item: "arpeggio",     weight: 1},
-			])].index;
 			if (type == InstrumentType.chip || type == InstrumentType.harmonics || type == InstrumentType.pickedString) {
 				instrument.unison = Config.unisons.dictionary[selectWeightedRandom([
 					{item: "none"      , weight: 10},
@@ -634,6 +629,20 @@ export class ChangeRandomGeneratedInstrument extends Change {
 				])].index;
 			}
 			
+			if (Math.random() < 0.1) {
+				instrument.effects |= 1 << EffectType.transition;
+				instrument.transition = Config.transitions.dictionary[selectWeightedRandom([
+					{item: "interrupt"  , weight: 1},
+					{item: "slide"      , weight: 2},
+				])].index;
+			}
+			if (Math.random() < 0.2) {
+				instrument.effects |= 1 << EffectType.chord;
+				instrument.chord = Config.chords.dictionary[selectWeightedRandom([
+					{item: "strum"   ,     weight: 2},
+					{item: "arpeggio",     weight: 1},
+				])].index;
+			}
 			if (Math.random() < 0.05) {
 				instrument.pitchShift = selectCurvedDistribution(0, Config.pitchShiftRange - 1, Config.pitchShiftCenter, 1);
 				if (instrument.pitchShift != Config.pitchShiftCenter) {
