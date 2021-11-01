@@ -712,6 +712,7 @@ export class PatternEditor {
 						start = this._cursor.start;
 						end = start + defaultLength;
 					}
+					const continuesLastPattern: boolean = (start < 0);
 					if (start < 0) start = 0;
 					if (end > this._doc.song.beatsPerBar * Config.partsPerBeat) end = this._doc.song.beatsPerBar * Config.partsPerBeat;
 					
@@ -725,6 +726,7 @@ export class PatternEditor {
 							if (pattern.notes[i].start >= end) break;
 						}
 						const theNote: Note = new Note(this._cursor.pitch, start, end, Config.noteSizeMax, this._doc.song.getChannelIsNoise(this._doc.channel));
+						theNote.continuesLastPattern = continuesLastPattern;
 						sequence.append(new ChangeNoteAdded(this._doc, pattern, theNote, i));
 						this._copyPins(theNote);
 					
@@ -742,6 +744,7 @@ export class PatternEditor {
 					
 					const shiftedPin: NotePin = this._cursor.curNote.pins[this._cursor.nearPinIndex];
 					let shiftedTime: number = Math.round((this._cursor.curNote.start + shiftedPin.time + shift) / minDivision) * minDivision;
+					const continuesLastPattern: boolean = (shiftedTime < 0.0);
 					if (shiftedTime < 0) shiftedTime = 0;
 					if (shiftedTime > this._doc.song.beatsPerBar * Config.partsPerBeat) shiftedTime = this._doc.song.beatsPerBar * Config.partsPerBeat;
 					
@@ -763,7 +766,7 @@ export class PatternEditor {
 						this._dragVisible = true;
 						
 						sequence.append(new ChangeNoteTruncate(this._doc, this._pattern, start, end, this._cursor.curNote));
-						sequence.append(new ChangePinTime(this._doc, this._cursor.curNote, this._cursor.nearPinIndex, shiftedTime));
+						sequence.append(new ChangePinTime(this._doc, this._cursor.curNote, this._cursor.nearPinIndex, shiftedTime, continuesLastPattern));
 						this._copyPins(this._cursor.curNote);
 					}
 				} else if (this._cursor.pitchIndex == -1) {
@@ -1095,8 +1098,8 @@ export class PatternEditor {
 		if (this._pattern != null) {
 			const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 			const chord: Chord = instrument.getChord();
-			const transition: Transition = instrument.getTransition()
-			const displayNumberedChords: boolean = chord.customInterval || chord.arpeggiates || chord.strumParts > 0 || transition.isSeamless;
+			const transition: Transition = instrument.getTransition();
+			const displayNumberedChords: boolean = chord.customInterval || chord.arpeggiates || chord.strumParts > 0 || transition.slides;
 			for (const note of this._pattern.notes) {
 				for (let i: number = 0; i < note.pitches.length; i++) {
 					const pitch: number = note.pitches[i];
@@ -1111,10 +1114,28 @@ export class PatternEditor {
 					this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 					this._svgNoteContainer.appendChild(notePath);
 					
+					let indicatorOffset: number = 2;
+					if (note.continuesLastPattern) {
+						const arrowHeight: number = Math.min(this._pitchHeight, 20);
+						let arrowPath: string;
+						arrowPath  = "M " + prettyNumber(this._partWidth * note.start + indicatorOffset)      + " " + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset) - 0.1 * arrowHeight);
+						arrowPath += "L " + prettyNumber(this._partWidth * note.start + indicatorOffset)      + " " + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset) + 0.1 * arrowHeight);
+						arrowPath += "L " + prettyNumber(this._partWidth * note.start + indicatorOffset + 4)  + " " + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset) + 0.1 * arrowHeight);
+						arrowPath += "L " + prettyNumber(this._partWidth * note.start + indicatorOffset + 4)  + " " + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset) + 0.3 * arrowHeight);
+						arrowPath += "L " + prettyNumber(this._partWidth * note.start + indicatorOffset + 12) + " " + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset));
+						arrowPath += "L " + prettyNumber(this._partWidth * note.start + indicatorOffset + 4)  + " " + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset) - 0.3 * arrowHeight);
+						arrowPath += "L " + prettyNumber(this._partWidth * note.start + indicatorOffset + 4)  + " " + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset) - 0.1 * arrowHeight);
+						const arrow: SVGPathElement = SVG.path();
+						arrow.setAttribute("d", arrowPath);
+						arrow.setAttribute("fill", ColorConfig.invertedText);
+						this._svgNoteContainer.appendChild(arrow);
+						indicatorOffset += 12;
+					}
+					
 					if (note.pitches.length > 1) {
 						if (displayNumberedChords) {
-							let oscillatorLabel: SVGTextElement = SVG.text();
-							oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + 2));
+							const oscillatorLabel: SVGTextElement = SVG.text();
+							oscillatorLabel.setAttribute("x", "" + prettyNumber(this._partWidth * note.start + indicatorOffset));
 							oscillatorLabel.setAttribute("y", "" + prettyNumber(this._pitchToPixelHeight(pitch - this._octaveOffset)));
 							oscillatorLabel.setAttribute("width", "30");
 							oscillatorLabel.setAttribute("fill", ColorConfig.invertedText);

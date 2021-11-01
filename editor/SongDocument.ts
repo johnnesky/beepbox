@@ -308,7 +308,7 @@ export class SongDocument {
 		}
 		
 		const highlightedPattern: Pattern | null = this.getCurrentPattern();
-		if (highlightedPattern != null) {
+		if (highlightedPattern != null && this.song.patternInstruments) {
 			this.recentPatternInstruments[this.channel] = highlightedPattern.instruments.concat();
 		}
 		

@@ -458,10 +458,10 @@ export class ExportPrompt implements Prompt {
 						writer.writeUint8(MidiEventType.meta);
 						writer.writeMidi7Bits(MidiMetaEventMessage.instrumentName);
 						writer.writeMidiAscii("Instrument " + (instrumentIndex + 1));
-					
+						
 						if (!isDrumset) {
 							let instrumentProgram: number = 81; // default to sawtooth wave. 
-					
+							
 							if (preset != null && preset.midiProgram != undefined) {
 								instrumentProgram = preset.midiProgram;
 							} else if (instrument.type == InstrumentType.drumset) {
@@ -486,13 +486,13 @@ export class ExportPrompt implements Prompt {
 									throw new Error("Unrecognized instrument type.");
 								}
 							}
-					
+							
 							// Program (instrument) change event:
 							writeEventTime(barStartTime);
 							writer.writeUint8(MidiEventType.programChange | midiChannel);
 							writer.writeMidi7Bits(instrumentProgram);
 						}
-					
+						
 						// Instrument volume:
 						writeEventTime(barStartTime);
 						let instrumentVolume: number = volumeMultToMidiVolume(Synth.instrumentVolumeToVolumeMult(instrument.volume));
@@ -681,6 +681,9 @@ export class ExportPrompt implements Prompt {
 							
 							// End all tones.
 							for (let toneIndex: number = 0; toneIndex < toneCount; toneIndex++) {
+								// TODO: If the note at the start of the next pattern has
+								// continuesLastPattern and has the same chord, it ought to extend
+								// this previous note.
 								writeEventTime(noteEndTime);
 								writer.writeUint8(MidiEventType.noteOff | midiChannel);
 								writer.writeMidi7Bits(prevPitches[toneIndex]); // pitch

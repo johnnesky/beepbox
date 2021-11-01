@@ -1,7 +1,7 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import {Algorithm, Dictionary, FilterType, InstrumentType, EffectType, AutomationTarget, Config, effectsIncludePanning, effectsIncludeDistortion} from "../synth/SynthConfig";
-import {NotePin, Note, makeNotePin, Pattern, FilterSettings, FilterControlPoint, SpectrumWave, HarmonicsWave, Instrument, Channel, Song} from "../synth/synth";
+import {NotePin, Note, makeNotePin, Pattern, FilterSettings, FilterControlPoint, SpectrumWave, HarmonicsWave, Instrument, Channel, Song, Synth} from "../synth/synth";
 import {Preset, PresetCategory, EditorConfig} from "./EditorConfig";
 import {Change, ChangeGroup, ChangeSequence, UndoableChange} from "./Change";
 import {SongDocument} from "./SongDocument";
@@ -131,11 +131,27 @@ export function generateScaleMap(oldScaleFlags: ReadonlyArray<boolean>, newScale
 	return fullPitchMap;
 }
 
+function removeRedundantPins(pins: NotePin[]): void {
+	for (let i: number = 1; i < pins.length - 1; ) {
+		const prevPin: NotePin = pins[i-1];
+		const pin: NotePin = pins[i];
+		const nextPin: NotePin = pins[i+1];
+		const prevTimeSpan: number = pin.time - prevPin.time;
+		const nextTimeSpan: number = nextPin.time - pin.time;
+		if ((pin.interval - prevPin.interval) * nextTimeSpan == (nextPin.interval - pin.interval) * prevTimeSpan &&
+			(pin.size - prevPin.size) * nextTimeSpan == (nextPin.size - pin.size) * prevTimeSpan)
+		{
+			pins.splice(i, 1);
+		} else {
+			i++;
+		}
+	}
+}
+
 function projectNoteIntoBar(oldNote: Note, timeOffset: number, noteStartPart: number, noteEndPart: number, newNotes: Note[]): void {
 	// Create a new note, and interpret the pitch bend and size events
 	// to determine where we need to insert pins to control interval and volume.
 	const newNote: Note = new Note(-1, noteStartPart, noteEndPart, Config.noteSizeMax, false);
-	newNotes.push(newNote);
 	newNote.pins.length = 0;
 	newNote.pitches.length = 0;
 	const newNoteLength: number = noteEndPart - noteStartPart;
@@ -177,6 +193,31 @@ function projectNoteIntoBar(oldNote: Note, timeOffset: number, noteStartPart: nu
 	}
 	for (let pinIdx: number = 0; pinIdx < newNote.pins.length; pinIdx++) {
 		newNote.pins[pinIdx].interval -= offsetInterval;
+	}
+	
+	let joinedWithPrevNote: boolean = false;
+	if (newNote.start == 0) {
+		newNote.continuesLastPattern = (timeOffset < 0 || oldNote.continuesLastPattern);
+	} else {
+		newNote.continuesLastPattern = false;
+		if (newNotes.length > 0 && oldNote.continuesLastPattern) {
+			const prevNote: Note = newNotes[newNotes.length - 1];
+			if (prevNote.end == newNote.start && Synth.adjacentNotesHaveMatchingPitches(prevNote, newNote)) {
+				joinedWithPrevNote = true;
+				const newIntervalOffset: number = prevNote.pins[prevNote.pins.length - 1].interval;
+				const newTimeOffset: number = prevNote.end - prevNote.start;
+				for (let pinIndex: number = 1; pinIndex < newNote.pins.length; pinIndex++) {
+					const tempPin: NotePin = newNote.pins[pinIndex];
+					const transformedPin: NotePin = makeNotePin(tempPin.interval + newIntervalOffset, tempPin.time + newTimeOffset, tempPin.size);
+					prevNote.pins.push(transformedPin);
+					prevNote.end = prevNote.start + transformedPin.time;
+				}
+				removeRedundantPins(prevNote.pins);
+			}
+		}
+	}
+	if (!joinedWithPrevNote) {
+		newNotes.push(newNote);
 	}
 }
 
@@ -252,7 +293,7 @@ export class ChangeMoveAndOverflowNotes extends ChangeGroup {
 	}
 }
 
-export class ChangePins extends UndoableChange {
+class ChangePins extends UndoableChange {
 	protected _oldStart: number;
 	protected _newStart: number;
 	protected _oldEnd: number;
@@ -261,6 +302,8 @@ export class ChangePins extends UndoableChange {
 	protected _newPins: NotePin[];
 	protected _oldPitches: number[];
 	protected _newPitches: number[];
+	protected _oldContinuesLastPattern: boolean;
+	protected _newContinuesLastPattern: boolean;
 	constructor(protected _doc: SongDocument | null, protected _note: Note) {
 		super(false);
 		this._oldStart = this._note.start;
@@ -271,9 +314,11 @@ export class ChangePins extends UndoableChange {
 		this._newPins = [];
 		this._oldPitches = this._note.pitches;
 		this._newPitches = [];
+		this._oldContinuesLastPattern = this._note.continuesLastPattern;
+		this._newContinuesLastPattern = this._note.continuesLastPattern;
 	}
 	
-	protected _finishSetup(): void {
+	protected _finishSetup(continuesLastPattern?: boolean): void {
 		for (let i: number = 0; i < this._newPins.length - 1; ) {
 			if (this._newPins[i].time >= this._newPins[i+1].time) {
 				this._newPins.splice(i, 1);
@@ -282,17 +327,7 @@ export class ChangePins extends UndoableChange {
 			}
 		}
 		
-		for (let i: number = 1; i < this._newPins.length - 1; ) {
-			if (this._newPins[i-1].interval == this._newPins[i].interval &&
-				this._newPins[i].interval == this._newPins[i+1].interval &&
-				this._newPins[i-1].size == this._newPins[i].size &&
-				this._newPins[i].size == this._newPins[i+1].size)
-			{
-				this._newPins.splice(i, 1);
-			} else {
-				i++;
-			}
-		}
+		removeRedundantPins(this._newPins);
 		
 		const firstInterval: number = this._newPins[0].interval;
 		const firstTime: number = this._newPins[0].time;
@@ -306,6 +341,13 @@ export class ChangePins extends UndoableChange {
 		this._newStart = this._oldStart + firstTime;
 		this._newEnd   = this._newStart + this._newPins[this._newPins.length-1].time;
 		
+		if (continuesLastPattern != undefined) {
+			this._newContinuesLastPattern = continuesLastPattern;
+		}
+		if (this._newStart != 0) {
+			this._newContinuesLastPattern = false;
+		}
+		
 		this._doForwards();
 		this._didSomething();
 	}
@@ -315,6 +357,7 @@ export class ChangePins extends UndoableChange {
 		this._note.pitches = this._newPitches;
 		this._note.start = this._newStart;
 		this._note.end = this._newEnd;
+		this._note.continuesLastPattern = this._newContinuesLastPattern;
 		if (this._doc != null) this._doc.notifier.changed();
 	}
 	
@@ -323,6 +366,7 @@ export class ChangePins extends UndoableChange {
 		this._note.pitches = this._oldPitches;
 		this._note.start = this._oldStart;
 		this._note.end = this._oldEnd;
+		this._note.continuesLastPattern = this._oldContinuesLastPattern;
 		if (this._doc != null) this._doc.notifier.changed();
 	}
 }
@@ -1689,6 +1733,7 @@ export class ChangePaste extends ChangeGroup {
 				for (const pin of noteObject["pins"]) {
 					note.pins.push(makeNotePin(pin.interval, pin.time, pin.size));
 				}
+				note.continuesLastPattern = (noteObject["continuesLastPattern"] === true) && (note.start == 0);
 				pattern.notes.splice(noteInsertionIndex++, 0, note);
 				if (note.end > selectionEnd) {
 					this.append(new ChangeNoteLength(doc, note, note.start, selectionEnd));
@@ -1843,7 +1888,7 @@ export class ChangeEnsurePatternExists extends UndoableChange {
 }
 
 export class ChangePinTime extends ChangePins {
-	constructor(doc: SongDocument | null, note: Note, pinIndex: number, shiftedTime: number) {
+	constructor(doc: SongDocument | null, note: Note, pinIndex: number, shiftedTime: number, continuesLastPattern: boolean) {
 		super(doc, note);
 		
 		shiftedTime -= this._oldStart;
@@ -1858,6 +1903,7 @@ export class ChangePinTime extends ChangePins {
 				this._newPins.push(makeNotePin(oldPin.interval, time, oldPin.size));
 			} else if (time > skipEnd) {
 				if (!setPin) {
+					if (this._newPins.length > 0) continuesLastPattern = note.continuesLastPattern;
 					this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].size));
 					setPin = true;
 				}
@@ -1865,10 +1911,11 @@ export class ChangePinTime extends ChangePins {
 			}
 		}
 		if (!setPin) {
+			continuesLastPattern = note.continuesLastPattern;
 			this._newPins.push(makeNotePin(this._oldPins[pinIndex].interval, shiftedTime, this._oldPins[pinIndex].size));
 		}
 		
-		this._finishSetup();
+		this._finishSetup(continuesLastPattern);
 	}
 }
 
@@ -2474,6 +2521,7 @@ export class ChangeNoteAdded extends UndoableChange {
 export class ChangeNoteLength extends ChangePins {
 	constructor(doc: SongDocument | null, note: Note, truncStart: number, truncEnd: number) {
 		super(doc, note);
+		const continuesLastPattern: boolean = ((this._oldStart < 0 || note.continuesLastPattern) && truncStart == 0);
 		
 		truncStart -= this._oldStart;
 		truncEnd   -= this._oldStart;
@@ -2487,25 +2535,27 @@ export class ChangeNoteLength extends ChangePins {
 			if (oldPin.time < truncStart) {
 				prevSize = oldPin.size;
 				prevInterval = oldPin.interval;
-			} else if (oldPin.time <= truncEnd) {
+			} else {
 				if (oldPin.time > truncStart && !setStart) {
 					this._newPins.push(makeNotePin(prevInterval, truncStart, prevSize));
+					setStart = true;
 				}
-				this._newPins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.size));
-				setStart = true;
-				if (oldPin.time == truncEnd) {
-					pushLastPin = false;
+				if (oldPin.time <= truncEnd) {
+					this._newPins.push(makeNotePin(oldPin.interval, oldPin.time, oldPin.size));
+					if (oldPin.time == truncEnd) {
+						pushLastPin = false;
+						break;
+					}
+				} else {
 					break;
 				}
-			} else {
-				break;
-			} 
+			}
 			
 		}
 		
 		if (pushLastPin) this._newPins.push(makeNotePin(this._oldPins[i].interval, truncEnd, this._oldPins[i].size));
 		
-		this._finishSetup();
+		this._finishSetup(continuesLastPattern);
 	}
 }
 
@@ -2787,17 +2837,9 @@ export class ChangeDragSelectedNotes extends ChangeSequence {
 		} else if (parts < 0) {
 			// Clear space for the dragged notes:
 			this.append(new ChangeNoteTruncate(doc, pattern, newStart, Math.min(oldStart, newEnd)));
-			if (oldStart < -parts) {
-				// If the dragged notes hit against the edge, truncate them too before dragging:
-				this.append(new ChangeNoteTruncate(doc, pattern, oldStart, -parts));
-			}
 		} else {
 			// Clear space for the dragged notes:
 			this.append(new ChangeNoteTruncate(doc, pattern, Math.max(oldEnd, newStart), newEnd));
-			if (oldEnd > doc.song.beatsPerBar * Config.partsPerBeat - parts) {
-				// If the dragged notes hit against the edge, truncate them too before dragging:
-				this.append(new ChangeNoteTruncate(doc, pattern, doc.song.beatsPerBar * Config.partsPerBeat - parts, oldEnd));
-			}
 		}
 		
 		this.append(new ChangePatternSelection(doc, newStart, newEnd));
@@ -2818,12 +2860,16 @@ export class ChangeDragSelectedNotes extends ChangeSequence {
 		for (const note of draggedNotes) {
 			note.start += parts;
 			note.end += parts;
+			if (note.end <= newStart) continue;
+			if (note.start >= newEnd) continue;
+			
+			this.append(new ChangeNoteAdded(doc, pattern, note, noteInsertionIndex++, false));
+			
+			this.append(new ChangeNoteLength(doc, note, Math.max(note.start, newStart), Math.min(newEnd, note.end)));
 			
 			for (let i: number = 0; i < Math.abs(transpose); i++) {
 				this.append(new ChangeTransposeNote(doc, channelIndex, note, transpose > 0));
 			}
-			
-			this.append(new ChangeNoteAdded(doc, pattern, note, noteInsertionIndex++, false));
 		}
 	}
 }
@@ -2981,17 +3027,7 @@ export class ChangeSizeBend extends UndoableChange {
 			}
 		}
 		
-		for (let i: number = 1; i < this._newPins.length - 1; ) {
-			if (this._newPins[i-1].interval == this._newPins[i].interval &&
-				this._newPins[i].interval == this._newPins[i+1].interval &&
-				this._newPins[i-1].size == this._newPins[i].size &&
-				this._newPins[i].size == this._newPins[i+1].size)
-			{
-				this._newPins.splice(i, 1);
-			} else {
-				i++;
-			}
-		}
+		removeRedundantPins(this._newPins);
 		
 		this._doForwards();
 		this._didSomething();

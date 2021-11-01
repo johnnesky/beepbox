@@ -204,7 +204,7 @@ export class Selection {
 				bars.push(patternNumber);
 				if (patterns[String(patternNumber)] == undefined) {
 					const pattern: Pattern | null = this._doc.song.getPattern(channelIndex, bar);
-					let instruments: number[] = [0];
+					let instruments: number[] = this._doc.recentPatternInstruments[channelIndex];
 					let notes: Note[] = [];
 					if (pattern != null) {
 						instruments = pattern.instruments.concat();
@@ -213,11 +213,11 @@ export class Selection {
 							for (const note of pattern.cloneNotes()) {
 								if (note.end <= this.patternSelectionStart) continue;
 								if (note.start >= this.patternSelectionEnd) continue;
-								if (note.start < this.patternSelectionStart || note.end > this.patternSelectionEnd) {
-									new ChangeNoteLength(null, note, Math.max(note.start, this.patternSelectionStart), Math.min(this.patternSelectionEnd, note.end));
-								}
 								note.start -= this.patternSelectionStart;
 								note.end -= this.patternSelectionStart;
+								if (note.start < 0 || note.end > this.patternSelectionEnd - this.patternSelectionStart) {
+									new ChangeNoteLength(null, note, Math.max(note.start, 0), Math.min(this.patternSelectionEnd - this.patternSelectionStart, note.end));
+								}
 								notes.push(note);
 							}
 						} else {

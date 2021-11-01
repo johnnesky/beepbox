@@ -106,9 +106,9 @@ export class TipPrompt implements Prompt {
 			case "transition": {
 				message = div(
 					h2("Transition"),
-					p("This setting controls what happens when one note begins at the same time that the previous note ends, possibly connecting the two notes instead of fading in/out."),
-					p("The \"instant\" transition makes the wave suddenly change from the old note's frequency to the new note's frequency, and restarts any envelopes. The \"continue\" transition is similar but it doesn't restart envelopes."),
-					p("The \"slide\" transition makes the pitch shift quickly but not instantaneously from the old note's frequency to the new note's frequency. The \"slide in pattern\" transition is the same thing except it doesn't connect the last note in a pattern to the first note in the next pattern."),
+					p("Usually, when one note ends at the same time another begins, the old note will fade out and the new note will fade in based on the fade in/out settings, but this setting can override that, connecting the end of one note to the beginning of the next."),
+					p("The \"interrupt\" transition makes the wave suddenly change from the old note's frequency to the new note's frequency without any fading, and restarts any envelopes. The \"continue\" transition is similar but it doesn't restart envelopes."),
+					p("The \"slide\" transition makes the pitch shift quickly but not instantaneously from the old note's frequency to the new note's frequency, and softly restarts envelopes. The \"slide in pattern\" transition is the same except it doesn't connect the last note in a pattern to the first note in the next pattern."),
 				);
 			} break;
 			case "chipWave": {

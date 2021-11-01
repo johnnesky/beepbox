@@ -461,7 +461,7 @@ export class ImportPrompt implements Prompt {
 							instrument.pan = currentInstrumentPan;
 							setInstrumentVolume = true;
 						}
-
+						
 						const drumFreqs: number[] = [];
 						let minDuration: number = channelMaxPitch;
 						let maxDuration: number = 0;
@@ -544,6 +544,7 @@ export class ImportPrompt implements Prompt {
 						// have a pattern instantiated, and insert notes for these pitches.
 						const startBar: number = Math.floor(prevEventPart / partsPerBar);
 						const endBar: number = Math.ceil(nextEventPart / partsPerBar);
+						let createdNote: boolean = false;
 						for (let bar: number = startBar; bar < endBar; bar++) {
 							const barStartPart: number = bar * partsPerBar;
 							const barStartMidiTick: number = bar * beatsPerBar * midiTicksPerBeat;
@@ -606,6 +607,8 @@ export class ImportPrompt implements Prompt {
 								// to determine where we need to insert pins to control interval and size.
 								const note: Note = new Note(-1, noteStartPart, noteEndPart, Config.noteSizeMax, false);
 								note.pins.length = 0;
+								note.continuesLastPattern = (createdNote && noteStartPart == 0);
+								createdNote = true;
 								
 								updateCurrentMidiInterval(noteStartMidiTick);
 								updateCurrentMidiNoteSize(noteStartMidiTick);
