@@ -198,6 +198,8 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 
 .beepboxEditor .tip {
 	cursor: help;
+	color: ${ColorConfig.secondaryText};
+	text-decoration: none;
 }
 
 .beepboxEditor .tip:hover {
@@ -910,10 +912,6 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
-}
-
-.beepboxEditor .tip {
-	color: ${ColorConfig.secondaryText};
 }
 
 .beepboxEditor .selectRow > :last-child {

@@ -32,7 +32,7 @@ import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
 import {Change} from "./Change";
 import {ChangeTempo, ChangeChorus, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangeChannelBar, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeUnison, ChangeChord, ChangeSong, ChangePitchShift, ChangeDetune, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization, ChangeAddEnvelope, ChangeAddChannelInstrument, ChangeRemoveChannelInstrument} from "./changes";
 
-const {button, div, input, select, span, optgroup, option} = HTML;
+const {a, button, div, input, select, span, optgroup, option} = HTML;
 
 function buildOptions(menu: HTMLSelectElement, items: ReadonlyArray<string | number>): HTMLSelectElement {
 	for (let index: number = 0; index < items.length; index++) {
@@ -341,7 +341,13 @@ export class SongEditor {
 	private readonly _instrumentSettingsArea: HTMLDivElement = div({class: "instrument-settings-area"}, this._instrumentSettingsGroup);
 	private readonly _settingsArea: HTMLDivElement = div({class: "settings-area noSelection"},
 		div({class: "version-area"},
-			div({style: `text-align: center; margin: 3px 0; color: ${ColorConfig.secondaryText};`}, EditorConfig.versionDisplayName),
+			div({style: `text-align: center; margin: 3px 0; color: ${ColorConfig.secondaryText};`},
+				EditorConfig.versionDisplayName,
+				" ",
+				a({class: "tip", target: "_blank", href: EditorConfig.releaseNotesURL},
+					EditorConfig.version,
+				),
+			),
 		),
 		div({class: "play-pause-area"},
 			div({class: "playback-bar-controls"},

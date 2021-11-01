@@ -1,7 +1,7 @@
 {
 	"name": "BeepBox",
-	"version": "3.0.13",
-	"description": "BeepBox is an online tool for sketching and sharing instrumental melodies.",
+	"version": "4.0",
+	"description": "BeepBox is an online tool for sketching and sharing instrumental music.",
 	"author": "John Nesky",
 	"license": "MIT",
 	"homepage": "https://www.beepbox.co",

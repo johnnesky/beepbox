@@ -22,9 +22,11 @@ export function prettyNumber(value: number): string {
 }
 
 export class EditorConfig {
-	public static readonly version: string = "3.0.13";
+	public static readonly version: string = "4.0";
 	
-	public static readonly versionDisplayName: string = "BeepBox " + EditorConfig.version;
+	public static readonly versionDisplayName: string = "BeepBox";
+	public static readonly releaseNotesURL: string = "https://github.com/johnnesky/beepbox/releases/tag/v" + EditorConfig.version;
+	
 	public static readonly presetCategories: DictionaryArray<PresetCategory> = toNameMap([
 		{name: "Custom Instruments", presets: <DictionaryArray<Preset>> toNameMap([
 			{name: "chip wave",        customType: InstrumentType.chip},
