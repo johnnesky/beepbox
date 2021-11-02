@@ -6,7 +6,7 @@
 	<title>BeepBox</title>
 	<meta name="application-name" content="BeepBox" />
 	<meta name="apple-mobile-web-app-title" content="BeepBox">
-	<meta name="description" content="BeepBox is an online tool for sketching and sharing instrumental music." />
+	<meta name="description" content="BeepBox is an online tool for sketching and sharing instrumental melodies." />
 	<meta name="keywords" content="chiptune, instrumental, music, song, melody, composition, tool, free, BeepBox" />
 	<meta name="mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-capable" content="yes" />
@@ -41,7 +41,7 @@
 			overflow: auto;
 			background: var(--editor-background, black);
 			width: 100%;
-			max-width: 710px;
+			max-width: 700px;
 			padding-left: 30px;
 			padding-right: 30px;
 		}
@@ -49,7 +49,7 @@
 			overflow: auto;
 			background: var(--editor-background, black);
 			width: 100%;
-			max-width: 710px;
+			max-width: 700px;
 			padding-left: 30px;
 			padding-right: 30px;
 		}
@@ -88,7 +88,7 @@
 		}
 		
 		/* wide screen */
-		@media (min-width: 711px) {
+		@media (min-width: 701px) {
 			html {
 				width: 100%;
 			}
@@ -96,21 +96,20 @@
 				width: 100%;
 			}
 			.column-container {
-				width: 710px;
+				width: 700px;
 				display: flex;
-				gap: 25px;
+				justify-content: space-between;
 			}
 			.instructions-column {
-				min-width: 0;
+				width: 375px;
 			}
 			.twitter-column {
 				width: 300px;
-				flex-shrink: 0;
 			}
 		}
 		
 		/* narrow screen */
-		@media (max-width: 710px) {
+		@media (max-width: 700px) {
 			body {
 				width: 100%;
 			}
@@ -135,15 +134,18 @@
 	<div id="text-content">
 		<section>
 			<h1>
-				BeepBox
+				BeepBox 3.0.13
 			</h1>
 			<p id="introduction">
-				BeepBox is an online tool for sketching and sharing instrumental music. 
+				BeepBox is an online tool for sketching and sharing instrumental melodies. 
 			</p>
 			<p>
 				All song data is contained in the URL at the top of your browser. 
 				When you make changes to the song, the URL is updated to reflect your changes. 
 				When you are satisfied with your song, just copy and paste the URL to save and share your song! 
+			</p>
+			<p>
+				The latest version of BeepBox is <a id="linkToLatestVersion" href="../" target="_blank">here</a>.
 			</p>
 			<div class="donation">
 				BeepBox is a passion project, and will always be free to use. If you find it valuable and have the means, any gratuity via
@@ -240,7 +242,7 @@
 						You can download and use <a href="https://github.com/johnnesky/beepbox">the source code</a> under the MIT license. In particular, you can use the synth code <a href="synth_example.html">as demonstrated here</a> to play BeepBox songs in your own JavaScript projects!
 					</p>
 					<p>
-						Those who yearn for simpler times can still use the <a id="linkTo2_3" href="2_3/" target="_blank">2.3</a> or <a id="linkTo3_0" href="3_0/" target="_blank">3.0.13</a> versions of BeepBox.
+						Those who yearn for simpler times can find the old version of BeepBox <a id="linkTo2_3" href="../2_3/" target="_blank">here</a>.
 					</p>
 				<section>
 			</main>
@@ -263,7 +265,7 @@
 	<script type="text/javascript">
 		
 		if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
-			document.getElementById("introduction").innerHTML = "BeepBox is an online tool for sketching and sharing instrumental music. Make sure that your volume is turned up, then press the play button!";
+			document.getElementById("introduction").innerHTML = "BeepBox is an online tool for sketching and sharing instrumental melodies. Make sure that your volume is turned up, then press the play button!";
 			document.getElementById("keyboard-instructions").style.display = "none";
 			document.getElementById("bar-editing").innerHTML = "Tap the other boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
 			document.getElementById("offline-instructions").innerHTML = 'You can use BeepBox when your device is offline if you put a shortcut to BeepBox on your home screen. <ul><li>Chrome: find the "Add to Home Screen" option in the ⋮ menu.</li><li>Firefox: find the "Add Page Shortcut" option in the ⋮ menu.</li><li>Safari: find the "Add to Home Screen" option in the bookmark menu.</li></ul>';
@@ -296,13 +298,20 @@
 			document.getElementById("beepboxEditorContainer").innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, Edge, Safari, or Opera.";
 		}
 		
-		// If the page was loaded with an old song version that old versions of BeepBox support,
-		// update the links to the old versions so that they'll open the song.
+		// Just before the user is about to use the link to the latest version, update it to
+		// contain the song data so that the current song will open in that version.
+		var linkToLatestVersion = document.getElementById("linkToLatestVersion");
+		function updateLinkToLatestVersion() {
+			linkToLatestVersion.href = location.origin + location.pathname.slice(0, location.pathname.lastIndexOf('/') + 1) + ".." + location.hash;
+		}
+		linkToLatestVersion.addEventListener("focus", updateLinkToLatestVersion);
+		linkToLatestVersion.addEventListener("mouseenter", updateLinkToLatestVersion);
+		linkToLatestVersion.addEventListener("touchstart", updateLinkToLatestVersion);
+		
+		// If the page was loaded with an old song version that the old version of BeepBox
+		// supports, update the link to the old version so that it'll open the song.
 		if (/^#[1-6]/.test(location.hash)) {
 			document.getElementById("linkTo2_3").href += location.hash;
-		}
-		if (/^#[1-8]/.test(location.hash)) {
-			document.getElementById("linkTo3_0").href += location.hash;
 		}
 		
 	</script>

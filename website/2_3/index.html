@@ -29,6 +29,22 @@
 		#beepboxEditorContainer {
 			min-height: 645px;
 		}
+		.donation form {
+			display: inline;
+		}
+		.donation input[type="submit"] {
+			-webkit-appearance: none;
+			appearance: none;
+			background: none;
+			border: none;
+			font-family: inherit;
+			font-size: inherit;
+			color: var(--link-accent, #98f);
+			text-decoration: underline;
+			cursor: pointer;
+			padding: 0;
+			margin: 0;
+		}
 		
 		/* wide screen */
 		@media (min-width: 701px) {
@@ -76,8 +92,18 @@
 		When you are satisfied with your song, just copy and paste the URL to save and share your song! 
 	</p>
 	<p>
-		The latest version of BeepBox is <a href="/" target="_blank">here</a>.
+		The latest version of BeepBox is <a id="linkToLatestVersion" href="../" target="_blank">here</a>.
 	</p>
+	<div class="donation">
+		BeepBox is a passion project, and will always be free to use. If you find it valuable and have the means, any gratuity via
+		<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
+			<input type="hidden" name="cmd" value="_donations" />
+			<input type="hidden" name="business" value="QZJTX9GRYEV9N" />
+			<input type="hidden" name="currency_code" value="USD" />
+			<input type="submit" name="submit" value="Paypal"/>
+		</form>
+		would be appreciated!
+	</div>
 	
 	<div class="column-container">
 		<div class="instructions-column">
@@ -185,6 +211,16 @@
 		} else {
 			document.getElementById("beepboxEditorContainer").innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, or Opera.";
 		}
+		
+		// Just before the user is about to use the link to the latest version, update it to
+		// contain the song data so that the current song will open in that version.
+		var linkToLatestVersion = document.getElementById("linkToLatestVersion");
+		function updateLinkToLatestVersion() {
+			linkToLatestVersion.href = location.origin + location.pathname.slice(0, location.pathname.lastIndexOf('/') + 1) + ".." + location.hash;
+		}
+		linkToLatestVersion.addEventListener("focus", updateLinkToLatestVersion);
+		linkToLatestVersion.addEventListener("mouseenter", updateLinkToLatestVersion);
+		linkToLatestVersion.addEventListener("touchstart", updateLinkToLatestVersion);
 		
 	</script>
 </body></html>

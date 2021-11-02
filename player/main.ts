@@ -207,6 +207,16 @@ document.body.appendChild(
 	),
 );
 
+function loadSong(songString: string, reuseParams: boolean): void {
+	synth.setSong(songString);
+	synth.snapToStart();
+	const updatedSongString: string = synth.song!.toBase64String();
+	editLink.href = "../#" + updatedSongString;
+	const hashQueryParams = new URLSearchParams(reuseParams ? location.hash.slice(1) : "");
+	hashQueryParams.set("song", updatedSongString);
+	location.hash = hashQueryParams.toString();
+}
+
 function hashUpdatedExternally(): void {
 	let myHash: string = location.hash;
 	if (prevHash == myHash || myHash == "") return;
@@ -219,7 +229,7 @@ function hashUpdatedExternally(): void {
 	
 	//titleText.textContent = "";
 	
-	fullscreenLink.setAttribute("href", location.href);
+	fullscreenLink.href = location.href;
 	
 	for (const parameter of myHash.split("&")) {
 		let equalsIndex: number = parameter.indexOf("=");
@@ -228,9 +238,7 @@ function hashUpdatedExternally(): void {
 			let value: string = parameter.substring(equalsIndex + 1);
 			switch (paramName) {
 				case "song":
-					synth.setSong(value);
-					synth.snapToStart();
-					editLink.setAttribute("href", "../#" + value);
+					loadSong(value, true);
 					break;
 				//case "title":
 				//	titleText.textContent = decodeURIComponent(value);
@@ -241,9 +249,7 @@ function hashUpdatedExternally(): void {
 					break;
 			}
 		} else {
-			synth.setSong(myHash);
-			synth.snapToStart();
-			editLink.setAttribute("href", "../#" + myHash);
+			loadSong(myHash, false);
 		}
 	}
 	

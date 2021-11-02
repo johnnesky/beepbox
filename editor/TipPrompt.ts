@@ -274,14 +274,15 @@ export class TipPrompt implements Prompt {
 				message = div(
 					h2("String sustain"),
 					p("This setting controls how quickly the picked string vibration decays."),
+					p("Unlike most of BeepBox's instrument synthesizer features, a picked string cannot change frequency suddenly while maintaining its decay. If a tone's pitch changes suddenly (e.g. if the chord type is set to \"arpeggio\" or the transition type is set to \"continues\") then the string will be re-picked and start decaying from the beginning again, even if the envelopes don't otherwise restart."),
 				);
 			} break;
 			case "envelopes": {
 				message = div(
 					h2("Envelopes"),
-					p("Envelopes are a way to dynamically adjust various other settings over time. Press the + button to add an envelope, then select which setting to control and the curve of the envelope. Try different combinations to see how they sound!"),
+					p("Envelopes are a way to dynamically adjust various other settings over time, usually based on how long the note lasts. Press the + button to add an envelope, then use the menus below to select which setting to control and the curve of the envelope. Try different combinations to see how they sound!"),
 					p("Most envelope curves restart from the beginning every time a new note plays. The \"note size\" option is based on the note width as drawn in the pattern editor."),
-					p("Envelope curves move in a range from 0 to 1. If multiple envelopes are targetting the same setting, they are multiplied before applying to the setting."),
+					p("Envelope curves move in the range from 0 to 1 (or vice versa), where 0 means as quiet as possible and 1 is the same as the corresponding position selected in the instrument settings above. If multiple envelopes are targetting the same setting, they are multiplied before applying to the setting."),
 				);
 			} break;
 			default: throw new Error("Unhandled TipPrompt type: " + type);
