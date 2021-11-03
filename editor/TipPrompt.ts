@@ -32,7 +32,7 @@ export class TipPrompt implements Prompt {
 			case "tempo": {
 				message = div(
 					h2("Song Tempo"),
-					p("This setting controls the speed of your song, measured in beats-per-minute. A \"beat\" is the length of the little gray rectangles in the pattern editor. (In music theory, a \"beat\" is usually equivalent to \"quarter note\".)"),
+					p("This setting controls the speed of your song, measured in beats-per-minute. A \"beat\" is the length of the little gray rectangles in the pattern editor. (In conventional music notation, a \"quarter note\" is usually equivalent to \"beat\".)"),
 				);
 			} break;
 			case "reverb": {
@@ -83,13 +83,13 @@ export class TipPrompt implements Prompt {
 					p("Filters are a way of emphasizing or diminishing different parts of a sound. Musical notes have a fundamental (base) frequency, but the sound of a musical note also has parts at higher frequencies and filters can adjust the volume of each of these parts based on their frequency."),
 					p("Click in the filter editor to insert, delete, or drag a filter control point. The horizontal position of the point determines which frequencies it affects, and the vertical position determines how the volume is affected at that frequency."),
 					p("Insert a new point on the left side of the filter editor to add a \"high-pass\" filter point, which additionally reduces the volume of lower frequencies, or insert a new point on the right side to add a \"low-pass\" filter point which reduces the volume of higher frequencies."),
-					p("You can also enable a \"Note Filter\" as an effect. EQ and note filters are mostly the same, but have different purposes. EQ filters are for basic adjustments, whereas note filters can be moved dynamically with envelopes and they make distortion effects sound more interesting."),
+					p("You can also enable a \"Note Filter\" as an effect. EQ and note filters are mostly the same, but have different purposes. EQ filters are for basic adjustments, whereas note filters can be moved dynamically with envelopes. Note filters also change how the distortion effect sounds."),
 				);
 			} break;
 			case "noteFilter": {
 				message = div(
 					h2("Note Filter"),
-					p("Note filters are mostly the same as EQ filters, but have a different purpose. EQ filters are for basic adjustments, whereas note filters can be moved dynamically with envelopes and they make distortion effects sound more interesting."),
+					p("Note filters are mostly the same as EQ filters, but have a different purpose. EQ filters are for basic adjustments, whereas note filters can be moved dynamically with envelopes. Note filters also change how the distortion effect sounds."),
 					p("Filters are a way of emphasizing or diminishing different parts of a sound. Musical notes have a fundamental (base) frequency, but the sound of a musical note also has parts at higher frequencies and filters can adjust the volume of each of these parts based on their frequency."),
 					p("Click in the filter editor to insert, delete, or drag a filter control point. The horizontal position of the point determines which frequencies it affects, and the vertical position determines how the volume is affected at that frequency."),
 					p("Insert a new point on the left side of the filter editor to add a \"high-pass\" filter point, which additionally reduces the volume of lower frequencies, or insert a new point on the right side to add a \"low-pass\" filter point which reduces the volume of higher frequencies."),
