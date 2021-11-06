@@ -672,7 +672,7 @@ export class FilterSettings {
 			for (const pointObject of filterObject) {
 				const point: FilterControlPoint = new FilterControlPoint();
 				point.type = Config.filterTypeNames.indexOf(pointObject["type"]);
-				if (point.type == -1) point.type = FilterType.peak;
+				if (<any>point.type == -1) point.type = FilterType.peak;
 				if (pointObject["cutoffHz"] != undefined) {
 					point.freq = FilterControlPoint.getRoundedSettingValueFromHz(pointObject["cutoffHz"]);
 				} else {
@@ -1157,7 +1157,7 @@ export class Instrument {
 		if (instrumentObject == undefined) instrumentObject = {};
 		
 		let type: InstrumentType = Config.instrumentTypeNames.indexOf(instrumentObject["type"]);
-		if (type == -1) type = isNoiseChannel ? InstrumentType.noise : InstrumentType.chip;
+		if (<any>type == -1) type = isNoiseChannel ? InstrumentType.noise : InstrumentType.chip;
 		this.setTypeAndReset(type, isNoiseChannel);
 		
 		if (instrumentObject["preset"] != undefined) {

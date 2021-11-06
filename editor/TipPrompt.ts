@@ -226,7 +226,7 @@ export class TipPrompt implements Prompt {
 			case "echoSustain": {
 				message = div(
 					h2("Echo Volume"),
-					p("The echo effect repeats the instrument's sound after a delay. Each echo is a little big quieter than the last, and this setting controls how much quieter."),
+					p("The echo effect repeats the instrument's sound after a delay. Each echo is a little bit quieter than the last, and this setting controls how much quieter."),
 				);
 			} break;
 			case "echoDelay": {

@@ -17,8 +17,8 @@ function lerp(low: number, high: number, t: number): number {
 }
 
 function save(blob: Blob, name: string): void {
-	if (navigator.msSaveOrOpenBlob) {
-		navigator.msSaveOrOpenBlob(blob, name);
+	if ((<any>navigator).msSaveOrOpenBlob) {
+		(<any>navigator).msSaveOrOpenBlob(blob, name);
 		return;
 	}
 
