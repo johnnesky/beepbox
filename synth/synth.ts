@@ -4309,6 +4309,7 @@ export class Synth {
 	public tickSampleCountdown: number = 0;
 	private isPlayingSong: boolean = false;
 	private liveInputEndTime: number = 0.0;
+	private browserAutomaticallyClearsAudioBuffer: boolean = true; // Assume true until proven otherwise. Older Chrome does not clear the buffer so it needs to be cleared manually.
 	
 	public static readonly tempFilterStartCoefficients: FilterCoefficients = new FilterCoefficients();
 	public static readonly tempFilterEndCoefficients: FilterCoefficients = new FilterCoefficients();
@@ -4510,12 +4511,21 @@ export class Synth {
 		const outputDataL: Float32Array = outputBuffer.getChannelData(0);
 		const outputDataR: Float32Array = outputBuffer.getChannelData(1);
 		
-		const isPlayingLiveTones = performance.now() < this.liveInputEndTime;
-		if (!isPlayingLiveTones && !this.isPlayingSong) {
-			for (let i: number = 0; i < outputBuffer.length; i++) {
+		if (this.browserAutomaticallyClearsAudioBuffer && (outputDataL[0] != 0.0 || outputDataR[0] != 0.0 || outputDataL[outputBuffer.length-1] != 0.0 || outputDataR[outputBuffer.length-1] != 0.0)) {
+			// If the buffer is ever initially nonzero, then this must be an older browser that doesn't automatically clear the audio buffer.
+			this.browserAutomaticallyClearsAudioBuffer = false;
+		}
+		if (!this.browserAutomaticallyClearsAudioBuffer) {
+			// If this browser does not clear the buffer automatically, do so manually before continuing.
+			const length: number = outputBuffer.length;
+			for (let i: number = 0; i < length; i++) {
 				outputDataL[i] = 0.0;
 				outputDataR[i] = 0.0;
 			}
+		}
+		
+		const isPlayingLiveTones = performance.now() < this.liveInputEndTime;
+		if (!isPlayingLiveTones && !this.isPlayingSong) {
 			this.deactivateAudio();
 		} else {
 			this.synthesize(outputDataL, outputDataR, outputBuffer.length, this.isPlayingSong);
