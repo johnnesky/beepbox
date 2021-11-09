@@ -472,12 +472,17 @@ export class DynamicBiquadFilter {
 	public output1: number = 0.0;
 	public output2: number = 0.0;
 	
+	// Some filter types are more stable when interpolating between coefficients
+	// if the "b" coefficient interpolation is multiplicative. Don't enable this
+	// for filter types where the "b" coefficients might change sign!
+	public useMultiplicativeInputCoefficients: boolean = false;
+	
 	public resetOutput(): void {
 		this.output1 = 0.0;
 		this.output2 = 0.0;
 	}
 	
-	public loadCoefficientsWithGradient(start: FilterCoefficients, end: FilterCoefficients, deltaRate: number): void {
+	public loadCoefficientsWithGradient(start: FilterCoefficients, end: FilterCoefficients, deltaRate: number, useMultiplicativeInputCoefficients: boolean): void {
 		if (start.order != 2 || end.order != 2) throw new Error();
 		this.a1 = start.a[1];
 		this.a2 = start.a[2];
@@ -486,8 +491,15 @@ export class DynamicBiquadFilter {
 		this.b2 = start.b[2];
 		this.a1Delta = (end.a[1] - start.a[1]) * deltaRate;
 		this.a2Delta = (end.a[2] - start.a[2]) * deltaRate;
-		this.b0Delta = (end.b[0] - start.b[0]) * deltaRate;
-		this.b1Delta = (end.b[1] - start.b[1]) * deltaRate;
-		this.b2Delta = (end.b[2] - start.b[2]) * deltaRate;
+		if (useMultiplicativeInputCoefficients) {
+			this.b0Delta = Math.pow(end.b[0] / start.b[0], deltaRate);
+			this.b1Delta = Math.pow(end.b[1] / start.b[1], deltaRate);
+			this.b2Delta = Math.pow(end.b[2] / start.b[2], deltaRate);
+		} else {
+			this.b0Delta = (end.b[0] - start.b[0]) * deltaRate;
+			this.b1Delta = (end.b[1] - start.b[1]) * deltaRate;
+			this.b2Delta = (end.b[2] - start.b[2]) * deltaRate;
+		}
+		this.useMultiplicativeInputCoefficients = useMultiplicativeInputCoefficients;
 	}
 }

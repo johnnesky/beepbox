@@ -4039,7 +4039,7 @@ class InstrumentState {
 			point.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, /*eqAllFreqsEnvelopeStart * eqFreqEnvelopeStart*/ 1.0, /*eqPeakEnvelopeStart*/ 1.0);
 			point.toCoefficients(Synth.tempFilterEndCoefficients,   samplesPerSecond, /*eqAllFreqsEnvelopeEnd   * eqFreqEnvelopeEnd*/   1.0, /*eqPeakEnvelopeEnd*/   1.0);
 			if (this.eqFilters.length <= i) this.eqFilters[i] = new DynamicBiquadFilter();
-			this.eqFilters[i].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength);
+			this.eqFilters[i].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength, point.type == FilterType.lowPass);
 			eqFilterVolume *= point.getVolumeCompensationMult();
 		}
 		this.eqFilterCount = eqFilterSettings.controlPointCount;
@@ -5454,7 +5454,7 @@ export class Synth {
 				point.toCoefficients(Synth.tempFilterStartCoefficients, synth.samplesPerSecond, noteAllFreqsEnvelopeStart * noteFreqEnvelopeStart, notePeakEnvelopeStart);
 				point.toCoefficients(Synth.tempFilterEndCoefficients,   synth.samplesPerSecond, noteAllFreqsEnvelopeEnd   * noteFreqEnvelopeEnd,   notePeakEnvelopeEnd);
 				if (tone.noteFilters.length <= i) tone.noteFilters[i] = new DynamicBiquadFilter();
-				tone.noteFilters[i].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength);
+				tone.noteFilters[i].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength, point.type == FilterType.lowPass);
 				noteFilterExpression *= point.getVolumeCompensationMult();
 			}
 			tone.noteFilterCount = noteFilterSettings.controlPointCount;
@@ -5495,7 +5495,7 @@ export class Synth {
 			point.toCoefficients(Synth.tempFilterStartCoefficients, synth.samplesPerSecond, drumsetFilterEnvelopeStart * (1.0 + drumsetFilterEnvelopeStart), 1.0);
 			point.toCoefficients(Synth.tempFilterEndCoefficients, synth.samplesPerSecond, drumsetFilterEnvelopeEnd * (1.0 + drumsetFilterEnvelopeEnd), 1.0);
 			if (tone.noteFilters.length == tone.noteFilterCount) tone.noteFilters[tone.noteFilterCount] = new DynamicBiquadFilter();
-			tone.noteFilters[tone.noteFilterCount].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength);
+			tone.noteFilters[tone.noteFilterCount].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength, true);
 			tone.noteFilterCount++;
 		}
 		
@@ -7119,9 +7119,15 @@ export class Synth {
 			sample = b0 * sample + b1 * input1 + b2 * input2 - a1 * output1 - a2 * output2;
 			filter.a1 = a1 + filter.a1Delta;
 			filter.a2 = a2 + filter.a2Delta;
-			filter.b0 = b0 + filter.b0Delta;
-			filter.b1 = b1 + filter.b1Delta;
-			filter.b2 = b2 + filter.b2Delta;
+			if (filter.useMultiplicativeInputCoefficients) {
+				filter.b0 = b0 * filter.b0Delta;
+				filter.b1 = b1 * filter.b1Delta;
+				filter.b2 = b2 * filter.b2Delta;
+			} else {
+				filter.b0 = b0 + filter.b0Delta;
+				filter.b1 = b1 + filter.b1Delta;
+				filter.b2 = b2 + filter.b2Delta;
+			}
 			filter.output2 = output1;
 			filter.output1 = sample;
 			// Updating the input values is waste if the next filter doesn't exist...
