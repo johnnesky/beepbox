@@ -4280,8 +4280,6 @@ export class Synth {
 	}
 	
 	public samplesPerSecond: number = 44100;
-	public stringDelayBufferSize: number;
-	public stringDelayBufferMask: number;
 	public panningDelayBufferSize: number;
 	public panningDelayBufferMask: number;
 	public chorusDelayBufferSize: number;
@@ -4392,8 +4390,6 @@ export class Synth {
 	}
 	
 	private computeDelayBufferSizes(): void {
-		this.stringDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond / Instrument.frequencyFromPitch(0));
-		this.stringDelayBufferMask = this.stringDelayBufferSize - 1;
 		this.panningDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond * Config.panDelaySecondsMax);
 		this.panningDelayBufferMask = this.panningDelayBufferSize - 1;
 		this.chorusDelayBufferSize = Synth.fittingPowerOfTwo(this.samplesPerSecond * Config.chorusMaxDelay);
@@ -5896,6 +5892,12 @@ export class Synth {
 	private static pickedStringSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
 		// This algorithm is similar to the Karpluss-Strong algorithm in principle, but with an
 		// all-pass filter for dispersion and with more control over the impulse.
+		// The source code is processed as a string before being compiled, in order to
+		// handle the unison feature. If unison is disabled or set to none, then only one
+		// string voice is required, otherwise two string voices are required. We only want
+		// to compute the minimum possible number of string voices, so omit the code for
+		// processing extra ones if possible. Any line containing a "#" is duplicated for
+		// each required voice, replacing the "#" with the voice index.
 		
 		const voiceCount: number = Config.unisons[instrument.unison].voices;
 		let pickedStringFunction: Function = Synth.pickedStringFunctionCache[voiceCount];
@@ -5910,8 +5912,6 @@ export class Synth {
 				const voiceCount = ${voiceCount};
 				const data = synth.tempMonoInstrumentSampleBuffer;
 				
-				const delayBufferMask = synth.stringDelayBufferMask >>> 0;
-				
 				const sustainEnvelopeStart = tone.envelopeComputer.envelopeStarts[NoteAutomationStringSustainIndex];
 				const sustainEnvelopeEnd   = tone.envelopeComputer.envelopeEnds[  NoteAutomationStringSustainIndex];
 				const stringDecayStart = 1.0 - Math.min(1.0, sustainEnvelopeStart * instrument.stringSustain / (Config.stringSustainRange - 1));
@@ -5919,8 +5919,6 @@ export class Synth {
 				
 				let pickedString# = tone.pickedStrings[#];
 				
-				if (pickedString#.delayLine == null || pickedString#.delayLine.length < synth.stringDelayBufferSize) pickedString#.delayLine = new Float32Array(synth.stringDelayBufferSize);
-				const delayLine# = pickedString#.delayLine;
 				const prevDelayLength# = +pickedString#.prevDelayLength;
 				let allPassSample# = +pickedString#.allPassSample;
 				let allPassPrevInput# = +pickedString#.allPassPrevInput;
@@ -5987,6 +5985,7 @@ export class Synth {
 				
 				const periodLengthStart# = 1.0 / phaseDeltaStart#;
 				const periodLengthEnd# = 1.0 / phaseDeltaEnd#;
+				const minBufferLength# = Math.ceil(Math.max(periodLengthStart#, periodLengthEnd#) * 2);
 				let delayLength# = periodLengthStart# - allPassPhaseDelayStart# - shelfPhaseDelayStart#;
 				const delayLengthEnd# = periodLengthEnd# - allPassPhaseDelayEnd# - shelfPhaseDelayEnd#;
 				
@@ -6007,8 +6006,29 @@ export class Synth {
 			
 			for (let voice: number = 0; voice < voiceCount; voice++) {
 				pickedStringSource += `
-					
-				if (delayIndex# == -1 || pitchChanged#)  {
+				
+				const reinitializeImpulse# = (delayIndex# == -1 || pitchChanged#);
+				if (pickedString#.delayLine == null || pickedString#.delayLine.length <= minBufferLength#) {
+					// The delay line buffer will get reused for other tones so might as well
+					// start off with a buffer size that is big enough for most notes.
+					const likelyMaximumLength = Math.ceil(2 * synth.samplesPerSecond / beepbox.Instrument.frequencyFromPitch(12));
+					const newDelayLine = new Float32Array(Synth.fittingPowerOfTwo(Math.max(likelyMaximumLength, minBufferLength#)));
+					if (!reinitializeImpulse# && pickedString#.delayLine != null) {
+						// If the tone has already started but the buffer needs to be reallocated,
+						// transfer the old data to the new buffer.
+						const oldDelayBufferMask = (pickedString#.delayLine.length - 1) >> 0;
+						const startCopyingFromIndex = delayIndex# + pickedString#.delayResetOffset;
+						delayIndex# = pickedString#.delayLine.length - pickedString#.delayResetOffset;
+						for (let i = 0; i < pickedString#.delayLine.length; i++) {
+							newDelayLine[i] = pickedString#.delayLine[(startCopyingFromIndex + i) & oldDelayBufferMask];
+						}
+					}
+					pickedString#.delayLine = newDelayLine;
+				}
+				const delayLine# = pickedString#.delayLine;
+				const delayBufferMask# = (delayLine#.length - 1) >> 0;
+				
+				if (reinitializeImpulse#) {
 					// -1 delay index means the tone was reset.
 					// Also, if the pitch changed suddenly (e.g. from seamless or arpeggio) then reset the wave.
 					
@@ -6025,15 +6045,12 @@ export class Synth {
 					const stopZerosAt = Math.ceil(startZerosFrom + periodLengthStart# * 2);
 					pickedString#.delayResetOffset = stopZerosAt; // And continue clearing the area in front of the delay line.
 					for (let i = startZerosFrom; i <= stopZerosAt; i++) {
-						delayLine#[i & delayBufferMask] = 0.0;
+						delayLine#[i & delayBufferMask#] = 0.0;
 					}
 					
 					const impulseWave = instrument.harmonicsWave.getCustomWave(instrument.type);
 					const impulseWaveLength = impulseWave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 					const impulsePhaseDelta = impulseWaveLength / periodLengthStart#;
-					if (delayLine#.length <= Math.ceil(periodLengthStart# * 2)) {
-						throw new Error("Picked string delay buffer too small to contain wave, buffer: " + impulseWaveLength + ", period: " + periodLengthStart#);
-					}
 					
 					const fadeDuration = Math.min(periodLengthStart# * 0.2, synth.samplesPerSecond * 0.003);
 					const startImpulseFromSample = Math.ceil(startImpulseFrom);
@@ -6052,12 +6069,12 @@ export class Synth {
 						const fadeOut = Math.min(1.0, (stopImpulseAt - i) / fadeDuration);
 						const combinedFade = fadeIn * fadeOut;
 						const curvedFade = combinedFade * combinedFade * (3.0 - 2.0 * combinedFade); // A cubic sigmoid from 0 to 1.
-						delayLine#[i & delayBufferMask] += sample * curvedFade;
+						delayLine#[i & delayBufferMask#] += sample * curvedFade;
 						prevWaveIntegral = nextWaveIntegral;
 						impulsePhase += impulsePhaseDelta;
 					}
 				}
-				delayIndex# = (delayIndex# & delayBufferMask) + synth.stringDelayBufferSize;`.replace(/\#/g, String(voice));
+				delayIndex# = (delayIndex# & delayBufferMask#) + delayLine#.length;`.replace(/\#/g, String(voice));
 			}
 			
 			pickedStringSource += `
@@ -6072,8 +6089,8 @@ export class Synth {
 					const upperIndex# = lowerIndex# + 1;
 					const fractionalDelay# = upperIndex# - targetSampleTime#;
 					const fractionalDelayG# = (1.0 - fractionalDelay#) / (1.0 + fractionalDelay#); // Inlined version of FilterCoefficients.prototype.allPass1stOrderFractionalDelay
-					const prevInput# = delayLine#[lowerIndex# & delayBufferMask];
-					const input# = delayLine#[upperIndex# & delayBufferMask];
+					const prevInput# = delayLine#[lowerIndex# & delayBufferMask#];
+					const input# = delayLine#[upperIndex# & delayBufferMask#];
 					fractionalDelaySample# = fractionalDelayG# * input# + prevInput# - fractionalDelayG# * fractionalDelaySample#;
 					
 					allPassSample# = fractionalDelaySample# * allPassG# + allPassPrevInput# - allPassG# * allPassSample#;
@@ -6082,8 +6099,8 @@ export class Synth {
 					shelfSample# = shelfB0# * allPassSample# + shelfB1# * shelfPrevInput# - shelfA1# * shelfSample#;
 					shelfPrevInput# = allPassSample#;
 					
-					delayLine#[delayIndex# & delayBufferMask] += shelfSample#;
-					delayLine#[(delayIndex# + delayResetOffset#) & delayBufferMask] = 0.0;
+					delayLine#[delayIndex# & delayBufferMask#] += shelfSample#;
+					delayLine#[(delayIndex# + delayResetOffset#) & delayBufferMask#] = 0.0;
 					delayIndex#++;
 					
 					const inputSample = (`
