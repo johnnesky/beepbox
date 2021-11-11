@@ -268,6 +268,7 @@ export class TipPrompt implements Prompt {
 				message = div(
 					h2("Frequency Quantization"),
 					p("The bitcrusher effect comes with an additional frequency quantization effect! This is a fun one to play with, especially when combined with the note filter effect."),
+					p("Every other notch on this slider is aligned with the currently selected key of the song, and the in-between notches are aligned with the tritones of the key."),
 				);
 			} break;
 			case "stringSustain": {

@@ -1262,7 +1262,7 @@ export class Instrument {
 			this.unison = Config.unisons.dictionary["hum"].index;
 			this.chord = Config.chords.dictionary["custom interval"].index;
 		}
-		if (this.chord != Config.chords.dictionary["simultaneous"].index) {
+		if (this.chord != Config.chords.dictionary["simultaneous"].index && !Array.isArray(instrumentObject["effects"])) {
 			// Enable chord if it was used.
 			this.effects = (this.effects | (1 << EffectType.chord));
 		}
@@ -1316,7 +1316,7 @@ export class Instrument {
 			this.echoDelay = clamp(0, Config.echoDelayRange, Math.round((+instrumentObject["echoDelayBeats"]) * (Config.ticksPerPart * Config.partsPerBeat) / Config.echoDelayStepTicks - 1.0));
 		}
 		
-		if (instrumentObject["chorus"] != undefined) {
+		if (!isNaN(instrumentObject["chorus"])) {
 			this.chorus = clamp(0, Config.chorusRange, Math.round((Config.chorusRange - 1) * (instrumentObject["chorus"] | 0) / 100));
 		}
 		

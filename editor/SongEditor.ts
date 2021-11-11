@@ -169,9 +169,12 @@ export class SongEditor {
 		option({value: "enableNotePreview"}, "Preview Added Notes"),
 		option({value: "showLetters"}, "Show Piano Keys"),
 		option({value: "showFifth"}, 'Highlight "Fifth" Notes'),
+		option({value: "notesOutsideScale"}, "Allow Notes Outside Scale"),
+		option({value: "setDefaultScale"}, "Use Current Scale as Default"),
 		option({value: "showChannels"}, "Show All Channels"),
 		option({value: "showScrollBar"}, "Octave Scroll Bar"),
 		option({value: "alwaysShowSettings"}, "Customize All Instruments"),
+		option({value: "instrumentCopyPaste"}, "Instrument Copy/Paste Buttons"),
 		option({value: "enableChannelMuting"}, "Enable Channel Muting"),
 		option({value: "displayBrowserUrl"}, "Display Song Data in URL"),
 		option({value: "layout"}, "Choose Layout..."),
@@ -199,6 +202,9 @@ export class SongEditor {
 	private readonly _instrumentRemoveButton: HTMLButtonElement = button({type: "button", class: "remove-instrument"});
 	private readonly _instrumentsButtonBar: HTMLDivElement = div({class: "instrument-bar"}, this._instrumentRemoveButton, this._instrumentAddButton);
 	private readonly _instrumentsButtonRow: HTMLDivElement = div({class: "selectRow", style: "display: none;"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentIndex")}, "Instrument:"), this._instrumentsButtonBar);
+	private readonly _instrumentCopyButton: HTMLButtonElement = button({type: "button", class: "copy-instrument"}, "Copy");
+	private readonly _instrumentPasteButton: HTMLButtonElement = button({type: "button", class: "paste-instrument"}, "Paste");
+	private readonly _instrumentCopyPasteRow: HTMLDivElement = div({class: "instrumentCopyPasteRow", style: "display: none;"}, this._instrumentCopyButton, this._instrumentPasteButton);
 	private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: -(Config.volumeRange - 1), max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
 	private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume:"), this._instrumentVolumeSlider.input);
 	private readonly _panSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.panMax, value: Config.panCenter, step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangePan(this._doc, oldValue, newValue));
@@ -299,6 +305,7 @@ export class SongEditor {
 			"Instrument Settings"
 		),
 		this._instrumentsButtonRow,
+		this._instrumentCopyPasteRow,
 		this._instrumentVolumeSliderRow,
 		div({class: "selectRow"},
 			span({class: "tip", onclick: ()=>this._openPrompt("instrumentType")}, "Type:"),
@@ -497,6 +504,8 @@ export class SongEditor {
 		this._drumPresetSelect.addEventListener("change", this._whenSetDrumPreset);
 		this._algorithmSelect.addEventListener("change", this._whenSetAlgorithm);
 		this._instrumentsButtonBar.addEventListener("click", this._whenSelectInstrument);
+		this._instrumentCopyButton.addEventListener("click", this._copyInstrument);
+		this._instrumentPasteButton.addEventListener("click", this._pasteInstrument);
 		this._customizeInstrumentButton.addEventListener("click", this._whenCustomizePressed);
 		this._feedbackTypeSelect.addEventListener("change", this._whenSetFeedbackType);
 		this._chipWaveSelect.addEventListener("change", this._whenSetChipWave);
@@ -661,9 +670,12 @@ export class SongEditor {
 			(this._doc.enableNotePreview ? "✓ " : "　") + "Preview Added Notes",
 			(this._doc.showLetters ? "✓ " : "　") + "Show Piano Keys",
 			(this._doc.showFifth ? "✓ " : "　") + 'Highlight "Fifth" Notes',
+			(this._doc.notesOutsideScale ? "✓ " : "　") + "Allow Notes Outside Scale",
+			(this._doc.defaultScale == this._doc.song.scale ? "✓ " : "　") + "Use Current Scale as Default",
 			(this._doc.showChannels ? "✓ " : "　") + "Show All Channels",
 			(this._doc.showScrollBar ? "✓ " : "　") + "Octave Scroll Bar",
 			(this._doc.alwaysShowSettings ? "✓ " : "　") + "Customize All Instruments",
+			(this._doc.instrumentCopyPaste ? "✓ " : "　") + "Instrument Copy/Paste Buttons",
 			(this._doc.enableChannelMuting ? "✓ " : "　") + "Enable Channel Muting",
 			(this._doc.displayBrowserUrl ? "✓ " : "　") + "Display Song Data in URL",
 			"　Choose Layout...",
@@ -708,6 +720,12 @@ export class SongEditor {
 			this._pitchedPresetSelect.style.display = "";
 			this._drumPresetSelect.style.display = "none";
 			setSelectedValue(this._pitchedPresetSelect, instrument.preset);
+		}
+		
+		if (this._doc.instrumentCopyPaste) {
+			this._instrumentCopyPasteRow.style.display = "";
+		} else {
+			this._instrumentCopyPasteRow.style.display = "none";
 		}
 		
 		if (!this._doc.alwaysShowSettings && instrument.preset != instrument.type) {
@@ -1320,21 +1338,23 @@ export class SongEditor {
 		this._doc.setVolume(Number(this._volumeSlider.value));
 	}
 	
-	private _copyInstrument(): void {
+	private _copyInstrument = (): void => {
 		const channel: Channel = this._doc.song.channels[this._doc.channel];
 		const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
 		const instrumentCopy: any = instrument.toJsonObject();
 		instrumentCopy["isDrum"] = this._doc.song.getChannelIsNoise(this._doc.channel);
 		window.localStorage.setItem("instrumentCopy", JSON.stringify(instrumentCopy));
+		this._refocusStage();
 	}
 	
-	private _pasteInstrument(): void {
+	private _pasteInstrument = (): void => {
 		const channel: Channel = this._doc.song.channels[this._doc.channel];
 		const instrument: Instrument = channel.instruments[this._doc.getCurrentInstrument()];
 		const instrumentCopy: any = JSON.parse(String(window.localStorage.getItem("instrumentCopy")));
 		if (instrumentCopy != null && instrumentCopy["isDrum"] == this._doc.song.getChannelIsNoise(this._doc.channel)) {
 			this._doc.record(new ChangePasteInstrument(this._doc, instrument, instrumentCopy));
 		}
+		this._refocusStage();
 	}
 	
 	private _randomPreset(): void {
@@ -1605,6 +1625,12 @@ export class SongEditor {
 			case "showFifth":
 				this._doc.showFifth = !this._doc.showFifth;
 				break;
+			case "notesOutsideScale":
+				this._doc.notesOutsideScale = !this._doc.notesOutsideScale;
+				break;
+			case "setDefaultScale":
+				this._doc.defaultScale = this._doc.song.scale;
+				break;
 			case "showChannels":
 				this._doc.showChannels = !this._doc.showChannels;
 				break;
@@ -1613,6 +1639,9 @@ export class SongEditor {
 				break;
 			case "alwaysShowSettings":
 				this._doc.alwaysShowSettings = !this._doc.alwaysShowSettings;
+				break;
+			case "instrumentCopyPaste":
+				this._doc.instrumentCopyPaste = !this._doc.instrumentCopyPaste;
 				break;
 			case "enableChannelMuting":
 				this._doc.enableChannelMuting = !this._doc.enableChannelMuting;

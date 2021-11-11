@@ -584,7 +584,7 @@ export class Selection {
 		
 		for (const channelIndex of this._eachSelectedChannel()) {
 			for (const pattern of this._eachSelectedPattern(channelIndex)) {
-				this._changeTranspose.append(new ChangeTranspose(this._doc, channelIndex, pattern, upward, false, octave));
+				this._changeTranspose.append(new ChangeTranspose(this._doc, channelIndex, pattern, upward, this._doc.notesOutsideScale, octave));
 			}
 		}
 		

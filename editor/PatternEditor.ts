@@ -329,7 +329,7 @@ export class PatternEditor {
 	private _snapToPitch(guess: number, min: number, max: number): number {
 		if (guess < min) guess = min;
 		if (guess > max) guess = max;
-		const scale: ReadonlyArray<boolean> = Config.scales[this._doc.song.scale].flags;
+		const scale: ReadonlyArray<boolean> = this._doc.notesOutsideScale ? Config.scales.dictionary["expert"].flags : Config.scales[this._doc.song.scale].flags;
 		if (scale[Math.floor(guess) % Config.pitchesPerOctave] || this._doc.song.getChannelIsNoise(this._doc.channel)) {
 			return Math.floor(guess);
 		} else {
