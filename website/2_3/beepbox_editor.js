@@ -6630,7 +6630,7 @@ var beepbox;
             this._loopDropDown = input({ style: "width: 2em;", type: "number", min: "1", max: "4", step: "1" });
             this._enableOutro = input({ type: "checkbox" });
             this._exportWavButton = button({}, [text("Export to .wav file")]);
-            this._exportMidiButton = button({}, [text("Export to .midi file")]);
+            this._exportMidiButton = button({}, [text("Export to .mid file")]);
             this._exportJsonButton = button({}, [text("Export to .json file")]);
             this._cancelButton = button({}, [text("Cancel")]);
             this.container = div({ className: "prompt", style: "width: 200px;" }, [
@@ -7150,7 +7150,7 @@ var beepbox;
                 }
                 arrayBuffer = ArrayBuffer.transfer(arrayBuffer, fileSize);
                 var blob = new Blob([arrayBuffer], { type: "audio/midi" });
-                save(blob, _this._fileName.value.trim() + ".midi");
+                save(blob, _this._fileName.value.trim() + ".mid");
                 _this._close();
             };
             this._whenExportToJson = function () {
