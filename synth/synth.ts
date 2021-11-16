@@ -1195,7 +1195,7 @@ export class Instrument {
 					"hard":        {transition: "normal",    fadeInSeconds: 0.0,    fadeOutTicks: -3},
 					"smooth":      {transition: "normal",    fadeInSeconds: 0.025,  fadeOutTicks: -3},
 					"soft":        {transition: "normal",    fadeInSeconds: 0.025,  fadeOutTicks: -3},
-					// Note that the old slide transition has the same as a new slide transition that is different.
+					// Note that the old slide transition has the same name as a new slide transition that is different.
 					// Only apply legacy settings if the instrument JSON was created before, based on the presence
 					// of the fade in/out fields.
 					"slide":       {transition: "slide in pattern", fadeInSeconds: 0.025,  fadeOutTicks: -3},

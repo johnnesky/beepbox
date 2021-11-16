@@ -71,6 +71,7 @@ export class PatternEditor {
 	private _copiedPins: NotePin[];
 	private _mouseXStart: number = 0;
 	private _mouseYStart: number = 0;
+	private _ctrlHeld: boolean = false;
 	private _shiftHeld: boolean = false;
 	private _touchTime: number = 0;
 	private _draggingStartOfSelection: boolean = false;
@@ -379,6 +380,14 @@ export class PatternEditor {
 		this._copiedPinChannels[this._doc.channel] = this._copiedPins;
 	}
 	
+	public movePlayheadToMouse(): boolean {
+		if (this._mouseOver) {
+			this._doc.synth.playhead = this._doc.bar + this._barOffset + (this._mouseX / this._editorWidth);
+			return true;
+		}
+		return false;
+	}
+	
 	public resetCopiedPins = (): void => {
 		const maxDivision: number = this._getMaxDivision();
 		this._copiedPinChannels.length = this._doc.song.getChannelCount();
@@ -441,6 +450,7 @@ export class PatternEditor {
 		if (isNaN(this._mouseX)) this._mouseX = 0;
 		if (isNaN(this._mouseY)) this._mouseY = 0;
 		this._usingTouch = false;
+		this._ctrlHeld = event.ctrlKey || event.metaKey;
 		this._shiftHeld = event.shiftKey;
 		this._whenCursorPressed();
 	}
@@ -453,6 +463,7 @@ export class PatternEditor {
 		if (isNaN(this._mouseX)) this._mouseX = 0;
 		if (isNaN(this._mouseY)) this._mouseY = 0;
 		this._usingTouch = true;
+		this._ctrlHeld = event.ctrlKey || event.metaKey;
 		this._shiftHeld = event.shiftKey;
 		this._touchTime = performance.now();
 		this._whenCursorPressed();
@@ -801,7 +812,7 @@ export class PatternEditor {
 					this._dragSize = bendSize;
 					this._dragVisible = true;
 					
-					sequence.append(new ChangeSizeBend(this._doc, this._cursor.curNote, bendPart, bendSize, bendInterval));
+					sequence.append(new ChangeSizeBend(this._doc, this._cursor.curNote, bendPart, bendSize, bendInterval, this._ctrlHeld));
 					this._copyPins(this._cursor.curNote);
 				} else {
 					sequence.append(new ChangePatternSelection(this._doc, 0, 0));

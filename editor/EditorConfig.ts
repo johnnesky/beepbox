@@ -27,6 +27,9 @@ export class EditorConfig {
 	public static readonly versionDisplayName: string = "BeepBox";
 	public static readonly releaseNotesURL: string = "https://github.com/johnnesky/beepbox/releases/tag/v" + EditorConfig.version;
 	
+	public static readonly isOnMac: boolean = /^Mac/i.test(navigator.platform) || /Mac OS X/i.test(navigator.userAgent) || /^(iPhone|iPad|iPod)/i.test(navigator.platform) || /(iPhone|iPad|iPod)/i.test(navigator.userAgent);
+	public static readonly ctrlSymbol: string = EditorConfig.isOnMac ? "⌘" : "Ctrl+";
+	
 	public static readonly presetCategories: DictionaryArray<PresetCategory> = toNameMap([
 		{name: "Custom Instruments", presets: <DictionaryArray<Preset>> toNameMap([
 			{name: "chip wave",        customType: InstrumentType.chip},

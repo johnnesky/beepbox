@@ -145,6 +145,14 @@ export class TrackEditor {
 		window.requestAnimationFrame(this._animatePlayhead);
 	}
 	
+	public movePlayheadToMouse(): boolean {
+		if (this._mouseOver) {
+			this._doc.synth.playhead = this._mouseBar + (this._mouseX % this._barWidth) / this._barWidth;
+			return true;
+		}
+		return false;
+	}
+	
 	private _dragBoxSelection(): void {
 		this._doc.selection.setTrackSelection(this._doc.selection.boxSelectionX0, this._mouseBar, this._doc.selection.boxSelectionY0, this._mouseChannel);
 		this._doc.selection.selectionUpdated();

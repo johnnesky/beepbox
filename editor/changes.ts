@@ -1097,6 +1097,15 @@ export class ChangeDeleteBars extends Change {
 	}
 }
 
+export class ChangeChannelOrder extends Change {
+	constructor(doc: SongDocument, selectionMin: number, selectionMax: number, offset: number) {
+		super();
+		doc.song.channels.splice(selectionMin + offset, 0, ...doc.song.channels.splice(selectionMin, selectionMax - selectionMin + 1));
+		doc.notifier.changed();
+		this._didSomething();
+	}
+}
+
 export class ChangeChannelCount extends Change {
 	constructor(doc: SongDocument, newPitchChannelCount: number, newNoiseChannelCount: number) {
 		super();
@@ -1147,6 +1156,45 @@ export class ChangeChannelCount extends Change {
 			
 			this._didSomething();
 		}
+	}
+}
+
+export class ChangeAddChannel extends ChangeGroup {
+	constructor(doc: SongDocument, index: number, isNoise: boolean) {
+		super();
+		const newPitchChannelCount: number = doc.song.pitchChannelCount + (isNoise ? 0 : 1);
+		const newNoiseChannelCount: number = doc.song.noiseChannelCount + (isNoise ? 1 : 0);
+		if (newPitchChannelCount <= Config.pitchChannelCountMax && newNoiseChannelCount <= Config.noiseChannelCountMax) {
+			const addedChannelIndex: number = isNoise ? doc.song.pitchChannelCount + doc.song.noiseChannelCount : doc.song.pitchChannelCount;
+			this.append(new ChangeChannelCount(doc, newPitchChannelCount, newNoiseChannelCount));
+			this.append(new ChangeChannelOrder(doc, index, addedChannelIndex - 1, 1));
+		}
+	}
+}
+
+export class ChangeRemoveChannel extends ChangeGroup {
+	constructor(doc: SongDocument, minIndex: number, maxIndex: number) {
+		super();
+		
+		while (maxIndex >= minIndex) {
+			const isNoise: boolean = doc.song.getChannelIsNoise(maxIndex);
+			doc.song.channels.splice(maxIndex, 1);
+			if (isNoise) {
+				doc.song.noiseChannelCount--;
+			} else {
+				doc.song.pitchChannelCount--;
+			}
+			maxIndex--;
+		}
+		
+		if (doc.song.pitchChannelCount < Config.pitchChannelCountMin) {
+			this.append(new ChangeChannelCount(doc, Config.pitchChannelCountMin, doc.song.noiseChannelCount));
+		}
+		
+		this.append(new ChangeChannelBar(doc, Math.max(0, minIndex - 1), doc.bar));
+		
+		this._didSomething();
+		doc.notifier.changed();
 	}
 }
 
@@ -3004,7 +3052,7 @@ export class ChangeSizeBend extends UndoableChange {
 	private _note: Note;
 	private _oldPins: NotePin[];
 	private _newPins: NotePin[];
-	constructor(doc: SongDocument, note: Note, bendPart: number, bendSize: number, bendInterval: number) {
+	constructor(doc: SongDocument, note: Note, bendPart: number, bendSize: number, bendInterval: number, uniformSize: boolean) {
 		super(false);
 		this._doc = doc;
 		this._note = note;
@@ -3015,16 +3063,24 @@ export class ChangeSizeBend extends UndoableChange {
 		
 		for (const pin of note.pins) {
 			if (pin.time < bendPart) {
-				this._newPins.push(pin);
+				if (uniformSize) {
+					this._newPins.push(makeNotePin(pin.interval, pin.time, bendSize));
+				} else {
+					this._newPins.push(pin);
+				}
 			} else if (pin.time == bendPart) {
 				this._newPins.push(makeNotePin(bendInterval, bendPart, bendSize));
 				inserted = true;
 			} else {
-				if (!inserted) {
+				if (!uniformSize && !inserted) {
 					this._newPins.push(makeNotePin(bendInterval, bendPart, bendSize));
 					inserted = true;
 				}
-				this._newPins.push(pin);
+				if (uniformSize) {
+					this._newPins.push(makeNotePin(pin.interval, pin.time, bendSize));
+				} else {
+					this._newPins.push(pin);
+				}
 			}
 		}
 		

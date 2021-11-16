@@ -32,7 +32,7 @@ export class MuteEditor {
 		
 		if (this._renderedChannelCount != this._doc.song.getChannelCount()) {
 			for (let y: number = this._renderedChannelCount; y < this._doc.song.getChannelCount(); y++) {
-				const muteButton: HTMLButtonElement = HTML.button({class: "mute-button", style: `height: ${channelHeight - 4}px; margin: 2px;`});
+				const muteButton: HTMLButtonElement = HTML.button({class: "mute-button", title: "Mute (M), Mute All (⇧M), Solo (S), Exclude (⇧S)", style: `height: ${channelHeight - 4}px; margin: 2px;`});
 				this.container.appendChild(muteButton);
 				this._buttons[y] = muteButton;
 			}
