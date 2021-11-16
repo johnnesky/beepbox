@@ -45,10 +45,11 @@ export class ExportPrompt implements Prompt {
 	private readonly _loopDropDown: HTMLInputElement = input({style:"width: 2em;", type: "number", min: "1", max: "4", step: "1"});
 	private readonly _enableOutro: HTMLInputElement = input({type: "checkbox"});
 	private readonly _formatSelect: HTMLSelectElement = select({style: "width: 100%;"},
-		option({value: "wav"}, "Export to .wav file."),
-		option({value: "mp3"}, "Export to .mp3 file."),
-		option({value: "midi"}, "Export to .mid file."),
-		option({value: "json"}, "Export to .json file."),
+		option({value: "wav"}, ".wav"),
+		option({value: "mp3"}, ".mp3"),
+		option({value: "midi"}, ".mid"),
+		option({value: "json"}, ".json (for any BeepBox version)"),
+		option({value: "html"}, ".html (opens BeepBox)"),
 	);
 	private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
 	private readonly _exportButton: HTMLButtonElement = button({class: "exportButton", style: "width:45%;"}, "Export");
@@ -82,6 +83,7 @@ export class ExportPrompt implements Prompt {
 				div({style: "display: table-cell; vertical-align: middle;"}, this._enableOutro),
 			),
 		),
+		div({style: "text-align: left;"}, "File Type:"),
 		div({class: "selectContainer", style: "width: 100%;"}, this._formatSelect),
 		div({style: "text-align: left;"}, "(Be patient, exporting may take some time...)"),
 		div({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
@@ -171,6 +173,9 @@ export class ExportPrompt implements Prompt {
 				break;
 			case "json":
 				this._exportToJson();
+				break;
+			case "html":
+				this._exportToHtml();
 				break;
 			default:
 				throw new Error("Unhandled file export type.");
@@ -738,6 +743,38 @@ export class ExportPrompt implements Prompt {
 		const jsonString: string = JSON.stringify(jsonObject, null, '\t');
 		const blob: Blob = new Blob([jsonString], {type: "application/json"});
 		save(blob, this._fileName.value.trim() + ".json");
+		this._close();
+	}
+	
+	private _exportToHtml(): void {
+		const fileContents = `\
+<!DOCTYPE html><meta charset="utf-8">
+
+You should be redirected to the song at:<br /><br />
+
+<a id="destination" href="${new URL("#" + this._doc.song.toBase64String(), location.href).href}"></a>
+
+<style>
+	:root {
+		color: white;
+		background: black;
+		font-family:
+		sans-serif;
+	}
+	a {
+		color: #98f;
+	}
+	a[href]::before {
+		content: attr(href);
+	}
+</style>
+
+<script>
+	location.assign(document.querySelector("a#destination").href);
+</script>
+`;
+		const blob: Blob = new Blob([fileContents], {type: "text/html"});
+		save(blob, this._fileName.value.trim() + ".html");
 		this._close();
 	}
 }
