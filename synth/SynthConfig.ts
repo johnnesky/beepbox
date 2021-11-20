@@ -135,7 +135,7 @@ export interface Rhythm extends BeepBoxOption {
 
 export interface ChipWave extends BeepBoxOption {
 	readonly expression: number;
-	readonly samples: Float64Array;
+	readonly samples: Float32Array;
 }
 
 export interface ChipNoise extends BeepBoxOption {
@@ -473,7 +473,7 @@ export class Config {
 	public static readonly detuneMax: number = Config.detuneCenter * 2;
 	public static readonly sineWaveLength: number = 1 << 8; // 256
 	public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
-	public static readonly sineWave: Float64Array = generateSineWave();
+	public static readonly sineWave: Float32Array = generateSineWave();
 	
 	// Picked strings have an all-pass filter with a corner frequency based on the tone fundamental frequency, in order to add a slight inharmonicity. (Which is important for distortion.)
 	public static readonly pickedStringDispersionCenterFreq: number = 6000.0; // The tone fundamental freq is pulled toward this freq for computing the all-pass corner freq.
@@ -524,7 +524,7 @@ export class Config {
 	]);
 }
 
-function centerWave(wave: Array<number>): Float64Array {
+function centerWave(wave: Array<number>): Float32Array {
 	let sum: number = 0.0;
 	for (let i: number = 0; i < wave.length; i++) sum += wave[i];
 	const average: number = sum / wave.length;
@@ -532,7 +532,7 @@ function centerWave(wave: Array<number>): Float64Array {
 	performIntegral(wave);
 	// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
 	wave.push(0);
-	return new Float64Array(wave);
+	return new Float32Array(wave);
 }
 
 export function performIntegral(wave: {length: number, [index: number]: number}): void {
@@ -646,8 +646,8 @@ export function drawNoiseSpectrum(wave: Float32Array, waveLength: number, lowOct
 	return combinedAmplitude;
 }
 
-function generateSineWave(): Float64Array {
-	const wave: Float64Array = new Float64Array(Config.sineWaveLength + 1);
+function generateSineWave(): Float32Array {
+	const wave: Float32Array = new Float32Array(Config.sineWaveLength + 1);
 	for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
 		wave[i] = Math.sin(i * Math.PI * 2.0 / Config.sineWaveLength);
 	}

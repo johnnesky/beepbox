@@ -400,8 +400,7 @@ export class Operator {
 
 export class SpectrumWave {
 	public spectrum: number[] = [];
-	private _wave: Float32Array | null = null;
-	private _waveIsReady: boolean = false;
+	public hash: number = -1;
 	
 	constructor(isNoiseChannel: boolean) {
 		this.reset(isNoiseChannel);
@@ -416,21 +415,30 @@ export class SpectrumWave {
 				this.spectrum[i] = isHarmonic ? Math.max(0, Math.round(Config.spectrumMax * (1 - i / 30))) : 0;
 			}
 		}
-		this._waveIsReady = false;
+		this.markCustomWaveDirty();
 	}
 	
 	public markCustomWaveDirty(): void {
-		this._waveIsReady = false;
+		const hashMult: number = Synth.fittingPowerOfTwo(Config.spectrumMax + 2) - 1;
+		let hash: number = 0;
+		for (const point of this.spectrum) hash = ((hash * hashMult) + point) >>> 0;
+		this.hash = hash;
 	}
+}
+
+class SpectrumWaveState {
+	public wave: Float32Array | null = null;
+	private _hash: number = -1;
 	
-	public getCustomWave(lowestOctave: number): Float32Array {
-		if (this._waveIsReady) return this._wave!;
+	public getCustomWave(settings: SpectrumWave, lowestOctave: number): Float32Array {
+		if (this._hash == settings.hash) return this.wave!;
+		this._hash = settings.hash;
 		
 		const waveLength: number = Config.spectrumNoiseLength;
-		if (this._wave == null || this._wave.length != waveLength + 1) {
-			this._wave = new Float32Array(waveLength + 1);
+		if (this.wave == null || this.wave.length != waveLength + 1) {
+			this.wave = new Float32Array(waveLength + 1);
 		}
-		const wave: Float32Array = this._wave;
+		const wave: Float32Array = this.wave;
 		
 		for (let i: number = 0; i < waveLength; i++) {
 			wave[i] = 0;
@@ -446,8 +454,8 @@ export class SpectrumWave {
 		
 		let combinedAmplitude: number = 1;
 		for (let i: number = 0; i < Config.spectrumControlPoints + 1; i++) {
-			const value1: number = (i <= 0) ? 0 : this.spectrum[i - 1];
-			const value2: number = (i >= Config.spectrumControlPoints) ? this.spectrum[Config.spectrumControlPoints - 1] : this.spectrum[i];
+			const value1: number = (i <= 0) ? 0 : settings.spectrum[i - 1];
+			const value2: number = (i >= Config.spectrumControlPoints) ? settings.spectrum[Config.spectrumControlPoints - 1] : settings.spectrum[i];
 			const octave1: number = controlPointToOctave(i - 1);
 			let octave2: number = controlPointToOctave(i);
 			if (i >= Config.spectrumControlPoints) octave2 = highestOctave + (octave2 - highestOctave) * falloffRatio;
@@ -455,8 +463,8 @@ export class SpectrumWave {
 			
 			combinedAmplitude += 0.02 * drawNoiseSpectrum(wave, waveLength, octave1, octave2, value1 / Config.spectrumMax, value2 / Config.spectrumMax, -0.5);
 		}
-		if (this.spectrum[Config.spectrumControlPoints - 1] > 0) {
-			combinedAmplitude += 0.02 * drawNoiseSpectrum(wave, waveLength, highestOctave + (controlPointToOctave(Config.spectrumControlPoints) - highestOctave) * falloffRatio, highestOctave, this.spectrum[Config.spectrumControlPoints - 1] / Config.spectrumMax, 0, -0.5);
+		if (settings.spectrum[Config.spectrumControlPoints - 1] > 0) {
+			combinedAmplitude += 0.02 * drawNoiseSpectrum(wave, waveLength, highestOctave + (controlPointToOctave(Config.spectrumControlPoints) - highestOctave) * falloffRatio, highestOctave, settings.spectrum[Config.spectrumControlPoints - 1] / Config.spectrumMax, 0, -0.5);
 		}
 		
 		inverseRealFourierTransform(wave, waveLength);
@@ -465,16 +473,13 @@ export class SpectrumWave {
 		// Duplicate the first sample at the end for easier wrap-around interpolation.
 		wave[waveLength] = wave[0];
 		
-		this._waveIsReady = true;
 		return wave;
 	}
 }
 
 export class HarmonicsWave {
 	public harmonics: number[] = [];
-	private _wave: Float32Array | null = null;
-	private _waveIsReady: boolean = false;
-	private _generatedForType: InstrumentType;
+	public hash: number = -1;
 	
 	constructor() {
 		this.reset();
@@ -487,29 +492,36 @@ export class HarmonicsWave {
 		this.harmonics[0] = Config.harmonicsMax;
 		this.harmonics[3] = Config.harmonicsMax;
 		this.harmonics[6] = Config.harmonicsMax;
-		this._waveIsReady = false;
+		this.markCustomWaveDirty();
 	}
 	
 	public markCustomWaveDirty(): void {
-		this._waveIsReady = false;
+		const hashMult: number = Synth.fittingPowerOfTwo(Config.harmonicsMax + 2) - 1;
+		let hash: number = 0;
+		for (const point of this.harmonics) hash = ((hash * hashMult) + point) >>> 0;
+		this.hash = hash;
 	}
+}
+
+class HarmonicsWaveState {
+	public wave: Float32Array | null = null;
+	private _hash: number = -1;
+	private _generatedForType: InstrumentType;
 	
-	public getCustomWave(instrumentType: InstrumentType): Float32Array {
-		if (this._generatedForType != instrumentType) {
-			this._generatedForType = instrumentType;
-			this._waveIsReady = false;
-		}
-		const harmonicsRendered: number = (instrumentType == InstrumentType.pickedString) ? Config.harmonicsRenderedForPickedString : Config.harmonicsRendered;
+	public getCustomWave(settings: HarmonicsWave, instrumentType: InstrumentType): Float32Array {
+		if (this._hash == settings.hash && this._generatedForType == instrumentType) return this.wave!;
+		this._hash = settings.hash;
+		this._generatedForType = instrumentType;
 		
-		if (this._waveIsReady) return this._wave!;
+		const harmonicsRendered: number = (instrumentType == InstrumentType.pickedString) ? Config.harmonicsRenderedForPickedString : Config.harmonicsRendered;
 		
 		const waveLength: number = Config.harmonicsWavelength;
 		const retroWave: Float32Array = getDrumWave(0, null, null);
 		
-		if (this._wave == null || this._wave.length != waveLength + 1) {
-			this._wave = new Float32Array(waveLength + 1);
+		if (this.wave == null || this.wave.length != waveLength + 1) {
+			this.wave = new Float32Array(waveLength + 1);
 		}
-		const wave: Float32Array = this._wave;
+		const wave: Float32Array = this.wave;
 		
 		for (let i: number = 0; i < waveLength; i++) {
 			wave[i] = 0;
@@ -520,7 +532,7 @@ export class HarmonicsWave {
 		
 		for (let harmonicIndex: number = 0; harmonicIndex < harmonicsRendered; harmonicIndex++) {
 			const harmonicFreq: number = harmonicIndex + 1;
-			let controlValue: number = harmonicIndex < Config.harmonicsControlPoints ? this.harmonics[harmonicIndex] : this.harmonics[Config.harmonicsControlPoints - 1];
+			let controlValue: number = harmonicIndex < Config.harmonicsControlPoints ? settings.harmonics[harmonicIndex] : settings.harmonics[Config.harmonicsControlPoints - 1];
 			if (harmonicIndex >= Config.harmonicsControlPoints) {
 				controlValue *= 1 - (harmonicIndex - Config.harmonicsControlPoints) / (harmonicsRendered - Config.harmonicsControlPoints);
 			}
@@ -549,7 +561,6 @@ export class HarmonicsWave {
 		// The first sample should be zero, and we'll duplicate it at the end for easier interpolation.
 		wave[waveLength] = wave[0];
 		
-		this._waveIsReady = true;
 		return wave;
 	}
 }
@@ -1492,14 +1503,6 @@ export class Instrument {
 		return 440.0 * Math.pow(2.0, (pitch - 69.0) / 12.0);
 	}
 	
-	public static drumsetIndexReferenceDelta(index: number): number {
-		return Instrument.frequencyFromPitch(Config.spectrumBasePitch + index * 6) / 44100;
-	}
-	
-	private static _drumsetIndexToSpectrumOctave(index: number) {
-		return 15 + Math.log2(Instrument.drumsetIndexReferenceDelta(index));
-	}
-	
 	public addEnvelope(target: number, index: number, envelope: number): void {
 		if (!this.supportsEnvelopeTarget(target, index)) throw new Error();
 		if (this.envelopeCount >= Config.maxEnvelopeCount) throw new Error();
@@ -1540,40 +1543,6 @@ export class Instrument {
 				this.envelopes[envelopeIndex].target = Config.instrumentAutomationTargets.dictionary["none"].index;
 				this.envelopes[envelopeIndex].index = 0;
 			}
-		}
-	}
-	
-	public warmUp(samplesPerSecond: number): void {
-		if (this.type == InstrumentType.noise) {
-			getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
-		} else if (this.type == InstrumentType.harmonics) {
-			this.harmonicsWave.getCustomWave(this.type);
-		} else if (this.type == InstrumentType.pickedString) {
-			this.harmonicsWave.getCustomWave(this.type);
-		} else if (this.type == InstrumentType.spectrum) {
-			this.spectrumWave.getCustomWave(8);
-		} else if (this.type == InstrumentType.drumset) {
-			for (let i: number = 0; i < Config.drumCount; i++) {
-				this.drumsetSpectrumWaves[i].getCustomWave(Instrument._drumsetIndexToSpectrumOctave(i));
-			}
-		}
-	}
-	
-	public getDrumWave(): Float32Array {
-		if (this.type == InstrumentType.noise) {
-			return getDrumWave(this.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
-		} else if (this.type == InstrumentType.spectrum) {
-			return this.spectrumWave.getCustomWave(8);
-		} else {
-			throw new Error("Unhandled instrument type in getDrumWave");
-		}
-	}
-	
-	public getDrumsetWave(pitch: number): Float32Array {
-		if (this.type == InstrumentType.drumset) {
-			return this.drumsetSpectrumWaves[pitch].getCustomWave(Instrument._drumsetIndexToSpectrumOctave(pitch));
-		} else {
-			throw new Error("Unhandled instrument type in getDrumsetWave");
 		}
 	}
 	
@@ -3465,6 +3434,8 @@ class EnvelopeComputer {
 	
 	public readonly envelopeStarts: number[] = [];
 	public readonly envelopeEnds: number[] = [];
+	private readonly _modifiedEnvelopeIndices: number[] = [];
+	private _modifiedEnvelopeCount: number = 0;
 	public lowpassCutoffDecayVolumeCompensation: number = 1.0;
 	
 	constructor(/*private _perNote: boolean*/) {
@@ -3485,6 +3456,7 @@ class EnvelopeComputer {
 		this.prevNoteSecondsEnd = 0.0;
 		this.prevNoteTicksEnd = 0.0;
 		this._prevNoteSizeFinal = Config.noteSizeMax;
+		this._modifiedEnvelopeCount = 0;
 	}
 	
 	public computeEnvelopes(instrument: Instrument, currentPart: number, tickTimeStart: number, tickTimeEnd: number, secondsPassing: number, tone: Tone | null): void {
@@ -3614,6 +3586,7 @@ class EnvelopeComputer {
 				
 				this.envelopeStarts[computeIndex] *= envelopeStart;
 				this.envelopeEnds[computeIndex]   *= envelopeEnd;
+				this._modifiedEnvelopeIndices[this._modifiedEnvelopeCount++] = computeIndex;
 				
 				if (automationTarget.isFilter) {
 					const filterSettings: FilterSettings = /*this._perNote ?*/ instrument.noteFilter /*: instrument.eqFilter*/;
@@ -3647,21 +3620,13 @@ class EnvelopeComputer {
 		this.lowpassCutoffDecayVolumeCompensation = lowpassCutoffDecayVolumeCompensation;
 	}
 	
-	public clearEnvelopes(instrument: Instrument): void {
-		for (let envelopeIndex: number = 0; envelopeIndex < instrument.envelopeCount; envelopeIndex++) {
-			const envelopeSettings: EnvelopeSettings = instrument.envelopes[envelopeIndex];
-			const automationTarget: AutomationTarget = Config.instrumentAutomationTargets[envelopeSettings.target];
-			if (/*automationTarget.perNote == this._perNote &&*/ automationTarget.computeIndex != null) {
-				const computeIndex: number = automationTarget.computeIndex + envelopeSettings.index;
-				this.envelopeStarts[computeIndex] = 1.0;
-				this.envelopeEnds[computeIndex]   = 1.0;
-			}
+	public clearEnvelopes(): void {
+		for (let envelopeIndex: number = 0; envelopeIndex < this._modifiedEnvelopeCount; envelopeIndex++) {
+			const computeIndex: number = this._modifiedEnvelopeIndices[envelopeIndex];
+			this.envelopeStarts[computeIndex] = 1.0;
+			this.envelopeEnds[computeIndex]   = 1.0;
 		}
-		//if (this._perNote) {
-			// As a special case, note volume may be altered even if there was no envelope for it.
-			this.envelopeStarts[NoteAutomationIndex.noteVolume] = 1.0;
-			this.envelopeEnds[  NoteAutomationIndex.noteVolume] = 1.0;
-		//}
+		this._modifiedEnvelopeCount = 0;
 	}
 	
 	public static computeEnvelope(envelope: Envelope, time: number, beats: number, noteSize: number): number {
@@ -3722,6 +3687,8 @@ class Tone {
 	public pulseWidth: number = 0.0;
 	public pulseWidthDelta: number = 0.0;
 	public readonly pickedStrings: PickedString[] = [];
+	public stringDecayStart: number = 0.0;
+	public stringDecayEnd: number = 0.0;
 	
 	public readonly noteFilters: DynamicBiquadFilter[] = [];
 	public noteFilterCount: number = 0;
@@ -3764,8 +3731,6 @@ class Tone {
 }
 
 class InstrumentState {
-	public instrument: Instrument;
-	
 	public awake: boolean = false; // Whether the instrument's effects-processing loop should continue.
 	public computed: boolean = false; // Whether the effects-processing parameters are up-to-date for the current synth run.
 	public tonesAddedInThisTick: boolean = false; // Whether any instrument tones are currently active.
@@ -3776,6 +3741,14 @@ class InstrumentState {
 	public readonly activeTones: Deque<Tone> = new Deque<Tone>();
 	public readonly releasedTones: Deque<Tone> = new Deque<Tone>(); // Tones that are in the process of fading out after the corresponding notes ended.
 	public readonly liveInputTones: Deque<Tone> = new Deque<Tone>(); // Tones that are initiated by a source external to the loaded song data.
+	
+	public type: InstrumentType = InstrumentType.chip;
+	public synthesizer: Function | null = null;
+	public wave: Float32Array | null = null;
+	public noisePitchFilterMult: number = 1.0;
+	public unison: Unison | null = null;
+	public chord: Chord | null = null;
+	public effects: number = 0;
 	
 	public eqFilterVolumeStart: number = 1.0;
 	public eqFilterVolumeDelta: number = 0.0;
@@ -3864,6 +3837,16 @@ class InstrumentState {
 	public reverbShelfPrevInput3: number = 0.0;
 	
 	//public readonly envelopeComputer: EnvelopeComputer = new EnvelopeComputer(false);
+	
+	public readonly spectrumWave: SpectrumWaveState = new SpectrumWaveState();
+	public readonly harmonicsWave: HarmonicsWaveState = new HarmonicsWaveState();
+	public readonly drumsetSpectrumWaves: SpectrumWaveState[] = [];
+	
+	constructor() {
+		for (let i: number = 0; i < Config.drumCount; i++) {
+			this.drumsetSpectrumWaves[i] = new SpectrumWaveState();
+		}
+	}
 	
 	public allocateNecessaryBuffers(synth: Synth, instrument: Instrument, samplesPerTick: number): void {
 		if (effectsIncludePanning(instrument.effects)) {
@@ -3973,12 +3956,29 @@ class InstrumentState {
 	public compute(synth: Synth, instrument: Instrument, samplesPerTick: number, runLength: number, tone: Tone | null): void {
 		this.computed = true;
 		
+		this.type = instrument.type;
+		this.synthesizer = Synth.getInstrumentSynthFunction(instrument);
+		this.unison = Config.unisons[instrument.unison];
+		this.chord = instrument.getChord();
+		this.noisePitchFilterMult = Config.chipNoises[instrument.chipNoise].pitchFilterMult;
+		
+		// Force effects to be disabled if the corresponding slider is at zero (and automation isn't involved).
+		let effects: number = instrument.effects;
+		if (instrument.distortion  == 0)        effects &= ~(1 << EffectType.distortion);
+		if (instrument.pan == Config.panCenter) effects &= ~(1 << EffectType.panning);
+		if (instrument.chorus      == 0)        effects &= ~(1 << EffectType.chorus);
+		if (instrument.echoSustain == 0)        effects &= ~(1 << EffectType.echo);
+		if (instrument.reverb      == 0)        effects &= ~(1 << EffectType.reverb);
+		this.effects = effects;
+		
 		this.allocateNecessaryBuffers(synth, instrument, samplesPerTick);
 		
 		const samplesPerSecond: number = synth.samplesPerSecond;
 		const tickSampleCountdown: number = synth.tickSampleCountdown;
 		const tickRemainingStart: number = (tickSampleCountdown            ) / samplesPerTick;
 		const tickRemainingEnd:   number = (tickSampleCountdown - runLength) / samplesPerTick;
+		
+		this.updateWaves(instrument, samplesPerSecond);
 		
 		//const ticksIntoBar: number = synth.getTicksIntoBar();
 		//const tickTimeStart: number = ticksIntoBar + (1.0 - tickRemainingStart);
@@ -3989,12 +3989,12 @@ class InstrumentState {
 		//const envelopeStarts: number[] = this.envelopeComputer.envelopeStarts;
 		//const envelopeEnds: number[] = this.envelopeComputer.envelopeEnds;
 		
-		const usesDistortion: boolean = effectsIncludeDistortion(instrument.effects);
-		const usesBitcrusher: boolean = effectsIncludeBitcrusher(instrument.effects);
-		const usesPanning: boolean = effectsIncludePanning(instrument.effects);
-		const usesChorus: boolean = effectsIncludeChorus(instrument.effects);
-		const usesEcho: boolean = effectsIncludeEcho(instrument.effects);
-		const usesReverb: boolean = effectsIncludeReverb(instrument.effects);
+		const usesDistortion: boolean = effectsIncludeDistortion(effects);
+		const usesBitcrusher: boolean = effectsIncludeBitcrusher(effects);
+		const usesPanning:    boolean = effectsIncludePanning(effects);
+		const usesChorus:     boolean = effectsIncludeChorus(effects);
+		const usesEcho:       boolean = effectsIncludeEcho(effects);
+		const usesReverb:     boolean = effectsIncludeReverb(effects);
 		
 		if (usesDistortion) {
 			this.distortionStart = Math.min(1.0, /*envelopeStarts[InstrumentAutomationIndex.distortion] **/ instrument.distortion / (Config.distortionRange - 1));
@@ -4224,6 +4224,43 @@ class InstrumentState {
 		this.delayInputMultStart = delayInputMultStart;
 		this.delayInputMultDelta = (delayInputMultEnd - delayInputMultStart) / runLength;
 	}
+	
+	public updateWaves(instrument: Instrument, samplesPerSecond: number): void {
+		if (instrument.type == InstrumentType.chip) {
+			this.wave = Config.chipWaves[instrument.chipWave].samples;
+		} else if (instrument.type == InstrumentType.noise) {
+			this.wave = getDrumWave(instrument.chipNoise, inverseRealFourierTransform, scaleElementsByFactor);
+		} else if (instrument.type == InstrumentType.harmonics) {
+			this.wave = this.harmonicsWave.getCustomWave(instrument.harmonicsWave, instrument.type);
+		} else if (instrument.type == InstrumentType.pickedString) {
+			this.wave = this.harmonicsWave.getCustomWave(instrument.harmonicsWave, instrument.type);
+		} else if (instrument.type == InstrumentType.spectrum) {
+			this.wave = this.spectrumWave.getCustomWave(instrument.spectrumWave, 8);
+		} else if (instrument.type == InstrumentType.drumset) {
+			for (let i: number = 0; i < Config.drumCount; i++) {
+				this.drumsetSpectrumWaves[i].getCustomWave(instrument.drumsetSpectrumWaves[i], InstrumentState._drumsetIndexToSpectrumOctave(i));
+			}
+			this.wave = null;
+		} else {
+			this.wave = null;
+		}
+	}
+	
+	public getDrumsetWave(pitch: number): Float32Array {
+		if (this.type == InstrumentType.drumset) {
+			return this.drumsetSpectrumWaves[pitch].wave!;
+		} else {
+			throw new Error("Unhandled instrument type in getDrumsetWave");
+		}
+	}
+	
+	public static drumsetIndexReferenceDelta(index: number): number {
+		return Instrument.frequencyFromPitch(Config.spectrumBasePitch + index * 6) / 44100;
+	}
+	
+	private static _drumsetIndexToSpectrumOctave(index: number): number {
+		return 15 + Math.log2(InstrumentState.drumsetIndexReferenceDelta(index));
+	}
 }
 
 class ChannelState {
@@ -4268,7 +4305,7 @@ export class Synth {
 					const instrument: Instrument = song.channels[j].instruments[i];
 					const instrumentState: InstrumentState = this.channels[j].instruments[i];
 					Synth.getInstrumentSynthFunction(instrument);
-					instrument.warmUp(this.samplesPerSecond);
+					instrumentState.updateWaves(instrument, this.samplesPerSecond);
 					instrumentState.allocateNecessaryBuffers(this, instrument, samplesPerTick);
 				}
 			}
@@ -4635,10 +4672,10 @@ export class Synth {
 							instrumentState.compute(this, instrument, samplesPerTick, runLength, null);
 						}
 						
-						Synth.effectsSynth(this, outputDataL, outputDataR, bufferIndex, runLength, instrument, instrumentState);
+						Synth.effectsSynth(this, outputDataL, outputDataR, bufferIndex, runLength, instrumentState);
 						
 						instrumentState.computed = false;
-						//instrumentState.envelopeComputer.clearEnvelopes(instrument);
+						//instrumentState.envelopeComputer.clearEnvelopes();
 					}
 				}
 			}
@@ -5179,23 +5216,19 @@ export class Synth {
 			instrumentState.compute(this, instrument, samplesPerTick, runLength, tone);
 		}
 		
-		Synth.computeTone(this, song, channelIndex, samplesPerTick, runLength, tone, released, shouldFadeOutFast);
-		const synthesizer: Function = Synth.getInstrumentSynthFunction(instrument);
-		synthesizer(this, bufferIndex, runLength, tone, instrument);
-		tone.envelopeComputer.clearEnvelopes(instrument);
+		Synth.computeTone(this, song, channel, song.getChannelIsNoise(channelIndex), instrument, tone, samplesPerTick, runLength, released, shouldFadeOutFast);
+		instrumentState.synthesizer!(this, bufferIndex, runLength, tone, instrumentState);
+		tone.envelopeComputer.clearEnvelopes();
 	}
 	
 	private static computeChordExpression(chordSize: number): number {
 		return 1.0 / ((chordSize - 1) * 0.25 + 1.0);
 	}
 	
-	private static computeTone(synth: Synth, song: Song, channelIndex: number, samplesPerTick: number, runLength: number, tone: Tone, released: boolean, shouldFadeOutFast: boolean): void {
-		const channel: Channel = song.channels[channelIndex];
-		const instrument: Instrument = channel.instruments[tone.instrumentIndex];
+	private static computeTone(synth: Synth, song: Song, channel: Channel, isNoiseChannel: boolean, instrument: Instrument, tone: Tone, samplesPerTick: number, runLength: number, released: boolean, shouldFadeOutFast: boolean): void {
 		const transition: Transition = instrument.getTransition();
 		const chord: Chord = instrument.getChord();
 		const chordExpression: number = chord.singleTone ? 1.0 : Synth.computeChordExpression(tone.chordSize);
-		const isNoiseChannel: boolean = song.getChannelIsNoise(channelIndex);
 		const intervalScale: number = isNoiseChannel ? Config.noiseInterval : 1;
 		const secondsPerPart: number = Config.ticksPerPart * samplesPerTick / synth.samplesPerSecond;
 		const sampleTime: number = 1.0 / synth.samplesPerSecond;
@@ -5629,6 +5662,11 @@ export class Synth {
 						pickedString.delayIndex = -1;
 					}
 				}
+				
+				const sustainEnvelopeStart = tone.envelopeComputer.envelopeStarts[NoteAutomationIndex.stringSustain];
+				const sustainEnvelopeEnd   = tone.envelopeComputer.envelopeEnds[  NoteAutomationIndex.stringSustain];
+				tone.stringDecayStart = 1.0 - Math.min(1.0, sustainEnvelopeStart * instrument.stringSustain / (Config.stringSustainRange - 1));
+				tone.stringDecayEnd   = 1.0 - Math.min(1.0, sustainEnvelopeEnd   * instrument.stringSustain / (Config.stringSustainRange - 1));
 			}
 			
 			const startFreq: number = Instrument.frequencyFromPitch(startPitch);
@@ -5667,7 +5705,7 @@ export class Synth {
 		return effect;
 	}
 	
-	private static getInstrumentSynthFunction(instrument: Instrument): Function {
+	public static getInstrumentSynthFunction(instrument: Instrument): Function {
 		if (instrument.type == InstrumentType.fm) {
 			const fingerprint: string = instrument.algorithm + "_" + instrument.feedbackType;
 			if (Synth.fmSynthFunctionCache[fingerprint] == undefined) {
@@ -5737,13 +5775,13 @@ export class Synth {
 		}
 	}
 	
-	private static chipSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+	private static chipSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrumentState: InstrumentState): void {
 		const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
-		const wave: Float64Array = Config.chipWaves[instrument.chipWave].samples;
+		const wave: Float32Array = instrumentState.wave!;
 		const waveLength: number = wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 		
-		const unisonSign: number = tone.specialIntervalExpressionMult * Config.unisons[instrument.unison].sign;
-		if (instrument.unison == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
+		const unisonSign: number = tone.specialIntervalExpressionMult * instrumentState.unison!.sign;
+		if (instrumentState.unison!.voices == 1 && !instrumentState.chord!.customInterval) tone.phases[1] = tone.phases[0];
 		let phaseDeltaA: number = tone.phaseDeltas[0] * waveLength;
 		let phaseDeltaB: number = tone.phaseDeltas[1] * waveLength;
 		const phaseDeltaScaleA: number = +tone.phaseDeltaScales[0];
@@ -5813,13 +5851,13 @@ export class Synth {
 		tone.initialNoteFilterInput2 = initialFilterInput2;
 	}
 	
-	private static harmonicsSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+	private static harmonicsSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrumentState: InstrumentState): void {
 		const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
-		const wave: Float32Array = instrument.harmonicsWave.getCustomWave(instrument.type);
+		const wave: Float32Array = instrumentState.wave!;
 		const waveLength: number = wave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 		
-		const unisonSign: number = tone.specialIntervalExpressionMult * Config.unisons[instrument.unison].sign;
-		if (instrument.unison == 0 && !instrument.getChord().customInterval) tone.phases[1] = tone.phases[0];
+		const unisonSign: number = tone.specialIntervalExpressionMult * instrumentState.unison!.sign;
+		if (instrumentState.unison!.voices == 1 && !instrumentState.chord!.customInterval) tone.phases[1] = tone.phases[0];
 		let phaseDeltaA: number = tone.phaseDeltas[0] * waveLength;
 		let phaseDeltaB: number = tone.phaseDeltas[1] * waveLength;
 		const phaseDeltaScaleA: number = +tone.phaseDeltaScales[0];
@@ -5889,7 +5927,7 @@ export class Synth {
 		tone.initialNoteFilterInput2 = initialFilterInput2;
 	}
 	
-	private static pickedStringSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+	private static pickedStringSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrumentState: InstrumentState): void {
 		// This algorithm is similar to the Karpluss-Strong algorithm in principle, but with an
 		// all-pass filter for dispersion and with more control over the impulse.
 		// The source code is processed as a string before being compiled, in order to
@@ -5899,7 +5937,7 @@ export class Synth {
 		// processing extra ones if possible. Any line containing a "#" is duplicated for
 		// each required voice, replacing the "#" with the voice index.
 		
-		const voiceCount: number = Config.unisons[instrument.unison].voices;
+		const voiceCount: number = instrumentState.unison!.voices;
 		let pickedStringFunction: Function = Synth.pickedStringFunctionCache[voiceCount];
 		if (pickedStringFunction == undefined) {
 			let pickedStringSource: string = "";
@@ -5908,14 +5946,11 @@ export class Synth {
 				
 				const Config = beepbox.Config;
 				const Synth = beepbox.Synth;
-				const NoteAutomationStringSustainIndex = ${NoteAutomationIndex.stringSustain};
 				const voiceCount = ${voiceCount};
 				const data = synth.tempMonoInstrumentSampleBuffer;
 				
-				const sustainEnvelopeStart = tone.envelopeComputer.envelopeStarts[NoteAutomationStringSustainIndex];
-				const sustainEnvelopeEnd   = tone.envelopeComputer.envelopeEnds[  NoteAutomationStringSustainIndex];
-				const stringDecayStart = 1.0 - Math.min(1.0, sustainEnvelopeStart * instrument.stringSustain / (Config.stringSustainRange - 1));
-				const stringDecayEnd   = 1.0 - Math.min(1.0, sustainEnvelopeEnd   * instrument.stringSustain / (Config.stringSustainRange - 1));
+				const stringDecayStart = tone.stringDecayStart;
+				const stringDecayEnd   = tone.stringDecayEnd;
 				
 				let pickedString# = tone.pickedStrings[#];
 				
@@ -6048,7 +6083,7 @@ export class Synth {
 						delayLine#[i & delayBufferMask#] = 0.0;
 					}
 					
-					const impulseWave = instrument.harmonicsWave.getCustomWave(instrument.type);
+					const impulseWave = instrumentState.wave;
 					const impulseWaveLength = impulseWave.length - 1; // The first sample is duplicated at the end, don't double-count it.
 					const impulsePhaseDelta = impulseWaveLength / periodLengthStart#;
 					
@@ -6079,7 +6114,7 @@ export class Synth {
 			
 			pickedStringSource += `
 				
-				const unisonSign = tone.specialIntervalExpressionMult * Config.unisons[instrument.unison].sign;
+				const unisonSign = tone.specialIntervalExpressionMult * instrumentState.unison.sign;
 				const delayResetOffset# = pickedString#.delayResetOffset|0;
 				
 				const stopIndex = bufferIndex + runLength;
@@ -6155,22 +6190,22 @@ export class Synth {
 			});
 			
 			//console.log(pickedStringSource);
-			pickedStringFunction = new Function("synth", "bufferIndex", "runLength", "tone", "instrument", pickedStringSource);
+			pickedStringFunction = new Function("synth", "bufferIndex", "runLength", "tone", "instrumentState", pickedStringSource);
 			Synth.pickedStringFunctionCache[voiceCount] = pickedStringFunction;
 		}
 		
-		pickedStringFunction(synth, bufferIndex, runLength, tone, instrument);
+		pickedStringFunction(synth, bufferIndex, runLength, tone, instrumentState);
 	}
 	
-	private static effectsSynth(synth: Synth, outputDataL: Float32Array, outputDataR: Float32Array, bufferIndex: number, runLength: number, instrument: Instrument, instrumentState: InstrumentState): void {
+	private static effectsSynth(synth: Synth, outputDataL: Float32Array, outputDataR: Float32Array, bufferIndex: number, runLength: number, instrumentState: InstrumentState): void {
 		// TODO: If automation is involved, don't assume sliders will stay at zero.
-		const usesDistortion: boolean = effectsIncludeDistortion(instrument.effects) && instrument.distortion != 0;
-		const usesBitcrusher: boolean = effectsIncludeBitcrusher(instrument.effects);
+		const usesDistortion: boolean = effectsIncludeDistortion(instrumentState.effects);
+		const usesBitcrusher: boolean = effectsIncludeBitcrusher(instrumentState.effects);
 		const usesEqFilter: boolean = instrumentState.eqFilterCount > 0;
-		const usesPanning: boolean = effectsIncludePanning(instrument.effects) && instrument.pan != Config.panCenter;
-		const usesChorus: boolean = effectsIncludeChorus(instrument.effects) && instrument.chorus != 0;
-		const usesEcho: boolean = effectsIncludeEcho(instrument.effects) && instrument.echoSustain != 0;
-		const usesReverb: boolean = effectsIncludeReverb(instrument.effects) && instrument.reverb != 0;
+		const usesPanning: boolean = effectsIncludePanning(instrumentState.effects);
+		const usesChorus: boolean = effectsIncludeChorus(instrumentState.effects);
+		const usesEcho: boolean = effectsIncludeEcho(instrumentState.effects);
+		const usesReverb: boolean = effectsIncludeReverb(instrumentState.effects);
 		let signature: number = 0;  if (usesDistortion) signature = signature | 1;
 		signature = signature << 1; if (usesBitcrusher) signature = signature | 1;
 		signature = signature << 1; if (usesEqFilter) signature = signature | 1;
@@ -6715,14 +6750,14 @@ export class Synth {
 			}
 			
 			//console.log(effectsSource);
-			effectsFunction = new Function("synth", "outputDataL", "outputDataR", "bufferIndex", "runLength", "instrument", "instrumentState", effectsSource);
+			effectsFunction = new Function("synth", "outputDataL", "outputDataR", "bufferIndex", "runLength", "instrumentState", effectsSource);
 			Synth.effectsFunctionCache[signature] = effectsFunction;
 		}
 		
-		effectsFunction(synth, outputDataL, outputDataR, bufferIndex, runLength, instrument, instrumentState);
+		effectsFunction(synth, outputDataL, outputDataR, bufferIndex, runLength, instrumentState);
 	}
 	
-	private static pulseWidthSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+	private static pulseWidthSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrumentState: InstrumentState): void {
 		const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
 		
 		let phaseDelta: number = tone.phaseDeltas[0];
@@ -6841,9 +6876,9 @@ export class Synth {
 			const operator#Scaled   = operator#OutputMult * operator#Output;
 	`).split("\n");
 	
-	private static noiseSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+	private static noiseSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrumentState: InstrumentState): void {
 		const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
-		let wave: Float32Array = instrument.getDrumWave();
+		const wave: Float32Array = instrumentState.wave!;
 		let phaseDelta: number = +tone.phaseDeltas[0];
 		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 		let expression: number = +tone.expressionStarts[0];
@@ -6864,7 +6899,7 @@ export class Synth {
 		
 		// This is for a "legacy" style simplified 1st order lowpass filter with
 		// a cutoff frequency that is relative to the tone's fundamental frequency.
-		const pitchRelativefilter: number = Math.min(1.0, tone.phaseDeltas[0] * Config.chipNoises[instrument.chipNoise].pitchFilterMult);
+		const pitchRelativefilter: number = Math.min(1.0, tone.phaseDeltas[0] * instrumentState.noisePitchFilterMult);
 		
 		const stopIndex: number = bufferIndex + runLength;
 		for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
@@ -6894,9 +6929,9 @@ export class Synth {
 		tone.initialNoteFilterInput2 = initialFilterInput2;
 	}
 	
-	private static spectrumSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+	private static spectrumSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrumentState: InstrumentState): void {
 		const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
-		let wave: Float32Array = instrument.getDrumWave();
+		const wave: Float32Array = instrumentState.wave!;
 		let phaseDelta: number = tone.phaseDeltas[0] * (1 << 7);
 		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 		let expression: number = +tone.expressionStarts[0];
@@ -6950,10 +6985,10 @@ export class Synth {
 		tone.initialNoteFilterInput2 = initialFilterInput2;
 	}
 	
-	private static drumsetSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrument: Instrument): void {
+	private static drumsetSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrumentState: InstrumentState): void {
 		const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
-		let wave: Float32Array = instrument.getDrumsetWave(tone.drumsetPitch!);
-		let phaseDelta: number = tone.phaseDeltas[0] / Instrument.drumsetIndexReferenceDelta(tone.drumsetPitch!);
+		let wave: Float32Array = instrumentState.getDrumsetWave(tone.drumsetPitch!);
+		let phaseDelta: number = tone.phaseDeltas[0] / InstrumentState.drumsetIndexReferenceDelta(tone.drumsetPitch!);
 		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
 		let expression: number = +tone.expressionStarts[0];
 		const expressionDelta: number = +tone.expressionDeltas[0];
