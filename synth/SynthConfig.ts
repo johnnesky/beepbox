@@ -76,7 +76,7 @@ export const enum EffectType {
 	length,
 }
 
-export const enum NoteAutomationIndex {
+export const enum EnvelopeComputeIndex {
 	noteVolume,
 	noteFilterAllFreqs,
 	pulseWidth,
@@ -197,7 +197,7 @@ export interface Envelope extends BeepBoxOption {
 }
 
 export interface AutomationTarget extends BeepBoxOption {
-	readonly computeIndex: NoteAutomationIndex /*| InstrumentAutomationIndex*/ | null;
+	readonly computeIndex: EnvelopeComputeIndex /*| InstrumentAutomationIndex*/ | null;
 	readonly displayName: string;
 	//readonly perNote: boolean; // Whether to compute envelopes on a per-note basis.
 	readonly interleave: boolean; // Whether to interleave this target with the next one in the menu.
@@ -364,6 +364,7 @@ export class Config {
 	]);
 	public static readonly maxChordSize: number = 4;
 	public static readonly operatorCount: number = 4;
+	public static readonly maxPitchOrOperatorCount: number = Math.max(Config.maxChordSize, Config.operatorCount);
 	public static readonly algorithms: DictionaryArray<Algorithm> = toNameMap([
 		{name: "1←(2 3 4)",   carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3, 4], [],     [],  []]},
 		{name: "1←(2 3←4)",   carrierCount: 1, associatedCarrier: [1, 1, 1, 1], modulatedBy: [[2, 3],    [],     [4], []]},
@@ -492,20 +493,20 @@ export class Config {
 	public static readonly defaultAutomationRange: number = 13;
 	public static readonly instrumentAutomationTargets: DictionaryArray<AutomationTarget> = toNameMap([
 		{name: "none",                   computeIndex:                           null,                   displayName: "none",             /*perNote: false,*/ interleave: false, isFilter: false, /*range: 0,                              */    maxCount: 1,    effect: null,                    compatibleInstruments: null},
-		{name: "noteVolume",             computeIndex:       NoteAutomationIndex.noteVolume,             displayName: "note volume",      /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.volumeRange,             */    maxCount: 1,    effect: null,                    compatibleInstruments: null},
-		{name: "pulseWidth",             computeIndex:       NoteAutomationIndex.pulseWidth,             displayName: "pulse width",      /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.pulseWidthRange,         */    maxCount: 1,    effect: null,                    compatibleInstruments: [InstrumentType.pwm]},
-		{name: "stringSustain",          computeIndex:       NoteAutomationIndex.stringSustain,          displayName: "sustain",          /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.stringSustainRange,      */    maxCount: 1,    effect: null,                    compatibleInstruments: [InstrumentType.pickedString]},
-		{name: "unison",                 computeIndex:       NoteAutomationIndex.unison,                 displayName: "unison",           /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.defaultAutomationRange,  */    maxCount: 1,    effect: null,                    compatibleInstruments: [InstrumentType.chip, InstrumentType.harmonics, InstrumentType.pickedString]},
-		{name: "operatorFrequency",      computeIndex:       NoteAutomationIndex.operatorFrequency0,     displayName: "fm# freq",         /*perNote:  true,*/ interleave:  true, isFilter: false, /*range: Config.defaultAutomationRange,  */    maxCount: Config.operatorCount, effect: null,    compatibleInstruments: [InstrumentType.fm]},
-		{name: "operatorAmplitude",      computeIndex:       NoteAutomationIndex.operatorAmplitude0,     displayName: "fm# volume",       /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.operatorAmplitudeMax + 1,*/    maxCount: Config.operatorCount, effect: null,    compatibleInstruments: [InstrumentType.fm]},
-		{name: "feedbackAmplitude",      computeIndex:       NoteAutomationIndex.feedbackAmplitude,      displayName: "fm feedback",      /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.operatorAmplitudeMax + 1,*/    maxCount: 1,    effect: null,                    compatibleInstruments: [InstrumentType.fm]},
-		{name: "pitchShift",             computeIndex:       NoteAutomationIndex.pitchShift,             displayName: "pitch shift",      /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.pitchShiftRange,         */    maxCount: 1,    effect: EffectType.pitchShift,   compatibleInstruments: null},
-		{name: "detune",                 computeIndex:       NoteAutomationIndex.detune,                 displayName: "detune",           /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.detuneMax + 1,           */    maxCount: 1,    effect: EffectType.detune,       compatibleInstruments: null},
-		{name: "vibratoDepth",           computeIndex:       NoteAutomationIndex.vibratoDepth,           displayName: "vibrato range",    /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.defaultAutomationRange,  */    maxCount: 1,    effect: EffectType.vibrato,      compatibleInstruments: null},
-		{name: "noteFilterAllFreqs",     computeIndex:       NoteAutomationIndex.noteFilterAllFreqs,     displayName: "n. filter freqs",  /*perNote:  true,*/ interleave: false, isFilter:  true, /*range: null,                           */    maxCount: 1,    effect: EffectType.noteFilter,   compatibleInstruments: null},
-		{name: "noteFilterFreq",         computeIndex:       NoteAutomationIndex.noteFilterFreq0,        displayName: "n. filter # freq", /*perNote:  true,*/ interleave: false/*true*/, isFilter:  true, /*range: Config.filterFreqRange,     */        maxCount: Config.filterMaxPoints, effect: EffectType.noteFilter, compatibleInstruments: null},
+		{name: "noteVolume",             computeIndex:       EnvelopeComputeIndex.noteVolume,             displayName: "note volume",      /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.volumeRange,             */    maxCount: 1,    effect: null,                    compatibleInstruments: null},
+		{name: "pulseWidth",             computeIndex:       EnvelopeComputeIndex.pulseWidth,             displayName: "pulse width",      /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.pulseWidthRange,         */    maxCount: 1,    effect: null,                    compatibleInstruments: [InstrumentType.pwm]},
+		{name: "stringSustain",          computeIndex:       EnvelopeComputeIndex.stringSustain,          displayName: "sustain",          /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.stringSustainRange,      */    maxCount: 1,    effect: null,                    compatibleInstruments: [InstrumentType.pickedString]},
+		{name: "unison",                 computeIndex:       EnvelopeComputeIndex.unison,                 displayName: "unison",           /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.defaultAutomationRange,  */    maxCount: 1,    effect: null,                    compatibleInstruments: [InstrumentType.chip, InstrumentType.harmonics, InstrumentType.pickedString]},
+		{name: "operatorFrequency",      computeIndex:       EnvelopeComputeIndex.operatorFrequency0,     displayName: "fm# freq",         /*perNote:  true,*/ interleave:  true, isFilter: false, /*range: Config.defaultAutomationRange,  */    maxCount: Config.operatorCount, effect: null,    compatibleInstruments: [InstrumentType.fm]},
+		{name: "operatorAmplitude",      computeIndex:       EnvelopeComputeIndex.operatorAmplitude0,     displayName: "fm# volume",       /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.operatorAmplitudeMax + 1,*/    maxCount: Config.operatorCount, effect: null,    compatibleInstruments: [InstrumentType.fm]},
+		{name: "feedbackAmplitude",      computeIndex:       EnvelopeComputeIndex.feedbackAmplitude,      displayName: "fm feedback",      /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.operatorAmplitudeMax + 1,*/    maxCount: 1,    effect: null,                    compatibleInstruments: [InstrumentType.fm]},
+		{name: "pitchShift",             computeIndex:       EnvelopeComputeIndex.pitchShift,             displayName: "pitch shift",      /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.pitchShiftRange,         */    maxCount: 1,    effect: EffectType.pitchShift,   compatibleInstruments: null},
+		{name: "detune",                 computeIndex:       EnvelopeComputeIndex.detune,                 displayName: "detune",           /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.detuneMax + 1,           */    maxCount: 1,    effect: EffectType.detune,       compatibleInstruments: null},
+		{name: "vibratoDepth",           computeIndex:       EnvelopeComputeIndex.vibratoDepth,           displayName: "vibrato range",    /*perNote:  true,*/ interleave: false, isFilter: false, /*range: Config.defaultAutomationRange,  */    maxCount: 1,    effect: EffectType.vibrato,      compatibleInstruments: null},
+		{name: "noteFilterAllFreqs",     computeIndex:       EnvelopeComputeIndex.noteFilterAllFreqs,     displayName: "n. filter freqs",  /*perNote:  true,*/ interleave: false, isFilter:  true, /*range: null,                           */    maxCount: 1,    effect: EffectType.noteFilter,   compatibleInstruments: null},
+		{name: "noteFilterFreq",         computeIndex:       EnvelopeComputeIndex.noteFilterFreq0,        displayName: "n. filter # freq", /*perNote:  true,*/ interleave: false/*true*/, isFilter:  true, /*range: Config.filterFreqRange,     */        maxCount: Config.filterMaxPoints, effect: EffectType.noteFilter, compatibleInstruments: null},
 		// Controlling filter gain is less obvious and intuitive than controlling filter freq, so to avoid confusion I've disabled it for now...
-		//{name: "noteFilterGain",         computeIndex:       NoteAutomationIndex.noteFilterGain0,        displayName: "n. filter # vol",  /*perNote:  true,*/ interleave: false, isFilter:  true, range: Config.filterGainRange,             maxCount: Config.filterMaxPoints, effect: EffectType.noteFilter, compatibleInstruments: null},
+		//{name: "noteFilterGain",         computeIndex:       EnvelopeComputeIndex.noteFilterGain0,        displayName: "n. filter # vol",  /*perNote:  true,*/ interleave: false, isFilter:  true, range: Config.filterGainRange,             maxCount: Config.filterMaxPoints, effect: EffectType.noteFilter, compatibleInstruments: null},
 		/*
 		{name: "distortion",             computeIndex: InstrumentAutomationIndex.distortion,             displayName: "distortion",       perNote: false, interleave: false, isFilter: false, range: Config.distortionRange,             maxCount: 1,    effect: EffectType.distortion,   compatibleInstruments: null},
 		{name: "bitcrusherQuantization", computeIndex: InstrumentAutomationIndex.bitcrusherQuantization, displayName: "bit crush",        perNote: false, interleave: false, isFilter: false, range: Config.bitcrusherQuantizationRange, maxCount: 1,    effect: EffectType.bitcrusher,   compatibleInstruments: null},
