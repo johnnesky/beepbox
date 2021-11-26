@@ -179,9 +179,9 @@ export class HarmonicsEditor {
 			this._renderedPath = path;
 			this._curve.setAttribute("d", path);
 		}
-		if (this._renderedFifths != this._doc.showFifth) {
-			this._renderedFifths = this._doc.showFifth;
-			this._fifths.style.display = this._doc.showFifth ? "" : "none";
+		if (this._renderedFifths != this._doc.prefs.showFifth) {
+			this._renderedFifths = this._doc.prefs.showFifth;
+			this._fifths.style.display = this._doc.prefs.showFifth ? "" : "none";
 		}
 	}
 }

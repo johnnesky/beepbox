@@ -6,6 +6,7 @@ import {ColorConfig, ChannelColors} from "./ColorConfig";
 import "./Layout"; // Imported here for the sake of ensuring this code is transpiled early.
 import {Instrument, Channel, Synth} from "../synth/synth";
 import {HTML} from "imperative-html/dist/esm/elements-strict";
+import {Preferences} from "./Preferences";
 import {SongDocument} from "./SongDocument";
 import {Prompt} from "./Prompt";
 import {TipPrompt} from "./TipPrompt";
@@ -624,16 +625,17 @@ export class SongEditor {
 	}
 	
 	public whenUpdated = (): void => {
-		this._muteEditor.container.style.display = this._doc.enableChannelMuting ? "" : "none";
+		const prefs: Preferences = this._doc.prefs;
+		this._muteEditor.container.style.display = prefs.enableChannelMuting ? "" : "none";
 		const trackBounds: DOMRect = this._trackVisibleArea.getBoundingClientRect();
-		this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left - (this._doc.enableChannelMuting ? 32 : 0)) / this._doc.getBarWidth());
+		this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left - (prefs.enableChannelMuting ? 32 : 0)) / this._doc.getBarWidth());
 		this._doc.trackVisibleChannels = Math.floor((trackBounds.bottom - trackBounds.top - 30) / this._doc.getChannelHeight());
 		this._barScrollBar.render();
 		this._muteEditor.render();
 		this._trackEditor.render();
 		
-		this._piano.container.style.display = this._doc.showLetters ? "" : "none";
-		this._octaveScrollBar.container.style.display = this._doc.showScrollBar ? "" : "none";
+		this._piano.container.style.display = prefs.showLetters ? "" : "none";
+		this._octaveScrollBar.container.style.display = prefs.showScrollBar ? "" : "none";
 		this._barScrollBar.container.style.display = this._doc.song.barCount > this._doc.trackVisibleBars ? "" : "none";
 		
 		if (this._doc.getFullScreen()) {
@@ -656,8 +658,8 @@ export class SongEditor {
 			this._patternEditorNext.render();
 			this._zoomInButton.style.display = "";
 			this._zoomOutButton.style.display = "";
-			this._zoomInButton.style.right = this._doc.showScrollBar ? "24px" : "4px";
-			this._zoomOutButton.style.right = this._doc.showScrollBar ? "24px" : "4px";
+			this._zoomInButton.style.right = prefs.showScrollBar ? "24px" : "4px";
+			this._zoomOutButton.style.right = prefs.showScrollBar ? "24px" : "4px";
 		} else {
 			this._patternEditor.container.style.width = "";
 			this._patternEditor.container.style.flexShrink = "";
@@ -669,21 +671,21 @@ export class SongEditor {
 		this._patternEditor.render();
 		
 		const optionCommands: ReadonlyArray<string> = [
-			(this._doc.autoPlay ? "✓ " : "　") + "Auto Play On Load",
-			(this._doc.autoFollow ? "✓ " : "　") + "Auto Follow Track",
-			(this._doc.enableNotePreview ? "✓ " : "　") + "Preview Added Notes",
-			(this._doc.showLetters ? "✓ " : "　") + "Show Piano Keys",
-			(this._doc.showFifth ? "✓ " : "　") + 'Highlight "Fifth" Notes',
-			(this._doc.notesOutsideScale ? "✓ " : "　") + "Allow Notes Outside Scale",
-			(this._doc.defaultScale == this._doc.song.scale ? "✓ " : "　") + "Use Current Scale as Default",
-			(this._doc.showChannels ? "✓ " : "　") + "Show All Channels",
-			(this._doc.showScrollBar ? "✓ " : "　") + "Octave Scroll Bar",
-			(this._doc.alwaysShowSettings ? "✓ " : "　") + "Customize All Instruments",
-			(this._doc.instrumentCopyPaste ? "✓ " : "　") + "Instrument Copy/Paste Buttons",
-			(this._doc.enableChannelMuting ? "✓ " : "　") + "Enable Channel Muting",
-			(this._doc.displayBrowserUrl ? "✓ " : "　") + "Display Song Data in URL",
+			(prefs.autoPlay ? "✓ " : "　") + "Auto Play On Load",
+			(prefs.autoFollow ? "✓ " : "　") + "Auto Follow Track",
+			(prefs.enableNotePreview ? "✓ " : "　") + "Preview Added Notes",
+			(prefs.showLetters ? "✓ " : "　") + "Show Piano Keys",
+			(prefs.showFifth ? "✓ " : "　") + 'Highlight "Fifth" Notes',
+			(prefs.notesOutsideScale ? "✓ " : "　") + "Allow Notes Outside Scale",
+			(prefs.defaultScale == this._doc.song.scale ? "✓ " : "　") + "Use Current Scale as Default",
+			(prefs.showChannels ? "✓ " : "　") + "Show All Channels",
+			(prefs.showScrollBar ? "✓ " : "　") + "Octave Scroll Bar",
+			(prefs.alwaysShowSettings ? "✓ " : "　") + "Customize All Instruments",
+			(prefs.instrumentCopyPaste ? "✓ " : "　") + "Instrument Copy/Paste Buttons",
+			(prefs.enableChannelMuting ? "✓ " : "　") + "Enable Channel Muting",
+			(prefs.displayBrowserUrl ? "✓ " : "　") + "Display Song Data in URL",
 			"　Choose Layout...",
-			(this._doc.colorTheme == "light classic" ? "✓ " : "　") + "Light Theme",
+			(prefs.colorTheme == "light classic" ? "✓ " : "　") + "Light Theme",
 		];
 		for (let i: number = 0; i < optionCommands.length; i++) {
 			const option: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.children[i + 1];
@@ -726,13 +728,13 @@ export class SongEditor {
 			setSelectedValue(this._pitchedPresetSelect, instrument.preset);
 		}
 		
-		if (this._doc.instrumentCopyPaste) {
+		if (prefs.instrumentCopyPaste) {
 			this._instrumentCopyPasteRow.style.display = "";
 		} else {
 			this._instrumentCopyPasteRow.style.display = "none";
 		}
 		
-		if (!this._doc.alwaysShowSettings && instrument.preset != instrument.type) {
+		if (!prefs.alwaysShowSettings && instrument.preset != instrument.type) {
 			this._customizeInstrumentButton.style.display = "";
 			this._customInstrumentSettingsGroup.style.display = "none";
 		} else {
@@ -832,7 +834,7 @@ export class SongEditor {
 				this._pitchShiftSlider.updateValue(instrument.pitchShift);
 				this._pitchShiftSlider.input.title = (instrument.pitchShift - Config.pitchShiftCenter) + " semitone(s)";
 				for (const marker of this._pitchShiftFifthMarkers) {
-					marker.style.display = this._doc.showFifth ? "" : "none";
+					marker.style.display = prefs.showFifth ? "" : "none";
 				}
 			} else {
 				this._pitchShiftRow.style.display = "none";
@@ -1003,7 +1005,7 @@ export class SongEditor {
 		this._instrumentVolumeSlider.updateValue(-instrument.volume);
 		this._addEnvelopeButton.disabled = (instrument.envelopeCount >= Config.maxEnvelopeCount);
 		
-		this._volumeSlider.value = String(this._doc.volume);
+		this._volumeSlider.value = String(prefs.volume);
 		
 		// If an interface element was selected, but becomes invisible (e.g. an instrument
 		// select menu) just select the editor container so keyboard commands still work.
@@ -1013,7 +1015,7 @@ export class SongEditor {
 		
 		this._setPrompt(this._doc.prompt);
 		
-		if (this._doc.autoFollow && !this._doc.synth.playing) {
+		if (prefs.autoFollow && !this._doc.synth.playing) {
 			this._doc.synth.goToBar(this._doc.bar);
 		}
 		
@@ -1165,7 +1167,7 @@ export class SongEditor {
 			case 70: // f
 				if (!event.ctrlKey && !event.metaKey) {
 					this._doc.synth.snapToStart();
-					if (this._doc.autoFollow) {
+					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
 					}
 					event.preventDefault();
@@ -1175,7 +1177,7 @@ export class SongEditor {
 				if (!event.ctrlKey && !event.metaKey) {
 					this._doc.synth.goToBar(this._doc.bar);
 					this._doc.synth.snapToBar();
-					if (this._doc.autoFollow) {
+					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
 					}
 					event.preventDefault();
@@ -1183,7 +1185,7 @@ export class SongEditor {
 				break;
 			case 77: // m
 				if (!event.ctrlKey && !event.metaKey) {
-					if (this._doc.enableChannelMuting) {
+					if (this._doc.prefs.enableChannelMuting) {
 						this._doc.selection.muteChannels(event.shiftKey);
 						event.preventDefault();
 					}
@@ -1200,7 +1202,7 @@ export class SongEditor {
 					this._openPrompt("export");
 					event.preventDefault();
 				} else {
-					if (this._doc.enableChannelMuting) {
+					if (this._doc.prefs.enableChannelMuting) {
 						this._doc.selection.soloChannels(event.shiftKey);
 						event.preventDefault();
 					}
@@ -1258,7 +1260,7 @@ export class SongEditor {
 			case 219: // left brace
 				if (!event.ctrlKey && !event.metaKey) {
 					this._doc.synth.goToPrevBar();
-					if (this._doc.autoFollow) {
+					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
 					}
 					event.preventDefault();
@@ -1267,7 +1269,7 @@ export class SongEditor {
 			case 221: // right brace
 				if (!event.ctrlKey && !event.metaKey) {
 					this._doc.synth.goToNextBar();
-					if (this._doc.autoFollow) {
+					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
 					}
 					event.preventDefault();
@@ -1445,7 +1447,7 @@ export class SongEditor {
 	private _pause(): void {
 		this._doc.synth.pause();
 		this._doc.synth.resetEffects();
-		if (this._doc.autoFollow) {
+		if (this._doc.prefs.autoFollow) {
 			this._doc.synth.goToBar(this._doc.bar);
 		}
 		this._doc.synth.snapToBar();
@@ -1624,15 +1626,15 @@ export class SongEditor {
 	}
 	
 	private _zoomIn = (): void => {
-		this._doc.visibleOctaves = Math.max(1, this._doc.visibleOctaves - 1);
-		this._doc.savePreferences();
+		this._doc.prefs.visibleOctaves = Math.max(1, this._doc.prefs.visibleOctaves - 1);
+		this._doc.prefs.save();
 		this._doc.notifier.changed();
 		this._refocusStage();
 	}
 	
 	private _zoomOut = (): void => {
-		this._doc.visibleOctaves = Math.min(Config.pitchOctaves, this._doc.visibleOctaves + 1);
-		this._doc.savePreferences();
+		this._doc.prefs.visibleOctaves = Math.min(Config.pitchOctaves, this._doc.prefs.visibleOctaves + 1);
+		this._doc.prefs.save();
 		this._doc.notifier.changed();
 		this._refocusStage();
 	}
@@ -1735,40 +1737,40 @@ export class SongEditor {
 	private _optionsMenuHandler = (event:Event): void => {
 		switch (this._optionsMenu.value) {
 			case "autoPlay":
-				this._doc.autoPlay = !this._doc.autoPlay;
+				this._doc.prefs.autoPlay = !this._doc.prefs.autoPlay;
 				break;
 			case "autoFollow":
-				this._doc.autoFollow = !this._doc.autoFollow;
+				this._doc.prefs.autoFollow = !this._doc.prefs.autoFollow;
 				break;
 			case "enableNotePreview":
-				this._doc.enableNotePreview = !this._doc.enableNotePreview;
+				this._doc.prefs.enableNotePreview = !this._doc.prefs.enableNotePreview;
 				break;
 			case "showLetters":
-				this._doc.showLetters = !this._doc.showLetters;
+				this._doc.prefs.showLetters = !this._doc.prefs.showLetters;
 				break;
 			case "showFifth":
-				this._doc.showFifth = !this._doc.showFifth;
+				this._doc.prefs.showFifth = !this._doc.prefs.showFifth;
 				break;
 			case "notesOutsideScale":
-				this._doc.notesOutsideScale = !this._doc.notesOutsideScale;
+				this._doc.prefs.notesOutsideScale = !this._doc.prefs.notesOutsideScale;
 				break;
 			case "setDefaultScale":
-				this._doc.defaultScale = this._doc.song.scale;
+				this._doc.prefs.defaultScale = this._doc.song.scale;
 				break;
 			case "showChannels":
-				this._doc.showChannels = !this._doc.showChannels;
+				this._doc.prefs.showChannels = !this._doc.prefs.showChannels;
 				break;
 			case "showScrollBar":
-				this._doc.showScrollBar = !this._doc.showScrollBar;
+				this._doc.prefs.showScrollBar = !this._doc.prefs.showScrollBar;
 				break;
 			case "alwaysShowSettings":
-				this._doc.alwaysShowSettings = !this._doc.alwaysShowSettings;
+				this._doc.prefs.alwaysShowSettings = !this._doc.prefs.alwaysShowSettings;
 				break;
 			case "instrumentCopyPaste":
-				this._doc.instrumentCopyPaste = !this._doc.instrumentCopyPaste;
+				this._doc.prefs.instrumentCopyPaste = !this._doc.prefs.instrumentCopyPaste;
 				break;
 			case "enableChannelMuting":
-				this._doc.enableChannelMuting = !this._doc.enableChannelMuting;
+				this._doc.prefs.enableChannelMuting = !this._doc.prefs.enableChannelMuting;
 				for (const channel of this._doc.song.channels) channel.muted = false;
 				break;
 			case "displayBrowserUrl":
@@ -1778,12 +1780,12 @@ export class SongEditor {
 				this._openPrompt("layout");
 				break;
 			case "colorTheme":
-				this._doc.colorTheme = this._doc.colorTheme == "light classic" ? "dark classic" : "light classic";
-				ColorConfig.setTheme(this._doc.colorTheme);
+				this._doc.prefs.colorTheme = this._doc.prefs.colorTheme == "light classic" ? "dark classic" : "light classic";
+				ColorConfig.setTheme(this._doc.prefs.colorTheme);
 				break;
 		}
 		this._optionsMenu.selectedIndex = 0;
 		this._doc.notifier.changed();
-		this._doc.savePreferences();
+		this._doc.prefs.save();
 	}
 }

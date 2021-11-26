@@ -1,11 +1,12 @@
 // Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-import {Scale, Config} from "../synth/SynthConfig";
+import {Config} from "../synth/SynthConfig";
 import {Pattern, Channel, Song, Synth} from "../synth/synth";
 import {SongRecovery, generateUid} from "./SongRecovery";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
 import {Selection} from "./Selection";
+import {Preferences} from "./Preferences";
 import {Change} from "./Change";
 import {ChangeNotifier} from "./ChangeNotifier";
 import {ChangeSong, setDefaultInstruments, discardInvalidPatternInstruments} from "./changes";
@@ -22,31 +23,13 @@ interface HistoryState {
 }
 
 export class SongDocument {
-	public static readonly defaultVisibleOctaves: number = 3;
-	
 	public song: Song;
 	public synth: Synth;
 	public notifier: ChangeNotifier = new ChangeNotifier();
 	public selection: Selection = new Selection(this);
+	public prefs: Preferences = new Preferences();
 	public channel: number = 0;
 	public bar: number = 0;
-	public autoPlay: boolean;
-	public autoFollow: boolean;
-	public enableNotePreview: boolean;
-	public showFifth: boolean;
-	public notesOutsideScale: boolean;
-	public defaultScale: number;
-	public showLetters: boolean;
-	public showChannels: boolean;
-	public showScrollBar: boolean;
-	public alwaysShowSettings: boolean;
-	public instrumentCopyPaste: boolean;
-	public enableChannelMuting: boolean;
-	public colorTheme: string;
-	public layout: string;
-	public displayBrowserUrl: boolean;
-	public volume: number = 75;
-	public visibleOctaves: number = SongDocument.defaultVisibleOctaves;
 	public recentPatternInstruments: number[][] = [];
 	public viewedInstrument: number[] = [];
 	
@@ -72,36 +55,8 @@ export class SongDocument {
 	constructor() {
 		this.notifier.watch(this._validateDocState);
 		
-		this.autoPlay = window.localStorage.getItem("autoPlay") == "true";
-		this.autoFollow = window.localStorage.getItem("autoFollow") == "true";
-		this.enableNotePreview = window.localStorage.getItem("enableNotePreview") != "false";
-		this.showFifth = window.localStorage.getItem("showFifth") == "true";
-		this.notesOutsideScale = window.localStorage.getItem("notesOutsideScale") == "true";
-		this.showLetters = window.localStorage.getItem("showLetters") == "true";
-		this.showChannels = window.localStorage.getItem("showChannels") == "true";
-		this.showScrollBar = window.localStorage.getItem("showScrollBar") == "true";
-		this.alwaysShowSettings = window.localStorage.getItem("alwaysShowSettings") == "true";
-		this.instrumentCopyPaste = window.localStorage.getItem("instrumentCopyPaste") == "true";
-		this.enableChannelMuting = window.localStorage.getItem("enableChannelMuting") == "true";
-		this.displayBrowserUrl = window.localStorage.getItem("displayBrowserUrl") != "false";
-		this.layout = window.localStorage.getItem("layout") || "small";
-		this.colorTheme = window.localStorage.getItem("colorTheme") || "dark classic";
-		this.visibleOctaves = ((<any>window.localStorage.getItem("visibleOctaves")) >>> 0) || SongDocument.defaultVisibleOctaves;
-		
-		const defaultScale: Scale | undefined = Config.scales.dictionary[window.localStorage.getItem("defaultScale")!];
-		this.defaultScale = (defaultScale != undefined) ? defaultScale.index : 0;
-		
-		if (window.localStorage.getItem("volume") != null) {
-			this.volume = Math.min(<any>window.localStorage.getItem("volume") >>> 0, 75);
-		}
-		
-		if (window.localStorage.getItem("fullScreen") != null) {
-			if (window.localStorage.getItem("fullScreen") == "true") this.layout = "long";
-			window.localStorage.removeItem("fullScreen");
-		}
-		
-		ColorConfig.setTheme(this.colorTheme);
-		Layout.setLayout(this.layout);
+		ColorConfig.setTheme(this.prefs.colorTheme);
+		Layout.setLayout(this.prefs.layout);
 		
 		if (window.sessionStorage.getItem("currentUndoIndex") == null) {
 			window.sessionStorage.setItem("currentUndoIndex", "0");
@@ -116,7 +71,7 @@ export class SongDocument {
 		this.song = new Song(songString);
 		if (songString == "" || songString == undefined) {
 			setDefaultInstruments(this.song);
-			this.song.scale = this.defaultScale;
+			this.song.scale = this.prefs.defaultScale;
 		}
 		songString = this.song.toBase64String();
 		this.synth = new Synth(this.song);
@@ -154,12 +109,12 @@ export class SongDocument {
 	
 	public toggleDisplayBrowserUrl() {
 		const state: HistoryState = this._getHistoryState()!;
-		this.displayBrowserUrl = !this.displayBrowserUrl;
+		this.prefs.displayBrowserUrl = !this.prefs.displayBrowserUrl;
 		this._replaceState(state, this.song.toBase64String());
 	}
 	
 	private _getHistoryState(): HistoryState | null {
-		if (this.displayBrowserUrl) {
+		if (this.prefs.displayBrowserUrl) {
 			return window.history.state;
 		} else {
 			const json: any = JSON.parse(window.sessionStorage.getItem(window.sessionStorage.getItem("currentUndoIndex")!)!);
@@ -168,7 +123,7 @@ export class SongDocument {
 	}
 	
 	private _getHash(): string {
-		if (this.displayBrowserUrl) {
+		if (this.prefs.displayBrowserUrl) {
 			return window.location.hash;
 		} else {
 			const json: any = JSON.parse(window.sessionStorage.getItem(window.sessionStorage.getItem("currentUndoIndex")!)!);
@@ -177,7 +132,7 @@ export class SongDocument {
 	}
 	
 	private _replaceState(state: HistoryState, hash: string): void {
-		if (this.displayBrowserUrl) {
+		if (this.prefs.displayBrowserUrl) {
 			window.history.replaceState(state, "", "#" + hash);
 		} else {
 			window.sessionStorage.setItem(window.sessionStorage.getItem("currentUndoIndex") || "0", JSON.stringify({state, hash}));
@@ -186,7 +141,7 @@ export class SongDocument {
 	}
 	
 	private _pushState(state: HistoryState, hash: string): void {
-		if (this.displayBrowserUrl) {
+		if (this.prefs.displayBrowserUrl) {
 			window.history.pushState(state, "", "#" + hash);
 		} else {
 			let currentIndex: number = Number(window.sessionStorage.getItem("currentUndoIndex"));
@@ -209,7 +164,7 @@ export class SongDocument {
 	}
 	
 	private _forward(): void {
-		if (this.displayBrowserUrl) {
+		if (this.prefs.displayBrowserUrl) {
 			window.history.forward();
 		} else {
 			let currentIndex: number = Number(window.sessionStorage.getItem("currentUndoIndex"));
@@ -223,7 +178,7 @@ export class SongDocument {
 	}
 	
 	private _back(): void {
-		if (this.displayBrowserUrl) {
+		if (this.prefs.displayBrowserUrl) {
 			window.history.back();
 		} else {
 			let currentIndex: number = Number(window.sessionStorage.getItem("currentUndoIndex"));
@@ -244,7 +199,7 @@ export class SongDocument {
 			const state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, instrument: this.viewedInstrument[this.channel], recoveryUid: this._recoveryUid, prompt: null, selection: this.selection.toJSON()};
 			new ChangeSong(this, window.location.hash);
 			this.prompt = state.prompt;
-			if (this.displayBrowserUrl) {
+			if (this.prefs.displayBrowserUrl) {
 				this._replaceState(state, this.song.toBase64String());
 			} else {
 				this._pushState(state, this.song.toBase64String());
@@ -425,34 +380,14 @@ export class SongDocument {
 		this.notifier.changed();
 	}
 	
-	public savePreferences(): void {
-		window.localStorage.setItem("autoPlay", this.autoPlay ? "true" : "false");
-		window.localStorage.setItem("autoFollow", this.autoFollow ? "true" : "false");
-		window.localStorage.setItem("enableNotePreview", this.enableNotePreview ? "true" : "false");
-		window.localStorage.setItem("showFifth", this.showFifth ? "true" : "false");
-		window.localStorage.setItem("notesOutsideScale", this.notesOutsideScale ? "true" : "false");
-		window.localStorage.setItem("defaultScale", Config.scales[this.defaultScale].name);
-		window.localStorage.setItem("showLetters", this.showLetters ? "true" : "false");
-		window.localStorage.setItem("showChannels", this.showChannels ? "true" : "false");
-		window.localStorage.setItem("showScrollBar", this.showScrollBar ? "true" : "false");
-		window.localStorage.setItem("alwaysShowSettings", this.alwaysShowSettings ? "true" : "false");
-		window.localStorage.setItem("enableChannelMuting", this.enableChannelMuting ? "true" : "false");
-		window.localStorage.setItem("instrumentCopyPaste", this.instrumentCopyPaste ? "true" : "false");
-		window.localStorage.setItem("displayBrowserUrl", this.displayBrowserUrl ? "true" : "false");
-		window.localStorage.setItem("layout", this.layout);
-		window.localStorage.setItem("colorTheme", this.colorTheme);
-		window.localStorage.setItem("volume", String(this.volume));
-		window.localStorage.setItem("visibleOctaves", String(this.visibleOctaves));
-	}
-	
 	public setVolume(val: number): void {
-		this.volume = val;
-		this.savePreferences();
+		this.prefs.volume = val;
+		this.prefs.save();
 		this.synth.volume = this._calcVolume();
 	}
 	
 	private _calcVolume(): number {
-		return Math.min(1.0, Math.pow(this.volume / 50.0, 0.5)) * Math.pow(2.0, (this.volume - 75.0) / 25.0);
+		return Math.min(1.0, Math.pow(this.prefs.volume / 50.0, 0.5)) * Math.pow(2.0, (this.prefs.volume - 75.0) / 25.0);
 	}
 	
 	public getCurrentPattern(barOffset: number = 0): Pattern | null {
@@ -468,7 +403,7 @@ export class SongDocument {
 	}
 	
 	public getBarWidth(): number {
-		return (!this.getMobileLayout() && this.enableChannelMuting && !this.getFullScreen()) ? 30 : 32;
+		return (!this.getMobileLayout() && this.prefs.enableChannelMuting && !this.getFullScreen()) ? 30 : 32;
 	}
 	
 	public getChannelHeight(): number {
@@ -476,11 +411,11 @@ export class SongDocument {
 	}
 	
 	public getFullScreen(): boolean {
-		return !this.getMobileLayout() && (this.layout != "small");
+		return !this.getMobileLayout() && (this.prefs.layout != "small");
 	}
 	
 	public getVisibleOctaveCount(): number {
-		return this.getFullScreen() ? this.visibleOctaves : SongDocument.defaultVisibleOctaves;
+		return this.getFullScreen() ? this.prefs.visibleOctaves : Preferences.defaultVisibleOctaves;
 	}
 	
 	public getVisiblePitchCount(): number {

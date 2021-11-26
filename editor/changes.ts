@@ -2320,7 +2320,7 @@ export class ChangeSong extends ChangeGroup {
 			this.append(new ChangePatternSelection(doc, 0, 0));
 			doc.selection.resetBoxSelection();
 			setDefaultInstruments(doc.song);
-			doc.song.scale = doc.defaultScale;
+			doc.song.scale = doc.prefs.defaultScale;
 			
 			for (let i: number = 0; i <= doc.song.channels.length; i++) {
 				doc.viewedInstrument[i] = 0;
@@ -2917,7 +2917,7 @@ export class ChangeDragSelectedNotes extends ChangeSequence {
 			this.append(new ChangeNoteLength(doc, note, Math.max(note.start, newStart), Math.min(newEnd, note.end)));
 			
 			for (let i: number = 0; i < Math.abs(transpose); i++) {
-				this.append(new ChangeTransposeNote(doc, channelIndex, note, transpose > 0, doc.notesOutsideScale));
+				this.append(new ChangeTransposeNote(doc, channelIndex, note, transpose > 0, doc.prefs.notesOutsideScale));
 			}
 		}
 	}

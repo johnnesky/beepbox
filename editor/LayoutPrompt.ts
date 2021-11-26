@@ -68,7 +68,7 @@ export class LayoutPrompt implements Prompt {
 		this._cancelButton.addEventListener("click", this._close);
 		this.container.addEventListener("keydown", this._whenKeyPressed);
 		
-		(<any> this._form.elements)["layout"].value = this._doc.layout;
+		(<any> this._form.elements)["layout"].value = this._doc.prefs.layout;
 	}
 	
 	private _close = (): void => { 
@@ -88,9 +88,9 @@ export class LayoutPrompt implements Prompt {
 	}
 	
 	private _confirm = (): void => { 
-		this._doc.layout = (<any> this._form.elements)["layout"].value;
-		this._doc.savePreferences();
-		Layout.setLayout(this._doc.layout);
+		this._doc.prefs.layout = (<any> this._form.elements)["layout"].value;
+		this._doc.prefs.save();
+		Layout.setLayout(this._doc.prefs.layout);
 		this._close();
 	}
 }

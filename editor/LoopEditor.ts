@@ -202,7 +202,7 @@ export class LoopEditor {
 				this._change = new ChangeLoop(this._doc, oldStart, oldEnd - oldStart, endPoints.start, endPoints.length);
 			}
 			this._doc.synth.jumpIntoLoop();
-			if (this._doc.autoFollow) {
+			if (this._doc.prefs.autoFollow) {
 				new ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead), true);
 			}
 			this._doc.setProspectiveChange(this._change);

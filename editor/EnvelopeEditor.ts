@@ -68,7 +68,7 @@ export class EnvelopeEditor {
 	
 	public render(): void {
 		const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
-		if (!this._doc.alwaysShowSettings && instrument.preset != instrument.type) return;
+		if (!this._doc.prefs.alwaysShowSettings && instrument.preset != instrument.type) return;
 		
 		for (let envelopeIndex: number = this._rows.length; envelopeIndex < instrument.envelopeCount; envelopeIndex++) {
 			const targetSelect: HTMLSelectElement = HTML.select();

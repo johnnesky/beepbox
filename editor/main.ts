@@ -18,7 +18,7 @@ editor.whenUpdated();
 editor.mainLayer.focus();
 
 // don't autoplay on mobile devices, wait for input.
-if (!isMobile && doc.autoPlay) {
+if (!isMobile && doc.prefs.autoPlay) {
 	function autoplay(): void {
 		if (!document.hidden) {
 			doc.synth.play();

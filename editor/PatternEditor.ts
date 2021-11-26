@@ -330,7 +330,7 @@ export class PatternEditor {
 	private _snapToPitch(guess: number, min: number, max: number): number {
 		if (guess < min) guess = min;
 		if (guess > max) guess = max;
-		const scale: ReadonlyArray<boolean> = this._doc.notesOutsideScale ? Config.scales.dictionary["expert"].flags : Config.scales[this._doc.song.scale].flags;
+		const scale: ReadonlyArray<boolean> = this._doc.prefs.notesOutsideScale ? Config.scales.dictionary["expert"].flags : Config.scales[this._doc.song.scale].flags;
 		if (scale[Math.floor(guess) % Config.pitchesPerOctave] || this._doc.song.getChannelIsNoise(this._doc.channel)) {
 			return Math.floor(guess);
 		} else {
@@ -423,7 +423,7 @@ export class PatternEditor {
 			this._svgPlayhead.setAttribute("visibility", "hidden");
 		}
 		
-		if (this._doc.synth.playing && this._doc.autoFollow && this._followPlayheadBar != playheadBar) {
+		if (this._doc.synth.playing && this._doc.prefs.autoFollow && this._followPlayheadBar != playheadBar) {
 			new ChangeChannelBar(this._doc, this._doc.channel, playheadBar);
 			this._doc.notifier.notifyWatchers();
 		}
@@ -470,7 +470,7 @@ export class PatternEditor {
 	}
 	
 	private _whenCursorPressed(): void {
-		if (this._doc.enableNotePreview) this._doc.synth.maintainLiveInput();
+		if (this._doc.prefs.enableNotePreview) this._doc.synth.maintainLiveInput();
 		this._mouseDown = true;
 		this._mouseXStart = this._mouseX;
 		this._mouseYStart = this._mouseY;
@@ -518,7 +518,7 @@ export class PatternEditor {
 			if (pattern == null) throw new Error();
 			sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
 			
-			if (this._doc.enableNotePreview && !this._doc.synth.playing) {
+			if (this._doc.prefs.enableNotePreview && !this._doc.synth.playing) {
 				// Play the new note out loud if enabled.
 				const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
 				this._doc.synth.liveInputDuration = duration;
@@ -551,7 +551,7 @@ export class PatternEditor {
 	}
 	
 	private _whenCursorMoved(): void {
-		if (this._doc.enableNotePreview && this._mouseOver) this._doc.synth.maintainLiveInput();
+		if (this._doc.prefs.enableNotePreview && this._mouseOver) this._doc.synth.maintainLiveInput();
 		
 		// HACK: Undoable pattern changes rely on persistent instance
 		// references. Loading song from hash via undo/redo breaks that,
@@ -892,7 +892,7 @@ export class PatternEditor {
 					sequence.append(new ChangePitchAdded(this._doc, this._cursor.curNote, this._cursor.pitch, this._cursor.curNote.pitches.length));
 					this._copyPins(this._cursor.curNote);
 					
-					if (this._doc.enableNotePreview && !this._doc.synth.playing) {
+					if (this._doc.prefs.enableNotePreview && !this._doc.synth.playing) {
 						const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
 						this._doc.synth.liveInputDuration = duration;
 						this._doc.synth.liveInputPitches = this._cursor.curNote.pitches.concat();
@@ -1064,9 +1064,9 @@ export class PatternEditor {
 			this._updateSelection();
 		}
 		
-		if (this._renderedFifths != this._doc.showFifth) {
-			this._renderedFifths = this._doc.showFifth;
-			this._backgroundPitchRows[7].setAttribute("fill", this._doc.showFifth ? ColorConfig.fifthNote : ColorConfig.pitchBackground);
+		if (this._renderedFifths != this._doc.prefs.showFifth) {
+			this._renderedFifths = this._doc.prefs.showFifth;
+			this._backgroundPitchRows[7].setAttribute("fill", this._doc.prefs.showFifth ? ColorConfig.fifthNote : ColorConfig.pitchBackground);
 		}
 		
 		for (let j: number = 0; j < Config.pitchesPerOctave; j++) {
@@ -1085,7 +1085,7 @@ export class PatternEditor {
 			}
 		}
 		
-		if (this._doc.showChannels) {
+		if (this._doc.prefs.showChannels) {
 			for (let channel: number = this._doc.song.getChannelCount() - 1; channel >= 0; channel--) {
 				if (channel == this._doc.channel) continue;
 				if (this._doc.song.getChannelIsNoise(channel) != this._doc.song.getChannelIsNoise(this._doc.channel)) continue;

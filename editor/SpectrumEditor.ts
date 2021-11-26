@@ -181,9 +181,9 @@ export class SpectrumEditor {
 			this._arrow.setAttribute("d", "M " + this._editorWidth + " " + prettyNumber(lastHeight) + " L " + (this._editorWidth - 4) + " " + prettyNumber(lastHeight - 4) + " L " + (this._editorWidth - 4) + " " + prettyNumber(lastHeight + 4) + " z");
 			this._arrow.style.display = (lastValue > 0) ? "" : "none";
 		}
-		if (this._renderedFifths != this._doc.showFifth) {
-			this._renderedFifths = this._doc.showFifth;
-			this._fifths.style.display = this._doc.showFifth ? "" : "none";
+		if (this._renderedFifths != this._doc.prefs.showFifth) {
+			this._renderedFifths = this._doc.prefs.showFifth;
+			this._fifths.style.display = this._doc.prefs.showFifth ? "" : "none";
 		}
 	}
 }

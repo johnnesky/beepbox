@@ -26,7 +26,7 @@ export class MuteEditor {
 	}
 	
 	public render(): void {
-		if (!this._doc.enableChannelMuting) return;
+		if (!this._doc.prefs.enableChannelMuting) return;
 		
 		const channelHeight = this._doc.getChannelHeight();
 		
