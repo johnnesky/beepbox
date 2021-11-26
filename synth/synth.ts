@@ -18,6 +18,21 @@ const epsilon: number = (1.0e-24); // For detecting and avoiding float denormals
 //let samplesAccumulated: number = 0;
 //let samplePerformance: number = 0;
 
+export function clamp(min: number, max: number, val: number): number {
+	max = max - 1;
+	if (val <= max) {
+		if (val >= min) return val;
+		else return min;
+	} else {
+		return max;
+	}
+}
+
+function validateRange(min: number, max: number, val: number): number {
+	if (min <= val && val <= max) return val;
+	throw new Error(`Value ${val} not in range [${min}, ${max}]`);
+}
+
 const enum CharCode {
 	SPACE = 32,
 	HASH = 35,
@@ -288,21 +303,6 @@ export function makeNotePin(interval: number, time: number, size: number): NoteP
 	return {interval: interval, time: time, size: size};
 }
 
-export function clamp(min: number, max: number, val: number): number {
-	max = max - 1;
-	if (val <= max) {
-		if (val >= min) return val;
-		else return min;
-	} else {
-		return max;
-	}
-}
-
-function validateRange(min: number, max: number, val: number): number {
-	if (min <= val && val <= max) return val;
-	throw new Error(`Value ${val} not in range [${min}, ${max}]`);
-}
-
 export class Note {
 	public pitches: number[];
 	public pins: NotePin[];
@@ -381,6 +381,144 @@ export class Pattern {
 		this.notes.length = 0;
 		this.instruments[0] = 0;
 		this.instruments.length = 1;
+	}
+	
+	public toJsonObject(song: Song): any {
+		const noteArray: Object[] = [];
+		for (const note of this.notes) {
+			const pointArray: Object[] = [];
+			for (const pin of note.pins) {
+				pointArray.push({
+					"tick": (pin.time + note.start) * Config.rhythms[song.rhythm].stepsPerBeat / Config.partsPerBeat,
+					"pitchBend": pin.interval,
+					"volume": Math.round(pin.size * 100 / 3),
+				});
+			}
+			
+			const noteObject: any = {
+				"pitches": note.pitches,
+				"points": pointArray,
+			};
+			if (note.start == 0) {
+				noteObject["continuesLastPattern"] = note.continuesLastPattern;
+			}
+			noteArray.push(noteObject);
+		}
+		
+		const patternObject: any = {"notes": noteArray};
+		if (song.patternInstruments) {
+			patternObject["instruments"] = this.instruments.map(i => i + 1);
+		}
+		return patternObject;
+	}
+	
+	public fromJsonObject(patternObject: any, song: Song, channel: Channel, importedPartsPerBeat: number, isNoiseChannel: boolean): void {
+		if (song.patternInstruments) {
+			if (Array.isArray(patternObject["instruments"])) {
+				const instruments: any[] = patternObject["instruments"];
+				const instrumentCount: number = clamp(Config.instrumentCountMin, song.getMaxInstrumentsPerPatternForChannel(channel) + 1, instruments.length);
+				for (let j: number = 0; j < instrumentCount; j++) {
+					this.instruments[j] = clamp(0, channel.instruments.length, (instruments[j] | 0) - 1);
+				}
+				this.instruments.length = instrumentCount;
+			} else {
+				this.instruments[0] = clamp(0, channel.instruments.length, (patternObject["instrument"] | 0) - 1);
+				this.instruments.length = 1;
+			}
+		}
+		
+		if (patternObject["notes"] && patternObject["notes"].length > 0) {
+			const maxNoteCount: number = Math.min(song.beatsPerBar * Config.partsPerBeat, patternObject["notes"].length >>> 0);
+			
+			// TODO: Consider supporting notes specified in any timing order, sorting them and truncating as necessary.
+			let tickClock: number = 0;
+			for (let j: number = 0; j < patternObject["notes"].length; j++) {
+				if (j >= maxNoteCount) break;
+				
+				const noteObject = patternObject["notes"][j];
+				if (!noteObject || !noteObject["pitches"] || !(noteObject["pitches"].length >= 1) || !noteObject["points"] || !(noteObject["points"].length >= 2)) {
+					continue;
+				}
+				
+				const note: Note = new Note(0, 0, 0, 0);
+				note.pitches = [];
+				note.pins = [];
+				
+				for (let k: number = 0; k < noteObject["pitches"].length; k++) {
+					const pitch: number = noteObject["pitches"][k] | 0;
+					if (note.pitches.indexOf(pitch) != -1) continue;
+					note.pitches.push(pitch);
+					if (note.pitches.length >= Config.maxChordSize) break;
+				}
+				if (note.pitches.length < 1) continue;
+				
+				let noteClock: number = tickClock;
+				let startInterval: number = 0;
+				for (let k: number = 0; k < noteObject["points"].length; k++) {
+					const pointObject: any = noteObject["points"][k];
+					if (pointObject == undefined || pointObject["tick"] == undefined) continue;
+					const interval: number = (pointObject["pitchBend"] == undefined) ? 0 : (pointObject["pitchBend"] | 0);
+					
+					const time: number = Math.round((+pointObject["tick"]) * Config.partsPerBeat / importedPartsPerBeat);
+					
+					const size: number = (pointObject["volume"] == undefined) ? 3 : Math.max(0, Math.min(3, Math.round((pointObject["volume"] | 0) * 3 / 100)));
+					
+					if (time > song.beatsPerBar * Config.partsPerBeat) continue;
+					if (note.pins.length == 0) {
+						if (time < noteClock) continue;
+						note.start = time;
+						startInterval = interval;
+					} else {
+						if (time <= noteClock) continue;
+					}
+					noteClock = time;
+					
+					note.pins.push(makeNotePin(interval - startInterval, time - note.start, size));
+				}
+				if (note.pins.length < 2) continue;
+				
+				note.end = note.pins[note.pins.length - 1].time + note.start;
+				
+				const maxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
+				let lowestPitch: number = maxPitch;
+				let highestPitch: number = 0;
+				for (let k: number = 0; k < note.pitches.length; k++) {
+					note.pitches[k] += startInterval;
+					if (note.pitches[k] < 0 || note.pitches[k] > maxPitch) {
+						note.pitches.splice(k, 1);
+						k--;
+					}
+					if (note.pitches[k] < lowestPitch) lowestPitch = note.pitches[k];
+					if (note.pitches[k] > highestPitch) highestPitch = note.pitches[k];
+				}
+				if (note.pitches.length < 1) continue;
+				
+				for (let k: number = 0; k < note.pins.length; k++) {
+					const pin: NotePin = note.pins[k];
+					if (pin.interval + lowestPitch < 0) pin.interval = -lowestPitch;
+					if (pin.interval + highestPitch > maxPitch) pin.interval = maxPitch - highestPitch;
+					if (k >= 2) {
+						if (pin.interval == note.pins[k-1].interval &&
+							pin.interval == note.pins[k-2].interval &&
+							pin.size == note.pins[k-1].size &&
+							pin.size == note.pins[k-2].size)
+						{
+							note.pins.splice(k-1, 1);
+							k--;
+						}
+					}
+				}
+				
+				if (note.start == 0) {
+					note.continuesLastPattern = (noteObject["continuesLastPattern"] === true);
+				} else {
+					note.continuesLastPattern = false;
+				}
+				
+				this.notes.push(note);
+				tickClock = note.end;
+			}
+		}
 	}
 }
 
@@ -3033,33 +3171,7 @@ export class Song {
 			
 			const patternArray: Object[] = [];
 			for (const pattern of channel.patterns) {
-				const noteArray: Object[] = [];
-				for (const note of pattern.notes) {
-					const pointArray: Object[] = [];
-					for (const pin of note.pins) {
-						pointArray.push({
-							"tick": (pin.time + note.start) * Config.rhythms[this.rhythm].stepsPerBeat / Config.partsPerBeat,
-							"pitchBend": pin.interval,
-							"volume": Math.round(pin.size * 100 / 3),
-						});
-					}
-					
-					const noteObject: any = {
-						"pitches": note.pitches,
-						"points": pointArray,
-					};
-					if (note.start == 0) {
-						noteObject["continuesLastPattern"] = note.continuesLastPattern;
-					}
-					noteArray.push(noteObject);
-				}
-				
-				const patternObject: any = {"notes": noteArray};
-				if (this.patternInstruments) {
-					patternObject["instruments"] = pattern.instruments.map(i => i + 1);
-				}
-				
-				patternArray.push(patternObject);
+				patternArray.push(pattern.toJsonObject(this));
 			}
 			
 			const sequenceArray: number[] = [];
@@ -3239,112 +3351,7 @@ export class Song {
 					if (channelObject["patterns"]) patternObject = channelObject["patterns"][i];
 					if (patternObject == undefined) continue;
 					
-					if (this.patternInstruments) {
-						if (Array.isArray(patternObject["instruments"])) {
-							const instruments: any[] = patternObject["instruments"];
-							const instrumentCount: number = clamp(Config.instrumentCountMin, this.getMaxInstrumentsPerPatternForChannel(channel) + 1, instruments.length);
-							for (let j: number = 0; j < instrumentCount; j++) {
-								pattern.instruments[j] = clamp(0, channel.instruments.length, (instruments[j] | 0) - 1);
-							}
-							pattern.instruments.length = instrumentCount;
-						} else {
-							pattern.instruments[0] = clamp(0, channel.instruments.length, (patternObject["instrument"] | 0) - 1);
-							pattern.instruments.length = 1;
-						}
-					}
-					
-					if (patternObject["notes"] && patternObject["notes"].length > 0) {
-						const maxNoteCount: number = Math.min(this.beatsPerBar * Config.partsPerBeat, patternObject["notes"].length >>> 0);
-						
-						// TODO: Consider supporting notes specified in any timing order, sorting them and truncating as necessary. 
-						let tickClock: number = 0;
-						for (let j: number = 0; j < patternObject["notes"].length; j++) {
-							if (j >= maxNoteCount) break;
-							
-							const noteObject = patternObject["notes"][j];
-							if (!noteObject || !noteObject["pitches"] || !(noteObject["pitches"].length >= 1) || !noteObject["points"] || !(noteObject["points"].length >= 2)) {
-								continue;
-							}
-							
-							const note: Note = new Note(0, 0, 0, 0);
-							note.pitches = [];
-							note.pins = [];
-							
-							for (let k: number = 0; k < noteObject["pitches"].length; k++) {
-								const pitch: number = noteObject["pitches"][k] | 0;
-								if (note.pitches.indexOf(pitch) != -1) continue;
-								note.pitches.push(pitch);
-								if (note.pitches.length >= Config.maxChordSize) break;
-							}
-							if (note.pitches.length < 1) continue;
-							
-							let noteClock: number = tickClock;
-							let startInterval: number = 0;
-							for (let k: number = 0; k < noteObject["points"].length; k++) {
-								const pointObject: any = noteObject["points"][k];
-								if (pointObject == undefined || pointObject["tick"] == undefined) continue;
-								const interval: number = (pointObject["pitchBend"] == undefined) ? 0 : (pointObject["pitchBend"] | 0);
-								
-								const time: number = Math.round((+pointObject["tick"]) * Config.partsPerBeat / importedPartsPerBeat);
-								
-								const size: number = (pointObject["volume"] == undefined) ? 3 : Math.max(0, Math.min(3, Math.round((pointObject["volume"] | 0) * 3 / 100)));
-								
-								if (time > this.beatsPerBar * Config.partsPerBeat) continue;
-								if (note.pins.length == 0) {
-									if (time < noteClock) continue;
-									note.start = time;
-									startInterval = interval;
-								} else {
-									if (time <= noteClock) continue;
-								}
-								noteClock = time;
-								
-								note.pins.push(makeNotePin(interval - startInterval, time - note.start, size));
-							}
-							if (note.pins.length < 2) continue;
-							
-							note.end = note.pins[note.pins.length - 1].time + note.start;
-							
-							const maxPitch: number = isNoiseChannel ? Config.drumCount - 1 : Config.maxPitch;
-							let lowestPitch: number = maxPitch;
-							let highestPitch: number = 0;
-							for (let k: number = 0; k < note.pitches.length; k++) {
-								note.pitches[k] += startInterval;
-								if (note.pitches[k] < 0 || note.pitches[k] > maxPitch) {
-									note.pitches.splice(k, 1);
-									k--;
-								}
-								if (note.pitches[k] < lowestPitch) lowestPitch = note.pitches[k];
-								if (note.pitches[k] > highestPitch) highestPitch = note.pitches[k];
-							}
-							if (note.pitches.length < 1) continue;
-							
-							for (let k: number = 0; k < note.pins.length; k++) {
-								const pin: NotePin = note.pins[k];
-								if (pin.interval + lowestPitch < 0) pin.interval = -lowestPitch;
-								if (pin.interval + highestPitch > maxPitch) pin.interval = maxPitch - highestPitch;
-								if (k >= 2) {
-									if (pin.interval == note.pins[k-1].interval && 
-										pin.interval == note.pins[k-2].interval && 
-										pin.size == note.pins[k-1].size && 
-										pin.size == note.pins[k-2].size)
-									{
-										note.pins.splice(k-1, 1);
-										k--;
-									}
-								}
-							}
-							
-							if (note.start == 0) {
-								note.continuesLastPattern = (noteObject["continuesLastPattern"] === true);
-							} else {
-								note.continuesLastPattern = false;
-							}
-							
-							pattern.notes.push(note);
-							tickClock = note.end;
-						}
-					}
+					pattern.fromJsonObject(patternObject, this, channel, importedPartsPerBeat, isNoiseChannel);
 				}
 				channel.patterns.length = this.patternsPerChannel;
 				
