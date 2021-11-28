@@ -372,10 +372,10 @@ export class SongDocument {
 	}
 	
 	public goBackToStart(): void {
-		this.channel = 0;
 		this.bar = 0;
+		this.channel = 0;
 		this.barScrollPos = 0;
-		this.notifier.changed();
+		this.channelScrollPos = 0;
 		this.synth.snapToStart();
 		this.notifier.changed();
 	}

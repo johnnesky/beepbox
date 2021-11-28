@@ -1295,7 +1295,7 @@ export class SongEditor {
 					this._doc.selection.swapChannels(-1);
 				} else if (event.shiftKey) {
 					this._doc.selection.boxSelectionY1 = Math.max(0, this._doc.selection.boxSelectionY1 - 1);
-					this._doc.selection.scrollToSelection();
+					this._doc.selection.scrollToEndOfSelection();
 					this._doc.selection.selectionUpdated();
 				} else {
 					this._doc.selection.setChannelBar((this._doc.channel - 1 + this._doc.song.getChannelCount()) % this._doc.song.getChannelCount(), this._doc.bar);
@@ -1308,7 +1308,7 @@ export class SongEditor {
 					this._doc.selection.swapChannels(1);
 				} else if (event.shiftKey) {
 					this._doc.selection.boxSelectionY1 = Math.min(this._doc.song.getChannelCount() - 1, this._doc.selection.boxSelectionY1 + 1);
-					this._doc.selection.scrollToSelection();
+					this._doc.selection.scrollToEndOfSelection();
 					this._doc.selection.selectionUpdated();
 				} else {
 					this._doc.selection.setChannelBar((this._doc.channel + 1) % this._doc.song.getChannelCount(), this._doc.bar);
@@ -1319,7 +1319,7 @@ export class SongEditor {
 			case 37: // left
 				if (event.shiftKey) {
 					this._doc.selection.boxSelectionX1 = Math.max(0, this._doc.selection.boxSelectionX1 - 1);
-					this._doc.selection.scrollToSelection();
+					this._doc.selection.scrollToEndOfSelection();
 					this._doc.selection.selectionUpdated();
 				} else {
 					this._doc.selection.setChannelBar(this._doc.channel, (this._doc.bar + this._doc.song.barCount - 1) % this._doc.song.barCount);
@@ -1330,7 +1330,7 @@ export class SongEditor {
 			case 39: // right
 				if (event.shiftKey) {
 					this._doc.selection.boxSelectionX1 = Math.min(this._doc.song.barCount - 1, this._doc.selection.boxSelectionX1 + 1);
-					this._doc.selection.scrollToSelection();
+					this._doc.selection.scrollToEndOfSelection();
 					this._doc.selection.selectionUpdated();
 				} else {
 					this._doc.selection.setChannelBar(this._doc.channel, (this._doc.bar + 1) % this._doc.song.barCount);

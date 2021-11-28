@@ -399,7 +399,7 @@ export class TrackEditor {
 		
 		this._select.style.display = this._touchMode ? "" : "none";
 		
-		if (this._doc.selection.boxSelectionWidth > 1 || this._doc.selection.boxSelectionHeight > 1) {
+		if (this._doc.selection.boxSelectionActive) {
 			// TODO: This causes the selection rectangle to repaint every time the
 			// editor renders and the selection is visible. Check if anything changed
 			// before overwriting the attributes?

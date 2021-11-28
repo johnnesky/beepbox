@@ -1034,7 +1034,6 @@ export class ChangeBarCount extends Change {
 				doc.song.loopStart = Math.max(0, doc.song.loopStart + diff);
 			}
 			doc.bar = Math.min(doc.bar, newValue - 1);
-			doc.barScrollPos = Math.max(0, Math.min(newValue - doc.trackVisibleBars, doc.barScrollPos));
 			doc.song.loopLength = Math.min(newValue, doc.song.loopLength);
 			doc.song.loopStart = Math.min(newValue - doc.song.loopLength, doc.song.loopStart);
 			doc.song.barCount = newValue;
@@ -1061,7 +1060,7 @@ export class ChangeInsertBars extends Change {
 		doc.song.barCount = newLength;
 		
 		doc.bar += count;
-		doc.barScrollPos = Math.min(newLength - doc.trackVisibleBars, doc.barScrollPos + count);
+		doc.barScrollPos += count;
 		if (doc.song.loopStart >= start) {
 			doc.song.loopStart += count;
 		} else if (doc.song.loopStart + doc.song.loopLength >= start) {
@@ -1151,7 +1150,6 @@ export class ChangeChannelCount extends Change {
 			doc.song.channels.length = doc.song.getChannelCount();
 			
 			doc.channel = Math.min(doc.channel, newPitchChannelCount + newNoiseChannelCount - 1);
-			doc.channelScrollPos = Math.max(0, Math.min(doc.song.getChannelCount() - doc.trackVisibleChannels, doc.channelScrollPos));
 			doc.notifier.changed();
 			
 			this._didSomething();
@@ -1206,8 +1204,7 @@ export class ChangeChannelBar extends Change {
 		doc.channel = newChannel;
 		doc.bar = newBar;
 		if (!silently) {
-			doc.barScrollPos = Math.min(doc.bar, Math.max(doc.bar - (doc.trackVisibleBars - 1), doc.barScrollPos));
-			doc.channelScrollPos = Math.min(doc.channel, Math.max(doc.channel - (doc.trackVisibleChannels - 1), doc.channelScrollPos));
+			doc.selection.scrollToSelectedPattern();
 		}
 		doc.notifier.changed();
 		if (oldChannel != newChannel || oldBar != newBar) {
@@ -2340,16 +2337,13 @@ export class ChangeValidateTrackSelection extends Change {
 		super();
 		const channelIndex: number = Math.min(doc.channel, doc.song.getChannelCount() - 1);
 		const bar: number = Math.max(0, Math.min(doc.song.barCount - 1, doc.bar));
-		const barScrollPos: number = Math.min(doc.bar, Math.max(doc.bar - (doc.trackVisibleBars - 1), Math.max(0, Math.min(doc.song.barCount - doc.trackVisibleBars, doc.barScrollPos))));
-		const channelScrollPos: number = Math.min(doc.channel, Math.max(doc.channel - (doc.trackVisibleChannels - 1), Math.max(0, Math.min(doc.song.getChannelCount() - doc.trackVisibleChannels, doc.channelScrollPos))));
-		if (doc.channel != channelIndex || doc.bar != bar || doc.channelScrollPos != channelScrollPos || doc.barScrollPos != barScrollPos) {
-			doc.channel = channelIndex;
-			doc.channel = channelScrollPos;
+		if (doc.channel != channelIndex || doc.bar != bar) {
 			doc.bar = bar;
-			doc.barScrollPos = barScrollPos;
-			doc.notifier.changed();
+			doc.channel = channelIndex;
 			this._didSomething();
 		}
+		doc.selection.scrollToSelectedPattern();
+		doc.notifier.changed();
 	}
 }
 

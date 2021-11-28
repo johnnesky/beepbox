@@ -32,7 +32,7 @@ export class BarScrollBar {
 	private _dragStart: number;
 	private _notchSpace: number;
 	private _renderedNotchCount: number = -1;
-	private _renderedBarPos: number = -1;
+	private _renderedScrollBarPos: number = -1;
 	
 	constructor(private _doc: SongDocument, private _trackContainer: HTMLDivElement) {
 		const center: number = this._editorHeight * 0.5;
@@ -192,8 +192,11 @@ export class BarScrollBar {
 			}
 		}
 		
-		if (resized || this._renderedBarPos != this._doc.barScrollPos) {
-			this._renderedBarPos = this._doc.barScrollPos;
+		this._doc.barScrollPos     = Math.max(0, Math.min(this._doc.song.barCount          - this._doc.trackVisibleBars,     this._doc.barScrollPos));
+		this._doc.channelScrollPos = Math.max(0, Math.min(this._doc.song.getChannelCount() - this._doc.trackVisibleChannels, this._doc.channelScrollPos));
+		
+		if (resized || this._renderedScrollBarPos != this._doc.barScrollPos) {
+			this._renderedScrollBarPos = this._doc.barScrollPos;
 			this._handle.setAttribute("x", String(this._notchSpace * this._doc.barScrollPos));
 			this._handle.setAttribute("width", String(this._notchSpace * this._doc.trackVisibleBars));
 			this._handleHighlight.setAttribute("x", String(this._notchSpace * this._doc.barScrollPos));

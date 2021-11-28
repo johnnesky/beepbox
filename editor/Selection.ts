@@ -82,11 +82,16 @@ export class Selection {
 	public get boxSelectionHeight(): number {
 		return Math.abs(this.boxSelectionY0 - this.boxSelectionY1) + 1;
 	}
-	public scrollToSelection(): void {
-		this._doc.barScrollPos = Math.min(this._doc.barScrollPos, this.boxSelectionX1);
-		this._doc.barScrollPos = Math.max(this._doc.barScrollPos, this.boxSelectionX1 - (this._doc.trackVisibleBars - 1));
-		this._doc.channelScrollPos = Math.min(this._doc.channelScrollPos, this.boxSelectionY1);
-		this._doc.channelScrollPos = Math.max(this._doc.channelScrollPos, this.boxSelectionY1 - (this._doc.trackVisibleChannels - 1));
+	public get boxSelectionActive(): boolean {
+		return this.boxSelectionWidth > 1 || this.boxSelectionHeight > 1;
+	}
+	public scrollToSelectedPattern(): void {
+		this._doc.barScrollPos     = Math.min(this._doc.bar,     Math.max(this._doc.bar     - (this._doc.trackVisibleBars     - 1), this._doc.barScrollPos));
+		this._doc.channelScrollPos = Math.min(this._doc.channel, Math.max(this._doc.channel - (this._doc.trackVisibleChannels - 1), this._doc.channelScrollPos));
+	}
+	public scrollToEndOfSelection(): void {
+		this._doc.barScrollPos     = Math.min(this.boxSelectionX1, Math.max(this.boxSelectionX1 - (this._doc.trackVisibleBars     - 1), this._doc.barScrollPos));
+		this._doc.channelScrollPos = Math.min(this.boxSelectionY1, Math.max(this.boxSelectionY1 - (this._doc.trackVisibleChannels - 1), this._doc.channelScrollPos));
 	}
 	
 	public setChannelBar(channelIndex: number, bar: number): void {
@@ -170,7 +175,7 @@ export class Selection {
 		const group: ChangeGroup = new ChangeGroup();
 		if (this._doc.selection.patternSelectionActive) {
 			
-			if (this.boxSelectionWidth > 1 || this.boxSelectionHeight > 1) {
+			if (this.boxSelectionActive) {
 				group.append(new ChangeDuplicateSelectedReusedPatterns(this._doc, this.boxSelectionBar, this.boxSelectionWidth, this.boxSelectionChannel, this.boxSelectionHeight));
 			}
 			
@@ -297,7 +302,7 @@ export class Selection {
 		const copiedPartDuration: number = selectionCopy["partDuration"] >>> 0;
 		
 		const group: ChangeGroup = new ChangeGroup();
-		const fillSelection: boolean = (this.boxSelectionWidth > 1 || this.boxSelectionHeight > 1);
+		const fillSelection: boolean = this.boxSelectionActive;
 		
 		const pasteHeight: number = fillSelection ? this.boxSelectionHeight : Math.min(channelCopies.length, this._doc.song.getChannelCount() - this.boxSelectionChannel);
 		for (let pasteChannel: number = 0; pasteChannel < pasteHeight; pasteChannel++) {
@@ -457,7 +462,7 @@ export class Selection {
 		const channelCopies: ChannelCopy[] = selectionCopy["channels"] || [];
 		
 		const group: ChangeGroup = new ChangeGroup();
-		const fillSelection: boolean = (this.boxSelectionWidth > 1 || this.boxSelectionHeight > 1);
+		const fillSelection: boolean = this.boxSelectionActive;
 		
 		const pasteHeight: number = fillSelection ? this.boxSelectionHeight : Math.min(channelCopies.length, this._doc.song.getChannelCount() - this.boxSelectionChannel);
 		for (let pasteChannel: number = 0; pasteChannel < pasteHeight; pasteChannel++) {
@@ -566,7 +571,7 @@ export class Selection {
 	public forceRhythm(): void {
 		const group: ChangeGroup = new ChangeGroup();
 		
-		if (this.boxSelectionWidth > 1 || this.boxSelectionHeight > 1) {
+		if (this.boxSelectionActive) {
 			group.append(new ChangeDuplicateSelectedReusedPatterns(this._doc, this.boxSelectionBar, this.boxSelectionWidth, this.boxSelectionChannel, this.boxSelectionHeight));
 		}
 		
@@ -582,7 +587,7 @@ export class Selection {
 	public forceScale(): void {
 		const group: ChangeGroup = new ChangeGroup();
 		
-		if (this.boxSelectionWidth > 1 || this.boxSelectionHeight > 1) {
+		if (this.boxSelectionActive) {
 			group.append(new ChangeDuplicateSelectedReusedPatterns(this._doc, this.boxSelectionBar, this.boxSelectionWidth, this.boxSelectionChannel, this.boxSelectionHeight));
 		}
 		
@@ -620,7 +625,7 @@ export class Selection {
 		const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTranspose);
 		this._changeTranspose = new ChangeGroup();
 		
-		if (this.boxSelectionWidth > 1 || this.boxSelectionHeight > 1) {
+		if (this.boxSelectionActive) {
 			this._changeTranspose.append(new ChangeDuplicateSelectedReusedPatterns(this._doc, this.boxSelectionBar, this.boxSelectionWidth, this.boxSelectionChannel, this.boxSelectionHeight));
 		}
 		
@@ -682,7 +687,7 @@ export class Selection {
 					if (instruments.length == 0) instruments[0] = 0;
 				}
 				
-				if (this.boxSelectionWidth > 1 || this.boxSelectionHeight > 1) {
+				if (this.boxSelectionActive) {
 					this._changeInstrument.append(new ChangeDuplicateSelectedReusedPatterns(this._doc, this.boxSelectionBar, this.boxSelectionWidth, this.boxSelectionChannel, this.boxSelectionHeight));
 				}
 				for (const channelIndex of this._eachSelectedChannel()) {
@@ -698,7 +703,7 @@ export class Selection {
 			this._changeInstrument.append(new ChangeViewInstrument(this._doc, instrument));
 			
 			if (!this._doc.song.layeredInstruments && this._doc.song.patternInstruments) {
-				if (this.boxSelectionWidth > 1 || this.boxSelectionHeight > 1) {
+				if (this.boxSelectionActive) {
 					this._changeInstrument.append(new ChangeDuplicateSelectedReusedPatterns(this._doc, this.boxSelectionBar, this.boxSelectionWidth, this.boxSelectionChannel, this.boxSelectionHeight));
 				}
 				const instruments: number[] = [instrument];
