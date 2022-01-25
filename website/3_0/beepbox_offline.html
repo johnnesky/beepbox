@@ -9186,8 +9186,7 @@ var beepbox = (function (exports) {
         return clone;
     }
 
-    function makeColorBrighter(hex, k) {
-    	// #AGZAM4
+    function makeColorBrighter(hex, k) { // #AGZAM4
     	var R = 0;
     	var G = 0;
     	var B = 0;
@@ -9202,6 +9201,7 @@ var beepbox = (function (exports) {
 		}
 		if(k < 0) k = 0;
 		if(k > 1) k = 1;
+		// Color of light is rgb(iR iG iB)
 		let iR = 255;//119;
 		let iG = 255;//68;
 		let iB = 255;
@@ -9311,7 +9311,7 @@ var beepbox = (function (exports) {
 
                     this._svgPlayhead.setAttribute("x", "" + prettyNumber(this._playheadX * this._editorWidth - 2));
 
-                    if (this._pattern != null && this._doc.animation) {
+                    if (this._pattern != null && this._doc.animation) { // #AGZAM4
                 		for (const note of this._pattern.notes) {
                     		for (let i = 0; i < note.pitches.length; i++) {
                     	    	const pitch = note.pitches[i];
@@ -9319,7 +9319,6 @@ var beepbox = (function (exports) {
                     	    	let pathPrimaryFill = "";
                     	    	let pathSecondaryFill = "";
 
-                    	    	// #AGZAM4 Color of notes
                     	    	let agzam4Let = (this._playheadX * this._editorWidth - 2);
                     		    	if((this._partWidth * note.start + 2) < agzam4Let) {
 									var rootStyles = getComputedStyle(document.querySelector(':root'));
@@ -9355,7 +9354,7 @@ var beepbox = (function (exports) {
             		}
                 }else {
                     this._svgPlayhead.setAttribute("visibility", "hidden");
-                    if (this._pattern != null && this._doc.animation) {
+                    if (this._pattern != null && this._doc.animation) { // #AGZAM4
                 		for (const note of this._pattern.notes) {
                     		for (let i = 0; i < note.pitches.length; i++) {
                     	    	const pitch = note.pitches[i];
@@ -14072,7 +14071,7 @@ var beepbox = (function (exports) {
             this._volumeSlider = input$6({ title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "75", value: "50", step: "1" });
             this._fileMenu = select$5({ style: "width: 100%;" }, option$5({ selected: true, disabled: true, hidden: false }, "File"), option$5({ value: "new" }, "+ New Blank Song"), option$5({ value: "import" }, "↑ Import Song..."), option$5({ value: "export" }, "↓ Export Song..."), option$5({ value: "copyUrl" }, "⎘ Copy Song URL"), option$5({ value: "shareUrl" }, "⤳ Share Song URL"), option$5({ value: "shortenUrl" }, "… Shorten Song URL"), option$5({ value: "viewPlayer" }, "▶ View in Song Player"), option$5({ value: "copyEmbed" }, "⎘ Copy HTML Embed Code"), option$5({ value: "songRecovery" }, "⚠ Recover Recent Song..."));
             this._editMenu = select$5({ style: "width: 100%;" }, option$5({ selected: true, disabled: true, hidden: false }, "Edit"), option$5({ value: "undo" }, "Undo (Z)"), option$5({ value: "redo" }, "Redo (Y)"), option$5({ value: "copy" }, "Copy Pattern (C)"), option$5({ value: "pasteNotes" }, "Paste Pattern Notes (V)"), option$5({ value: "pasteNumbers" }, "Paste Pattern Numbers (⇧V)"), option$5({ value: "insertBars" }, "Insert Bar After Selection (⏎)"), option$5({ value: "deleteBars" }, "Delete Selected Bar (⌫)"), option$5({ value: "selectAll" }, "Select All (A)"), option$5({ value: "selectChannel" }, "Select Channel (⇧A)"), option$5({ value: "duplicatePatterns" }, "Duplicate Reused Patterns (D)"), option$5({ value: "transposeUp" }, "Move Notes Up (+)"), option$5({ value: "transposeDown" }, "Move Notes Down (-)"), option$5({ value: "moveNotesSideways" }, "Move All Notes Sideways..."), option$5({ value: "beatsPerBar" }, "Change Beats Per Bar..."), option$5({ value: "barCount" }, "Change Song Length..."), option$5({ value: "channelSettings" }, "Channel Settings..."));
-            this._optionsMenu = select$5({ style: "width: 100%;" }, option$5({ selected: true, disabled: true, hidden: false }, "Preferences"), option$5({ value: "autoPlay" }, "Auto Play On Load"), option$5({ value: "autoFollow" }, "Auto Follow Track"), option$5({ value: "enableNotePreview" }, "Preview Added Notes"), option$5({ value: "showLetters" }, "Show Piano Keys"), option$5({ value: "showFifth" }, 'Highlight "Fifth" Notes'), option$5({ value: "showChannels" }, "Show All Channels"), option$5({ value: "showScrollBar" }, "Octave Scroll Bar"), option$5({ value: "alwaysShowSettings" }, "Customize All Instruments"), option$5({ value: "enableChannelMuting" }, "Enable Channel Muting"), option$5({ value: "displayBrowserUrl" }, "Display Song Data in URL"), option$5({ value: "fullScreen" }, "Full-Screen Layout"), option$5({ value: "colorTheme" }, "Light Theme"), option$5({ value: "animation" }, "Animation"));
+            this._optionsMenu = select$5({ style: "width: 100%;" }, option$5({ selected: true, disabled: true, hidden: false }, "Preferences"), option$5({ value: "autoPlay" }, "Auto Play On Load"), option$5({ value: "autoFollow" }, "Auto Follow Track"), option$5({ value: "enableNotePreview" }, "Preview Added Notes"), option$5({ value: "showLetters" }, "Show Piano Keys"), option$5({ value: "showFifth" }, 'Highlight "Fifth" Notes'), option$5({ value: "showChannels" }, "Show All Channels"), option$5({ value: "showScrollBar" }, "Octave Scroll Bar"), option$5({ value: "alwaysShowSettings" }, "Customize All Instruments"), option$5({ value: "enableChannelMuting" }, "Enable Channel Muting"), option$5({ value: "displayBrowserUrl" }, "Display Song Data in URL"), option$5({ value: "fullScreen" }, "Full-Screen Layout"), option$5({ value: "colorTheme" }, "Light Theme"), /* #AGZAM4 */ option$5({ value: "animation" }, "Animation"));
             this._scaleSelect = buildOptions(select$5(), Config.scales.map(scale => scale.name));
             this._keySelect = buildOptions(select$5(), Config.keys.map(key => key.name).reverse());
             this._tempoSlider = new Slider(input$6({ style: "margin: 0; width: 4em; flex-grow: 1; vertical-align: middle;", type: "range", min: "0", max: "14", value: "7", step: "1" }), this._doc, (oldValue, newValue) => new ChangeTempo(this._doc, oldValue, Math.round(120.0 * Math.pow(2.0, (-4.0 + newValue) / 9.0))));
@@ -14194,7 +14193,7 @@ var beepbox = (function (exports) {
                     (this._doc.displayBrowserUrl ? "✓ " : "") + "Display Song Data in URL",
                     (this._doc.fullScreen ? "✓ " : "") + "Full-Screen Layout",
                     (this._doc.colorTheme == "light classic" ? "✓ " : "") + "Light Theme",
-                    (this._doc.animation ? "✓ " : "") + "Animation",
+                    (this._doc.animation ? "✓ " : "") + "Animation", // #AGZAM4
                 ];
                 for (let i = 0; i < optionCommands.length; i++) {
                     const option = this._optionsMenu.children[i + 1];
@@ -14861,7 +14860,7 @@ var beepbox = (function (exports) {
                         this._doc.colorTheme = this._doc.colorTheme == "light classic" ? "dark classic" : "light classic";
                         ColorConfig.setTheme(this._doc.colorTheme);
                         break;
-                    case "animation":
+                    case "animation": // #AGZAM4
                         this._doc.animation = !this._doc.animation;
                         break;
                 }
@@ -15749,7 +15748,7 @@ var beepbox = (function (exports) {
             this.displayBrowserUrl = window.localStorage.getItem("displayBrowserUrl") != "false";
             this.fullScreen = window.localStorage.getItem("fullScreen") == "true";
             this.colorTheme = window.localStorage.getItem("colorTheme") || "dark classic";
-            this.animation = window.localStorage.getItem("animation") || "true";
+            this.animation = window.localStorage.getItem("animation") || "true"; // #AGZAM4
 
             ColorConfig.setTheme(this.colorTheme);
             Layout.setFullScreen(this.fullScreen);
@@ -15937,7 +15936,7 @@ var beepbox = (function (exports) {
             window.localStorage.setItem("displayBrowserUrl", this.displayBrowserUrl ? "true" : "false");
             window.localStorage.setItem("fullScreen", this.fullScreen ? "true" : "false");
             window.localStorage.setItem("colorTheme", this.colorTheme);
-            window.localStorage.setItem("animation", this.animation);
+            window.localStorage.setItem("animation", this.animation); // #AGZAM4
             window.localStorage.setItem("volume", String(this.volume));
         }
         setVolume(val) {

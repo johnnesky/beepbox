@@ -24,7 +24,7 @@ var beepbox = (function (exports) {
     */
     class Config {
     }
-    Config.scales = toNameMap([
+        Config.scales = toNameMap([
         { name: "easy :)", realName: "pentatonic major", flags: [true, false, true, false, true, false, false, true, false, true, false, false] },
         { name: "easy :(", realName: "pentatonic minor", flags: [true, false, false, true, false, true, false, true, false, false, true, false] },
         { name: "island :)", realName: "ryukyu", flags: [true, false, false, false, true, true, false, true, false, false, false, true] },
@@ -847,126 +847,126 @@ var beepbox = (function (exports) {
     }
     ColorConfig.themes = {
         "dark classic": `
-				:root {
-					--page-margin: black;
-					--editor-background: black;
-					--hover-preview: white;
-					--playhead: white;
-					--primary-text: white;
-					--secondary-text: #999;
-					--inverted-text: black;
-					--text-selection: rgba(119,68,255,0.99);
-					--box-selection-fill: rgba(255,255,255,0.2);
-					--loop-accent: #74f;
-					--link-accent: #98f;
-					--ui-widget-background: #444;
-					--ui-widget-focus: #777;
-					--pitch-background: #444;
-					--tonic: #864;
-					--fifth-note: #468;
-					--white-piano-key: #bbb;
-					--black-piano-key: #444;
-					--pitch1-secondary-channel: #0099a1;
-					--pitch1-primary-channel:   #25f3ff;
-					--pitch1-secondary-note:    #00bdc7;
-					--pitch1-primary-note:      #92f9ff;
-					--pitch2-secondary-channel: #a1a100;
-					--pitch2-primary-channel:   #ffff25;
-					--pitch2-secondary-note:    #c7c700;
-					--pitch2-primary-note:      #ffff92;
-					--pitch3-secondary-channel: #c75000;
-					--pitch3-primary-channel:   #ff9752;
-					--pitch3-secondary-note:    #ff771c;
-					--pitch3-primary-note:      #ffcdab;
-					--pitch4-secondary-channel: #00a100;
-					--pitch4-primary-channel:   #50ff50;
-					--pitch4-secondary-note:    #00c700;
-					--pitch4-primary-note:      #a0ffa0;
-					--pitch5-secondary-channel: #d020d0;
-					--pitch5-primary-channel:   #ff90ff;
-					--pitch5-secondary-note:    #e040e0;
-					--pitch5-primary-note:      #ffc0ff;
-					--pitch6-secondary-channel: #7777b0;
-					--pitch6-primary-channel:   #a0a0ff;
-					--pitch6-secondary-note:    #8888d0;
-					--pitch6-primary-note:      #d0d0ff;
-					--noise1-secondary-channel: #6f6f6f;
-					--noise1-primary-channel:   #aaaaaa;
-					--noise1-secondary-note:    #a7a7a7;
-					--noise1-primary-note:      #e0e0e0;
-					--noise2-secondary-channel: #996633;
-					--noise2-primary-channel:   #ddaa77;
-					--noise2-secondary-note:    #cc9966;
-					--noise2-primary-note:      #f0d0bb;
-					--noise3-secondary-channel: #4a6d8f;
-					--noise3-primary-channel:   #77aadd;
-					--noise3-secondary-note:    #6f9fcf;
-					--noise3-primary-note:      #bbd7ff;
-				}
-			`,
+                :root {
+                    --page-margin: black;
+                    --editor-background: black;
+                    --hover-preview: white;
+                    --playhead: white;
+                    --primary-text: white;
+                    --secondary-text: #999;
+                    --inverted-text: black;
+                    --text-selection: rgba(119,68,255,0.99);
+                    --box-selection-fill: rgba(255,255,255,0.2);
+                    --loop-accent: #74f;
+                    --link-accent: #98f;
+                    --ui-widget-background: #444;
+                    --ui-widget-focus: #777;
+                    --pitch-background: #444;
+                    --tonic: #864;
+                    --fifth-note: #468;
+                    --white-piano-key: #bbb;
+                    --black-piano-key: #444;
+                    --pitch1-secondary-channel: #0099a1;
+                    --pitch1-primary-channel:   #25f3ff; 
+                    --pitch1-secondary-note:    #00bdc7;
+                    --pitch1-primary-note:      #92f9ff;
+                    --pitch2-secondary-channel: #a1a100;
+                    --pitch2-primary-channel:   #ffff25;
+                    --pitch2-secondary-note:    #c7c700;
+                    --pitch2-primary-note:      #ffff92;
+                    --pitch3-secondary-channel: #c75000;
+                    --pitch3-primary-channel:   #ff9752;
+                    --pitch3-secondary-note:    #ff771c;
+                    --pitch3-primary-note:      #ffcdab;
+                    --pitch4-secondary-channel: #00a100;
+                    --pitch4-primary-channel:   #50ff50;
+                    --pitch4-secondary-note:    #00c700;
+                    --pitch4-primary-note:      #a0ffa0;
+                    --pitch5-secondary-channel: #d020d0;
+                    --pitch5-primary-channel:   #ff90ff;
+                    --pitch5-secondary-note:    #e040e0;
+                    --pitch5-primary-note:      #ffc0ff;
+                    --pitch6-secondary-channel: #7777b0;
+                    --pitch6-primary-channel:   #a0a0ff;
+                    --pitch6-secondary-note:    #8888d0;
+                    --pitch6-primary-note:      #d0d0ff;
+                    --noise1-secondary-channel: #6f6f6f;
+                    --noise1-primary-channel:   #aaaaaa;
+                    --noise1-secondary-note:    #a7a7a7;
+                    --noise1-primary-note:      #e0e0e0;
+                    --noise2-secondary-channel: #996633;
+                    --noise2-primary-channel:   #ddaa77;
+                    --noise2-secondary-note:    #cc9966;
+                    --noise2-primary-note:      #f0d0bb;
+                    --noise3-secondary-channel: #4a6d8f;
+                    --noise3-primary-channel:   #77aadd;
+                    --noise3-secondary-note:    #6f9fcf;
+                    --noise3-primary-note:      #bbd7ff;
+                }
+            `,
         "light classic": `
-				:root {
-					-webkit-text-stroke-width: 0.5px;
-					--page-margin: #685d88;
-					--editor-background: white;
-					--hover-preview: black;
-					--playhead: rgba(0,0,0,0.5);
-					--primary-text: black;
-					--secondary-text: #777;
-					--inverted-text: white;
-					--text-selection: rgba(200,170,255,0.99);
-					--box-selection-fill: rgba(0,0,0,0.1);
-					--loop-accent: #98f;
-					--link-accent: #74f;
-					--ui-widget-background: #ececec;
-					--ui-widget-focus: #eee;
-					--pitch-background: #ececec;
-					--tonic: #f0d6b6;
-					--fifth-note: #bbddf0;
-					--white-piano-key: #eee;
-					--black-piano-key: #666;
-					--pitch1-secondary-channel: #6CD9ED;
-					--pitch1-primary-channel:   #00A0BD;
-					--pitch1-secondary-note:    #34C2DC;
-					--pitch1-primary-note:      #00758A;
-					--pitch2-secondary-channel: #E3C941;
-					--pitch2-primary-channel:   #B49700;
-					--pitch2-secondary-note:    #D1B628;
-					--pitch2-primary-note:      #836E00;
-					--pitch3-secondary-channel: #FF9D61;
-					--pitch3-primary-channel:   #E14E00;
-					--pitch3-secondary-note:    #F67D3C;
-					--pitch3-primary-note:      #B64000;
-					--pitch4-secondary-channel: #4BE24B;
-					--pitch4-primary-channel:   #00A800;
-					--pitch4-secondary-note:    #2DC82D;
-					--pitch4-primary-note:      #008000;
-					--pitch5-secondary-channel: #FF90FF;
-					--pitch5-primary-channel:   #E12EDF;
-					--pitch5-secondary-note:    #EC6EEC;
-					--pitch5-primary-note:      #A600A5;
-					--pitch6-secondary-channel: #B5B5FE;
-					--pitch6-primary-channel:   #6969FD;
-					--pitch6-secondary-note:    #9393FE;
-					--pitch6-primary-note:      #4A4AD7;
-					--noise1-secondary-channel: #C1C1C1;
-					--noise1-primary-channel:   #898989;
-					--noise1-secondary-note:    #ADADAD;
-					--noise1-primary-note:      #6C6C6C;
-					--noise2-secondary-channel: #E8BB8C;
-					--noise2-primary-channel:   #BD7D3A;
-					--noise2-secondary-note:    #D1A374;
-					--noise2-primary-note:      #836342;
-					--noise3-secondary-channel: #9BC4EB;
-					--noise3-primary-channel:   #4481BE;
-					--noise3-secondary-note:    #7CA7D3;
-					--noise3-primary-note:      #476685;
-				}
-				
-				.beepboxEditor button, .beepboxEditor select {
-					box-shadow: inset 0 0 0 1px var(--secondary-text);
-				}
-			`,
+                :root {
+                    -webkit-text-stroke-width: 0.5px;
+                    --page-margin: #685d88;
+                    --editor-background: white;
+                    --hover-preview: black;
+                    --playhead: rgba(0,0,0,0.5);
+                    --primary-text: black;
+                    --secondary-text: #777;
+                    --inverted-text: white;
+                    --text-selection: rgba(200,170,255,0.99);
+                    --box-selection-fill: rgba(0,0,0,0.1);
+                    --loop-accent: #98f;
+                    --link-accent: #74f;
+                    --ui-widget-background: #ececec;
+                    --ui-widget-focus: #eee;
+                    --pitch-background: #ececec;
+                    --tonic: #f0d6b6;
+                    --fifth-note: #bbddf0;
+                    --white-piano-key: #eee;
+                    --black-piano-key: #666;
+                    --pitch1-secondary-channel: #6CD9ED;
+                    --pitch1-primary-channel:   #00A0BD;
+                    --pitch1-secondary-note:    #34C2DC;
+                    --pitch1-primary-note:      #00758A;
+                    --pitch2-secondary-channel: #E3C941;
+                    --pitch2-primary-channel:   #B49700;
+                    --pitch2-secondary-note:    #D1B628;
+                    --pitch2-primary-note:      #836E00;
+                    --pitch3-secondary-channel: #FF9D61;
+                    --pitch3-primary-channel:   #E14E00;
+                    --pitch3-secondary-note:    #F67D3C;
+                    --pitch3-primary-note:      #B64000;
+                    --pitch4-secondary-channel: #4BE24B;
+                    --pitch4-primary-channel:   #00A800;
+                    --pitch4-secondary-note:    #2DC82D;
+                    --pitch4-primary-note:      #008000;
+                    --pitch5-secondary-channel: #FF90FF;
+                    --pitch5-primary-channel:   #E12EDF;
+                    --pitch5-secondary-note:    #EC6EEC;
+                    --pitch5-primary-note:      #A600A5;
+                    --pitch6-secondary-channel: #B5B5FE;
+                    --pitch6-primary-channel:   #6969FD;
+                    --pitch6-secondary-note:    #9393FE;
+                    --pitch6-primary-note:      #4A4AD7;
+                    --noise1-secondary-channel: #C1C1C1;
+                    --noise1-primary-channel:   #898989;
+                    --noise1-secondary-note:    #ADADAD;
+                    --noise1-primary-note:      #6C6C6C;
+                    --noise2-secondary-channel: #E8BB8C;
+                    --noise2-primary-channel:   #BD7D3A;
+                    --noise2-secondary-note:    #D1A374;
+                    --noise2-primary-note:      #836342;
+                    --noise3-secondary-channel: #9BC4EB;
+                    --noise3-primary-channel:   #4481BE;
+                    --noise3-secondary-note:    #7CA7D3;
+                    --noise3-primary-note:      #476685;
+                }
+                
+                .beepboxEditor button, .beepboxEditor select {
+                    box-shadow: inset 0 0 0 1px var(--secondary-text);
+                }
+            `,
     };
     ColorConfig.pageMargin = "var(--page-margin)";
     ColorConfig.editorBackground = "var(--editor-background)";
@@ -1057,161 +1057,161 @@ var beepbox = (function (exports) {
 
 /* Note: "#" symbols need to be encoded as "%23" in SVG data urls, otherwise they are interpreted as fragment identifiers! */
 :root {
-	--play-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -8 L -4 8 L 9 0 z" fill="gray"/></svg>');
-	--pause-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-4" y="-8" width="4" height="16" fill="gray"/><rect x="5" y="-8" width="4" height="16" fill="gray"/></svg>');
-	--prev-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-6" y="-6" width="2" height="12" fill="gray"/><path d="M 6 -6 L 6 6 L -3 0 z" fill="gray"/></svg>');
-	--next-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="4" y="-6" width="2" height="12" fill="gray"/><path d="M -6 -6 L -6 6 L 3 0 z" fill="gray"/></svg>');
-	--volume-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z" fill="gray"/></svg>');
-	--unmuted-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="3 3 20 20"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z" fill="gray"/></svg>');
-	--muted-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="3 3 20 20"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z" fill="gray"/></svg>');
-	--menu-down-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -2 L 4 -2 L 0 3 z" fill="gray"/></svg>');
-	--select-arrows-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -3 L 4 -3 L 0 -8 z M -4 3 L 4 3 L 0 8 z" fill="gray"/></svg>');
-	--file-page-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-5 -21 26 26"><path d="M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z" fill="gray"/></svg>');
-	--edit-pencil-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-5 -21 26 26"><path d="M 0 0 L 1 -4 L 4 -1 z M 2 -5 L 10 -13 L 13 -10 L 5 -2 zM 11 -14 L 13 -16 L 14 -16 L 16 -14 L 16 -13 L 14 -11 z" fill="gray"/></svg>');
-	--preferences-gear-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M 5.78 -1.6 L 7.93 -0.94 L 7.93 0.94 L 5.78 1.6 L 4.85 3.53 L 5.68 5.61 L 4.21 6.78 L 2.36 5.52 L 0.27 5.99 L -0.85 7.94 L -2.68 7.52 L -2.84 5.28 L -4.52 3.95 L -6.73 4.28 L -7.55 2.59 L -5.9 1.07 L -5.9 -1.07 L -7.55 -2.59 L -6.73 -4.28 L -4.52 -3.95 L -2.84 -5.28 L -2.68 -7.52 L -0.85 -7.94 L 0.27 -5.99 L 2.36 -5.52 L 4.21 -6.78 L 5.68 -5.61 L 4.85 -3.53 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z" fill="gray"/></svg>');
-	--customize-dial-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"> \
-			<g transform="translate(0,1)" fill="gray"> \
-				<circle cx="0" cy="0" r="6.5" stroke="gray" stroke-width="1" fill="none"/> \
-				<rect x="-1" y="-5" width="2" height="4" transform="rotate(30)"/> \
-				<circle cx="-7.79" cy="4.5" r="0.75"/> \
-				<circle cx="-9" cy="0" r="0.75"/> \
-				<circle cx="-7.79" cy="-4.5" r="0.75"/> \
-				<circle cx="-4.5" cy="-7.79" r="0.75"/> \
-				<circle cx="0" cy="-9" r="0.75"/> \
-				<circle cx="4.5" cy="-7.79" r="0.75"/> \
-				<circle cx="7.79" cy="-4.5" r="0.75"/> \
-				<circle cx="9" cy="0" r="0.75"/> \
-				<circle cx="7.79" cy="4.5" r="0.75"/> \
-			</g> \
-		</svg>');
-	--export-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"/></svg>');
-	--close-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"/></svg>');
-	--checkmark-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"/></svg>');
-	--drum-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40"> \
-			<defs> \
-				<linearGradient id="gold1" x1="0%" y1="0%" x2="100%" y2="0%"> \
-					<stop offset="0%" stop-color="%237e3302"/> \
-					<stop offset="40%" stop-color="%23ffec6b"/> \
-					<stop offset="100%" stop-color="%237e3302"/> \
-				</linearGradient> \
-				<linearGradient id="gold2" x1="0%" y1="0%" x2="100%" y2="0%"> \
-					<stop offset="0%" stop-color="%23faaf7d"/> \
-					<stop offset="15%" stop-color="%23fffba9"/> \
-					<stop offset="40%" stop-color="%23ffffe3"/> \
-					<stop offset="65%" stop-color="%23fffba9"/> \
-					<stop offset="100%" stop-color="%23faaf7d"/> \
-				</linearGradient> \
-				<radialGradient id="gold3" cx="0%" cy="0%" r="100%"> \
-					<stop offset="0%" stop-color="%23ffffe3"/> \
-					<stop offset="50%" stop-color="%23ffec6b"/> \
-					<stop offset="100%" stop-color="%237e3302"/> \
-				</radialGradient> \
-				<linearGradient id="red" x1="0%" y1="0%" x2="100%" y2="0%"> \
-					<stop offset="0%" stop-color="%23641919"/> \
-					<stop offset="40%" stop-color="%23cd2c2c"/> \
-					<stop offset="100%" stop-color="%23641919"/> \
-				</linearGradient> \
-				<radialGradient id="membrane"> \
-					<stop offset="10%" stop-color="%23cccccc" /> \
-					<stop offset="90%" stop-color="%23f6f6f7" /> \
-					<stop offset="100%" stop-color="%23999" /> \
-				</radialGradient> \
-			</defs> \
-			<ellipse cx="16" cy="26" rx="16" ry="14" fill="rgba(0,0,0,0.5)"/> \
-			<ellipse cx="16" cy="25" rx="16" ry="14" fill="url(%23gold1)"/> \
-			<rect x="0" y="23" width="32" height="2" fill="url(%23gold1)"/> \
-			<ellipse cx="16" cy="23" rx="16" ry="14" fill="url(%23gold2)"/> \
-			<ellipse cx="16" cy="23" rx="15" ry="13" fill="url(%23red)"/> \
-			<rect x="1" y="17" width="30" height="6" fill="url(%23red)"/> \
-			<rect x="5" y="27" width="1" height="5" rx="0.5" fill="rgba(0,0,0,0.5)"/> \
-			<rect x="15" y="31" width="2" height="5" rx="1" fill="rgba(0,0,0,0.5)"/> \
-			<rect x="26" y="27" width="1" height="5" rx="0.5" fill="rgba(0,0,0,0.5)"/> \
-			<rect x="5" y="26" width="1" height="5" rx="0.5" fill="url(%23gold3)"/> \
-			<rect x="15" y="30" width="2" height="5" rx="1" fill="url(%23gold3)"/> \
-			<rect x="26" y="26" width="1" height="5" rx="0.5" fill="url(%23gold3)"/> \
-			<ellipse cx="16" cy="18" rx="15" ry="13" fill="rgba(0,0,0,0.5)"/> \
-			<ellipse cx="16" cy="16" rx="16" ry="14" fill="url(%23gold1)"/> \
-			<rect x="0" y="14" width="32" height="2" fill="url(%23gold1)"/> \
-			<ellipse cx="16" cy="14" rx="16" ry="14" fill="url(%23gold2)"/> \
-			<ellipse cx="16" cy="14" rx="15" ry="13" fill="url(%23membrane)"/> \
-		</svg>');
-	--piano-key-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="15" preserveAspectRatio="none" viewBox="0 -1 32 15"> \
-			<defs> \
-				<linearGradient id="shadow" x1="0%" y1="0%" x2="100%" y2="0%"> \
-					<stop offset="0%" stop-color="rgba(0,0,0,0.5)"/> \
-					<stop offset="100%" stop-color="transparent"/> \
-				</linearGradient> \
-			</defs> \
-			<rect x="-1" y="1" width="31" height="1" rx="0.6" fill="rgba(255,255,255,0.4)"/> \
-			<path d="M -1 11 L 30 11 L 30 2 L 33 -1 L 33 14 L -1 14 z" fill="rgba(0,0,0,0.7)"/> \
-			<rect x="-1" y="-1" width="19" height="15" fill="url(%23shadow)"/> \
-		</svg>');
+    --play-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -8 L -4 8 L 9 0 z" fill="gray"/></svg>');
+    --pause-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-4" y="-8" width="4" height="16" fill="gray"/><rect x="5" y="-8" width="4" height="16" fill="gray"/></svg>');
+    --prev-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-6" y="-6" width="2" height="12" fill="gray"/><path d="M 6 -6 L 6 6 L -3 0 z" fill="gray"/></svg>');
+    --next-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="4" y="-6" width="2" height="12" fill="gray"/><path d="M -6 -6 L -6 6 L 3 0 z" fill="gray"/></svg>');
+    --volume-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z" fill="gray"/></svg>');
+    --unmuted-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="3 3 20 20"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z" fill="gray"/></svg>');
+    --muted-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="3 3 20 20"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z" fill="gray"/></svg>');
+    --menu-down-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -2 L 4 -2 L 0 3 z" fill="gray"/></svg>');
+    --select-arrows-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -3 L 4 -3 L 0 -8 z M -4 3 L 4 3 L 0 8 z" fill="gray"/></svg>');
+    --file-page-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-5 -21 26 26"><path d="M 2 0 L 2 -16 L 10 -16 L 14 -12 L 14 0 z M 3 -1 L 13 -1 L 13 -11 L 9 -11 L 9 -15 L 3 -15 z" fill="gray"/></svg>');
+    --edit-pencil-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-5 -21 26 26"><path d="M 0 0 L 1 -4 L 4 -1 z M 2 -5 L 10 -13 L 13 -10 L 5 -2 zM 11 -14 L 13 -16 L 14 -16 L 16 -14 L 16 -13 L 14 -11 z" fill="gray"/></svg>');
+    --preferences-gear-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M 5.78 -1.6 L 7.93 -0.94 L 7.93 0.94 L 5.78 1.6 L 4.85 3.53 L 5.68 5.61 L 4.21 6.78 L 2.36 5.52 L 0.27 5.99 L -0.85 7.94 L -2.68 7.52 L -2.84 5.28 L -4.52 3.95 L -6.73 4.28 L -7.55 2.59 L -5.9 1.07 L -5.9 -1.07 L -7.55 -2.59 L -6.73 -4.28 L -4.52 -3.95 L -2.84 -5.28 L -2.68 -7.52 L -0.85 -7.94 L 0.27 -5.99 L 2.36 -5.52 L 4.21 -6.78 L 5.68 -5.61 L 4.85 -3.53 M 2.92 0.67 L 2.92 -0.67 L 2.35 -1.87 L 1.3 -2.7 L 0 -3 L -1.3 -2.7 L -2.35 -1.87 L -2.92 -0.67 L -2.92 0.67 L -2.35 1.87 L -1.3 2.7 L -0 3 L 1.3 2.7 L 2.35 1.87 z" fill="gray"/></svg>');
+    --customize-dial-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"> \
+            <g transform="translate(0,1)" fill="gray"> \
+                <circle cx="0" cy="0" r="6.5" stroke="gray" stroke-width="1" fill="none"/> \
+                <rect x="-1" y="-5" width="2" height="4" transform="rotate(30)"/> \
+                <circle cx="-7.79" cy="4.5" r="0.75"/> \
+                <circle cx="-9" cy="0" r="0.75"/> \
+                <circle cx="-7.79" cy="-4.5" r="0.75"/> \
+                <circle cx="-4.5" cy="-7.79" r="0.75"/> \
+                <circle cx="0" cy="-9" r="0.75"/> \
+                <circle cx="4.5" cy="-7.79" r="0.75"/> \
+                <circle cx="7.79" cy="-4.5" r="0.75"/> \
+                <circle cx="9" cy="0" r="0.75"/> \
+                <circle cx="7.79" cy="4.5" r="0.75"/> \
+            </g> \
+        </svg>');
+    --export-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"/></svg>');
+    --close-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"/></svg>');
+    --checkmark-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"/></svg>');
+    --drum-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40"> \
+            <defs> \
+                <linearGradient id="gold1" x1="0%" y1="0%" x2="100%" y2="0%"> \
+                    <stop offset="0%" stop-color="%237e3302"/> \
+                    <stop offset="40%" stop-color="%23ffec6b"/> \
+                    <stop offset="100%" stop-color="%237e3302"/> \
+                </linearGradient> \
+                <linearGradient id="gold2" x1="0%" y1="0%" x2="100%" y2="0%"> \
+                    <stop offset="0%" stop-color="%23faaf7d"/> \
+                    <stop offset="15%" stop-color="%23fffba9"/> \
+                    <stop offset="40%" stop-color="%23ffffe3"/> \
+                    <stop offset="65%" stop-color="%23fffba9"/> \
+                    <stop offset="100%" stop-color="%23faaf7d"/> \
+                </linearGradient> \
+                <radialGradient id="gold3" cx="0%" cy="0%" r="100%"> \
+                    <stop offset="0%" stop-color="%23ffffe3"/> \
+                    <stop offset="50%" stop-color="%23ffec6b"/> \
+                    <stop offset="100%" stop-color="%237e3302"/> \
+                </radialGradient> \
+                <linearGradient id="red" x1="0%" y1="0%" x2="100%" y2="0%"> \
+                    <stop offset="0%" stop-color="%23641919"/> \
+                    <stop offset="40%" stop-color="%23cd2c2c"/> \
+                    <stop offset="100%" stop-color="%23641919"/> \
+                </linearGradient> \
+                <radialGradient id="membrane"> \
+                    <stop offset="10%" stop-color="%23cccccc" /> \
+                    <stop offset="90%" stop-color="%23f6f6f7" /> \
+                    <stop offset="100%" stop-color="%23999" /> \
+                </radialGradient> \
+            </defs> \
+            <ellipse cx="16" cy="26" rx="16" ry="14" fill="rgba(0,0,0,0.5)"/> \
+            <ellipse cx="16" cy="25" rx="16" ry="14" fill="url(%23gold1)"/> \
+            <rect x="0" y="23" width="32" height="2" fill="url(%23gold1)"/> \
+            <ellipse cx="16" cy="23" rx="16" ry="14" fill="url(%23gold2)"/> \
+            <ellipse cx="16" cy="23" rx="15" ry="13" fill="url(%23red)"/> \
+            <rect x="1" y="17" width="30" height="6" fill="url(%23red)"/> \
+            <rect x="5" y="27" width="1" height="5" rx="0.5" fill="rgba(0,0,0,0.5)"/> \
+            <rect x="15" y="31" width="2" height="5" rx="1" fill="rgba(0,0,0,0.5)"/> \
+            <rect x="26" y="27" width="1" height="5" rx="0.5" fill="rgba(0,0,0,0.5)"/> \
+            <rect x="5" y="26" width="1" height="5" rx="0.5" fill="url(%23gold3)"/> \
+            <rect x="15" y="30" width="2" height="5" rx="1" fill="url(%23gold3)"/> \
+            <rect x="26" y="26" width="1" height="5" rx="0.5" fill="url(%23gold3)"/> \
+            <ellipse cx="16" cy="18" rx="15" ry="13" fill="rgba(0,0,0,0.5)"/> \
+            <ellipse cx="16" cy="16" rx="16" ry="14" fill="url(%23gold1)"/> \
+            <rect x="0" y="14" width="32" height="2" fill="url(%23gold1)"/> \
+            <ellipse cx="16" cy="14" rx="16" ry="14" fill="url(%23gold2)"/> \
+            <ellipse cx="16" cy="14" rx="15" ry="13" fill="url(%23membrane)"/> \
+        </svg>');
+    --piano-key-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="15" preserveAspectRatio="none" viewBox="0 -1 32 15"> \
+            <defs> \
+                <linearGradient id="shadow" x1="0%" y1="0%" x2="100%" y2="0%"> \
+                    <stop offset="0%" stop-color="rgba(0,0,0,0.5)"/> \
+                    <stop offset="100%" stop-color="transparent"/> \
+                </linearGradient> \
+            </defs> \
+            <rect x="-1" y="1" width="31" height="1" rx="0.6" fill="rgba(255,255,255,0.4)"/> \
+            <path d="M -1 11 L 30 11 L 30 2 L 33 -1 L 33 14 L -1 14 z" fill="rgba(0,0,0,0.7)"/> \
+            <rect x="-1" y="-1" width="19" height="15" fill="url(%23shadow)"/> \
+        </svg>');
 }
 
 
 .obtrusive-scrollbars, .obtrusive-scrollbars * {
-	scrollbar-width: thin;
-	scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
+    scrollbar-width: thin;
+    scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
 }
 .obtrusive-scrollbars::-webkit-scrollbar, .obtrusive-scrollbars *::-webkit-scrollbar {
-	width: 12px;
+    width: 12px;
 }
 .obtrusive-scrollbars::-webkit-scrollbar-track, .obtrusive-scrollbars *::-webkit-scrollbar-track {
-	background: ${ColorConfig.editorBackground};
+    background: ${ColorConfig.editorBackground};
 }
 .obtrusive-scrollbars::-webkit-scrollbar-thumb, .obtrusive-scrollbars *::-webkit-scrollbar-thumb {
-	background-color: ${ColorConfig.uiWidgetBackground};
-	border: 3px solid ${ColorConfig.editorBackground};
+    background-color: ${ColorConfig.uiWidgetBackground};
+    border: 3px solid ${ColorConfig.editorBackground};
 }
 
 
 .beepboxEditor {
-	display: grid;
+    display: grid;
     grid-template-columns: minmax(0, 1fr) max-content;
     grid-template-rows: max-content 1fr; /* max-content minmax(0, 1fr); Chrome 80 grid layout regression. https://bugs.chromium.org/p/chromium/issues/detail?id=1050307 */
     grid-template-areas: "pattern-area settings-area" "track-area settings-area";
-	grid-column-gap: 6px;
-	grid-row-gap: 6px;
-	position: relative;
-	touch-action: manipulation;
-	cursor: default;
-	font-size: small;
-	overflow: hidden;
-	color: ${ColorConfig.primaryText};
-	background: ${ColorConfig.editorBackground};
+    grid-column-gap: 6px;
+    grid-row-gap: 6px;
+    position: relative;
+    touch-action: manipulation;
+    cursor: default;
+    font-size: small;
+    overflow: hidden;
+    color: ${ColorConfig.primaryText};
+    background: ${ColorConfig.editorBackground};
 }
 
 .beepboxEditor .noSelection {
-	-webkit-touch-callout: none;
-	-webkit-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .beepboxEditor div {
-	margin: 0;
-	padding: 0;
+    margin: 0;
+    padding: 0;
 }
 
 .beepboxEditor .pattern-area {
-	grid-area: pattern-area;
-	height: 481px;
-	display: flex;
-	flex-direction: row;
+    grid-area: pattern-area;
+    height: 481px;
+    display: flex;
+    flex-direction: row;
 }
 
 .beepboxEditor .track-area {
-	grid-area: track-area;
+    grid-area: track-area;
 }
 
 .beepboxEditor .settings-area {
-	grid-area: settings-area;
-	display: grid;
+    grid-area: settings-area;
+    display: grid;
     grid-template-columns: auto;
     grid-template-rows: min-content min-content min-content min-content min-content;
     grid-template-areas: "version-area" "play-pause-area" "menu-area" "song-settings-area" "instrument-settings-area";
-	grid-column-gap: 6px;
+    grid-column-gap: 6px;
 }
 
 .beepboxEditor .version-area{ grid-area: version-area; }
@@ -1221,295 +1221,295 @@ var beepbox = (function (exports) {
 .beepboxEditor .instrument-settings-area{ grid-area: instrument-settings-area; }
 
 .beepboxEditor .tip {
-	cursor: help;
+    cursor: help;
 }
 
 .beepboxEditor .tip:hover {
-	color: ${ColorConfig.linkAccent};
-	text-decoration: underline;
+    color: ${ColorConfig.linkAccent};
+    text-decoration: underline;
 }
 .beepboxEditor .tip:active {
-	color: ${ColorConfig.primaryText};
+    color: ${ColorConfig.primaryText};
 }
 
 .beepboxEditor .volume-speaker {
-	flex-shrink: 0;
-	width: 2em;
-	height: 2em;
-	background: ${ColorConfig.secondaryText};
-	-webkit-mask-image: var(--volume-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--volume-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    flex-shrink: 0;
+    width: 2em;
+    height: 2em;
+    background: ${ColorConfig.secondaryText};
+    -webkit-mask-image: var(--volume-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--volume-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor .drum-button {
-	flex: 1;
-	background-color: transparent;
-	background-image: var(--drum-symbol);
-	background-repeat: no-repeat;
-	background-position: center;
+    flex: 1;
+    background-color: transparent;
+    background-image: var(--drum-symbol);
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
 .beepboxEditor .piano-button {
-	flex: 1;
-	position: relative;
-	display: flex;
-	align-items: center;
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
 }
 .beepboxEditor .piano-button::before {
-	content: "";
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: 100%;
-	height: 100%;
-	pointer-events: none;
-	background-image: var(--piano-key-symbol);
-	background-repeat: no-repeat;
-	background-position: center;
-	background-size: 100% 115.38%;
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background-image: var(--piano-key-symbol);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 115.38%;
 }
 .beepboxEditor .piano-button.disabled::after {
-	content: "";
-	position: absolute;
-	right: 0;
-	top: 0;
-	width: 70%;
-	height: 100%;
-	pointer-events: none;
-	background: ${ColorConfig.editorBackground};
-	-webkit-mask-image: linear-gradient(90deg, transparent 0%, gray 70%, gray 100%);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: linear-gradient(90deg, transparent 0%, gray 70%, gray 100%);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 70%;
+    height: 100%;
+    pointer-events: none;
+    background: ${ColorConfig.editorBackground};
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, gray 70%, gray 100%);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: linear-gradient(90deg, transparent 0%, gray 70%, gray 100%);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor .customize-instrument {
-	margin: 2px 0;
+    margin: 2px 0;
 }
 .beepboxEditor .customize-instrument::before {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	left: 0;
-	top: 50%;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 2em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--customize-dial-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--customize-dial-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 2em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--customize-dial-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--customize-dial-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor .menu.file::before {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	left: 0;
-	top: 50%;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 2em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--file-page-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--file-page-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 2em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--file-page-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--file-page-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor .menu.edit::before {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	left: 0;
-	top: 50%;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 2em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--edit-pencil-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--edit-pencil-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 2em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--edit-pencil-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--edit-pencil-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor .menu.preferences::before {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	left: 0;
-	top: 50%;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 2em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--preferences-gear-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--preferences-gear-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 2em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--preferences-gear-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--preferences-gear-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor .mute-button::before {
-	content: "";
-	pointer-events: none;
-	width: 100%;
-	height: 100%;
-	background: ${ColorConfig.primaryText};
-	display: inline-block;
-	-webkit-mask-image: var(--unmuted-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	-webkit-mask-size: contain;
-	mask-image: var(--unmuted-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
-	mask-size: contain;
+    content: "";
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+    background: ${ColorConfig.primaryText};
+    display: inline-block;
+    -webkit-mask-image: var(--unmuted-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    mask-image: var(--unmuted-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
 }
 
 .beepboxEditor .mute-button.muted::before {
-	background: ${ColorConfig.editorBackground};
-	-webkit-mask-image: var(--muted-symbol);
-	mask-image: var(--muted-symbol);
+    background: ${ColorConfig.editorBackground};
+    -webkit-mask-image: var(--muted-symbol);
+    mask-image: var(--muted-symbol);
 }
 
 .beepboxEditor .promptContainer {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	display: flex;
-	justify-content: center;
-	align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .beepboxEditor .promptContainer::before {
-	content: "";
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background: ${ColorConfig.editorBackground};
-	opacity: 0.5;
-	display: flex;
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: ${ColorConfig.editorBackground};
+    opacity: 0.5;
+    display: flex;
 }
 
 .beepboxEditor .prompt {
-	margin: auto;
-	text-align: center;
-	background: ${ColorConfig.editorBackground};
-	border-radius: 15px;
-	border: 4px solid ${ColorConfig.uiWidgetBackground};
-	color: ${ColorConfig.primaryText};
-	padding: 20px;
-	display: flex;
-	flex-direction: column;
-	position: relative;
-	box-shadow: 5px 5px 20px 10px rgba(0,0,0,0.5);
+    margin: auto;
+    text-align: center;
+    background: ${ColorConfig.editorBackground};
+    border-radius: 15px;
+    border: 4px solid ${ColorConfig.uiWidgetBackground};
+    color: ${ColorConfig.primaryText};
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 5px 5px 20px 10px rgba(0,0,0,0.5);
 }
 
 .beepboxEditor .prompt > *:not(:first-child):not(.cancelButton) {
-	margin-top: 1.5em;
+    margin-top: 1.5em;
 }
 
 .beepboxEditor .prompt h2 {
-	font-size: 2em;
-	margin: 0 16px;
-	font-weight: normal;
+    font-size: 2em;
+    margin: 0 16px;
+    font-weight: normal;
 }
 
 .beepboxEditor .prompt p {
-	text-align: left;
-	margin: 1em 0;
+    text-align: left;
+    margin: 1em 0;
 }
 
 .beepboxEditor .selectContainer {
-	position: relative;
+    position: relative;
 }
 .beepboxEditor .selectContainer:not(.menu)::after {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	right: 0;
-	top: 50%;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 1.1em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--select-arrows-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--select-arrows-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 1.1em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--select-arrows-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--select-arrows-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 .beepboxEditor .selectContainer.menu::after {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	right: 0;
-	top: 50%;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 2em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--menu-down-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--menu-down-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 2em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--menu-down-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--menu-down-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 .beepboxEditor select {
-	margin: 0;
-	padding: 0 0.3em;
-	display: block;
-	height: 2em;
-	border: none;
-	border-radius: 0.4em;
-	background: ${ColorConfig.uiWidgetBackground};
-	color: inherit;
-	font-size: inherit;
-	cursor: pointer;
-	font-family: inherit;
-	font-weight: inherit;
+    margin: 0;
+    padding: 0 0.3em;
+    display: block;
+    height: 2em;
+    border: none;
+    border-radius: 0.4em;
+    background: ${ColorConfig.uiWidgetBackground};
+    color: inherit;
+    font-size: inherit;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: inherit;
 
-	-webkit-appearance:none;
-	-moz-appearance: none;
-	appearance: none;
+    -webkit-appearance:none;
+    -moz-appearance: none;
+    appearance: none;
 }
 .beepboxEditor .menu select {
-	padding: 0 2em;
+    padding: 0 2em;
 }
 .beepboxEditor select:focus {
-	background: ${ColorConfig.uiWidgetFocus};
-	outline: none;
+    background: ${ColorConfig.uiWidgetFocus};
+    outline: none;
 }
 .beepboxEditor .menu select {
-	text-align: center;
-	text-align-last: center;
+    text-align: center;
+    text-align-last: center;
 }
 .beepboxEditor .settings-area select {
        width: 100%;
@@ -1517,265 +1517,265 @@ var beepbox = (function (exports) {
 
 /* This makes it look better in firefox on my computer... What about others?
 @-moz-document url-prefix() {
-	.beepboxEditor select { padding: 0 2px; }
+    .beepboxEditor select { padding: 0 2px; }
 }
 */
 .beepboxEditor button {
-	margin: 0;
-	position: relative;
-	height: 2em;
-	border: none;
-	border-radius: 0.4em;
-	background: ${ColorConfig.uiWidgetBackground};
-	color: inherit;
-	font-size: inherit;
-	font-family: inherit;
-	font-weight: inherit;
-	cursor: pointer;
+    margin: 0;
+    position: relative;
+    height: 2em;
+    border: none;
+    border-radius: 0.4em;
+    background: ${ColorConfig.uiWidgetBackground};
+    color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: inherit;
+    cursor: pointer;
 }
 .beepboxEditor button:focus {
-	background: ${ColorConfig.uiWidgetFocus};
-	outline: none;
+    background: ${ColorConfig.uiWidgetFocus};
+    outline: none;
 }
 
 .beepboxEditor button.cancelButton {
-	float: right;
-	width: 2em;
-	position: absolute;
-	top: 8px;
-	right: 8px;
+    float: right;
+    width: 2em;
+    position: absolute;
+    top: 8px;
+    right: 8px;
 }
 
 .beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.okayButton, .beepboxEditor button.exportButton {
-	padding-left: 2em;
+    padding-left: 2em;
 }
 .beepboxEditor button.playButton::before {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	left: 0;
-	top: 50%;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 2em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--play-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--play-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 2em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--play-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--play-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 .beepboxEditor button.pauseButton::before {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	left: 0;
-	top: 50%;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 2em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--pause-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--pause-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 2em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--pause-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--pause-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor button.prevBarButton::before {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	margin-left: -1em;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 2em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--prev-bar-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--prev-bar-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -1em;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 2em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--prev-bar-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--prev-bar-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor button.nextBarButton::before {
-	content: "";
-	flex-shrink: 0;
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	margin-left: -1em;
-	margin-top: -1em;
-	pointer-events: none;
-	width: 2em;
-	height: 2em;
-	background: currentColor;
-	-webkit-mask-image: var(--next-bar-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--next-bar-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    flex-shrink: 0;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -1em;
+    margin-top: -1em;
+    pointer-events: none;
+    width: 2em;
+    height: 2em;
+    background: currentColor;
+    -webkit-mask-image: var(--next-bar-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--next-bar-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor button.cancelButton::before {
-	content: "";
-	position: absolute;
-	width: 2em;
-	height: 2em;
-	left: 0;
-	top: 0;
-	pointer-events: none;
-	background: currentColor;
-	mask-image: var(--close-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
-	-webkit-mask-image: var(--close-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
+    content: "";
+    position: absolute;
+    width: 2em;
+    height: 2em;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    background: currentColor;
+    mask-image: var(--close-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-image: var(--close-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
 }
 
 .beepboxEditor button.okayButton::before {
-	content: "";
-	position: absolute;
-	width: 2em;
-	height: 2em;
-	left: 0;
-	top: 0;
-	pointer-events: none;
-	background: currentColor;
-	-webkit-mask-image: var(--checkmark-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
-	mask-image: var(--checkmark-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
+    content: "";
+    position: absolute;
+    width: 2em;
+    height: 2em;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    background: currentColor;
+    -webkit-mask-image: var(--checkmark-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-image: var(--checkmark-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
 }
 
 .beepboxEditor button.exportButton::before {
-	content: "";
-	position: absolute;
-	width: 2em;
-	height: 2em;
-	left: 0;
-	top: 0;
-	pointer-events: none;
-	background: currentColor;
-	mask-image: var(--export-symbol);
-	mask-repeat: no-repeat;
-	mask-position: center;
-	-webkit-mask-image: var(--export-symbol);
-	-webkit-mask-repeat: no-repeat;
-	-webkit-mask-position: center;
+    content: "";
+    position: absolute;
+    width: 2em;
+    height: 2em;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    background: currentColor;
+    mask-image: var(--export-symbol);
+    mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-image: var(--export-symbol);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
 }
 
 .beepboxEditor canvas {
-	overflow: hidden;
-	position: absolute;
-	display: block;
+    overflow: hidden;
+    position: absolute;
+    display: block;
 }
 
 .beepboxEditor .trackContainer {
-	overflow-x: hidden;
-	flex-grow: 1;
+    overflow-x: hidden;
+    flex-grow: 1;
 }
 
 .beepboxEditor .trackAndMuteContainer {
-	display: flex;
-	align-items: flex-start;
+    display: flex;
+    align-items: flex-start;
 }
 
 .beepboxEditor .muteEditor {
-	height: 128px;
-	width: 32px;
-	flex-shrink: 0;
-	display: flex;
-	flex-direction: column;
-	align-items: stretch;
+    height: 128px;
+    width: 32px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
 }
 
 .beepboxEditor .selectRow {
-	margin: 2px 0;
-	height: 2em;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
+    margin: 2px 0;
+    height: 2em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .beepboxEditor .tip {
-	color: ${ColorConfig.secondaryText};
+    color: ${ColorConfig.secondaryText};
 }
 
 .beepboxEditor .selectRow > :nth-child(2) {
-	width: 61.5%;
+    width: 61.5%;
 }
 
 .beepboxEditor .operatorRow {
-	margin: 2px 0;
-	height: 2em;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
+    margin: 2px 0;
+    height: 2em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
 }
 
 .beepboxEditor .operatorRow > * {
-	flex-grow: 1;
-	flex-shrink: 1;
+    flex-grow: 1;
+    flex-shrink: 1;
 }
 
 .beepboxEditor .menu-area {
-	display: flex;
-	flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 .beepboxEditor .menu-area > * {
-	margin: 2px 0;
+    margin: 2px 0;
 }
 .beepboxEditor .menu-area > button {
-	padding: 0 2em;
-	white-space: nowrap;
+    padding: 0 2em;
+    white-space: nowrap;
 }
 
 .beepboxEditor .song-settings-area {
-	display: flex;
-	flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
 .beepboxEditor .editor-controls {
-	flex-shrink: 0;
-	display: flex;
-	flex-direction: column;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .beepboxEditor .instrument-settings-area {
-	display: flex;
-	flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
 .beepboxEditor .editor-right-side-top > *, .beepboxEditor .editor-right-side-bottom > * {
-	flex-shrink: 0;
+    flex-shrink: 0;
 }
 
 .beepboxEditor input[type=text], .beepboxEditor input[type=number] {
-	font-size: inherit;
-	font-weight: inherit;
-	font-family: inherit;
-	background: transparent;
-	border: 1px solid ${ColorConfig.uiWidgetFocus};
-	color: ${ColorConfig.primaryText};
+    font-size: inherit;
+    font-weight: inherit;
+    font-family: inherit;
+    background: transparent;
+    border: 1px solid ${ColorConfig.uiWidgetFocus};
+    color: ${ColorConfig.primaryText};
 }
 
 .beepboxEditor input[type=text]::selection, .beepboxEditor input[type=number]::selection {
-	background-color: ${ColorConfig.textSelection};
-	color: ${ColorConfig.primaryText};
+    background-color: ${ColorConfig.textSelection};
+    color: ${ColorConfig.primaryText};
 }
 
 .beepboxEditor input[type=checkbox] {
@@ -1783,177 +1783,177 @@ var beepbox = (function (exports) {
 }
 
 .beepboxEditor input[type=range] {
-	-webkit-appearance: none;
-	color: inherit;
-	width: 100%;
-	height: 2em;
-	font-size: inherit;
-	margin: 0;
-	cursor: pointer;
-	background-color: ${ColorConfig.editorBackground};
-	touch-action: pan-y;
+    -webkit-appearance: none;
+    color: inherit;
+    width: 100%;
+    height: 2em;
+    font-size: inherit;
+    margin: 0;
+    cursor: pointer;
+    background-color: ${ColorConfig.editorBackground};
+    touch-action: pan-y;
 }
 .beepboxEditor input[type=range]:focus {
-	outline: none;
+    outline: none;
 }
 .beepboxEditor input[type=range]::-webkit-slider-runnable-track {
-	width: 100%;
-	height: 0.5em;
-	cursor: pointer;
-	background: ${ColorConfig.uiWidgetBackground};
+    width: 100%;
+    height: 0.5em;
+    cursor: pointer;
+    background: ${ColorConfig.uiWidgetBackground};
 }
 .beepboxEditor input[type=range]::-webkit-slider-thumb {
-	height: 2em;
-	width: 0.5em;
-	border-radius: 0.25em;
-	background: currentColor;
-	cursor: pointer;
-	-webkit-appearance: none;
-	margin-top: -0.75em;
+    height: 2em;
+    width: 0.5em;
+    border-radius: 0.25em;
+    background: currentColor;
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin-top: -0.75em;
 }
 .beepboxEditor input[type=range]:focus::-webkit-slider-runnable-track {
-	background: ${ColorConfig.uiWidgetFocus};
+    background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-moz-range-track {
-	width: 100%;
-	height: 0.5em;
-	cursor: pointer;
-	background: ${ColorConfig.uiWidgetBackground};
+    width: 100%;
+    height: 0.5em;
+    cursor: pointer;
+    background: ${ColorConfig.uiWidgetBackground};
 }
 .beepboxEditor input[type=range]:focus::-moz-range-track {
-	background: ${ColorConfig.uiWidgetFocus};
+    background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-moz-range-thumb {
-	height: 2em;
-	width: 0.5em;
-	border-radius: 0.25em;
-	border: none;
-	background: currentColor;
-	cursor: pointer;
+    height: 2em;
+    width: 0.5em;
+    border-radius: 0.25em;
+    border: none;
+    background: currentColor;
+    cursor: pointer;
 }
 .beepboxEditor input[type=range]::-ms-track {
-	width: 100%;
-	height: 0.5em;
-	cursor: pointer;
-	background: ${ColorConfig.uiWidgetBackground};
-	border-color: transparent;
+    width: 100%;
+    height: 0.5em;
+    cursor: pointer;
+    background: ${ColorConfig.uiWidgetBackground};
+    border-color: transparent;
 }
 .beepboxEditor input[type=range]:focus::-ms-track {
-	background: ${ColorConfig.uiWidgetFocus};
+    background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-ms-thumb {
-	height: 2em;
-	width: 0.5em;
-	border-radius: 0.25em;
-	background: currentColor;
-	cursor: pointer;
+    height: 2em;
+    width: 0.5em;
+    border-radius: 0.25em;
+    background: currentColor;
+    cursor: pointer;
 }
 .beepboxEditor .hintButton {
-	border: 1px solid currentColor;
-	border-radius: 50%;
-	text-decoration: none;
-	width: 1em;
-	height: 1em;
-	text-align: center;
-	margin-left: auto;
-	margin-right: .4em;
-	cursor: pointer;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    text-decoration: none;
+    width: 1em;
+    height: 1em;
+    text-align: center;
+    margin-left: auto;
+    margin-right: .4em;
+    cursor: pointer;
 }
 
 /* wide screen */
 @media (min-width: 701px) {
-	#beepboxEditorContainer {
-		display: table;
-	}
-	.beepboxEditor {
-		flex-direction: row;
-	}
-	.beepboxEditor:focus-within {
-		outline: 3px solid ${ColorConfig.uiWidgetBackground};
-	}
-	.beepboxEditor .trackAndMuteContainer {
-		width: 512px;
-	}
-	.beepboxEditor .play-pause-area {
-		display: flex;
-		flex-direction: column;
-	}
-	.beepboxEditor .playback-bar-controls {
-		display: flex;
-		flex-direction: row;
-		margin: 2px 0;
-	}
-	.beepboxEditor .playback-volume-controls {
-		display: flex;
-		flex-direction: row;
-		margin: 2px 0;
-		align-items: center;
-	}
-	.beepboxEditor .pauseButton, .beepboxEditor .playButton {
-		flex-grow: 1;
-	}
-	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
-		flex-grow: 1;
-		margin-left: 10px;
-	}
-	.beepboxEditor .settings-area {
-		width: 14em;
-	}
+    #beepboxEditorContainer {
+        display: table;
+    }
+    .beepboxEditor {
+        flex-direction: row;
+    }
+    .beepboxEditor:focus-within {
+        outline: 3px solid ${ColorConfig.uiWidgetBackground};
+    }
+    .beepboxEditor .trackAndMuteContainer {
+        width: 512px;
+    }
+    .beepboxEditor .play-pause-area {
+        display: flex;
+        flex-direction: column;
+    }
+    .beepboxEditor .playback-bar-controls {
+        display: flex;
+        flex-direction: row;
+        margin: 2px 0;
+    }
+    .beepboxEditor .playback-volume-controls {
+        display: flex;
+        flex-direction: row;
+        margin: 2px 0;
+        align-items: center;
+    }
+    .beepboxEditor .pauseButton, .beepboxEditor .playButton {
+        flex-grow: 1;
+    }
+    .beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
+        flex-grow: 1;
+        margin-left: 10px;
+    }
+    .beepboxEditor .settings-area {
+        width: 14em;
+    }
 }
 
 /* narrow screen */
 @media (max-width: 700px) {
-	.beepboxEditor {
-		grid-template-columns: minmax(0, 1fr);
-		grid-template-rows: min-content 6px min-content min-content;
-		grid-template-areas: "pattern-area" "." "track-area" "settings-area";
-		grid-row-gap: 0;
-	}
-	.beepboxEditor .settings-area {
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-		grid-template-rows: min-content min-content 1fr min-content;
-		grid-template-areas:
-			"play-pause-area play-pause-area"
-			"menu-area instrument-settings-area"
-			"song-settings-area instrument-settings-area"
-			"version-area version-area";
-		grid-column-gap: 8px;
-		margin: 0 4px;
-	}
-	.beepboxEditor:focus-within {
-		outline: none;
-	}
-	.beepboxEditor .pattern-area {
-		max-height: 75vh;
-	}
-	.beepboxEditor .trackContainer {
-		overflow-x: auto;
-	}
-	.beepboxEditor .barScrollBar {
-		display: none;
-	}
-	.beepboxEditor .play-pause-area {
-		display: flex;
-		flex-direction: row;
-		margin: 2px 0;
-	}
-	.beepboxEditor .playback-bar-controls {
-		display: flex;
-		flex-direction: row;
-		flex-grow: 1;
-	}
-	.beepboxEditor .playback-volume-controls {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		flex-grow: 1;
-		margin: 0 2px;
-	}
-	.beepboxEditor .pauseButton, .beepboxEditor .playButton,
-	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
-		flex-grow: 1;
-		margin: 0 2px;
-	}
+    .beepboxEditor {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: min-content 6px min-content min-content;
+        grid-template-areas: "pattern-area" "." "track-area" "settings-area";
+        grid-row-gap: 0;
+    }
+    .beepboxEditor .settings-area {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: min-content min-content 1fr min-content;
+        grid-template-areas:
+            "play-pause-area play-pause-area"
+            "menu-area instrument-settings-area"
+            "song-settings-area instrument-settings-area"
+            "version-area version-area";
+        grid-column-gap: 8px;
+        margin: 0 4px;
+    }
+    .beepboxEditor:focus-within {
+        outline: none;
+    }
+    .beepboxEditor .pattern-area {
+        max-height: 75vh;
+    }
+    .beepboxEditor .trackContainer {
+        overflow-x: auto;
+    }
+    .beepboxEditor .barScrollBar {
+        display: none;
+    }
+    .beepboxEditor .play-pause-area {
+        display: flex;
+        flex-direction: row;
+        margin: 2px 0;
+    }
+    .beepboxEditor .playback-bar-controls {
+        display: flex;
+        flex-direction: row;
+        flex-grow: 1;
+    }
+    .beepboxEditor .playback-volume-controls {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        flex-grow: 1;
+        margin: 0 2px;
+    }
+    .beepboxEditor .pauseButton, .beepboxEditor .playButton,
+    .beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
+        flex-grow: 1;
+        margin: 0 2px;
+    }
 }
 
 `));
@@ -1964,79 +1964,79 @@ var beepbox = (function (exports) {
         }
     }
     Layout._normalLayout = `
-		`;
+        `;
     Layout._fullScreenLayout = `
-			/* wide screen */
-			@media (min-width: 701px) {
-				#beepboxEditorContainer {
-					max-width: initial;
-					height: 100vh;
-				}
-				.beepboxEditor {
-					width: 100%;
-					min-height: 100vh;
-					grid-template-columns: minmax(0, 1fr) 30em; /* minmax(0, 1fr) min-content; Chrome 80 grid layout regression. https://bugs.chromium.org/p/chromium/issues/detail?id=1050307 */
-					grid-template-rows: minmax(481px, 1fr) min-content;
-					grid-template-areas: "pattern-area settings-area" "track-area track-area";
-				}
-				.beepboxEditor .pattern-area {
-					width: 100%;
-					height: 100%;
-				}
-				.beepboxEditor .track-area {
-					width: 100%;
-					overflow-y: auto;
-				}
-				.beepboxEditor .editor-widget-column {
-					flex: 0;
-				}
-				.beepboxEditor .trackAndMuteContainer {
-					width: 100%;
-				}
-				.beepboxEditor .instrument-settings-area {
-					overflow-y: auto;
-					position: relative;
-				}
-				.beepboxEditor .instrument-settings-area > .editor-controls {
-					position: absolute;
-					width: 100%;
-				}
-				.beepboxEditor .song-settings-area {
-					overflow-y: auto;
-				}
-				
-				.beepboxEditor .settings-area {
-					width: 30em;
-					grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-					grid-template-rows: auto auto auto minmax(0, 1fr);
-					grid-template-areas:
-						"instrument-settings-area version-area"
-						"instrument-settings-area play-pause-area"
-						"instrument-settings-area menu-area"
-						"instrument-settings-area song-settings-area";
-				}
-				
-				.beepboxEditor .barScrollBar {
-					display: none;
-				}
-				.beepboxEditor .trackContainer {
-					overflow-x: auto;
-					scrollbar-width: auto;
-					scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackContainer::-webkit-scrollbar {
-					width: 20px;
-					height: 20px;
-				}
-				.beepboxEditor .trackContainer::-webkit-scrollbar-track {
-					background: ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackContainer::-webkit-scrollbar-thumb {
-					background-color: ${ColorConfig.uiWidgetBackground};
-					border: 3px solid ${ColorConfig.editorBackground};
-				}
-			}
-		`;
+            /* wide screen */
+            @media (min-width: 701px) {
+                #beepboxEditorContainer {
+                    max-width: initial;
+                    height: 100vh;
+                }
+                .beepboxEditor {
+                    width: 100%;
+                    min-height: 100vh;
+                    grid-template-columns: minmax(0, 1fr) 30em; /* minmax(0, 1fr) min-content; Chrome 80 grid layout regression. https://bugs.chromium.org/p/chromium/issues/detail?id=1050307 */
+                    grid-template-rows: minmax(481px, 1fr) min-content;
+                    grid-template-areas: "pattern-area settings-area" "track-area track-area";
+                }
+                .beepboxEditor .pattern-area {
+                    width: 100%;
+                    height: 100%;
+                }
+                .beepboxEditor .track-area {
+                    width: 100%;
+                    overflow-y: auto;
+                }
+                .beepboxEditor .editor-widget-column {
+                    flex: 0;
+                }
+                .beepboxEditor .trackAndMuteContainer {
+                    width: 100%;
+                }
+                .beepboxEditor .instrument-settings-area {
+                    overflow-y: auto;
+                    position: relative;
+                }
+                .beepboxEditor .instrument-settings-area > .editor-controls {
+                    position: absolute;
+                    width: 100%;
+                }
+                .beepboxEditor .song-settings-area {
+                    overflow-y: auto;
+                }
+                
+                .beepboxEditor .settings-area {
+                    width: 30em;
+                    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                    grid-template-rows: auto auto auto minmax(0, 1fr);
+                    grid-template-areas:
+                        "instrument-settings-area version-area"
+                        "instrument-settings-area play-pause-area"
+                        "instrument-settings-area menu-area"
+                        "instrument-settings-area song-settings-area";
+                }
+                
+                .beepboxEditor .barScrollBar {
+                    display: none;
+                }
+                .beepboxEditor .trackContainer {
+                    overflow-x: auto;
+                    scrollbar-width: auto;
+                    scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
+                }
+                .beepboxEditor .trackContainer::-webkit-scrollbar {
+                    width: 20px;
+                    height: 20px;
+                }
+                .beepboxEditor .trackContainer::-webkit-scrollbar-track {
+                    background: ${ColorConfig.editorBackground};
+                }
+                .beepboxEditor .trackContainer::-webkit-scrollbar-thumb {
+                    background-color: ${ColorConfig.uiWidgetBackground};
+                    border: 3px solid ${ColorConfig.editorBackground};
+                }
+            }
+        `;
     Layout._styleElement = document.head.appendChild(HTML.style({ type: "text/css" }));
 
     const { button, div, p, h2 } = HTML;
@@ -6373,73 +6373,73 @@ var beepbox = (function (exports) {
     }
     Synth.fmSynthFunctionCache = {};
     Synth.fmSourceTemplate = (`
-			const sineWave = beepbox.Config.sineWave;
-			
-			let phaseDeltaScale = +tone.phaseDeltaScale;
-			// I'm adding 1000 to the phase to ensure that it's never negative even when modulated by other waves because negative numbers don't work with the modulus operator very well.
-			let operator#Phase       = +((tone.phases[#] % 1) + 1000) * beepbox.Config.sineWaveLength;
-			let operator#PhaseDelta  = +tone.phaseDeltas[#];
-			let operator#OutputMult  = +tone.volumeStarts[#];
-			const operator#OutputDelta = +tone.volumeDeltas[#];
-			let operator#Output      = +tone.feedbackOutputs[#];
-			let feedbackMult         = +tone.feedbackMult;
-			const feedbackDelta        = +tone.feedbackDelta;
-			let volume = +tone.volumeStart;
-			const volumeDelta = +tone.volumeDelta;
-			
-			let filter1 = +tone.filter;
-			let filter2 = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
-			const filterScale1 = +tone.filterScale;
-			const filterScale2 = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
-			const filterResonance = beepbox.Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (beepbox.Config.filterResonanceRange - 2), 0.5);
-			let filterSample0 = +tone.filterSample0;
-			let filterSample1 = +tone.filterSample1;
-			
-			const stopIndex = stereoBufferIndex + runLength;
-			stereoBufferIndex += tone.stereoOffset;
-			const stereoVolume1 = tone.stereoVolume1;
-			const stereoVolume2 = tone.stereoVolume2;
-			const stereoDelay = tone.stereoDelay;
-			while (stereoBufferIndex < stopIndex) {
-				// INSERT OPERATOR COMPUTATION HERE
-				const fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
-				
-				const feedback = filterResonance + filterResonance / (1.0 - filter1);
-				filterSample0 += filter1 * (fmOutput - filterSample0 + feedback * (filterSample0 - filterSample1));
-				filterSample1 += filter2 * (filterSample0 - filterSample1);
-				
-				feedbackMult += feedbackDelta;
-				operator#OutputMult += operator#OutputDelta;
-				operator#Phase += operator#PhaseDelta;
-				operator#PhaseDelta *= phaseDeltaScale;
-				filter1 *= filterScale1;
-				filter2 *= filterScale2;
-				
-				const output = filterSample1 * volume;
-				volume += volumeDelta;
-				
-				data[stereoBufferIndex] += output * stereoVolume1;
-				data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
-				stereoBufferIndex += 2;
-			}
-			
-			tone.phases[#] = operator#Phase / ` + Config.sineWaveLength + `;
-			tone.feedbackOutputs[#] = operator#Output;
-			
-			const epsilon = (1.0e-24);
-			if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
-			if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
-			tone.filterSample0 = filterSample0;
-			tone.filterSample1 = filterSample1;
-		`).split("\n");
+            const sineWave = beepbox.Config.sineWave;
+            
+            let phaseDeltaScale = +tone.phaseDeltaScale;
+            // I'm adding 1000 to the phase to ensure that it's never negative even when modulated by other waves because negative numbers don't work with the modulus operator very well.
+            let operator#Phase       = +((tone.phases[#] % 1) + 1000) * beepbox.Config.sineWaveLength;
+            let operator#PhaseDelta  = +tone.phaseDeltas[#];
+            let operator#OutputMult  = +tone.volumeStarts[#];
+            const operator#OutputDelta = +tone.volumeDeltas[#];
+            let operator#Output      = +tone.feedbackOutputs[#];
+            let feedbackMult         = +tone.feedbackMult;
+            const feedbackDelta        = +tone.feedbackDelta;
+            let volume = +tone.volumeStart;
+            const volumeDelta = +tone.volumeDelta;
+            
+            let filter1 = +tone.filter;
+            let filter2 = instrument.getFilterIsFirstOrder() ? 1.0 : filter1;
+            const filterScale1 = +tone.filterScale;
+            const filterScale2 = instrument.getFilterIsFirstOrder() ? 1.0 : filterScale1;
+            const filterResonance = beepbox.Config.filterMaxResonance * Math.pow(Math.max(0, instrument.getFilterResonance() - 1) / (beepbox.Config.filterResonanceRange - 2), 0.5);
+            let filterSample0 = +tone.filterSample0;
+            let filterSample1 = +tone.filterSample1;
+            
+            const stopIndex = stereoBufferIndex + runLength;
+            stereoBufferIndex += tone.stereoOffset;
+            const stereoVolume1 = tone.stereoVolume1;
+            const stereoVolume2 = tone.stereoVolume2;
+            const stereoDelay = tone.stereoDelay;
+            while (stereoBufferIndex < stopIndex) {
+                // INSERT OPERATOR COMPUTATION HERE
+                const fmOutput = (/*operator#Scaled*/); // CARRIER OUTPUTS
+                
+                const feedback = filterResonance + filterResonance / (1.0 - filter1);
+                filterSample0 += filter1 * (fmOutput - filterSample0 + feedback * (filterSample0 - filterSample1));
+                filterSample1 += filter2 * (filterSample0 - filterSample1);
+                
+                feedbackMult += feedbackDelta;
+                operator#OutputMult += operator#OutputDelta;
+                operator#Phase += operator#PhaseDelta;
+                operator#PhaseDelta *= phaseDeltaScale;
+                filter1 *= filterScale1;
+                filter2 *= filterScale2;
+                
+                const output = filterSample1 * volume;
+                volume += volumeDelta;
+                
+                data[stereoBufferIndex] += output * stereoVolume1;
+                data[(stereoBufferIndex + stereoDelay) % stereoBufferLength] += output * stereoVolume2;
+                stereoBufferIndex += 2;
+            }
+            
+            tone.phases[#] = operator#Phase / ` + Config.sineWaveLength + `;
+            tone.feedbackOutputs[#] = operator#Output;
+            
+            const epsilon = (1.0e-24);
+            if (-epsilon < filterSample0 && filterSample0 < epsilon) filterSample0 = 0.0;
+            if (-epsilon < filterSample1 && filterSample1 < epsilon) filterSample1 = 0.0;
+            tone.filterSample0 = filterSample0;
+            tone.filterSample1 = filterSample1;
+        `).split("\n");
     Synth.operatorSourceTemplate = (`
-				const operator#PhaseMix = operator#Phase/* + operator@Scaled*/;
-				const operator#PhaseInt = operator#PhaseMix|0;
-				const operator#Index    = operator#PhaseInt & ` + Config.sineWaveMask + `;
-				const operator#Sample   = sineWave[operator#Index];
-				operator#Output       = operator#Sample + (sineWave[operator#Index + 1] - operator#Sample) * (operator#PhaseMix - operator#PhaseInt);
-				const operator#Scaled   = operator#OutputMult * operator#Output;
-		`).split("\n");
+                const operator#PhaseMix = operator#Phase/* + operator@Scaled*/;
+                const operator#PhaseInt = operator#PhaseMix|0;
+                const operator#Index    = operator#PhaseInt & ` + Config.sineWaveMask + `;
+                const operator#Sample   = sineWave[operator#Index];
+                operator#Output       = operator#Sample + (sineWave[operator#Index + 1] - operator#Sample) * (operator#PhaseMix - operator#PhaseInt);
+                const operator#Scaled   = operator#OutputMult * operator#Output;
+        `).split("\n");
 
     class Change {
         constructor() {
@@ -8951,6 +8951,33 @@ var beepbox = (function (exports) {
         node.parentNode.replaceChild(clone, node);
         return clone;
     }
+
+    function makeColorBrighter(hex, k) { // #AGZAM4
+        var R = 0;
+        var G = 0;
+        var B = 0;
+        if(hex.length == 3) {
+            R = parseInt(hex.substring(0,1),16);
+            G = parseInt(hex.substring(1,2),16);
+            B = parseInt(hex.substring(2,3),16);
+        }else {
+            R = parseInt(hex.substring(0,2),16);
+            G = parseInt(hex.substring(2,4),16);
+            B = parseInt(hex.substring(4,6),16);
+        }
+        if(k < 0) k = 0;
+        if(k > 1) k = 1;
+        // Color of light is rgb(iR iG iB)
+        let iR = 255;//119;
+        let iG = 255;//68;
+        let iB = 255;
+        R = (R-iR)*k+iR;
+        G = (G-iG)*k+iG;
+        B = (B-iB)*k+iB;
+
+        return "rgb("+R+","+G+","+B+")";
+    }
+
     class PatternCursor {
         constructor() {
             this.valid = false;
@@ -9044,14 +9071,72 @@ var beepbox = (function (exports) {
                     const modPlayhead = this._doc.synth.playhead - playheadBar;
                     if (Math.abs(modPlayhead - this._playheadX) > 0.1) {
                         this._playheadX = modPlayhead;
-                    }
-                    else {
+                    }else {
                         this._playheadX += (modPlayhead - this._playheadX) * 0.2;
                     }
+
                     this._svgPlayhead.setAttribute("x", "" + prettyNumber(this._playheadX * this._editorWidth - 2));
-                }
-                else {
+
+                    if (this._pattern != null && this._doc.animation) { // #AGZAM4
+                        for (const note of this._pattern.notes) {
+                            for (let i = 0; i < note.pitches.length; i++) {
+                                const pitch = note.pitches[i];
+                                let notePath = SVG.path();
+                                let pathPrimaryFill = "";
+                                let pathSecondaryFill = "";
+
+                                let agzam4Let = (this._playheadX * this._editorWidth - 2);
+                                    if((this._partWidth * note.start + 2) < agzam4Let) {
+                                    var rootStyles = getComputedStyle(document.querySelector(':root'));
+                                    var hex1 = rootStyles.getPropertyValue(
+                                            ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote.replace("var(", "").replace(")", "")
+                                        ).replaceAll("#", "").replaceAll(" ", "");
+                                    var hex2 = rootStyles.getPropertyValue(
+                                            ColorConfig.getChannelColor(this._doc.song, this._doc.channel).secondaryNote.replace("var(", "").replace(")", "")
+                                        ).replaceAll("#", "").replaceAll(" ", "");
+                                    let k = (agzam4Let - (this._partWidth * note.start + 2))*0.01;
+                                    pathPrimaryFill = makeColorBrighter(hex1, k);
+                                    pathSecondaryFill = makeColorBrighter(hex2, k);
+                                }else {
+                                    pathPrimaryFill= ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote;
+                                    pathSecondaryFill= ColorConfig.getChannelColor(this._doc.song, this._doc.channel).secondaryNote;
+                                }
+    
+                                notePath.setAttribute("fill", pathSecondaryFill);
+                                notePath.setAttribute("pointer-events", "none");
+
+
+                                this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
+                                this._svgNoteContainer.appendChild(notePath);
+                                notePath = SVG.path();
+                            
+                                notePath.setAttribute("fill", pathPrimaryFill);
+
+                                notePath.setAttribute("pointer-events", "none");
+                                this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+                                this._svgNoteContainer.appendChild(notePath);
+                            }
+                        }
+                    }
+                }else {
                     this._svgPlayhead.setAttribute("visibility", "hidden");
+                    if (this._pattern != null && this._doc.animation) { // #AGZAM4
+                        for (const note of this._pattern.notes) {
+                            for (let i = 0; i < note.pitches.length; i++) {
+                                const pitch = note.pitches[i];
+                                let notePath = SVG.path();
+                                notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).secondaryNote);
+                                notePath.setAttribute("pointer-events", "none");
+                                this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, false, this._octaveOffset);
+                                this._svgNoteContainer.appendChild(notePath);
+                                notePath = SVG.path();
+                                notePath.setAttribute("fill", ColorConfig.getChannelColor(this._doc.song, this._doc.channel).primaryNote);
+                                notePath.setAttribute("pointer-events", "none");
+                                this._drawNote(notePath, pitch, note.start, note.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
+                                this._svgNoteContainer.appendChild(notePath);
+                            }
+                        }
+                    }
                 }
                 if (this._doc.synth.playing && this._doc.autoFollow && this._followPlayheadBar != playheadBar) {
                     new ChangeChannelBar(this._doc, this._doc.channel, playheadBar);
@@ -13752,7 +13837,7 @@ var beepbox = (function (exports) {
             this._volumeSlider = input$6({ title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "75", value: "50", step: "1" });
             this._fileMenu = select$5({ style: "width: 100%;" }, option$5({ selected: true, disabled: true, hidden: false }, "File"), option$5({ value: "new" }, "+ New Blank Song"), option$5({ value: "import" }, "↑ Import Song..."), option$5({ value: "export" }, "↓ Export Song..."), option$5({ value: "copyUrl" }, "⎘ Copy Song URL"), option$5({ value: "shareUrl" }, "⤳ Share Song URL"), option$5({ value: "shortenUrl" }, "… Shorten Song URL"), option$5({ value: "viewPlayer" }, "▶ View in Song Player"), option$5({ value: "copyEmbed" }, "⎘ Copy HTML Embed Code"), option$5({ value: "songRecovery" }, "⚠ Recover Recent Song..."));
             this._editMenu = select$5({ style: "width: 100%;" }, option$5({ selected: true, disabled: true, hidden: false }, "Edit"), option$5({ value: "undo" }, "Undo (Z)"), option$5({ value: "redo" }, "Redo (Y)"), option$5({ value: "copy" }, "Copy Pattern (C)"), option$5({ value: "pasteNotes" }, "Paste Pattern Notes (V)"), option$5({ value: "pasteNumbers" }, "Paste Pattern Numbers (⇧V)"), option$5({ value: "insertBars" }, "Insert Bar After Selection (⏎)"), option$5({ value: "deleteBars" }, "Delete Selected Bar (⌫)"), option$5({ value: "selectAll" }, "Select All (A)"), option$5({ value: "selectChannel" }, "Select Channel (⇧A)"), option$5({ value: "duplicatePatterns" }, "Duplicate Reused Patterns (D)"), option$5({ value: "transposeUp" }, "Move Notes Up (+)"), option$5({ value: "transposeDown" }, "Move Notes Down (-)"), option$5({ value: "moveNotesSideways" }, "Move All Notes Sideways..."), option$5({ value: "beatsPerBar" }, "Change Beats Per Bar..."), option$5({ value: "barCount" }, "Change Song Length..."), option$5({ value: "channelSettings" }, "Channel Settings..."));
-            this._optionsMenu = select$5({ style: "width: 100%;" }, option$5({ selected: true, disabled: true, hidden: false }, "Preferences"), option$5({ value: "autoPlay" }, "Auto Play On Load"), option$5({ value: "autoFollow" }, "Auto Follow Track"), option$5({ value: "enableNotePreview" }, "Preview Added Notes"), option$5({ value: "showLetters" }, "Show Piano Keys"), option$5({ value: "showFifth" }, 'Highlight "Fifth" Notes'), option$5({ value: "showChannels" }, "Show All Channels"), option$5({ value: "showScrollBar" }, "Octave Scroll Bar"), option$5({ value: "alwaysShowSettings" }, "Customize All Instruments"), option$5({ value: "enableChannelMuting" }, "Enable Channel Muting"), option$5({ value: "displayBrowserUrl" }, "Display Song Data in URL"), option$5({ value: "fullScreen" }, "Full-Screen Layout"), option$5({ value: "colorTheme" }, "Light Theme"));
+            this._optionsMenu = select$5({ style: "width: 100%;" }, option$5({ selected: true, disabled: true, hidden: false }, "Preferences"), option$5({ value: "autoPlay" }, "Auto Play On Load"), option$5({ value: "autoFollow" }, "Auto Follow Track"), option$5({ value: "enableNotePreview" }, "Preview Added Notes"), option$5({ value: "showLetters" }, "Show Piano Keys"), option$5({ value: "showFifth" }, 'Highlight "Fifth" Notes'), option$5({ value: "showChannels" }, "Show All Channels"), option$5({ value: "showScrollBar" }, "Octave Scroll Bar"), option$5({ value: "alwaysShowSettings" }, "Customize All Instruments"), option$5({ value: "enableChannelMuting" }, "Enable Channel Muting"), option$5({ value: "displayBrowserUrl" }, "Display Song Data in URL"), option$5({ value: "fullScreen" }, "Full-Screen Layout"), option$5({ value: "colorTheme" }, "Light Theme"), /* #AGZAM4 */ option$5({ value: "animation" }, "Animation"));
             this._scaleSelect = buildOptions(select$5(), Config.scales.map(scale => scale.name));
             this._keySelect = buildOptions(select$5(), Config.keys.map(key => key.name).reverse());
             this._tempoSlider = new Slider(input$6({ style: "margin: 0; width: 4em; flex-grow: 1; vertical-align: middle;", type: "range", min: "0", max: "14", value: "7", step: "1" }), this._doc, (oldValue, newValue) => new ChangeTempo(this._doc, oldValue, Math.round(120.0 * Math.pow(2.0, (-4.0 + newValue) / 9.0))));
@@ -13874,6 +13959,7 @@ var beepbox = (function (exports) {
                     (this._doc.displayBrowserUrl ? "✓ " : "") + "Display Song Data in URL",
                     (this._doc.fullScreen ? "✓ " : "") + "Full-Screen Layout",
                     (this._doc.colorTheme == "light classic" ? "✓ " : "") + "Light Theme",
+                    (this._doc.animation ? "✓ " : "") + "Animation", // #AGZAM4
                 ];
                 for (let i = 0; i < optionCommands.length; i++) {
                     const option = this._optionsMenu.children[i + 1];
@@ -14539,6 +14625,9 @@ var beepbox = (function (exports) {
                     case "colorTheme":
                         this._doc.colorTheme = this._doc.colorTheme == "light classic" ? "dark classic" : "light classic";
                         ColorConfig.setTheme(this._doc.colorTheme);
+                        break;
+                    case "animation": // #AGZAM4
+                        this._doc.animation = !this._doc.animation;
                         break;
                 }
                 this._optionsMenu.selectedIndex = 0;
@@ -15425,6 +15514,8 @@ var beepbox = (function (exports) {
             this.displayBrowserUrl = window.localStorage.getItem("displayBrowserUrl") != "false";
             this.fullScreen = window.localStorage.getItem("fullScreen") == "true";
             this.colorTheme = window.localStorage.getItem("colorTheme") || "dark classic";
+            this.animation = window.localStorage.getItem("animation") || "true"; // #AGZAM4
+
             ColorConfig.setTheme(this.colorTheme);
             Layout.setFullScreen(this.fullScreen);
             if (window.localStorage.getItem("volume") != null) {
@@ -15611,6 +15702,7 @@ var beepbox = (function (exports) {
             window.localStorage.setItem("displayBrowserUrl", this.displayBrowserUrl ? "true" : "false");
             window.localStorage.setItem("fullScreen", this.fullScreen ? "true" : "false");
             window.localStorage.setItem("colorTheme", this.colorTheme);
+            window.localStorage.setItem("animation", this.animation); // #AGZAM4
             window.localStorage.setItem("volume", String(this.volume));
         }
         setVolume(val) {
