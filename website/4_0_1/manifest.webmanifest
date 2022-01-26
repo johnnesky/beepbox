@@ -1,0 +1,16 @@
+{
+	"name": "BeepBox",
+	"short_name": "BeepBox",
+	"description": "BeepBox is a tool for sketching and sharing instrumental melodies.",
+	"scope": "/",
+	"start_url": ".",
+	"display": "browser",
+	"orientation": "portrait-primary",
+	"theme_color": "#444",
+	"background_color": "#000",
+	"categories": ["music"],
+	"icons": [
+		{ "src": "/icon_shadow_192.png",   "sizes": "192x192", "type": "image/png", "purpose": "any" },
+		{ "src": "/icon_maskable_192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }
+	]
+}

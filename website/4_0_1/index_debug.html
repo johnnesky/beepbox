@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>BeepBox DEBUG</title>
+	<meta name="mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+	<meta name="theme-color" content="#444" />
+	<meta name="format-detection" content="telephone=no" />
+	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" rel="stylesheet" media="none" onload="if (this.media != 'all') this.media='all';" /> <!-- this is a trick to load CSS asynchronously. -->
+	<style type="text/css">
+		html {
+			background: var(--page-margin, black);
+			overflow-x: hidden;
+			font-size: large;
+			font-family: 'Roboto', sans-serif;
+			line-height: 1.3;
+			color: var(--primary-text, white);
+		}
+		body {
+			margin: auto;
+			overflow-x: hidden;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			align-content: center;
+		}
+		#beepboxEditorContainer {
+			min-height: 645px;
+			overflow: auto;
+			background: var(--editor-background, black);
+			width: 100%;
+			max-width: 710px;
+			padding-left: 30px;
+			padding-right: 30px;
+		}
+		
+		/* wide screen */
+		@media (min-width: 711px) {
+			html {
+				width: 100%;
+			}
+			body {
+				width: 100%;
+			}
+			.column-container {
+				width: 710px;
+				display: flex;
+				gap: 25px;
+			}
+			.instructions-column {
+				min-width: 0;
+			}
+			.twitter-column {
+				width: 300px;
+				flex-shrink: 0;
+			}
+		}
+		
+		/* narrow screen */
+		@media (max-width: 710px) {
+			body {
+				width: 100%;
+			}
+			p, .donation {
+				margin: 1em 0.5em;
+			}
+			.column-container {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+		}
+	</style>
+</head>
+<body>
+<div id="beepboxEditorContainer"></div>
+<h1>BeepBox DEBUG</h1>
+<script src="beepbox_editor.js"></script>
+</body></html>

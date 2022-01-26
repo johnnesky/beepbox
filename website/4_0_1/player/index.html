@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>BeepBox Song Player</title>
+	<meta name="description" content="BeepBox is an online tool for sketching and sharing instrumental melodies." />
+	<meta name="keywords" content="chiptune, instrumental, music, melody, composition, tool, square wave, NES, NSF, BeepBox" />
+	<meta name="theme-color" content="#444" />
+	<meta name="format-detection" content="telephone=no" />
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+	<link rel="icon" type="image/png" sizes="32x32" href="/icon_32.png" />
+	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" rel="stylesheet" media="none" onload="if (this.media != 'all') this.media='all';" /> <!-- this is a trick to load CSS asynchronously. -->
+	<meta name="robots" content="noindex, nofollow" />
+	<style>
+		html {
+			width: 100vw;
+			font-family: 'Roboto', sans-serif;
+			color: var(--primary-text, white);
+			align-items: center;
+		}
+		html, body {
+			height: 100%;
+			overflow: hidden;
+			display: flex;
+			margin: 0;
+			padding: 0;
+			background: var(--page-margin, black);
+		}
+		body {
+			width: 100vw;
+			flex-direction: column;
+			align-items: stretch;
+		}
+	</style>
+</head>
+<body>
+	<script type="text/javascript">
+		function browserHasRequiredFeatures() {
+			"use strict";
+			if (window.AudioContext == undefined && window.webkitAudioContext == undefined) {
+				return false;
+			}
+			
+			try {
+				eval("class T {}");
+				eval("const a = () => 0");
+				eval("for (const a of []);");
+			} catch (error) {
+				return false;
+			}
+			
+			return true;
+		}
+		
+		if (browserHasRequiredFeatures()) {
+			// Go ahead and load js beepbox editor interface:
+			var fileref = document.createElement("script");
+			fileref.setAttribute("type", "text/javascript");
+			fileref.setAttribute("src", "beepbox_player.js"); // min
+			document.head.appendChild(fileref);
+		} else {
+			document.body.innerHTML = "Sorry, BeepBox doesn't support your browser. Try a recent version of Chrome, Firefox, Edge, Safari, or Opera.";
+		}
+	</script>
+</body>
+</html>
