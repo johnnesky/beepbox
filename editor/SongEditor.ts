@@ -724,7 +724,7 @@ export class SongEditor {
                             ),
                         ),
                         "Song Settings",
-                        div({ style: "width: 100%; left: 0; top: -1px; position:absolute;" }, this._jumpToModIndicator),
+                        div({ style: "width: 100%; left: 0; top: -1px; position:absolute; overflow-x:clip;" }, this._jumpToModIndicator),
                     ),
                 ),
                 div({ class: "selectRow" },
