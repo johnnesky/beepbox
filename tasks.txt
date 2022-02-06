@@ -53,7 +53,7 @@
 √ set up some basic html
 √ new waves
 √ source control
-√ karplus strong filter + decay
+√ filter + decay
 √ separate main file for offline.
 √ take focus from "save as wav" button after clicking it!
 √ changing preferences doesn't need to be undoable but should update display.
@@ -357,3 +357,14 @@
 √ Added tinyurl shortcut to file menu.
 √ BPM is now precise.
 √ Hold shift (or long press on touch screen) and drag in pattern editor to select part of it. Pattern selection can be dragged, copied, and pasted.
+√ Replaced lowpass cutoff/resonance system with a more flexible filter biquad stacking system.
+√ Added electric guitar instrument type.
+√ Allow any instrument to add the distortion effect. Make effects applied per-instrument.
+√ Added Bitcrusher effect.
+√ Added Echo effect.
+√ Generalized envelopes.
+√ Allow zooming pattern editor in fullscreen layouts.
+√ Added another fullscreen layout option.
+√ Added an option for layered instruments in a single channel.
+√ Move the fade in/out duration into a separate setting from transition, fixed slide across patterns, and added a new transition to avoid restarting envelopes between adjacent notes.
+√ Added feature to continue note from previous pattern, by dragging beginning of a note past the start of the pattern.

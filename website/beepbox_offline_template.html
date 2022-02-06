@@ -33,7 +33,7 @@
 			overflow: auto;
 			background: var(--editor-background, black);
 			width: 100%;
-			max-width: 700px;
+			max-width: 710px;
 			padding-left: 30px;
 			padding-right: 30px;
 		}
@@ -41,7 +41,7 @@
 			overflow: auto;
 			background: var(--editor-background, black);
 			width: 100%;
-			max-width: 700px;
+			max-width: 710px;
 			padding-left: 30px;
 			padding-right: 30px;
 		}
@@ -80,7 +80,7 @@
 		}
 		
 		/* wide screen */
-		@media (min-width: 701px) {
+		@media (min-width: 711px) {
 			html {
 				width: 100%;
 			}
@@ -88,20 +88,21 @@
 				width: 100%;
 			}
 			.column-container {
-				width: 700px;
+				width: 710px;
 				display: flex;
-				justify-content: space-between;
+				gap: 25px;
 			}
 			/*.instructions-column {
-				width: 375px;
+				min-width: 0;
 			}
 			.twitter-column {
 				width: 300px;
+				flex-shrink: 0;
 			}*/
 		}
 		
 		/* narrow screen */
-		@media (max-width: 700px) {
+		@media (max-width: 710px) {
 			body {
 				width: 100%;
 			}
@@ -129,7 +130,7 @@
 				BeepBox Offline
 			</h1>
 			<p id="introduction">
-				BeepBox is an online (and offline!) tool for sketching and sharing instrumental melodies. 
+				JummBox is an online (and offline!) tool for sketching and sharing instrumental music. 
 			</p>
 			<p>
 				All song data is contained in the URL at the top of your browser. 
@@ -162,7 +163,7 @@
 						Notes go into patterns, and you can edit one pattern at a time.
 						Those numbered boxes at the bottom of the editor are the different patterns you can edit.
 						<span id="bar-editing">
-							Click the other boxes to move to a different part of the song, or click the arrows on the currently selected box to swap which pattern is played during that part of the song.
+							Click the boxes to move to a different part of the song, or click the arrows on the currently selected box to swap which pattern is played during that part of the song.
 						</span>
 					</p>
 					<p>
@@ -178,15 +179,16 @@
 							When BeepBox has focus (click on its interface above), you can use these keyboard shortcuts: <br/>
 						</p>
 						<ul>
-							<li>Spacebar: play or pause the song</li>
-							<li>Z: undo</li>
-							<li>Y or Shift Z: redo</li>
-							<li>C: copy pattern from selection</li>
-							<li>V: paste pattern into selection</li>
-							<li>1-8: assign a pattern number to selection</li>
-							<li>Arrows: move selection</li>
-							<li>[ ]: move playhead backward or forward</li>
-							<li>Shift & Drag: select part of a pattern (long press on touch screen)</li>
+							<li><b>Spacebar</b>: play or pause the song</li>
+							<li><b>Shift Spacebar</b>: play from mouse location</li>
+							<li><b>Z</b>: undo, <b>Y or Shift Z</b>: redo</li>
+							<li><b>C/V</b>: copy/paste selected pattern(s)</li>
+							<li><b>0-9</b>: assign pattern number to selection</li>
+							<li><b>Arrows</b>: move selection</li>
+							<li><b>Ctrl + Arrows</b>: rearrange channels</li>
+							<li><b>[ ]</b>: move playhead backward or forward</li>
+							<li><b>F/H</b>: move to First or Highlighted pattern </li>
+							<li><b>Shift & Drag</b>: select part of a pattern (long press on touch screen)</li>
 							<li>Check BeepBox's edit menu for more!</li>
 						</ul>
 					</div>
@@ -208,16 +210,19 @@
 						About
 					</h2>
 					<p>
-						BeepBox is developed by <a href="http://www.johnnesky.com">John Nesky</a>, also known as <a href="https://twitter.com/shaktool">@shaktool</a>. 
+						BeepBox is developed by <a href="http://www.johnnesky.com" target="_blank">John Nesky</a>, also known as <a href="https://twitter.com/shaktool" target="_blank">@shaktool</a>. 
 					</p>
 					<p>
 						BeepBox does not claim ownership over songs created with it, so original songs belong to their authors. 
 					</p>
 					<p>
-						Neither John Nesky nor BeepBox assume responsibility for any copyrighted material played on BeepBox. No songs are ever received, recorded, or distributed by BeepBox's servers. All song data is contained in the URL after the hash (#) mark, and your song data will not leave your device unless you copy and share the URL.
+						Neither John Nesky nor BeepBox assume responsibility for any copyrighted material played on BeepBox. No songs are ever received, recorded, or distributed by BeepBox's servers. All song data is contained in the URL after the hash (#) mark, and your song data will not leave your device unless you copy and share the URL. BeepBox does not collect, track, or share any user data. 
 					</p>
 					<p>
-						BeepBox does not collect, track, or share any user data. 
+						You can find the <a href="https://github.com/johnnesky/beepbox/releases/" target="_blank">release notes for the latest versions of BeepBox here</a>.
+					</p>
+					<p>
+						You can download and use <a href="https://github.com/johnnesky/beepbox" target="_blank">the source code</a> under the MIT license
 					</p>
 				<section>
 			</main>
@@ -227,9 +232,9 @@
 	<script type="text/javascript">
 
 if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
-	document.getElementById("introduction").innerHTML = "BeepBox is an online tool for sketching and sharing instrumental melodies. Make sure that your volume is turned up, then press the play button!";
+	document.getElementById("introduction").innerHTML = "JummBox is an online tool for sketching and sharing instrumental music. Make sure that your volume is turned up, then press the play button!";
 	document.getElementById("keyboard-instructions").style.display = "none";
-	document.getElementById("bar-editing").innerHTML = "Tap the other boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
+	document.getElementById("bar-editing").innerHTML = "Tap the boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
 }
 
 /* INSERT_BEEPBOX_SOURCE_HERE */

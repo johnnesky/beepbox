@@ -13,7 +13,7 @@
     <title>JummBox</title>
     <meta name="application-name" content="JummBox" />
     <meta name="apple-mobile-web-app-title" content="JummBox">
-    <meta name="description" content="JummBox is an online tool for sketching and sharing instrumental melodies." />
+	<meta name="description" content="JummBox is an online tool for sketching and sharing instrumental music." />
     <meta name="keywords" content="chiptune, instrumental, music, song, melody, composition, tool, free, square wave, NES, NSF, JummBox, jummbox, BeepBox, beepbox" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -51,7 +51,7 @@
             overflow: auto;
             background: var(--editor-background, black);
             width: 100%;
-            max-width: 700px;
+			max-width: 710px;
             padding-left: 30px;
             padding-right: 30px;
         }
@@ -60,7 +60,7 @@
             overflow: auto;
             background: var(--editor-background, black);
             width: 100%;
-            max-width: 700px;
+			max-width: 710px;
             padding-left: 30px;
             padding-right: 30px;
         }
@@ -107,7 +107,7 @@
         }
 
         /* wide screen */
-        @media (min-width: 701px) {
+		@media (min-width: 711px) {
             html {
                 width: 100%;
             }
@@ -117,22 +117,23 @@
             }
 
             .column-container {
-                width: 700px;
+				width: 710px;
                 display: flex;
-                justify-content: space-between;
+				gap: 25px;
             }
 
             .instructions-column {
-                width: 375px;
+				min-width: 0;
             }
 
             .twitter-column {
                 width: 300px;
+				flex-shrink: 0;
             }
         }
 
         /* narrow screen */
-        @media (max-width: 700px) {
+		@media (max-width: 710px) {
             body {
                 width: 100%;
             }
@@ -170,7 +171,7 @@
             </p>
             <p>
                 If you're familiar with BeepBox and just want to learn what JummBox does differently, check out this <a href="https://youtu.be/26yDP4ACuzE">overview video</a>.
-                You can also find the latest patch notes <a href="https://jummbus.bitbucket.io/patch_notes/2.4.html">here</a>.
+                You can also find the latest patch notes <a href="https://jummbus.bitbucket.io/patch_notes/2.5.html">here</a>.
             </p>
             <p>
                 All song data is contained in the URL at the top of your browser.
@@ -205,7 +206,7 @@
                         Notes go into patterns, and you can edit one pattern at a time.
                         Those numbered boxes at the bottom of the editor are the different patterns you can edit.
                         <span id="bar-editing">
-                            Click the other boxes to move to a different part of the song, or click the arrows on the currently selected box to swap which pattern is played during that part of the song.
+                            Click the boxes to move to a different part of the song, or click the arrows on the currently selected box to swap which pattern is played during that part of the song.
                         </span>
                     </p>
                     <p>
@@ -224,27 +225,17 @@
                         </p>
                         <ul>
                             <li>Spacebar: play or pause the song</li>
-                            <li>Z: undo</li>
-                            <li>Y or Shift Z: redo</li>
+                            <li><b>Shift Spacebar</b>: play from mouse location</li>
+							<li><b>Z</b>: undo, <b>Y or Shift Z</b>: redo</li>
                             <li>C: copy pattern from selection</li>
                             <li>V: paste pattern into selection</li>
-                            <li>0-9: assign a pattern number to selection</li>
-                            <li>Arrows: move selection</li>
-                            <li>[ ]: Move the playhead backward and forward</li>
-                            <li>Shift 0-9: reassign the instrument for the currently selected pattern </li>
-                            <li>- +: move the notes in the pattern up or down (and hold Shift to move an octave at a time!)</li>
-                            <li>A: Select all patterns</li>
-                            <li>Shift A: Select current channel</li>
-                            <li>Enter: insert a bar</li>
-                            <li>Backspace: delete a bar</li>
-							<li>Shift & Drag: select part of a pattern (long press on touch screen)</li>
-                            <li>F: move playhead to the <b>F</b>irst bar in the song</li>
-                            <li>H: move playhead to the selected bar (<b>H</b>ere)</li>
-                            <li>M: <b>M</b>ute/unmute current channel</li>
-                            <li>Shift M: <b>M</b>ute/unmute all channels
-                            <li>S: <b>S</b>olo current channel</li>
-                            <li>N: set pattern to the lowest-numbered one not used anywhere in the song (This can help you find gaps in patterns that you missed).</li>
-                            <li>Shift N: set pattern to the lowest-numbered one that is completely empty.</li>
+                            <li><b>0-9</b>: assign pattern number to selection</li>
+							<li><b>Arrows</b>: move selection</li>
+							<li><b>Ctrl + Arrows</b>: rearrange channels</li>
+							<li><b>[ ]</b>: move playhead backward or forward</li>
+							<li><b>F/H</b>: move to First or Highlighted pattern </li>
+							<li><b>Shift & Drag</b>: select part of a pattern (long press on touch screen)</li>
+							<li>These are just a few shortcuts, check JummBox's edit menu for more!</li>
                         </ul>
                     </div>
                     <p>
@@ -264,7 +255,7 @@
                         You can also click on the label next to each option for a description of what it does.
                     </p>
                     <p>
-                        <a href="https://twitter.com/beepboxco">Check out some of these songs that other people have posted on Twitter!</a>
+                        <a href="https://twitter.com/beepboxco" target="_blank">Check out some of these songs that other people have posted on Twitter!</a>
                         If you find something you like, you should let the creator know!
                         And if you see any beginners asking for advice, maybe you can help them!
                     </p>
@@ -274,9 +265,12 @@
                         About
                     </h2>
                     <p>
-                        JummBox is developed by Jummbus. You can find him sporadically at <a href="https://twitter.com/jummbus">twitter.com/jummbus</a>.<br><br>
-                        BeepBox was originally developed by <a href="http://www.johnnesky.com">John Nesky</a>, also known as <a href="https://twitter.com/shaktool">@shaktool</a>.
+                        JummBox is developed by Jummbus. You can find him sporadically at <a href="https://twitter.com/jummbus" target="_blank">twitter.com/jummbus</a>.<br><br>
+                        BeepBox was originally developed by <a href="http://www.johnnesky.com" target="_blank">John Nesky</a>, also known as <a href="https://twitter.com/shaktool" target="_blank">@shaktool</a>.
                     </p>
+					<p>
+						The next oldest version of JummBox is available <a href=https://jummbus.bitbucket.io/2_4>here</a>.
+					</p>
                     <p>
                         JummBox does not claim ownership over songs created with it, so original songs belong to their authors.
                     </p>
@@ -290,8 +284,8 @@
                         You can download <a download="jummbox_offline.html" href="jummbox_offline.html">an offline version of JummBox</a> to use when you don't have access to the internet. The features are otherwise the same.
                     </p>
                     <p>
-                        You can download and use <a href="https://github.com/jummbus/jummbox">the source code</a> under the MIT license.
-                        The original BeepBox source code by John Nesky can be found <a href="https://github.com/johnnesky/beepbox">here</a>.
+                        You can download and use <a href="https://github.com/jummbus/jummbox" target="_blank">the source code</a> under the MIT license.
+                        The original BeepBox source code by John Nesky can be found <a href="https://github.com/johnnesky/beepbox" target="_blank">here</a>.
                     </p>
                 </section>
             </main>
@@ -300,7 +294,7 @@
                     Shared on Twitter:
                 </h2>
                 <div style="background: black;">
-                    <a class="twitter-timeline" data-width="300" data-height="2000" data-link-color="#9988ff" data-chrome="noheader nofooter transparent" data-dnt="true" data-theme="dark" href="https://twitter.com/beepboxco?ref_src=twsrc%5Etfw">Songs retweeted by @beepboxco</a>
+                    <a class="twitter-timeline" data-width="300" data-height="2000" data-link-color="#9988ff" data-chrome="noheader nofooter transparent" data-dnt="true" data-theme="dark" href="https://twitter.com/beepboxco?ref_src=twsrc%5Etfw" target="_blank">Songs retweeted by @beepboxco</a>
                     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
                 </div>
             </aside>
@@ -335,7 +329,7 @@
         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent)) {
             document.getElementById("introduction").innerHTML = "JummBox is an online tool for sketching and sharing chiptune melodies. Make sure that your volume is turned up, then press the play button!";
             document.getElementById("keyboard-instructions").style.display = "none";
-            document.getElementById("bar-editing").innerHTML = "Tap the other boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
+            document.getElementById("bar-editing").innerHTML = "Tap the boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
 			//document.getElementById("offline-instructions").innerHTML = 'You can use BeepBox when your device is offline if you put a shortcut to BeepBox on your home screen. <ul><li>Chrome: find the "Add to Home Screen" option in the ⋮ menu.</li><li>Firefox: find the "Add Page Shortcut" option in the ⋮ menu.</li><li>Safari: find the "Add to Home Screen" option in the bookmark menu.</li></ul>';
         }
 
@@ -366,6 +360,14 @@
             document.getElementById("beepboxEditorContainer").innerHTML = "Sorry, JummBox doesn't support your browser. Try a recent version of Chrome, Firefox, Edge, Safari, or Opera.";
         }
 
+		// If the page was loaded with an old song version that old versions of BeepBox support,
+		// update the links to the old versions so that they'll open the song.
+		if (/^#[1-6]/.test(location.hash)) {
+			document.getElementById("linkTo2_3").href += location.hash;
+		}
+		if (/^#[1-8]/.test(location.hash)) {
+			document.getElementById("linkTo3_0").href += location.hash;
+		}
     </script>
 </body>
 </html>

@@ -309,6 +309,8 @@ export class LimiterPrompt implements Prompt {
 
 		this.updatePlayButton();
 
+		setTimeout(() => this._playButton.focus());
+
 		this.limiterCanvas.render();
 	}
 

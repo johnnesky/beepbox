@@ -1,6 +1,5 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-//namespace beepbox {
 export class Deque<T> {
 	private _capacity: number = 1;
 	private _buffer: Array<T | undefined> = [undefined];
@@ -89,5 +88,4 @@ export class Deque<T> {
 		this._mask = this._capacity - 1;
 	}
 }
-//}
 

@@ -1,11 +1,10 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import { SongDocument } from "./SongDocument";
 import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 import { ChangeLoop, ChangeChannelBar } from "./changes";
 import { ColorConfig } from "./ColorConfig";
 
-//namespace beepbox {
 interface Cursor {
 	startBar: number;
 	mode: number;
@@ -18,23 +17,23 @@ interface Endpoints {
 
 export class LoopEditor {
 	private readonly _editorHeight: number = 20;
-	private readonly _startMode: number = 0;
-	private readonly _endMode: number = 1;
-	private readonly _bothMode: number = 2;
-
-	private readonly _loop: SVGPathElement = SVG.path({ fill: "none", stroke: ColorConfig.loopAccent, "stroke-width": 4 });
-	private readonly _highlight: SVGPathElement = SVG.path({ fill: ColorConfig.hoverPreview, "pointer-events": "none" });
-
-	private readonly _svg: SVGSVGElement = SVG.svg({ style: `background-color: ${ColorConfig.editorBackground}; touch-action: pan-y; position: absolute;`, height: this._editorHeight },
+		private readonly _startMode:   number = 0;
+		private readonly _endMode:     number = 1;
+		private readonly _bothMode:    number = 2;
+		
+		private readonly _loop: SVGPathElement = SVG.path({fill: "none", stroke: ColorConfig.loopAccent, "stroke-width": 4});
+		private readonly _highlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
+		
+	private readonly _svg: SVGSVGElement = SVG.svg({style: `touch-action: pan-y; position: absolute;`, height: this._editorHeight},
 		this._loop,
 		this._highlight,
 	);
-
-	public readonly container: HTMLElement = HTML.div({ style: "height: 20px; position: relative; margin: 5px 0;" }, this._svg);
-
+		
+	public readonly container: HTMLElement = HTML.div({class: "loopEditor"}, this._svg);
+		
 	private _barWidth: number = 32;
 	private _change: ChangeLoop | null = null;
-	private _cursor: Cursor = { startBar: -1, mode: -1 };
+		private _cursor: Cursor = {startBar: -1, mode: -1};
 	private _mouseX: number = 0;
 	//private _mouseY: number = 0;
 	private _clientStartX: number = 0;
@@ -47,28 +46,28 @@ export class LoopEditor {
 	private _renderedLoopStop: number = -1;
 	private _renderedBarCount: number = 0;
 	private _renderedBarWidth: number = -1;
-
+		
 	constructor(private _doc: SongDocument) {
 		this._updateCursorStatus();
 		this._render();
 		this._doc.notifier.watch(this._documentChanged);
-
+			
 		this.container.addEventListener("mousedown", this._whenMousePressed);
 		document.addEventListener("mousemove", this._whenMouseMoved);
 		document.addEventListener("mouseup", this._whenCursorReleased);
 		this.container.addEventListener("mouseover", this._whenMouseOver);
 		this.container.addEventListener("mouseout", this._whenMouseOut);
-
+			
 		this.container.addEventListener("touchstart", this._whenTouchPressed);
 		this.container.addEventListener("touchmove", this._whenTouchMoved);
 		this.container.addEventListener("touchend", this._whenTouchReleased);
 		this.container.addEventListener("touchcancel", this._whenTouchReleased);
 	}
-
+		
 	private _updateCursorStatus(): void {
 		const bar: number = this._mouseX / this._barWidth;
 		this._cursor.startBar = bar;
-
+			
 		if (bar > this._doc.song.loopStart - 0.25 && bar < this._doc.song.loopStart + this._doc.song.loopLength + 0.25) {
 			if (bar - this._doc.song.loopStart < this._doc.song.loopLength * 0.5) {
 				this._cursor.mode = this._startMode;
@@ -79,7 +78,7 @@ export class LoopEditor {
 			this._cursor.mode = this._bothMode;
 		}
 	}
-
+		
 	private _findEndPoints(middle: number): Endpoints {
 		let start: number = Math.round(middle - this._doc.song.loopLength / 2);
 		let end: number = start + this._doc.song.loopLength;
@@ -91,21 +90,21 @@ export class LoopEditor {
 			start -= end - this._doc.song.barCount;
 			end = this._doc.song.barCount;
 		}
-		return { start: start, length: end - start };
+			return {start: start, length: end - start};
 	}
-
+		
 	private _whenMouseOver = (event: MouseEvent): void => {
 		if (this._mouseOver) return;
 		this._mouseOver = true;
 		this._updatePreview();
 	}
-
+		
 	private _whenMouseOut = (event: MouseEvent): void => {
 		if (!this._mouseOver) return;
 		this._mouseOver = false;
 		this._updatePreview();
 	}
-
+		
 	private _whenMousePressed = (event: MouseEvent): void => {
 		event.preventDefault();
 		this._mouseDown = true;
@@ -116,7 +115,7 @@ export class LoopEditor {
 		this._updatePreview();
 		this._whenMouseMoved(event);
 	}
-
+		
 	private _whenTouchPressed = (event: TouchEvent): void => {
 		//event.preventDefault();
 		this._mouseDown = true;
@@ -131,20 +130,20 @@ export class LoopEditor {
 		this._draggingHorizontally = false;
 		this._startedScrolling = false;
 	}
-
+		
 	private _whenMouseMoved = (event: MouseEvent): void => {
 		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		//this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
 		this._whenCursorMoved();
 	}
-
+		
 	private _whenTouchMoved = (event: TouchEvent): void => {
 		if (!this._mouseDown) return;
 		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 		this._mouseX = event.touches[0].clientX - boundingRect.left;
 		//this._mouseY = event.touches[0].clientY - boundingRect.top;
-
+			
 		if (!this._draggingHorizontally && !this._startedScrolling) {
 			if (Math.abs(event.touches[0].clientY - this._clientStartY) > 10) {
 				this._startedScrolling = true;
@@ -152,13 +151,13 @@ export class LoopEditor {
 				this._draggingHorizontally = true;
 			}
 		}
-
+			
 		if (this._draggingHorizontally) {
 			this._whenCursorMoved();
 			event.preventDefault();
 		}
 	}
-
+		
 	private _whenCursorMoved(): void {
 		if (this._mouseDown) {
 			let oldStart: number = this._doc.song.loopStart;
@@ -167,7 +166,7 @@ export class LoopEditor {
 				oldStart = this._change.oldStart;
 				oldEnd = oldStart + this._change.oldLength;
 			}
-
+				
 			const bar: number = this._mouseX / this._barWidth;
 			let start: number;
 			let end: number;
@@ -212,7 +211,7 @@ export class LoopEditor {
 			this._updatePreview();
 		}
 	}
-
+		
 	private _whenTouchReleased = (event: TouchEvent): void => {
 		event.preventDefault();
 		if (!this._startedScrolling) {
@@ -224,7 +223,7 @@ export class LoopEditor {
 
 		this._mouseDown = false;
 	}
-
+		
 	private _whenCursorReleased = (event: Event): void => {
 		if (this._change != null) this._doc.record(this._change);
 		this._change = null;
@@ -232,14 +231,14 @@ export class LoopEditor {
 		this._updateCursorStatus();
 		this._render();
 	}
-
+		
 	private _updatePreview(): void {
 		const showHighlight: boolean = this._mouseOver && !this._mouseDown;
 		this._highlight.style.visibility = showHighlight ? "visible" : "hidden";
-
+			
 		if (showHighlight) {
 			const radius: number = this._editorHeight / 2;
-
+				
 			let highlightStart: number = (this._doc.song.loopStart) * this._barWidth;
 			let highlightStop: number = (this._doc.song.loopStart + this._doc.song.loopLength) * this._barWidth;
 			if (this._cursor.mode == this._startMode) {
@@ -251,7 +250,7 @@ export class LoopEditor {
 				highlightStart = (endPoints.start) * this._barWidth;
 				highlightStop = (endPoints.start + endPoints.length) * this._barWidth;
 			}
-
+				
 			this._highlight.setAttribute("d",
 				`M ${highlightStart + radius} ${4} ` +
 				`L ${highlightStop - radius} ${4} ` +
@@ -262,18 +261,18 @@ export class LoopEditor {
 			);
 		}
 	}
-
+		
 	private _documentChanged = (): void => {
 		this._render();
 	}
-
+		
 	private _render(): void {
 		this._barWidth = this._doc.getBarWidth();
-
+			
 		const radius: number = this._editorHeight / 2;
 		const loopStart: number = (this._doc.song.loopStart) * this._barWidth;
 		const loopStop: number = (this._doc.song.loopStart + this._doc.song.loopLength) * this._barWidth;
-
+			
 		if (this._renderedBarCount != this._doc.song.barCount || this._renderedBarWidth != this._barWidth) {
 			this._renderedBarCount = this._doc.song.barCount;
 			this._renderedBarWidth = this._barWidth;
@@ -294,8 +293,7 @@ export class LoopEditor {
 				`z`
 			);
 		}
-
+			
 		this._updatePreview();
 	}
 }
-//}

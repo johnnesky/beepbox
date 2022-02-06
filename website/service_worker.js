@@ -7,10 +7,14 @@ self.addEventListener("install", function(event) {
 			return cache.addAll([
 				"/",
 				"/beepbox_editor.min.js",
-				//"/2_3/",
-				//"/2_3/beepbox_editor.min.js",
 				"/player/",
 				"/player/beepbox_player.min.js",
+				"/2_4/",
+				"/2_4/beepbox_editor.min.js",
+				"/2_4/player/",
+				"/2_4/player/beepbox_player.min.js",
+				//"/2_3/",
+				//"/2_3/beepbox_editor.min.js",
 				"https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js",
 			]).then(() => self.skipWaiting());
 		})

@@ -1,4 +1,4 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import {ColorConfig} from "./ColorConfig";
 import {HTML} from "imperative-html/dist/esm/elements-strict";
@@ -19,6 +19,8 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 
 /* Note: "#" symbols need to be encoded as "%23" in SVG data urls, otherwise they are interpreted as fragment identifiers! */
 :root {
+	--button-size: 26px;
+	--settings-area-width: 192px;
 	--play-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -8 L -4 8 L 9 0 z" fill="gray"/></svg>');
 	--pause-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-4" y="-8" width="4" height="16" fill="gray"/><rect x="5" y="-8" width="4" height="16" fill="gray"/></svg>');
 	--prev-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-6" y="-6" width="2" height="12" fill="gray"/><path d="M 6 -6 L 6 6 L -3 0 z" fill="gray"/></svg>');
@@ -46,8 +48,13 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 				<circle cx="7.79" cy="4.5" r="0.75"/> \
 			</g> \
 		</svg>');
+	--instrument-copy-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-5 -21 26 26"><path d="M 0 -15 L 1 -15 L 1 0 L 13 0 L 13 1 L 0 1 L 0 -15 z M 2 -1 L 2 -17 L 10 -17 L 14 -13 L 14 -1 z M 3 -2 L 13 -2 L 13 -12 L 9 -12 L 9 -16 L 3 -16 z" fill="currentColor"></path></svg>');
+	--instrument-paste-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26"><path d="M 8 18 L 6 18 L 6 5 L 17 5 L 17 7 M 9 8 L 16 8 L 20 12 L 20 22 L 9 22 z" stroke="currentColor" fill="none"></path><path d="M 9 3 L 14 3 L 14 6 L 9 6 L 9 3 z M 16 8 L 20 12 L 16 12 L 16 8 z" fill="currentColor"></path></svg>');
 	--export-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 3 L -8 8 L 8 8 L 8 3 L 6 3 L 6 6 L -6 6 L -6 3 z M 0 2 L -4 -2 L -1 -2 L -1 -8 L 1 -8 L 1 -2 L 4 -2 z"/></svg>');
-	--close-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 -6 L -6 -8 L 0 -2  L 6 -8 L 8 -6 L 2 0 L 8 6 L 6 8 L 0 2 L -6 8 L -8 6 L -2 0 z"/></svg>');
+	--close-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -7.07 -5.66 L -5.66 -7.07 L 0 -1.4 L 5.66 -7.07 L 7.07 -5.66 L 1.4 0 L 7.07 5.66 L 5.66 7.07 L 0 1.4 L -5.66 7.07 L -7.07 5.66 L -1.4 0 z"/></svg>');
+	--add-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -8 -1 L -1 -1 L -1 -8  L 1 -8 L 1 -1 L 8 -1 L 8 1 L 1 1 L 1 8 L -1 8 L -1 1 L -8 1 z"/></svg>');
+	--zoom-in-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="-10 -10 20 20"><circle cx="-1" cy="-1" r="6" stroke-width="2" stroke="gray" fill="none"></circle><path stroke="gray" stroke-width="2" d="M 3 3 L 7 7 M -1 -4 L -1 2 M -4 -1 L 2 -1" fill="none"></path></svg>');
+	--zoom-out-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="-10 -10 20 20"><circle cx="-1" cy="-1" r="6" stroke-width="2" stroke="gray" fill="none"></circle><path stroke="gray" stroke-width="2" d="M 3 3 L 7 7 M -4 -1 L 2 -1" fill="none"></path></svg>');
 	--checkmark-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path fill="gray" d="M -9 -2 L -8 -3 L -3 2 L 9 -8 L 10 -7 L -3 8 z"/></svg>');
 	--drum-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40"> \
 			<defs> \
@@ -153,7 +160,7 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: relative;
 	touch-action: manipulation;
 	cursor: default;
-	font-size: small;
+	font-size: 13px;
 	overflow: hidden;
 	color: ${ColorConfig.primaryText};
 	background: ${ColorConfig.editorBackground};
@@ -164,6 +171,19 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
     -ms-transition: opacity 0.2s ease-in;
     transition: opacity 0.2s ease-in;
     transition-delay: 0s;
+}
+
+.beepboxEditor .operatorRow {
+	margin: 2px 0;
+	height: 2em;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.beepboxEditor .operatorRow > * {
+	flex-grow: 1;
+	flex-shrink: 1;
 }
 
 .pattern-area {
@@ -250,10 +270,19 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	height: 481px;
 	display: flex;
 	flex-direction: row;
+	position: relative;
 }
 
 .beepboxEditor .track-area {
 	grid-area: track-area;
+}
+
+.beepboxEditor .loopEditor {
+	height: 20px;
+	position: sticky;
+	bottom: 0;
+	padding: 5px 0;
+	background-color: ${ColorConfig.editorBackground};
 }
 
 .beepboxEditor .settings-area {
@@ -273,6 +302,8 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 
 .beepboxEditor .tip {
 	cursor: help;
+	color: ${ColorConfig.secondaryText};
+	text-decoration: none;
 }
 
 .beepboxEditor .tip:hover {
@@ -285,8 +316,8 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 
 .beepboxEditor .volume-speaker {
 	flex-shrink: 0;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: ${ColorConfig.secondaryText};
 	-webkit-mask-image: var(--volume-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -369,10 +400,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--customize-dial-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -382,16 +413,190 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	mask-position: center;
 }
 
+.beepboxEditor .instrumentCopyPasteRow {
+	gap: 2px;
+}
+
+.beepboxEditor .copy-instrument {
+	margin: 2px 0;
+	flex-grow: 1;
+}
+.beepboxEditor .copy-instrument::before {
+	content: "";
+	flex-shrink: 0;
+	position: absolute;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	width: var(--button-size);
+	height: var(--button-size);
+	background: currentColor;
+	-webkit-mask-image: var(--instrument-copy-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--instrument-copy-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+
+.beepboxEditor .paste-instrument {
+	margin: 2px 0;
+	flex-grow: 1;
+}
+.beepboxEditor .paste-instrument::before {
+	content: "";
+	flex-shrink: 0;
+	position: absolute;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	width: var(--button-size);
+	height: var(--button-size);
+	background: currentColor;
+	-webkit-mask-image: var(--instrument-paste-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--instrument-paste-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+
+.beepboxEditor .envelopeEditor {
+	display: flex;
+	flex-direction: column;
+}
+
+.beepboxEditor .envelope-row {
+	display: flex;
+	margin: 2px 0;
+	gap: 2px;
+}
+
+.beepboxEditor .add-envelope {
+	width: var(--button-size);
+}
+.beepboxEditor .add-envelope::before {
+	content: "";
+	position: absolute;
+	width: var(--button-size);
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--add-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--add-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+.beepboxEditor .add-envelope:disabled {
+	visibility: hidden;
+}
+
+.beepboxEditor .effects-menu {
+	width: var(--button-size);
+	position: relative;
+}
+.beepboxEditor .effects-menu::before {
+	content: "";
+	position: absolute;
+	width: var(--button-size);
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--menu-down-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--menu-down-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+
+.beepboxEditor .zoomInButton, .beepboxEditor .zoomOutButton {
+	width: var(--button-size);
+	position: absolute;
+	right: 10px;
+}
+.beepboxEditor .zoomInButton {
+	top: 10px;
+}
+.beepboxEditor .zoomOutButton {
+	top: 50px;
+}
+.beepboxEditor .zoomInButton::before {
+	content: "";
+	position: absolute;
+	width: var(--button-size);
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--zoom-in-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--zoom-in-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+.beepboxEditor .zoomOutButton::before {
+	content: "";
+	position: absolute;
+	width: var(--button-size);
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--zoom-out-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--zoom-out-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+
+.beepboxEditor .delete-envelope {
+	width: var(--button-size);
+	flex-shrink: 0;
+	flex-grow: 0;
+}
+.beepboxEditor .delete-envelope::before {
+	content: "";
+	position: absolute;
+	width: var(--button-size);
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--close-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--close-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+.beepboxEditor .delete-envelope:disabled {
+	visibility: hidden;
+}
+
 .beepboxEditor .menu.file::before {
 	content: "";
 	flex-shrink: 0;
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--file-page-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -407,10 +612,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--edit-pencil-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -426,10 +631,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--preferences-gear-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -495,6 +700,7 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	z-index: 100;
 }
 
 .beepboxEditor .promptContainer::before {
@@ -538,6 +744,24 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	margin: 1em 0;
 }
 
+.beepboxEditor .layout-option {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	cursor: pointer;
+	color: ${ColorConfig.secondaryText};
+}
+
+.beepboxEditor .layout-option input {
+	display: none;
+}
+
+.beepboxEditor .layout-option input:checked ~ * {
+	color: ${ColorConfig.primaryText};
+}
+.beepboxEditor select.invalidSetting {
+	border: solid 1px red;
+}
 .beepboxEditor .selectContainer {
 	position: relative;
 }
@@ -547,10 +771,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: absolute;
 	right: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 1.1em;
-	height: 2em;
+	width: 14px;
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--select-arrows-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -565,10 +789,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: absolute;
 	right: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--menu-down-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -579,11 +803,11 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 }
 .beepboxEditor select {
 	margin: 0;
-	padding: 0 0.3em;
+	padding: 0 4px;
 	display: block;
-	height: 2em;
+	height: var(--button-size);
 	border: none;
-	border-radius: 0.4em;
+	border-radius: 5px;
 	background: ${ColorConfig.uiWidgetBackground};
 	color: inherit;
 	font-size: inherit;
@@ -697,7 +921,7 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 }
 
 .beepboxEditor .menu select {
-	padding: 0 2em;
+	padding: 0 var(--button-size);
 }
 .beepboxEditor select:focus {
 	background: ${ColorConfig.uiWidgetFocus};
@@ -719,9 +943,9 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 .beepboxEditor button {
 	margin: 0;
 	position: relative;
-	height: 2em;
+	height: var(--button-size);
 	border: none;
-	border-radius: 0.4em;
+	border-radius: 5px;
 	background: ${ColorConfig.uiWidgetBackground};
 	color: inherit;
 	font-size: inherit;
@@ -736,14 +960,14 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 
 .beepboxEditor button.cancelButton {
 	float: right;
-	width: 2em;
+	width: var(--button-size);
 	position: absolute;
 	top: 8px;
 	right: 8px;
 }
 
 .beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.okayButton, .beepboxEditor button.exportButton {
-	padding-left: 2em;
+	padding-left: var(--button-size);
 }
 .beepboxEditor button.playButton::before {
 	content: "";
@@ -751,10 +975,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--play-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -769,10 +993,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: absolute;
 	left: 0;
 	top: 50%;
-	margin-top: -1em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--pause-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -788,11 +1012,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	margin-left: -1em;
-	margin-top: -1em;
+	transform: translate(-50%, -50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--prev-bar-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -808,11 +1031,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	margin-left: -1em;
-	margin-top: -1em;
+	transform: translate(-50%, -50%);
 	pointer-events: none;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	background: currentColor;
 	-webkit-mask-image: var(--next-bar-symbol);
 	-webkit-mask-repeat: no-repeat;
@@ -825,8 +1047,8 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 .beepboxEditor button.cancelButton::before {
 	content: "";
 	position: absolute;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	left: 0;
 	top: 0;
 	pointer-events: none;
@@ -842,8 +1064,8 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 .beepboxEditor button.okayButton::before {
 	content: "";
 	position: absolute;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	left: 0;
 	top: 0;
 	pointer-events: none;
@@ -859,8 +1081,8 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 .beepboxEditor button.exportButton::before {
 	content: "";
 	position: absolute;
-	width: 2em;
-	height: 2em;
+	width: var(--button-size);
+	height: var(--button-size);
 	left: 0;
 	top: 0;
 	pointer-events: none;
@@ -869,6 +1091,85 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	mask-repeat: no-repeat;
 	mask-position: center;
 	-webkit-mask-image: var(--export-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+
+.beepboxEditor .instrument-bar {
+	display: flex;
+	gap: 2px;
+}
+
+.beepboxEditor .instrument-bar button {
+	flex-grow: 1;
+	min-width: 0;
+	padding: 0;
+	flex-basis: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-color-lit);
+}
+
+.beepboxEditor .instrument-bar .remove-instrument, .beepboxEditor .instrument-bar .add-instrument {
+	max-width: var(--button-size);
+}
+
+.beepboxEditor .instrument-bar > :not(:first-child) {
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+}
+
+.beepboxEditor .instrument-bar > :not(.last-button) {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.beepboxEditor .instrument-bar .selected-instrument {
+	background: var(--background-color-lit);
+	color: ${ColorConfig.invertedText};
+}
+
+.beepboxEditor .instrument-bar .deactivated {
+	background: ${ColorConfig.editorBackground};
+	color: var(--text-color-dim);
+}
+
+.beepboxEditor .instrument-bar .deactivated.selected-instrument {
+	background: var(--background-color-dim);
+	color: ${ColorConfig.invertedText};
+}
+
+.beepboxEditor .instrument-bar .remove-instrument::before {
+	content: "";
+	position: absolute;
+	width: 100%;
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--close-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--close-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+}
+
+.beepboxEditor .instrument-bar .add-instrument::before {
+	content: "";
+	position: absolute;
+	width: 100%;
+	height: var(--button-size);
+	left: 0;
+	top: 0;
+	pointer-events: none;
+	background: currentColor;
+	mask-image: var(--add-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-image: var(--add-symbol);
 	-webkit-mask-repeat: no-repeat;
 	-webkit-mask-position: center;
 }
@@ -891,52 +1192,43 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 }
 
 .beepboxEditor .trackContainer {
-	overflow-x: hidden;
 	flex-grow: 1;
 }
 
 .beepboxEditor .trackAndMuteContainer {
 	display: flex;
 	align-items: flex-start;
+	width: 100%;
+	min-height: 0;
+	flex: 1;
+	overflow-x: hidden;
+	position: relative;
 }
 
 .beepboxEditor .muteEditor {
-	height: 128px;
 	width: 32px;
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
+	position: sticky;
+	left: 0;
+	z-index: 1;
+	background: ${ColorConfig.editorBackground};
 }
 
-.beepboxEditor .selectRow {
+.beepboxEditor .selectRow, .beepboxEditor .instrumentCopyPasteRow {
 	margin: 2px 0;
-	height: 2em;
+	height: var(--button-size);
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
 }
 
-.beepboxEditor .tip {
-	color: ${ColorConfig.secondaryText};
-}
-
-.beepboxEditor .selectRow > :nth-child(2) {
-	width: 61.5%;
-}
-
-.beepboxEditor .operatorRow {
-	margin: 2px 0;
-	height: 2em;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-}
-
-.beepboxEditor .operatorRow > * {
-	flex-grow: 1;
-	flex-shrink: 1;
+.beepboxEditor .selectRow > :last-child {
+	width: 62.5%;
+	flex-shrink: 0;
 }
 
 .beepboxEditor .menu-area {
@@ -947,7 +1239,7 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	margin: 2px 0;
 }
 .beepboxEditor .menu-area > button {
-	padding: 0 2em;
+	padding: 0 var(--button-size);
 	white-space: nowrap;
 }
 
@@ -969,6 +1261,33 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 
 .beepboxEditor .editor-right-side-top > *, .beepboxEditor .editor-right-side-bottom > * {
 	flex-shrink: 0;
+}
+
+.beepboxEditor .pitchShiftMarkerContainer {
+	box-sizing: border-box;
+	display: flex;
+	height: 100%;
+	left: 3px;
+	right: 3px;
+	position: absolute;
+	align-items: center;
+	pointer-events: none;
+}
+
+.beepboxEditor .pitchShiftMarker {
+	width: 0;
+	height: 0;
+	position: absolute;
+}
+
+.beepboxEditor .pitchShiftMarker::before {
+	content: "";
+	width: 2px;
+	height: 20px;
+	transform: translate(-50%, -50%);
+	position: absolute;
+	background: currentColor;
+	border-radius: 3px;
 }
 
 .beepboxEditor input[type=text], .beepboxEditor input[type=number] {
@@ -994,11 +1313,11 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	-webkit-appearance: none;
 	color: inherit;
 	width: 100%;
-	height: 2em;
+	height: var(--button-size);
 	font-size: inherit;
 	margin: 0;
 	cursor: pointer;
-	background-color: ${ColorConfig.editorBackground};
+	background: none;
 	touch-action: pan-y;
   position: relative;
 }
@@ -1007,9 +1326,13 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 }
 .beepboxEditor input[type=range]::-webkit-slider-runnable-track {
 	width: 100%;
-	height: 0.5em;
+	height: 6px;
 	cursor: pointer;
 	background: ${ColorConfig.uiWidgetBackground};
+}
+
+.modTarget:hover {
+	fill: ${ColorConfig.hoverPreview} !important;
 }
 
 .beepboxEditor span.midTick:after {
@@ -1045,20 +1368,20 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 		border-radius: var(--mod-border-radius);
 }
 .beepboxEditor input[type=range]::-webkit-slider-thumb {
-	height: 2em;
-	width: 0.5em;
-	border-radius: 0.25em;
+	height: var(--button-size);
+	width: 6px;
+	border-radius: 3px;
 	background: currentColor;
 	cursor: pointer;
 	-webkit-appearance: none;
-	margin-top: -0.75em;
+	margin-top: -10px;
 }
 .beepboxEditor input[type=range]:focus::-webkit-slider-runnable-track {
 	background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-moz-range-track {
 	width: 100%;
-	height: 0.5em;
+	height: 6px;
 	cursor: pointer;
 	background: ${ColorConfig.uiWidgetBackground};
 }
@@ -1066,16 +1389,16 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-moz-range-thumb {
-	height: 2em;
-	width: 0.5em;
-	border-radius: 0.25em;
+	height: var(--button-size);
+	width: 6px;
+	border-radius: 3px;
 	border: none;
 	background: currentColor;
 	cursor: pointer;
 }
 .beepboxEditor input[type=range]::-ms-track {
 	width: 100%;
-	height: 0.5em;
+	height: 6px;
 	cursor: pointer;
 	background: ${ColorConfig.uiWidgetBackground};
 	border-color: transparent;
@@ -1084,21 +1407,10 @@ document.head.appendChild(HTML.style({ type: "text/css" }, `
 	background: ${ColorConfig.uiWidgetFocus};
 }
 .beepboxEditor input[type=range]::-ms-thumb {
-	height: 2em;
-	width: 0.5em;
-	border-radius: 0.25em;
+	height: var(--button-size);
+	width: 6px;
+	border-radius: 3px;
 	background: currentColor;
-	cursor: pointer;
-}
-.beepboxEditor .hintButton {
-	border: 1px solid currentColor;
-	border-radius: 50%;
-	text-decoration: none;
-	width: 1em;
-	height: 1em;
-	text-align: center;
-	margin-left: auto;
-	margin-right: .4em;
 	cursor: pointer;
 }
 
@@ -1107,7 +1419,7 @@ li.select2-results__option[role=group] > strong:hover {
 }
 
 /* wide screen */
-@media (min-width: 701px) {
+@media (min-width: 711px) {
 	#beepboxEditorContainer {
 		display: table;
 	}
@@ -1151,12 +1463,12 @@ li.select2-results__option[role=group] > strong:hover {
 		margin-left: 10px;
 	}
 	.beepboxEditor .settings-area {
-		width: 14em;
+		width: var(--settings-area-width);
 	}
 }
 
 /* narrow screen */
-@media (max-width: 700px) {
+@media (max-width: 710px) {
 	.beepboxEditor {
 		grid-template-columns: minmax(0, 1fr);
 		grid-template-rows: min-content 6px min-content min-content;
@@ -1180,7 +1492,7 @@ li.select2-results__option[role=group] > strong:hover {
 	.beepboxEditor .pattern-area {
 		max-height: 75vh;
 	}
-	.beepboxEditor .trackContainer {
+	.beepboxEditor .trackAndMuteContainer {
 		overflow-x: auto;
 	}
 	.beepboxEditor .barScrollBar {

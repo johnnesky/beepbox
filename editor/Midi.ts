@@ -1,6 +1,5 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
-//namespace beepbox {
 export const defaultMidiExpression: number = 0x7F;
 export const defaultMidiPitchBend: number = 0x2000;
 
@@ -26,7 +25,7 @@ export const enum MidiEventType {
 	channelPressure = 0xD0,
 	pitchBend = 0xE0,
 	metaAndSysex = 0xF0,
-
+		
 	// These events are identified by all 8 bits.
 	meta = 0xFF,
 	// sysexStart = 0xF0,
@@ -34,21 +33,21 @@ export const enum MidiEventType {
 }
 
 export const enum MidiControlEventMessage {
-
+		
 	setParameterMSB = 0x06,
 	volumeMSB = 0x07,
 	panMSB = 0x0A,
 	expressionMSB = 0x0B,
-
+		
 	setParameterLSB = 0x26,
 	//volumeLSB = 0x27,
 	//expressionLSB = 0x2B,
-
+		
 	//nonRegisteredParameterNumberLSB = 0x62,
 	//nonRegisteredParameterNumberMSB = 0x63,
 	registeredParameterNumberLSB = 0x64,
 	registeredParameterNumberMSB = 0x65,
-
+		
 	// Channel mode messages:
 	/*
 	allSoundOff = 0x78,
@@ -105,31 +104,31 @@ export interface AnalogousDrum {
 	volume: number;
 }
 export const analogousDrumMap: { [K: number]: AnalogousDrum } = {
-	35: { frequency: 0, duration: 2, volume: 3 }, // Acoustic Bass Drum
-	36: { frequency: 0, duration: 2, volume: 3 }, // Bass Drum 1
-	37: { frequency: 5, duration: 1, volume: 3 }, // Side Stick
-	38: { frequency: 4, duration: 2, volume: 3 }, // Acoustic Snare
-	39: { frequency: 5, duration: 2, volume: 3 }, // Hand Clap
-	40: { frequency: 4, duration: 2, volume: 3 }, // Electric Snare
-	41: { frequency: 1, duration: 2, volume: 3 }, // Low Floor Tom
-	42: { frequency: 8, duration: 1, volume: 3 }, // Closed Hi Hat
-	43: { frequency: 1, duration: 2, volume: 3 }, // High Floor Tom
-	44: { frequency: 8, duration: 1, volume: 2 }, // Pedal Hi-Hat
-	45: { frequency: 2, duration: 2, volume: 3 }, // Low Tom
-	46: { frequency: 8, duration: 4, volume: 3 }, // Open Hi-Hat
-	47: { frequency: 2, duration: 2, volume: 3 }, // Low-Mid Tom
-	48: { frequency: 3, duration: 2, volume: 3 }, // Hi-Mid Tom
-	49: { frequency: 7, duration: 4, volume: 3 }, // Crash Cymbal 1
-	50: { frequency: 3, duration: 2, volume: 3 }, // High Tom
-	51: { frequency: 6, duration: 4, volume: 2 }, // Ride Cymbal 1
-	52: { frequency: 7, duration: 4, volume: 3 }, // Chinese Cymbal
-	53: { frequency: 6, duration: 2, volume: 3 }, // Ride Bell
+		35: { frequency:  0, duration: 2, volume: 3 }, // Acoustic Bass Drum
+		36: { frequency:  0, duration: 2, volume: 3 }, // Bass Drum 1
+		37: { frequency:  5, duration: 1, volume: 3 }, // Side Stick
+		38: { frequency:  4, duration: 2, volume: 3 }, // Acoustic Snare
+		39: { frequency:  5, duration: 2, volume: 3 }, // Hand Clap
+		40: { frequency:  4, duration: 2, volume: 3 }, // Electric Snare
+		41: { frequency:  1, duration: 2, volume: 3 }, // Low Floor Tom
+		42: { frequency:  8, duration: 1, volume: 3 }, // Closed Hi Hat
+		43: { frequency:  1, duration: 2, volume: 3 }, // High Floor Tom
+		44: { frequency:  8, duration: 1, volume: 2 }, // Pedal Hi-Hat
+		45: { frequency:  2, duration: 2, volume: 3 }, // Low Tom
+		46: { frequency:  8, duration: 4, volume: 3 }, // Open Hi-Hat
+		47: { frequency:  2, duration: 2, volume: 3 }, // Low-Mid Tom
+		48: { frequency:  3, duration: 2, volume: 3 }, // Hi-Mid Tom
+		49: { frequency:  7, duration: 4, volume: 3 }, // Crash Cymbal 1
+		50: { frequency:  3, duration: 2, volume: 3 }, // High Tom
+		51: { frequency:  6, duration: 4, volume: 2 }, // Ride Cymbal 1
+		52: { frequency:  7, duration: 4, volume: 3 }, // Chinese Cymbal
+		53: { frequency:  6, duration: 2, volume: 3 }, // Ride Bell
 	54: { frequency: 11, duration: 2, volume: 3 }, // Tambourine
-	55: { frequency: 9, duration: 4, volume: 3 }, // Splash Cymbal
-	56: { frequency: 7, duration: 1, volume: 2 }, // Cowbell
-	57: { frequency: 7, duration: 4, volume: 3 }, // Crash Cymbal 2
+		55: { frequency:  9, duration: 4, volume: 3 }, // Splash Cymbal
+		56: { frequency:  7, duration: 1, volume: 2 }, // Cowbell
+		57: { frequency:  7, duration: 4, volume: 3 }, // Crash Cymbal 2
 	58: { frequency: 10, duration: 2, volume: 2 }, // Vibraslap
-	59: { frequency: 6, duration: 4, volume: 3 }, // Ride Cymbal 2
+		59: { frequency:  6, duration: 4, volume: 3 }, // Ride Cymbal 2
 	//60: { frequency:  7, duration: 1, volume: 3 }, // Hi Bongo
 	//61: { frequency:  5, duration: 1, volume: 3 }, // Low Bongo
 	//62: { frequency:  6, duration: 1, volume: 3 }, // Mute Hi Conga
@@ -167,4 +166,3 @@ export function midiExpressionToVolumeMult(expression: number): number {
 export function volumeMultToMidiExpression(volumeMult: number): number {
 	return Math.pow(volumeMult, 0.25) * 127;
 }
-//}

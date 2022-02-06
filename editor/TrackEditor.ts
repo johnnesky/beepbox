@@ -1,4 +1,4 @@
-// Copyright (C) 2020 John Nesky, distributed under the MIT license.
+// Copyright (C) 2021 John Nesky, distributed under the MIT license.
 
 import { Pattern } from "../synth/synth";
 import { ColorConfig, ChannelColors } from "./ColorConfig";
@@ -8,12 +8,11 @@ import { SongDocument } from "./SongDocument";
 import { SongEditor } from "./SongEditor";
 import { HTML, SVG } from "imperative-html/dist/esm/elements-strict";
 
-//namespace beepbox {
 
 class Box {
 	private readonly _text: Text = document.createTextNode("1");
-	private readonly _label: SVGTextElement = SVG.text({ "font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red" }, this._text);
-	private readonly _rect: SVGRectElement = SVG.rect({ x: 1, y: 1 });
+		private readonly _label: SVGTextElement = SVG.text({"font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red"}, this._text);
+		private readonly _rect: SVGRectElement = SVG.rect({x: 1, y: 1});
 	public readonly container: SVGSVGElement = SVG.svg(this._rect, this._label);
 	private _renderedIndex: number = 1;
 	private _renderedDim: boolean = true;
@@ -24,7 +23,7 @@ class Box {
 		this._rect.setAttribute("fill", ColorConfig.uiWidgetBackground);
 		this._label.setAttribute("fill", color);
 	}
-
+		
 	public setSize(width: number, height: number): void {
 		this.container.setAttribute("x", "" + (this._x * width));
 		this.container.setAttribute("y", "" + (Config.barEditorHeight + this._y * height));
@@ -33,7 +32,7 @@ class Box {
 		this._label.setAttribute("x", "" + (width / 2));
 		this._label.setAttribute("y", "" + Math.round(height / 2 + 7));
 	}
-
+		
 	public setIndex(index: number, dim: boolean, selected: boolean, color: string, isNoise: boolean, isMod: boolean): void {
 		if (this._renderedIndex != index) {
 			if (!this._renderedSelected && ((index == 0) != (this._renderedIndex == 0))) {
@@ -48,9 +47,9 @@ class Box {
 					else
 						this._rect.setAttribute("fill", dim ? ColorConfig.trackEditorBgPitchDim : ColorConfig.trackEditorBgPitch);
 
-				}
 			}
-
+			}
+			
 			if (index >= 100) {
 				this._label.setAttribute("font-size", "16");
 				this._label.setAttribute("style", "transform: translate(0px, -1.5px);");
@@ -61,9 +60,9 @@ class Box {
 			}
 
 			this._renderedIndex = index;
-			this._text.data = "" + index;
+				this._text.data = ""+index;
 		}
-
+			
 		if (this._renderedDim != dim || this._renderedColor != color) {
 			this._renderedDim = dim;
 			if (selected) {
@@ -73,7 +72,7 @@ class Box {
 
 				if (this._renderedIndex == 0) {
 					this._rect.setAttribute("fill", ColorConfig.editorBackground);
-				}
+			}
 				else {
 					if (isNoise)
 						this._rect.setAttribute("fill", dim ? ColorConfig.trackEditorBgNoiseDim : ColorConfig.trackEditorBgNoise);
@@ -82,9 +81,9 @@ class Box {
 					else
 						this._rect.setAttribute("fill", dim ? ColorConfig.trackEditorBgPitchDim : ColorConfig.trackEditorBgPitch);
 				}
-			}
 		}
-
+		}
+			
 		if (this._renderedSelected != selected || this._renderedColor != color) {
 			this._renderedSelected = selected;
 			if (selected) {
@@ -95,7 +94,7 @@ class Box {
 
 				if (this._renderedIndex == 0) {
 					this._rect.setAttribute("fill", ColorConfig.editorBackground);
-				}
+			}
 				else {
 					if (isNoise)
 						this._rect.setAttribute("fill", dim ? ColorConfig.trackEditorBgNoiseDim : ColorConfig.trackEditorBgNoise);
@@ -104,9 +103,9 @@ class Box {
 					else
 						this._rect.setAttribute("fill", dim ? ColorConfig.trackEditorBgPitchDim : ColorConfig.trackEditorBgPitch);
 				}
-			}
 		}
-
+		}
+			
 		this._renderedColor = color;
 	}
 }
@@ -120,13 +119,13 @@ export class TrackEditor {
 	);
 	private readonly _boxContainer: SVGGElement = SVG.g();
 	private readonly _barNumberContainer: SVGGElement = SVG.g();
-	private readonly _playhead: SVGRectElement = SVG.rect({ fill: ColorConfig.playhead, x: 0, y: 0, width: 4, height: 128 });
-	private readonly _boxHighlight: SVGRectElement = SVG.rect({ fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30 });
-	private readonly _upHighlight: SVGPathElement = SVG.path({ fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none" });
-	private readonly _downHighlight: SVGPathElement = SVG.path({ fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none" });
+		private readonly _playhead: SVGRectElement = SVG.rect({fill: ColorConfig.playhead, x: 0, y: 0, width: 4, height: 128});
+		private readonly _boxHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
+		private readonly _upHighlight: SVGPathElement = SVG.path({fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none"});
+		private readonly _downHighlight: SVGPathElement = SVG.path({fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none"});
 	private readonly _barEditorPath: SVGPathElement = SVG.path({ fill: ColorConfig.uiWidgetBackground, stroke: ColorConfig.uiWidgetBackground, "stroke-width": 1, "pointer-events": "none" });
 	private readonly _selectionRect: SVGRectElement = SVG.rect({ class: "dashed-line dash-move", fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "fill-opacity": "0.4", "pointer-events": "none", visibility: "hidden", x: 1, y: 1, width: 62, height: 62 });
-	private readonly _svg: SVGSVGElement = SVG.svg({ style: `background-color: ${ColorConfig.editorBackground}; position: absolute;`, height: 128 },
+		private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; position: absolute;`, height: 128},
 		this._boxContainer,
 		this._barEditorPath,
 		this._selectionRect,
@@ -136,9 +135,9 @@ export class TrackEditor {
 		this._downHighlight,
 		this._playhead,
 	);
-	private readonly _select: HTMLSelectElement = HTML.select({ class: "trackSelectBox", style: "background: none; border: none; appearance: none; border-radius: initial; box-shadow: none; color: transparent; position: absolute; touch-action: none;" });
+		private readonly _select: HTMLSelectElement = HTML.select({class: "trackSelectBox", style: "background: none; border: none; appearance: none; border-radius: initial; box-shadow: none; color: transparent; position: absolute; touch-action: none;"});
 	public readonly container: HTMLElement = HTML.div({ class: "noSelection", style: "height: 128px; position: relative; overflow:hidden;" }, this._svg, this._select, this._barDropDown);
-
+		
 	private readonly _grid: Box[][] = [];
 	private readonly _barNumbers: SVGTextElement[] = [];
 	private _mouseX: number = 0;
@@ -166,7 +165,7 @@ export class TrackEditor {
 	private _touchMode: boolean = isMobile;
 	private _barDropDownBar: number = 0;
 	private _lastScrollTime: number = 0;
-
+		
 	constructor(private _doc: SongDocument, private _songEditor: SongEditor) {
 		window.requestAnimationFrame(this._animatePlayhead);
 		this._svg.addEventListener("mousedown", this._whenMousePressed);
@@ -174,13 +173,13 @@ export class TrackEditor {
 		document.addEventListener("mouseup", this._whenMouseReleased);
 		this._svg.addEventListener("mouseover", this._whenMouseOver);
 		this._svg.addEventListener("mouseout", this._whenMouseOut);
-
+			
 		this._select.addEventListener("change", this._whenSelectChanged);
 		this._select.addEventListener("touchstart", this._whenSelectPressed);
 		this._select.addEventListener("touchmove", this._whenSelectMoved);
 		this._select.addEventListener("touchend", this._whenSelectReleased);
 		this._select.addEventListener("touchcancel", this._whenSelectReleased);
-
+			
 		let determinedCursorType: boolean = false;
 		document.addEventListener("mousedown", () => {
 			if (!determinedCursorType) {
@@ -229,9 +228,9 @@ export class TrackEditor {
 				this._songEditor._barScrollBar.animatePlayhead();
 			}
 
-		}
+	}
 		else if (this._barDropDown.value == "deleteBar") {
-
+		
 			//var prevBar = this._doc.bar;
 
 			this._doc.bar = this._barDropDownBar;
@@ -256,7 +255,7 @@ export class TrackEditor {
 	private _whenSelectChanged = (): void => {
 		this._doc.selection.setPattern(this._select.selectedIndex);
 	}
-
+		
 	private _animatePlayhead = (timestamp: number): void => {
 		const playhead = (this._barWidth * this._doc.synth.playhead - 2);
 		if (this._renderedPlayhead != playhead) {
@@ -265,18 +264,20 @@ export class TrackEditor {
 		}
 		window.requestAnimationFrame(this._animatePlayhead);
 	}
-
-	public movePlayheadToMouse(): void {
+	
+	public movePlayheadToMouse(): boolean {
 		if (this._mouseOver) {
 			this._doc.synth.playhead = this._mouseBar + (this._mouseX % this._barWidth) / this._barWidth;
+			return true;
 		}
+		return false;
 	}
-
+	
 	private _dragBoxSelection(): void {
 		this._doc.selection.setTrackSelection(this._doc.selection.boxSelectionX0, this._mouseBar, this._doc.selection.boxSelectionY0, this._mouseChannel);
 		this._doc.selection.selectionUpdated();
 	}
-
+		
 	private _updateSelectPos(event: TouchEvent): void {
 		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 		this._mouseX = event.touches[0].clientX - boundingRect.left;
@@ -286,7 +287,7 @@ export class TrackEditor {
 		this._mouseBar = Math.floor(Math.min(this._doc.song.barCount - 1, Math.max(0, this._mouseX / this._barWidth)));
 		this._mouseChannel = Math.floor(Math.min(this._doc.song.getChannelCount() - 1, Math.max(0, (this._mouseY - Config.barEditorHeight) / this._channelHeight)));
 	}
-
+		
 	private _whenSelectPressed = (event: TouchEvent): void => {
 		this._mousePressed = true;
 		this._mouseDragging = true;
@@ -294,7 +295,7 @@ export class TrackEditor {
 		this._mouseStartBar = this._mouseBar;
 		this._mouseStartChannel = this._mouseChannel;
 	}
-
+		
 	private _whenSelectMoved = (event: TouchEvent): void => {
 		this._updateSelectPos(event);
 		if (this._mouseStartBar != this._mouseBar || this._mouseStartChannel != this._mouseChannel) {
@@ -304,23 +305,23 @@ export class TrackEditor {
 		if (this._mousePressed) this._dragBoxSelection();
 		this._updatePreview();
 	}
-
+		
 	private _whenSelectReleased = (event: TouchEvent): void => {
 		this._mousePressed = false;
 		this._mouseDragging = false;
 		this._updatePreview();
 	}
-
+		
 	private _whenMouseOver = (event: MouseEvent): void => {
 		if (this._mouseOver) return;
 		this._mouseOver = true;
 	}
-
+		
 	private _whenMouseOut = (event: MouseEvent): void => {
 		if (!this._mouseOver) return;
 		this._mouseOver = false;
 	}
-
+		
 	private _updateMousePos(event: MouseEvent): void {
 		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
 		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
@@ -328,7 +329,7 @@ export class TrackEditor {
 		this._mouseBar = Math.floor(Math.min(this._doc.song.barCount - 1, Math.max(0, this._mouseX / this._barWidth)));
 		this._mouseChannel = Math.floor(Math.min(this._doc.song.getChannelCount() - 1, Math.max(0, (this._mouseY - Config.barEditorHeight) / this._channelHeight)));
 	}
-
+		
 	private _whenMousePressed = (event: MouseEvent): void => {
 		event.preventDefault();
 		this._mousePressed = true;
@@ -339,21 +340,21 @@ export class TrackEditor {
 		// Act on track portion
 		if (this._mouseY >= Config.barEditorHeight) {
 
-			if (event.shiftKey) {
+		if (event.shiftKey) {
+			this._mouseDragging = true;
+			this._doc.selection.setTrackSelection(this._doc.selection.boxSelectionX0, this._mouseBar, this._doc.selection.boxSelectionY0, this._mouseChannel);
+			this._doc.selection.selectionUpdated();
+		} else {
+			this._mouseDragging = false;
+			if (this._doc.channel != this._mouseChannel || this._doc.bar != this._mouseBar) {
+				this._doc.selection.setChannelBar(this._mouseChannel, this._mouseBar);
 				this._mouseDragging = true;
-				this._doc.selection.setTrackSelection(this._doc.selection.boxSelectionX0, this._mouseBar, this._doc.selection.boxSelectionY0, this._mouseChannel);
-				this._doc.selection.selectionUpdated();
-			} else {
-				this._mouseDragging = false;
-				if (this._doc.channel != this._mouseChannel || this._doc.bar != this._mouseBar) {
-					this._doc.selection.setChannelBar(this._mouseChannel, this._mouseBar);
-					this._mouseDragging = true;
-				}
-				this._doc.selection.resetBoxSelection();
 			}
+			this._doc.selection.resetBoxSelection();
 		}
 	}
-
+	}
+		
 	private _whenMouseMoved = (event: MouseEvent): void => {
 		this._updateMousePos(event);
 		if (this._mousePressed) {
@@ -364,7 +365,7 @@ export class TrackEditor {
 		}
 		this._updatePreview();
 	}
-
+		
 	private _whenMouseReleased = (event: MouseEvent): void => {
 		if (this._mousePressed && !this._mouseDragging) {
 			if (this._doc.channel == this._mouseChannel && this._doc.bar == this._mouseBar) {
@@ -377,19 +378,19 @@ export class TrackEditor {
 		this._mouseDragging = false;
 		this._updatePreview();
 	}
-
+		
 	private _updatePreview(): void {
 		let channel: number = this._mouseChannel;
 		let bar: number = this._mouseBar;
-
+			
 		if (this._touchMode) {
 			bar = this._doc.bar;
 			channel = this._doc.channel;
 		}
-
+			
 		const selected: boolean = (bar == this._doc.bar && channel == this._doc.channel);
 		const overTrackEditor: boolean = (this._mouseY >= Config.barEditorHeight);
-
+			
 		if (this._mouseDragging && this._mouseStartBar != this._mouseBar) {
 
 			// Handle auto-scroll in selection. Only @50ms or slower.
@@ -426,7 +427,7 @@ export class TrackEditor {
 		} else {
 			this._boxHighlight.style.visibility = "hidden";
 		}
-
+			
 		if ((this._mouseOver || this._touchMode) && selected && overTrackEditor) {
 			const up: boolean = ((this._mouseY - Config.barEditorHeight) % this._channelHeight) < this._channelHeight / 2;
 			const center: number = this._barWidth * (bar + 0.8);
@@ -434,20 +435,20 @@ export class TrackEditor {
 			const base: number = this._channelHeight * 0.1;
 			const tip: number = this._channelHeight * 0.4;
 			const width: number = this._channelHeight * 0.175;
-
+				
 			this._upHighlight.setAttribute("fill", up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.invertedText);
 			this._downHighlight.setAttribute("fill", !up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.invertedText);
-
+				
 			this._upHighlight.setAttribute("d", `M ${center} ${middle - tip} L ${center + width} ${middle - base} L ${center - width} ${middle - base} z`);
 			this._downHighlight.setAttribute("d", `M ${center} ${middle + tip} L ${center + width} ${middle + base} L ${center - width} ${middle + base} z`);
-
+				
 			this._upHighlight.style.visibility = "visible";
 			this._downHighlight.style.visibility = "visible";
 		} else {
 			this._upHighlight.style.visibility = "hidden";
 			this._downHighlight.style.visibility = "hidden";
 		}
-
+			
 		this._selectionRect.style.left = (this._barWidth * this._doc.bar) + "px";
 		this._selectionRect.style.top = (Config.barEditorHeight + (this._channelHeight * this._doc.channel)) + "px";
 
@@ -456,26 +457,26 @@ export class TrackEditor {
 		this._select.style.width = this._barWidth + "px";
 		this._select.style.top = (Config.barEditorHeight + this._channelHeight * this._doc.channel) + "px";
 		this._select.style.height = this._channelHeight + "px";
-
+			
 		this._barDropDown.style.left = (this._barWidth * bar) + "px";
 
 		const patternCount: number = this._doc.song.patternsPerChannel + 1;
 		for (let i: number = this._renderedPatternCount; i < patternCount; i++) {
-			this._select.appendChild(HTML.option({ value: i }, i));
+				this._select.appendChild(HTML.option({value: i}, i));
 		}
 		for (let i: number = patternCount; i < this._renderedPatternCount; i++) {
-			this._select.removeChild(<Node>this._select.lastChild);
+				this._select.removeChild(<Node> this._select.lastChild);
 		}
 		this._renderedPatternCount = patternCount;
 		const selectedPattern: number = this._doc.song.channels[this._doc.channel].bars[this._doc.bar];
 		if (this._select.selectedIndex != selectedPattern) this._select.selectedIndex = selectedPattern;
 	}
-
+		
 	public render(): void {
 
 		this._barWidth = this._doc.getBarWidth();
 		this._channelHeight = this._doc.getChannelHeight();
-
+			
 		if (this._renderedChannelCount != this._doc.song.getChannelCount()) {
 
 			// Add new channel boxes if needed
@@ -488,18 +489,18 @@ export class TrackEditor {
 					this._grid[y][x] = box;
 				}
 			}
-
+				
 			// Remove old channel boxes
 			for (let y: number = this._doc.song.getChannelCount(); y < this._renderedChannelCount; y++) {
 				for (let x: number = 0; x < this._renderedBarCount; x++) {
 					this._boxContainer.removeChild(this._grid[y][x].container);
 				}
 			}
-
+				
 			this._grid.length = this._doc.song.getChannelCount();
 			this._mousePressed = false;
 		}
-
+			
 		if (this._renderedBarCount != this._doc.song.barCount || this._renderedBarWidth != this._barWidth) {
 			for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
 				for (let x: number = this._renderedBarCount; x < this._doc.song.barCount; x++) {
@@ -527,8 +528,8 @@ export class TrackEditor {
 				var pathBottom = Config.barEditorHeight - 3;
 
 				pathString += `M ${pathLeft} ${pathTop} H ${pathRight} V ${pathBottom} H ${pathLeft} V ${pathTop} Z `;
-			}
-
+		}
+			
 			this._barEditorPath.setAttribute("d", pathString);
 
 			if (this._renderedBarCount < this._doc.song.barCount) {
@@ -563,7 +564,7 @@ export class TrackEditor {
 			this._svg.setAttribute("width", editorWidth + "");
 			this._mousePressed = false;
 		}
-
+			
 		if (this._renderedChannelHeight != this._channelHeight || this._renderedBarWidth != this._barWidth) {
 			this._renderedBarWidth = this._barWidth;
 			for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
@@ -573,7 +574,7 @@ export class TrackEditor {
 			}
 			this._mousePressed = false;
 		}
-
+			
 		if (this._renderedChannelHeight != this._channelHeight || this._renderedChannelCount != this._doc.song.getChannelCount()) {
 			this._renderedChannelHeight = this._channelHeight;
 			this._renderedChannelCount = this._doc.song.getChannelCount();
@@ -582,13 +583,13 @@ export class TrackEditor {
 			this._playhead.setAttribute("height", "" + editorHeight);
 			this.container.style.height = editorHeight + "px";
 		}
-
+			
 		for (let j: number = 0; j < this._doc.song.getChannelCount(); j++) {
 			for (let i: number = 0; i < this._renderedBarCount; i++) {
 				const pattern: Pattern | null = this._doc.song.getPattern(j, i);
 				const selected: boolean = (i == this._doc.bar && j == this._doc.channel);
 				const dim: boolean = (pattern == null || pattern.notes.length == 0);
-
+					
 				const box: Box = this._grid[j][i];
 				if (i < this._doc.song.barCount) {
 					const colors: ChannelColors = ColorConfig.getChannelColor(this._doc.song, j);
@@ -600,9 +601,9 @@ export class TrackEditor {
 			}
 
 		}
-
+			
 		this._select.style.display = this._touchMode ? "" : "none";
-
+			
 		if (this._doc.selection.boxSelectionWidth > 1 || this._doc.selection.boxSelectionHeight > 1) {
 			// TODO: This causes the selection rectangle to repaint every time the
 			// editor renders and the selection is visible. Check if anything changed
@@ -615,8 +616,7 @@ export class TrackEditor {
 		} else {
 			this._selectionRect.setAttribute("visibility", "hidden");
 		}
-
+			
 		this._updatePreview();
 	}
 }
-//}

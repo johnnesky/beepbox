@@ -74,6 +74,7 @@ export class ThemePrompt implements Prompt {
 
 	private _previewTheme = (): void => {
 		ColorConfig.setTheme(this._themeSelect.value);
+		this._doc.notifier.changed();
 	}
 }
 //}
