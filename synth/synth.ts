@@ -1700,7 +1700,7 @@ export class Instrument {
         if (instrumentObject["detune"] != undefined) {
             this.detune = clamp(Config.detuneMin, Config.detuneMax + 1, (instrumentObject["detune"] | 0));
         }
-        else {
+        else if (instrumentObject["detuneCents"] == undefined) {
             this.detune = Config.detuneCenter;
         }
 
@@ -2565,6 +2565,7 @@ export class Song {
                     }
                 } else if (instrument.type == InstrumentType.customChipWave) {
                     buffer.push(SongTagCode.wave, base64IntToCharCode[instrument.chipWave]);
+                    buffer.push(SongTagCode.unison, base64IntToCharCode[instrument.unison]);
                     buffer.push(SongTagCode.customChipWave);
                     // Push custom wave values
                     for (let j: number = 0; j < 64; j++) {
@@ -4162,8 +4163,7 @@ export class Song {
                     for (let j: number = 0; j < channel.instruments.length; j++) {
                         detuneScaleNotes[j] = [];
                         for (let i: number = 0; i < Config.modCount; i++) {
-                            detuneScaleNotes[j][Config.modCount - 1 - i] = 1 + 3 * +(beforeFive && fromJummBox && isModChannel && (channel.instruments[j].modulators[i] == Config.modulators.dictionary["detune"].index
-                                || channel.instruments[j].modulators[i] == Config.modulators.dictionary["song detune"].index));
+                            detuneScaleNotes[j][Config.modCount - 1 - i] = 1 + 3 * +(beforeFive && fromJummBox && isModChannel && (channel.instruments[j].modulators[i] == Config.modulators.dictionary["detune"].index));
                         }
                     }
                     const octaveOffset: number = (isNoiseChannel || isModChannel) ? 0 : channel.octave * 12;
@@ -4426,7 +4426,17 @@ export class Song {
                                         const pattern: Pattern = new Pattern();
                                         this.channels[channelIndex].patterns.push(pattern);
                                         this.channels[channelIndex].bars[0] = this.channels[channelIndex].patterns.length;
-
+                                        if (this.channels[channelIndex].patterns.length > this.patternsPerChannel) {
+                                            for (let chn: number = 0; chn < this.channels.length; chn++) {
+                                                if (this.channels[chn].patterns.length <= this.patternsPerChannel) {
+                                                    this.channels[chn].patterns.push(new Pattern());
+                                                }
+                                            }
+                                            this.patternsPerChannel++;
+                                        }
+                                        pattern.instruments.length = 1;
+                                        pattern.instruments[0] = songReverbInstrument;
+                                        pattern.notes.length = 0;
                                         pattern.notes.push(new Note(Config.modCount - 1 - songReverbIndex, 0, 6, legacyGlobalReverb));
                                     }
                                 }

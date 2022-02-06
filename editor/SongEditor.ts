@@ -1765,7 +1765,7 @@ export class SongEditor {
                     this._reverbRow.style.display = "none";
                 }
 
-                if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pickedString) {
+                if (instrument.type == InstrumentType.chip || instrument.type == InstrumentType.customChipWave || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.pickedString) {
                     this._unisonSelectRow.style.display = "";
                     setSelectedValue(this._unisonSelect, instrument.unison);
                 } else {
