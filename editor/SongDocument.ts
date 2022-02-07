@@ -319,7 +319,7 @@ export class SongDocument {
 					this.viewedInstrument[i] = pattern.instruments[0];
 				}
 			}
-			this.viewedInstrument[i] = Math.min(this.viewedInstrument[i], this.song.channels[i].instruments.length - 1);
+			this.viewedInstrument[i] = Math.min(this.viewedInstrument[i] | 0, this.song.channels[i].instruments.length - 1);
 		}
 		
 		const highlightedPattern: Pattern | null = this.getCurrentPattern();

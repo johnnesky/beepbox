@@ -3028,7 +3028,7 @@ export class ChangeValidateTrackSelection extends Change {
         const channelScrollPos: number = Math.min(doc.channel, Math.max(doc.channel - (doc.trackVisibleChannels - 1), Math.max(0, Math.min(doc.song.getChannelCount() - doc.trackVisibleChannels, doc.channelScrollPos))));
         if (doc.channel != channelIndex || doc.bar != bar || doc.channelScrollPos != channelScrollPos || doc.barScrollPos != barScrollPos) {
             doc.channel = channelIndex;
-            doc.channel = channelScrollPos;
+            doc.channelScrollPos = channelScrollPos;
             doc.bar = bar;
             doc.barScrollPos = barScrollPos;
             doc.notifier.changed();
