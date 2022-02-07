@@ -1339,8 +1339,25 @@ export class ChangeAddChannel extends ChangeGroup {
 
 export class ChangeRemoveChannel extends ChangeGroup {
 	constructor(doc: SongDocument, minIndex: number, maxIndex: number) {
-		super();
-		
+        super();
+
+        const oldMax: number = maxIndex;
+
+        // Update modulators - if a higher index was removed, shift down
+        for (let modChannel: number = doc.song.pitchChannelCount + doc.song.noiseChannelCount; modChannel < doc.song.channels.length; modChannel++) {
+            for (let instrumentIndex: number = 0; instrumentIndex < doc.song.channels[modChannel].instruments.length; instrumentIndex++) {
+                const modInstrument: Instrument = doc.song.channels[modChannel].instruments[instrumentIndex];
+                for (let mod: number = 0; mod < Config.modCount; mod++) {
+                    if (modInstrument.modChannels[mod] >= minIndex && modInstrument.modChannels[mod] <= oldMax) {
+                        this.append(new ChangeModChannel(doc, mod, 0, modInstrument));
+                    }
+                    else if (modInstrument.modChannels[mod] > oldMax) {
+                        this.append(new ChangeModChannel(doc, mod, modInstrument.modChannels[mod] - (oldMax - minIndex + 1) + 2, modInstrument));
+                    }
+                }
+            }
+        }
+
 		while (maxIndex >= minIndex) {
             const isNoise: boolean = doc.song.getChannelIsNoise(maxIndex);
             const isMod: boolean = doc.song.getChannelIsMod(maxIndex);
@@ -1352,15 +1369,18 @@ export class ChangeRemoveChannel extends ChangeGroup {
             } else {
 				doc.song.pitchChannelCount--;
 			}
-			maxIndex--;
+            maxIndex--;
 		}
 		
         if (doc.song.pitchChannelCount < Config.pitchChannelCountMin) {
             this.append(new ChangeChannelCount(doc, Config.pitchChannelCountMin, doc.song.noiseChannelCount, doc.song.modChannelCount));
-		}
-		
+        }
+
+        ColorConfig.resetColors();
+        doc.recalcChannelNames = true;
+
 		this.append(new ChangeChannelBar(doc, Math.max(0, minIndex - 1), doc.bar));
-		
+
 		this._didSomething();
 		doc.notifier.changed();
 	}
@@ -2372,9 +2392,11 @@ export class ChangeSetPatternInstruments extends Change {
 }
 
 export class ChangeModChannel extends Change {
-    constructor(doc: SongDocument, mod: number, index: number) {
+    constructor(doc: SongDocument, mod: number, index: number, useInstrument?: Instrument) {
         super();
         let instrument: Instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+        if (useInstrument != undefined)
+            instrument = useInstrument;
 
         // None, or swapping from song to instrument/vice-versa
         if (index == 0 || (Config.modulators[instrument.modulators[mod]].forSong && index >= 2) || (!Config.modulators[instrument.modulators[mod]].forSong && index < 2)) {

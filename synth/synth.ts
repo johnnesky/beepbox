@@ -4407,6 +4407,7 @@ export class Song {
                             if (songReverbChannel == channelIndex && songReverbInstrument == instrumentIndex) {
                                 const patternIndex: number = this.channels[channelIndex].bars[0];
                                 if (patternIndex > 0) {
+                                    // Doesn't work if 1st pattern isn't using the right ins for song reverb...
                                     // Add note to start of pattern
                                     const pattern: Pattern = this.channels[channelIndex].patterns[patternIndex-1];
                                     let lowestPart: number = 6;
@@ -6147,11 +6148,11 @@ export class Synth {
                     // EQ Filter check
                     || (tgtInstrument.eqFilterType && str == "eq filter")
                     || (!tgtInstrument.eqFilterType && (str == "eq filt cut" || str == "eq filt peak"))
-                    || (str == "eq filter" && Math.floor(instrument.modFilterTypes[mod] - 1) > tgtInstrument.eqFilter.controlPointCount)
+                    || (str == "eq filter" && Math.floor((instrument.modFilterTypes[mod] + 1)/2) > tgtInstrument.eqFilter.controlPointCount)
                     // Note Filter check
                     || (tgtInstrument.noteFilterType && str == "note filter")
                     || (!tgtInstrument.noteFilterType && (str == "note filt cut" || str == "note filt peak"))
-                    || (str == "note filter" && Math.floor(tgtInstrument.modFilterTypes[mod] - 1)))) {
+                    || (str == "note filter" && Math.floor((instrument.modFilterTypes[mod] + 1) / 2) > tgtInstrument.noteFilter.controlPointCount))) {
 
                     instrument.invalidModulators[mod] = false;
                     i = tgtInstrumentList.length;

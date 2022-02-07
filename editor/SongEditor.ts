@@ -2211,8 +2211,8 @@ export class SongEditor {
                         this._modFilterBoxes[mod].classList.add("invalidSetting");
                         instrument.invalidModulators[mod] = true;
                         let useName: string = ((instrument.modFilterTypes[mod] - 1) % 2 == 1) ?
-                            "dot " + (Math.floor(instrument.modFilterTypes[mod] / 2) + 1) + " y"
-                            : "dot " + (Math.floor(instrument.modFilterTypes[mod] / 2) + 1) + " x";
+                            "dot " + (Math.floor((instrument.modFilterTypes[mod]-1) / 2) + 1) + " y"
+                            : "dot " + (Math.floor((instrument.modFilterTypes[mod]-1) / 2) + 1) + " x";
                         this._modFilterBoxes[mod].insertBefore(option({ value: useName, style: "color: red;" }, useName), this._modFilterBoxes[mod].children[0]);
                         this._modFilterBoxes[mod].selectedIndex = 0;
 

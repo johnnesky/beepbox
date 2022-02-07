@@ -230,6 +230,9 @@ function loadSong(songString: string, reuseParams: boolean): void {
 	synth.snapToStart();
 	const updatedSongString: string = synth.song!.toBase64String();
 	editLink.href = "../#" + updatedSongString;
+	//@jummbus - these lines convert old url vers loaded into the player to the new url ver. The problem is, if special chars are included,
+	// they appear to get double-encoded (e.g. the '%' in %20 is encoded again), which breaks the link. Disabled for now until I have a chance
+	// to look into it more.
 	//const hashQueryParams = new URLSearchParams(reuseParams ? location.hash.slice(1) : "");
 	//hashQueryParams.set("song", updatedSongString);
 	//location.hash = hashQueryParams.toString();
