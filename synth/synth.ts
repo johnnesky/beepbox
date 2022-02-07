@@ -1820,6 +1820,16 @@ export class Instrument {
                 }
                 if (operatorObject["waveform"] != undefined) {
                     operator.waveform = Config.operatorWaves.findIndex(wave => wave.name == operatorObject["waveform"]);
+                    if (operator.waveform == -1) {
+                        // GoldBox compatibility
+                        if (operatorObject["waveform"] == "square") {
+                            operator.waveform = Config.operatorWaves.dictionary["pulse width"].index;
+                            operator.pulseWidth = 5;
+                        } else {
+                            operator.waveform = 0;
+                        }
+
+                    }
                 } else {
                     operator.waveform = 0;
                 }
