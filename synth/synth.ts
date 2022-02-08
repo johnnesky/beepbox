@@ -5626,16 +5626,22 @@ class InstrumentState {
 
                 startPoint.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, 1.0, 1.0);
                 endPoint.toCoefficients(Synth.tempFilterEndCoefficients, samplesPerSecond, 1.0, 1.0);
+
+                if (this.eqFilters.length < 1) this.eqFilters[0] = new DynamicBiquadFilter();
+                this.eqFilters[0].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength, startPoint.type == FilterType.lowPass);
+
             } else {
                 eqFilterSettingsStart.convertLegacySettingsForSynth(startSimpleFreq, startSimpleGain, true);
 
                 startPoint = eqFilterSettingsStart.controlPoints[0];
 
                 startPoint.toCoefficients(Synth.tempFilterStartCoefficients, samplesPerSecond, 1.0, 1.0);
+
+                if (this.eqFilters.length < 1) this.eqFilters[0] = new DynamicBiquadFilter();
+                this.eqFilters[0].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterStartCoefficients, 1.0 / runLength, startPoint.type == FilterType.lowPass);
+
             }
 
-            if (this.eqFilters.length < 1) this.eqFilters[0] = new DynamicBiquadFilter();
-            this.eqFilters[0].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterStartCoefficients, 1.0 / runLength, startPoint.type == FilterType.lowPass);
             eqFilterVolume *= startPoint.getVolumeCompensationMult();
 
             this.eqFilterCount = 1;
@@ -7870,7 +7876,6 @@ export class Synth {
         let tmpNoteFilter: FilterSettings = instrument.noteFilter;
         let startPoint: FilterControlPoint;
         let endPoint: FilterControlPoint;
-        let filterChanges: boolean = false;
 
         if (instrument.noteFilterType) {
             // Simple EQ filter (old style). For analysis, using random filters from normal style since they are N/A in this context.
@@ -7884,6 +7889,7 @@ export class Synth {
             let startSimpleGain: number = instrument.noteFilterSimplePeak;
             let endSimpleFreq: number = instrument.noteFilterSimpleCut;
             let endSimpleGain: number = instrument.noteFilterSimplePeak;
+            let filterChanges: boolean = false;
 
             if (synth.isModActive(Config.modulators.dictionary["note filt cut"].index, channelIndex, tone.instrumentIndex)) {
                 startSimpleFreq = synth.getModValue(Config.modulators.dictionary["note filt cut"].index, channelIndex, tone.instrumentIndex, false);
@@ -7896,18 +7902,11 @@ export class Synth {
                 filterChanges = true;
             }
 
-            if (filterChanges) {
-                noteFilterSettingsStart.convertLegacySettingsForSynth(startSimpleFreq, startSimpleGain);
-                noteFilterSettingsEnd.convertLegacySettingsForSynth(endSimpleFreq, endSimpleGain);
+            noteFilterSettingsStart.convertLegacySettingsForSynth(startSimpleFreq, startSimpleGain, !filterChanges);
+            noteFilterSettingsEnd.convertLegacySettingsForSynth(endSimpleFreq, endSimpleGain, !filterChanges);
 
-                startPoint = noteFilterSettingsStart.controlPoints[0];
-                endPoint = noteFilterSettingsEnd.controlPoints[0];
-
-            } else {
-                noteFilterSettingsStart.convertLegacySettingsForSynth(startSimpleFreq, startSimpleGain, true);
-
-                startPoint = noteFilterSettingsStart.controlPoints[0];
-            }
+            startPoint = noteFilterSettingsStart.controlPoints[0];
+            endPoint = noteFilterSettingsEnd.controlPoints[0];
 
             // Temporarily override so that envelope computer uses appropriate computed note filter
             instrument.noteFilter = noteFilterSettingsStart;
@@ -8076,13 +8075,10 @@ export class Synth {
                 const notePeakEnvelopeEnd: number = envelopeEnds[NoteAutomationIndex.noteFilterGain0];
 
                 startPoint!.toCoefficients(Synth.tempFilterStartCoefficients, synth.samplesPerSecond, noteAllFreqsEnvelopeStart * noteFreqEnvelopeStart, notePeakEnvelopeStart);
-
-                if (filterChanges) {
-                    endPoint!.toCoefficients(Synth.tempFilterEndCoefficients, synth.samplesPerSecond, noteAllFreqsEnvelopeEnd * noteFreqEnvelopeEnd, notePeakEnvelopeEnd);
-                }
+                endPoint!.toCoefficients(Synth.tempFilterEndCoefficients, synth.samplesPerSecond, noteAllFreqsEnvelopeEnd * noteFreqEnvelopeEnd, notePeakEnvelopeEnd);
 
                 if (tone.noteFilters.length < 1) tone.noteFilters[0] = new DynamicBiquadFilter();
-                tone.noteFilters[0].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterStartCoefficients, 1.0 / runLength, startPoint!.type == FilterType.lowPass);
+                tone.noteFilters[0].loadCoefficientsWithGradient(Synth.tempFilterStartCoefficients, Synth.tempFilterEndCoefficients, 1.0 / runLength, startPoint!.type == FilterType.lowPass);
                 noteFilterExpression *= startPoint!.getVolumeCompensationMult();
 
                 tone.noteFilterCount = 1;
