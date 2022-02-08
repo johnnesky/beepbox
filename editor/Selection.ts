@@ -92,11 +92,16 @@ export class Selection {
     }
 
     public setChannelBar(channelIndex: number, bar: number): void {
-        const canReplaceLastChange: boolean = true;//this._doc.lastChangeWas(this._changeTrack);
+        if (channelIndex == this._doc.channel && bar == this._doc.bar) return;
+        const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTrack);
         this._changeTrack = new ChangeGroup();
         this._changeTrack.append(new ChangeChannelBar(this._doc, channelIndex, bar));
-        this._doc.record(this._changeTrack, canReplaceLastChange);
+        // Don't erase existing redo history just to look at highlighted pattern.
+        if (!this._doc.hasRedoHistory()) {
+            this._doc.record(this._changeTrack, canReplaceLastChange);
+        }
         this.selectionUpdated();
+
     }
 
     public setPattern(pattern: number): void {

@@ -2425,10 +2425,16 @@ export class Song {
                     buffer.push(base64IntToCharCode[instrument.eqFilterSimplePeak]);
                 }
                 else {
-                    buffer.push(base64IntToCharCode[instrument.eqFilter.controlPointCount]);
-                    for (let j: number = 0; j < instrument.eqFilter.controlPointCount; j++) {
-                        const point: FilterControlPoint = instrument.eqFilter.controlPoints[j];
-                        buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
+                    if (instrument.eqFilter == null) {
+                        // Push null filter settings
+                        buffer.push(base64IntToCharCode[0]);
+                        console.log("Null EQ filter settings detected in toBase64String for channelIndex " + channelIndex + ", instrumentIndex " + i);
+                    } else {
+                        buffer.push(base64IntToCharCode[instrument.eqFilter.controlPointCount]);
+                        for (let j: number = 0; j < instrument.eqFilter.controlPointCount; j++) {
+                            const point: FilterControlPoint = instrument.eqFilter.controlPoints[j];
+                            buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[Math.round(point.freq)], base64IntToCharCode[Math.round(point.gain)]);
+                        }
                     }
 
                     // Push subfilters as well. Skip Index 0, is a copy of the base filter.
@@ -2444,7 +2450,7 @@ export class Song {
                             buffer.push(base64IntToCharCode[instrument.eqSubFilters[j + 1]!.controlPointCount]);
                             for (let k: number = 0; k < instrument.eqSubFilters[j + 1]!.controlPointCount; k++) {
                                 const point: FilterControlPoint = instrument.eqSubFilters[j + 1]!.controlPoints[k];
-                                buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
+                                buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[Math.round(point.freq)], base64IntToCharCode[Math.round(point.gain)]);
                             }
                         }
                     }
@@ -2459,10 +2465,17 @@ export class Song {
                         buffer.push(base64IntToCharCode[instrument.noteFilterSimplePeak]);
                     }
                     else {
-                        buffer.push(base64IntToCharCode[instrument.noteFilter.controlPointCount]);
-                        for (let j: number = 0; j < instrument.noteFilter.controlPointCount; j++) {
-                            const point: FilterControlPoint = instrument.noteFilter.controlPoints[j];
-                            buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
+                        if (instrument.noteFilter == null) {
+                            // Push null filter settings
+                            buffer.push(base64IntToCharCode[0]);
+                            console.log("Null note filter settings detected in toBase64String for channelIndex " + channelIndex + ", instrumentIndex " + i);
+                        }
+                        else {
+                            buffer.push(base64IntToCharCode[instrument.noteFilter.controlPointCount]);
+                            for (let j: number = 0; j < instrument.noteFilter.controlPointCount; j++) {
+                                const point: FilterControlPoint = instrument.noteFilter.controlPoints[j];
+                                buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[Math.round(point.freq)], base64IntToCharCode[Math.round(point.gain)]);
+                            }
                         }
 
                         // Push subfilters as well. Skip Index 0, is a copy of the base filter.
@@ -2478,7 +2491,7 @@ export class Song {
                                 buffer.push(base64IntToCharCode[instrument.noteSubFilters[j + 1]!.controlPointCount]);
                                 for (let k: number = 0; k < instrument.noteSubFilters[j + 1]!.controlPointCount; k++) {
                                     const point: FilterControlPoint = instrument.noteSubFilters[j + 1]!.controlPoints[k];
-                                    buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[point.freq], base64IntToCharCode[point.gain]);
+                                    buffer.push(base64IntToCharCode[point.type], base64IntToCharCode[Math.round(point.freq)], base64IntToCharCode[Math.round(point.gain)]);
                                 }
                             }
                         }
