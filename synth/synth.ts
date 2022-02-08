@@ -4071,7 +4071,7 @@ export class Song {
 
                     const maxInstrumentsPerPattern: number = this.getMaxInstrumentsPerPattern(channelIndex);
                     const neededInstrumentCountBits: number = Song.getNeededBits(maxInstrumentsPerPattern - Config.instrumentCountMin);
-                    
+
                     const neededInstrumentIndexBits: number = Song.getNeededBits(channel.instruments.length - 1);
 
                     // Some info about modulator settings immediately follows in mod channels.
@@ -4419,7 +4419,7 @@ export class Song {
                                 if (patternIndex > 0) {
                                     // Doesn't work if 1st pattern isn't using the right ins for song reverb...
                                     // Add note to start of pattern
-                                    const pattern: Pattern = this.channels[channelIndex].patterns[patternIndex-1];
+                                    const pattern: Pattern = this.channels[channelIndex].patterns[patternIndex - 1];
                                     let lowestPart: number = 6;
                                     for (const note of pattern.notes) {
                                         if (note.pitches[0] == Config.modCount - 1 - songReverbIndex) {
@@ -6158,7 +6158,7 @@ export class Synth {
                     // EQ Filter check
                     || (tgtInstrument.eqFilterType && str == "eq filter")
                     || (!tgtInstrument.eqFilterType && (str == "eq filt cut" || str == "eq filt peak"))
-                    || (str == "eq filter" && Math.floor((instrument.modFilterTypes[mod] + 1)/2) > tgtInstrument.eqFilter.controlPointCount)
+                    || (str == "eq filter" && Math.floor((instrument.modFilterTypes[mod] + 1) / 2) > tgtInstrument.eqFilter.controlPointCount)
                     // Note Filter check
                     || (tgtInstrument.noteFilterType && str == "note filter")
                     || (!tgtInstrument.noteFilterType && (str == "note filt cut" || str == "note filt peak"))
@@ -7971,8 +7971,8 @@ export class Synth {
                 modDetuneEnd = synth.getModValue(Config.modulators.dictionary["detune"].index, channelIndex, tone.instrumentIndex, true) + Config.detuneCenter;
             }
             if (synth.isModActive(Config.modulators.dictionary["song detune"].index, channelIndex, tone.instrumentIndex)) {
-                modDetuneStart += 4*synth.getModValue(Config.modulators.dictionary["song detune"].index, channelIndex, tone.instrumentIndex, false);
-                modDetuneEnd += 4*synth.getModValue(Config.modulators.dictionary["song detune"].index, channelIndex, tone.instrumentIndex, true);
+                modDetuneStart += 4 * synth.getModValue(Config.modulators.dictionary["song detune"].index, channelIndex, tone.instrumentIndex, false);
+                modDetuneEnd += 4 * synth.getModValue(Config.modulators.dictionary["song detune"].index, channelIndex, tone.instrumentIndex, true);
             }
             intervalStart += Synth.detuneToCents((modDetuneStart) * envelopeStart) * Config.pitchesPerOctave / (12.0 * 100.0);
             intervalEnd += Synth.detuneToCents((modDetuneEnd) * envelopeEnd) * Config.pitchesPerOctave / (12.0 * 100.0);
@@ -8192,10 +8192,20 @@ export class Synth {
                 tone.phaseDeltas[i] = freqStart * sampleTime * Config.sineWaveLength;
                 tone.phaseDeltaScales[i] = Math.pow(freqEnd / freqStart, 1.0 / runLength);
 
-                const amplitudeCurve: number = Synth.operatorAmplitudeCurve(instrument.operators[i].amplitude);
-                const amplitudeMult: number = amplitudeCurve * Config.operatorFrequencies[instrument.operators[i].frequency].amplitudeSign;
-                let expressionStart: number = amplitudeMult;
-                let expressionEnd: number = amplitudeMult;
+                let amplitudeStart: number = instrument.operators[i].amplitude;
+                let amplitudeEnd: number = instrument.operators[i].amplitude;
+                if (synth.isModActive(Config.modulators.dictionary["fm slider 1"].index + i, channelIndex, tone.instrumentIndex)) {
+                    amplitudeStart *= synth.getModValue(Config.modulators.dictionary["fm slider 1"].index + i, channelIndex, tone.instrumentIndex, false) / 15.0;
+                    amplitudeEnd *= synth.getModValue(Config.modulators.dictionary["fm slider 1"].index + i, channelIndex, tone.instrumentIndex, true) / 15.0;
+                }
+
+                const amplitudeCurveStart: number = Synth.operatorAmplitudeCurve(amplitudeStart);
+                const amplitudeCurveEnd: number = Synth.operatorAmplitudeCurve(amplitudeEnd);
+                const amplitudeMultStart: number = amplitudeCurveStart * Config.operatorFrequencies[instrument.operators[i].frequency].amplitudeSign;
+                const amplitudeMultEnd: number = amplitudeCurveEnd * Config.operatorFrequencies[instrument.operators[i].frequency].amplitudeSign;
+
+                let expressionStart: number = amplitudeMultStart;
+                let expressionEnd: number = amplitudeMultEnd;
 
 
                 if (i < carrierCount) {
@@ -8207,7 +8217,7 @@ export class Synth {
                     expressionStart *= envelopeStarts[NoteAutomationIndex.noteVolume];
                     expressionEnd *= envelopeEnds[NoteAutomationIndex.noteVolume];
 
-                    totalCarrierExpression += amplitudeCurve;
+                    totalCarrierExpression += amplitudeCurveEnd;
                 } else {
                     // modulator
                     expressionStart *= Config.sineWaveLength * 1.5;
