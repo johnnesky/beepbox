@@ -8258,9 +8258,19 @@ export class Synth {
                 tone.expressionStarts[i] *= sineExpressionBoost;
                 tone.expressionDeltas[i] *= sineExpressionBoost;
             }
-            const feedbackAmplitude: number = Config.sineWaveLength * 0.3 * instrument.feedbackAmplitude / 15.0;
-            let feedbackStart: number = feedbackAmplitude * envelopeStarts[NoteAutomationIndex.feedbackAmplitude];
-            let feedbackEnd: number = feedbackAmplitude * envelopeEnds[NoteAutomationIndex.feedbackAmplitude];
+
+            let useFeedbackAmplitudeStart: number = instrument.feedbackAmplitude;
+            let useFeedbackAmplitudeEnd: number = instrument.feedbackAmplitude;
+            if (synth.isModActive(Config.modulators.dictionary["fm feedback"].index, channelIndex, tone.instrumentIndex)) {
+                useFeedbackAmplitudeStart *= synth.getModValue(Config.modulators.dictionary["fm feedback"].index, channelIndex, tone.instrumentIndex, false) / 15.0;
+                useFeedbackAmplitudeEnd *= synth.getModValue(Config.modulators.dictionary["fm feedback"].index, channelIndex, tone.instrumentIndex, true) / 15.0;
+            }
+
+            let feedbackAmplitudeStart: number = Config.sineWaveLength * 0.3 * useFeedbackAmplitudeStart / 15.0;
+            const feedbackAmplitudeEnd: number = Config.sineWaveLength * 0.3 * useFeedbackAmplitudeEnd / 15.0;
+
+            let feedbackStart: number = feedbackAmplitudeStart * envelopeStarts[NoteAutomationIndex.feedbackAmplitude];
+            let feedbackEnd: number = feedbackAmplitudeEnd * envelopeEnds[NoteAutomationIndex.feedbackAmplitude];
             tone.feedbackMult = feedbackStart;
             tone.feedbackDelta = (feedbackEnd - tone.feedbackMult) / runLength;
 
