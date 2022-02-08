@@ -6160,7 +6160,7 @@ export class Synth {
                     || (tgtInstrument.type != InstrumentType.fm && (str == "fm slider 1" || str == "fm slider 2" || str == "fm slider 3" || str == "fm slider 4" || str == "fm feedback"))
                     || (tgtInstrument.type != InstrumentType.pwm && (str == "pulse width"))
                     // Arp check
-                    || (!tgtInstrument.getChord().arpeggiates && (str == "arpeggio speed" || str == "reset arpeggio"))
+                    || (!tgtInstrument.getChord().arpeggiates && (str == "arpeggio speed" || str == "reset arp"))
                     // EQ Filter check
                     || (tgtInstrument.eqFilterType && str == "eq filter")
                     || (!tgtInstrument.eqFilterType && (str == "eq filt cut" || str == "eq filt peak"))

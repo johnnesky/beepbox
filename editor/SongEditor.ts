@@ -2060,7 +2060,7 @@ export class SongEditor {
 
                         if (anyInstrumentArps) {
                             settingList.push("arpeggio speed");
-                            settingList.push("reset arpeggio");
+                            settingList.push("reset arp");
                         }
                         if (anyInstrumentPitchShifts) {
                             settingList.push("pitch shift");
