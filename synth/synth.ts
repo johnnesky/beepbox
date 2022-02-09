@@ -2042,7 +2042,7 @@ export class Instrument {
         }
         if (automationTarget.isFilter) {
             //if (automationTarget.perNote) {
-            if (index >= this.noteFilter.controlPointCount && !this.noteFilterType) return false;
+            if (index >= this.noteFilter.controlPointCount || this.noteFilterType) return false;
             //} else {
             //	if (index >= this.eqFilter.controlPointCount)   return false;
             //}
