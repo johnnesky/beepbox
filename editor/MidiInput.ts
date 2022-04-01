@@ -2,8 +2,8 @@ import {SongDocument} from "./SongDocument";
 import {LiveInput} from "./LiveInput";
 
 const enum MIDI_EVENT {
-	NOTE_ON = 144,
-	NOTE_OFF = 128,
+	NOTE_ON = "9",
+	NOTE_OFF = "8",
 }
 
 interface MIDIInput extends EventTarget {
@@ -17,7 +17,7 @@ interface MIDIConnectionEvent {
 }
 
 interface MIDIMessageEvent {
-	data: [type: MIDI_EVENT, key: number, velocity: number];
+	data: [type: number, key: number, velocity: number];
 	target: MIDIInput;
 }
 
@@ -66,10 +66,14 @@ export class MIDIInputHandler {
 	}
 
 	private _onMIDIMessage = (event: MIDIMessageEvent) => {
-		const [eventType, key] = event.data;
+		const isDrum: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
 		const context = this._getContext(event.target);
+		let [eventType, key] = event.data;
+		if(isDrum) {
+			key = key % 12;
+		}
 
-		switch(eventType) {
+		switch(eventType.toString(16)[0]) {
 			case MIDI_EVENT.NOTE_ON:
 				this._doc.synth.maintainLiveInput();
 				this._liveInput.addNote(key, context);
