@@ -22,6 +22,7 @@ import {HarmonicsEditor} from "./HarmonicsEditor";
 import {BarScrollBar} from "./BarScrollBar";
 import {OctaveScrollBar} from "./OctaveScrollBar";
 import {LiveInput} from "./LiveInput";
+import {MIDIInputHandler} from "./MidiInput";
 import {Piano} from "./Piano";
 import {BeatsPerBarPrompt} from "./BeatsPerBarPrompt";
 import {MoveNotesSidewaysPrompt} from "./MoveNotesSidewaysPrompt";
@@ -431,6 +432,7 @@ export class SongEditor {
 	
 	constructor(private _doc: SongDocument) {
 		this._doc.notifier.watch(this.whenUpdated);
+		new MIDIInputHandler(this._doc, this._liveInput);
 		window.addEventListener("resize", this.whenUpdated);
 		
 		if (!("share" in navigator)) {
