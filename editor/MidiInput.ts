@@ -64,17 +64,20 @@ export class MIDIInputHandler {
 	private _onMIDIMessage = (event: MIDIMessageEvent) => {
 		const isDrum: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
 		const context = this._getContext(event.target);
-		let [eventType, key] = event.data;
+		let [eventType, key, velocity] = event.data;
+		eventType &= 0xF0;
+
 		if(isDrum) {
 			key = key % 12;
 		}
 
-		switch(eventType & 0xF0) {
-			case MidiEventType.noteOn:
+		switch(true) {
+			case eventType == MidiEventType.noteOn && velocity > 0:
 				this._doc.synth.maintainLiveInput();
 				this._liveInput.addNote(key, context);
 				break;
-			case MidiEventType.noteOff:
+			case eventType == MidiEventType.noteOff:
+			case eventType == MidiEventType.noteOn && velocity == 0:
 				this._liveInput.removeNote(key, context);
 				break;
 		}
