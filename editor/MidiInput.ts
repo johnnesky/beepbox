@@ -1,10 +1,6 @@
 import {SongDocument} from "./SongDocument";
 import {LiveInput} from "./LiveInput";
-
-const enum MIDI_EVENT {
-	NOTE_ON = "9",
-	NOTE_OFF = "8",
-}
+import {MidiEventType} from "./Midi";
 
 interface MIDIInput extends EventTarget {
 	id: string;
@@ -73,12 +69,12 @@ export class MIDIInputHandler {
 			key = key % 12;
 		}
 
-		switch(eventType.toString(16)[0]) {
-			case MIDI_EVENT.NOTE_ON:
+		switch(eventType & 0xF0) {
+			case MidiEventType.noteOn:
 				this._doc.synth.maintainLiveInput();
 				this._liveInput.addNote(key, context);
 				break;
-			case MIDI_EVENT.NOTE_OFF:
+			case MidiEventType.noteOff:
 				this._liveInput.removeNote(key, context);
 				break;
 		}
