@@ -28,22 +28,22 @@ export class MIDIInputHandler {
 		this.registerMIDIAccessHandler();
 	}
 	private async registerMIDIAccessHandler() {
-		if(navigator.requestMIDIAccess == null) return;
+		if (navigator.requestMIDIAccess == null) return;
 
 		try {
 			const midiAccess = await navigator.requestMIDIAccess();
 
 			midiAccess.inputs.forEach(this._registerMIDIInput);
 			midiAccess.addEventListener("statechange", this._handleStateChange);
-		} catch(e) {
+		} catch (e) {
 			console.error("Failed to get MIDI access", e);
 		}
 	}
 
 	private _handleStateChange = (event: MIDIConnectionEvent) => {
-		if(event.port.type !== "input") return;
+		if (event.port.type !== "input") return;
 		
-		switch(event.port.state) {
+		switch (event.port.state) {
 			case "connected":
 				this._registerMIDIInput(event.port);
 				break;
@@ -72,11 +72,11 @@ export class MIDIInputHandler {
 		let [eventType, key, velocity] = event.data;
 		eventType &= 0xF0;
 
-		if(isDrum) {
+		if (isDrum) {
 			key = key % 12;
 		}
 
-		switch(true) {
+		switch (true) {
 			case eventType == MidiEventType.noteOn && velocity > 0:
 				this._doc.synth.maintainLiveInput();
 				this._liveInput.addNote(key, context);

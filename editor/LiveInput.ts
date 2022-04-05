@@ -5,7 +5,7 @@ export class LiveInput {
 		this._doc.notifier.watch(this._documentChanged);
 		this._documentChanged();
 	}
-	private _playingPitches: {pitch: number, context: string}[] = [];
+	private _playingPitches: { pitch: number, context: string }[] = [];
 	public addNote(pitch: number, context: string) {
 		this._playingPitches = [...this._playingPitches, {pitch, context}];
 		this._updateSound();
@@ -20,7 +20,7 @@ export class LiveInput {
 		this._updateSound();
 	}
 	private _updateSound() {
-		if(this._playingPitches.length == 0) {
+		if (this._playingPitches.length == 0) {
 			this._doc.synth.liveInputDuration = 0;
 		} else {
 			this._doc.synth.liveInputDuration = Number.MAX_SAFE_INTEGER;
