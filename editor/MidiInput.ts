@@ -17,16 +17,21 @@ interface MIDIMessageEvent {
 	target: MIDIInput;
 }
 
+declare global {
+	interface Navigator {
+		requestMIDIAccess?(): Promise<any>;
+	}
+}
+
 export class MIDIInputHandler {
 	constructor(private _doc: SongDocument, private _liveInput: LiveInput) {
 		this.registerMIDIAccessHandler();
 	}
 	private async registerMIDIAccessHandler() {
-		const requestMIDIAccess = (navigator as any).requestMIDIAccess.bind(navigator);
-		if(requestMIDIAccess == null) return;
+		if(navigator.requestMIDIAccess == null) return;
 
 		try {
-			const midiAccess = await requestMIDIAccess();
+			const midiAccess = await navigator.requestMIDIAccess();
 
 			midiAccess.inputs.forEach(this._registerMIDIInput);
 			midiAccess.addEventListener("statechange", this._handleStateChange);
