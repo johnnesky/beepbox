@@ -71,13 +71,16 @@ export class MIDIInputHandler {
 			key = key % 12;
 		}
 
-		switch (true) {
-			case eventType == MidiEventType.noteOn && velocity > 0:
+		if (eventType == MidiEventType.noteOn && velocity == 0) {
+			eventType = MidiEventType.noteOff;
+		}
+
+		switch (eventType) {
+			case MidiEventType.noteOn:
 				this._doc.synth.maintainLiveInput();
 				this._liveInput.addNote(key);
 				break;
-			case eventType == MidiEventType.noteOff:
-			case eventType == MidiEventType.noteOn && velocity == 0:
+			case MidiEventType.noteOff:
 				this._liveInput.removeNote(key);
 				break;
 		}
