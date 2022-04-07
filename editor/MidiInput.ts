@@ -59,16 +59,11 @@ export class MIDIInputHandler {
 
 	private _unregisterMIDIInput = (midiInput: MIDIInput) => {
 		midiInput.removeEventListener("midimessage", this._onMIDIMessage as any);
-		this._liveInput.clear(this._getContext(midiInput));
-	}
-
-	private _getContext(midiInput: MIDIInput) {
-		return `midiInput:${midiInput.id}`;
+		this._liveInput.clear();
 	}
 
 	private _onMIDIMessage = (event: MIDIMessageEvent) => {
 		const isDrum: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
-		const context = this._getContext(event.target);
 		let [eventType, key, velocity] = event.data;
 		eventType &= 0xF0;
 
@@ -79,11 +74,11 @@ export class MIDIInputHandler {
 		switch (true) {
 			case eventType == MidiEventType.noteOn && velocity > 0:
 				this._doc.synth.maintainLiveInput();
-				this._liveInput.addNote(key, context);
+				this._liveInput.addNote(key);
 				break;
 			case eventType == MidiEventType.noteOff:
 			case eventType == MidiEventType.noteOn && velocity == 0:
-				this._liveInput.removeNote(key, context);
+				this._liveInput.removeNote(key);
 				break;
 		}
 	}

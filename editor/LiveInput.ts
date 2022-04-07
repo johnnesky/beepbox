@@ -5,18 +5,18 @@ export class LiveInput {
 		this._doc.notifier.watch(this._documentChanged);
 		this._documentChanged();
 	}
-	private _playingPitches: { pitch: number, context: string }[] = [];
-	public addNote(pitch: number, context: string) {
-		this._playingPitches = [...this._playingPitches, {pitch, context}];
+	private _playingPitches: number[] = [];
+	public addNote(pitch: number) {
+		this._playingPitches = [...this._playingPitches, pitch];
 		this._updateSound();
 	}
-	public removeNote(pitch: number, context: string) {
+	public removeNote(pitch: number) {
 		this._playingPitches = this._playingPitches
-			.filter(p => p.pitch !== pitch || p.context !== context);
+			.filter(p => p !== pitch);
 		this._updateSound();
 	}
-	public clear(context: string) {
-		this._playingPitches = this._playingPitches.filter(p => p.context !== context);
+	public clear() {
+		this._playingPitches = [];
 		this._updateSound();
 	}
 	private _updateSound() {
@@ -24,7 +24,7 @@ export class LiveInput {
 			this._doc.synth.liveInputDuration = 0;
 		} else {
 			this._doc.synth.liveInputDuration = Number.MAX_SAFE_INTEGER;
-			this._doc.synth.liveInputPitches = this._playingPitches.map(p => p.pitch);
+			this._doc.synth.liveInputPitches = this._playingPitches;
 			this._doc.synth.liveInputStarted = true;
 		}
 	}
