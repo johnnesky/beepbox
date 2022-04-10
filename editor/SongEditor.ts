@@ -21,6 +21,8 @@ import {SpectrumEditor} from "./SpectrumEditor";
 import {HarmonicsEditor} from "./HarmonicsEditor";
 import {BarScrollBar} from "./BarScrollBar";
 import {OctaveScrollBar} from "./OctaveScrollBar";
+import {LiveInput} from "./LiveInput";
+import {MIDIInputHandler} from "./MidiInput";
 import {Piano} from "./Piano";
 import {BeatsPerBarPrompt} from "./BeatsPerBarPrompt";
 import {MoveNotesSidewaysPrompt} from "./MoveNotesSidewaysPrompt";
@@ -126,7 +128,8 @@ export class SongEditor {
 	private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc);
 	private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
 	private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
-	private readonly _piano: Piano = new Piano(this._doc);
+	private readonly _liveInput: LiveInput = new LiveInput(this._doc);
+	private readonly _piano: Piano = new Piano(this._doc, this._liveInput);
 	private readonly _playButton: HTMLButtonElement = button({style: "width: 80px;", type: "button"});
 	private readonly _prevBarButton: HTMLButtonElement = button({class: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)"});
 	private readonly _nextBarButton: HTMLButtonElement = button({class: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
@@ -429,6 +432,7 @@ export class SongEditor {
 	
 	constructor(private _doc: SongDocument) {
 		this._doc.notifier.watch(this.whenUpdated);
+		new MIDIInputHandler(this._doc, this._liveInput);
 		window.addEventListener("resize", this.whenUpdated);
 		
 		if (!("share" in navigator)) {
