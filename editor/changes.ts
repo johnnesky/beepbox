@@ -1,4 +1,4 @@
-// Copyright (C) 2021 John Nesky, distributed under the MIT license.
+// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
 import {Algorithm, Dictionary, FilterType, InstrumentType, EffectType, AutomationTarget, Config, effectsIncludePanning, effectsIncludeDistortion} from "../synth/SynthConfig";
 import {NotePin, Note, makeNotePin, Pattern, FilterSettings, FilterControlPoint, SpectrumWave, HarmonicsWave, Instrument, Channel, Song, Synth} from "../synth/synth";
@@ -2344,7 +2344,7 @@ export class ChangeValidateTrackSelection extends Change {
 		const channelScrollPos: number = Math.min(doc.channel, Math.max(doc.channel - (doc.trackVisibleChannels - 1), Math.max(0, Math.min(doc.song.getChannelCount() - doc.trackVisibleChannels, doc.channelScrollPos))));
 		if (doc.channel != channelIndex || doc.bar != bar || doc.channelScrollPos != channelScrollPos || doc.barScrollPos != barScrollPos) {
 			doc.channel = channelIndex;
-			doc.channel = channelScrollPos;
+			doc.channelScrollPos = channelScrollPos;
 			doc.bar = bar;
 			doc.barScrollPos = barScrollPos;
 			doc.notifier.changed();
