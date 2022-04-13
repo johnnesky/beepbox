@@ -84,13 +84,13 @@ export class Piano {
 		const octaveOffset: number = this._doc.getBaseVisibleOctave(this._doc.channel) * Config.pitchesPerOctave;
 		const currentPitch: number = this._cursorPitch + octaveOffset;
 		if (this._playedPitch == currentPitch) return;
-		this._liveInput.removeNote(this._playedPitch);
+		this._liveInput.removePitch(this._playedPitch);
 		this._playedPitch = currentPitch;
-		this._liveInput.addNote(currentPitch);
+		this._liveInput.addPitch(currentPitch);
 	}
 	
 	private _releaseLiveInput(): void {
-		this._liveInput.removeNote(this._playedPitch);
+		this._liveInput.removePitch(this._playedPitch);
 		this._playedPitch = -1;
 	}
 	
