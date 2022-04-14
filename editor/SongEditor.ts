@@ -1,4 +1,4 @@
-// Copyright (C) 2021 John Nesky, distributed under the MIT license.
+// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
 import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "../synth/SynthConfig";
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig";
@@ -22,6 +22,8 @@ import {SpectrumEditor} from "./SpectrumEditor";
 import {HarmonicsEditor} from "./HarmonicsEditor";
 import {BarScrollBar} from "./BarScrollBar";
 import {OctaveScrollBar} from "./OctaveScrollBar";
+import {LiveInput} from "./LiveInput";
+import {MidiInputHandler} from "./MidiInput";
 import {Piano} from "./Piano";
 import {BeatsPerBarPrompt} from "./BeatsPerBarPrompt";
 import {MoveNotesSidewaysPrompt} from "./MoveNotesSidewaysPrompt";
@@ -120,14 +122,15 @@ class Slider {
 export class SongEditor {
 	public prompt: Prompt | null = null;
 	
-	private readonly _patternEditorPrev: PatternEditor = new PatternEditor(this._doc, false, -1);
-	private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc, true, 0);
-	private readonly _patternEditorNext: PatternEditor = new PatternEditor(this._doc, false, 1);
+	private readonly _liveInput: LiveInput = new LiveInput(this._doc);
+	private readonly _patternEditorPrev: PatternEditor = new PatternEditor(this._doc, this._liveInput, false, -1);
+	private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc, this._liveInput, true, 0);
+	private readonly _patternEditorNext: PatternEditor = new PatternEditor(this._doc, this._liveInput, false, 1);
 	private readonly _muteEditor: MuteEditor = new MuteEditor(this._doc);
 	private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc);
 	private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
 	private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
-	private readonly _piano: Piano = new Piano(this._doc);
+	private readonly _piano: Piano = new Piano(this._doc, this._liveInput);
 	private readonly _playButton: HTMLButtonElement = button({style: "width: 80px;", type: "button"});
 	private readonly _prevBarButton: HTMLButtonElement = button({class: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)"});
 	private readonly _nextBarButton: HTMLButtonElement = button({class: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
@@ -430,6 +433,7 @@ export class SongEditor {
 	
 	constructor(private _doc: SongDocument) {
 		this._doc.notifier.watch(this.whenUpdated);
+		new MidiInputHandler(this._doc, this._liveInput);
 		window.addEventListener("resize", this.whenUpdated);
 		
 		if (!("share" in navigator)) {

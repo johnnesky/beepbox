@@ -1,9 +1,10 @@
-// Copyright (C) 2021 John Nesky, distributed under the MIT license.
+// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
 import {Chord, Transition, Config} from "../synth/SynthConfig";
 import {NotePin, Note, makeNotePin, Pattern, Instrument} from "../synth/synth";
 import {ColorConfig} from "./ColorConfig";
 import {SongDocument} from "./SongDocument";
+import {LiveInput} from "./LiveInput";
 import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 import {ChangeSequence, UndoableChange} from "./Change";
 import {ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeSizeBend, ChangePitchBend, ChangePitchAdded} from "./changes";
@@ -99,7 +100,7 @@ export class PatternEditor {
 	private _renderedNoiseChannelCount: number = -1;
 	private _followPlayheadBar: number = -1;
 	
-	constructor(private _doc: SongDocument, private _interactive: boolean, private _barOffset: number) {
+	constructor(private _doc: SongDocument, private _liveInput: LiveInput, private _interactive: boolean, private _barOffset: number) {
 		for (let i: number = 0; i < Config.pitchesPerOctave; i++) {
 			const rectangle: SVGRectElement = SVG.rect();
 			rectangle.setAttribute("x", "1");
@@ -521,9 +522,7 @@ export class PatternEditor {
 			if (this._doc.prefs.enableNotePreview && !this._doc.synth.playing) {
 				// Play the new note out loud if enabled.
 				const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
-				this._doc.synth.liveInputDuration = duration;
-				this._doc.synth.liveInputPitches = [this._cursor.pitch];
-				this._doc.synth.liveInputStarted = true;
+				this._liveInput.setTemporaryPitches([this._cursor.pitch], duration);
 			}
 		}
 		this._updateSelection();
@@ -894,9 +893,7 @@ export class PatternEditor {
 					
 					if (this._doc.prefs.enableNotePreview && !this._doc.synth.playing) {
 						const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
-						this._doc.synth.liveInputDuration = duration;
-						this._doc.synth.liveInputPitches = this._cursor.curNote.pitches.concat();
-						this._doc.synth.liveInputStarted = true;
+						this._liveInput.setTemporaryPitches(this._cursor.curNote.pitches, duration);
 					}
 				} else {
 					if (this._cursor.curNote.pitches.length == 1) {
