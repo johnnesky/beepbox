@@ -5029,19 +5029,24 @@ export class Synth {
 					this.computeTone(song, channelIndex, samplesPerTick, tone, false, false);
 				} else {
 					//const transition: Transition = instrument.getTransition();
+					
+					this.moveTonesIntoOrderedTempMatchedList(toneList, pitches);
+					
 					for (let i: number = 0; i < pitches.length; i++) {
 						//const strumOffsetParts: number = i * instrument.getChord().strumParts;
 						
 						let tone: Tone;
-						if (toneList.count() <= toneCount) {
+						if (this.tempMatchedPitchTones[toneCount] != null) {
+							tone = this.tempMatchedPitchTones[toneCount]!;
+							this.tempMatchedPitchTones[toneCount] = null;
+							if (tone.pitchCount != 1 || tone.pitches[0] != pitches[i]) {
+								this.releaseTone(instrumentState, tone);
+								tone = this.newTone();
+							}
+							toneList.pushBack(tone);
+						} else {
 							tone = this.newTone();
 							toneList.pushBack(tone);
-						} else if (!instrument.getTransition().isSeamless && this.liveInputStarted) {
-							this.releaseTone(instrumentState, toneList.get(toneCount));
-							tone = this.newTone();
-							toneList.set(toneCount, tone);
-						} else {
-							tone = toneList.get(toneCount);
 						}
 						toneCount++;
 						
@@ -5050,7 +5055,7 @@ export class Synth {
 						tone.chordSize = pitches.length;
 						tone.instrumentIndex = instrumentIndex;
 						tone.note = tone.prevNote = tone.nextNote = null;
-						tone.atNoteStart = this.liveInputStarted;
+						tone.atNoteStart = false;
 						tone.forceContinueAtStart = false;
 						tone.forceContinueAtEnd = false;
 						this.computeTone(song, channelIndex, samplesPerTick, tone, false, false);
@@ -5061,6 +5066,8 @@ export class Synth {
 			while (toneList.count() > toneCount) {
 				this.releaseTone(instrumentState, toneList.popBack());
 			}
+			
+			this.clearTempMatchedPitchTones(toneCount, instrumentState);
 		}
 		
 		this.liveInputStarted = false;
@@ -5106,6 +5113,38 @@ export class Synth {
 			if (secondNote.pitches.indexOf(pitch + firstNoteInterval) == -1) return false;
 		}
 		return true;
+	}
+
+	private moveTonesIntoOrderedTempMatchedList(toneList: Deque<Tone>, notePitches: number[]): void {
+		// The tones are about to seamlessly transition to a new note. The pitches
+		// from the old note may or may not match any of the pitches in the new
+		// note, and not necessarily in order, but if any do match, they'll sound
+		// better if those tones continue to have the same pitch. Attempt to find
+		// the right spot for each old tone in the new chord if possible.
+		
+		for (let i: number = 0; i < toneList.count(); i++) {
+			const tone: Tone = toneList.get(i);
+			const pitch: number = tone.pitches[0] + tone.lastInterval;
+			for (let j: number = 0; j < notePitches.length; j++) {
+				if (notePitches[j] == pitch) {
+					this.tempMatchedPitchTones[j] = tone;
+					toneList.remove(i);
+					i--;
+					break;
+				}
+			}
+		}
+		
+		// Any tones that didn't get matched should just fill in the gaps.
+		while (toneList.count() > 0) {
+			const tone: Tone = toneList.popFront();
+			for (let j: number = 0; j < this.tempMatchedPitchTones.length; j++) {
+				if (this.tempMatchedPitchTones[j] == null) {
+					this.tempMatchedPitchTones[j] = tone;
+					break;
+				}
+			}
+		}
 	}
 	
 	private determineCurrentActiveTones(song: Song, channelIndex: number, samplesPerTick: number, playSong: boolean): void {
@@ -5248,35 +5287,7 @@ export class Synth {
 					const transition: Transition = instrument.getTransition();
 					
 					if (((transition.isSeamless && !transition.slides && chord.strumParts == 0) || forceContinueAtStart) && (Config.ticksPerPart * note.start == currentTick) && prevNoteForThisInstrument != null) {
-						// The tones are about to seamlessly transition to a new note. The pitches
-						// from the old note may or may not match any of the pitches in the new
-						// note, and not necessarily in order, but if any do match, they'll sound
-						// better if those tones continue to have the same pitch. Attempt to find
-						// the right spot for each old tone in the new chord if possible.
-						
-						for (let i: number = 0; i < toneList.count(); i++) {
-							const tone: Tone = toneList.get(i);
-							const pitch: number = tone.pitches[0] + tone.lastInterval;
-							for (let j: number = 0; j < note.pitches.length; j++) {
-								if (note.pitches[j] == pitch) {
-									this.tempMatchedPitchTones[j] = tone;
-									toneList.remove(i);
-									i--;
-									break;
-								}
-							}
-						}
-						
-						// Any tones that didn't get matched should just fill in the gaps.
-						while (toneList.count() > 0) {
-							const tone: Tone = toneList.popFront();
-							for (let j: number = 0; j < this.tempMatchedPitchTones.length; j++) {
-								if (this.tempMatchedPitchTones[j] == null) {
-									this.tempMatchedPitchTones[j] = tone;
-									break;
-								}
-							}
-						}
+						this.moveTonesIntoOrderedTempMatchedList(toneList, note.pitches);
 					}
 					
 					let strumOffsetParts: number = 0;
@@ -5362,23 +5373,27 @@ export class Synth {
 				const tone: Tone = toneList.popBack();
 				const channel: Channel = song.channels[channelIndex];
 				if (tone.instrumentIndex < channel.instruments.length && !tone.isOnLastTick) {
-					const instrumentState: InstrumentState = this.channels[channelIndex].instruments[tone.instrumentIndex];
+					const instrumentState: InstrumentState = channelState.instruments[tone.instrumentIndex];
 					this.releaseTone(instrumentState, tone);
 				} else {
 					this.freeTone(tone);
 				}
 			}
 			
-			for (let i: number = toneCount; i < this.tempMatchedPitchTones.length; i++) {
-				const oldTone: Tone | null = this.tempMatchedPitchTones[i];
-				if (oldTone != null) {
-					if (oldTone.isOnLastTick) {
-						this.freeTone(oldTone);
-					} else {
-						this.releaseTone(instrumentState, oldTone);
-					}
-					this.tempMatchedPitchTones[i] = null;
+			this.clearTempMatchedPitchTones(toneCount, instrumentState);
+		}
+	}
+	
+	private clearTempMatchedPitchTones(toneCount: number, instrumentState: InstrumentState): void {
+		for (let i: number = toneCount; i < this.tempMatchedPitchTones.length; i++) {
+			const oldTone: Tone | null = this.tempMatchedPitchTones[i];
+			if (oldTone != null) {
+				if (oldTone.isOnLastTick) {
+					this.freeTone(oldTone);
+				} else {
+					this.releaseTone(instrumentState, oldTone);
 				}
+				this.tempMatchedPitchTones[i] = null;
 			}
 		}
 	}

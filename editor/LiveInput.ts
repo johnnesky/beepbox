@@ -1,5 +1,6 @@
 // Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
+import {Config} from "../synth/SynthConfig";
 import {SongDocument} from "./SongDocument";
 
 export class LiveInput {
@@ -14,7 +15,7 @@ export class LiveInput {
 		for (let i: number = 0; i < pitches.length; i++) {
 			this._doc.synth.liveInputPitches[i] = pitches[i];
 		}
-		this._doc.synth.liveInputPitches.length = pitches.length;
+		this._doc.synth.liveInputPitches.length = Math.min(pitches.length, Config.maxChordSize);
 		this._doc.synth.liveInputDuration = duration;
 		this._doc.synth.liveInputStarted = true;
 		this._pitchesAreTemporary = true;
@@ -27,6 +28,9 @@ export class LiveInput {
 		}
 		if (this._doc.synth.liveInputPitches.indexOf(pitch) == -1) {
 			this._doc.synth.liveInputPitches.push(pitch);
+			while (this._doc.synth.liveInputPitches.length > Config.maxChordSize) {
+				this._doc.synth.liveInputPitches.shift();
+			}
 			this._doc.synth.liveInputDuration = Number.MAX_SAFE_INTEGER;
 			this._doc.synth.liveInputStarted = true;
 		}
