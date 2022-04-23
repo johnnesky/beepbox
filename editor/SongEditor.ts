@@ -1445,6 +1445,7 @@ export class SongEditor {
 	
 	private _play(): void {
 		this._doc.synth.play();
+		this._doc.synth.maintainLiveInput();
 		this.updatePlayButton();
 	}
 	

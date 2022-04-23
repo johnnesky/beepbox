@@ -25,6 +25,9 @@ interface MIDIMessageEvent {
 	target: MIDIInput;
 }
 
+// A unique id for this tab.
+const id: string = ((Math.random() * 0xffffffff) >>> 0).toString(16);
+
 export class MidiInputHandler {
 	constructor(private _doc: SongDocument, private _liveInput: LiveInput) {
 		this.registerMidiAccessHandler();
@@ -38,9 +41,18 @@ export class MidiInputHandler {
 			
 			midiAccess.inputs.forEach(this._registerMidiInput);
 			midiAccess.addEventListener("statechange", this._handleStateChange);
+			
+			this._takeMidiHandlerFocus();
+			window.addEventListener("focus", this._takeMidiHandlerFocus);
 		} catch (e) {
 			console.error("Failed to get MIDI access", e);
 		}
+	}
+	
+	private _takeMidiHandlerFocus = (event?: Event) => {
+		// Record that this browser tab is the one that should handle midi
+		// events and any other open tabs should ignore midi events for now.
+		localStorage.setItem("midiHandlerId", id);
 	}
 	
 	private _handleStateChange = (event: MIDIConnectionEvent) => {
@@ -66,6 +78,11 @@ export class MidiInputHandler {
 	}
 	
 	private _onMidiMessage = (event: MIDIMessageEvent) => {
+		// Ignore midi events if a different tab is handling them.
+		if (localStorage.getItem("midiHandlerId") != id) return;
+		
+		this._doc.synth.preferLowerLatency = true;
+		
 		const isDrum: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
 		let [eventType, key, velocity] = event.data;
 		eventType &= 0xF0;

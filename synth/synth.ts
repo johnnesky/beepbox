@@ -4487,6 +4487,8 @@ export class Synth {
 	// TODO: reverb
 	
 	public song: Song | null = null;
+	public preferLowerLatency: boolean = false; // enable when recording performances from keyboard or MIDI. Takes effect next time you activate audio.
+	public anticipatePoorPerformance: boolean = false; // enable on mobile devices to reduce audio stutter glitches. Takes effect next time you activate audio.
 	public liveInputDuration: number = 0;
 	public liveInputStarted: boolean = false;
 	public liveInputPitches: number[] = [];
@@ -4547,9 +4549,8 @@ export class Synth {
 			this.part = Math.floor(remainder);
 			remainder = Config.ticksPerPart * (remainder - this.part);
 			this.tick = Math.floor(remainder);
-			const samplesPerTick: number = this.getSamplesPerTick();
-			remainder = samplesPerTick * (remainder - this.tick);
-			this.tickSampleCountdown = samplesPerTick - remainder;
+			this.tickSampleCountdown = 0;
+			this.isAtStartOfTick = true;
 			this.prevBar = null;
 		}
 	}
@@ -4596,10 +4597,13 @@ export class Synth {
 	}
 	
 	private activateAudio(): void {
-		if (this.audioCtx == null || this.scriptNode == null) {
-			this.audioCtx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+		const bufferSize: number = this.anticipatePoorPerformance ? (this.preferLowerLatency ? 2048 : 4096) : (this.preferLowerLatency ? 512 : 2048);
+		if (this.audioCtx == null || this.scriptNode == null || this.scriptNode.bufferSize != bufferSize) {
+			if (this.scriptNode != null) this.deactivateAudio();
+			const latencyHint: string = this.anticipatePoorPerformance ? (this.preferLowerLatency ? "balanced" : "playback") : (this.preferLowerLatency ? "interactive" : "balanced");
+			this.audioCtx = this.audioCtx || new (window.AudioContext || window.webkitAudioContext)({latencyHint: latencyHint});
 			this.samplesPerSecond = this.audioCtx.sampleRate;
-			this.scriptNode = this.audioCtx.createScriptProcessor ? this.audioCtx.createScriptProcessor(2048, 0, 2) : this.audioCtx.createJavaScriptNode(2048, 0, 2); // 2048, 0 input channels, 2 output channels
+			this.scriptNode = this.audioCtx.createScriptProcessor ? this.audioCtx.createScriptProcessor(bufferSize, 0, 2) : this.audioCtx.createJavaScriptNode(bufferSize, 0, 2); // bufferSize samples per callback buffer, 0 input channels, 2 output channels (left/right)
 			this.scriptNode.onaudioprocess = this.audioProcessCallback;
 			this.scriptNode.channelCountMode = 'explicit';
 			this.scriptNode.channelInterpretation = 'speakers';
@@ -4719,8 +4723,7 @@ export class Synth {
 			}
 		}
 		
-		const isPlayingLiveTones = performance.now() < this.liveInputEndTime;
-		if (!isPlayingLiveTones && !this.isPlayingSong) {
+		if (!this.isPlayingSong && performance.now() >= this.liveInputEndTime) {
 			this.deactivateAudio();
 		} else {
 			this.synthesize(outputDataL, outputDataR, outputBuffer.length, this.isPlayingSong);
@@ -4742,8 +4745,10 @@ export class Synth {
 		let ended: boolean = false;
 		
 		// Check the bounds of the playhead:
-		while (this.tickSampleCountdown <= 0) this.tickSampleCountdown += samplesPerTick;
-		if (this.tickSampleCountdown > samplesPerTick) this.tickSampleCountdown = samplesPerTick;
+		if (this.tickSampleCountdown <= 0 || this.tickSampleCountdown > samplesPerTick) {
+			this.tickSampleCountdown = samplesPerTick;
+			this.isAtStartOfTick = true;
+		}
 		if (playSong) {
 			if (this.beat >= song.beatsPerBar) {
 				this.bar++;
@@ -4751,7 +4756,8 @@ export class Synth {
 				this.part = 0;
 				this.tick = 0;
 				this.tickSampleCountdown = samplesPerTick;
-			
+				this.isAtStartOfTick = true;
+				
 				if (this.loopRepeatCount != 0 && this.bar == song.loopStart + song.loopLength) {
 					this.bar = song.loopStart;
 					if (this.loopRepeatCount > 0) this.loopRepeatCount--;

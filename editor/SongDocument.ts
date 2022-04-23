@@ -1,6 +1,7 @@
 // Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
 import {Config} from "../synth/SynthConfig";
+import {isMobile} from "./EditorConfig";
 import {Pattern, Channel, Song, Synth} from "../synth/synth";
 import {SongRecovery, generateUid} from "./SongRecovery";
 import {ColorConfig} from "./ColorConfig";
@@ -76,6 +77,7 @@ export class SongDocument {
 		songString = this.song.toBase64String();
 		this.synth = new Synth(this.song);
 		this.synth.volume = this._calcVolume();
+		this.synth.anticipatePoorPerformance = isMobile;
 		
 		let state: HistoryState | null = this._getHistoryState();
 		if (state == null) {
