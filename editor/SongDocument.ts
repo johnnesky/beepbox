@@ -6,6 +6,7 @@ import {Pattern, Channel, Song, Synth} from "../synth/synth";
 import {SongRecovery, generateUid} from "./SongRecovery";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
+import {LiveInput} from "./LiveInput";
 import {Selection} from "./Selection";
 import {Preferences} from "./Preferences";
 import {Change} from "./Change";
@@ -26,13 +27,14 @@ interface HistoryState {
 export class SongDocument {
 	public song: Song;
 	public synth: Synth;
-	public notifier: ChangeNotifier = new ChangeNotifier();
-	public selection: Selection = new Selection(this);
-	public prefs: Preferences = new Preferences();
+	public readonly notifier: ChangeNotifier = new ChangeNotifier();
+	public readonly liveInput: LiveInput = new LiveInput(this);
+	public readonly selection: Selection = new Selection(this);
+	public readonly prefs: Preferences = new Preferences();
 	public channel: number = 0;
 	public bar: number = 0;
-	public recentPatternInstruments: number[][] = [];
-	public viewedInstrument: number[] = [];
+	public readonly recentPatternInstruments: number[][] = [];
+	public readonly viewedInstrument: number[] = [];
 	
 	public trackVisibleBars: number = 16;
 	public trackVisibleChannels: number = 4;

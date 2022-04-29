@@ -309,7 +309,9 @@ export class ColorConfig {
 	private static readonly _styleElement: HTMLStyleElement = document.head.appendChild(HTML.style({type: "text/css"}));
 	
 	public static setTheme(name: string): void {
-		this._styleElement.textContent = this.themes[name];
+		let theme: string = this.themes[name];
+		if (theme == undefined) theme = this.themes["dark classic"];
+		this._styleElement.textContent = theme;
 		
 		const themeColor = <HTMLMetaElement> document.querySelector("meta[name='theme-color']");
 		if (themeColor != null) {

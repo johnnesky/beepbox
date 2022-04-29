@@ -5055,7 +5055,7 @@ export class Synth {
 						tone.chordSize = pitches.length;
 						tone.instrumentIndex = instrumentIndex;
 						tone.note = tone.prevNote = tone.nextNote = null;
-						tone.atNoteStart = false;
+						tone.atNoteStart = this.liveInputStarted;
 						tone.forceContinueAtStart = false;
 						tone.forceContinueAtEnd = false;
 						this.computeTone(song, channelIndex, samplesPerTick, tone, false, false);

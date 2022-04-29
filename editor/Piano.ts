@@ -4,7 +4,6 @@ import {Config} from "../synth/SynthConfig";
 import {SongDocument} from "./SongDocument";
 import {HTML} from "imperative-html/dist/esm/elements-strict";
 import {ColorConfig} from "./ColorConfig";
-import {LiveInput} from "./LiveInput";
 
 export class Piano {
 	private readonly _pianoContainer: HTMLDivElement = HTML.div({style: "width: 100%; height: 100%; display: flex; flex-direction: column-reverse; align-items: stretch;"});
@@ -32,7 +31,7 @@ export class Piano {
 	private _renderedKey: number = -1;
 	private _renderedPitchCount: number = -1;
 	
-	constructor(private _doc: SongDocument, private _liveInput: LiveInput) {
+	constructor(private _doc: SongDocument) {
 		for (let i: number = 0; i < Config.drumCount; i++) {
 			const scale: number = (1.0 - (i / Config.drumCount) * 0.35) * 100;
 			const brightness: number = 1.0 + ((i - Config.drumCount / 2.0) / Config.drumCount) * 0.5;
@@ -84,13 +83,13 @@ export class Piano {
 		const octaveOffset: number = this._doc.getBaseVisibleOctave(this._doc.channel) * Config.pitchesPerOctave;
 		const currentPitch: number = this._cursorPitch + octaveOffset;
 		if (this._playedPitch == currentPitch) return;
-		this._liveInput.removePitch(this._playedPitch);
+		this._doc.liveInput.removePerformedPitch(this._playedPitch);
 		this._playedPitch = currentPitch;
-		this._liveInput.addPitch(currentPitch);
+		this._doc.liveInput.addPerformedPitch(currentPitch);
 	}
 	
 	private _releaseLiveInput(): void {
-		this._liveInput.removePitch(this._playedPitch);
+		this._doc.liveInput.removePerformedPitch(this._playedPitch);
 		this._playedPitch = -1;
 	}
 	

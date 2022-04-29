@@ -598,6 +598,15 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	margin: 1em 0;
 }
 
+.beepboxEditor .prompt.recordingSetupPrompt p {
+	margin-top: 1em;
+	margin-bottom: 0;
+}
+
+.beepboxEditor .prompt.recordingSetupPrompt > label:not(:first-child):not(.cancelButton) {
+	margin: 2px 0;
+}
+
 .beepboxEditor .layout-option {
 	display: flex;
 	flex-direction: column;

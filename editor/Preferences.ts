@@ -22,6 +22,14 @@ export class Preferences {
 	public displayBrowserUrl: boolean;
 	public volume: number = 75;
 	public visibleOctaves: number = Preferences.defaultVisibleOctaves;
+	public pressControlForShortcuts: boolean;
+	public keyboardLayout: string;
+	public enableMidi: boolean;
+	public showRecordButton: boolean;
+	public snapRecordedNotesToRhythm: boolean;
+	public ignorePerformedNotesNotInScale: boolean;
+	public metronomeCountIn: boolean;
+	public metronomeWhileRecording: boolean;
 	
 	constructor() {
 		this.reload();
@@ -40,6 +48,14 @@ export class Preferences {
 		this.instrumentCopyPaste = window.localStorage.getItem("instrumentCopyPaste") == "true";
 		this.enableChannelMuting = window.localStorage.getItem("enableChannelMuting") == "true";
 		this.displayBrowserUrl = window.localStorage.getItem("displayBrowserUrl") != "false";
+		this.pressControlForShortcuts = window.localStorage.getItem("pressControlForShortcuts") == "true";
+		this.enableMidi = window.localStorage.getItem("enableMidi") != "false";
+		this.showRecordButton = window.localStorage.getItem("showRecordButton") == "true";
+		this.snapRecordedNotesToRhythm = window.localStorage.getItem("snapRecordedNotesToRhythm") == "true";
+		this.ignorePerformedNotesNotInScale = window.localStorage.getItem("ignorePerformedNotesNotInScale") == "true";
+		this.metronomeCountIn = window.localStorage.getItem("metronomeCountIn") != "false";
+		this.metronomeWhileRecording = window.localStorage.getItem("metronomeWhileRecording") != "false";
+		this.keyboardLayout = window.localStorage.getItem("keyboardLayout") || "wickiHayden";
 		this.layout = window.localStorage.getItem("layout") || "small";
 		this.colorTheme = window.localStorage.getItem("colorTheme") || "dark classic";
 		this.visibleOctaves = ((<any>window.localStorage.getItem("visibleOctaves")) >>> 0) || Preferences.defaultVisibleOctaves;
@@ -71,6 +87,14 @@ export class Preferences {
 		window.localStorage.setItem("enableChannelMuting", this.enableChannelMuting ? "true" : "false");
 		window.localStorage.setItem("instrumentCopyPaste", this.instrumentCopyPaste ? "true" : "false");
 		window.localStorage.setItem("displayBrowserUrl", this.displayBrowserUrl ? "true" : "false");
+		window.localStorage.setItem("pressControlForShortcuts", this.pressControlForShortcuts ? "true" : "false");
+		window.localStorage.setItem("enableMidi", this.enableMidi ? "true" : "false");
+		window.localStorage.setItem("showRecordButton", this.showRecordButton ? "true" : "false");
+		window.localStorage.setItem("snapRecordedNotesToRhythm", this.snapRecordedNotesToRhythm ? "true" : "false");
+		window.localStorage.setItem("ignorePerformedNotesNotInScale", this.ignorePerformedNotesNotInScale ? "true" : "false");
+		window.localStorage.setItem("metronomeCountIn", this.metronomeCountIn ? "true" : "false");
+		window.localStorage.setItem("metronomeWhileRecording", this.metronomeWhileRecording ? "true" : "false");
+		window.localStorage.setItem("keyboardLayout", this.keyboardLayout);
 		window.localStorage.setItem("layout", this.layout);
 		window.localStorage.setItem("colorTheme", this.colorTheme);
 		window.localStorage.setItem("volume", String(this.volume));

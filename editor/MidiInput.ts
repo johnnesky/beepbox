@@ -1,7 +1,7 @@
 // Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
+import {Config} from "../synth/SynthConfig";
 import {SongDocument} from "./SongDocument";
-import {LiveInput} from "./LiveInput";
 import {AnalogousDrum, analogousDrumMap, MidiEventType} from "./Midi";
 
 declare global {
@@ -29,7 +29,7 @@ interface MIDIMessageEvent {
 const id: string = ((Math.random() * 0xffffffff) >>> 0).toString(16);
 
 export class MidiInputHandler {
-	constructor(private _doc: SongDocument, private _liveInput: LiveInput) {
+	constructor(private _doc: SongDocument) {
 		this.registerMidiAccessHandler();
 	}
 	
@@ -74,14 +74,12 @@ export class MidiInputHandler {
 	
 	private _unregisterMidiInput = (midiInput: MIDIInput) => {
 		midiInput.removeEventListener("midimessage", this._onMidiMessage as any);
-		this._liveInput.clear();
+		this._doc.liveInput.clearAllPitches();
 	}
 	
 	private _onMidiMessage = (event: MIDIMessageEvent) => {
-		// Ignore midi events if a different tab is handling them.
-		if (localStorage.getItem("midiHandlerId") != id) return;
-		
-		this._doc.synth.preferLowerLatency = true;
+		// Ignore midi events if disabled or a different tab is handling them.
+		if (!this._doc.prefs.enableMidi || localStorage.getItem("midiHandlerId") != id) return;
 		
 		const isDrum: boolean = this._doc.song.getChannelIsNoise(this._doc.channel);
 		let [eventType, key, velocity] = event.data;
@@ -94,6 +92,9 @@ export class MidiInputHandler {
 			} else {
 				return;
 			}
+		} else {
+			key -= Config.keys[this._doc.song.key].basePitch; // The basePitch of the song key is implicit so don't include it.
+			if (key < 0 || key > Config.maxPitch) return;
 		}
 		
 		if (eventType == MidiEventType.noteOn && velocity == 0) {
@@ -102,11 +103,11 @@ export class MidiInputHandler {
 		
 		switch (eventType) {
 			case MidiEventType.noteOn:
-				this._doc.synth.maintainLiveInput();
-				this._liveInput.addPitch(key);
+				this._doc.synth.preferLowerLatency = true;
+				this._doc.liveInput.addPerformedPitch(key);
 				break;
 			case MidiEventType.noteOff:
-				this._liveInput.removePitch(key);
+				this._doc.liveInput.removePerformedPitch(key);
 				break;
 		}
 	}

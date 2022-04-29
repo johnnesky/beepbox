@@ -22,8 +22,8 @@ import {SpectrumEditor} from "./SpectrumEditor";
 import {HarmonicsEditor} from "./HarmonicsEditor";
 import {BarScrollBar} from "./BarScrollBar";
 import {OctaveScrollBar} from "./OctaveScrollBar";
-import {LiveInput} from "./LiveInput";
 import {MidiInputHandler} from "./MidiInput";
+import {KeyboardLayout} from "./KeyboardLayout";
 import {Piano} from "./Piano";
 import {BeatsPerBarPrompt} from "./BeatsPerBarPrompt";
 import {MoveNotesSidewaysPrompt} from "./MoveNotesSidewaysPrompt";
@@ -32,6 +32,7 @@ import {ChannelSettingsPrompt} from "./ChannelSettingsPrompt";
 import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt";
+import {RecordingSetupPrompt} from "./RecordingSetupPrompt";
 import {Change} from "./Change";
 import {ChangeTempo, ChangeChorus, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeUnison, ChangeChord, ChangeSong, ChangePitchShift, ChangeDetune, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization, ChangeAddEnvelope, ChangeAddChannelInstrument, ChangeRemoveChannelInstrument} from "./changes";
 
@@ -122,15 +123,15 @@ class Slider {
 export class SongEditor {
 	public prompt: Prompt | null = null;
 	
-	private readonly _liveInput: LiveInput = new LiveInput(this._doc);
-	private readonly _patternEditorPrev: PatternEditor = new PatternEditor(this._doc, this._liveInput, false, -1);
-	private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc, this._liveInput, true, 0);
-	private readonly _patternEditorNext: PatternEditor = new PatternEditor(this._doc, this._liveInput, false, 1);
+	private readonly _keyboardLayout: KeyboardLayout = new KeyboardLayout(this._doc);
+	private readonly _patternEditorPrev: PatternEditor = new PatternEditor(this._doc, false, -1);
+	private readonly _patternEditor: PatternEditor = new PatternEditor(this._doc, true, 0);
+	private readonly _patternEditorNext: PatternEditor = new PatternEditor(this._doc, false, 1);
 	private readonly _muteEditor: MuteEditor = new MuteEditor(this._doc);
 	private readonly _trackEditor: TrackEditor = new TrackEditor(this._doc);
 	private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
 	private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
-	private readonly _piano: Piano = new Piano(this._doc, this._liveInput);
+	private readonly _piano: Piano = new Piano(this._doc);
 	private readonly _playButton: HTMLButtonElement = button({style: "width: 80px;", type: "button"});
 	private readonly _prevBarButton: HTMLButtonElement = button({class: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)"});
 	private readonly _nextBarButton: HTMLButtonElement = button({class: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
@@ -185,6 +186,7 @@ export class SongEditor {
 		option({value: "displayBrowserUrl"}, "Display Song Data in URL"),
 		option({value: "layout"}, "Choose Layout..."),
 		option({value: "colorTheme"}, "Light Theme"),
+		option({value: "recordingSetup"}, "Set Up Note Recording..."),
 	);
 	private readonly _scaleSelect: HTMLSelectElement = buildOptions(select(), Config.scales.map(scale=>scale.name));
 	private readonly _keySelect: HTMLSelectElement = buildOptions(select(), Config.keys.map(key=>key.name).reverse());
@@ -433,7 +435,7 @@ export class SongEditor {
 	
 	constructor(private _doc: SongDocument) {
 		this._doc.notifier.watch(this.whenUpdated);
-		new MidiInputHandler(this._doc, this._liveInput);
+		new MidiInputHandler(this._doc);
 		window.addEventListener("resize", this.whenUpdated);
 		
 		if (!("share" in navigator)) {
@@ -541,6 +543,7 @@ export class SongEditor {
 		this._patternArea.addEventListener("contextmenu", this._disableCtrlContextMenu);
 		this._trackArea.addEventListener("contextmenu", this._disableCtrlContextMenu);
 		this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
+		this.mainLayer.addEventListener("keyup", this._whenKeyReleased);
 		
 		this._promptContainer.addEventListener("click", (event) => {
 			if (event.target == this._promptContainer) {
@@ -607,6 +610,9 @@ export class SongEditor {
 					break;
 				case "layout":
 					this.prompt = new LayoutPrompt(this._doc);
+					break;
+				case "recordingSetup":
+					this.prompt = new RecordingSetupPrompt(this._doc);
 					break;
 				default:
 					this.prompt = new TipPrompt(this._doc, promptName);
@@ -690,6 +696,7 @@ export class SongEditor {
 			(prefs.displayBrowserUrl ? "✓ " : "　") + "Display Song Data in URL",
 			"　Choose Layout...",
 			(prefs.colorTheme == "light classic" ? "✓ " : "　") + "Light Theme",
+			"　Set Up Note Recording...",
 		];
 		for (let i: number = 0; i < optionCommands.length; i++) {
 			const option: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.children[i + 1];
@@ -1099,6 +1106,9 @@ export class SongEditor {
 			return;
 		}
 		
+		const canPlayNotes: boolean = (!event.ctrlKey && !event.metaKey && (this._doc.prefs.pressControlForShortcuts || event.getModifierState("CapsLock")));
+		if (canPlayNotes) this._keyboardLayout.handleKeyEvent(event, true);
+		
 		switch (event.keyCode) {
 			case 27: // ESC key
 				if (!event.ctrlKey && !event.metaKey) {
@@ -1119,6 +1129,7 @@ export class SongEditor {
 				this._refocusStage();
 				break;
 			case 90: // z
+				if (canPlayNotes) break;
 				if (event.shiftKey) {
 					this._doc.redo();
 				} else {
@@ -1127,10 +1138,12 @@ export class SongEditor {
 				event.preventDefault();
 				break;
 			case 89: // y
+				if (canPlayNotes) break;
 				this._doc.redo();
 				event.preventDefault();
 				break;
 			case 67: // c
+				if (canPlayNotes) break;
 				if (event.shiftKey) {
 					this._copyInstrument();
 				} else {
@@ -1155,6 +1168,7 @@ export class SongEditor {
 				event.preventDefault();
 				break;
 			case 65: // a
+				if (canPlayNotes) break;
 				if (event.shiftKey) {
 					this._doc.selection.selectChannel();
 				} else {
@@ -1163,13 +1177,15 @@ export class SongEditor {
 				event.preventDefault();
 				break;
 			case 68: // d
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.duplicatePatterns();
 					event.preventDefault();
 				}
 				break;
 			case 70: // f
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.synth.snapToStart();
 					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
@@ -1178,7 +1194,8 @@ export class SongEditor {
 				}
 				break;
 			case 72: // h
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.synth.goToBar(this._doc.bar);
 					this._doc.synth.snapToBar();
 					if (this._doc.prefs.autoFollow) {
@@ -1188,7 +1205,8 @@ export class SongEditor {
 				}
 				break;
 			case 77: // m
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					if (this._doc.prefs.enableChannelMuting) {
 						this._doc.selection.muteChannels(event.shiftKey);
 						event.preventDefault();
@@ -1196,12 +1214,14 @@ export class SongEditor {
 				}
 				break;
 			case 81: // q
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._openPrompt("channelSettings");
 					event.preventDefault();
 				}
 				break;
 			case 83: // s
+				if (canPlayNotes) break;
 				if (event.ctrlKey || event.metaKey) {
 					this._openPrompt("export");
 					event.preventDefault();
@@ -1213,13 +1233,15 @@ export class SongEditor {
 				}
 				break;
 			case 79: // o
+				if (canPlayNotes) break;
 				if (event.ctrlKey || event.metaKey) {
 					this._openPrompt("import");
 					event.preventDefault();
 				}
 				break;
 			case 86: // v
-				if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
+				if (canPlayNotes) break;
+				if ((event.ctrlKey || event.metaKey) && event.shiftKey && !this._doc.prefs.pressControlForShortcuts) {
 					this._doc.selection.pasteNumbers();
 				} else if (event.shiftKey) {
 					this._pasteInstrument();
@@ -1229,7 +1251,8 @@ export class SongEditor {
 				event.preventDefault();
 				break;
 			case 73: // i
-				if (!event.ctrlKey && !event.metaKey && event.shiftKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey) && event.shiftKey) {
 					// Copy the current instrument as a preset to the clipboard.
 					const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 					const instrumentObject: any = instrument.toJsonObject();
@@ -1252,7 +1275,8 @@ export class SongEditor {
 				}
 				break;
 			case 82: // r
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					if (event.shiftKey) {
 						this._randomGenerated();
 					} else {
@@ -1262,7 +1286,8 @@ export class SongEditor {
 				}
 				break;
 			case 219: // left brace
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.synth.goToPrevBar();
 					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
@@ -1271,7 +1296,8 @@ export class SongEditor {
 				}
 				break;
 			case 221: // right brace
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.synth.goToNextBar();
 					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
@@ -1281,7 +1307,8 @@ export class SongEditor {
 				break;
 			case 189: // -
 			case 173: // Firefox -
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.transpose(false, event.shiftKey);
 					event.preventDefault();
 				}
@@ -1289,7 +1316,8 @@ export class SongEditor {
 			case 187: // +
 			case 61: // Firefox +
 			case 171: // Some users have this as +? Hmm.
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.transpose(true, event.shiftKey);
 					event.preventDefault();
 				}
@@ -1343,61 +1371,71 @@ export class SongEditor {
 				event.preventDefault();
 				break;
 			case 48: // 0
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("0", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 49: // 1
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("1", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 50: // 2
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("2", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 51: // 3
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("3", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 52: // 4
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("4", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 53: // 5
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("5", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 54: // 6
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("6", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 55: // 7
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("7", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 56: // 8
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("8", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 57: // 9
-				if (!event.ctrlKey && !event.metaKey) {
+				if (canPlayNotes) break;
+				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("9", event.shiftKey);
 					event.preventDefault();
 				}
@@ -1407,6 +1445,16 @@ export class SongEditor {
 				this._doc.selection.instrumentDigits = "";
 				break;
 		}
+		
+		if (canPlayNotes) {
+			this._doc.selection.digits = "";
+			this._doc.selection.instrumentDigits = "";
+		}
+	}
+	
+	private _whenKeyReleased = (event: KeyboardEvent): void => {
+		const canPlayNotes: boolean = (this._doc.prefs.pressControlForShortcuts ? !event.ctrlKey && !event.metaKey : event.getModifierState("CapsLock"));
+		if (canPlayNotes) this._keyboardLayout.handleKeyEvent(event, false);
 	}
 	
 	private _copyTextToClipboard(text: string): void {
@@ -1451,6 +1499,7 @@ export class SongEditor {
 	
 	private _pause(): void {
 		this._doc.synth.pause();
+		this._doc.liveInput.clearAllPitches();
 		this._doc.synth.resetEffects();
 		if (this._doc.prefs.autoFollow) {
 			this._doc.synth.goToBar(this._doc.bar);
@@ -1787,6 +1836,9 @@ export class SongEditor {
 			case "colorTheme":
 				this._doc.prefs.colorTheme = this._doc.prefs.colorTheme == "light classic" ? "dark classic" : "light classic";
 				ColorConfig.setTheme(this._doc.prefs.colorTheme);
+				break;
+			case "recordingSetup":
+				this._openPrompt("recordingSetup");
 				break;
 		}
 		this._optionsMenu.selectedIndex = 0;
