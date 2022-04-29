@@ -6,7 +6,7 @@ import {Pattern, Channel, Song, Synth} from "../synth/synth";
 import {SongRecovery, generateUid} from "./SongRecovery";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
-import {LiveInput} from "./LiveInput";
+import {SongPerformance} from "./SongPerformance";
 import {Selection} from "./Selection";
 import {Preferences} from "./Preferences";
 import {Change} from "./Change";
@@ -28,7 +28,7 @@ export class SongDocument {
 	public song: Song;
 	public synth: Synth;
 	public readonly notifier: ChangeNotifier = new ChangeNotifier();
-	public readonly liveInput: LiveInput = new LiveInput(this);
+	public readonly performance: SongPerformance = new SongPerformance(this);
 	public readonly selection: Selection = new Selection(this);
 	public readonly prefs: Preferences = new Preferences();
 	public channel: number = 0;

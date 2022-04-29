@@ -74,7 +74,7 @@ export class MidiInputHandler {
 	
 	private _unregisterMidiInput = (midiInput: MIDIInput) => {
 		midiInput.removeEventListener("midimessage", this._onMidiMessage as any);
-		this._doc.liveInput.clearAllPitches();
+		this._doc.performance.clearAllPitches();
 	}
 	
 	private _onMidiMessage = (event: MIDIMessageEvent) => {
@@ -104,10 +104,10 @@ export class MidiInputHandler {
 		switch (eventType) {
 			case MidiEventType.noteOn:
 				this._doc.synth.preferLowerLatency = true;
-				this._doc.liveInput.addPerformedPitch(key);
+				this._doc.performance.addPerformedPitch(key);
 				break;
 			case MidiEventType.noteOff:
-				this._doc.liveInput.removePerformedPitch(key);
+				this._doc.performance.removePerformedPitch(key);
 				break;
 		}
 	}

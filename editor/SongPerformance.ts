@@ -3,7 +3,7 @@
 import {Config} from "../synth/SynthConfig";
 import {SongDocument} from "./SongDocument";
 
-export class LiveInput {
+export class SongPerformance {
 	private _channelIsDrum: boolean = false;
 	private _channelOctave: number = -1;
 	private _songKey: number = -1;

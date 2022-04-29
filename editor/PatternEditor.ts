@@ -521,7 +521,7 @@ export class PatternEditor {
 			if (this._doc.prefs.enableNotePreview && !this._doc.synth.playing) {
 				// Play the new note out loud if enabled.
 				const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
-				this._doc.liveInput.setTemporaryPitches([this._cursor.pitch], duration);
+				this._doc.performance.setTemporaryPitches([this._cursor.pitch], duration);
 			}
 		}
 		this._updateSelection();
@@ -892,7 +892,7 @@ export class PatternEditor {
 					
 					if (this._doc.prefs.enableNotePreview && !this._doc.synth.playing) {
 						const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
-						this._doc.liveInput.setTemporaryPitches(this._cursor.curNote.pitches, duration);
+						this._doc.performance.setTemporaryPitches(this._cursor.curNote.pitches, duration);
 					}
 				} else {
 					if (this._cursor.curNote.pitches.length == 1) {

@@ -1499,7 +1499,7 @@ export class SongEditor {
 	
 	private _pause(): void {
 		this._doc.synth.pause();
-		this._doc.liveInput.clearAllPitches();
+		this._doc.performance.clearAllPitches();
 		this._doc.synth.resetEffects();
 		if (this._doc.prefs.autoFollow) {
 			this._doc.synth.goToBar(this._doc.bar);

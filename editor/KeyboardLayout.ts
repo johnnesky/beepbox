@@ -26,7 +26,7 @@ export class KeyboardLayout {
 	private _onWindowBlur = (event: Event) => {
 		// Browsers don't explicitly release keys when the page isn't in focus so let's just assume they're all released.
 		if (this._possiblyPlayingPitchesFromKeyboard) {
-			this._doc.liveInput.clearAllPitches();
+			this._doc.performance.clearAllPitches();
 			this._possiblyPlayingPitchesFromKeyboard = false;
 		}
 	}
@@ -110,10 +110,10 @@ export class KeyboardLayout {
 			if (x >= 0 && x < Config.drumCount) {
 				if (pressed) {
 					this._doc.synth.preferLowerLatency = true;
-					this._doc.liveInput.addPerformedPitch(x);
+					this._doc.performance.addPerformedPitch(x);
 					this._possiblyPlayingPitchesFromKeyboard = true;
 				} else {
-					this._doc.liveInput.removePerformedPitch(x);
+					this._doc.performance.removePerformedPitch(x);
 				}
 			}
 			return;
@@ -160,10 +160,10 @@ export class KeyboardLayout {
 			
 			if (pressed) {
 				this._doc.synth.preferLowerLatency = true;
-				this._doc.liveInput.addPerformedPitch(pitch);
+				this._doc.performance.addPerformedPitch(pitch);
 				this._possiblyPlayingPitchesFromKeyboard = true;
 			} else {
-				this._doc.liveInput.removePerformedPitch(pitch);
+				this._doc.performance.removePerformedPitch(pitch);
 			}
 		}
 	}
