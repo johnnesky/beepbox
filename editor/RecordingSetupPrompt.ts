@@ -33,7 +33,7 @@ export class RecordingSetupPrompt implements Prompt {
 		h2("Note Recording Setup"),
 		p("BeepBox can record notes that you play on a keyboard. You can start recording by pressing Ctrl+Space."),
 		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Also show record button:",
+			"Also show record ● button:",
 			this._showRecordButton,
 		),
 		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},

@@ -132,9 +132,12 @@ export class SongEditor {
 	private readonly _loopEditor: LoopEditor = new LoopEditor(this._doc);
 	private readonly _octaveScrollBar: OctaveScrollBar = new OctaveScrollBar(this._doc);
 	private readonly _piano: Piano = new Piano(this._doc);
-	private readonly _playButton: HTMLButtonElement = button({style: "width: 80px;", type: "button"});
-	private readonly _prevBarButton: HTMLButtonElement = button({class: "prevBarButton", style: "width: 40px;", type: "button", title: "Previous Bar (left bracket)"});
-	private readonly _nextBarButton: HTMLButtonElement = button({class: "nextBarButton", style: "width: 40px;", type: "button", title: "Next Bar (right bracket)"});
+	private readonly _playButton: HTMLButtonElement = button({class: "playButton", type: "button", title: "Play (Space)"}, span("Play"));
+	private readonly _pauseButton: HTMLButtonElement = button({class: "pauseButton", style: "display: none;", type: "button", title: "Pause (Space)"}, "Pause");
+	private readonly _recordButton: HTMLButtonElement = button({class: "recordButton", style: "display: none;", type: "button", title: "Record (Ctrl+Space)"}, span("Record"));
+	private readonly _stopButton: HTMLButtonElement = button({class: "stopButton", style: "display: none;", type: "button", title: "Stop Recording (Space)"}, "Stop");
+	private readonly _prevBarButton: HTMLButtonElement = button({class: "prevBarButton", type: "button", title: "Previous Bar (left bracket)"});
+	private readonly _nextBarButton: HTMLButtonElement = button({class: "nextBarButton", type: "button", title: "Next Bar (right bracket)"});
 	private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "75", value: "50", step: "1"});
 	private readonly _fileMenu: HTMLSelectElement = select({style: "width: 100%;"},
 		option({selected: true, disabled: true, hidden: false}, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
@@ -171,15 +174,15 @@ export class SongEditor {
 	);
 	private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"},
 		option({selected: true, disabled: true, hidden: false}, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
-		option({value: "autoPlay"}, "Auto Play On Load"),
-		option({value: "autoFollow"}, "Auto Follow Track"),
-		option({value: "enableNotePreview"}, "Preview Added Notes"),
+		option({value: "autoPlay"}, "Auto Play on Load"),
+		option({value: "autoFollow"}, "Keep Current Pattern Selected"),
+		option({value: "enableNotePreview"}, "Hear Preview of Added Notes"),
 		option({value: "showLetters"}, "Show Piano Keys"),
-		option({value: "showFifth"}, 'Highlight "Fifth" Notes'),
-		option({value: "notesOutsideScale"}, "Allow Notes Outside Scale"),
+		option({value: "showFifth"}, 'Highlight "Fifth" of Song Key'),
+		option({value: "notesOutsideScale"}, "Allow Adding Notes Not in Scale"),
 		option({value: "setDefaultScale"}, "Use Current Scale as Default"),
-		option({value: "showChannels"}, "Show All Channels"),
-		option({value: "showScrollBar"}, "Octave Scroll Bar"),
+		option({value: "showChannels"}, "Show Notes From All Channels"),
+		option({value: "showScrollBar"}, "Show Octave Scroll Bar"),
 		option({value: "alwaysShowSettings"}, "Customize All Instruments"),
 		option({value: "instrumentCopyPaste"}, "Instrument Copy/Paste Buttons"),
 		option({value: "enableChannelMuting"}, "Enable Channel Muting"),
@@ -367,6 +370,9 @@ export class SongEditor {
 		div({class: "play-pause-area"},
 			div({class: "playback-bar-controls"},
 				this._playButton,
+				this._pauseButton,
+				this._recordButton,
+				this._stopButton,
 				this._prevBarButton,
 				this._nextBarButton,
 			),
@@ -426,6 +432,11 @@ export class SongEditor {
 	private _currentPromptName: string | null = null;
 	private _highlightedInstrumentIndex: number = -1;
 	private _renderedInstrumentCount: number = 0;
+	private _renderedIsPlaying: boolean = false;
+	private _renderedIsRecording: boolean = false;
+	private _renderedShowRecordButton: boolean = false;
+	private _renderedCtrlHeld: boolean = false;
+	private _ctrlHeld: boolean = false;
 	private _deactivatedInstruments: boolean = false;
 	private readonly _operatorRows: HTMLDivElement[] = []
 	private readonly _operatorAmplitudeSliders: Slider[] = []
@@ -437,6 +448,7 @@ export class SongEditor {
 		this._doc.notifier.watch(this.whenUpdated);
 		new MidiInputHandler(this._doc);
 		window.addEventListener("resize", this.whenUpdated);
+		window.requestAnimationFrame(this.updatePlayButton);
 		
 		if (!("share" in navigator)) {
 			this._fileMenu.removeChild(this._fileMenu.querySelector("[value='shareUrl']")!);
@@ -525,6 +537,22 @@ export class SongEditor {
 		this._chordSelect.addEventListener("change", this._whenSetChord);
 		this._vibratoSelect.addEventListener("change", this._whenSetVibrato);
 		this._playButton.addEventListener("click", this._togglePlay);
+		this._pauseButton.addEventListener("click", this._togglePlay);
+		this._recordButton.addEventListener("click", this._toggleRecord);
+		this._stopButton.addEventListener("click", this._toggleRecord);
+		// Start recording instead of opening context menu when control-clicking the record button on a Mac.
+		this._recordButton.addEventListener("contextmenu", (event: MouseEvent) => {
+			if (event.ctrlKey) {
+				event.preventDefault();
+				this._toggleRecord();
+			}
+		});
+		this._stopButton.addEventListener("contextmenu", (event: MouseEvent) => {
+			if (event.ctrlKey) {
+				event.preventDefault();
+				this._toggleRecord();
+			}
+		});
 		this._prevBarButton.addEventListener("click", this._whenPrevBarPressed);
 		this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
 		this._volumeSlider.addEventListener("input", this._setVolumeSlider);
@@ -681,15 +709,15 @@ export class SongEditor {
 		this._patternEditor.render();
 		
 		const optionCommands: ReadonlyArray<string> = [
-			(prefs.autoPlay ? "✓ " : "　") + "Auto Play On Load",
-			(prefs.autoFollow ? "✓ " : "　") + "Auto Follow Track",
-			(prefs.enableNotePreview ? "✓ " : "　") + "Preview Added Notes",
+			(prefs.autoPlay ? "✓ " : "　") + "Auto Play on Load",
+			(prefs.autoFollow ? "✓ " : "　") + "Keep Current Pattern Selected",
+			(prefs.enableNotePreview ? "✓ " : "　") + "Hear Preview of Added Notes",
 			(prefs.showLetters ? "✓ " : "　") + "Show Piano Keys",
-			(prefs.showFifth ? "✓ " : "　") + 'Highlight "Fifth" Notes',
-			(prefs.notesOutsideScale ? "✓ " : "　") + "Allow Notes Outside Scale",
+			(prefs.showFifth ? "✓ " : "　") + 'Highlight "Fifth" of Song Key',
+			(prefs.notesOutsideScale ? "✓ " : "　") + "Allow Adding Notes Not in Scale",
 			(prefs.defaultScale == this._doc.song.scale ? "✓ " : "　") + "Use Current Scale as Default",
-			(prefs.showChannels ? "✓ " : "　") + "Show All Channels",
-			(prefs.showScrollBar ? "✓ " : "　") + "Octave Scroll Bar",
+			(prefs.showChannels ? "✓ " : "　") + "Show Notes From All Channels",
+			(prefs.showScrollBar ? "✓ " : "　") + "Show Octave Scroll Bar",
 			(prefs.alwaysShowSettings ? "✓ " : "　") + "Customize All Instruments",
 			(prefs.instrumentCopyPaste ? "✓ " : "　") + "Instrument Copy/Paste Buttons",
 			(prefs.enableChannelMuting ? "✓ " : "　") + "Enable Channel Muting",
@@ -1047,18 +1075,40 @@ export class SongEditor {
 		}
 	}
 	
-	public updatePlayButton(): void {
-		if (this._doc.synth.playing) {
-			this._playButton.classList.remove("playButton");
-			this._playButton.classList.add("pauseButton");
-			this._playButton.title = "Pause (Space)";
-			this._playButton.textContent = "Pause";
-		} else {
-			this._playButton.classList.remove("pauseButton");
-			this._playButton.classList.add("playButton");
-			this._playButton.title = "Play (Space)";
-			this._playButton.textContent = "Play";
+	public updatePlayButton = (): void => {
+		if (this._renderedIsPlaying != this._doc.synth.playing || this._renderedIsRecording != this._doc.synth.recording || this._renderedShowRecordButton != this._doc.prefs.showRecordButton || this._renderedCtrlHeld != this._ctrlHeld) {
+			this._renderedIsPlaying = this._doc.synth.playing;
+			this._renderedIsRecording = this._doc.synth.recording;
+			this._renderedShowRecordButton = this._doc.prefs.showRecordButton;
+			this._renderedCtrlHeld = this._ctrlHeld;
+			
+			if (document.activeElement == this._playButton || document.activeElement == this._pauseButton || document.activeElement == this._recordButton || document.activeElement == this._stopButton) {
+				// When a focused element is hidden, focus is transferred to the document, so let's refocus the editor instead to make sure we can still capture keyboard input.
+				this._refocusStage();
+			}
+			
+			this._playButton.style.display = "none";
+			this._pauseButton.style.display = "none";
+			this._recordButton.style.display = "none";
+			this._stopButton.style.display = "none";
+			this._playButton.classList.remove("shrunk");
+			this._recordButton.classList.remove("shrunk");
+			if (this._doc.synth.recording) {
+				this._stopButton.style.display = "";
+			} else if (this._doc.synth.playing) {
+				this._pauseButton.style.display = "";
+			} else if (this._doc.prefs.showRecordButton) {
+				this._playButton.style.display = "";
+				this._recordButton.style.display = "";
+				this._playButton.classList.add("shrunk");
+				this._recordButton.classList.add("shrunk");
+			} else if (this._ctrlHeld) {
+				this._recordButton.style.display = "";
+			} else {
+				this._playButton.style.display = "";
+			}
 		}
+		window.requestAnimationFrame(this.updatePlayButton);
 	}
 	
 	private _disableCtrlContextMenu = (event: MouseEvent): boolean => {
@@ -1098,6 +1148,8 @@ export class SongEditor {
 	}
 	
 	private _whenKeyPressed = (event: KeyboardEvent): void => {
+		this._ctrlHeld = event.ctrlKey;
+		
 		if (this.prompt) {
 			if (event.keyCode == 27) { // ESC key
 				// close prompt.
@@ -1117,7 +1169,9 @@ export class SongEditor {
 				}
 				break;
 			case 32: // space
-				if (event.shiftKey) {
+				if (event.ctrlKey) {
+					this._toggleRecord();
+				} else if (event.shiftKey) {
 					// Jump to mouse
 					if (this._trackEditor.movePlayheadToMouse() || this._patternEditor.movePlayheadToMouse()) {
 						if (!this._doc.synth.playing) this._play();
@@ -1453,6 +1507,8 @@ export class SongEditor {
 	}
 	
 	private _whenKeyReleased = (event: KeyboardEvent): void => {
+		this._ctrlHeld = event.ctrlKey;
+		
 		const canPlayNotes: boolean = (this._doc.prefs.pressControlForShortcuts ? !event.ctrlKey && !event.metaKey : event.getModifierState("CapsLock"));
 		if (canPlayNotes) this._keyboardLayout.handleKeyEvent(event, false);
 	}
@@ -1491,10 +1547,19 @@ export class SongEditor {
 		}
 	}
 	
+	private _toggleRecord = (): void => {
+		if (this._doc.synth.playing) {
+			this._pause();
+		} else {
+			this._doc.synth.snapToBar();
+			this._doc.synth.startRecording();
+			this._doc.synth.maintainLiveInput();
+		}
+	}
+	
 	private _play(): void {
 		this._doc.synth.play();
 		this._doc.synth.maintainLiveInput();
-		this.updatePlayButton();
 	}
 	
 	private _pause(): void {
@@ -1505,7 +1570,6 @@ export class SongEditor {
 			this._doc.synth.goToBar(this._doc.bar);
 		}
 		this._doc.synth.snapToBar();
-		this.updatePlayButton();
 	}
 	
 	private _setVolumeSlider = (): void => {

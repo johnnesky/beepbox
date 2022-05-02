@@ -21,8 +21,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 :root {
 	--button-size: 26px;
 	--settings-area-width: 192px;
-	--play-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -4 -8 L -4 8 L 9 0 z" fill="gray"/></svg>');
-	--pause-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-4" y="-8" width="4" height="16" fill="gray"/><rect x="5" y="-8" width="4" height="16" fill="gray"/></svg>');
+	--play-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><path d="M -5 -8 L -5 8 L 8 0 z" fill="gray"/></svg>');
+	--pause-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-5" y="-7" width="4" height="14" fill="gray"/><rect x="3" y="-7" width="4" height="14" fill="gray"/></svg>');
+	--record-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><circle cx="0" cy="0" r="6" fill="gray"/></svg>');
+	--stop-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-6" y="-6" width="12" height="12" fill="gray"/></svg>');
 	--prev-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="-6" y="-6" width="2" height="12" fill="gray"/><path d="M 6 -6 L 6 6 L -3 0 z" fill="gray"/></svg>');
 	--next-bar-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="-13 -13 26 26"><rect x="4" y="-6" width="2" height="12" fill="gray"/><path d="M -6 -6 L -6 6 L 3 0 z" fill="gray"/></svg>');
 	--volume-symbol: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26"><path d="M 4 16 L 4 10 L 8 10 L 13 5 L 13 21 L 8 16 z M 15 11 L 16 10 A 7.2 7.2 0 0 1 16 16 L 15 15 A 5.8 5.8 0 0 0 15 12 z M 18 8 L 19 7 A 11.5 11.5 0 0 1 19 19 L 18 18 A 10.1 10.1 0 0 0 18 8 z" fill="gray"/></svg>');
@@ -726,9 +728,13 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	right: 8px;
 }
 
-.beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.okayButton, .beepboxEditor button.exportButton {
-	padding-left: var(--button-size);
+.beepboxEditor .playback-bar-controls {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+	grid-template-rows: min-content;
+	grid-column-gap: 4px;
 }
+
 .beepboxEditor button.playButton::before {
 	content: "";
 	flex-shrink: 0;
@@ -762,6 +768,42 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	-webkit-mask-repeat: no-repeat;
 	-webkit-mask-position: center;
 	mask-image: var(--pause-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+.beepboxEditor button.recordButton::before {
+	content: "";
+	flex-shrink: 0;
+	position: absolute;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	width: var(--button-size);
+	height: var(--button-size);
+	background: currentColor;
+	-webkit-mask-image: var(--record-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--record-symbol);
+	mask-repeat: no-repeat;
+	mask-position: center;
+}
+.beepboxEditor button.stopButton::before {
+	content: "";
+	flex-shrink: 0;
+	position: absolute;
+	left: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	width: var(--button-size);
+	height: var(--button-size);
+	background: currentColor;
+	-webkit-mask-image: var(--stop-symbol);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-image: var(--stop-symbol);
 	mask-repeat: no-repeat;
 	mask-position: center;
 }
@@ -802,6 +844,42 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	mask-image: var(--next-bar-symbol);
 	mask-repeat: no-repeat;
 	mask-position: center;
+}
+
+.beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.recordButton, .beepboxEditor button.stopButton, .beepboxEditor button.okayButton, .beepboxEditor button.exportButton {
+	padding-left: var(--button-size);
+}
+.beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.recordButton, .beepboxEditor button.stopButton {
+	grid-column-start: 1;
+	grid-column-end: 3;
+}
+.beepboxEditor button.prevBarButton {
+	grid-column-start: 3;
+	grid-column-end: 4;
+}
+.beepboxEditor button.nextBarButton {
+	grid-column-start: 4;
+	grid-column-end: 5;
+}
+
+.beepboxEditor button.playButton.shrunk, .beepboxEditor button.recordButton.shrunk {
+	padding: 0;
+}
+.beepboxEditor button.playButton.shrunk::before, .beepboxEditor button.recordButton.shrunk::before {
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+}
+.beepboxEditor button.playButton.shrunk span, .beepboxEditor button.recordButton.shrunk span {
+	display: none;
+}
+.beepboxEditor button.playButton.shrunk {
+	grid-column-start: 1;
+	grid-column-end: 2;
+}
+.beepboxEditor button.recordButton.shrunk {
+	grid-column-start: 2;
+	grid-column-end: 3;
 }
 
 .beepboxEditor button.cancelButton::before {
@@ -1143,8 +1221,6 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		flex-direction: column;
 	}
 	.beepboxEditor .playback-bar-controls {
-		display: flex;
-		flex-direction: row;
 		margin: 2px 0;
 	}
 	.beepboxEditor .playback-volume-controls {
@@ -1152,13 +1228,6 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		flex-direction: row;
 		margin: 2px 0;
 		align-items: center;
-	}
-	.beepboxEditor .pauseButton, .beepboxEditor .playButton {
-		flex-grow: 1;
-	}
-	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
-		flex-grow: 1;
-		margin-left: 10px;
 	}
 	.beepboxEditor .settings-area {
 		width: var(--settings-area-width);
@@ -1197,13 +1266,12 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		display: none;
 	}
 	.beepboxEditor .play-pause-area {
-		display: flex;
-		flex-direction: row;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-column-gap: 8px;
 		margin: 2px 0;
 	}
 	.beepboxEditor .playback-bar-controls {
-		display: flex;
-		flex-direction: row;
 		flex-grow: 1;
 	}
 	.beepboxEditor .playback-volume-controls {
@@ -1211,12 +1279,6 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		flex-direction: row;
 		align-items: center;
 		flex-grow: 1;
-		margin: 0 2px;
-	}
-	.beepboxEditor .pauseButton, .beepboxEditor .playButton,
-	.beepboxEditor .nextBarButton, .beepboxEditor .prevBarButton {
-		flex-grow: 1;
-		margin: 0 2px;
 	}
 }
 

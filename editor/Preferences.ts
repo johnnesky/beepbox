@@ -37,7 +37,7 @@ export class Preferences {
 	
 	public reload(): void {
 		this.autoPlay = window.localStorage.getItem("autoPlay") == "true";
-		this.autoFollow = window.localStorage.getItem("autoFollow") == "true";
+		this.autoFollow = window.localStorage.getItem("autoFollow") != "false";
 		this.enableNotePreview = window.localStorage.getItem("enableNotePreview") != "false";
 		this.showFifth = window.localStorage.getItem("showFifth") == "true";
 		this.notesOutsideScale = window.localStorage.getItem("notesOutsideScale") == "true";

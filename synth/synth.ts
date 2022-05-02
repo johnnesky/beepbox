@@ -4507,6 +4507,7 @@ export class Synth {
 	public isAtStartOfTick: boolean = true;
 	public tickSampleCountdown: number = 0;
 	private isPlayingSong: boolean = false;
+	private isRecording: boolean = false;
 	private liveInputEndTime: number = 0.0;
 	private browserAutomaticallyClearsAudioBuffer: boolean = true; // Assume true until proven otherwise. Older Chrome does not clear the buffer so it needs to be cleared manually.
 	
@@ -4532,6 +4533,10 @@ export class Synth {
 	
 	public get playing(): boolean {
 		return this.isPlayingSong;
+	}
+	
+	public get recording(): boolean {
+		return this.isRecording;
 	}
 	
 	public get playhead(): number {
@@ -4638,6 +4643,12 @@ export class Synth {
 	public pause(): void {
 		if (!this.isPlayingSong) return;
 		this.isPlayingSong = false;
+		this.isRecording = false;
+	}
+	
+	public startRecording(): void {
+		this.isRecording = true;
+		this.play();
 	}
 	
 	public snapToStart(): void {
