@@ -196,6 +196,11 @@ export class SongDocument {
 	}
 	
 	private _whenHistoryStateChanged = (): void => {
+		if (this.synth.recording) {
+			// Changes to the song while it's recording to could mess up the recording so just abort the recording.
+			this.performance.pause();
+		}
+		
 		if (window.history.state == null && window.location.hash != "") {
 			// The user changed the hash directly.
 			this._sequenceNumber++;

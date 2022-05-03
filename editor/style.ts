@@ -849,9 +849,13 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 .beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.recordButton, .beepboxEditor button.stopButton, .beepboxEditor button.okayButton, .beepboxEditor button.exportButton {
 	padding-left: var(--button-size);
 }
-.beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.recordButton, .beepboxEditor button.stopButton {
+.beepboxEditor button.playButton, .beepboxEditor button.pauseButton, .beepboxEditor button.recordButton {
 	grid-column-start: 1;
 	grid-column-end: 3;
+}
+.beepboxEditor button.stopButton {
+	grid-column-start: 1;
+	grid-column-end: 5;
 }
 .beepboxEditor button.prevBarButton {
 	grid-column-start: 3;

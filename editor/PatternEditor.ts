@@ -423,7 +423,7 @@ export class PatternEditor {
 			this._svgPlayhead.setAttribute("visibility", "hidden");
 		}
 		
-		if (this._doc.synth.playing && this._doc.prefs.autoFollow && this._followPlayheadBar != playheadBar) {
+		if (this._doc.synth.playing && (this._doc.synth.recording || this._doc.prefs.autoFollow) && this._followPlayheadBar != playheadBar) {
 			new ChangeChannelBar(this._doc, this._doc.channel, playheadBar);
 			this._doc.notifier.notifyWatchers();
 		}

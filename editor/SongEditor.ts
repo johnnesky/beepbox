@@ -135,7 +135,7 @@ export class SongEditor {
 	private readonly _playButton: HTMLButtonElement = button({class: "playButton", type: "button", title: "Play (Space)"}, span("Play"));
 	private readonly _pauseButton: HTMLButtonElement = button({class: "pauseButton", style: "display: none;", type: "button", title: "Pause (Space)"}, "Pause");
 	private readonly _recordButton: HTMLButtonElement = button({class: "recordButton", style: "display: none;", type: "button", title: "Record (Ctrl+Space)"}, span("Record"));
-	private readonly _stopButton: HTMLButtonElement = button({class: "stopButton", style: "display: none;", type: "button", title: "Stop Recording (Space)"}, "Stop");
+	private readonly _stopButton: HTMLButtonElement = button({class: "stopButton", style: "display: none;", type: "button", title: "Stop Recording (Space)"}, "Stop Recording");
 	private readonly _prevBarButton: HTMLButtonElement = button({class: "prevBarButton", type: "button", title: "Previous Bar (left bracket)"});
 	private readonly _nextBarButton: HTMLButtonElement = button({class: "nextBarButton", type: "button", title: "Next Bar (right bracket)"});
 	private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "75", value: "50", step: "1"});
@@ -356,6 +356,43 @@ export class SongEditor {
 		this._barScrollBar.container,
 	);
 	
+	private readonly _menuArea: HTMLDivElement = div({class: "menu-area"},
+		div({class: "selectContainer menu file"},
+			this._fileMenu,
+		),
+		div({class: "selectContainer menu edit"},
+			this._editMenu,
+		),
+		div({class: "selectContainer menu preferences"},
+			this._optionsMenu,
+		),
+	);
+	private readonly _songSettingsArea: HTMLDivElement = div({class: "song-settings-area"},
+		div({class: "editor-controls"},
+			div({style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};`},
+				"Song Settings",
+			),
+			div({class: "selectRow"},
+				span({class: "tip", onclick: ()=>this._openPrompt("scale")}, "Scale:"),
+				div({class: "selectContainer"}, this._scaleSelect),
+			),
+			div({class: "selectRow"},
+				span({class: "tip", onclick: ()=>this._openPrompt("key")}, "Key:"),
+				div({class: "selectContainer"}, this._keySelect),
+			),
+			div({class: "selectRow"},
+				span({class: "tip", onclick: ()=>this._openPrompt("tempo")}, "Tempo:"),
+				span({style: "display: flex;"},
+					this._tempoSlider.input,
+					this._tempoStepper,
+				),
+			),
+			div({class: "selectRow"},
+				span({class: "tip", onclick: ()=>this._openPrompt("rhythm")}, "Rhythm:"),
+				div({class: "selectContainer"}, this._rhythmSelect),
+			),
+		),
+	);
 	private readonly _instrumentSettingsArea: HTMLDivElement = div({class: "instrument-settings-area"}, this._instrumentSettingsGroup);
 	private readonly _settingsArea: HTMLDivElement = div({class: "settings-area noSelection"},
 		div({class: "version-area"},
@@ -381,43 +418,8 @@ export class SongEditor {
 				this._volumeSlider,
 			),
 		),
-		div({class: "menu-area"},
-			div({class: "selectContainer menu file"},
-				this._fileMenu,
-			),
-			div({class: "selectContainer menu edit"},
-				this._editMenu,
-			),
-			div({class: "selectContainer menu preferences"},
-				this._optionsMenu,
-			),
-		),
-		div({class: "song-settings-area"},
-			div({class: "editor-controls"},
-				div({style: `margin: 3px 0; text-align: center; color: ${ColorConfig.secondaryText};`},
-					"Song Settings",
-				),
-				div({class: "selectRow"},
-					span({class: "tip", onclick: ()=>this._openPrompt("scale")}, "Scale:"),
-					div({class: "selectContainer"}, this._scaleSelect),
-				),
-				div({class: "selectRow"},
-					span({class: "tip", onclick: ()=>this._openPrompt("key")}, "Key:"),
-					div({class: "selectContainer"}, this._keySelect),
-				),
-				div({class: "selectRow"},
-					span({class: "tip", onclick: ()=>this._openPrompt("tempo")}, "Tempo:"),
-					span({style: "display: flex;"},
-						this._tempoSlider.input,
-						this._tempoStepper,
-					),
-				),
-				div({class: "selectRow"},
-					span({class: "tip", onclick: ()=>this._openPrompt("rhythm")}, "Rhythm:"),
-					div({class: "selectContainer"}, this._rhythmSelect),
-				),
-			),
-		),
+		this._menuArea,
+		this._songSettingsArea,
 		this._instrumentSettingsArea,
 	);
 	
@@ -603,7 +605,7 @@ export class SongEditor {
 		
 		if (this.prompt) {
 			if (this._wasPlaying && !(this.prompt instanceof TipPrompt)) {
-				this._play();
+				this._doc.performance.play();
 			}
 			this._wasPlaying = false;
 			this._promptContainer.style.display = "none";
@@ -650,7 +652,7 @@ export class SongEditor {
 			if (this.prompt) {
 				if (!(this.prompt instanceof TipPrompt)) {
 					this._wasPlaying = this._doc.synth.playing;
-					this._pause();
+					this._doc.performance.pause();
 				}
 				this._promptContainer.style.display = "";
 				this._promptContainer.appendChild(this.prompt.container);
@@ -1091,10 +1093,27 @@ export class SongEditor {
 			this._pauseButton.style.display = "none";
 			this._recordButton.style.display = "none";
 			this._stopButton.style.display = "none";
+			this._prevBarButton.style.display = "";
+			this._nextBarButton.style.display = "";
 			this._playButton.classList.remove("shrunk");
 			this._recordButton.classList.remove("shrunk");
+			this._patternEditorRow.style.pointerEvents = "";
+			this._octaveScrollBar.container.style.pointerEvents = "";
+			this._trackArea.style.pointerEvents = "";
+			this._instrumentSettingsArea.style.pointerEvents = "";
+			this._menuArea.style.pointerEvents = "";
+			this._songSettingsArea.style.pointerEvents = "";
+			
 			if (this._doc.synth.recording) {
 				this._stopButton.style.display = "";
+				this._prevBarButton.style.display = "none";
+				this._nextBarButton.style.display = "none";
+				this._patternEditorRow.style.pointerEvents = "none";
+				this._octaveScrollBar.container.style.pointerEvents = "none";
+				this._trackArea.style.pointerEvents = "none";
+				this._instrumentSettingsArea.style.pointerEvents = "none";
+				this._menuArea.style.pointerEvents = "none";
+				this._songSettingsArea.style.pointerEvents = "none";
 			} else if (this._doc.synth.playing) {
 				this._pauseButton.style.display = "";
 			} else if (this._doc.prefs.showRecordButton) {
@@ -1158,6 +1177,17 @@ export class SongEditor {
 			return;
 		}
 		
+		if (this._doc.synth.recording) {
+			// The only valid keyboard interactions when recording are playing notes or space to stop.
+			this._keyboardLayout.handleKeyEvent(event, true);
+			if (event.keyCode == 32) { // space
+				this._toggleRecord();
+				event.preventDefault();
+				this._refocusStage();
+			}
+			return;
+		}
+		
 		const canPlayNotes: boolean = (!event.ctrlKey && !event.metaKey && (this._doc.prefs.pressControlForShortcuts || event.getModifierState("CapsLock")));
 		if (canPlayNotes) this._keyboardLayout.handleKeyEvent(event, true);
 		
@@ -1174,7 +1204,7 @@ export class SongEditor {
 				} else if (event.shiftKey) {
 					// Jump to mouse
 					if (this._trackEditor.movePlayheadToMouse() || this._patternEditor.movePlayheadToMouse()) {
-						if (!this._doc.synth.playing) this._play();
+						if (!this._doc.synth.playing) this._doc.performance.play();
 					}
 				} else {
 					this._togglePlay();
@@ -1510,7 +1540,7 @@ export class SongEditor {
 		this._ctrlHeld = event.ctrlKey;
 		
 		const canPlayNotes: boolean = (this._doc.prefs.pressControlForShortcuts ? !event.ctrlKey && !event.metaKey : event.getModifierState("CapsLock"));
-		if (canPlayNotes) this._keyboardLayout.handleKeyEvent(event, false);
+		if (this._doc.synth.recording || canPlayNotes) this._keyboardLayout.handleKeyEvent(event, false);
 	}
 	
 	private _copyTextToClipboard(text: string): void {
@@ -1540,36 +1570,19 @@ export class SongEditor {
 	
 	private _togglePlay = (): void => {
 		if (this._doc.synth.playing) {
-			this._pause();
+			this._doc.performance.pause();
 		} else {
 			this._doc.synth.snapToBar();
-			this._play();
+			this._doc.performance.play();
 		}
 	}
 	
 	private _toggleRecord = (): void => {
 		if (this._doc.synth.playing) {
-			this._pause();
+			this._doc.performance.pause();
 		} else {
-			this._doc.synth.snapToBar();
-			this._doc.synth.startRecording();
-			this._doc.synth.maintainLiveInput();
+			this._doc.performance.record();
 		}
-	}
-	
-	private _play(): void {
-		this._doc.synth.play();
-		this._doc.synth.maintainLiveInput();
-	}
-	
-	private _pause(): void {
-		this._doc.synth.pause();
-		this._doc.performance.clearAllPitches();
-		this._doc.synth.resetEffects();
-		if (this._doc.prefs.autoFollow) {
-			this._doc.synth.goToBar(this._doc.bar);
-		}
-		this._doc.synth.snapToBar();
 	}
 	
 	private _setVolumeSlider = (): void => {

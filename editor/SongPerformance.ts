@@ -2,6 +2,7 @@
 
 import {Config} from "../synth/SynthConfig";
 import {SongDocument} from "./SongDocument";
+import {ChangeChannelBar} from "./changes";
 
 export class SongPerformance {
 	private _channelIsDrum: boolean = false;
@@ -11,6 +12,32 @@ export class SongPerformance {
 	
 	constructor(private _doc: SongDocument) {
 		this._doc.notifier.watch(this._documentChanged);
+	}
+	
+	public play(): void {
+		this._doc.synth.play();
+		this._doc.synth.maintainLiveInput();
+	}
+	
+	public pause(): void {
+		this._doc.synth.pause();
+		this.clearAllPitches();
+		this._doc.synth.resetEffects();
+		if (this._doc.prefs.autoFollow) {
+			this._doc.synth.goToBar(this._doc.bar);
+		}
+		this._doc.synth.snapToBar();
+	}
+	
+	public record(): void {
+		this._doc.synth.snapToBar();
+		const playheadBar: number = Math.floor(this._doc.synth.playhead);
+		if (playheadBar != this._doc.bar) {
+			new ChangeChannelBar(this._doc, this._doc.channel, playheadBar);
+			this._doc.notifier.notifyWatchers();
+		}
+		this._doc.synth.startRecording();
+		this._doc.synth.maintainLiveInput();
 	}
 	
 	public setTemporaryPitches(pitches: number[], duration: number): void {
