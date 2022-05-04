@@ -574,6 +574,7 @@ export class SongEditor {
 		this._trackArea.addEventListener("contextmenu", this._disableCtrlContextMenu);
 		this.mainLayer.addEventListener("keydown", this._whenKeyPressed);
 		this.mainLayer.addEventListener("keyup", this._whenKeyReleased);
+		this.mainLayer.addEventListener("focusin", this._onFocusIn);
 		
 		this._promptContainer.addEventListener("click", (event) => {
 			if (event.target == this._promptContainer) {
@@ -662,6 +663,14 @@ export class SongEditor {
 	
 	private _refocusStage = (): void => {
 		this.mainLayer.focus({preventScroll: true});
+	}
+	
+	private _onFocusIn = (event: Event): void => {
+		if (this._doc.synth.recording && event.target != this.mainLayer && event.target != this._stopButton && event.target != this._volumeSlider) {
+			// Don't allow using tab to focus on the song settings while recording,
+			// since interacting with them while recording would mess up the recording.
+			this._refocusStage();
+		}
 	}
 	
 	public whenUpdated = (): void => {
@@ -1099,10 +1108,15 @@ export class SongEditor {
 			this._recordButton.classList.remove("shrunk");
 			this._patternEditorRow.style.pointerEvents = "";
 			this._octaveScrollBar.container.style.pointerEvents = "";
-			this._trackArea.style.pointerEvents = "";
+			this._octaveScrollBar.container.style.opacity = "";
+			this._trackContainer.style.pointerEvents = "";
+			this._loopEditor.container.style.opacity = "";
 			this._instrumentSettingsArea.style.pointerEvents = "";
+			this._instrumentSettingsArea.style.opacity = "";
 			this._menuArea.style.pointerEvents = "";
+			this._menuArea.style.opacity = "";
 			this._songSettingsArea.style.pointerEvents = "";
+			this._songSettingsArea.style.opacity = "";
 			
 			if (this._doc.synth.recording) {
 				this._stopButton.style.display = "";
@@ -1110,10 +1124,15 @@ export class SongEditor {
 				this._nextBarButton.style.display = "none";
 				this._patternEditorRow.style.pointerEvents = "none";
 				this._octaveScrollBar.container.style.pointerEvents = "none";
-				this._trackArea.style.pointerEvents = "none";
+				this._octaveScrollBar.container.style.opacity = "0.5";
+				this._trackContainer.style.pointerEvents = "none";
+				this._loopEditor.container.style.opacity = "0.5";
 				this._instrumentSettingsArea.style.pointerEvents = "none";
+				this._instrumentSettingsArea.style.opacity = "0.5";
 				this._menuArea.style.pointerEvents = "none";
+				this._menuArea.style.opacity = "0.5";
 				this._songSettingsArea.style.pointerEvents = "none";
+				this._songSettingsArea.style.opacity = "0.5";
 			} else if (this._doc.synth.playing) {
 				this._pauseButton.style.display = "";
 			} else if (this._doc.prefs.showRecordButton) {
