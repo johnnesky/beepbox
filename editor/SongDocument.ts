@@ -27,8 +27,8 @@ interface HistoryState {
 export class SongDocument {
 	public song: Song;
 	public synth: Synth;
+	public performance: SongPerformance;
 	public readonly notifier: ChangeNotifier = new ChangeNotifier();
-	public readonly performance: SongPerformance = new SongPerformance(this);
 	public readonly selection: Selection = new Selection(this);
 	public readonly prefs: Preferences = new Preferences();
 	public channel: number = 0;
@@ -44,6 +44,7 @@ export class SongDocument {
 	
 	public addedEffect: boolean = false;
 	public addedEnvelope: boolean = false;
+	public currentPatternIsDirty: boolean = false;
 	
 	private static readonly _maximumUndoHistory: number = 100;
 	private _recovery: SongRecovery = new SongRecovery();
@@ -109,6 +110,7 @@ export class SongDocument {
 		}
 		
 		this._validateDocState();
+		this.performance = new SongPerformance(this);
 	}
 	
 	public toggleDisplayBrowserUrl() {
@@ -198,7 +200,7 @@ export class SongDocument {
 	private _whenHistoryStateChanged = (): void => {
 		if (this.synth.recording) {
 			// Changes to the song while it's recording to could mess up the recording so just abort the recording.
-			this.performance.pause();
+			this.performance.abortRecording();
 		}
 		
 		if (window.history.state == null && window.location.hash != "") {

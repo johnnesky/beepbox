@@ -4716,6 +4716,18 @@ export class Synth {
 		this.playheadInternal += this.bar - oldBar;
 	}
 	
+	private getNextBar(): number {
+		let nextBar: number = this.bar + 1;
+		if (this.isRecording) {
+			if (nextBar >= this.song!.barCount) {
+				nextBar = this.song!.barCount - 1;
+			}
+		} else if (this.loopRepeatCount != 0 && nextBar == this.song!.loopStart + this.song!.loopLength) {
+			nextBar = this.song!.loopStart;
+		}
+		return nextBar;
+	}
+	
 	private audioProcessCallback = (audioProcessingEvent: any): void => {
 		const outputBuffer = audioProcessingEvent.outputBuffer;
 		const outputDataL: Float32Array = outputBuffer.getChannelData(0);
@@ -4762,17 +4774,15 @@ export class Synth {
 		}
 		if (playSong) {
 			if (this.beat >= song.beatsPerBar) {
-				this.bar++;
 				this.beat = 0;
 				this.part = 0;
 				this.tick = 0;
 				this.tickSampleCountdown = samplesPerTick;
 				this.isAtStartOfTick = true;
 				
-				if (this.loopRepeatCount != 0 && this.bar == song.loopStart + song.loopLength) {
-					this.bar = song.loopStart;
-					if (this.loopRepeatCount > 0) this.loopRepeatCount--;
-				}
+				this.prevBar = this.bar;
+				this.bar = this.getNextBar();
+				if (this.bar <= this.prevBar && this.loopRepeatCount > 0) this.loopRepeatCount--;
 			}
 			if (this.bar >= song.barCount) {
 				this.bar = 0;
@@ -4800,10 +4810,7 @@ export class Synth {
 		let bufferIndex: number = 0;
 		while (bufferIndex < outputBufferLength && !ended) {
 			
-			this.nextBar = this.bar + 1;
-			if (this.loopRepeatCount != 0 && this.nextBar == song.loopStart + song.loopLength) {
-				this.nextBar = song.loopStart;
-			}
+			this.nextBar = this.getNextBar();
 			if (this.nextBar >= song.barCount) this.nextBar = null;
 			
 			const samplesLeftInBuffer: number = outputBufferLength - bufferIndex;
@@ -4921,12 +4928,11 @@ export class Synth {
 							if (this.beat == song.beatsPerBar) {
 								// bar changed, reset for next bar:
 								this.beat = 0;
+								
 								this.prevBar = this.bar;
-								this.bar++;
-								if (this.loopRepeatCount != 0 && this.bar == song.loopStart + song.loopLength) {
-									this.bar = song.loopStart;
-									if (this.loopRepeatCount > 0) this.loopRepeatCount--;
-								}
+								this.bar = this.getNextBar();
+								if (this.bar <= this.prevBar && this.loopRepeatCount > 0) this.loopRepeatCount--;
+								
 								if (this.bar >= song.barCount) {
 									this.bar = 0;
 									if (this.loopRepeatCount != -1) {
@@ -5168,7 +5174,7 @@ export class Synth {
 		let prevNote: Note | null = null;
 		let nextNote: Note | null = null;
 		
-		if (playSong && pattern != null && !channel.muted) {
+		if (playSong && pattern != null && !channel.muted && (!this.isRecording || this.liveInputChannel != channelIndex)) {
 			for (let i: number = 0; i < pattern.notes.length; i++) {
 				if (pattern.notes[i].end <= currentPart) {
 					prevNote = pattern.notes[i];

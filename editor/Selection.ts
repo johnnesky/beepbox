@@ -402,16 +402,9 @@ export class Selection {
 				
 			} else {
 				for (let pasteBar: number = 0; pasteBar < pasteWidth; pasteBar++) {
-					const bar: number = this.boxSelectionBar + pasteBar;
-					const removedPattern: number = this._doc.song.channels[channelIndex].bars[bar];
-					if (removedPattern != 0) {
-						group.append(new ChangePatternNumbers(this._doc, 0, bar, channelIndex, 1, 1));
-						if (this._patternIndexIsUnused(channelIndex, removedPattern)) {
-							// When a pattern becomes unused when replaced by rectangular selection pasting,
-							// remove all the notes from the pattern so that it may be reused.
-							this._doc.song.channels[channelIndex].patterns[removedPattern - 1].notes.length = 0;
-						}
-					}
+					// When a pattern becomes unused when replaced by rectangular selection pasting,
+					// remove all the notes from the pattern so that it may be reused.
+					this.erasePatternInBar(group, channelIndex, this.boxSelectionBar + pasteBar);
 				}
 				
 				const reusablePatterns: Dictionary<number> = {};
@@ -454,6 +447,20 @@ export class Selection {
 		}
 		
 		this._doc.record(group);
+	}
+	
+	// Set a bar's pattern number to zero, and if that pattern was not used
+	// elsewhere in the channel, erase all notes in it as well.
+	public erasePatternInBar(group: ChangeGroup, channelIndex: number, bar: number): void {
+		const removedPattern: number = this._doc.song.channels[channelIndex].bars[bar];
+		if (removedPattern != 0) {
+			group.append(new ChangePatternNumbers(this._doc, 0, bar, channelIndex, 1, 1));
+			if (this._patternIndexIsUnused(channelIndex, removedPattern)) {
+				// When a pattern becomes unused when replaced by rectangular selection pasting,
+				// remove all the notes from the pattern so that it may be reused.
+				this._doc.song.channels[channelIndex].patterns[removedPattern - 1].notes.length = 0;
+			}
+		}
 	}
 	
 	public pasteNumbers(): void {

@@ -402,9 +402,11 @@ export class PatternEditor {
 	private _animatePlayhead = (timestamp: number): void => {
 		
 		if (this._usingTouch && !this._shiftHeld && !this._mouseDragging && this._mouseDown && performance.now() > this._touchTime + 1000 && this._cursor.valid && this._doc.lastChangeWas(this._dragChange)) {
+			// On a mobile device, the pattern editor supports using a long stationary touch to activate selection.
 			this._dragChange!.undo();
 			this._shiftHeld = true;
 			this._whenCursorPressed();
+			// The full interface is usually only rerendered in response to user input events, not animation events, but in this case go ahead and rerender everything.
 			this._doc.notifier.notifyWatchers();
 		}
 		
@@ -424,10 +426,17 @@ export class PatternEditor {
 		}
 		
 		if (this._doc.synth.playing && (this._doc.synth.recording || this._doc.prefs.autoFollow) && this._followPlayheadBar != playheadBar) {
+			// When autofollow is enabled, select the current bar (but don't record it in undo history).
 			new ChangeChannelBar(this._doc, this._doc.channel, playheadBar);
+			// The full interface is usually only rerendered in response to user input events, not animation events, but in this case go ahead and rerender everything.
 			this._doc.notifier.notifyWatchers();
 		}
 		this._followPlayheadBar = playheadBar;
+		
+		if (this._doc.currentPatternIsDirty) {
+			this._redrawNotePatterns();
+		}
+		
 		window.requestAnimationFrame(this._animatePlayhead);
 	}
 	
@@ -1052,8 +1061,6 @@ export class PatternEditor {
 			}
 		}
 		
-		this._svgNoteContainer = makeEmptyReplacementElement(this._svgNoteContainer);
-		
 		if (this._interactive) {
 			if (!this._mouseDown) this._updateCursorStatus();
 			this._updatePreview();
@@ -1080,6 +1087,12 @@ export class PatternEditor {
 				this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground" + this._barOffset + ")");
 			}
 		}
+		
+		this._redrawNotePatterns();
+	}
+	
+	private _redrawNotePatterns(): void {
+		this._svgNoteContainer = makeEmptyReplacementElement(this._svgNoteContainer);
 		
 		if (this._doc.prefs.showChannels) {
 			for (let channel: number = this._doc.song.getChannelCount() - 1; channel >= 0; channel--) {
@@ -1156,6 +1169,8 @@ export class PatternEditor {
 				}
 			}
 		}
+		
+		this._doc.currentPatternIsDirty = false;
 	}
 	
 	private _drawNote(svgElement: SVGPathElement, pitch: number, start: number, pins: NotePin[], radius: number, showSize: boolean, offset: number): void {
