@@ -4,13 +4,14 @@ import {EditorConfig} from "./EditorConfig";
 import {SongDocument} from "./SongDocument";
 import {Prompt} from "./Prompt";
 import {HTML} from "imperative-html/dist/esm/elements-strict";
+import {ColorConfig} from "./ColorConfig";
 
 const {button, label, div, p, a, h2, input, select, option} = HTML;
 
 export class RecordingSetupPrompt implements Prompt {
 	private readonly _keyboardMode: HTMLSelectElement = select({style: "width: 100%;"},
-		option({value: "useCapsLockForNotes"}, "simple keyboard shortcuts, use caps lock to play notes"),
-		option({value: "pressControlForShortcuts"}, "simple keyboard notes, press " + EditorConfig.ctrlName + " for shortcuts"),
+		option({value: "useCapsLockForNotes"}, "simple shortcuts, use caps lock to play notes"),
+		option({value: "pressControlForShortcuts"}, "simple notes, press " + EditorConfig.ctrlName + " for shortcuts"),
 	);
 	private readonly _keyboardLayout: HTMLSelectElement = select({style: "width: 100%;"},
 		option({value: "wickiHayden"}, "Wicki-Hayden"),
@@ -20,51 +21,55 @@ export class RecordingSetupPrompt implements Prompt {
 		option({value: "pianoTransposingC"}, "piano transposing C :) to song key"),
 		option({value: "pianoTransposingA"}, "piano transposing A :( to song key"),
 	);
-	private readonly _enableMidi: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "checkbox"});
-	private readonly _showRecordButton: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "checkbox"});
-	private readonly _snapRecordedNotesToRhythm: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "checkbox"});
-	private readonly _ignorePerformedNotesNotInScale: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "checkbox"});
-	private readonly _metronomeCountIn: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "checkbox"});
-	private readonly _metronomeWhileRecording: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "checkbox"});
+	private readonly _enableMidi: HTMLInputElement = input({style: "width: 2em; margin-left: 1em;", type: "checkbox"});
+	private readonly _showRecordButton: HTMLInputElement = input({style: "width: 2em; margin-left: 1em;", type: "checkbox"});
+	private readonly _snapRecordedNotesToRhythm: HTMLInputElement = input({style: "width: 2em; margin-left: 1em;", type: "checkbox"});
+	private readonly _ignorePerformedNotesNotInScale: HTMLInputElement = input({style: "width: 2em; margin-left: 1em;", type: "checkbox"});
+	private readonly _metronomeCountIn: HTMLInputElement = input({style: "width: 2em; margin-left: 1em;", type: "checkbox"});
+	private readonly _metronomeWhileRecording: HTMLInputElement = input({style: "width: 2em; margin-left: 1em;", type: "checkbox"});
 	
 	private readonly _okayButton: HTMLButtonElement = button({class: "okayButton", style: "width:45%;"}, "Okay");
 	private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
-	public readonly container: HTMLDivElement = div({class: "prompt noSelection recordingSetupPrompt", style: "width: 333px; text-align: right;"},
+	public readonly container: HTMLDivElement = div({class: "prompt noSelection recordingSetupPrompt", style: "width: 333px; text-align: right; max-height: 80%;"},
 		h2("Note Recording Setup"),
-		p("BeepBox can record notes that you play on a keyboard. You can start recording by pressing Ctrl+Space."),
-		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Also show record ● button:",
-			this._showRecordButton,
-		),
-		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Use metronome to count-in before recording:",
-			this._metronomeCountIn,
-		),
-		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Play metronome while recording:",
-			this._metronomeWhileRecording,
-		),
-		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Snap recorded notes to the song's rhythm:",
-			this._snapRecordedNotesToRhythm,
-		),
-		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Ignore notes not in the song's scale:",
-			this._ignorePerformedNotesNotInScale,
-		),
-		p("While recording, you can perform notes on your keyboard!"),
-		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Keyboard layout:",
-			div({class: "selectContainer", style: "width: 65%; margin-left: 1em;"}, this._keyboardLayout),
-		),
-		p("When not recording, the computer keyboard is normally for shortcuts (like C and V for copy and paste) but can also be used to perform notes depending on this mode:"),
-		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			div({class: "selectContainer", style: "width: 100%;"}, this._keyboardMode),
-		),
-		p("If you have a ", a({href: "https://caniuse.com/midi", target: "_blank"}, "compatible browser"), " on a device connected to a MIDI keyboard, you can use it to perform notes in BeepBox! (Or you could buy ", a({href: "https://imitone.com/", target: "_blank"}, "Imitone"), " or ", a({href: "https://vochlea.com/", target: "_blank"}, "Dubler"), " to hum notes into a microphone while wearing headphones!)"),
-		label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
-			"Enable MIDI performance:",
-			this._enableMidi,
+		div({style: "display: grid; overflow-y: auto; flex-shrink: 1;"},
+			p("BeepBox can record notes as you perform them. You can start recording by pressing Ctrl+Space."),
+			label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Add ● record button next to ▶ play button:",
+				this._showRecordButton,
+			),
+			label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Snap recorded notes to the song's rhythm:",
+				this._snapRecordedNotesToRhythm,
+			),
+			label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Ignore notes not in the song's scale:",
+				this._ignorePerformedNotesNotInScale,
+			),
+			p("While recording, you can perform notes on your keyboard!"),
+			label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Keyboard layout:",
+				div({class: "selectContainer", style: "width: 65%; margin-left: 1em;"}, this._keyboardLayout),
+			),
+			p("When not recording, you can use the computer keyboard either for shortcuts (like C and V for copy and paste) or for performing notes, depending on this mode:"),
+			label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				div({class: "selectContainer", style: "width: 100%;"}, this._keyboardMode),
+			),
+			p("Performing music takes practice! Try slowing the tempo and using this metronome to help you keep a rhythm."),
+			label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Hear metronome while recording:",
+				this._metronomeWhileRecording,
+			),
+			label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Count-in 1 bar of metronome before recording:",
+				this._metronomeCountIn,
+			),
+			p("If you have a ", a({href: "https://caniuse.com/midi", target: "_blank"}, "compatible browser"), " on a device connected to a MIDI keyboard, you can use it to perform notes in BeepBox! (Or you could buy ", a({href: "https://imitone.com/", target: "_blank"}, "Imitone"), " or ", a({href: "https://vochlea.com/", target: "_blank"}, "Dubler"), " to hum notes into a microphone while wearing headphones!)"),
+			label({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
+				"Enable MIDI performance:",
+				this._enableMidi,
+			),
+			div({style: `width: 100%; height: 40px; background: linear-gradient(rgba(0,0,0,0), ${ColorConfig.editorBackground}); position: sticky; bottom: 0; pointer-events: none;`}),
 		),
 		label({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
 			this._okayButton,

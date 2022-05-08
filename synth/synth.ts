@@ -4496,6 +4496,8 @@ export class Synth {
 	public liveInputInstruments: number[] = [];
 	public loopRepeatCount: number = -1;
 	public volume: number = 1.0;
+	public enableMetronome: boolean = false;
+	public countInMetronome: boolean = false;
 	
 	private playheadInternal: number = 0.0;
 	private bar: number = 0;
@@ -4524,6 +4526,11 @@ export class Synth {
 	private readonly tonePool: Deque<Tone> = new Deque<Tone>();
 	private readonly tempMatchedPitchTones: Array<Tone | null> = Array(Config.maxChordSize).fill(null);
 	
+	private startedMetronome: boolean = false;
+	private metronomeSamplesRemaining: number = -1;
+	private metronomeAmplitude: number = 0.0;
+	private metronomePrevAmplitude: number = 0.0;
+	private metronomeFilter: number = 0.0;
 	private limit: number = 0.0;
 	
 	private tempMonoInstrumentSampleBuffer: Float32Array | null = null;
@@ -4816,12 +4823,13 @@ export class Synth {
 			const samplesLeftInBuffer: number = outputBufferLength - bufferIndex;
 			const samplesLeftInTick: number = Math.ceil(this.tickSampleCountdown);
 			const runLength: number = Math.min(samplesLeftInTick, samplesLeftInBuffer);
+			const runEnd: number = bufferIndex + runLength;
 			for (let channelIndex: number = 0; channelIndex < song.getChannelCount(); channelIndex++) {
 				const channel: Channel = song.channels[channelIndex];
 				const channelState: ChannelState = this.channels[channelIndex];
 				
 				if (this.isAtStartOfTick) {
-					this.determineCurrentActiveTones(song, channelIndex, samplesPerTick, playSong);
+					this.determineCurrentActiveTones(song, channelIndex, samplesPerTick, playSong && !this.countInMetronome);
 					this.determineLiveInputTones(song, channelIndex, samplesPerTick);
 				}
 				
@@ -4873,8 +4881,39 @@ export class Synth {
 				}
 			}
 			
+			if (this.enableMetronome || this.countInMetronome) {
+				if (this.part == 0) {
+					if (!this.startedMetronome) {
+						const midBeat: boolean = (song.beatsPerBar > 4 && (song.beatsPerBar % 2 == 0) && this.beat == song.beatsPerBar / 2);
+						const periods:   number = (this.beat == 0) ? 8 : midBeat ? 6 : 4;
+						const hz:        number = (this.beat == 0) ? 1600 : midBeat ? 1200 : 800;
+						const amplitude: number = (this.beat == 0) ? 0.06 : midBeat ? 0.05 : 0.04;
+						const samplesPerPeriod: number = this.samplesPerSecond / hz;
+						const radiansPerSample: number = Math.PI * 2.0 / samplesPerPeriod;
+						this.metronomeSamplesRemaining = Math.floor(samplesPerPeriod * periods);
+						this.metronomeFilter = 2.0 * Math.cos(radiansPerSample);
+						this.metronomeAmplitude = amplitude * Math.sin(radiansPerSample);
+						this.metronomePrevAmplitude = 0.0;
+						
+						this.startedMetronome = true;
+					}
+					if (this.metronomeSamplesRemaining > 0) {
+						const stopIndex: number = Math.min(runEnd, bufferIndex + this.metronomeSamplesRemaining);
+						this.metronomeSamplesRemaining -= stopIndex - bufferIndex;
+						for (let i: number = bufferIndex; i < stopIndex; i++) {
+							outputDataL[i] += this.metronomeAmplitude;
+							outputDataR[i] += this.metronomeAmplitude;
+							const tempAmplitude: number = this.metronomeFilter * this.metronomeAmplitude - this.metronomePrevAmplitude;
+							this.metronomePrevAmplitude = this.metronomeAmplitude;
+							this.metronomeAmplitude = tempAmplitude;
+						}
+					}
+				} else {
+					this.startedMetronome = false;
+				}
+			}
+			
 			// Post processing:
-			const runEnd: number = bufferIndex + runLength;
 			for (let i: number = bufferIndex; i < runEnd; i++) {
 				// A compressor/limiter.
 				const sampleL = outputDataL[i];
@@ -4929,16 +4968,20 @@ export class Synth {
 								// bar changed, reset for next bar:
 								this.beat = 0;
 								
-								this.prevBar = this.bar;
-								this.bar = this.getNextBar();
-								if (this.bar <= this.prevBar && this.loopRepeatCount > 0) this.loopRepeatCount--;
-								
-								if (this.bar >= song.barCount) {
-									this.bar = 0;
-									if (this.loopRepeatCount != -1) {
-										ended = true;
-										this.resetEffects();
-										this.pause();
+								if (this.countInMetronome) {
+									this.countInMetronome = false;
+								} else {
+									this.prevBar = this.bar;
+									this.bar = this.getNextBar();
+									if (this.bar <= this.prevBar && this.loopRepeatCount > 0) this.loopRepeatCount--;
+									
+									if (this.bar >= song.barCount) {
+										this.bar = 0;
+										if (this.loopRepeatCount != -1) {
+											ended = true;
+											this.resetEffects();
+											this.pause();
+										}
 									}
 								}
 							}
@@ -4952,7 +4995,7 @@ export class Synth {
 		if (!Number.isFinite(limit) || Math.abs(limit) < epsilon) limit = 0.0;
 		this.limit = limit;
 		
-		if (playSong) {
+		if (playSong && !this.countInMetronome) {
 			this.playheadInternal = (((this.tick + 1.0 - this.tickSampleCountdown / samplesPerTick) / 2.0 + this.part) / Config.partsPerBeat + this.beat) / song.beatsPerBar + this.bar;
 		}
 		
