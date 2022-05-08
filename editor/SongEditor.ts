@@ -1197,9 +1197,15 @@ export class SongEditor {
 		}
 		
 		if (this._doc.synth.recording) {
-			// The only valid keyboard interactions when recording are playing notes or space to stop.
-			this._keyboardLayout.handleKeyEvent(event, true);
+			// The only valid keyboard interactions when recording are playing notes or pressing space OR P to stop.
+			if (!event.ctrlKey && !event.metaKey) {
+				this._keyboardLayout.handleKeyEvent(event, true);
+			}
 			if (event.keyCode == 32) { // space
+				this._toggleRecord();
+				event.preventDefault();
+				this._refocusStage();
+			} else if (event.keyCode == 80 && (event.ctrlKey || event.metaKey)) {
 				this._toggleRecord();
 				event.preventDefault();
 				this._refocusStage();
@@ -1230,6 +1236,14 @@ export class SongEditor {
 				}
 				event.preventDefault();
 				this._refocusStage();
+				break;
+			case 80: // p
+				if (canPlayNotes) break;
+				if (event.ctrlKey || event.metaKey) {
+					this._toggleRecord();
+					event.preventDefault();
+					this._refocusStage();
+				}
 				break;
 			case 90: // z
 				if (canPlayNotes) break;
