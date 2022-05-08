@@ -4,13 +4,14 @@ import {Config} from "../synth/SynthConfig";
 import {Note, Pattern} from "../synth/synth";
 import {SongDocument} from "./SongDocument";
 import {ChangeGroup} from "./Change";
-import {ChangeChannelBar, ChangePinTime, ChangeEnsurePatternExists, ChangeNoteAdded, ChangeInsertBars, ChangeDeleteBars} from "./changes";
+import {ChangeChannelBar, ChangePinTime, ChangeEnsurePatternExists, ChangeNoteAdded, ChangeInsertBars, ChangeDeleteBars, ChangeNoteLength} from "./changes";
 
 export class SongPerformance {
 	private _channelIsDrum: boolean = false;
 	private _channelOctave: number = -1;
 	private _songKey: number = -1;
 	private _pitchesAreTemporary: boolean = false;
+	private _recentlyAddedPitches: number[] = []; // Pitches that are rapidly added then removed within a minimum rhythm duration wouldn't get recorded until I explicitly track recently added notes and check if any are no longer held.
 	
 	private _songLengthWhenRecordingStarted: number = -1;
 	private _playheadPart: number = -1;
@@ -75,6 +76,7 @@ export class SongPerformance {
 		this._playheadPattern = null;
 		this._pitchesChanged = true;
 		this._lastNote = null;
+		this._recentlyAddedPitches.length = 0;
 		this._recordingChange = new ChangeGroup();
 		this._doc.setProspectiveChange(this._recordingChange);
 	}
@@ -84,10 +86,14 @@ export class SongPerformance {
 		this.pause();
 	}
 	
+	private _getMinDivision(): number {
+		return Config.partsPerBeat / Config.rhythms[this._doc.song.rhythm].stepsPerBeat;
+	}
+	
 	private _getCurrentPlayheadPart(): number {
 		const currentPart: number = this._doc.synth.playhead * this._doc.song.beatsPerBar * Config.partsPerBeat;
 		if (this._doc.prefs.snapRecordedNotesToRhythm) {
-			const minDivision: number = Config.partsPerBeat / Config.rhythms[this._doc.song.rhythm].stepsPerBeat;
+			const minDivision: number = this._getMinDivision();
 			return Math.round(currentPart / minDivision) * minDivision;
 		}
 		return Math.round(currentPart);
@@ -144,26 +150,51 @@ export class SongPerformance {
 				// Instead of updating the entire interface when extending the last note, just update the current pattern as a special case to avoid doing too much work every frame since performance is important while recording.
 				this._doc.currentPatternIsDirty = true;
 			} else {
+				this._pitchesChanged = false;
 				if (this._lastNote != null) {
 					// End the last note.
 					this._lastNote = null;
 				}
-				if (this._doc.synth.liveInputPitches.length > 0) {
-					if (this._playheadPattern == null) {
-						this._doc.selection.erasePatternInBar(this._recordingChange, this._doc.synth.liveInputChannel, bar);
-						this._recordingChange.append(new ChangeEnsurePatternExists(this._doc, this._doc.synth.liveInputChannel, bar));
-						this._playheadPattern = this._doc.song.getPattern(this._doc.synth.liveInputChannel, bar);
+				// All current pitches will usually fill the time span from startPart to endPart, but
+				// if any recent pitches were released before being recorded, they'll get recorded here
+				// as short as possible and then any remaining time will be dedicated to pitches that
+				// haven't been released yet.
+				let noteStartPart: number = startPart;
+				let noteEndPart: number = endPart;
+				while (noteStartPart < endPart) {
+					if (this._recentlyAddedPitches.length > 0 || this._doc.synth.liveInputPitches.length > 0) {
+						if (this._playheadPattern == null) {
+							this._doc.selection.erasePatternInBar(this._recordingChange, this._doc.synth.liveInputChannel, bar);
+							this._recordingChange.append(new ChangeEnsurePatternExists(this._doc, this._doc.synth.liveInputChannel, bar));
+							this._playheadPattern = this._doc.song.getPattern(this._doc.synth.liveInputChannel, bar);
+						}
+						if (this._playheadPattern == null) throw new Error();
+						this._lastNote = new Note(-1, noteStartPart, noteEndPart, Config.noteSizeMax, this._doc.song.getChannelIsNoise(this._doc.synth.liveInputChannel));
+						this._lastNote.continuesLastPattern = (noteStartPart == 0 && !this._pitchesChanged);
+						this._lastNote.pitches.length = 0;
+						while (this._recentlyAddedPitches.length > 0) {
+							if (this._lastNote.pitches.length >= Config.maxChordSize) break;
+							const recentPitch: number = this._recentlyAddedPitches.shift()!;
+							if (this._doc.synth.liveInputPitches.indexOf(recentPitch) == -1) {
+								this._lastNote.pitches.push(recentPitch);
+								this._pitchesChanged = true;
+							}
+						}
+						for (let i: number = 0; i < this._doc.synth.liveInputPitches.length; i++) {
+							if (this._lastNote.pitches.length >= Config.maxChordSize) break;
+							this._lastNote.pitches.push(this._doc.synth.liveInputPitches[i]);
+						}
+						this._recordingChange.append(new ChangeNoteAdded(this._doc, this._playheadPattern, this._lastNote, this._playheadPattern.notes.length));
+						if (this._pitchesChanged) {
+							// If this note contains pitches that were already released, shorten it and start a new note.
+							noteEndPart = noteStartPart + this._getMinDivision();
+							new ChangeNoteLength(this._doc, this._lastNote, this._lastNote.start, noteEndPart);
+							this._lastNote = null;
+						}
+						dirty = true;
 					}
-					if (this._playheadPattern == null) throw new Error();
-					this._lastNote = new Note(this._doc.synth.liveInputPitches[0], startPart, endPart, Config.noteSizeMax, this._doc.song.getChannelIsNoise(this._doc.synth.liveInputChannel));
-					this._lastNote.continuesLastPattern = (startPart == 0 && !this._pitchesChanged);
-					for (let i: number = 0; i < this._doc.synth.liveInputPitches.length; i++) {
-						this._lastNote.pitches[i] = this._doc.synth.liveInputPitches[i];
-					}
-					this._recordingChange.append(new ChangeNoteAdded(this._doc, this._playheadPattern, this._lastNote, this._playheadPattern.notes.length));
-					dirty = true;
+					noteStartPart = noteEndPart;
 				}
-				this._pitchesChanged = false;
 			}
 			
 			if (bar == this._doc.song.barCount - 1) {
@@ -206,6 +237,18 @@ export class SongPerformance {
 				this._doc.synth.liveInputPitches.shift();
 			}
 			this._doc.synth.liveInputDuration = Number.MAX_SAFE_INTEGER;
+			
+			if (this._recordingChange != null) {
+				const recentIndex: number = this._recentlyAddedPitches.indexOf(pitch);
+				if (recentIndex != -1) {
+					// If the latest pitch is already in _recentlyAddedPitches, remove it before adding it back at the end.
+					this._recentlyAddedPitches.splice(recentIndex, 1);
+				}
+				this._recentlyAddedPitches.push(pitch);
+				while (this._recentlyAddedPitches.length > Config.maxChordSize * 4) {
+					this._recentlyAddedPitches.shift();
+				}
+			}
 		}
 	}
 	
