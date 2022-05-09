@@ -22,7 +22,7 @@ export class KeyboardLayout {
 		let forcedKey: number | null = null;
 		switch (keyboardLayout) {
 			case "wickiHayden":
-				pitchOffset = y * 5 + x * 2;
+				pitchOffset = y * 5 + x * 2 - 2;
 				break;
 			case "songScale":
 				const scaleFlags: ReadonlyArray<boolean> = Config.scales[doc.song.scale].flags;
