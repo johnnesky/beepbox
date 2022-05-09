@@ -17,6 +17,50 @@ export class KeyboardLayout {
 		[  11,  13,null,  16,  18,null,  21,  23,  25,null,  28,  30,null],
 	];
 	
+	public static keyPosToPitch(doc: SongDocument, x: number, y: number, keyboardLayout: string): number | null {
+		let pitchOffset: number | null = null;
+		let forcedKey: number | null = null;
+		switch (keyboardLayout) {
+			case "wickiHayden":
+				pitchOffset = y * 5 + x * 2;
+				break;
+			case "songScale":
+				const scaleFlags: ReadonlyArray<boolean> = Config.scales[doc.song.scale].flags;
+				const scaleIndices: number[] = <number[]> scaleFlags.map((flag, index) => flag ? index : null).filter((index) => index != null);
+				pitchOffset = (y - 1 + Math.floor(x / scaleIndices.length)) * Config.pitchesPerOctave + scaleIndices[x % scaleIndices.length];
+				break;
+			case "pianoAtC":
+				pitchOffset = KeyboardLayout._pianoAtC[y][x];
+				forcedKey = Config.keys.dictionary["C"].basePitch;
+				break;
+			case "pianoAtA":
+				pitchOffset = KeyboardLayout._pianoAtA[y][x];
+				forcedKey = Config.keys.dictionary["A"].basePitch;
+				break;
+			case "pianoTransposingC":
+				pitchOffset = KeyboardLayout._pianoAtC[y][x];
+				break;
+			case "pianoTransposingA":
+				pitchOffset = KeyboardLayout._pianoAtA[y][x];
+				break;
+		}
+		
+		if (pitchOffset == null) return null;
+		
+		const octaveOffset: number = Math.max(0, doc.song.channels[doc.channel].octave - 1) * Config.pitchesPerOctave;
+		let keyOffset: number = 0; // The basePitch of the song key is implicit.
+		
+		if (forcedKey != null) {
+			const keyBasePitch: number = Config.keys[doc.song.key].basePitch;
+			keyOffset = (forcedKey - keyBasePitch + 144) % 12;
+		}
+		
+		const pitch = octaveOffset + keyOffset + pitchOffset;
+		if (pitch < 0 || pitch > Config.maxPitch) return null;
+			
+		return pitch;
+	}
+	
 	private _possiblyPlayingPitchesFromKeyboard: boolean = false;
 	
 	constructor(private _doc: SongDocument) {
@@ -119,45 +163,9 @@ export class KeyboardLayout {
 			return;
 		}
 		
-		let pitchOffset: number | null = null;
-		let forcedKey: number | null = null;
-		switch (this._doc.prefs.keyboardLayout) {
-			case "wickiHayden":
-				pitchOffset = y * 5 + x * 2;
-				break;
-			case "songScale":
-				const scaleFlags: ReadonlyArray<boolean> = Config.scales[this._doc.song.scale].flags;
-				const scaleIndices: number[] = <number[]> scaleFlags.map((flag, index) => flag ? index : null).filter((index) => index != null);
-				pitchOffset = (y - 1 + Math.floor(x / scaleIndices.length)) * Config.pitchesPerOctave + scaleIndices[x % scaleIndices.length];
-				break;
-			case "pianoAtC":
-				pitchOffset = KeyboardLayout._pianoAtC[y][x];
-				forcedKey = Config.keys.dictionary["C"].basePitch;
-				break;
-			case "pianoAtA":
-				pitchOffset = KeyboardLayout._pianoAtA[y][x];
-				forcedKey = Config.keys.dictionary["A"].basePitch;
-				break;
-			case "pianoTransposingC":
-				pitchOffset = KeyboardLayout._pianoAtC[y][x];
-				break;
-			case "pianoTransposingA":
-				pitchOffset = KeyboardLayout._pianoAtA[y][x];
-				break;
-		}
+		const pitch: number | null = KeyboardLayout.keyPosToPitch(this._doc, x, y, this._doc.prefs.keyboardLayout);
 		
-		if (pitchOffset != null) {
-			const octaveOffset: number = Math.max(0, this._doc.song.channels[this._doc.channel].octave - 1) * Config.pitchesPerOctave;
-			let keyOffset: number = 0; // The basePitch of the song key is implicit.
-			
-			if (forcedKey != null) {
-				const keyBasePitch: number = Config.keys[this._doc.song.key].basePitch;
-				keyOffset = (forcedKey - keyBasePitch + 144) % 12;
-			}
-			
-			const pitch = octaveOffset + keyOffset + pitchOffset;
-			if (pitch < 0 || pitch > Config.maxPitch) return;
-			
+		if (pitch != null) {
 			if (pressed) {
 				this._doc.synth.preferLowerLatency = true;
 				this._doc.performance.addPerformedPitch(pitch);

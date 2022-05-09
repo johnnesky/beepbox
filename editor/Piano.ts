@@ -217,26 +217,30 @@ export class Piano {
 					this._pianoKeys[j].classList.remove("disabled");
 					this._pianoLabels[j].style.display = "";
 					
-					let text: string;
-					
-					if (Config.keys[pitchNameIndex].isWhiteKey) {
-						text = Config.keys[pitchNameIndex].name;
-					} else {
-						const shiftDir: number = Config.blackKeyNameParents[j % Config.pitchesPerOctave];
-						text = Config.keys[(pitchNameIndex + Config.pitchesPerOctave + shiftDir) % Config.pitchesPerOctave].name;
-						if (shiftDir == 1) {
-							text += "♭";
-						} else if (shiftDir == -1) {
-							text += "♯";
-						}
-					}
-					
 					const label: HTMLDivElement = this._pianoLabels[j];
 					label.style.color = Config.keys[pitchNameIndex].isWhiteKey ? "black" : "white";
-					label.textContent = text;
+					label.textContent = Piano.getPitchName(pitchNameIndex, j);
 				}
 			}
 		}
 		this._updatePreview();
+	}
+	
+	public static getPitchName(pitchNameIndex: number, scaleIndex: number): string {
+		let text: string;
+		
+		if (Config.keys[pitchNameIndex].isWhiteKey) {
+			text = Config.keys[pitchNameIndex].name;
+		} else {
+			const shiftDir: number = Config.blackKeyNameParents[scaleIndex % Config.pitchesPerOctave];
+			text = Config.keys[(pitchNameIndex + Config.pitchesPerOctave + shiftDir) % Config.pitchesPerOctave].name;
+			if (shiftDir == 1) {
+				text += "♭";
+			} else if (shiftDir == -1) {
+				text += "♯";
+			}
+		}
+		
+		return text;
 	}
 }

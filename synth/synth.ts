@@ -4654,6 +4654,7 @@ export class Synth {
 	}
 	
 	public startRecording(): void {
+		this.preferLowerLatency = true;
 		this.isRecording = true;
 		this.play();
 	}

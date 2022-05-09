@@ -600,8 +600,12 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	margin: 1em 0;
 }
 
+.beepboxEditor .prompt label {
+	cursor: pointer;
+}
+
 .beepboxEditor .prompt.recordingSetupPrompt p {
-	margin-top: 1em;
+	margin-top: 0.5em;
 	margin-bottom: 0;
 }
 
