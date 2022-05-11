@@ -87,7 +87,11 @@ export class SongPerformance {
 	}
 	
 	private _getMinDivision(): number {
-		return Config.partsPerBeat / Config.rhythms[this._doc.song.rhythm].stepsPerBeat;
+		if (this._doc.prefs.snapRecordedNotesToRhythm) {
+			return Config.partsPerBeat / Config.rhythms[this._doc.song.rhythm].stepsPerBeat;
+		} else {
+			return 1;
+		}
 	}
 	
 	private _getCurrentPlayheadPart(): number {
@@ -194,6 +198,7 @@ export class SongPerformance {
 						dirty = true;
 					}
 					noteStartPart = noteEndPart;
+					noteEndPart = endPart;
 				}
 			}
 			
