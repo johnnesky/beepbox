@@ -605,7 +605,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 .beepboxEditor .prompt.recordingSetupPrompt p {
-	margin-top: 0.5em;
+	margin-top: 0.75em;
 	margin-bottom: 0;
 }
 
