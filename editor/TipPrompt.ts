@@ -25,37 +25,37 @@ export class TipPrompt implements Prompt {
 			case "key": {
 				message = div(
 					h2("Song Key"),
-					p("This setting can shift the frequency of every note in your entire song up or down, aligning the \"tonic\" pitches (the brown rows in the pattern editor) with the selected \"key\" pitch."),
-					p("If you've already composed a song but it doesn't emphasize \"tonic\" pitches then the selected key isn't very meaningful. You can select the \"Detect Key\" option in the key menu to automatically align the most emphasized notes with \"tonic\" pitches."),
+					p("This setting can shift the frequency of every note in your entire song up or down, keeping the \"tonic\" pitches (the brown rows in the pattern editor) aligned with the selected \"key\" pitch."),
+					p("If you've already placed some notes but they don't emphasize \"tonic\" pitches then the selected key isn't very meaningful. You can select the \"Detect Key\" option in the key menu to automatically align the most emphasized notes with \"tonic\" pitches."),
 				);
 			} break;
 			case "tempo": {
 				message = div(
 					h2("Song Tempo"),
-					p("This setting controls the speed of your song, measured in beats-per-minute. A \"beat\" is the length of the little gray rectangles in the pattern editor. (In conventional music notation, a \"quarter note\" is usually equivalent to \"beat\".)"),
+					p("This setting controls the speed of your song, measured in beats-per-minute. A \"beat\" is the duration of the little gray rectangles in the pattern editor. (In conventional music notation, a \"quarter note\" is usually equivalent to \"beat\".)"),
 				);
 			} break;
 			case "reverb": {
 				message = div(
 					h2("Reverb"),
-					p("Reverb is like a continuous echo effect. A little bit helps instruments sound more natural. Adding a lot of reverb can add sense of depth or mystery, but too much reverb can kinda \"smear\" sounds so that it's harder to distinguish notes or instruments."),
+					p("Reverb is like a continuous echo effect. A little bit helps instruments sound more natural. Adding a lot of reverb can add sense of depth or mystery, but too much reverb can kinda \"smear\" sounds so that it's harder to distinguish notes or instruments, especially for lower \"bass\" notes."),
 				);
 			} break;
 			case "rhythm": {
 				message = div(
 					h2("Rhythm"),
 					p("This setting determines how beats are divided. The pattern editor helps you align notes to fractions of a beat based on this setting."),
-					p("If you've already composed a song but the notes don't align with the selected rhythm, you can select the \"Snap Notes To Rhythm\" option in the rhythm menu to force the notes in the currently selected pattern(s) to align with the selected rhythm."),
+					p("If you've already placed some notes but they don't align with the selected rhythm, you can select the \"Snap Notes To Rhythm\" option in the rhythm menu to force the notes in the currently selected pattern(s) to align with the selected rhythm."),
 				);
 			} break;
 			case "instrumentIndex": {
 				message = div(
 					h2("Instrument Number"),
-					p("In the \"Channel Settings\" option from BeepBox's \"File\" menu, there are a couple ways to enable multiple instruments per channel, in which case you can click the + button to add more instruments to a channel."),
+					p("In the \"Channel Settings\" option from BeepBox's \"File\" menu, there are a few ways to enable multiple instruments per channel."),
 					p("First, you could enable multiple simultaneous instruments per channel. All of the channel's instruments will play all of the notes in the channel at the same time, and you can click an instrument number to view and edit its settings."),
 					p("Second, you could enable different instruments per pattern. Only one of the instruments will play at any given time, but you can click the instrument number to change which instrument is used for the currently selected pattern(s)."),
 					p("Finally, you can enable them both, in which case you can click an instrument number once to view it, and again to toggle whether the instrument is used for the currently selected pattern(s)."),
-					p("Either way, you can also press shift and a number key to select an instrument."),
+					p("Either way, you can click the + button to add more instruments to a channel, and you can press shift and a number key on your keyboard to select an instrument as if you had clicked the corresponding button here."),
 				);
 			} break;
 			case "instrumentVolume": {
@@ -84,13 +84,13 @@ export class TipPrompt implements Prompt {
 					p("Filters are a way of emphasizing or diminishing different parts of a sound. Musical notes have a fundamental (base) frequency, but the sound of a musical note also has parts at higher frequencies and filters can adjust the volume of each of these parts based on their frequency."),
 					p("Click in the filter editor to insert, delete, or drag a filter control point. The horizontal position of the point determines which frequencies it affects, and the vertical position determines how the volume is affected at that frequency."),
 					p("Insert a new point on the left side of the filter editor to add a \"high-pass\" filter point, which additionally reduces the volume of lower frequencies, or insert a new point on the right side to add a \"low-pass\" filter point which reduces the volume of higher frequencies."),
-					p("You can also enable a \"Note Filter\" as an effect. EQ and note filters are mostly the same, but have different purposes. EQ filters are for basic adjustments, whereas note filters can be moved dynamically with envelopes. Note filters also change how the distortion effect sounds."),
+					p("You can also enable a \"Note Filter\" as an effect. EQ and note filters are mostly the same, but have different purposes. EQ filters are for overall adjustments, whereas note filters are for dynamic control and can be moved with envelopes. Note filters also change how the distortion effect sounds."),
 				);
 			} break;
 			case "noteFilter": {
 				message = div(
 					h2("Note Filter"),
-					p("Note filters are mostly the same as EQ filters, but have a different purpose. EQ filters are for basic adjustments, whereas note filters can be moved dynamically with envelopes. Note filters also change how the distortion effect sounds."),
+					p("Note filters are mostly the same as EQ filters, but have a different purpose. EQ filters are for overall adjustments, whereas note filters are for dynamic control and can be moved with envelopes. Note filters also change how the distortion effect sounds."),
 					p("Filters are a way of emphasizing or diminishing different parts of a sound. Musical notes have a fundamental (base) frequency, but the sound of a musical note also has parts at higher frequencies and filters can adjust the volume of each of these parts based on their frequency."),
 					p("Click in the filter editor to insert, delete, or drag a filter control point. The horizontal position of the point determines which frequencies it affects, and the vertical position determines how the volume is affected at that frequency."),
 					p("Insert a new point on the left side of the filter editor to add a \"high-pass\" filter point, which additionally reduces the volume of lower frequencies, or insert a new point on the right side to add a \"low-pass\" filter point which reduces the volume of higher frequencies."),
@@ -108,7 +108,7 @@ export class TipPrompt implements Prompt {
 				message = div(
 					h2("Transition"),
 					p("Usually, when one note ends at the same time another begins, the old note will fade out and the new note will fade in based on the fade in/out settings, but this setting can override that, connecting the end of one note to the beginning of the next."),
-					p("The \"interrupt\" transition makes the wave suddenly change from the old note's frequency to the new note's frequency without any fading, and restarts any envelopes. The \"continue\" transition is similar but it doesn't restart envelopes."),
+					p("The \"interrupt\" transition makes the wave suddenly change from the old note's frequency to the new note's frequency without any fading, but still restarts envelopes at the beginning of the new note. The \"continue\" transition is similar but it doesn't even restart envelopes, and can be used to make each of the notes in a chord start or stop at different times!"),
 					p("The \"slide\" transition makes the pitch shift quickly but not instantaneously from the old note's frequency to the new note's frequency, and softly restarts envelopes. The \"slide in pattern\" transition is the same except it doesn't connect the last note in a pattern to the first note in the next pattern."),
 				);
 			} break;
@@ -133,7 +133,7 @@ export class TipPrompt implements Prompt {
 			case "unison": {
 				message = div(
 					h2("Unison"),
-					p("This instrument can play two identical waves at slightly different frequencies. When two waves play at slightly different frequencies, they move in and out of phase with each other over time as different parts of the waves line up. This creates a dynamic, shifting sound. Pianos are a common example of this kind of sound, because each piano key strikes multiple strings that are tuned to slightly different frequencies."),
+					p("This instrument can play two identical waves at different frequencies. When two waves play at slightly different frequencies, they move in and out of phase with each other over time as different parts of the waves line up. This creates a dynamic, shifting sound. Pianos are a common example of this kind of sound, because each piano key strikes multiple strings that are tuned to slightly different frequencies."),
 					p("The distance between two frequencies is called an \"interval\", and this setting controls how large it is. If the interval is too wide, then the waves may sound out-of-tune and \"dissonant\". However, if the interval is even larger, then the two frequencies can even be distinct pitches."),
 				);
 			} break;

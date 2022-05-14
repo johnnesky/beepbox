@@ -1213,7 +1213,8 @@ export class SongEditor {
 			return;
 		}
 		
-		const canPlayNotes: boolean = (!event.ctrlKey && !event.metaKey && (this._doc.prefs.pressControlForShortcuts || event.getModifierState("CapsLock")));
+		const needControlForShortcuts: boolean = (this._doc.prefs.pressControlForShortcuts != event.getModifierState("CapsLock"));
+		const canPlayNotes: boolean = (!event.ctrlKey && !event.metaKey && needControlForShortcuts);
 		if (canPlayNotes) this._keyboardLayout.handleKeyEvent(event, true);
 		
 		switch (event.keyCode) {
@@ -1295,14 +1296,14 @@ export class SongEditor {
 				break;
 			case 68: // d
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.duplicatePatterns();
 					event.preventDefault();
 				}
 				break;
 			case 70: // f
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.synth.snapToStart();
 					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
@@ -1312,7 +1313,7 @@ export class SongEditor {
 				break;
 			case 72: // h
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.synth.goToBar(this._doc.bar);
 					this._doc.synth.snapToBar();
 					if (this._doc.prefs.autoFollow) {
@@ -1323,7 +1324,7 @@ export class SongEditor {
 				break;
 			case 77: // m
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					if (this._doc.prefs.enableChannelMuting) {
 						this._doc.selection.muteChannels(event.shiftKey);
 						event.preventDefault();
@@ -1332,7 +1333,7 @@ export class SongEditor {
 				break;
 			case 81: // q
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._openPrompt("channelSettings");
 					event.preventDefault();
 				}
@@ -1358,7 +1359,7 @@ export class SongEditor {
 				break;
 			case 86: // v
 				if (canPlayNotes) break;
-				if ((event.ctrlKey || event.metaKey) && event.shiftKey && !this._doc.prefs.pressControlForShortcuts) {
+				if ((event.ctrlKey || event.metaKey) && event.shiftKey && !needControlForShortcuts) {
 					this._doc.selection.pasteNumbers();
 				} else if (event.shiftKey) {
 					this._pasteInstrument();
@@ -1369,7 +1370,7 @@ export class SongEditor {
 				break;
 			case 73: // i
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey) && event.shiftKey) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey) && event.shiftKey) {
 					// Copy the current instrument as a preset to the clipboard.
 					const instrument: Instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 					const instrumentObject: any = instrument.toJsonObject();
@@ -1393,7 +1394,7 @@ export class SongEditor {
 				break;
 			case 82: // r
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					if (event.shiftKey) {
 						this._randomGenerated();
 					} else {
@@ -1404,7 +1405,7 @@ export class SongEditor {
 				break;
 			case 219: // left brace
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.synth.goToPrevBar();
 					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
@@ -1414,7 +1415,7 @@ export class SongEditor {
 				break;
 			case 221: // right brace
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.synth.goToNextBar();
 					if (this._doc.prefs.autoFollow) {
 						this._doc.selection.setChannelBar(this._doc.channel, Math.floor(this._doc.synth.playhead));
@@ -1425,7 +1426,7 @@ export class SongEditor {
 			case 189: // -
 			case 173: // Firefox -
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.transpose(false, event.shiftKey);
 					event.preventDefault();
 				}
@@ -1434,7 +1435,7 @@ export class SongEditor {
 			case 61: // Firefox +
 			case 171: // Some users have this as +? Hmm.
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.transpose(true, event.shiftKey);
 					event.preventDefault();
 				}
@@ -1489,70 +1490,70 @@ export class SongEditor {
 				break;
 			case 48: // 0
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("0", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 49: // 1
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("1", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 50: // 2
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("2", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 51: // 3
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("3", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 52: // 4
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("4", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 53: // 5
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("5", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 54: // 6
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("6", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 55: // 7
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("7", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 56: // 8
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("8", event.shiftKey);
 					event.preventDefault();
 				}
 				break;
 			case 57: // 9
 				if (canPlayNotes) break;
-				if (this._doc.prefs.pressControlForShortcuts == (event.ctrlKey || event.metaKey)) {
+				if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
 					this._doc.selection.nextDigit("9", event.shiftKey);
 					event.preventDefault();
 				}
@@ -1571,9 +1572,8 @@ export class SongEditor {
 	
 	private _whenKeyReleased = (event: KeyboardEvent): void => {
 		this._ctrlHeld = event.ctrlKey;
-		
-		const canPlayNotes: boolean = (this._doc.prefs.pressControlForShortcuts ? !event.ctrlKey && !event.metaKey : event.getModifierState("CapsLock"));
-		if (this._doc.synth.recording || canPlayNotes) this._keyboardLayout.handleKeyEvent(event, false);
+		// Release live pitches regardless of control or caps lock so that any pitches played before will get released even if the modifier keys changed.
+		this._keyboardLayout.handleKeyEvent(event, false);
 	}
 	
 	private _copyTextToClipboard(text: string): void {
