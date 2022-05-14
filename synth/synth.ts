@@ -2349,6 +2349,9 @@ export class Song {
 					for (let channelIndex: number = 0; channelIndex < this.pitchChannelCount; channelIndex++) {
 						this.channels[channelIndex].octave = clamp(0, Config.pitchOctaves, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					}
+					for (let channelIndex: number = this.pitchChannelCount; channelIndex < this.getChannelCount(); channelIndex++) {
+						this.channels[channelIndex].octave = 0;
+					}
 				}
 			} break;
 			case SongTagCode.startInstrument: {

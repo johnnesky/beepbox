@@ -169,16 +169,17 @@ export class Piano {
 		window.requestAnimationFrame(this._onAnimationFrame);
 		
 		let liveInputChanged: boolean = false;
-		if (this._renderedLiveInputPitches.length != this._doc.synth.liveInputPitches.length) {
+		const liveInputPitchCount: number = !this._doc.performance.pitchesAreTemporary() ? this._doc.synth.liveInputPitches.length : 0;
+		if (this._renderedLiveInputPitches.length != liveInputPitchCount) {
 			liveInputChanged = true;
 		}
-		for (let i: number = 0; i < this._renderedLiveInputPitches.length; i++) {
+		for (let i: number = 0; i < liveInputPitchCount; i++) {
 			if (this._renderedLiveInputPitches[i] != this._doc.synth.liveInputPitches[i]) {
 				this._renderedLiveInputPitches[i] = this._doc.synth.liveInputPitches[i];
 				liveInputChanged = true;
 			}
 		}
-		this._renderedLiveInputPitches.length = this._doc.synth.liveInputPitches.length;
+		this._renderedLiveInputPitches.length = liveInputPitchCount;
 		
 		if (liveInputChanged) {
 			this._updatePreview();
@@ -202,7 +203,7 @@ export class Piano {
 		const children: HTMLCollection = container.children;
 		for (let i: number = 0; i < children.length; i++) {
 			const child: Element = children[i];
-			if (this._doc.synth.liveInputPitches.indexOf(i + octaveOffset) == -1) {
+			if (this._renderedLiveInputPitches.indexOf(i + octaveOffset) == -1) {
 				child.classList.remove("pressed");
 			} else {
 				child.classList.add("pressed");

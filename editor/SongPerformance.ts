@@ -86,6 +86,10 @@ export class SongPerformance {
 		this.pause();
 	}
 	
+	public pitchesAreTemporary(): boolean {
+		return this._pitchesAreTemporary;
+	}
+	
 	private _getMinDivision(): number {
 		if (this._doc.prefs.snapRecordedNotesToRhythm) {
 			return Config.partsPerBeat / Config.rhythms[this._doc.song.rhythm].stepsPerBeat;
