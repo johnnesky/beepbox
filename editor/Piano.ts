@@ -30,12 +30,12 @@ export class Piano {
 	private _renderedDrums: boolean = false;
 	private _renderedKey: number = -1;
 	private _renderedPitchCount: number = -1;
+	private readonly _renderedLiveInputPitches: number[] = [];
 	
 	constructor(private _doc: SongDocument) {
 		for (let i: number = 0; i < Config.drumCount; i++) {
 			const scale: number = (1.0 - (i / Config.drumCount) * 0.35) * 100;
-			const brightness: number = 1.0 + ((i - Config.drumCount / 2.0) / Config.drumCount) * 0.5;
-			this._drumContainer.appendChild(HTML.div({class: "drum-button", style: `background-size: ${scale}% ${scale}%; filter: brightness(${brightness})`}));
+			this._drumContainer.appendChild(HTML.div({class: "drum-button", style: `background-size: ${scale}% ${scale}%;`}));
 		}
 		
 		this.container.addEventListener("mousedown", this._whenMousePressed);
@@ -51,6 +51,8 @@ export class Piano {
 		
 		this._doc.notifier.watch(this._documentChanged);
 		this._documentChanged();
+		
+		window.requestAnimationFrame(this._onAnimationFrame);
 	}
 	
 	private _updateCursorPitch(): void {
@@ -113,6 +115,7 @@ export class Piano {
 		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
 		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
 		if (isNaN(this._mouseY)) this._mouseY = 0;
+		this._updateCursorPitch();
 		this._playLiveInput();
 		this._updatePreview();
 	}
@@ -162,16 +165,49 @@ export class Piano {
 		this._releaseLiveInput();
 	}
 	
+	private _onAnimationFrame = (): void => {
+		window.requestAnimationFrame(this._onAnimationFrame);
+		
+		let liveInputChanged: boolean = false;
+		if (this._renderedLiveInputPitches.length != this._doc.synth.liveInputPitches.length) {
+			liveInputChanged = true;
+		}
+		for (let i: number = 0; i < this._renderedLiveInputPitches.length; i++) {
+			if (this._renderedLiveInputPitches[i] != this._doc.synth.liveInputPitches[i]) {
+				this._renderedLiveInputPitches[i] = this._doc.synth.liveInputPitches[i];
+				liveInputChanged = true;
+			}
+		}
+		this._renderedLiveInputPitches.length = this._doc.synth.liveInputPitches.length;
+		
+		if (liveInputChanged) {
+			this._updatePreview();
+		}
+	}
+	
 	private _updatePreview(): void {
 		this._preview.style.visibility = (!this._mouseOver || this._mouseDown) ? "hidden" : "visible";
-		if (!this._mouseOver || this._mouseDown) return;
 		
-		const boundingRect: ClientRect = this.container.getBoundingClientRect();
-		const pitchHeight: number = this._pitchHeight / (this._editorHeight / (boundingRect.bottom - boundingRect.top));
+		if (this._mouseOver && !this._mouseDown) {
+			const boundingRect: ClientRect = this.container.getBoundingClientRect();
+			const pitchHeight: number = this._pitchHeight / (this._editorHeight / (boundingRect.bottom - boundingRect.top));
+			
+			this._preview.style.left = "0px";
+			this._preview.style.top = pitchHeight * (this._pitchCount - this._cursorPitch - 1) + "px";
+			this._preview.style.height = pitchHeight + "px";
+		}
 		
-		this._preview.style.left = "0px";
-		this._preview.style.top = pitchHeight * (this._pitchCount - this._cursorPitch - 1) + "px";
-		this._preview.style.height = pitchHeight + "px";
+		const octaveOffset: number = this._doc.getBaseVisibleOctave(this._doc.channel) * Config.pitchesPerOctave;
+		const container: HTMLDivElement = this._doc.song.getChannelIsNoise(this._doc.channel) ? this._drumContainer : this._pianoContainer;
+		const children: HTMLCollection = container.children;
+		for (let i: number = 0; i < children.length; i++) {
+			const child: Element = children[i];
+			if (this._doc.synth.liveInputPitches.indexOf(i + octaveOffset) == -1) {
+				child.classList.remove("pressed");
+			} else {
+				child.classList.add("pressed");
+			}
+		}
 	}
 	
 	private _documentChanged = (): void => {

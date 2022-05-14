@@ -271,6 +271,10 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	mask-position: center;
 }
 
+.beepboxEditor .piano-button.pressed, .beepboxEditor .drum-button.pressed {
+	filter: brightness(0.5);
+}
+
 .beepboxEditor .customize-instrument {
 	margin: 2px 0;
 }
