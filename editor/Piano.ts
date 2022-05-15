@@ -162,6 +162,7 @@ export class Piano {
 	
 	private _whenTouchReleased = (event: TouchEvent): void => {
 		event.preventDefault();
+		this._mouseDown = false;
 		this._releaseLiveInput();
 	}
 	

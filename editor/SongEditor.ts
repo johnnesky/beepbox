@@ -1205,7 +1205,7 @@ export class SongEditor {
 				this._toggleRecord();
 				event.preventDefault();
 				this._refocusStage();
-			} else if (event.keyCode == 80 && (event.ctrlKey || event.metaKey)) {
+			} else if (event.keyCode == 80 && (event.ctrlKey || event.metaKey)) { // p
 				this._toggleRecord();
 				event.preventDefault();
 				this._refocusStage();
