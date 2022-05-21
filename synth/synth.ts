@@ -2462,6 +2462,7 @@ export class Song {
 							const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
 							legacySettings.filterCutoff = legacyToCutoff[legacyFilter];
 							legacySettings.filterResonance = 0;
+							legacySettings.filterEnvelope = Config.envelopes.dictionary[legacyToEnvelope[legacyFilter]];
 							instrument.convertLegacySettings(legacySettings);
 						}
 					} else {
