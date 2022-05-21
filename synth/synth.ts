@@ -1490,6 +1490,7 @@ export class Instrument {
 			for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
 				this.harmonicsWave.harmonics[i] = Math.max(0, Math.min(Config.harmonicsMax, Math.round(Config.harmonicsMax * (+instrumentObject["harmonics"][i]) / 100)));
 			}
+			this.harmonicsWave.markCustomWaveDirty();
 		} else {
 			this.harmonicsWave.reset();
 		}
@@ -1498,6 +1499,7 @@ export class Instrument {
 			for (let i: number = 0; i < Config.spectrumControlPoints; i++) {
 				this.spectrumWave.spectrum[i] = Math.max(0, Math.min(Config.spectrumMax, Math.round(Config.spectrumMax * (+instrumentObject["spectrum"][i]) / 100)));
 			}
+			this.spectrumWave.markCustomWaveDirty();
 		} else {
 			this.spectrumWave.reset(isNoiseChannel);
 		}
