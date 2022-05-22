@@ -3844,8 +3844,10 @@ class Tone {
 	public readonly phases: number[] = [];
 	public readonly phaseDeltas: number[] = [];
 	public readonly phaseDeltaScales: number[] = [];
-	public readonly expressions: number[] = [];
-	public readonly expressionDeltas: number[] = [];
+	public expression: number = 0.0;
+	public expressionDelta: number = 0.0;
+	public readonly operatorExpressions: number[] = [];
+	public readonly operatorExpressionDeltas: number[] = [];
 	public readonly prevPitchExpressions: Array<number | null> = Array(Config.maxPitchOrOperatorCount).fill(null);
 	public prevVibrato: number | null = null;
 	public prevStringDecay: number | null = null;
@@ -5555,9 +5557,11 @@ export class Synth {
 		for (let i: number = 0; i < Config.maxPitchOrOperatorCount; i++) {
 			tone.phaseDeltas[i] = 0.0;
 			tone.phaseDeltaScales[i] = 0.0;
-			tone.expressions[i]      = 0.0;
-			tone.expressionDeltas[i] = 0.0;
+			tone.operatorExpressions[i]      = 0.0;
+			tone.operatorExpressionDeltas[i] = 0.0;
 		}
+		tone.expression = 0.0;
+		tone.expressionDelta = 0.0;
 
 		if (released) {
 			const startTicksSinceReleased: number = tone.ticksSinceReleased;
@@ -5836,10 +5840,8 @@ export class Synth {
 					}
 					const pitchExpressionEnd: number   = Math.pow(2.0, -(pitchEnd   - expressionReferencePitch) / pitchDamping);
 					tone.prevPitchExpressions[i] = pitchExpressionEnd;
-					expressionStart *= baseExpression * pitchExpressionStart * fadeExpressionStart * noteFilterExpression * chordExpressionStart;
-					expressionEnd   *= baseExpression * pitchExpressionEnd * fadeExpressionEnd * noteFilterExpression * chordExpressionEnd;
-					expressionStart *= envelopeStarts[EnvelopeComputeIndex.noteVolume];
-					expressionEnd   *= envelopeEnds[  EnvelopeComputeIndex.noteVolume];
+					expressionStart *= pitchExpressionStart;
+					expressionEnd   *= pitchExpressionEnd;
 					
 					totalCarrierExpression += amplitudeCurve;
 				} else {
@@ -5853,17 +5855,17 @@ export class Synth {
 				expressionStart *= envelopeStarts[EnvelopeComputeIndex.operatorAmplitude0 + i];
 				expressionEnd   *= envelopeEnds[  EnvelopeComputeIndex.operatorAmplitude0 + i];
 				
-				tone.expressions[i] = expressionStart;
-				tone.expressionDeltas[i] = (expressionEnd - expressionStart) / roundedSamplesPerTick;
+				tone.operatorExpressions[i] = expressionStart;
+				tone.operatorExpressionDeltas[i] = (expressionEnd - expressionStart) / roundedSamplesPerTick;
 			}
 			
 			sineExpressionBoost *= (Math.pow(2.0, (2.0 - 1.4 * instrument.feedbackAmplitude / 15.0)) - 1.0) / 3.0;
 			sineExpressionBoost *= 1.0 - Math.min(1.0, Math.max(0.0, totalCarrierExpression - 1) / 2.0);
 			sineExpressionBoost = 1.0 + sineExpressionBoost * 3.0;
-			for (let i: number = 0; i < carrierCount; i++) {
-				tone.expressions[i] *= sineExpressionBoost;
-				tone.expressionDeltas[i] *= sineExpressionBoost;
-			}
+			const expressionStart: number = baseExpression * sineExpressionBoost * noteFilterExpression * fadeExpressionStart * chordExpressionStart * envelopeStarts[EnvelopeComputeIndex.noteVolume];
+			const expressionEnd:   number = baseExpression * sineExpressionBoost * noteFilterExpression * fadeExpressionEnd * chordExpressionEnd * envelopeEnds[  EnvelopeComputeIndex.noteVolume];
+			tone.expression = expressionStart;
+			tone.expressionDelta = (expressionEnd - expressionStart) / roundedSamplesPerTick;
 			
 			const feedbackAmplitude: number = Config.sineWaveLength * 0.3 * instrument.feedbackAmplitude / 15.0;
 			let feedbackStart: number = feedbackAmplitude * envelopeStarts[EnvelopeComputeIndex.feedbackAmplitude];
@@ -5937,10 +5939,10 @@ export class Synth {
 				tone.phaseDeltaScales[0] = basePhaseDeltaScale;
 			}
 			
-			let expressionStart: number = settingsExpressionMult * fadeExpressionStart * chordExpressionStart * pitchExpressionStart * envelopeStarts[EnvelopeComputeIndex.noteVolume];
-			let expressionEnd:   number = settingsExpressionMult * fadeExpressionEnd   * chordExpressionEnd   * pitchExpressionEnd   * envelopeEnds[  EnvelopeComputeIndex.noteVolume];
-			tone.expressions[0] = expressionStart;
-			tone.expressionDeltas[0] = (expressionEnd - expressionStart) / roundedSamplesPerTick;
+			const expressionStart: number = settingsExpressionMult * fadeExpressionStart * chordExpressionStart * pitchExpressionStart * envelopeStarts[EnvelopeComputeIndex.noteVolume];
+			const expressionEnd:   number = settingsExpressionMult * fadeExpressionEnd   * chordExpressionEnd   * pitchExpressionEnd   * envelopeEnds[  EnvelopeComputeIndex.noteVolume];
+			tone.expression = expressionStart;
+			tone.expressionDelta = (expressionEnd - expressionStart) / roundedSamplesPerTick;
 			
 			if (instrument.type == InstrumentType.pickedString) {
 				let stringDecayStart: number;
@@ -6062,8 +6064,8 @@ export class Synth {
 		let phaseDeltaB: number = tone.phaseDeltas[1] * waveLength;
 		const phaseDeltaScaleA: number = +tone.phaseDeltaScales[0];
 		const phaseDeltaScaleB: number = +tone.phaseDeltaScales[1];
-		let expression: number = +tone.expressions[0];
-		const expressionDelta: number = +tone.expressionDeltas[0];
+		let expression: number = +tone.expression;
+		const expressionDelta: number = +tone.expressionDelta;
 		let phaseA: number = (tone.phases[0] % 1) * waveLength;
 		let phaseB: number = (tone.phases[1] % 1) * waveLength;
 		
@@ -6123,7 +6125,7 @@ export class Synth {
 		tone.phases[1] = phaseB / waveLength;
 		tone.phaseDeltas[0] = phaseDeltaA / waveLength;
 		tone.phaseDeltas[1] = phaseDeltaB / waveLength;
-		tone.expressions[0] = expression;
+		tone.expression = expression;
 		
 		synth.sanitizeFilters(filters);
 		tone.initialNoteFilterInput1 = initialFilterInput1;
@@ -6141,8 +6143,8 @@ export class Synth {
 		let phaseDeltaB: number = tone.phaseDeltas[1] * waveLength;
 		const phaseDeltaScaleA: number = +tone.phaseDeltaScales[0];
 		const phaseDeltaScaleB: number = +tone.phaseDeltaScales[1];
-		let expression: number = +tone.expressions[0];
-		const expressionDelta: number = +tone.expressionDeltas[0];
+		let expression: number = +tone.expression;
+		const expressionDelta: number = +tone.expressionDelta;
 		let phaseA: number = (tone.phases[0] % 1) * waveLength;
 		let phaseB: number = (tone.phases[1] % 1) * waveLength;
 		
@@ -6202,7 +6204,7 @@ export class Synth {
 		tone.phases[1] = phaseB / waveLength;
 		tone.phaseDeltas[0] = phaseDeltaA / waveLength;
 		tone.phaseDeltas[1] = phaseDeltaB / waveLength;
-		tone.expressions[0] = expression;
+		tone.expression = expression;
 		
 		synth.sanitizeFilters(filters);
 		tone.initialNoteFilterInput1 = initialFilterInput1;
@@ -6250,8 +6252,8 @@ export class Synth {
 				const shelfB0Delta# = +pickedString#.shelfB0Delta;
 				const shelfB1Delta# = +pickedString#.shelfB1Delta;
 				
-				let expression = +tone.expressions[0];
-				const expressionDelta = +tone.expressionDeltas[0];
+				let expression = +tone.expression;
+				const expressionDelta = +tone.expressionDelta;
 				
 				const unisonSign = tone.specialIntervalExpressionMult * instrumentState.unison.sign;
 				const delayResetOffset# = pickedString#.delayResetOffset|0;
@@ -6325,7 +6327,7 @@ export class Synth {
 				pickedString#.shelfB0 = shelfB0#;
 				pickedString#.shelfB1 = shelfB1#;
 				
-				tone.expressions[0] = expression;
+				tone.expression = expression;
 				
 				synth.sanitizeFilters(filters);
 				tone.initialNoteFilterInput1 = initialFilterInput1;
@@ -6931,8 +6933,8 @@ export class Synth {
 		
 		let phaseDelta: number = tone.phaseDeltas[0];
 		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
-		let expression: number = +tone.expressions[0];
-		const expressionDelta: number = +tone.expressionDeltas[0];
+		let expression: number = +tone.expression;
+		const expressionDelta: number = +tone.expressionDelta;
 		let phase: number = (tone.phases[0] % 1);
 		
 		let pulseWidth: number = tone.pulseWidth;
@@ -6985,7 +6987,7 @@ export class Synth {
 		
 		tone.phases[0] = phase;
 		tone.phaseDeltas[0] = phaseDelta;
-		tone.expressions[0] = expression;
+		tone.expression = expression;
 		tone.pulseWidth = pulseWidth;
 		
 		synth.sanitizeFilters(filters);
@@ -7001,11 +7003,13 @@ export class Synth {
 		let operator#Phase       = +((tone.phases[#] % 1) + 1000) * ` + Config.sineWaveLength + `;
 		let operator#PhaseDelta  = +tone.phaseDeltas[#] * ` + Config.sineWaveLength + `;
 		let operator#PhaseDeltaScale = +tone.phaseDeltaScales[#];
-		let operator#OutputMult  = +tone.expressions[#];
-		const operator#OutputDelta = +tone.expressionDeltas[#];
+		let operator#OutputMult  = +tone.operatorExpressions[#];
+		const operator#OutputDelta = +tone.operatorExpressionDeltas[#];
 		let operator#Output      = +tone.feedbackOutputs[#];
 		let feedbackMult         = +tone.feedbackMult;
 		const feedbackDelta      = +tone.feedbackDelta;
+		let expression = +tone.expression;
+		const expressionDelta = +tone.expressionDelta;
 		
 		const filters = tone.noteFilters;
 		const filterCount = tone.noteFilterCount|0;
@@ -7028,14 +7032,18 @@ export class Synth {
 			operator#Phase += operator#PhaseDelta;
 			operator#PhaseDelta *= operator#PhaseDeltaScale;
 			
-			data[sampleIndex] += sample;
+			const output = sample * expression;
+			expression += expressionDelta;
+			
+			data[sampleIndex] += output;
 		}
 		
 		tone.phases[#] = operator#Phase / ` + Config.sineWaveLength + `;
 		tone.phaseDeltas[#] = operator#PhaseDelta / ` + Config.sineWaveLength + `;
-		tone.expressions[#] = operator#OutputMult;
+		tone.operatorExpressions[#] = operator#OutputMult;
 		tone.feedbackOutputs[#] = operator#Output;
 		tone.feedbackMult = feedbackMult;
+		tone.expression = expression;
 		
 		synth.sanitizeFilters(filters);
 		tone.initialNoteFilterInput1 = initialFilterInput1;
@@ -7056,8 +7064,8 @@ export class Synth {
 		const wave: Float32Array = instrumentState.wave!;
 		let phaseDelta: number = +tone.phaseDeltas[0];
 		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
-		let expression: number = +tone.expressions[0];
-		const expressionDelta: number = +tone.expressionDeltas[0];
+		let expression: number = +tone.expression;
+		const expressionDelta: number = +tone.expressionDelta;
 		let phase: number = (tone.phases[0] % 1) * Config.chipNoiseLength;
 		if (tone.phases[0] == 0) {
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
@@ -7098,7 +7106,7 @@ export class Synth {
 		
 		tone.phases[0] = phase / Config.chipNoiseLength;
 		tone.phaseDeltas[0] = phaseDelta;
-		tone.expressions[0] = expression;
+		tone.expression = expression;
 		tone.noiseSample = noiseSample;
 		
 		synth.sanitizeFilters(filters);
@@ -7112,8 +7120,8 @@ export class Synth {
 		const samplesInPeriod: number = (1 << 7);
 		let phaseDelta: number = tone.phaseDeltas[0] * samplesInPeriod;
 		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
-		let expression: number = +tone.expressions[0];
-		const expressionDelta: number = +tone.expressionDeltas[0];
+		let expression: number = +tone.expression;
+		const expressionDelta: number = +tone.expressionDelta;
 		let noiseSample: number = +tone.noiseSample;
 		
 		const filters: DynamicBiquadFilter[] = tone.noteFilters;
@@ -7157,7 +7165,7 @@ export class Synth {
 		
 		tone.phases[0] = phase / Config.spectrumNoiseLength;
 		tone.phaseDeltas[0] = phaseDelta / samplesInPeriod;
-		tone.expressions[0] = expression;
+		tone.expression = expression;
 		tone.noiseSample = noiseSample;
 		
 		synth.sanitizeFilters(filters);
@@ -7171,8 +7179,8 @@ export class Synth {
 		const referenceDelta: number = InstrumentState.drumsetIndexReferenceDelta(tone.drumsetPitch!);
 		let phaseDelta: number = tone.phaseDeltas[0] / referenceDelta;
 		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
-		let expression: number = +tone.expressions[0];
-		const expressionDelta: number = +tone.expressionDeltas[0];
+		let expression: number = +tone.expression;
+		const expressionDelta: number = +tone.expressionDelta;
 		
 		const filters: DynamicBiquadFilter[] = tone.noteFilters;
 		const filterCount: number = tone.noteFilterCount|0;
@@ -7209,7 +7217,7 @@ export class Synth {
 		
 		tone.phases[0] = phase / Config.spectrumNoiseLength;
 		tone.phaseDeltas[0] = phaseDelta * referenceDelta;
-		tone.expressions[0] = expression;
+		tone.expression = expression;
 		
 		synth.sanitizeFilters(filters);
 		tone.initialNoteFilterInput1 = initialFilterInput1;
