@@ -207,6 +207,27 @@ document.body.appendChild(
 	),
 );
 
+// Some browsers have an option to "block third-party cookies" (it's enabled by
+// default in icognito Chrome windows) that throws an error on trying to access
+// localStorage from cross-domain iframe such as this song player, so wrap the
+// access in a try-catch block to ignore the error instead of interrupting
+// execution.
+function setLocalStorage(key: string, value: string): void {
+	try {
+		localStorage.setItem(key, value);
+	} catch (error) {
+		console.error(error);
+	}
+}
+function getLocalStorage(key: string): string | null {
+	try {
+		return localStorage.getItem(key);
+	} catch (error) {
+		console.error(error);
+		return null;
+	}
+}
+
 function loadSong(songString: string, reuseParams: boolean): void {
 	synth.setSong(songString);
 	synth.snapToStart();
@@ -263,7 +284,7 @@ function onWindowResize(): void {
 function animate(): void {
 	if (synth.playing) {
 		animationRequest = requestAnimationFrame(animate);
-		if (localStorage.getItem("playerId") != id) {
+		if (getLocalStorage("playerId") != id) {
 			onTogglePlay();
 		}
 		renderPlayhead();
@@ -282,7 +303,7 @@ function onTogglePlay(): void {
 			synth.pause();
 		} else {
 			synth.play();
-			localStorage.setItem("playerId", id);
+			setLocalStorage("playerId", id);
 			animate();
 		}
 	}
@@ -299,7 +320,7 @@ function onToggleLoop(): void {
 }
 
 function onVolumeChange(): void {
-	localStorage.setItem("volume", volumeSlider.value);
+	setLocalStorage("volume", volumeSlider.value);
 	setSynthVolume();
 }
 
@@ -520,8 +541,8 @@ if ( top !== self ) {
 	if (!("share" in navigator)) shareLink.style.display = "none";
 }
 
-if (localStorage.getItem("volume") != null) {
-	volumeSlider.value = localStorage.getItem("volume")!;
+if (getLocalStorage("volume") != null) {
+	volumeSlider.value = getLocalStorage("volume")!;
 }
 setSynthVolume();
 
