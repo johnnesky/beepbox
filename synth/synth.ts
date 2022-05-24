@@ -1121,6 +1121,11 @@ export class Instrument {
 		if (legacyOperatorEnvelopes == undefined) legacyOperatorEnvelopes = [Config.envelopes.dictionary[(this.type == InstrumentType.fm) ? "note size" : "none"], Config.envelopes.dictionary["none"], Config.envelopes.dictionary["none"], Config.envelopes.dictionary["none"]];
 		if (legacyFeedbackEnv == undefined) legacyFeedbackEnv = Config.envelopes.dictionary["none"];
 		
+		// The "punch" envelope is special: it goes *above* the chosen cutoff. But if the cutoff was already at the max, it couldn't go any higher... except in the current version of BeepBox I raised the max cutoff so it *can* but then it sounds different, so to preserve the original sound let's just remove the punch envelope.
+		const legacyFilterCutoffRange: number = 11;
+		const cutoffAtMax: boolean = (legacyCutoffSetting == legacyFilterCutoffRange - 1);
+		if (cutoffAtMax && legacyFilterEnv.type == EnvelopeType.punch) legacyFilterEnv = Config.envelopes.dictionary["none"];
+		
 		const carrierCount: number = Config.algorithms[this.algorithm].carrierCount;
 		let noCarriersControlledByNoteSize: boolean = true;
 		let allCarriersControlledByNoteSize: boolean = true;
