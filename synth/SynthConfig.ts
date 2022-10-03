@@ -35,6 +35,12 @@ export const enum FilterType {
 	length,
 }
 
+export const enum SustainType {
+	bright,
+	acoustic,
+	length,
+}
+
 export const enum EnvelopeType {
 	noteSize,
 	none,
@@ -481,10 +487,11 @@ export class Config {
 	public static readonly pickedStringDispersionFreqScale: number = 0.3; // The tone fundamental freq freq moves this much toward the center freq for computing the all-pass corner freq.
 	public static readonly pickedStringDispersionFreqMult: number = 4.0; // The all-pass corner freq is based on this times the adjusted tone fundamental freq.
 	public static readonly pickedStringShelfHz: number = 4000.0; // The cutoff freq of the shelf filter that is used to decay the high frequency energy in the picked string.
-	
-	public static readonly distortionRange: number = 8;
 	public static readonly stringSustainRange: number = 15;
 	public static readonly stringDecayRate: number = 0.12;
+	public static readonly sustainTypeNames: ReadonlyArray<string> = ["bright", "acoustic"]; // See SustainType enum above.
+	
+	public static readonly distortionRange: number = 8;
 	public static readonly bitcrusherFreqRange: number = 14;
 	public static readonly bitcrusherOctaveStep: number = 0.5;
 	public static readonly bitcrusherQuantizationRange: number = 8;

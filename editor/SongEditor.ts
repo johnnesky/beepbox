@@ -28,6 +28,7 @@ import {Piano} from "./Piano";
 import {BeatsPerBarPrompt} from "./BeatsPerBarPrompt";
 import {MoveNotesSidewaysPrompt} from "./MoveNotesSidewaysPrompt";
 import {SongDurationPrompt} from "./SongDurationPrompt";
+import {SustainPrompt} from "./SustainPrompt";
 import {ChannelSettingsPrompt} from "./ChannelSettingsPrompt";
 import {ExportPrompt} from "./ExportPrompt";
 import {ImportPrompt} from "./ImportPrompt";
@@ -249,7 +250,8 @@ export class SongEditor {
 	private readonly _bitcrusherFreqSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherFreqRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeBitcrusherFreq(this._doc, oldValue, newValue));
 	private readonly _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Freq Crush:"), this._bitcrusherFreqSlider.input);
 	private readonly _stringSustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.stringSustainRange - 1, value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeStringSustain(this._doc, oldValue, newValue));
-	private readonly _stringSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("stringSustain")}, "Sustain:"), this._stringSustainSlider.input);
+	private readonly _stringSustainLabel: HTMLSpanElement = span({class: "tip", onclick: ()=>this._openPrompt("stringSustain")}, "Sustain:");
+	private readonly _stringSustainRow: HTMLDivElement = div({class: "selectRow"}, this._stringSustainLabel, this._stringSustainSlider.input);
 	private readonly _unisonSelect: HTMLSelectElement = buildOptions(select(), Config.unisons.map(unison=>unison.name));
 	private readonly _unisonSelectRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("unison")}, "Unison:"), div({class: "selectContainer"}, this._unisonSelect));
 	private readonly _chordSelect: HTMLSelectElement = buildOptions(select(), Config.chords.map(chord=>chord.name));
@@ -605,7 +607,7 @@ export class SongEditor {
 		this._currentPromptName = promptName;
 		
 		if (this.prompt) {
-			if (this._wasPlaying && !(this.prompt instanceof TipPrompt)) {
+			if (this._wasPlaying && !(this.prompt instanceof TipPrompt || this.prompt instanceof SustainPrompt)) {
 				this._doc.performance.play();
 			}
 			this._wasPlaying = false;
@@ -645,13 +647,16 @@ export class SongEditor {
 				case "recordingSetup":
 					this.prompt = new RecordingSetupPrompt(this._doc);
 					break;
+				case "stringSustain":
+					this.prompt = new SustainPrompt(this._doc);
+					break;
 				default:
 					this.prompt = new TipPrompt(this._doc, promptName);
 					break;
 			}
 			
 			if (this.prompt) {
-				if (!(this.prompt instanceof TipPrompt)) {
+				if (!(this.prompt instanceof TipPrompt || this.prompt instanceof SustainPrompt)) {
 					this._wasPlaying = this._doc.synth.playing;
 					this._doc.performance.pause();
 				}
@@ -812,6 +817,7 @@ export class SongEditor {
 			if (instrument.type == InstrumentType.pickedString) {
 				this._stringSustainRow.style.display = "";
 				this._stringSustainSlider.updateValue(instrument.stringSustain);
+				this._stringSustainLabel.textContent = "Sustain (" + Config.sustainTypeNames[instrument.stringSustainType].substring(0,1).toUpperCase() + "):";
 			} else {
 				this._stringSustainRow.style.display = "none";
 			}

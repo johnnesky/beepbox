@@ -1,9 +1,9 @@
 // Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, EffectType, EnvelopeComputeIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
+import {Dictionary, DictionaryArray, FilterType, SustainType, EnvelopeType, InstrumentType, EffectType, EnvelopeComputeIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
 import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
 import {Deque} from "./Deque";
-import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter} from "./filtering";
+import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter, warpInfinityToNyquist} from "./filtering";
 
 declare global {
 	interface Window {
@@ -1000,6 +1000,7 @@ export class Instrument {
 	public pan: number = Config.panCenter;
 	public pulseWidth: number = Config.pulseWidthRange - 1;
 	public stringSustain: number = 10;
+	public stringSustainType: SustainType = SustainType.acoustic;
 	public distortion: number = 0;
 	public bitcrusherFreq: number = 0;
 	public bitcrusherQuantization: number = 0;
@@ -1047,6 +1048,7 @@ export class Instrument {
 		this.vibrato = 0;
 		this.unison = 0;
 		this.stringSustain = 10;
+		this.stringSustainType = SustainType.acoustic;
 		this.fadeIn = 0;
 		this.fadeOut = Config.fadeOutNeutral;
 		this.transition = Config.transitions.dictionary["normal"].index;
@@ -1280,6 +1282,7 @@ export class Instrument {
 		} else if (this.type == InstrumentType.pickedString) {
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
 			instrumentObject["stringSustain"] = Math.round(100 * this.stringSustain / (Config.stringSustainRange - 1));
+			instrumentObject["stringSustainType"] = Config.sustainTypeNames[this.stringSustainType];
 		} else if (this.type == InstrumentType.harmonics) {
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
 		} else if (this.type == InstrumentType.fm) {
@@ -1514,6 +1517,8 @@ export class Instrument {
 		} else {
 			this.stringSustain = 10;
 		}
+		this.stringSustainType = Config.sustainTypeNames.indexOf(instrumentObject["stringSustainType"]);
+		if (<any>this.stringSustainType == -1) this.stringSustainType = SustainType.bright;
 		
 		if (this.type == InstrumentType.noise) {
 			this.chipNoise = Config.chipNoises.findIndex(wave=>wave.name==instrumentObject["wave"]);
@@ -1965,7 +1970,10 @@ export class Song {
 					buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth]);
 				} else if (instrument.type == InstrumentType.pickedString) {
 					buffer.push(SongTagCode.unison, base64IntToCharCode[instrument.unison]);
-					buffer.push(SongTagCode.stringSustain, base64IntToCharCode[instrument.stringSustain]);
+					if (Config.stringSustainRange > 0x20 || SustainType.length > 2) {
+						throw new Error("Not enough bits to represent sustain value and type in same base64 character.");
+					}
+					buffer.push(SongTagCode.stringSustain, base64IntToCharCode[instrument.stringSustain | (instrument.stringSustainType << 5)]);
 				} else {
 					throw new Error("Unknown instrument type.");
 				}
@@ -2540,7 +2548,9 @@ export class Song {
 			} break;
 			case SongTagCode.stringSustain: {
 				const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-				instrument.stringSustain = clamp(0, Config.stringSustainRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				const sustainValue: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+				instrument.stringSustain = clamp(0, Config.stringSustainRange, sustainValue & 0x1F);
+				instrument.stringSustainType = clamp(0, SustainType.length, sustainValue >> 5);
 			} break;
 			case SongTagCode.fadeInOut: {
 				if (beforeNine) {
@@ -3403,8 +3413,10 @@ class PickedString {
 	public delayIndex: number;
 	public allPassSample: number;
 	public allPassPrevInput: number;
-	public shelfSample: number;
-	public shelfPrevInput: number;
+	public sustainFilterSample: number;
+	public sustainFilterPrevOutput2: number;
+	public sustainFilterPrevInput1: number;
+	public sustainFilterPrevInput2: number;
 	public fractionalDelaySample: number;
 	public prevDelayLength: number;
 	public delayLengthDelta: number;
@@ -3412,12 +3424,16 @@ class PickedString {
 	
 	public allPassG: number = 0.0;
 	public allPassGDelta: number = 0.0;
-	public shelfA1: number = 0.0;
-	public shelfA1Delta: number = 0.0;
-	public shelfB0: number = 0.0;
-	public shelfB0Delta: number = 0.0;
-	public shelfB1: number = 0.0;
-	public shelfB1Delta: number = 0.0;
+	public sustainFilterA1: number = 0.0;
+	public sustainFilterA1Delta: number = 0.0;
+	public sustainFilterA2: number = 0.0;
+	public sustainFilterA2Delta: number = 0.0;
+	public sustainFilterB0: number = 0.0;
+	public sustainFilterB0Delta: number = 0.0;
+	public sustainFilterB1: number = 0.0;
+	public sustainFilterB1Delta: number = 0.0;
+	public sustainFilterB2: number = 0.0;
+	public sustainFilterB2Delta: number = 0.0;
 	
 	constructor() {
 		this.reset();
@@ -3427,18 +3443,17 @@ class PickedString {
 		this.delayIndex = -1;
 		this.allPassSample = 0.0;
 		this.allPassPrevInput = 0.0;
-		this.shelfSample = 0.0;
-		this.shelfPrevInput = 0.0;
+		this.sustainFilterSample = 0.0;
+		this.sustainFilterPrevOutput2 = 0.0;
+		this.sustainFilterPrevInput1 = 0.0;
+		this.sustainFilterPrevInput2 = 0.0;
 		this.fractionalDelaySample = 0.0;
 		this.prevDelayLength = -1.0;
 		this.delayResetOffset = 0;
 	}
 	
-	public update(synth: Synth, instrumentState: InstrumentState, tone: Tone, stringIndex: number, roundedSamplesPerTick: number, stringDecayStart: number, stringDecayEnd: number): void {
+	public update(synth: Synth, instrumentState: InstrumentState, tone: Tone, stringIndex: number, roundedSamplesPerTick: number, stringDecayStart: number, stringDecayEnd: number, sustainType: SustainType): void {
 		const allPassCenter: number = 2.0 * Math.PI * Config.pickedStringDispersionCenterFreq / synth.samplesPerSecond;
-		const shelfRadians: number = 2.0 * Math.PI * Config.pickedStringShelfHz / synth.samplesPerSecond;
-		const decayCurveStart: number = (Math.pow(100.0, stringDecayStart) - 1.0) / 99.0;
-		const decayCurveEnd: number   = (Math.pow(100.0, stringDecayEnd  ) - 1.0) / 99.0;
 		
 		const prevDelayLength: number = this.prevDelayLength;
 		
@@ -3455,10 +3470,17 @@ class PickedString {
 		const allPassRadiansStart: number = Math.min(Math.PI, radiansPerSampleStart * Config.pickedStringDispersionFreqMult * Math.pow(allPassCenter / radiansPerSampleStart, Config.pickedStringDispersionFreqScale));
 		const allPassRadiansEnd: number = Math.min(Math.PI, radiansPerSampleEnd * Config.pickedStringDispersionFreqMult * Math.pow(allPassCenter / radiansPerSampleEnd, Config.pickedStringDispersionFreqScale));
 		
-		const decayRateStart: number = Math.pow(0.5, decayCurveStart * shelfRadians / radiansPerSampleStart);
-		const decayRateEnd: number   = Math.pow(0.5, decayCurveEnd   * shelfRadians / radiansPerSampleEnd);
-		const shelfGainStart: number = Math.pow(decayRateStart, Config.stringDecayRate);
-		const shelfGainEnd: number   = Math.pow(decayRateEnd,   Config.stringDecayRate);
+		const shelfRadians: number = 2.0 * Math.PI * Config.pickedStringShelfHz / synth.samplesPerSecond;
+		const decayCurveStart: number = (Math.pow(100.0, stringDecayStart) - 1.0) / 99.0;
+		const decayCurveEnd: number   = (Math.pow(100.0, stringDecayEnd  ) - 1.0) / 99.0;
+		const register: number = sustainType == SustainType.acoustic ? 0.25 : 0.0;
+		const registerShelfCenter: number = 15.6;
+		const registerLowpassCenter: number = 3.0 * synth.samplesPerSecond / 48000;
+		//const decayRateStart: number = Math.pow(0.5, decayCurveStart * shelfRadians / radiansPerSampleStart);
+		//const decayRateEnd: number   = Math.pow(0.5, decayCurveEnd   * shelfRadians / radiansPerSampleEnd);
+		const decayRateStart: number = Math.pow(0.5, decayCurveStart * Math.pow(shelfRadians / (radiansPerSampleStart * registerShelfCenter), (1.0 + 2.0 * register)) * registerShelfCenter);
+		const decayRateEnd:   number = Math.pow(0.5, decayCurveEnd   * Math.pow(shelfRadians / (radiansPerSampleEnd   * registerShelfCenter), (1.0 + 2.0 * register)) * registerShelfCenter);
+		
 		const expressionDecayStart: number = Math.pow(decayRateStart, 0.002);
 		const expressionDecayEnd: number   = Math.pow(decayRateEnd,   0.002);
 		
@@ -3472,36 +3494,68 @@ class PickedString {
 		const allPassGEnd: number = Synth.tempFilterEndCoefficients.b[0]; /* same as a[1] */
 		const allPassPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
 		
-		Synth.tempFilterStartCoefficients.highShelf1stOrder(shelfRadians, shelfGainStart);
-		synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart);
-		const shelfA1Start: number = Synth.tempFilterStartCoefficients.a[1];
-		const shelfB0Start: number = Synth.tempFilterStartCoefficients.b[0] * expressionDecayStart;
-		const shelfB1Start: number = Synth.tempFilterStartCoefficients.b[1] * expressionDecayStart;
-		const shelfPhaseDelayStart: number = -synth.tempFrequencyResponse.angle() / centerHarmonicStart;
+		// 1st order shelf filters and 2nd order lowpass filters have differently shaped frequency
+		// responses, as well as adjustable shapes. I originally picked a 1st order shelf filter,
+		// but I kinda prefer 2nd order lowpass filters now and I designed a couple settings:
+		const enum PickedStringBrightnessType {
+			bright, // 1st order shelf
+			normal, // 2nd order lowpass, rounded corner
+			resonant, // 3rd order lowpass, harder corner
+		}
+		const brightnessType: PickedStringBrightnessType = <any> sustainType == SustainType.bright ? PickedStringBrightnessType.bright : PickedStringBrightnessType.normal;
+		if (brightnessType == PickedStringBrightnessType.bright) {
+			const shelfGainStart: number = Math.pow(decayRateStart, Config.stringDecayRate);
+			const shelfGainEnd: number   = Math.pow(decayRateEnd,   Config.stringDecayRate);
+			Synth.tempFilterStartCoefficients.highShelf2ndOrder(shelfRadians, shelfGainStart, 0.5);
+			Synth.tempFilterEndCoefficients.highShelf2ndOrder(shelfRadians, shelfGainEnd, 0.5);
+		} else {
+			const cornerHardness: number = Math.pow(brightnessType == PickedStringBrightnessType.normal ? 0.0 : 1.0, 0.25);
+			const lowpass1stOrderCutoffRadiansStart: number = Math.pow(registerLowpassCenter * registerLowpassCenter * radiansPerSampleStart * 3.3 * 48000 / synth.samplesPerSecond, 0.5 + register) / registerLowpassCenter / Math.pow(decayCurveStart, .5);
+			const lowpass1stOrderCutoffRadiansEnd:   number = Math.pow(registerLowpassCenter * registerLowpassCenter * radiansPerSampleEnd   * 3.3 * 48000 / synth.samplesPerSecond, 0.5 + register) / registerLowpassCenter / Math.pow(decayCurveEnd,   .5);
+			const lowpass2ndOrderCutoffRadiansStart: number = lowpass1stOrderCutoffRadiansStart * Math.pow(2.0, 0.5 - 1.75 * (1.0 - Math.pow(1.0 - cornerHardness, 0.85)));
+			const lowpass2ndOrderCutoffRadiansEnd:   number = lowpass1stOrderCutoffRadiansEnd   * Math.pow(2.0, 0.5 - 1.75 * (1.0 - Math.pow(1.0 - cornerHardness, 0.85)));
+			const lowpass2ndOrderGainStart: number = Math.pow(2.0, -Math.pow(2.0, -Math.pow(cornerHardness, 0.9)));
+			const lowpass2ndOrderGainEnd:   number = Math.pow(2.0, -Math.pow(2.0, -Math.pow(cornerHardness, 0.9)));
+			Synth.tempFilterStartCoefficients.lowPass2ndOrderButterworth(warpInfinityToNyquist(lowpass2ndOrderCutoffRadiansStart), lowpass2ndOrderGainStart);
+			Synth.tempFilterEndCoefficients  .lowPass2ndOrderButterworth(warpInfinityToNyquist(lowpass2ndOrderCutoffRadiansEnd),   lowpass2ndOrderGainEnd);
+		}
 		
-		Synth.tempFilterEndCoefficients.highShelf1stOrder(shelfRadians, shelfGainEnd);
+		synth.tempFrequencyResponse.analyze(Synth.tempFilterStartCoefficients, centerHarmonicStart);
+		const sustainFilterA1Start: number = Synth.tempFilterStartCoefficients.a[1];
+		const sustainFilterA2Start: number = Synth.tempFilterStartCoefficients.a[2];
+		const sustainFilterB0Start: number = Synth.tempFilterStartCoefficients.b[0] * expressionDecayStart;
+		const sustainFilterB1Start: number = Synth.tempFilterStartCoefficients.b[1] * expressionDecayStart;
+		const sustainFilterB2Start: number = Synth.tempFilterStartCoefficients.b[2] * expressionDecayStart;
+		const sustainFilterPhaseDelayStart: number = -synth.tempFrequencyResponse.angle() / centerHarmonicStart;
+		
 		synth.tempFrequencyResponse.analyze(Synth.tempFilterEndCoefficients, centerHarmonicEnd);
-		const shelfA1End: number = Synth.tempFilterEndCoefficients.a[1];
-		const shelfB0End: number = Synth.tempFilterEndCoefficients.b[0] * expressionDecayEnd;
-		const shelfB1End: number = Synth.tempFilterEndCoefficients.b[1] * expressionDecayEnd;
-		const shelfPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
+		const sustainFilterA1End: number = Synth.tempFilterEndCoefficients.a[1];
+		const sustainFilterA2End: number = Synth.tempFilterEndCoefficients.a[2];
+		const sustainFilterB0End: number = Synth.tempFilterEndCoefficients.b[0] * expressionDecayEnd;
+		const sustainFilterB1End: number = Synth.tempFilterEndCoefficients.b[1] * expressionDecayEnd;
+		const sustainFilterB2End: number = Synth.tempFilterEndCoefficients.b[2] * expressionDecayEnd;
+		const sustainFilterPhaseDelayEnd: number = -synth.tempFrequencyResponse.angle() / centerHarmonicEnd;
 		
 		const periodLengthStart: number = 1.0 / phaseDeltaStart;
 		const periodLengthEnd: number = 1.0 / phaseDeltaEnd;
 		const minBufferLength: number = Math.ceil(Math.max(periodLengthStart, periodLengthEnd) * 2);
-		const delayLength: number = periodLengthStart - allPassPhaseDelayStart - shelfPhaseDelayStart;
-		const delayLengthEnd: number = periodLengthEnd - allPassPhaseDelayEnd - shelfPhaseDelayEnd;
+		const delayLength: number = periodLengthStart - allPassPhaseDelayStart - sustainFilterPhaseDelayStart;
+		const delayLengthEnd: number = periodLengthEnd - allPassPhaseDelayEnd - sustainFilterPhaseDelayEnd;
 		
 		this.prevDelayLength = delayLength;
 		this.delayLengthDelta = (delayLengthEnd - delayLength) / roundedSamplesPerTick;
 		this.allPassG = allPassGStart;
-		this.shelfA1 = shelfA1Start;
-		this.shelfB0 = shelfB0Start;
-		this.shelfB1 = shelfB1Start;
+		this.sustainFilterA1 = sustainFilterA1Start;
+		this.sustainFilterA2 = sustainFilterA2Start;
+		this.sustainFilterB0 = sustainFilterB0Start;
+		this.sustainFilterB1 = sustainFilterB1Start;
+		this.sustainFilterB2 = sustainFilterB2Start;
 		this.allPassGDelta = (allPassGEnd - allPassGStart) / roundedSamplesPerTick;
-		this.shelfA1Delta = (shelfA1End - shelfA1Start) / roundedSamplesPerTick;
-		this.shelfB0Delta = (shelfB0End - shelfB0Start) / roundedSamplesPerTick;
-		this.shelfB1Delta = (shelfB1End - shelfB1Start) / roundedSamplesPerTick;
+		this.sustainFilterA1Delta = (sustainFilterA1End - sustainFilterA1Start) / roundedSamplesPerTick;
+		this.sustainFilterA2Delta = (sustainFilterA2End - sustainFilterA2Start) / roundedSamplesPerTick;
+		this.sustainFilterB0Delta = (sustainFilterB0End - sustainFilterB0Start) / roundedSamplesPerTick;
+		this.sustainFilterB1Delta = (sustainFilterB1End - sustainFilterB1Start) / roundedSamplesPerTick;
+		this.sustainFilterB2Delta = (sustainFilterB2End - sustainFilterB2Start) / roundedSamplesPerTick;
 		
 		const pitchChanged: boolean = Math.abs(Math.log2(delayLength / prevDelayLength)) > 0.01;
 		
@@ -3533,8 +3587,10 @@ class PickedString {
 			this.delayIndex = 0;
 			this.allPassSample = 0.0;
 			this.allPassPrevInput = 0.0;
-			this.shelfSample = 0.0;
-			this.shelfPrevInput = 0.0;
+			this.sustainFilterSample = 0.0;
+			this.sustainFilterPrevOutput2 = 0.0;
+			this.sustainFilterPrevInput1 = 0.0;
+			this.sustainFilterPrevInput2 = 0.0;
 			this.fractionalDelaySample = 0.0;
 			
 			// Clear away a region of the delay buffer for the new impulse.
@@ -5974,7 +6030,7 @@ export class Synth {
 				}
 				
 				for (let i: number = 0; i < unison.voices; i++) {
-					tone.pickedStrings[i].update(this, instrumentState, tone, i, roundedSamplesPerTick, stringDecayStart, stringDecayEnd);
+					tone.pickedStrings[i].update(this, instrumentState, tone, i, roundedSamplesPerTick, stringDecayStart, stringDecayEnd, instrument.stringSustainType);
 				}
 			}
 		}
@@ -6239,8 +6295,10 @@ export class Synth {
 				let pickedString# = tone.pickedStrings[#];
 				let allPassSample# = +pickedString#.allPassSample;
 				let allPassPrevInput# = +pickedString#.allPassPrevInput;
-				let shelfSample# = +pickedString#.shelfSample;
-				let shelfPrevInput# = +pickedString#.shelfPrevInput;
+				let sustainFilterSample# = +pickedString#.sustainFilterSample;
+				let sustainFilterPrevOutput2# = +pickedString#.sustainFilterPrevOutput2;
+				let sustainFilterPrevInput1# = +pickedString#.sustainFilterPrevInput1;
+				let sustainFilterPrevInput2# = +pickedString#.sustainFilterPrevInput2;
 				let fractionalDelaySample# = +pickedString#.fractionalDelaySample;
 				const delayLine# = pickedString#.delayLine;
 				const delayBufferMask# = (delayLine#.length - 1) >> 0;
@@ -6249,13 +6307,17 @@ export class Synth {
 				let delayLength# = +pickedString#.prevDelayLength;
 				const delayLengthDelta# = +pickedString#.delayLengthDelta;
 				let allPassG# = +pickedString#.allPassG;
-				let shelfA1# = +pickedString#.shelfA1;
-				let shelfB0# = +pickedString#.shelfB0;
-				let shelfB1# = +pickedString#.shelfB1;
+				let sustainFilterA1# = +pickedString#.sustainFilterA1;
+				let sustainFilterA2# = +pickedString#.sustainFilterA2;
+				let sustainFilterB0# = +pickedString#.sustainFilterB0;
+				let sustainFilterB1# = +pickedString#.sustainFilterB1;
+				let sustainFilterB2# = +pickedString#.sustainFilterB2;
 				const allPassGDelta# = +pickedString#.allPassGDelta;
-				const shelfA1Delta# = +pickedString#.shelfA1Delta;
-				const shelfB0Delta# = +pickedString#.shelfB0Delta;
-				const shelfB1Delta# = +pickedString#.shelfB1Delta;
+				const sustainFilterA1Delta# = +pickedString#.sustainFilterA1Delta;
+				const sustainFilterA2Delta# = +pickedString#.sustainFilterA2Delta;
+				const sustainFilterB0Delta# = +pickedString#.sustainFilterB0Delta;
+				const sustainFilterB1Delta# = +pickedString#.sustainFilterB1Delta;
+				const sustainFilterB2Delta# = +pickedString#.sustainFilterB2Delta;
 				
 				let expression = +tone.expression;
 				const expressionDelta = +tone.expressionDelta;
@@ -6283,10 +6345,13 @@ export class Synth {
 					allPassSample# = fractionalDelaySample# * allPassG# + allPassPrevInput# - allPassG# * allPassSample#;
 					allPassPrevInput# = fractionalDelaySample#;
 					
-					shelfSample# = shelfB0# * allPassSample# + shelfB1# * shelfPrevInput# - shelfA1# * shelfSample#;
-					shelfPrevInput# = allPassSample#;
+					const sustainFilterPrevOutput1# = sustainFilterSample#;
+					sustainFilterSample# = sustainFilterB0# * allPassSample# + sustainFilterB1# * sustainFilterPrevInput1# + sustainFilterB2# * sustainFilterPrevInput2# - sustainFilterA1# * sustainFilterSample# - sustainFilterA2# * sustainFilterPrevOutput2#;
+					sustainFilterPrevOutput2# = sustainFilterPrevOutput1#;
+					sustainFilterPrevInput2# = sustainFilterPrevInput1#;
+					sustainFilterPrevInput1# = allPassSample#;
 					
-					delayLine#[delayIndex# & delayBufferMask#] += shelfSample#;
+					delayLine#[delayIndex# & delayBufferMask#] += sustainFilterSample#;
 					delayLine#[(delayIndex# + delayResetOffset#) & delayBufferMask#] = 0.0;
 					delayIndex#++;
 					
@@ -6308,29 +6373,37 @@ export class Synth {
 					expression += expressionDelta;
 					delayLength# += delayLengthDelta#;
 					allPassG# += allPassGDelta#;
-					shelfA1# += shelfA1Delta#;
-					shelfB0# += shelfB0Delta#;
-					shelfB1# += shelfB1Delta#;
+					sustainFilterA1# += sustainFilterA1Delta#;
+					sustainFilterA2# += sustainFilterA2Delta#;
+					sustainFilterB0# += sustainFilterB0Delta#;
+					sustainFilterB1# += sustainFilterB1Delta#;
+					sustainFilterB2# += sustainFilterB2Delta#;
 				}
 				
 				// Avoid persistent denormal or NaN values in the delay buffers and filter history.
 				const epsilon = (1.0e-24);
 				if (!Number.isFinite(allPassSample#) || Math.abs(allPassSample#) < epsilon) allPassSample# = 0.0;
 				if (!Number.isFinite(allPassPrevInput#) || Math.abs(allPassPrevInput#) < epsilon) allPassPrevInput# = 0.0;
-				if (!Number.isFinite(shelfSample#) || Math.abs(shelfSample#) < epsilon) shelfSample# = 0.0;
-				if (!Number.isFinite(shelfPrevInput#) || Math.abs(shelfPrevInput#) < epsilon) shelfPrevInput# = 0.0;
+				if (!Number.isFinite(sustainFilterSample#) || Math.abs(sustainFilterSample#) < epsilon) sustainFilterSample# = 0.0;
+				if (!Number.isFinite(sustainFilterPrevOutput2#) || Math.abs(sustainFilterPrevOutput2#) < epsilon) sustainFilterPrevOutput2# = 0.0;
+				if (!Number.isFinite(sustainFilterPrevInput1#) || Math.abs(sustainFilterPrevInput1#) < epsilon) sustainFilterPrevInput1# = 0.0;
+				if (!Number.isFinite(sustainFilterPrevInput2#) || Math.abs(sustainFilterPrevInput2#) < epsilon) sustainFilterPrevInput2# = 0.0;
 				if (!Number.isFinite(fractionalDelaySample#) || Math.abs(fractionalDelaySample#) < epsilon) fractionalDelaySample# = 0.0;
 				pickedString#.allPassSample = allPassSample#;
 				pickedString#.allPassPrevInput = allPassPrevInput#;
-				pickedString#.shelfSample = shelfSample#;
-				pickedString#.shelfPrevInput = shelfPrevInput#;
+				pickedString#.sustainFilterSample = sustainFilterSample#;
+				pickedString#.sustainFilterPrevOutput2 = sustainFilterPrevOutput2#;
+				pickedString#.sustainFilterPrevInput1 = sustainFilterPrevInput1#;
+				pickedString#.sustainFilterPrevInput2 = sustainFilterPrevInput2#;
 				pickedString#.fractionalDelaySample = fractionalDelaySample#;
 				pickedString#.delayIndex = delayIndex#;
 				pickedString#.prevDelayLength = delayLength#;
 				pickedString#.allPassG = allPassG#;
-				pickedString#.shelfA1 = shelfA1#;
-				pickedString#.shelfB0 = shelfB0#;
-				pickedString#.shelfB1 = shelfB1#;
+				pickedString#.sustainFilterA1 = sustainFilterA1#;
+				pickedString#.sustainFilterA2 = sustainFilterA2#;
+				pickedString#.sustainFilterB0 = sustainFilterB0#;
+				pickedString#.sustainFilterB1 = sustainFilterB1#;
+				pickedString#.sustainFilterB2 = sustainFilterB2#;
 				
 				tone.expression = expression;
 				

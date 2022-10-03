@@ -167,7 +167,8 @@ denominator with the imaginary component negated.)
 Finally, I'll list some of the links that helped me understand filters and
 provided some of the algorithms I that use here.
 
-Here's where I found accurate 2nd order low-pass and high-pass digital filters:
+Here's where I found accurate 2nd order low-pass, high-pass, and high-shelf
+digital filters:
 https://web.archive.org/web/20120531011328/http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
 
 This page is how I found a link to the cookbook article above. It claims these
@@ -366,6 +367,23 @@ export class FilterCoefficients {
 		this.order = 2;
 	}
 	*/
+	
+	public highShelf2ndOrder(cornerRadiansPerSample: number, shelfLinearGain: number, slope: number): void {
+		const A: number = Math.sqrt(shelfLinearGain);
+		const c: number = Math.cos(cornerRadiansPerSample);
+		const Aplus: number = A + 1.0;
+		const Aminus: number = A - 1.0;
+		const alpha: number = Math.sin(cornerRadiansPerSample) * 0.5 * Math.sqrt((Aplus / A) * (1.0 / slope - 1.0) + 2.0);
+		const sqrtA2Alpha: number = 2.0 * Math.sqrt(A) * alpha;
+		const a0: number =   (Aplus  - Aminus * c + sqrtA2Alpha);
+		this.a[1] =  2 *     (Aminus - Aplus  * c              ) / a0;
+		this.a[2] =          (Aplus  - Aminus * c - sqrtA2Alpha) / a0;
+		this.b[0] =      A * (Aplus  + Aminus * c + sqrtA2Alpha) / a0;
+		this.b[1] = -2 * A * (Aminus + Aplus  * c              ) / a0;
+		this.b[2] =      A * (Aplus  + Aminus * c - sqrtA2Alpha) / a0;
+		this.order = 2;
+	}
+	
 	public peak2ndOrder(cornerRadiansPerSample: number, peakLinearGain: number, bandWidthScale: number): void {
 		const sqrtGain: number = Math.sqrt(peakLinearGain);
 		const bandWidth: number = bandWidthScale * cornerRadiansPerSample / (sqrtGain >= 1 ? sqrtGain : 1/sqrtGain);
@@ -502,4 +520,18 @@ export class DynamicBiquadFilter {
 		}
 		this.useMultiplicativeInputCoefficients = useMultiplicativeInputCoefficients;
 	}
+}
+
+// Filters are typically designed as analog filters first, then converted to
+// digital filters using one of two methods: the "matched z-transform" or the
+// "bilinear transform". The "bilinear transform" does a better job of
+// preserving the magnitudes of the frequency response, but warps the frequency
+// range such that the nyquist frequency of the digital filter (π) maps to the
+// infinity frequency of the analog filter. You can use the below functions to
+// manually perform this warping in either direction.
+export function warpNyquistToInfinity(radians: number): number {
+	return 2.0 * Math.tan(radians * 0.5);
+}
+export function warpInfinityToNyquist(radians: number): number {
+	return 2.0 * Math.atan(radians * 0.5);
 }

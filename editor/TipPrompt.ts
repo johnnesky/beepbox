@@ -272,13 +272,6 @@ export class TipPrompt implements Prompt {
 					p("Every other notch on this slider is aligned with the currently selected key of the song, and the in-between notches are aligned with the tritones of the key."),
 				);
 			} break;
-			case "stringSustain": {
-				message = div(
-					h2("String sustain"),
-					p("This setting controls how quickly the picked string vibration decays."),
-					p("Unlike most of BeepBox's instrument synthesizer features, a picked string cannot change frequency suddenly while maintaining its decay. If a tone's pitch changes suddenly (e.g. if the chord type is set to \"arpeggio\" or the transition type is set to \"continues\") then the string will be re-picked and start decaying from the beginning again, even if the envelopes don't otherwise restart."),
-				);
-			} break;
 			case "envelopes": {
 				message = div(
 					h2("Envelopes"),
