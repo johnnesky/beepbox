@@ -1049,8 +1049,6 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 .beepboxEditor .channelBox {
-	margin: 1px;
-	height: 25px;
 	display: flex;
 	text-align: center;
 	align-items: center;

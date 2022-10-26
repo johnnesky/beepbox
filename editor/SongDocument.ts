@@ -303,6 +303,9 @@ export class SongDocument {
 		{
 			this.selection.resetBoxSelection();
 		}
+		
+		this.barScrollPos     = Math.max(0, Math.min(this.song.barCount          - this.trackVisibleBars,     this.barScrollPos));
+		this.channelScrollPos = Math.max(0, Math.min(this.song.getChannelCount() - this.trackVisibleChannels, this.channelScrollPos));
 	}
 	
 	private _updateHistoryState = (): void => {
@@ -416,10 +419,6 @@ export class SongDocument {
 	
 	public getBarWidth(): number {
 		return (!this.getMobileLayout() && this.prefs.enableChannelMuting && !this.getFullScreen()) ? 30 : 32;
-	}
-	
-	public getChannelHeight(): number {
-		return 27;
 	}
 	
 	public getFullScreen(): boolean {

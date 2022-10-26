@@ -34,7 +34,7 @@ export class BarScrollBar {
 	private _renderedNotchCount: number = -1;
 	private _renderedScrollBarPos: number = -1;
 	
-	constructor(private _doc: SongDocument, private _trackContainer: HTMLDivElement) {
+	constructor(private _doc: SongDocument) {
 		const center: number = this._editorHeight * 0.5;
 		const base: number = 20;
 		const tip: number = 9;
@@ -52,15 +52,6 @@ export class BarScrollBar {
 		this.container.addEventListener("touchmove", this._whenTouchMoved);
 		this.container.addEventListener("touchend", this._whenCursorReleased);
 		this.container.addEventListener("touchcancel", this._whenCursorReleased);
-		
-		// Sorry, bypassing typescript type safety on this function because I want to use the new "passive" option.
-		//this._trackContainer.addEventListener("scroll", this._onScroll, {capture: false, passive: true});
-		(<Function>this._trackContainer.addEventListener)("scroll", this._onScroll, {capture: false, passive: true});
-	}
-	
-	private _onScroll = (event: Event): void => {
-		this._doc.barScrollPos = (this._trackContainer.scrollLeft / this._doc.getBarWidth());
-		//this._doc.notifier.changed();
 	}
 	
 	private _whenMouseOver = (event: MouseEvent): void => {
@@ -192,9 +183,6 @@ export class BarScrollBar {
 			}
 		}
 		
-		this._doc.barScrollPos     = Math.max(0, Math.min(this._doc.song.barCount          - this._doc.trackVisibleBars,     this._doc.barScrollPos));
-		this._doc.channelScrollPos = Math.max(0, Math.min(this._doc.song.getChannelCount() - this._doc.trackVisibleChannels, this._doc.channelScrollPos));
-		
 		if (resized || this._renderedScrollBarPos != this._doc.barScrollPos) {
 			this._renderedScrollBarPos = this._doc.barScrollPos;
 			this._handle.setAttribute("x", String(this._notchSpace * this._doc.barScrollPos));
@@ -204,8 +192,5 @@ export class BarScrollBar {
 		}
 		
 		this._updatePreview();
-		
-		this._trackContainer.scrollLeft = this._doc.barScrollPos * this._doc.getBarWidth();
-		this._trackContainer.scrollTop = this._doc.channelScrollPos * this._doc.getChannelHeight();
 	}
 }

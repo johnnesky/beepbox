@@ -16,6 +16,7 @@ import {FadeInOutEditor} from "./FadeInOutEditor";
 import {FilterEditor} from "./FilterEditor";
 import {MuteEditor} from "./MuteEditor";
 import {TrackEditor} from "./TrackEditor";
+import {ChannelRow} from "./ChannelRow";
 import {LayoutPrompt} from "./LayoutPrompt";
 import {LoopEditor} from "./LoopEditor";
 import {SpectrumEditor} from "./SpectrumEditor";
@@ -352,7 +353,7 @@ export class SongEditor {
 		this._trackContainer,
 		this._trackVisibleArea,
 	);
-	private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc, this._trackAndMuteContainer);
+	private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this._doc);
 	private readonly _trackArea: HTMLDivElement = div({class: "track-area"},
 		this._trackAndMuteContainer,
 		this._barScrollBar.container,
@@ -584,6 +585,10 @@ export class SongEditor {
 			}
 		});
 		
+		// Sorry, bypassing typescript type safety on this function because I want to use the new "passive" option.
+		//this._trackAndMuteContainer.addEventListener("scroll", this._onTrackAreaScroll, {capture: false, passive: true});
+		(<Function>this._trackAndMuteContainer.addEventListener)("scroll", this._onTrackAreaScroll, {capture: false, passive: true});
+		
 		if (isMobile) {
 			const autoPlayOption: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.querySelector("[value=autoPlay]");
 			autoPlayOption.disabled = true;
@@ -683,10 +688,13 @@ export class SongEditor {
 		this._muteEditor.container.style.display = prefs.enableChannelMuting ? "" : "none";
 		const trackBounds: DOMRect = this._trackVisibleArea.getBoundingClientRect();
 		this._doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left - (prefs.enableChannelMuting ? 32 : 0)) / this._doc.getBarWidth());
-		this._doc.trackVisibleChannels = Math.floor((trackBounds.bottom - trackBounds.top - 30) / this._doc.getChannelHeight());
+		this._doc.trackVisibleChannels = Math.floor((trackBounds.bottom - trackBounds.top - 30) / ChannelRow.patternHeight);
 		this._barScrollBar.render();
 		this._muteEditor.render();
 		this._trackEditor.render();
+		
+		this._trackAndMuteContainer.scrollLeft = this._doc.barScrollPos * this._doc.getBarWidth();
+		this._trackAndMuteContainer.scrollTop = this._doc.channelScrollPos * ChannelRow.patternHeight;
 		
 		this._piano.container.style.display = prefs.showLetters ? "" : "none";
 		this._octaveScrollBar.container.style.display = prefs.showScrollBar ? "" : "none";
@@ -1153,6 +1161,11 @@ export class SongEditor {
 			}
 		}
 		window.requestAnimationFrame(this.updatePlayButton);
+	}
+	
+	private _onTrackAreaScroll = (event: Event): void => {
+		this._doc.barScrollPos = (this._trackAndMuteContainer.scrollLeft / this._doc.getBarWidth());
+		//this._doc.notifier.changed();
 	}
 	
 	private _disableCtrlContextMenu = (event: MouseEvent): boolean => {
