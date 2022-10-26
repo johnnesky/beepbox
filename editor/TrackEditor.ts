@@ -7,71 +7,38 @@ import {SongDocument} from "./SongDocument";
 import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
 
 class Box {
-	private readonly _text: Text = document.createTextNode("1");
-	private readonly _label: SVGTextElement = SVG.text({"font-family": "sans-serif", "font-size": 20, "text-anchor": "middle", "font-weight": "bold", fill: "red"}, this._text);
-	private readonly _rect: SVGRectElement = SVG.rect({x: 1, y: 1});
-	public readonly container: SVGSVGElement = SVG.svg(this._rect, this._label);
-	private _renderedIndex: number = 1;
-	private _renderedDim: boolean = true;
-	private _renderedSelected: boolean = false;
-	private _renderedColor: string = "";
-	constructor(channel: number, private readonly _x: number, private readonly _y: number, color: string) {
-		this._rect.setAttribute("fill", ColorConfig.uiWidgetBackground);
-		this._label.setAttribute("fill", color);
+	private readonly _text: Text = document.createTextNode("");
+	private readonly _label: HTMLElement = HTML.div({class: "channelBoxLabel"}, this._text);
+	public readonly container: HTMLElement = HTML.div({class: "channelBox"}, this._label);
+	private _renderedIndex: number = -1;
+	constructor(channel: number, color: string) {
+		this.container.style.background = ColorConfig.uiWidgetBackground;
+		this._label.style.color = color;
 	}
 	
-	public setSize(width: number, height: number): void {
-		this.container.setAttribute("x", "" + (this._x * width));
-		this.container.setAttribute("y", "" + (this._y * height));
-		this._rect.setAttribute("width", "" + (width - 2));
-		this._rect.setAttribute("height", "" + (height - 2));
-		this._label.setAttribute("x", "" + (width / 2));
-		this._label.setAttribute("y", "" + Math.round(height / 2 + 7));
+	public setWidth(width: number): void {
+		this.container.style.width = (width - 2) + "px"; // there's a 1 pixel margin on either side.
 	}
 	
-	public setIndex(index: number, dim: boolean, selected: boolean, color: string): void {
+	public setIndex(index: number, selected: boolean, color: string): void {
 		if (this._renderedIndex != index) {
-			if (!this._renderedSelected && ((index == 0) != (this._renderedIndex == 0))) {
-				this._rect.setAttribute("fill", (index == 0) ? "none" : ColorConfig.uiWidgetBackground);
-			}
-		
 			this._renderedIndex = index;
-			this._text.data = ""+index;
+			this._text.data = String(index);
 		}
 		
-		if (this._renderedDim != dim || this._renderedColor != color) {
-			this._renderedDim = dim;
-			if (selected) {
-				this._label.setAttribute("fill", ColorConfig.invertedText);
-			} else {
-				this._label.setAttribute("fill", color);
-			}
-		}
-		
-		if (this._renderedSelected != selected || this._renderedColor != color) {
-			this._renderedSelected = selected;
-			if (selected) {
-				this._rect.setAttribute("fill", color);
-				this._label.setAttribute("fill", ColorConfig.invertedText);
-			} else {
-				this._rect.setAttribute("fill", (this._renderedIndex == 0) ? ColorConfig.editorBackground : ColorConfig.uiWidgetBackground);
-				this._label.setAttribute("fill", color);
-			}
-		}
-		
-		this._renderedColor = color;
+		this._label.style.color = selected ? ColorConfig.invertedText : color;
+		this.container.style.background = selected ? color : (index == 0) ? "none" : ColorConfig.uiWidgetBackground;
 	}
 }
 
 export class TrackEditor {
-	private readonly _boxContainer: SVGGElement = SVG.g();
+	private readonly _channelRowContainer: HTMLElement = HTML.div({style: "display: flex; flex-direction: column;"});
 	private readonly _playhead: SVGRectElement = SVG.rect({fill: ColorConfig.playhead, x: 0, y: 0, width: 4, height: 128});
 	private readonly _boxHighlight: SVGRectElement = SVG.rect({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": 2, "pointer-events": "none", x: 1, y: 1, width: 30, height: 30});
 	private readonly _upHighlight: SVGPathElement = SVG.path({fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none"});
 	private readonly _downHighlight: SVGPathElement = SVG.path({fill: ColorConfig.invertedText, stroke: ColorConfig.invertedText, "stroke-width": 1, "pointer-events": "none"});
 	private readonly _selectionRect: SVGRectElement = SVG.rect({fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "pointer-events": "none", visibility: "hidden", x: 1, y: 1, width: 62, height: 62});
-	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; position: absolute;`, height: 128},
-		this._boxContainer,
+	private readonly _svg: SVGSVGElement = SVG.svg({style: `position: absolute; top: 0;`},
 		this._selectionRect,
 		this._boxHighlight,
 		this._upHighlight,
@@ -79,8 +46,13 @@ export class TrackEditor {
 		this._playhead,
 	);
 	private readonly _select: HTMLSelectElement = HTML.select({class: "trackSelectBox", style: "background: none; border: none; appearance: none; border-radius: initial; box-shadow: none; color: transparent; position: absolute; touch-action: none;"});
-	public readonly container: HTMLElement = HTML.div({class: "noSelection", style: "height: 128px; position: relative; overflow:hidden;"}, this._svg, this._select);
+	public readonly container: HTMLElement = HTML.div({class: "noSelection", style: "position: relative; overflow: hidden;"},
+		this._channelRowContainer,
+		this._svg,
+		this._select,
+	);
 	
+	private readonly _channels: HTMLElement[] = [];
 	private readonly _grid: Box[][] = [];
 	private _mouseX: number = 0;
 	private _mouseY: number = 0;
@@ -92,7 +64,7 @@ export class TrackEditor {
 	private _mousePressed: boolean = false;
 	private _mouseDragging = false;
 	private _barWidth: number = 32;
-	private _channelHeight: number = 32;
+	private _channelHeight: number = -1;
 	private _renderedChannelCount: number = 0;
 	private _renderedBarCount: number = 0;
 	private _renderedPatternCount: number = 0;
@@ -320,18 +292,19 @@ export class TrackEditor {
 		if (this._renderedChannelCount != this._doc.song.getChannelCount()) {
 			for (let y: number = this._renderedChannelCount; y < this._doc.song.getChannelCount(); y++) {
 				this._grid[y] = [];
+				const channel: HTMLElement = HTML.div({class: "channelRow"});
+				this._channels[y] = channel;
+				this._channelRowContainer.appendChild(channel);
 				for (let x: number = 0; x < this._renderedBarCount; x++) {
-					const box: Box = new Box(y, x, y, ColorConfig.getChannelColor(this._doc.song, y).secondaryChannel);
-					box.setSize(this._barWidth, this._channelHeight);
-					this._boxContainer.appendChild(box.container);
+					const box: Box = new Box(y, ColorConfig.getChannelColor(this._doc.song, y).secondaryChannel);
+					box.setWidth(this._barWidth);
+					channel.appendChild(box.container);
 					this._grid[y][x] = box;
 				}
 			}
 			
 			for (let y: number = this._doc.song.getChannelCount(); y < this._renderedChannelCount; y++) {
-				for (let x: number = 0; x < this._renderedBarCount; x++) {
-					this._boxContainer.removeChild(this._grid[y][x].container);
-				}
+				this._channelRowContainer.removeChild(this._channels[y]);
 			}
 			
 			this._grid.length = this._doc.song.getChannelCount();
@@ -340,14 +313,15 @@ export class TrackEditor {
 		
 		if (this._renderedBarCount != this._doc.song.barCount) {
 			for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
+				const channel: HTMLElement = this._channels[y];
 				for (let x: number = this._renderedBarCount; x < this._doc.song.barCount; x++) {
-					const box: Box = new Box(y, x, y, ColorConfig.getChannelColor(this._doc.song, y).secondaryChannel);
-					box.setSize(this._barWidth, this._channelHeight);
-					this._boxContainer.appendChild(box.container);
+					const box: Box = new Box(y, ColorConfig.getChannelColor(this._doc.song, y).secondaryChannel);
+					box.setWidth(this._barWidth);
+					channel.appendChild(box.container);
 					this._grid[y][x] = box;
 				}
 				for (let x: number = this._doc.song.barCount; x < this._renderedBarCount; x++) {
-					this._boxContainer.removeChild(this._grid[y][x].container);
+					channel.removeChild(this._grid[y][x].container);
 				}
 				this._grid[y].length = this._doc.song.barCount;
 			}
@@ -356,16 +330,17 @@ export class TrackEditor {
 		if (this._renderedBarCount != this._doc.song.barCount || this._renderedBarWidth != this._barWidth) {
 			this._renderedBarCount = this._doc.song.barCount;
 			const editorWidth = this._barWidth * this._doc.song.barCount;
+			this._channelRowContainer.style.width = editorWidth + "px";
 			this.container.style.width = editorWidth + "px";
 			this._svg.setAttribute("width", editorWidth + "");
 			this._mousePressed = false;
 		}
 		
-		if (this._renderedChannelHeight != this._channelHeight || this._renderedBarWidth != this._barWidth) {
+		if (this._renderedBarWidth != this._barWidth) {
 			this._renderedBarWidth = this._barWidth;
 			for (let y: number = 0; y < this._doc.song.getChannelCount(); y++) {
 				for (let x: number = 0; x < this._renderedBarCount; x++) {
-					this._grid[y][x].setSize(this._barWidth, this._channelHeight);
+					this._grid[y][x].setWidth(this._barWidth);
 				}
 			}
 			this._mousePressed = false;
@@ -389,7 +364,7 @@ export class TrackEditor {
 				const box: Box = this._grid[j][i];
 				if (i < this._doc.song.barCount) {
 					const colors: ChannelColors = ColorConfig.getChannelColor(this._doc.song, j);
-					box.setIndex(this._doc.song.channels[j].bars[i], dim, selected, dim && !selected ? colors.secondaryChannel : colors.primaryChannel);
+					box.setIndex(this._doc.song.channels[j].bars[i], selected, dim && !selected ? colors.secondaryChannel : colors.primaryChannel);
 					box.container.style.visibility = "visible";
 				} else {
 					box.container.style.visibility = "hidden";

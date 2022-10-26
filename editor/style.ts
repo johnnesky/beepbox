@@ -1044,6 +1044,27 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	position: relative;
 }
 
+.beepboxEditor .channelRow {
+	display: flex;
+}
+
+.beepboxEditor .channelBox {
+	margin: 1px;
+	height: 25px;
+	display: flex;
+	text-align: center;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	padding-top: 1px;
+}
+
+.beepboxEditor .channelBoxLabel {
+	font-size: 20px;
+	font-family: sans-serif;
+	font-weight: bold;
+}
+
 .beepboxEditor .muteEditor {
 	width: 32px;
 	flex-shrink: 0;

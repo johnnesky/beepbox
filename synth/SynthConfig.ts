@@ -206,8 +206,8 @@ export interface AutomationTarget extends BeepBoxOption {
 	readonly computeIndex: EnvelopeComputeIndex /*| InstrumentAutomationIndex*/ | null;
 	readonly displayName: string;
 	//readonly perNote: boolean; // Whether to compute envelopes on a per-note basis.
-	readonly interleave: boolean; // Whether to interleave this target with the next one in the menu.
-	readonly isFilter: boolean; // Filters have a variable maxCount in practice.
+	readonly interleave: boolean; // Whether to interleave this target with the next one in the menu (e.g. filter frequency and gain).
+	readonly isFilter: boolean; // Filters are special because the maxCount depends on other instrument settings.
 	//readonly range: number | null; // set if automation is allowed.
 	readonly maxCount: number;
 	readonly effect: EffectType | null;

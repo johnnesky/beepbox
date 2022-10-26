@@ -100,6 +100,7 @@ export class SongDocument {
 		//this.barScrollPos = Math.max(0, this.bar - (this.trackVisibleBars - 6));
 		this.prompt = state.prompt;
 		this.selection.fromJSON(state.selection);
+		this.selection.scrollToSelectedPattern();
 		
 		// For all input events, catch them when they are about to finish bubbling,
 		// presumably after all handlers are done updating the model, then update the
