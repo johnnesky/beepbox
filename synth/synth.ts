@@ -6092,7 +6092,9 @@ export class Synth {
 				
 				//console.log(synthSource.join("\n"));
 				
-				Synth.fmSynthFunctionCache[fingerprint] = new Function("synth", "bufferIndex", "runLength", "tone", "instrument", synthSource.join("\n"));
+				const wrappedFmSynth: string = "return (synth, bufferIndex, runLength, tone, instrument) => {" + synthSource.join("\n") + "}";
+				
+				Synth.fmSynthFunctionCache[fingerprint] = new Function("Config", "Synth", wrappedFmSynth)(Config, Synth);
 			}
 			return Synth.fmSynthFunctionCache[fingerprint];
 		} else if (instrument.type == InstrumentType.chip) {
@@ -6285,11 +6287,9 @@ export class Synth {
 		const voiceCount: number = instrumentState.unison!.voices;
 		let pickedStringFunction: Function = Synth.pickedStringFunctionCache[voiceCount];
 		if (pickedStringFunction == undefined) {
-			let pickedStringSource: string = "";
+			let pickedStringSource: string = "return (synth, bufferIndex, runLength, tone, instrumentState) => {";
 			
 			pickedStringSource += `
-				const Config = beepbox.Config;
-				const Synth = beepbox.Synth;
 				const data = synth.tempMonoInstrumentSampleBuffer;
 				
 				let pickedString# = tone.pickedStrings[#];
@@ -6409,7 +6409,8 @@ export class Synth {
 				
 				synth.sanitizeFilters(filters);
 				tone.initialNoteFilterInput1 = initialFilterInput1;
-				tone.initialNoteFilterInput2 = initialFilterInput2;`
+				tone.initialNoteFilterInput2 = initialFilterInput2;
+			}`
 			
 			// Duplicate lines containing "#" for each voice and replace the "#" with the voice index.
 			pickedStringSource = pickedStringSource.replace(/^.*\#.*$/mg, line => {
@@ -6421,7 +6422,7 @@ export class Synth {
 			});
 			
 			//console.log(pickedStringSource);
-			pickedStringFunction = new Function("synth", "bufferIndex", "runLength", "tone", "instrumentState", pickedStringSource);
+			pickedStringFunction = new Function("Config", "Synth", pickedStringSource)(Config, Synth);
 			Synth.pickedStringFunctionCache[voiceCount] = pickedStringFunction;
 		}
 		
@@ -6447,12 +6448,11 @@ export class Synth {
 		
 		let effectsFunction: Function = Synth.effectsFunctionCache[signature];
 		if (effectsFunction == undefined) {
-			let effectsSource: string = "";
+			let effectsSource: string = "return (synth, outputDataL, outputDataR, bufferIndex, runLength, instrumentState) => {";
 			
 			const usesDelays: boolean = usesChorus || usesReverb || usesEcho;
 			
 			effectsSource += `
-				const Config = beepbox.Config;
 				const tempMonoInstrumentSampleBuffer = synth.tempMonoInstrumentSampleBuffer;
 				
 				let mixVolume = +instrumentState.mixVolume;
@@ -6528,7 +6528,7 @@ export class Synth {
 				const filterCount = instrumentState.eqFilterCount|0;
 				let initialFilterInput1 = +instrumentState.initialEqFilterInput1;
 				let initialFilterInput2 = +instrumentState.initialEqFilterInput2;
-				const applyFilters = beepbox.Synth.applyFilters;`
+				const applyFilters = Synth.applyFilters;`
 			}
 			
 			// The eq filter volume is also used to fade out the instrument state, so always include it.
@@ -6932,7 +6932,7 @@ export class Synth {
 			if (usesPanning) {
 				effectsSource += `
 				
-				beepbox.Synth.sanitizeDelayLine(panningDelayLine, panningDelayPos, panningMask);
+				Synth.sanitizeDelayLine(panningDelayLine, panningDelayPos, panningMask);
 				instrumentState.panningDelayPos = panningDelayPos;
 				instrumentState.panningVolumeL = panningVolumeL;
 				instrumentState.panningVolumeR = panningVolumeR;
@@ -6943,8 +6943,8 @@ export class Synth {
 			if (usesChorus) {
 				effectsSource += `
 				
-				beepbox.Synth.sanitizeDelayLine(chorusDelayLineL, chorusDelayPos, chorusMask);
-				beepbox.Synth.sanitizeDelayLine(chorusDelayLineR, chorusDelayPos, chorusMask);
+				Synth.sanitizeDelayLine(chorusDelayLineL, chorusDelayPos, chorusMask);
+				Synth.sanitizeDelayLine(chorusDelayLineR, chorusDelayPos, chorusMask);
 				instrumentState.chorusPhase = chorusPhase;
 				instrumentState.chorusDelayPos = chorusDelayPos;
 				instrumentState.chorusVoiceMult = chorusVoiceMult;
@@ -6954,8 +6954,8 @@ export class Synth {
 			if (usesEcho) {
 				effectsSource += `
 				
-				beepbox.Synth.sanitizeDelayLine(echoDelayLineL, echoDelayPos, echoMask);
-				beepbox.Synth.sanitizeDelayLine(echoDelayLineR, echoDelayPos, echoMask);
+				Synth.sanitizeDelayLine(echoDelayLineL, echoDelayPos, echoMask);
+				Synth.sanitizeDelayLine(echoDelayLineR, echoDelayPos, echoMask);
 				instrumentState.echoDelayPos = echoDelayPos;
 				instrumentState.echoMult = echoMult;
 				instrumentState.echoDelayOffsetRatio = echoDelayOffsetRatio;
@@ -6973,10 +6973,10 @@ export class Synth {
 			if (usesReverb) {
 				effectsSource += `
 				
-				beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos        , reverbMask);
-				beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  3041, reverbMask);
-				beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  6426, reverbMask);
-				beepbox.Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos + 10907, reverbMask);
+				Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos        , reverbMask);
+				Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  3041, reverbMask);
+				Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos +  6426, reverbMask);
+				Synth.sanitizeDelayLine(reverbDelayLine, reverbDelayPos + 10907, reverbMask);
 				instrumentState.reverbDelayPos = reverbDelayPos;
 				instrumentState.reverbMult = reverb;
 				
@@ -6998,8 +6998,10 @@ export class Synth {
 				instrumentState.reverbShelfPrevInput3 = reverbShelfPrevInput3;`
 			}
 			
+			effectsSource += "}";
+			
 			//console.log(effectsSource);
-			effectsFunction = new Function("synth", "outputDataL", "outputDataR", "bufferIndex", "runLength", "instrumentState", effectsSource);
+			effectsFunction = new Function("Config", "Synth", effectsSource)(Config, Synth);
 			Synth.effectsFunctionCache[signature] = effectsFunction;
 		}
 		
@@ -7075,7 +7077,7 @@ export class Synth {
 	
 	private static fmSourceTemplate: string[] = (`
 		const data = synth.tempMonoInstrumentSampleBuffer;
-		const sineWave = beepbox.Config.sineWave;
+		const sineWave = Config.sineWave;
 		
 		// I'm adding 1000 to the phase to ensure that it's never negative even when modulated by other waves because negative numbers don't work with the modulus operator very well.
 		let operator#Phase       = +((tone.phases[#] % 1) + 1000) * ` + Config.sineWaveLength + `;
@@ -7093,7 +7095,7 @@ export class Synth {
 		const filterCount = tone.noteFilterCount|0;
 		let initialFilterInput1 = +tone.initialNoteFilterInput1;
 		let initialFilterInput2 = +tone.initialNoteFilterInput2;
-		const applyFilters = beepbox.Synth.applyFilters;
+		const applyFilters = Synth.applyFilters;
 		
 		const stopIndex = bufferIndex + runLength;
 		for (let sampleIndex = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
