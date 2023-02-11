@@ -216,14 +216,14 @@ function setLocalStorage(key: string, value: string): void {
 	try {
 		localStorage.setItem(key, value);
 	} catch (error) {
-		console.error(error);
+		// Ignore the error since we can't fix it.
 	}
 }
 function getLocalStorage(key: string): string | null {
 	try {
 		return localStorage.getItem(key);
 	} catch (error) {
-		console.error(error);
+		// Ignore the error since we can't fix it.
 		return null;
 	}
 }
@@ -284,7 +284,8 @@ function onWindowResize(): void {
 function animate(): void {
 	if (synth.playing) {
 		animationRequest = requestAnimationFrame(animate);
-		if (getLocalStorage("playerId") != id) {
+		const storedPlayerId: string | null = getLocalStorage("playerId");
+		if (storedPlayerId != null && storedPlayerId != id) {
 			onTogglePlay();
 		}
 		renderPlayhead();
