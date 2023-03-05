@@ -50,7 +50,7 @@ export class ImportPrompt implements Prompt {
 		const file: File = this._fileInput.files![0];
 		if (!file) return;
 		
-		const extension: string = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2);
+		const extension: string = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
 		if (extension == "json") {
 			const reader: FileReader = new FileReader();
 			reader.addEventListener("load", (event: Event): void => {
