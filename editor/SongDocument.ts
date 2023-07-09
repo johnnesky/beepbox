@@ -3,7 +3,7 @@
 import {Config} from "../synth/SynthConfig";
 import {isMobile} from "./EditorConfig";
 import {Pattern, Channel, Song, Synth} from "../synth/synth";
-import {SongRecovery, generateUid} from "./SongRecovery";
+import {SongRecovery, generateUid, errorAlert} from "./SongRecovery";
 import {ColorConfig} from "./ColorConfig";
 import {Layout} from "./Layout";
 import {SongPerformance} from "./SongPerformance";
@@ -72,10 +72,14 @@ export class SongDocument {
 		if (songString == "") {
 			songString = this._getHash();
 		}
-		this.song = new Song(songString);
-		if (songString == "" || songString == undefined) {
-			setDefaultInstruments(this.song);
-			this.song.scale = this.prefs.defaultScale;
+		try {
+			this.song = new Song(songString);
+			if (songString == "" || songString == undefined) {
+				setDefaultInstruments(this.song);
+				this.song.scale = this.prefs.defaultScale;
+			}
+		} catch (error) {
+			errorAlert(error);
 		}
 		songString = this.song.toBase64String();
 		this.synth = new Synth(this.song);
@@ -115,7 +119,8 @@ export class SongDocument {
 	}
 	
 	public toggleDisplayBrowserUrl() {
-		const state: HistoryState = this._getHistoryState()!;
+		const state: HistoryState | null = this._getHistoryState();
+		if (state == null) throw new Error("History state is null.");
 		this.prefs.displayBrowserUrl = !this.prefs.displayBrowserUrl;
 		this._replaceState(state, this.song.toBase64String());
 	}
@@ -209,7 +214,11 @@ export class SongDocument {
 			this._sequenceNumber++;
 			this._resetSongRecoveryUid();
 			const state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, instrument: this.viewedInstrument[this.channel], recoveryUid: this._recoveryUid, prompt: null, selection: this.selection.toJSON()};
-			new ChangeSong(this, window.location.hash);
+			try {
+				new ChangeSong(this, window.location.hash);
+			} catch (error) {
+				errorAlert(error);
+			}
 			this.prompt = state.prompt;
 			if (this.prefs.displayBrowserUrl) {
 				this._replaceState(state, this.song.toBase64String());
@@ -232,7 +241,12 @@ export class SongDocument {
 		this.viewedInstrument[this.channel] = state.instrument;
 		this._sequenceNumber = state.sequenceNumber;
 		this.prompt = state.prompt;
-		new ChangeSong(this, this._getHash());
+		
+		try {
+			new ChangeSong(this, this._getHash());
+		} catch (error) {
+			errorAlert(error);
+		}
 		
 		this._recoveryUid = state.recoveryUid;
 		this.selection.fromJSON(state.selection);
@@ -315,7 +329,7 @@ export class SongDocument {
 			// Ensure that the song is not corrupted before saving it.
 			hash = this.song.toBase64String();
 		} catch (error) {
-			window.alert("Whoops, the song data appears to have been corrupted! Please try to recover the last working version of the song from the \"Recover Recent Song...\" option in BeepBox's \"File\" menu.");
+			errorAlert(error);
 			return;
 		}
 		if (this._stateShouldBePushed) this._sequenceNumber++;
@@ -366,8 +380,8 @@ export class SongDocument {
 	}
 	
 	public undo(): void {
-		const state: HistoryState = this._getHistoryState()!;
-		if (state.canUndo) this._back();
+		const state: HistoryState | null = this._getHistoryState();
+		if (state == null || state.canUndo) this._back();
 	}
 	
 	public redo(): void {

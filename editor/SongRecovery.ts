@@ -35,6 +35,11 @@ export function generateUid(): string {
 	return ((Math.random() * (-1 >>> 0)) >>> 0).toString(32);
 }
 
+export function errorAlert(error: any): void {
+	console.warn(error);
+	window.alert("Whoops, the song data appears to have been corrupted! Please try to recover the last working version of the song from the \"Recover Recent Song...\" option in BeepBox's \"File\" menu.");
+}
+
 function compareSongs(a: RecoveredSong, b: RecoveredSong): number {
 	return b.versions[0].time - a.versions[0].time;
 }
@@ -80,7 +85,7 @@ export class SongRecovery {
 				// Ensure that the song is not corrupted.
 				this._song.fromBase64String(songData);
 			} catch (error) {
-				window.alert("Whoops, the song data appears to have been corrupted! Please try to recover the last working version of the song from the \"Recover Recent Song...\" option in BeepBox's \"File\" menu.");
+				errorAlert(error);
 				return;
 			}
 			
