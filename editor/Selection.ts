@@ -99,6 +99,13 @@ export class Selection {
 		const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeTrack);
 		this._changeTrack = new ChangeGroup();
 		this._changeTrack.append(new ChangeChannelBar(this._doc, channelIndex, bar));
+		// @jummbus - changing current viewed instrument to the first for the current pattern if the viewedInstrument is not in the pattern
+		const pattern: Pattern | null = this._doc.getCurrentPattern(0);
+		if (pattern != null) {
+			if (pattern.instruments.indexOf(this._doc.viewedInstrument[this._doc.channel]) == -1) {
+				this._doc.viewedInstrument[this._doc.channel] = pattern.instruments[0];
+			}
+		}
 		// Don't erase existing redo history just to look at highlighted pattern.
 		if (!this._doc.hasRedoHistory()) {
 			this._doc.record(this._changeTrack, canReplaceLastChange);
@@ -111,25 +118,25 @@ export class Selection {
 	}
 	
 	public nextDigit(digit: string, forInstrument: boolean): void {
-		const channel: Channel = this._doc.song.channels[this.boxSelectionChannel];
+		const channel: Channel = this._doc.song.channels[this._doc.channel];
 		
 		if (forInstrument) {
+			// Treat "0" as meaning instrument 10
+			if (digit == "0") digit = "10";
 			this.instrumentDigits += digit;
 			var parsed = parseInt(this.instrumentDigits);
-			var pattern: Pattern | null = this._doc.getCurrentPattern();
-			if (parsed != 0 && parsed <= channel.instruments.length && pattern != null) {
+			if (parsed != 0 && parsed <= channel.instruments.length) {
 				this.selectInstrument(parsed - 1);
 				return;
 			}
 			this.instrumentDigits = digit;
 			parsed = parseInt(this.instrumentDigits);
-			if (parsed != 0 && parsed <= channel.instruments.length && pattern != null) {
+			if (parsed != 0 && parsed <= channel.instruments.length) {
 				this.selectInstrument(parsed - 1);
 				return;
 			}
 			this.instrumentDigits = "";
-		}
-		else {
+		} else {
 			if (this.digits.length > 0 && this.digits != String(channel.bars[this.boxSelectionBar])) {
 				this.digits = "";
 			}
@@ -683,6 +690,7 @@ export class Selection {
 				const canReplaceLastChange: boolean = this._doc.lastChangeWas(this._changeInstrument);
 				this._changeInstrument = new ChangeGroup();
 				const instruments: number[] = this._doc.recentPatternInstruments[this._doc.channel];
+				this._doc.notifier.changed(); // doc.recentPatternInstruments changes even if a 0 pattern is selected.
 				if (instruments.indexOf(instrument) == -1) {
 					instruments.push(instrument);
 					const maxLayers: number = this._doc.song.getMaxInstrumentsPerPattern(this._doc.channel);

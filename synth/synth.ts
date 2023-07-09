@@ -4542,6 +4542,12 @@ export class Synth {
 				}
 			}
 		}
+		/*
+		// JummBox needed to run synth functions for at least one sample (for JIT purposes)
+		// before starting audio callbacks to avoid skipping the initial output.
+		var dummyArray = new Float32Array(1);
+		this.synthesize(dummyArray, dummyArray, 1, true);
+		*/
 	}
 	
 	private static operatorAmplitudeCurve(amplitude: number): number {
@@ -4712,8 +4718,8 @@ export class Synth {
 	public play(): void {
 		if (this.isPlayingSong) return;
 		this.isPlayingSong = true;
-		this.activateAudio();
 		this.warmUpSynthesizer(this.song);
+		this.activateAudio();
 	}
 	
 	public pause(): void {
