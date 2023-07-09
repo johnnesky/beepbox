@@ -281,16 +281,26 @@ function onWindowResize(): void {
 	renderTimeline();
 }
 
+let pauseIfAnotherPlayerStartsHandle: ReturnType<typeof setInterval> | null = null;
+function pauseIfAnotherPlayerStarts(): void {
+	if (!synth.playing) {
+		clearInterval(pauseIfAnotherPlayerStartsHandle!);
+		return;
+	}
+	
+	const storedPlayerId: string | null = getLocalStorage("playerId");
+	if (storedPlayerId != null && storedPlayerId != id) {
+		onTogglePlay();
+		renderPlayhead();
+		clearInterval(pauseIfAnotherPlayerStartsHandle!);
+	}
+}
+
 function animate(): void {
 	if (synth.playing) {
 		animationRequest = requestAnimationFrame(animate);
-		const storedPlayerId: string | null = getLocalStorage("playerId");
-		if (storedPlayerId != null && storedPlayerId != id) {
-			onTogglePlay();
-		}
 		renderPlayhead();
 	}
-	
 	if (pauseButtonDisplayed != synth.playing) {
 		renderPlayButton();
 	}
@@ -306,6 +316,8 @@ function onTogglePlay(): void {
 			synth.play();
 			setLocalStorage("playerId", id);
 			animate();
+			clearInterval(pauseIfAnotherPlayerStartsHandle!);
+			pauseIfAnotherPlayerStartsHandle = setInterval(pauseIfAnotherPlayerStarts, 100);
 		}
 	}
 	renderPlayButton();
@@ -337,6 +349,7 @@ function onTimelineMouseDown(event: MouseEvent): void {
 }
 
 function onTimelineMouseMove(event: MouseEvent): void {
+	if (!draggingPlayhead) return;
 	event.preventDefault();
 	onTimelineCursorMove(event.clientX || event.pageX);
 }
