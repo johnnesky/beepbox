@@ -135,6 +135,10 @@ export class PatternEditor {
 		this.resetCopiedPins();
 	}
 	
+	private _getMaxPitch(): number {
+		return this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount - 1 : Config.maxPitch;
+	}
+	
 	private _getMaxDivision(): number {
 		const rhythmStepsPerBeat: number = Config.rhythms[this._doc.song.rhythm].stepsPerBeat;
 		if (rhythmStepsPerBeat % 4 == 0) {
@@ -227,7 +231,7 @@ export class PatternEditor {
 			}
 			
 			mousePitch -= interval;
-			this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, (this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount - 1 : Config.maxPitch) - maxInterval);
+			this._cursor.pitch = this._snapToPitch(mousePitch, -minInterval, this._getMaxPitch() - maxInterval);
 			
 			// Snap to nearby existing note if present.
 			if (!this._doc.song.getChannelIsNoise(this._doc.channel)) {
@@ -247,7 +251,7 @@ export class PatternEditor {
 				}
 			}
 		} else {
-			this._cursor.pitch = this._snapToPitch(mousePitch, 0, Config.maxPitch);
+			this._cursor.pitch = this._snapToPitch(mousePitch, 0, this._getMaxPitch());
 			const defaultLength: number = this._copiedPins[this._copiedPins.length-1].time;
 			const fullBeats: number = Math.floor(this._cursor.part / Config.partsPerBeat);
 			const maxDivision: number = this._getMaxDivision();
@@ -810,7 +814,7 @@ export class PatternEditor {
 						bendSize = Math.round(prevPin.size * (1.0 - sizeRatio) + nextPin.size * sizeRatio + ((this._mouseYStart - this._mouseY) / (75.0 / Config.noteSizeMax)));
 						if (bendSize < 0) bendSize = 0;
 						if (bendSize > Config.noteSizeMax) bendSize = Config.noteSizeMax;
-						bendInterval = this._snapToPitch(prevPin.interval * (1.0 - sizeRatio) + nextPin.interval * sizeRatio + this._cursor.curNote.pitches[0], 0, Config.maxPitch) - this._cursor.curNote.pitches[0];
+						bendInterval = this._snapToPitch(Math.round(prevPin.interval * (1.0 - sizeRatio) + nextPin.interval * sizeRatio + this._cursor.curNote.pitches[0]), 0, this._getMaxPitch()) - this._cursor.curNote.pitches[0];
 						break;
 					}
 					
@@ -854,7 +858,7 @@ export class PatternEditor {
 					}
 					minPitch -= this._cursor.curNote.pitches[this._cursor.pitchIndex];
 					maxPitch -= this._cursor.curNote.pitches[this._cursor.pitchIndex];
-					const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, (this._doc.song.getChannelIsNoise(this._doc.channel) ? Config.drumCount-1 : Config.maxPitch) - maxPitch);
+					const bendTo: number = this._snapToPitch(this._findMousePitch(this._mouseY), -minPitch, this._getMaxPitch() - maxPitch);
 					sequence.append(new ChangePitchBend(this._doc, this._cursor.curNote, bendStart, bendEnd, bendTo, this._cursor.pitchIndex));
 					this._copyPins(this._cursor.curNote);
 					
