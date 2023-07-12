@@ -825,7 +825,7 @@ export class SongEditor {
 			if (instrument.type == InstrumentType.pickedString) {
 				this._stringSustainRow.style.display = "";
 				this._stringSustainSlider.updateValue(instrument.stringSustain);
-				this._stringSustainLabel.textContent = "Sustain (" + Config.sustainTypeNames[instrument.stringSustainType].substring(0,1).toUpperCase() + "):";
+				this._stringSustainLabel.textContent = Config.enableAcousticSustain ? "Sustain (" + Config.sustainTypeNames[instrument.stringSustainType].substring(0,1).toUpperCase() + "):" : "Sustain:";
 			} else {
 				this._stringSustainRow.style.display = "none";
 			}

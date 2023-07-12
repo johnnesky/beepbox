@@ -1048,7 +1048,7 @@ export class Instrument {
 		this.vibrato = 0;
 		this.unison = 0;
 		this.stringSustain = 10;
-		this.stringSustainType = SustainType.acoustic;
+		this.stringSustainType = Config.enableAcousticSustain ? SustainType.acoustic : SustainType.bright;
 		this.fadeIn = 0;
 		this.fadeOut = Config.fadeOutNeutral;
 		this.transition = Config.transitions.dictionary["normal"].index;
@@ -1282,7 +1282,9 @@ export class Instrument {
 		} else if (this.type == InstrumentType.pickedString) {
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
 			instrumentObject["stringSustain"] = Math.round(100 * this.stringSustain / (Config.stringSustainRange - 1));
-			instrumentObject["stringSustainType"] = Config.sustainTypeNames[this.stringSustainType];
+			if (Config.enableAcousticSustain) {
+				instrumentObject["stringSustainType"] = Config.sustainTypeNames[this.stringSustainType];
+			}
 		} else if (this.type == InstrumentType.harmonics) {
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
 		} else if (this.type == InstrumentType.fm) {
@@ -1517,7 +1519,7 @@ export class Instrument {
 		} else {
 			this.stringSustain = 10;
 		}
-		this.stringSustainType = Config.sustainTypeNames.indexOf(instrumentObject["stringSustainType"]);
+		this.stringSustainType = Config.enableAcousticSustain ? Config.sustainTypeNames.indexOf(instrumentObject["stringSustainType"]) : SustainType.bright;
 		if (<any>this.stringSustainType == -1) this.stringSustainType = SustainType.bright;
 		
 		if (this.type == InstrumentType.noise) {
@@ -2550,7 +2552,7 @@ export class Song {
 				const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
 				const sustainValue: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 				instrument.stringSustain = clamp(0, Config.stringSustainRange, sustainValue & 0x1F);
-				instrument.stringSustainType = clamp(0, SustainType.length, sustainValue >> 5);
+				instrument.stringSustainType = Config.enableAcousticSustain ? clamp(0, SustainType.length, sustainValue >> 5) : SustainType.bright;
 			} break;
 			case SongTagCode.fadeInOut: {
 				if (beforeNine) {

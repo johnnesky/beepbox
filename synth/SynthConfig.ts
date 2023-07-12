@@ -489,6 +489,7 @@ export class Config {
 	public static readonly pickedStringShelfHz: number = 4000.0; // The cutoff freq of the shelf filter that is used to decay the high frequency energy in the picked string.
 	public static readonly stringSustainRange: number = 15;
 	public static readonly stringDecayRate: number = 0.12;
+	public static readonly enableAcousticSustain: boolean = false;
 	public static readonly sustainTypeNames: ReadonlyArray<string> = ["bright", "acoustic"]; // See SustainType enum above.
 	
 	public static readonly distortionRange: number = 8;
