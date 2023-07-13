@@ -177,7 +177,7 @@ export class SongEditor {
 	private readonly _optionsMenu: HTMLSelectElement = select({style: "width: 100%;"},
 		option({selected: true, disabled: true, hidden: false}, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
 		option({value: "autoPlay"}, "Auto Play on Load"),
-		option({value: "autoFollow"}, "Keep Current Pattern Selected"),
+		option({value: "autoFollow"}, "Show And Play The Same Bar"),
 		option({value: "enableNotePreview"}, "Hear Preview of Added Notes"),
 		option({value: "showLetters"}, "Show Piano Keys"),
 		option({value: "showFifth"}, 'Highlight "Fifth" of Song Key'),
@@ -215,8 +215,8 @@ export class SongEditor {
 	private readonly _instrumentRemoveButton: HTMLButtonElement = button({type: "button", class: "remove-instrument"});
 	private readonly _instrumentsButtonBar: HTMLDivElement = div({class: "instrument-bar"}, this._instrumentRemoveButton, this._instrumentAddButton);
 	private readonly _instrumentsButtonRow: HTMLDivElement = div({class: "selectRow", style: "display: none;"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentIndex")}, "Instrument:"), this._instrumentsButtonBar);
-	private readonly _instrumentCopyButton: HTMLButtonElement = button({type: "button", class: "copy-instrument"}, "Copy");
-	private readonly _instrumentPasteButton: HTMLButtonElement = button({type: "button", class: "paste-instrument"}, "Paste");
+	private readonly _instrumentCopyButton: HTMLButtonElement = button({type: "button", class: "copy-instrument", title: "Copy Instrument (⇧C)"}, "Copy");
+	private readonly _instrumentPasteButton: HTMLButtonElement = button({type: "button", class: "paste-instrument", title: "Paste Instrument (⇧V)"}, "Paste");
 	private readonly _instrumentCopyPasteRow: HTMLDivElement = div({class: "instrumentCopyPasteRow", style: "display: none;"}, this._instrumentCopyButton, this._instrumentPasteButton);
 	private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: -(Config.volumeRange - 1), max: "0", value: "0", step: "1"}), this._doc, (oldValue: number, newValue: number) => new ChangeVolume(this._doc, oldValue, -newValue));
 	private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume:"), this._instrumentVolumeSlider.input);
@@ -734,7 +734,7 @@ export class SongEditor {
 		
 		const optionCommands: ReadonlyArray<string> = [
 			(prefs.autoPlay ? "✓ " : "　") + "Auto Play on Load",
-			(prefs.autoFollow ? "✓ " : "　") + "Keep Current Pattern Selected",
+			(prefs.autoFollow ? "✓ " : "　") + "Show And Play The Same Bar",
 			(prefs.enableNotePreview ? "✓ " : "　") + "Hear Preview of Added Notes",
 			(prefs.showLetters ? "✓ " : "　") + "Show Piano Keys",
 			(prefs.showFifth ? "✓ " : "　") + 'Highlight "Fifth" of Song Key',

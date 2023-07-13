@@ -44,7 +44,7 @@ export class ChannelSettingsPrompt implements Prompt {
 			"per pattern:",
 			this._patternInstrumentsBox,
 		),
-		label({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
+		div({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
 			this._okayButton,
 		),
 		this._cancelButton,

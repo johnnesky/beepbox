@@ -51,7 +51,7 @@ export class TipPrompt implements Prompt {
 			case "instrumentIndex": {
 				message = div(
 					h2("Instrument Number"),
-					p("In the \"Channel Settings\" option from BeepBox's \"File\" menu, there are a few ways to enable multiple instruments per channel."),
+					p("In the \"Channel Settings\" option from BeepBox's \"Edit\" menu, there are a few ways to enable multiple instruments per channel."),
 					p("First, you could enable multiple simultaneous instruments per channel. All of the channel's instruments will play all of the notes in the channel at the same time, and you can click an instrument number to view and edit its settings."),
 					p("Second, you could enable different instruments per pattern. Only one of the instruments will play at any given time, but you can click the instrument number to change which instrument is used for the currently selected pattern(s)."),
 					p("Finally, you can enable them both, in which case you can click an instrument number once to view it, and again to toggle whether the instrument is used for the currently selected pattern(s)."),

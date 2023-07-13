@@ -3248,8 +3248,10 @@ export class Song {
 		this.scale = 11; // default to expert.
 		if (jsonObject["scale"] != undefined) {
 			const oldScaleNames: Dictionary<string> = {
-				"romani :)": "dbl harmonic :)",
-				"romani :(": "dbl harmonic :(",
+				"romani :)": "double harmonic :)",
+				"romani :(": "double harmonic :(",
+				"dbl harmonic :)": "double harmonic :)",
+				"dbl harmonic :(": "double harmonic :(",
 				"enigma": "strange",
 			};
 			const scaleName: string = (oldScaleNames[jsonObject["scale"]] != undefined) ? oldScaleNames[jsonObject["scale"]] : jsonObject["scale"];

@@ -8,7 +8,7 @@ import {Prompt} from "./Prompt";
 import {ChangeGroup} from "./Change";
 import {ChangeStringSustainType} from "./changes";
 
-const {button, div, label, h2, p, select, option} = HTML;
+const {button, div, h2, p, select, option} = HTML;
 
 export class SustainPrompt implements Prompt {
 	private readonly _typeSelect: HTMLSelectElement = select({style: "width: 100%;"},
@@ -28,7 +28,7 @@ export class SustainPrompt implements Prompt {
 			p("BeepBox comes with two slightly different sustain designs. You can select one here and press \"Okay\" to confirm it."),
 			div({class: "selectContainer", style: "width: 100%;"}, this._typeSelect),
 		),
-		label({style: {display: Config.enableAcousticSustain ? "flex" : "none", "flex-direction": "row-reverse", "justify-content": "space-between"}},
+		div({style: {display: Config.enableAcousticSustain ? "flex" : "none", "flex-direction": "row-reverse", "justify-content": "space-between"}},
 			this._okayButton,
 		),
 		this._cancelButton,

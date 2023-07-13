@@ -192,7 +192,7 @@
 							<li><b>Ctrl + Arrows</b>: rearrange channels</li>
 							<li><b>[ ]</b>: move playhead backward or forward</li>
 							<li><b>F/H</b>: move to First or Highlighted pattern </li>
-							<li><b>Shift & Drag</b>: select part of a pattern (long press on touch screen)</li>
+							<li><b>Shift & Drag</b>: select part of a pattern</li>
 							<li>Check BeepBox's edit menu for more!</li>
 						</ul>
 					</div>
@@ -200,6 +200,11 @@
 						In the note pattern editor, you can click and drag horizontally on a note to adjust its duration.
 						You can also click above or below an existing note to add more notes to be played simultaneously, which is called a chord. 
 					</p>
+					<div id="mobile-instructions" style="display: none;">
+						<p>
+							You can also long-press in the pattern editor to select a time range within a pattern, which you can then drag to move multiple notes at once.<br/>
+						</p>
+					</div>
 					<p>
 						ADVANCED: Drag vertically from an existing note to bend its pitch, or drag vertically from above or below the note to adjust its volume. Drag on the numbered pattern boxes to select multiple patterns to copy and paste parts of your song.
 					</p>
@@ -248,6 +253,7 @@
 		if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
 			document.getElementById("introduction").innerHTML = "BeepBox is an online tool for sketching and sharing instrumental music. Make sure that your volume is turned up, then press the play button!";
 			document.getElementById("keyboard-instructions").style.display = "none";
+			document.getElementById("mobile-instructions").style.display = "";
 			document.getElementById("bar-editing").innerHTML = "Tap the boxes to move to a different part of the song, or tap on the currently selected box to swap which pattern is played during that part of the song.";
 			document.getElementById("offline-instructions").innerHTML = 'You can use BeepBox when your device is offline if you put a shortcut to BeepBox on your home screen. <ul><li>Chrome: find the "Add to Home Screen" option in the ⋮ menu.</li><li>Firefox: find the "Add Page Shortcut" option in the ⋮ menu.</li><li>Safari: find the "Add to Home Screen" option in the bookmark menu.</li></ul>';
 		}
