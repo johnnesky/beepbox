@@ -650,6 +650,7 @@ export class ChangeRandomGeneratedInstrument extends Change {
 			const type: InstrumentType = selectWeightedRandom([
 				{item: InstrumentType.chip,         weight: 4},
 				{item: InstrumentType.pwm,          weight: 4},
+				{item: InstrumentType.supersaw,     weight: 5},
 				{item: InstrumentType.harmonics,    weight: 5},
 				{item: InstrumentType.pickedString, weight: 5},
 				{item: InstrumentType.spectrum,     weight: 1},
@@ -786,7 +787,14 @@ export class ChangeRandomGeneratedInstrument extends Change {
 				case InstrumentType.chip: {
 					instrument.chipWave = (Math.random() * Config.chipWaves.length)|0;
 				} break;
-				case InstrumentType.pwm: {
+				case InstrumentType.pwm:
+				case InstrumentType.supersaw: {
+					if (type == InstrumentType.supersaw) {
+						instrument.supersawDynamism = selectCurvedDistribution(0, Config.supersawDynamismMax, Config.supersawDynamismMax, 2);
+						instrument.supersawSpread = selectCurvedDistribution(0, Config.supersawSpreadMax, Math.ceil(Config.supersawSpreadMax / 3), 4);
+						instrument.supersawShape = selectCurvedDistribution(0, Config.supersawShapeMax, 0, 4);
+					}
+					
 					instrument.pulseWidth = selectCurvedDistribution(0, Config.pulseWidthRange - 1, Config.pulseWidthRange - 1, 2);
 					
 					if (Math.random() < 0.6) {
@@ -1308,6 +1316,31 @@ export class ChangePulseWidth extends ChangeInstrumentSlider {
 	constructor(doc: SongDocument, oldValue: number, newValue: number) {
 		super(doc);
 		this._instrument.pulseWidth = newValue;
+		doc.notifier.changed();
+		if (oldValue != newValue) this._didSomething();
+	}
+}
+
+export class ChangeSupersawDynamism extends ChangeInstrumentSlider {
+	constructor(doc: SongDocument, oldValue: number, newValue: number) {
+		super(doc);
+		this._instrument.supersawDynamism = newValue;
+		doc.notifier.changed();
+		if (oldValue != newValue) this._didSomething();
+	}
+}
+export class ChangeSupersawSpread extends ChangeInstrumentSlider {
+	constructor(doc: SongDocument, oldValue: number, newValue: number) {
+		super(doc);
+		this._instrument.supersawSpread = newValue;
+		doc.notifier.changed();
+		if (oldValue != newValue) this._didSomething();
+	}
+}
+export class ChangeSupersawShape extends ChangeInstrumentSlider {
+	constructor(doc: SongDocument, oldValue: number, newValue: number) {
+		super(doc);
+		this._instrument.supersawShape = newValue;
 		doc.notifier.changed();
 		if (oldValue != newValue) this._didSomething();
 	}

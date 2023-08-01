@@ -483,7 +483,7 @@ export class ExportPrompt implements Prompt {
 									if (ExportPrompt.midiChipInstruments.length > instrument.chipWave) {
 										instrumentProgram = ExportPrompt.midiChipInstruments[instrument.chipWave];
 									}
-								} else if (instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics) {
+								} else if (instrument.type == InstrumentType.pwm || instrument.type == InstrumentType.fm || instrument.type == InstrumentType.harmonics || instrument.type == InstrumentType.supersaw) {
 									instrumentProgram = 81; // sawtooth
 								} else if (instrument.type == InstrumentType.pickedString) {
 									instrumentProgram = 0x19; // steel guitar

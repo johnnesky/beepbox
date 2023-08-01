@@ -124,6 +124,27 @@ export class TipPrompt implements Prompt {
 					p("BeepBox comes with several basic noise sounds. These do not have any distinct musical pitch, and can be used like drums to create beats and emphasize your song's rhythm."),
 				);
 			} break;
+			case "supersawDynamism": {
+				message = div(
+					h2("Supersaw Dynamism"),
+					p("A supersaw is a combination of many sawtooth waves, and this setting controls the contribution of extra sawtooth waves."),
+					p("At the low end of the slider, only the first wave is contributing to the sound, which sounds like an ordinary static sawtooth wave. At the maximum setting, all of the waves are contributing equally and the resulting tone can randomly shift depending on how the waves line up with each other, similar to the \"unison\" and \"chorus\" settings."),
+				);
+			} break;
+			case "supersawSpread": {
+				message = div(
+					h2("Supersaw Spread"),
+					p("A supersaw is a combination of many sawtooth waves, and this setting controls the distance between their frequencies. The dynamism setting must be used for the extra waves to have any effect."),
+					p("At the low end of the spread slider, all of the voices have the same frequency but random phase, resulting in a different sound every time a note starts. In the middle, the waves all have slightly different frequencies that shift in and out of phase over time similar to the \"unison\" and \"chorus\" settings, creating a classic supersaw sound. At the extreme end, the frequencies are so far apart they sound dissonant."),
+				);
+			} break;
+			case "supersawShape": {
+				message = div(
+					h2("Supersaw Shape"),
+					p("This supersaw instrument includes an option to change the shape of the waves from sawtooth waves to pulse waves. Use this setting to morph between the two shapes."),
+					p("When a pulse wave shape is used, you can also control the pulse width with a separate setting."),
+				);
+			} break;
 			case "pulseWidth": {
 				message = div(
 					h2("Pulse Wave Width"),

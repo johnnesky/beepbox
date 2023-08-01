@@ -110,52 +110,70 @@ const enum CharCode {
 }
 
 const enum SongTagCode {
-	beatCount           = CharCode.a, // added in song url version 2
-	bars                = CharCode.b, // added in 2
-	vibrato             = CharCode.c, // added in 2, DEPRECATED
-	fadeInOut           = CharCode.d, // added in 3 for transition, switched to fadeInOut in 9
-	loopEnd             = CharCode.e, // added in 2
-	eqFilter            = CharCode.f, // added in 3
-	barCount            = CharCode.g, // added in 3
-	unison              = CharCode.h, // added in 2
-	instrumentCount     = CharCode.i, // added in 3
-	patternCount        = CharCode.j, // added in 3
-	key                 = CharCode.k, // added in 2
-	loopStart           = CharCode.l, // added in 2
-	reverb              = CharCode.m, // added in 5, DEPRECATED
-	channelCount        = CharCode.n, // added in 6
-	channelOctave       = CharCode.o, // added in 3
-	patterns            = CharCode.p, // added in 2
-	effects             = CharCode.q, // added in 7
-	rhythm              = CharCode.r, // added in 2
-	scale               = CharCode.s, // added in 2
-	tempo               = CharCode.t, // added in 2
-	preset              = CharCode.u, // added in 7
-	volume              = CharCode.v, // added in 2
-	wave                = CharCode.w, // added in 2
-	
-	filterResonance     = CharCode.y, // added in 7, DEPRECATED
-	drumsetEnvelopes    = CharCode.z, // added in 7 for filter envelopes, still used for drumset envelopes
-	algorithm           = CharCode.A, // added in 6
-	feedbackAmplitude   = CharCode.B, // added in 6
-	chord               = CharCode.C, // added in 7, DEPRECATED
-	
-	envelopes           = CharCode.E, // added in 6 for FM operator envelopes, repurposed in 9 for general envelopes.
-	feedbackType        = CharCode.F, // added in 6
-	
-	harmonics           = CharCode.H, // added in 7
-	stringSustain       = CharCode.I, // added in 9
-	
+	beatCount           = CharCode.a, // added in BeepBox URL version 2
+	bars                = CharCode.b, // added in BeepBox URL version 2
+	vibrato             = CharCode.c, // added in BeepBox URL version 2, DEPRECATED
+	fadeInOut           = CharCode.d, // added in BeepBox URL version 3 for transition, switched to fadeInOut in 9
+	loopEnd             = CharCode.e, // added in BeepBox URL version 2
+	eqFilter            = CharCode.f, // added in BeepBox URL version 3
+	barCount            = CharCode.g, // added in BeepBox URL version 3
+	unison              = CharCode.h, // added in BeepBox URL version 2
+	instrumentCount     = CharCode.i, // added in BeepBox URL version 3
+	patternCount        = CharCode.j, // added in BeepBox URL version 3
+	key                 = CharCode.k, // added in BeepBox URL version 2
+	loopStart           = CharCode.l, // added in BeepBox URL version 2
+	reverb              = CharCode.m, // added in BeepBox URL version 5, DEPRECATED
+	channelCount        = CharCode.n, // added in BeepBox URL version 6
+	channelOctave       = CharCode.o, // added in BeepBox URL version 3
+	patterns            = CharCode.p, // added in BeepBox URL version 2
+	effects             = CharCode.q, // added in BeepBox URL version 7
+	rhythm              = CharCode.r, // added in BeepBox URL version 2
+	scale               = CharCode.s, // added in BeepBox URL version 2
+	tempo               = CharCode.t, // added in BeepBox URL version 2
+	preset              = CharCode.u, // added in BeepBox URL version 7
+	volume              = CharCode.v, // added in BeepBox URL version 2
+	wave                = CharCode.w, // added in BeepBox URL version 2
+	supersaw            = CharCode.x, // added in BeepBox URL version 9
+	filterResonance     = CharCode.y, // added in BeepBox URL version 7, DEPRECATED
+	drumsetEnvelopes    = CharCode.z, // added in BeepBox URL version 7 for filter envelopes, still used for drumset envelopes
+	algorithm           = CharCode.A, // added in BeepBox URL version 6
+	feedbackAmplitude   = CharCode.B, // added in BeepBox URL version 6
+	chord               = CharCode.C, // added in BeepBox URL version 7, DEPRECATED
+//	                    = CharCode.D, // added in JummBox URL version 3(?) for detune, DEPRECATED
+	envelopes           = CharCode.E, // added in BeepBox URL version 6 for FM operator envelopes, repurposed in 9 for general envelopes.
+	feedbackType        = CharCode.F, // added in BeepBox URL version 6
+//	                    = CharCode.G, // added in JummBox URL version 3 for arpeggioSpeed, DEPRECATED
+	harmonics           = CharCode.H, // added in BeepBox URL version 7
+	stringSustain       = CharCode.I, // added in BeepBox URL version 9
+//	                    = CharCode.J,
+//	                    = CharCode.K,
 	pan                 = CharCode.L, // added between 8 and 9, DEPRECATED
-	
-	operatorAmplitudes  = CharCode.P, // added in 6
-	operatorFrequencies = CharCode.Q, // added in 6
-	
-	spectrum            = CharCode.S, // added in 7
-	startInstrument     = CharCode.T, // added in 6
-	
-	feedbackEnvelope    = CharCode.V, // added in 6, DEPRECATED
-	pulseWidth          = CharCode.W, // added in 7
+//	                    = CharCode.M, // added in JummBox URL version 1(?) for customChipWave
+//	                    = CharCode.N, // added in JummBox URL version 1(?) for songTitle
+//	                    = CharCode.O, // added in JummBox URL version 3(?) for limiterSettings
+	operatorAmplitudes  = CharCode.P, // added in BeepBox URL version 6
+	operatorFrequencies = CharCode.Q, // added in BeepBox URL version 6
+//	                    = CharCode.R, // added in JummBox URL version 4 for operatorWaves
+	spectrum            = CharCode.S, // added in BeepBox URL version 7
+	startInstrument     = CharCode.T, // added in BeepBox URL version 6
+//	                    = CharCode.U, // added in JummBox URL version 4(?) for channelNames
+	feedbackEnvelope    = CharCode.V, // added in BeepBox URL version 6, DEPRECATED
+	pulseWidth          = CharCode.W, // added in BeepBox URL version 7
+//	                    = CharCode.X, // added in JummBox URL version 4 for aliases, DEPRECATED
+//	                    = CharCode.Y,
+//	                    = CharCode.Z,
+//	                    = CharCode.NUM_0,
+//	                    = CharCode.NUM_1,
+//	                    = CharCode.NUM_2,
+//	                    = CharCode.NUM_3,
+//	                    = CharCode.NUM_4,
+//	                    = CharCode.NUM_5,
+//	                    = CharCode.NUM_6,
+//	                    = CharCode.NUM_7,
+//	                    = CharCode.NUM_8,
+//	                    = CharCode.NUM_9,
+//	                    = CharCode.DASH,
+//	                    = CharCode.UNDERSCORE,
 }
 
 const base64IntToCharCode: ReadonlyArray<number> = [48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,45,95];
@@ -999,6 +1017,9 @@ export class Instrument {
 	public volume: number = 0;
 	public pan: number = Config.panCenter;
 	public pulseWidth: number = Config.pulseWidthRange - 1;
+	public supersawDynamism: number = Config.supersawDynamismMax;
+	public supersawSpread: number = Math.ceil(Config.supersawSpreadMax / 2.0);
+	public supersawShape: number = 0;
 	public stringSustain: number = 10;
 	public stringSustainType: SustainType = SustainType.acoustic;
 	public distortion: number = 0;
@@ -1094,6 +1115,13 @@ export class Instrument {
 			case InstrumentType.pickedString:
 				this.chord = Config.chords.dictionary["strum"].index;
 				this.harmonicsWave.reset();
+				break;
+			case InstrumentType.supersaw:
+				this.chord = Config.chords.dictionary["arpeggio"].index;
+				this.supersawDynamism = Config.supersawDynamismMax;
+				this.supersawSpread = Math.ceil(Config.supersawSpreadMax / 2.0);
+				this.supersawShape = 0;
+				this.pulseWidth = Config.pulseWidthRange - 1;
 				break;
 			default:
 				throw new Error("Unrecognized instrument type: " + type);
@@ -1279,6 +1307,11 @@ export class Instrument {
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
 		} else if (this.type == InstrumentType.pwm) {
 			instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
+		} else if (this.type == InstrumentType.supersaw) {
+			instrumentObject["pulseWidth"] = Math.round(getPulseWidthRatio(this.pulseWidth) * 100 * 100000) / 100000;
+			instrumentObject["dynamism"] = Math.round(100 * this.supersawDynamism / Config.supersawDynamismMax);
+			instrumentObject["spread"] = Math.round(100 * this.supersawSpread / Config.supersawSpreadMax);
+			instrumentObject["shape"] = Math.round(100 * this.supersawShape / Config.supersawShapeMax);
 		} else if (this.type == InstrumentType.pickedString) {
 			instrumentObject["unison"] = Config.unisons[this.unison].name;
 			instrumentObject["stringSustain"] = Math.round(100 * this.stringSustain / (Config.stringSustainRange - 1));
@@ -1496,6 +1529,22 @@ export class Instrument {
 			this.pulseWidth = Config.pulseWidthRange - 1;
 		}
 		
+		if (instrumentObject["dynamism"] != undefined) {
+			this.supersawDynamism = clamp(0, Config.supersawDynamismMax + 1, Math.round(Config.supersawDynamismMax * (instrumentObject["dynamism"] | 0) / 100));
+		} else {
+			this.supersawDynamism = Config.supersawDynamismMax;
+		}
+		if (instrumentObject["spread"] != undefined) {
+			this.supersawSpread = clamp(0, Config.supersawSpreadMax + 1, Math.round(Config.supersawSpreadMax * (instrumentObject["spread"] | 0) / 100));
+		} else {
+			this.supersawSpread = Math.ceil(Config.supersawSpreadMax / 2.0);
+		}
+		if (instrumentObject["shape"] != undefined) {
+			this.supersawShape = clamp(0, Config.supersawShapeMax + 1, Math.round(Config.supersawShapeMax * (instrumentObject["shape"] | 0) / 100));
+		} else {
+			this.supersawShape = 0;
+		}
+		
 		if (instrumentObject["harmonics"] != undefined) {
 			for (let i: number = 0; i < Config.harmonicsControlPoints; i++) {
 				this.harmonicsWave.harmonics[i] = Math.max(0, Math.min(Config.harmonicsMax, Math.round(Config.harmonicsMax * (+instrumentObject["harmonics"][i]) / 100)));
@@ -1668,6 +1717,9 @@ export class Instrument {
 	
 	public supportsEnvelopeTarget(target: number, index: number): boolean {
 		const automationTarget: AutomationTarget = Config.instrumentAutomationTargets[target];
+		if (automationTarget.computeIndex == null && automationTarget.name != "none") {
+			return false;
+		}
 		if (index >= automationTarget.maxCount) {
 			return false;
 		}
@@ -1969,6 +2021,9 @@ export class Song {
 				} else if (instrument.type == InstrumentType.harmonics) {
 					buffer.push(SongTagCode.unison, base64IntToCharCode[instrument.unison]);
 				} else if (instrument.type == InstrumentType.pwm) {
+					buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth]);
+				} else if (instrument.type == InstrumentType.supersaw) {
+					buffer.push(SongTagCode.supersaw, base64IntToCharCode[instrument.supersawDynamism], base64IntToCharCode[instrument.supersawSpread], base64IntToCharCode[instrument.supersawShape]);
 					buffer.push(SongTagCode.pulseWidth, base64IntToCharCode[instrument.pulseWidth]);
 				} else if (instrument.type == InstrumentType.pickedString) {
 					buffer.push(SongTagCode.unison, base64IntToCharCode[instrument.unison]);
@@ -2547,6 +2602,12 @@ export class Song {
 					legacySettings.pulseEnvelope = Song._envelopeFromLegacyIndex(base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 					instrument.convertLegacySettings(legacySettings);
 				}
+			} break;
+			case SongTagCode.supersaw: {
+				const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+				instrument.supersawDynamism = clamp(0, Config.supersawDynamismMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				instrument.supersawSpread = clamp(0, Config.supersawSpreadMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+				instrument.supersawShape = clamp(0, Config.supersawShapeMax + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 			} break;
 			case SongTagCode.stringSustain: {
 				const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
@@ -3918,6 +3979,16 @@ class Tone {
 	public prevStringDecay: number | null = null;
 	public pulseWidth: number = 0.0;
 	public pulseWidthDelta: number = 0.0;
+	public supersawDynamism: number = 0.0;
+	public supersawDynamismDelta: number = 0.0;
+	public supersawUnisonDetunes: number[] = []; // These can change over time, but slowly enough that I'm not including corresponding delta values within a tick run.
+	public supersawShape: number = 0.0;
+	public supersawShapeDelta: number = 0.0;
+	public supersawDelayLength: number = 0.0;
+	public supersawDelayLengthDelta: number = 0.0;
+	public supersawDelayLine: Float32Array | null = null;
+	public supersawDelayIndex: number = -1;
+	public supersawPrevPhaseDelta: number | null = null;
 	public readonly pickedStrings: PickedString[] = [];
 	
 	public readonly noteFilters: DynamicBiquadFilter[] = [];
@@ -3950,12 +4021,14 @@ class Tone {
 		this.initialNoteFilterInput1 = 0.0;
 		this.initialNoteFilterInput2 = 0.0;
 		this.liveInputSamplesHeld = 0;
+		this.supersawDelayIndex = -1;
 		for (const pickedString of this.pickedStrings) {
 			pickedString.reset();
 		}
 		this.envelopeComputer.reset();
 		this.prevVibrato = null;
 		this.prevStringDecay = null;
+		this.supersawPrevPhaseDelta = null;
 		this.drumsetPitch = null;
 	}
 }
@@ -5614,6 +5687,8 @@ export class Synth {
 			baseExpression = Config.harmonicsBaseExpression;
 		} else if (instrument.type == InstrumentType.pwm) {
 			baseExpression = Config.pwmBaseExpression;
+		} else if (instrument.type == InstrumentType.supersaw) {
+			baseExpression = Config.supersawBaseExpression;
 		} else if (instrument.type == InstrumentType.pickedString) {
 			baseExpression = Config.pickedStringBaseExpression;
 		} else {
@@ -5944,7 +6019,8 @@ export class Synth {
 			tone.feedbackMult = feedbackStart;
 			tone.feedbackDelta = (feedbackEnd - feedbackStart) / roundedSamplesPerTick;
 		} else {
-			const basePhaseDeltaScale: number = Math.pow(2.0, ((intervalEnd - intervalStart) * intervalScale / 12.0) / roundedSamplesPerTick);
+			const freqEndRatio: number = Math.pow(2.0, (intervalEnd - intervalStart) * intervalScale / 12.0);
+			const basePhaseDeltaScale: number = Math.pow(freqEndRatio, 1.0 / roundedSamplesPerTick);
 			
 			let pitch: number = tone.pitches[0];
 			if (tone.pitchCount > 1 && (chord.arpeggiates || chord.customInterval)) {
@@ -5984,6 +6060,7 @@ export class Synth {
 				tone.pulseWidth = pulseWidthStart;
 				tone.pulseWidthDelta = (pulseWidthEnd - pulseWidthStart) / roundedSamplesPerTick;
 			}
+			
 			if (instrument.type == InstrumentType.pickedString) {
 				// Increase expression to compensate for string decay.
 				settingsExpressionMult *= Math.pow(2.0, 0.7 * (1.0 - instrument.stringSustain / (Config.stringSustainRange - 1)));
@@ -6010,8 +6087,152 @@ export class Synth {
 				tone.phaseDeltaScales[0] = basePhaseDeltaScale;
 			}
 			
-			const expressionStart: number = settingsExpressionMult * fadeExpressionStart * chordExpressionStart * pitchExpressionStart * envelopeStarts[EnvelopeComputeIndex.noteVolume];
-			const expressionEnd:   number = settingsExpressionMult * fadeExpressionEnd   * chordExpressionEnd   * pitchExpressionEnd   * envelopeEnds[  EnvelopeComputeIndex.noteVolume];
+			// TODO: make expressionStart and expressionEnd variables earlier and modify those
+			// instead of these supersawExpression variables.
+			let supersawExpressionStart: number = 1.0;
+			let supersawExpressionEnd: number = 1.0;
+			if (instrument.type == InstrumentType.supersaw) {
+				const minFirstVoiceAmplitude: number = 1.0 / Math.sqrt(Config.supersawVoiceCount);
+				const baseDynamismSlider: number = instrument.supersawDynamism / Config.supersawDynamismMax;
+				const curvedDynamismStart: number = 1.0 - Math.pow(Math.max(0.0, 1.0 - baseDynamismSlider * envelopeStarts[EnvelopeComputeIndex.supersawDynamism]), 0.2);
+				const curvedDynamismEnd:   number = 1.0 - Math.pow(Math.max(0.0, 1.0 - baseDynamismSlider * envelopeEnds[  EnvelopeComputeIndex.supersawDynamism]), 0.2);
+				const firstVoiceAmplitudeStart: number = Math.pow(2.0, Math.log2(minFirstVoiceAmplitude) * curvedDynamismStart);
+				const firstVoiceAmplitudeEnd:   number = Math.pow(2.0, Math.log2(minFirstVoiceAmplitude) * curvedDynamismEnd);
+				// TODO: automation
+				const dynamismStart: number = Math.sqrt((1.0 / Math.pow(firstVoiceAmplitudeStart, 2.0) - 1.0) / (Config.supersawVoiceCount - 1.0));
+				const dynamismEnd:   number = Math.sqrt((1.0 / Math.pow(firstVoiceAmplitudeEnd, 2.0) - 1.0) / (Config.supersawVoiceCount - 1.0));
+				tone.supersawDynamism = dynamismStart;
+				tone.supersawDynamismDelta = (dynamismEnd - dynamismStart) / roundedSamplesPerTick;
+				
+				const initializeSupersaw: boolean = (tone.supersawDelayIndex == -1);
+				if (initializeSupersaw) {
+					// Goal: generate sawtooth phases such that the combined initial amplitude
+					// cancel out to minimize pop. Algorithm: generate sorted phases, iterate over
+					// their sawtooth drop points to find a combined zero crossing, then offset the
+					// phases so they start there.
+					
+					// Generate random phases in ascending order by adding positive randomly
+					// sized gaps between adjacent phases. For a proper distribution of random
+					// events, the gaps sizes should be an "exponential distribution", which is
+					// just: -Math.log(Math.random()). At the end, normalize the phases to a 0-1
+					// range by dividing by the final value of the accumulator.
+					let accumulator: number = 0.0;
+					for (let i: number = 0; i < Config.supersawVoiceCount; i++) {
+						tone.phases[i] = accumulator;
+						accumulator += -Math.log(Math.random());
+					}
+					
+					const amplitudeSum: number = 1.0 + (Config.supersawVoiceCount - 1.0) * dynamismStart;
+					const slope: number = amplitudeSum;
+					
+					// Find the initial amplitude of the sum of sawtooths with the normalized
+					// set of phases.
+					let sample: number = 0.0;
+					for (let i: number = 0; i < Config.supersawVoiceCount; i++) {
+						const amplitude: number = (i == 0) ? 1.0 : dynamismStart;
+						const normalizedPhase: number = tone.phases[i] / accumulator;
+						tone.phases[i] = normalizedPhase;
+						sample += (normalizedPhase - 0.5) * amplitude;
+					}
+					
+					// Find the phase of the zero crossing of the sum of the sawtooths. You can
+					// use a constant slope and the distance between sawtooth drops to determine if
+					// the zero crossing occurs between them. Note that a small phase means that
+					// the corresponding drop for that wave is far away, and a big phase means the
+					// drop is nearby, so to iterate forward through the drops we iterate backward
+					// through the phases.
+					let zeroCrossingPhase: number = 1.0;
+					let prevDrop: number = 0.0;
+					for (let i: number = Config.supersawVoiceCount - 1; i >= 0; i--) {
+						const nextDrop: number = 1.0 - tone.phases[i];
+						const phaseDelta: number = nextDrop - prevDrop;
+						if (sample < 0.0) {
+							const distanceToZeroCrossing: number = -sample / slope;
+							if (distanceToZeroCrossing < phaseDelta) {
+								zeroCrossingPhase = prevDrop + distanceToZeroCrossing;
+								break;
+							}
+						}
+						const amplitude: number = (i == 0) ? 1.0 : dynamismStart;
+						sample += phaseDelta * slope - amplitude;
+						prevDrop = nextDrop;
+					}
+					for (let i: number = 0; i < Config.supersawVoiceCount; i++) {
+						tone.phases[i] += zeroCrossingPhase;
+					}
+					
+					// Randomize the (initially sorted) order of the phases (aside from the
+					// first one) so that they don't correlate to the detunes that are also
+					// based on index.
+					for (let i: number = 1; i < Config.supersawVoiceCount - 1; i++) {
+						const swappedIndex: number = i + Math.floor(Math.random() * (Config.supersawVoiceCount - i));
+						const temp: number = tone.phases[i];
+						tone.phases[i] = tone.phases[swappedIndex];
+						tone.phases[swappedIndex] = temp;
+					}
+				}
+				
+				const baseSpreadSlider: number = instrument.supersawSpread / Config.supersawSpreadMax;
+				// TODO: automation
+				const spreadSliderStart: number = baseSpreadSlider * envelopeStarts[EnvelopeComputeIndex.supersawSpread];
+				const spreadSliderEnd:   number = baseSpreadSlider * envelopeEnds[  EnvelopeComputeIndex.supersawSpread];
+				// Just use the average detune for the current tick in the below loop.
+				const averageSpreadSlider: number = (spreadSliderStart + spreadSliderEnd) * 0.5;
+				const curvedSpread: number = Math.pow(1.0 - Math.sqrt(Math.max(0.0, 1.0 - averageSpreadSlider)), 1.75);
+				for (let i = 0; i < Config.supersawVoiceCount; i++) {
+					// Spread out the detunes around the center;
+					const offset: number = (i == 0) ? 0.0 : Math.pow((((i + 1) >> 1) - 0.5 + 0.025 * ((i & 2) - 1)) / (Config.supersawVoiceCount >> 1), 1.1) * ((i & 1) * 2 - 1);
+					tone.supersawUnisonDetunes[i] = Math.pow(2.0, curvedSpread * offset / 12.0);
+				}
+				
+				const baseShape: number = instrument.supersawShape / Config.supersawShapeMax;
+				// TODO: automation
+				const shapeStart: number = baseShape * envelopeStarts[EnvelopeComputeIndex.supersawShape];
+				const shapeEnd:   number = baseShape * envelopeEnds[  EnvelopeComputeIndex.supersawShape];
+				tone.supersawShape = shapeStart;
+				tone.supersawShapeDelta = (shapeEnd - shapeStart) / roundedSamplesPerTick;
+				
+				const basePulseWidth: number = getPulseWidthRatio(instrument.pulseWidth);
+				// TODO: automation
+				const pulseWidthStart: number = basePulseWidth * envelopeStarts[EnvelopeComputeIndex.pulseWidth];
+				const pulseWidthEnd:   number = basePulseWidth * envelopeEnds[  EnvelopeComputeIndex.pulseWidth];
+				const phaseDeltaStart: number = (tone.supersawPrevPhaseDelta != null) ? tone.supersawPrevPhaseDelta : startFreq * sampleTime;
+				const phaseDeltaEnd: number = startFreq * sampleTime * freqEndRatio;
+				tone.supersawPrevPhaseDelta = phaseDeltaEnd;
+				const delayLengthStart = pulseWidthStart / phaseDeltaStart;
+				const delayLengthEnd = pulseWidthEnd / phaseDeltaEnd;
+				tone.supersawDelayLength = delayLengthStart;
+				tone.supersawDelayLengthDelta = (delayLengthEnd - delayLengthStart) / roundedSamplesPerTick;
+				const minBufferLength: number = Math.ceil(Math.max(delayLengthStart, delayLengthEnd)) + 2;
+				
+				if (tone.supersawDelayLine == null || tone.supersawDelayLine.length <= minBufferLength) {
+					// The delay line buffer will get reused for other tones so might as well
+					// start off with a buffer size that is big enough for most notes.
+					const likelyMaximumLength: number = Math.ceil(0.5 * this.samplesPerSecond / Instrument.frequencyFromPitch(24));
+					const newDelayLine: Float32Array = new Float32Array(Synth.fittingPowerOfTwo(Math.max(likelyMaximumLength, minBufferLength)));
+					if (!initializeSupersaw && tone.supersawDelayLine != null) {
+						// If the tone has already started but the buffer needs to be reallocated,
+						// transfer the old data to the new buffer.
+						const oldDelayBufferMask: number = (tone.supersawDelayLine.length - 1) >> 0;
+						const startCopyingFromIndex: number = tone.supersawDelayIndex;
+						for (let i: number = 0; i < tone.supersawDelayLine.length; i++) {
+							newDelayLine[i] = tone.supersawDelayLine[(startCopyingFromIndex + i) & oldDelayBufferMask];
+						}
+					}
+					tone.supersawDelayLine = newDelayLine;
+					tone.supersawDelayIndex = tone.supersawDelayLine.length;
+				} else if (initializeSupersaw) {
+					tone.supersawDelayLine.fill(0.0);
+					tone.supersawDelayIndex = tone.supersawDelayLine.length;
+				}
+				
+				const pulseExpressionRatio: number = Config.pwmBaseExpression / Config.supersawBaseExpression;
+				supersawExpressionStart *= (1.0 + (pulseExpressionRatio - 1.0) * shapeStart) / Math.sqrt(1.0 + (Config.supersawVoiceCount - 1.0) * dynamismStart * dynamismStart);
+				supersawExpressionEnd *= (1.0 + (pulseExpressionRatio - 1.0) * shapeEnd) / Math.sqrt(1.0 + (Config.supersawVoiceCount - 1.0) * dynamismEnd * dynamismEnd);
+			}
+			
+			const expressionStart: number = settingsExpressionMult * fadeExpressionStart * chordExpressionStart * pitchExpressionStart * envelopeStarts[EnvelopeComputeIndex.noteVolume] * supersawExpressionStart;
+			const expressionEnd:   number = settingsExpressionMult * fadeExpressionEnd   * chordExpressionEnd   * pitchExpressionEnd   * envelopeEnds[  EnvelopeComputeIndex.noteVolume] * supersawExpressionEnd;
 			tone.expression = expressionStart;
 			tone.expressionDelta = (expressionEnd - expressionStart) / roundedSamplesPerTick;
 			
@@ -6113,6 +6334,8 @@ export class Synth {
 			return Synth.harmonicsSynth;
 		} else if (instrument.type == InstrumentType.pwm) {
 			return Synth.pulseWidthSynth;
+		} else if (instrument.type == InstrumentType.supersaw) {
+			return Synth.supersawSynth;
 		} else if (instrument.type == InstrumentType.pickedString) {
 			return Synth.pickedStringSynth;
 		} else if (instrument.type == InstrumentType.noise) {
@@ -7085,6 +7308,109 @@ export class Synth {
 		tone.initialNoteFilterInput2 = initialFilterInput2;
 	}
 	
+	private static supersawSynth(synth: Synth, bufferIndex: number, runLength: number, tone: Tone, instrumentState: InstrumentState): void {
+		const data: Float32Array = synth.tempMonoInstrumentSampleBuffer!;
+		const voiceCount: number = Config.supersawVoiceCount|0;
+		
+		let phaseDelta: number = tone.phaseDeltas[0];
+		const phaseDeltaScale: number = +tone.phaseDeltaScales[0];
+		let expression: number = +tone.expression;
+		const expressionDelta: number = +tone.expressionDelta;
+		let phases: number[] = tone.phases;
+		
+		let dynamism: number = +tone.supersawDynamism;
+		const dynamismDelta: number = +tone.supersawDynamismDelta;
+		const unisonDetunes: number[] = tone.supersawUnisonDetunes;
+		let shape: number = +tone.supersawShape;
+		const shapeDelta: number = +tone.supersawShapeDelta;
+		let delayLength: number = +tone.supersawDelayLength;
+		const delayLengthDelta: number = +tone.supersawDelayLengthDelta;
+		const delayLine: Float32Array = tone.supersawDelayLine!;
+		const delayBufferMask: number = (delayLine.length - 1) >> 0;
+		let delayIndex: number = tone.supersawDelayIndex|0;
+		delayIndex = (delayIndex & delayBufferMask) + delayLine.length;
+		
+		const filters: DynamicBiquadFilter[] = tone.noteFilters;
+		const filterCount: number = tone.noteFilterCount|0;
+		let initialFilterInput1: number = +tone.initialNoteFilterInput1;
+		let initialFilterInput2: number = +tone.initialNoteFilterInput2;
+		const applyFilters: Function = Synth.applyFilters;
+		
+		const stopIndex: number = bufferIndex + runLength;
+		for (let sampleIndex: number = bufferIndex; sampleIndex < stopIndex; sampleIndex++) {
+			// The phase initially starts at a zero crossing so apply
+			// the delta before first sample to get a nonzero value.
+			let phase: number = (phases[0] + phaseDelta) % 1.0;
+			let supersawSample: number = phase - 0.5 * (1.0 + (voiceCount - 1.0) * dynamism);
+			
+			// This is a PolyBLEP, which smooths out discontinuities at any frequency to reduce aliasing. 
+			if (phase < phaseDelta) {
+				var t: number = phase / phaseDelta;
+				supersawSample -= (t+t-t*t-1) * 0.5;
+			} else if (phase > 1.0 - phaseDelta) {
+				var t: number = (phase - 1.0) / phaseDelta;
+				supersawSample -= (t+t+t*t+1) * 0.5;
+			}
+			
+			phases[0] = phase;
+			
+			for (let i: number = 1; i < voiceCount; i++) {
+				const detunedPhaseDelta: number = phaseDelta * unisonDetunes[i];
+				// The phase initially starts at a zero crossing so apply
+				// the delta before first sample to get a nonzero value.
+				let phase: number = (phases[i] + detunedPhaseDelta) % 1.0;
+				supersawSample += phase * dynamism;
+				
+				// This is a PolyBLEP, which smooths out discontinuities at any frequency to reduce aliasing. 
+				if (phase < detunedPhaseDelta) {
+					const t: number = phase / detunedPhaseDelta;
+					supersawSample -= (t+t-t*t-1) * 0.5 * dynamism;
+				} else if (phase > 1.0 - detunedPhaseDelta) {
+					const t: number = (phase - 1.0) / detunedPhaseDelta;
+					supersawSample -= (t+t+t*t+1) * 0.5 * dynamism;
+				}
+				
+				phases[i] = phase;
+			}
+			
+			delayLine[delayIndex & delayBufferMask] = supersawSample;
+			const delaySampleTime: number = delayIndex - delayLength;
+			const lowerIndex: number = delaySampleTime | 0;
+			const upperIndex: number = lowerIndex + 1;
+			const delayRatio: number = delaySampleTime - lowerIndex;
+			const prevDelaySample: number = delayLine[lowerIndex & delayBufferMask];
+			const nextDelaySample: number = delayLine[upperIndex & delayBufferMask];
+			const delaySample: number = prevDelaySample + (nextDelaySample - prevDelaySample) * delayRatio;
+			delayIndex++;
+			
+			const inputSample: number = supersawSample - delaySample * shape;
+			const sample: number = applyFilters(inputSample, initialFilterInput1, initialFilterInput2, filterCount, filters);
+			initialFilterInput2 = initialFilterInput1;
+			initialFilterInput1 = inputSample;
+			
+			phaseDelta *= phaseDeltaScale;
+			dynamism += dynamismDelta;
+			shape += shapeDelta;
+			delayLength += delayLengthDelta;
+			
+			const output: number = sample * expression;
+			expression += expressionDelta;
+			
+			data[sampleIndex] += output;
+		}
+		
+		tone.phaseDeltas[0] = phaseDelta;
+		tone.expression = expression;
+		tone.supersawDynamism = dynamism;
+		tone.supersawShape = shape;
+		tone.supersawDelayLength = delayLength;
+		tone.supersawDelayIndex = delayIndex;
+		
+		synth.sanitizeFilters(filters);
+		tone.initialNoteFilterInput1 = initialFilterInput1;
+		tone.initialNoteFilterInput2 = initialFilterInput2;
+	}
+	
 	private static fmSourceTemplate: string[] = (`
 		const data = synth.tempMonoInstrumentSampleBuffer;
 		const sineWave = Config.sineWave;
@@ -7157,7 +7483,7 @@ export class Synth {
 		let expression: number = +tone.expression;
 		const expressionDelta: number = +tone.expressionDelta;
 		let phase: number = (tone.phases[0] % 1) * Config.chipNoiseLength;
-		if (tone.phases[0] == 0) {
+		if (tone.phases[0] == 0.0) {
 			// Zero phase means the tone was reset, just give noise a random start phase instead.
 			phase = Math.random() * Config.chipNoiseLength;
 		}
@@ -7222,7 +7548,7 @@ export class Synth {
 		
 		let phase: number = (tone.phases[0] % 1) * Config.spectrumNoiseLength;
 		// Zero phase means the tone was reset, just give noise a random start phase instead.
-		if (tone.phases[0] == 0) phase = Synth.findRandomZeroCrossing(wave, Config.spectrumNoiseLength) + phaseDelta;
+		if (tone.phases[0] == 0.0) phase = Synth.findRandomZeroCrossing(wave, Config.spectrumNoiseLength) + phaseDelta;
 		const phaseMask: number = Config.spectrumNoiseLength - 1;
 		
 		// This is for a "legacy" style simplified 1st order lowpass filter with
@@ -7280,7 +7606,7 @@ export class Synth {
 		
 		let phase: number = (tone.phases[0] % 1) * Config.spectrumNoiseLength;
 		// Zero phase means the tone was reset, just give noise a random start phase instead.
-		if (tone.phases[0] == 0) phase = Synth.findRandomZeroCrossing(wave, Config.spectrumNoiseLength) + phaseDelta;
+		if (tone.phases[0] == 0.0) phase = Synth.findRandomZeroCrossing(wave, Config.spectrumNoiseLength) + phaseDelta;
 		const phaseMask: number = Config.spectrumNoiseLength - 1;
 		
 		const stopIndex: number = bufferIndex + runLength;
