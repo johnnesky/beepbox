@@ -101,7 +101,7 @@ export class Selection {
 		this._changeTrack.append(new ChangeChannelBar(this._doc, channelIndex, bar));
 		// @jummbus - changing current viewed instrument to the first for the current pattern if the viewedInstrument is not in the pattern
 		const pattern: Pattern | null = this._doc.getCurrentPattern(0);
-		if (pattern != null) {
+		if (pattern != null && this._doc.song.patternInstruments) {
 			if (pattern.instruments.indexOf(this._doc.viewedInstrument[this._doc.channel]) == -1) {
 				this._doc.viewedInstrument[this._doc.channel] = pattern.instruments[0];
 			}
