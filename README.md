@@ -13,14 +13,15 @@ valuable and have the means, any gratuity via
 [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=QZJTX9GRYEV9N&currency_code=USD)
 would be appreciated!
 
-BeepBox is developed by [John Nesky](http://www.johnnesky.com/).
+BeepBox is developed by [John Nesky](http://www.johnnesky.com/). This source
+code is available under the [MIT license](LICENSE.md).
 
 ## Compiling
 
-The source code is available under the MIT license. The code is written in
-[TypeScript](https://www.typescriptlang.org/), which requires
-[node & npm](https://www.npmjs.com/get-npm), so install those first. Then to
-build this project, open the command line and run:
+The code is written in TypeScript, which requires Node & npm so
+[install those first](https://nodejs.org/en/download). To contribute changes,
+you'll also need [git](https://github.com/git-guides/install-git). Then to build
+this project, open the command line and run:
 
 ```
 git clone https://github.com/johnnesky/beepbox.git

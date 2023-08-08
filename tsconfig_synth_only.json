@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"rootDir": "./",
 		"outDir": "build",
-		"target": "es6",
+		"target": "es2016",
 		"moduleResolution": "node",
 		"sourceMap": true,
 		"removeComments": true,
