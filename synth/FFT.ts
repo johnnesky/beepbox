@@ -30,15 +30,17 @@ function countBits(n: number): number {
 // index in base 2. Useful for computing the FFT.
 function reverseIndexBits(array: NumberArray, fullArrayLength: number): void {
 	const bitCount: number = countBits(fullArrayLength);
-	if (bitCount > 16) throw new Error("FFT array length must not be greater than 2^16.");
-	const finalShift: number = 16 - bitCount;
+	const finalShift: number = 32 - bitCount;
 	for (let i: number = 0; i < fullArrayLength; i++) {
-		// Dear Javascript: Please support bit order reversal intrinsics. Thanks! :D
+		// Dear JavaScript: Please support bit order reversal intrinsics. Thanks! :D
 		let j: number;
-		j = ((i & 0xaaaa) >> 1) | ((i & 0x5555) << 1);
-		j = ((j & 0xcccc) >> 2) | ((j & 0x3333) << 2);
-		j = ((j & 0xf0f0) >> 4) | ((j & 0x0f0f) << 4);
-		j = ((j           >> 8) | ((j &   0xff) << 8)) >> finalShift;
+		j = ((i >> 1) & 0x55555555) | ((i & 0x55555555) << 1);
+		j = ((j >> 2) & 0x33333333) | ((j & 0x33333333) << 2);
+		j = ((j >> 4) & 0x0F0F0F0F) | ((j & 0x0F0F0F0F) << 4);
+		j = ((j >> 8) & 0x00FF00FF) | ((j & 0x00FF00FF) << 8);
+		j = ((j >>16) & 0x0000FFFF) | ((j & 0x0000FFFF) <<16);
+		j = j >>> finalShift;
+		
 		if (j > i) {
 			let temp: number = array[i];
 			array[i] = array[j];
@@ -61,7 +63,7 @@ export function discreteFourierTransform(realArray: NumberArray, imagArray: Numb
 		realOut[i] = 0.0;
 		imagOut[i] = 0.0;
 		for (let j: number = 0; j < fullArrayLength; j++) {
-			const radians: number = -6.2831853 * j * i / fullArrayLength;
+			const radians: number = -Math.PI * 2.0 * j * i / fullArrayLength;
 			const c: number = Math.cos(radians);
 			const s: number = Math.sin(radians);
 			realOut[i] += realArray[j] * c - imagArray[j] * s;

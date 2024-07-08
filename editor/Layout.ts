@@ -64,24 +64,6 @@ export class Layout {
 				.beepboxEditor .trackContainer {
 					overflow: visible;
 				}
-				.beepboxEditor .trackAndMuteContainer {
-					scrollbar-width: auto;
-					scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar {
-					width: 20px;
-					height: 20px;
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-track {
-					background: ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-thumb {
-					background-color: ${ColorConfig.uiWidgetBackground};
-					border: 3px solid ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-corner {
-					background-color: ${ColorConfig.editorBackground};
-				}
 			}
 		`,
 		"tall": `\
@@ -159,24 +141,6 @@ export class Layout {
 				}
 				.beepboxEditor .trackContainer {
 					overflow: visible;
-				}
-				.beepboxEditor .trackAndMuteContainer {
-					scrollbar-width: auto;
-					scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar {
-					width: 20px;
-					height: 20px;
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-track {
-					background: ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-thumb {
-					background-color: ${ColorConfig.uiWidgetBackground};
-					border: 3px solid ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-corner {
-					background-color: ${ColorConfig.editorBackground};
 				}
 			}
 		`,
