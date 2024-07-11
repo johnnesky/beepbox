@@ -2,7 +2,7 @@
 set -e
 
 # Compile editor/index.ts into build/editor/index.js and dependencies
-npx tsc
+npx tsc -p scripts/tsconfig_editor.json
 
 # Combine build/editor/index.js and dependencies into website/beepbox_editor.js
 npx rollup build/editor/index.js \

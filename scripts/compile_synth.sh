@@ -2,7 +2,7 @@
 set -e
 
 # Compile synth/synth.ts into build/synth/synth.js and dependencies
-npx tsc -p tsconfig_synth_only.json
+npx tsc -p scripts/tsconfig_synth_only.json
 
 # Combine build/synth/synth.js and dependencies into website/beepbox_synth.js
 npx rollup build/synth/synth.js \

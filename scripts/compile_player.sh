@@ -2,7 +2,7 @@
 set -e
 
 # Compile player/main.ts into build/player/main.js and dependencies
-npx tsc -p tsconfig_player.json
+npx tsc -p scripts/tsconfig_player.json
 
 # Combine build/player/main.js and dependencies into website/player/beepbox_player.js
 npx rollup build/player/main.js \

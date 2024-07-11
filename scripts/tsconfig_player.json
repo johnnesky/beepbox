@@ -1,4 +1,4 @@
 {
 	"extends": "./tsconfig_synth_only.json",
-	"files": [ "editor/index.ts" ],
+	"files": [ "../player/main.ts" ],
 }
