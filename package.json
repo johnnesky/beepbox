@@ -8,10 +8,10 @@
 	"type": "module",
 	"scripts": {
 		"build": "npm run build-synth && npm run build-player && npm run build-editor",
-		"build-synth": "bash ./compile_beepbox_synth.sh",
-		"build-player": "bash ./compile_beepbox_player.sh",
-		"build-editor": "bash ./compile_beepbox_editor.sh",
-		"live-editor": "bash ./live_beepbox_editor.sh"
+		"build-synth": "bash ./scripts/compile_synth.sh",
+		"build-player": "bash ./scripts/compile_player.sh",
+		"build-editor": "bash ./scripts/compile_editor.sh",
+		"live-editor": "bash ./scripts/live_editor.sh"
 	},
 	"repository": {
 		"type": "git",
