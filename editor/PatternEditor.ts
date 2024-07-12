@@ -1,13 +1,13 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Chord, Transition, Config} from "../synth/SynthConfig";
-import {NotePin, Note, makeNotePin, Pattern, Instrument} from "../synth/synth";
-import {ColorConfig} from "./ColorConfig";
-import {SongDocument} from "./SongDocument";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
-import {ChangeSequence, UndoableChange} from "./Change";
-import {ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeSizeBend, ChangePitchBend, ChangePitchAdded} from "./changes";
-import {prettyNumber} from "./EditorConfig";
+import {Chord, Transition, Config} from "../synth/SynthConfig.js";
+import {NotePin, Note, makeNotePin, Pattern, Instrument} from "../synth/synth.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {ChangeSequence, UndoableChange} from "./Change.js";
+import {ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeSizeBend, ChangePitchBend, ChangePitchAdded} from "./changes.js";
+import {prettyNumber} from "./EditorConfig.js";
 
 function makeEmptyReplacementElement<T extends Node>(node: T): T {
 	const clone: T = <T> node.cloneNode(false);

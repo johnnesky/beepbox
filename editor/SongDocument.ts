@@ -1,17 +1,17 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {isMobile} from "./EditorConfig";
-import {Pattern, Channel, Song, Synth} from "../synth/synth";
-import {SongRecovery, generateUid, errorAlert} from "./SongRecovery";
-import {ColorConfig} from "./ColorConfig";
-import {Layout} from "./Layout";
-import {SongPerformance} from "./SongPerformance";
-import {Selection} from "./Selection";
-import {Preferences} from "./Preferences";
-import {Change} from "./Change";
-import {ChangeNotifier} from "./ChangeNotifier";
-import {ChangeSong, setDefaultInstruments, discardInvalidPatternInstruments} from "./changes";
+import {Config} from "../synth/SynthConfig.js";
+import {isMobile} from "./EditorConfig.js";
+import {Pattern, Channel, Song, Synth} from "../synth/synth.js";
+import {SongRecovery, generateUid, errorAlert} from "./SongRecovery.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {Layout} from "./Layout.js";
+import {SongPerformance} from "./SongPerformance.js";
+import {Selection} from "./Selection.js";
+import {Preferences} from "./Preferences.js";
+import {Change} from "./Change.js";
+import {ChangeNotifier} from "./ChangeNotifier.js";
+import {ChangeSong, setDefaultInstruments, discardInvalidPatternInstruments} from "./changes.js";
 
 interface HistoryState {
 	canUndo: boolean;

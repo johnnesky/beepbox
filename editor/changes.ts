@@ -1,10 +1,10 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Algorithm, Dictionary, FilterType, SustainType, InstrumentType, EffectType, AutomationTarget, Config, effectsIncludePanning, effectsIncludeDistortion} from "../synth/SynthConfig";
-import {NotePin, Note, makeNotePin, Pattern, FilterSettings, FilterControlPoint, SpectrumWave, HarmonicsWave, Instrument, Channel, Song, Synth} from "../synth/synth";
-import {Preset, PresetCategory, EditorConfig} from "./EditorConfig";
-import {Change, ChangeGroup, ChangeSequence, UndoableChange} from "./Change";
-import {SongDocument} from "./SongDocument";
+import {Algorithm, Dictionary, FilterType, SustainType, InstrumentType, EffectType, AutomationTarget, Config, effectsIncludePanning, effectsIncludeDistortion} from "../synth/SynthConfig.js";
+import {NotePin, Note, makeNotePin, Pattern, FilterSettings, FilterControlPoint, SpectrumWave, HarmonicsWave, Instrument, Channel, Song, Synth} from "../synth/synth.js";
+import {Preset, PresetCategory, EditorConfig} from "./EditorConfig.js";
+import {Change, ChangeGroup, ChangeSequence, UndoableChange} from "./Change.js";
+import {SongDocument} from "./SongDocument.js";
 
 export function patternsContainSameInstruments(pattern1Instruments: number[], pattern2Instruments: number[]): boolean {
 	const pattern2Has1Instruments: boolean = pattern1Instruments.every(instrument => pattern2Instruments.indexOf(instrument) != -1);

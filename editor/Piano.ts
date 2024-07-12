@@ -1,9 +1,9 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {SongDocument} from "./SongDocument";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
-import {ColorConfig} from "./ColorConfig";
+import {Config} from "../synth/SynthConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
+import {ColorConfig} from "./ColorConfig.js";
 
 export class Piano {
 	private readonly _pianoContainer: HTMLDivElement = HTML.div({style: "width: 100%; height: 100%; display: flex; flex-direction: column-reverse; align-items: stretch;"});

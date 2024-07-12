@@ -1,12 +1,12 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {clamp, Instrument, Synth} from "../synth/synth";
-import {SongDocument} from "./SongDocument";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
-import {ColorConfig} from "./ColorConfig";
-import {ChangeSequence, UndoableChange} from "./Change";
-import {ChangeFadeInOut} from "./changes";
+import {Config} from "../synth/SynthConfig.js";
+import {clamp, Instrument, Synth} from "../synth/synth.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {ChangeSequence, UndoableChange} from "./Change.js";
+import {ChangeFadeInOut} from "./changes.js";
 
 export class FadeInOutEditor {
 	private readonly _editorWidth: number = 120;

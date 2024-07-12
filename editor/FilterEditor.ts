@@ -1,14 +1,14 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {FilterCoefficients, FrequencyResponse} from "../synth/filtering";
-import {FilterType, Config} from "../synth/SynthConfig";
-import {FilterSettings, FilterControlPoint, Instrument} from "../synth/synth";
-import {SongDocument} from "./SongDocument";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
-import {ColorConfig} from "./ColorConfig";
-import {ChangeSequence, UndoableChange} from "./Change";
-import {ChangeFilterAddPoint, ChangeFilterMovePoint} from "./changes";
-import {prettyNumber} from "./EditorConfig";
+import {FilterCoefficients, FrequencyResponse} from "../synth/filtering.js";
+import {FilterType, Config} from "../synth/SynthConfig.js";
+import {FilterSettings, FilterControlPoint, Instrument} from "../synth/synth.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {ChangeSequence, UndoableChange} from "./Change.js";
+import {ChangeFilterAddPoint, ChangeFilterMovePoint} from "./changes.js";
+import {prettyNumber} from "./EditorConfig.js";
 
 export class FilterEditor {
 	private readonly _editorWidth: number = 120;

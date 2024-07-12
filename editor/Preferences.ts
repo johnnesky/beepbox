@@ -1,6 +1,6 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Scale, Config} from "../synth/SynthConfig";
+import {Scale, Config} from "../synth/SynthConfig.js";
 
 export class Preferences {
 	public static readonly defaultVisibleOctaves: number = 3;

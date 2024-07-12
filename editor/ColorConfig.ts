@@ -1,8 +1,8 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {BeepBoxOption, DictionaryArray, toNameMap} from "../synth/SynthConfig";
-import {Song} from "../synth/synth";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
+import {BeepBoxOption, DictionaryArray, toNameMap} from "../synth/SynthConfig.js";
+import {Song} from "../synth/synth.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
 
 export interface ChannelColors extends BeepBoxOption {
 	readonly secondaryChannel: string;

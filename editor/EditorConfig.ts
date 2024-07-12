@@ -1,6 +1,6 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {DictionaryArray, BeepBoxOption, InstrumentType, toNameMap} from "../synth/SynthConfig";
+import {DictionaryArray, BeepBoxOption, InstrumentType, toNameMap} from "../synth/SynthConfig.js";
 
 export interface PresetCategory extends BeepBoxOption {
 	readonly presets: DictionaryArray<Preset>;

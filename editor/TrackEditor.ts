@@ -1,10 +1,10 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {ColorConfig} from "./ColorConfig";
-import {isMobile} from "./EditorConfig";
-import {SongDocument} from "./SongDocument";
-import {ChannelRow} from "./ChannelRow";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
+import {ColorConfig} from "./ColorConfig.js";
+import {isMobile} from "./EditorConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {ChannelRow} from "./ChannelRow.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
 
 export class TrackEditor {
 	private readonly _channelRowContainer: HTMLElement = HTML.div({style: "display: flex; flex-direction: column;"});

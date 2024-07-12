@@ -1,9 +1,9 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {SongDocument} from "./SongDocument";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
-import {ChangeLoop, ChangeChannelBar} from "./changes";
-import {ColorConfig} from "./ColorConfig";
+import {SongDocument} from "./SongDocument.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {ChangeLoop, ChangeChannelBar} from "./changes.js";
+import {ColorConfig} from "./ColorConfig.js";
 
 interface Cursor {
 	startBar: number;

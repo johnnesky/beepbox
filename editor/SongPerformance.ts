@@ -1,10 +1,10 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {Note, Pattern} from "../synth/synth";
-import {SongDocument} from "./SongDocument";
-import {ChangeGroup} from "./Change";
-import {ChangeChannelBar, ChangePinTime, ChangeEnsurePatternExists, ChangeNoteAdded, ChangeInsertBars, ChangeDeleteBars, ChangeNoteLength} from "./changes";
+import {Config} from "../synth/SynthConfig.js";
+import {Note, Pattern} from "../synth/synth.js";
+import {SongDocument} from "./SongDocument.js";
+import {ChangeGroup} from "./Change.js";
+import {ChangeChannelBar, ChangePinTime, ChangeEnsurePatternExists, ChangeNoteAdded, ChangeInsertBars, ChangeDeleteBars, ChangeNoteLength} from "./changes.js";
 
 export class SongPerformance {
 	private _channelIsDrum: boolean = false;

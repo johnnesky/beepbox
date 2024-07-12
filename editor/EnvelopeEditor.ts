@@ -1,10 +1,10 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {InstrumentType, Config} from "../synth/SynthConfig";
-import {Instrument} from "../synth/synth";
-import {SongDocument} from "./SongDocument";
-import {ChangeSetEnvelopeTarget, ChangeSetEnvelopeType, ChangeRemoveEnvelope} from "./changes";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
+import {InstrumentType, Config} from "../synth/SynthConfig.js";
+import {Instrument} from "../synth/synth.js";
+import {SongDocument} from "./SongDocument.js";
+import {ChangeSetEnvelopeTarget, ChangeSetEnvelopeType, ChangeRemoveEnvelope} from "./changes.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
 
 export class EnvelopeEditor {
 	public readonly container: HTMLElement = HTML.div({class: "envelopeEditor"});

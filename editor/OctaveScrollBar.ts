@@ -1,10 +1,10 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {SongDocument} from "./SongDocument";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
-import {ChangeOctave} from "./changes";
-import {ColorConfig} from "./ColorConfig";
+import {Config} from "../synth/SynthConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {ChangeOctave} from "./changes.js";
+import {ColorConfig} from "./ColorConfig.js";
 
 export class OctaveScrollBar {
 	private readonly _editorWidth: number = 20;

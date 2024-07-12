@@ -1,9 +1,9 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Pattern} from "../synth/synth";
-import {ColorConfig, ChannelColors} from "./ColorConfig";
-import {SongDocument} from "./SongDocument";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
+import {Pattern} from "../synth/synth.js";
+import {ColorConfig, ChannelColors} from "./ColorConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
 
 export class Box {
 	private readonly _text: Text = document.createTextNode("");

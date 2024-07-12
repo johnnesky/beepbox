@@ -1,12 +1,12 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {SpectrumWave, Instrument} from "../synth/synth";
-import {SongDocument} from "./SongDocument";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
-import {ColorConfig} from "./ColorConfig";
-import {ChangeSpectrum} from "./changes";
-import {prettyNumber} from "./EditorConfig";
+import {Config} from "../synth/SynthConfig.js";
+import {SpectrumWave, Instrument} from "../synth/synth.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {ChangeSpectrum} from "./changes.js";
+import {prettyNumber} from "./EditorConfig.js";
 
 export class SpectrumEditor {
 	private readonly _editorWidth: number = 120;

@@ -1,8 +1,8 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {SongDocument} from "./SongDocument";
-import {AnalogousDrum, analogousDrumMap, MidiEventType} from "./Midi";
+import {Config} from "../synth/SynthConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {AnalogousDrum, analogousDrumMap, MidiEventType} from "./Midi.js";
 
 declare global {
 	interface Navigator {

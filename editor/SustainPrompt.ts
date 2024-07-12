@@ -1,12 +1,12 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {Instrument} from "../synth/synth";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
-import {SongDocument} from "./SongDocument";
-import {Prompt} from "./Prompt";
-import {ChangeGroup} from "./Change";
-import {ChangeStringSustainType} from "./changes";
+import {Config} from "../synth/SynthConfig.js";
+import {Instrument} from "../synth/synth.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
+import {SongDocument} from "./SongDocument.js";
+import {Prompt} from "./Prompt.js";
+import {ChangeGroup} from "./Change.js";
+import {ChangeStringSustainType} from "./changes.js";
 
 const {button, div, h2, p, select, option} = HTML;
 

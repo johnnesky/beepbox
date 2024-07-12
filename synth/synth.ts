@@ -1,9 +1,9 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Dictionary, DictionaryArray, FilterType, SustainType, EnvelopeType, InstrumentType, EffectType, EnvelopeComputeIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
-import {scaleElementsByFactor, fastFourierTransform, forwardRealFourierTransform, inverseRealFourierTransform} from "./FFT";
-import {Deque} from "./Deque";
-import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter, warpInfinityToNyquist} from "./filtering";
+import {Dictionary, DictionaryArray, FilterType, SustainType, EnvelopeType, InstrumentType, EffectType, EnvelopeComputeIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig.js";
+import {scaleElementsByFactor, fastFourierTransform, forwardRealFourierTransform, inverseRealFourierTransform} from "./FFT.js";
+import {Deque} from "./Deque.js";
+import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter, warpInfinityToNyquist} from "./filtering.js";
 
 declare global {
 	interface Window {

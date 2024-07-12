@@ -1,11 +1,11 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
-import {SongDocument} from "./SongDocument";
-import {Prompt} from "./Prompt";
-import {ChangeMoveNotesSideways} from "./changes";
-import {ColorConfig} from "./ColorConfig";
+import {Config} from "../synth/SynthConfig.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
+import {SongDocument} from "./SongDocument.js";
+import {Prompt} from "./Prompt.js";
+import {ChangeMoveNotesSideways} from "./changes.js";
+import {ColorConfig} from "./ColorConfig.js";
 
 const {button, div, span, h2, input, br, select, option} = HTML;
 
