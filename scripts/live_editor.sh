@@ -11,7 +11,8 @@ set -e
 # used to locally serve the site, navigate your browser to
 # website/index_debug.html, and automatically make the browser reload when the
 # compiled version is regenerated. You can use CTRL+C to stop the tasks.
+# You may need to wait for tsc to compile once before editing any source files.
 npx concurrently \
-	"npx tsc --watch --preserveWatchOutput" \
+	"npx tsc -p scripts/tsconfig_editor.json --watch --preserveWatchOutput" \
 	"npx rollup build/editor/index.js --file website/beepbox_editor.js --format iife --output.name beepbox --context exports --sourcemap --plugin rollup-plugin-sourcemaps --plugin @rollup/plugin-node-resolve --watch.buildDelay 200 -w" \
 	"npx five-server --wait=200 --watch=website/* --open=/index_debug.html website/"
