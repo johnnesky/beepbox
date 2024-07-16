@@ -32,9 +32,9 @@ class PatternCursor {
 }
 
 export class PatternEditor {
-	private readonly _svgNoteBackground: SVGPatternElement = SVG.pattern({id: "patternEditorNoteBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse"});
-	private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({id: "patternEditorDrumBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse"});
-	private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", "pointer-events": "none", fill: "url(#patternEditorNoteBackground" + this._barOffset + ")"});
+	private readonly _svgNoteBackground: SVGPatternElement = SVG.pattern({x: "0", y: "0", patternUnits: "userSpaceOnUse"});
+	private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({x: "0", y: "0", patternUnits: "userSpaceOnUse"});
+	private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", "pointer-events": "none"});
 	private _svgNoteContainer: SVGSVGElement = SVG.svg();
 	private readonly _svgPlayhead: SVGRectElement = SVG.rect({x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none"});
 	private readonly _selectionRect: SVGRectElement = SVG.rect({fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "pointer-events": "none", visibility: "hidden"});
@@ -100,6 +100,10 @@ export class PatternEditor {
 	private _followPlayheadBar: number = -1;
 	
 	constructor(private _doc: SongDocument, private _interactive: boolean, private _barOffset: number) {
+		this._svgNoteBackground.setAttribute("id", "patternEditorNoteBackground" + this._barOffset);
+		this._svgDrumBackground.setAttribute("id", "patternEditorDrumBackground" + this._barOffset);
+		this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground" + this._barOffset + ")");
+
 		for (let i: number = 0; i < Config.pitchesPerOctave; i++) {
 			const rectangle: SVGRectElement = SVG.rect();
 			rectangle.setAttribute("x", "1");

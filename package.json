@@ -11,7 +11,8 @@
 		"build-synth": "bash ./scripts/compile_synth.sh",
 		"build-player": "bash ./scripts/compile_player.sh",
 		"build-editor": "bash ./scripts/compile_editor.sh",
-		"live-editor": "bash ./scripts/live_editor.sh"
+		"live-editor": "bash ./scripts/live_editor.sh",
+		"live-editor-fast-typeless": "bash ./scripts/live_editor_fast_typeless.sh"
 	},
 	"repository": {
 		"type": "git",
@@ -27,6 +28,7 @@
 		"typescript": "^4.9.5"
 	},
 	"dependencies": {
+		"esbuild": "^0.23.0",
 		"imperative-html": "^0.1.2"
 	}
 }

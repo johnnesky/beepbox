@@ -489,7 +489,14 @@ export class Config {
 	public static readonly detuneMax: number = Config.detuneCenter * 2;
 	public static readonly sineWaveLength: number = 1 << 8; // 256
 	public static readonly sineWaveMask: number = Config.sineWaveLength - 1;
-	public static readonly sineWave: Float32Array = generateSineWave();
+	private static _generateSineWave(): Float32Array {
+		const wave: Float32Array = new Float32Array(Config.sineWaveLength + 1);
+		for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
+			wave[i] = Math.sin(i * Math.PI * 2.0 / Config.sineWaveLength);
+		}
+		return wave;
+	}
+	public static readonly sineWave: Float32Array = Config._generateSineWave();
 	
 	// Picked strings have an all-pass filter with a corner frequency based on the tone fundamental frequency, in order to add a slight inharmonicity. (Which is important for distortion.)
 	public static readonly pickedStringDispersionCenterFreq: number = 6000.0; // The tone fundamental freq is pulled toward this freq for computing the all-pass corner freq.
@@ -665,14 +672,6 @@ export function drawNoiseSpectrum(wave: Float32Array, waveLength: number, lowOct
 	}
 	
 	return combinedAmplitude;
-}
-
-function generateSineWave(): Float32Array {
-	const wave: Float32Array = new Float32Array(Config.sineWaveLength + 1);
-	for (let i: number = 0; i < Config.sineWaveLength + 1; i++) {
-		wave[i] = Math.sin(i * Math.PI * 2.0 / Config.sineWaveLength);
-	}
-	return wave;
 }
 
 export function getArpeggioPitchIndex(pitchCount: number, rhythm: number, arpeggio: number): number {
