@@ -356,7 +356,7 @@ export class Config {
 	public static readonly effectNames: ReadonlyArray<string> = ["reverb", "chorus", "panning", "distortion", "bitcrusher", "note filter", "echo", "pitch shift", "detune", "vibrato", "transition type", "chord type"];
 	public static readonly effectOrder: ReadonlyArray<EffectType> = [EffectType.transition, EffectType.chord, EffectType.pitchShift, EffectType.detune, EffectType.vibrato, EffectType.noteFilter, EffectType.distortion, EffectType.bitcrusher, EffectType.panning, EffectType.chorus, EffectType.echo, EffectType.reverb];
 	public static readonly noteSizeMax: number = 3;
-	public static readonly volumeRange: number = 8;
+	public static readonly volumeRange: number = 24;
 	public static readonly volumeLogScale: number = -0.5;
 	public static readonly panCenter: number = 4;
 	public static readonly panMax: number = Config.panCenter * 2;
