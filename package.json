@@ -1,34 +1,31 @@
 {
-	"name": "BeepBox",
-	"version": "4.2",
-	"description": "BeepBox is an online tool for sketching and sharing instrumental music.",
-	"author": "John Nesky",
+	"name": "beepbox",
 	"license": "MIT",
-	"homepage": "https://www.beepbox.co",
 	"type": "module",
+	"private": true,
 	"scripts": {
-		"build": "npm run build-synth && npm run build-player && npm run build-editor",
+		"build": "npm run clean && npm run build-synth && npm run build-player && npm run build-editor",
 		"build-synth": "bash ./scripts/compile_synth.sh",
 		"build-player": "bash ./scripts/compile_player.sh",
 		"build-editor": "bash ./scripts/compile_editor.sh",
+		"clean": "bash ./scripts/clean.sh",
 		"live-editor": "bash ./scripts/live_editor.sh",
-		"live-editor-fast-typeless": "bash ./scripts/live_editor_fast_typeless.sh"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://johnnesky@github.com/johnnesky/beepbox.git"
+		"live-editor-fast-typeless": "bash ./scripts/live_editor_fast_typeless.sh",
+		"deploy-website": "bash ./scripts/deploy.sh",
+		"publish": "bash ./scripts/publish_on_npm.sh",
+		"prepublishOnly": "echo \"Use 'npm run publish' instead!\" && exit 1"
 	},
 	"devDependencies": {
 		"@rollup/plugin-node-resolve": "^15.1.0",
 		"concurrently": "^8.2.2",
+		"esbuild": "^0.23.0",
 		"five-server": "^0.3.3",
 		"rollup": "^2.79.1",
 		"rollup-plugin-sourcemaps": "^0.6.3",
 		"terser": "^5.19.2",
 		"typescript": "^4.9.5"
 	},
-	"dependencies": {
-		"esbuild": "^0.23.0",
+	"peerDependencies": {
 		"imperative-html": "^0.1.2"
 	}
 }

@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
 
-# Compile synth/synth.ts into build/synth/synth.js and dependencies
+# Compile synth/index.ts into build/synth/index.js and dependencies
 npx tsc -p scripts/tsconfig_synth_only.json
 
-# Combine build/synth/synth.js and dependencies into website/beepbox_synth.js
-npx rollup build/synth/synth.js \
-	--file website/beepbox_synth.js \
+# Bundle build/synth/index.js and dependencies into bundle/beepbox_synth.js
+npx rollup build/synth/index.js \
+	--file bundle/beepbox_synth.js \
 	--format iife \
 	--output.name beepbox \
 	--context exports \
@@ -14,11 +14,14 @@ npx rollup build/synth/synth.js \
 	--plugin rollup-plugin-sourcemaps \
 	--plugin @rollup/plugin-node-resolve
 
-# Minify website/beepbox_synth.js into website/beepbox_synth.min.js
+# Minify bundle/beepbox_synth.js into bundle/beepbox_synth.min.js
 npx terser \
-	website/beepbox_synth.js \
-	--source-map "content='website/beepbox_synth.js.map',url=beepbox_synth.min.js.map" \
-	-o website/beepbox_synth.min.js \
+	bundle/beepbox_synth.js \
+	--source-map "content='bundle/beepbox_synth.js.map',url=beepbox_synth.min.js.map" \
+	-o bundle/beepbox_synth.min.js \
 	--compress \
 	--mangle \
 	--mangle-props regex="/^_.+/;"
+
+# Copy the bundled and minified code into the website folder
+cp -r bundle/. website/
