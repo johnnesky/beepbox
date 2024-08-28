@@ -17,6 +17,14 @@ You can easily use a script tag to load the synthesizer code, then use the globa
 </script>
 ```
 
+Or you could do it with [the fancy module syntax](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules):
+
+```html
+<script type="module">
+    import {Synth} from "https://cdn.jsdelivr.net/npm/beepbox/esm/synth/index.js";
+</script>
+```
+
 ## Installing the code from npm
 
 If you're using npm, you can use that to install the synthesizer on the command line:
@@ -35,13 +43,13 @@ Deploying code to your website that was written in this manner is a complex subj
 
 ## Using the synthesizer
 
-Either way, you can use the Synth class in your code to play and pause songs using the song data that you can copy from the URL above BeepBox's online editor:
+Regardless of how you load the synthesizer code, you can use the Synth class in your code to play and pause songs. Copy the song data from BeepBox's [online editor](https://www.beepbox.co) URL then pass that to the Synth contructor:
 
 ```javascript
 var synth = new Synth("#9n30sbk7l00e00t2-a7g00j00r1i0o443T0v2u00f0qw02d03w2h0E0T0v2u00f0qw02d03w2h0E0T0v0u00f0qw02d03w1h0E0bUp1OFEYtghQ4sBihS7dQQuwE8W2eywzwPbGcKCzZk4t17hghQCngpo");
 
 document.getElementById("playButton").addEventListener("click", event => {
-	if (synth.isPlayingSong) {
+	if (synth.playing) {
 		synth.pause();
 	} else {
 		synth.play();

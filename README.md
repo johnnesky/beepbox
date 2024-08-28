@@ -16,6 +16,11 @@ would be appreciated!
 BeepBox is developed by [John Nesky](https://johnnesky.com/). This source code
 is available under the [MIT license](LICENSE.md).
 
+## Synthesizer library
+
+You can use BeepBox's synthesizer to play music in your own web app! See
+[the npm package](https://www.npmjs.com/package/beepbox) for more details.
+
 ## Compiling
 
 The code is written in TypeScript, which requires Node & npm so
