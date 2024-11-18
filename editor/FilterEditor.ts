@@ -1,24 +1,26 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {FilterCoefficients, FrequencyResponse} from "../synth/filtering.js";
 import {FilterType, Config} from "../synth/SynthConfig.js";
+import {prettyNumber} from "./EditorConfig.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {FilterCoefficients, FrequencyResponse} from "../synth/filtering.js";
 import {FilterSettings, FilterControlPoint, Instrument} from "../synth/synth.js";
 import {SongDocument} from "./SongDocument.js";
 import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
-import {ColorConfig} from "./ColorConfig.js";
+import {EasyPointers, Point2d} from "./EasyPointers.js";
 import {ChangeSequence, UndoableChange} from "./Change.js";
 import {ChangeFilterAddPoint, ChangeFilterMovePoint} from "./changes.js";
-import {prettyNumber} from "./EditorConfig.js";
 
 export class FilterEditor {
 	private readonly _editorWidth: number = 120;
 	private readonly _editorHeight: number = 26;
+	private readonly _pointRadius: number = 2;
 	private readonly _responsePath: SVGPathElement = SVG.path({fill: ColorConfig.uiWidgetBackground, "pointer-events": "none"});
 	//private readonly _octaves: SVGSVGElement = SVG.svg({"pointer-events": "none", overflow: "visible"});
 	private readonly _controlPointPath: SVGPathElement = SVG.path({fill: "currentColor", "pointer-events": "none"});
 	private readonly _dottedLinePath: SVGPathElement = SVG.path({fill: "none", stroke: "currentColor", "stroke-width": 1, "stroke-dasharray": "3, 2", "pointer-events": "none"});
 	private readonly _highlight: SVGCircleElement = SVG.circle({fill: "white", stroke: "none", "pointer-events": "none", r: 4});
-	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: none;`, width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"},
+	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground};`, width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"},
 		this._responsePath,
 		//this._octaves,
 		this._dottedLinePath,
@@ -27,17 +29,17 @@ export class FilterEditor {
 	);
 	private readonly _label: HTMLDivElement = HTML.div({style: "position: absolute; bottom: 0; left: 2px; font-size: 8px; line-height: 1; pointer-events: none;"});
 	
-	public readonly container: HTMLElement = HTML.div({class: "filterEditor", style: "height: 100%; position: relative;"},
+	public readonly container: HTMLElement = HTML.div({class: "filterEditor", style: "height: 100%; position: relative; touch-action: none;"},
 		this._svg,
 		this._label,
 	);
-	private readonly _pointRadius: number = 2;
+	
+	private readonly _pointers: EasyPointers = new EasyPointers(this.container, {touchGestureScrolling: "preventConditionally"});
 	
 	private _useNoteFilter: boolean = false;
 	private _touchMode: boolean = false;
 	private _mouseX: number = 0;
 	private _mouseY: number = 0;
-	private _mouseOver: boolean = false;
 	private _mouseDown: boolean = false;
 	private _mouseDragging: boolean = false;
 	private _addingPoint: boolean = false;
@@ -63,16 +65,12 @@ export class FilterEditor {
 			this._octaves.appendChild(SVG.rect({fill: ColorConfig.tonic, x: i * this._editorWidth / (Config.filterFreqRange * Config.filterFreqStep) - 0.5, y: 0, width: 1, height: this._editorHeight}));
 		}
 		*/
-		this.container.addEventListener("mousedown", this._whenMousePressed);
-		this.container.addEventListener("mouseover", this._whenMouseOver);
-		this.container.addEventListener("mouseout", this._whenMouseOut);
-		document.addEventListener("mousemove", this._whenMouseMoved);
-		document.addEventListener("mouseup", this._whenCursorReleased);
-		
-		this.container.addEventListener("touchstart", this._whenTouchPressed);
-		this.container.addEventListener("touchmove", this._whenTouchMoved);
-		this.container.addEventListener("touchend", this._whenCursorReleased);
-		this.container.addEventListener("touchcancel", this._whenCursorReleased);
+		this.container.addEventListener("pointerenter", this._onPointerMove);
+		this.container.addEventListener("pointerleave", this._onPointerLeave);
+		this.container.addEventListener("pointerdown", this._onPointerDown);
+		this.container.addEventListener("pointermove", this._onPointerMove);
+		this.container.addEventListener("pointerup", this._onPointerUp);
+		this.container.addEventListener("pointercancel", this._onPointerUp);
 	}
 	
 	private _xToFreq(x: number): number {
@@ -88,67 +86,25 @@ export class FilterEditor {
 		return (this._editorHeight - 1) * (1 - gain / (Config.filterGainRange - 1)) + .5;
 	}
 	
-	private _whenMouseOver = (event: MouseEvent): void => {
-		this._mouseOver = true;
-	}
-	
-	private _whenMouseOut = (event: MouseEvent): void => {
-		this._mouseOver = false;
+	private _onPointerLeave = (event: PointerEvent): void => {
 		this._updatePath();
 	}
 	
-	private _whenMousePressed = (event: MouseEvent): void => {
-		event.preventDefault();
-		this._touchMode = false;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._whenCursorPressed();
+	private _updateMousePos(event: PointerEvent): void {
+		const point: Point2d = event.pointer!.getPointInNormalized(this.container);
+		this._mouseX = point.x * this._editorWidth;
+		this._mouseY = point.y * this._editorHeight;
 	}
 	
-	private _whenTouchPressed = (event: TouchEvent): void => {
-		event.preventDefault();
-		this._touchMode = true;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._whenCursorPressed();
-	}
-	
-	private _whenMouseMoved = (event: MouseEvent): void => {
-		if (this.container.offsetParent == null) return;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		if (!this._mouseDown) this._updateCursor();
-		this._whenCursorMoved();
-	}
-	
-	private _whenTouchMoved = (event: TouchEvent): void => {
-		if (this.container.offsetParent == null) return;
-		if (this._mouseDown) event.preventDefault();
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		if (!this._mouseDown) this._updateCursor();
-		this._whenCursorMoved();
-	}
-	
-	private _whenCursorPressed(): void {
+	private _onPointerDown = (event: PointerEvent): void => {
 		this._mouseDown = true;
+		this._touchMode = event.pointer!.isTouch;
+		this._updateMousePos(event);
 		const sequence: ChangeSequence = new ChangeSequence();
 		this._dragChange = sequence;
 		this._doc.setProspectiveChange(this._dragChange);
 		this._updateCursor();
-		this._whenCursorMoved();
+		this._whenCursorMoved(event);
 	}
 	
 	private _updateCursor(): void {
@@ -179,7 +135,13 @@ export class FilterEditor {
 		}
 	}
 	
-	private _whenCursorMoved(): void {
+	private _onPointerMove = (event: PointerEvent): void => {
+		this._updateMousePos(event);
+		if (!this._mouseDown) this._updateCursor();
+		this._whenCursorMoved(event);
+	}
+	
+	private _whenCursorMoved(event: PointerEvent): void {
 		if (this._dragChange != null && this._doc.lastChangeWas(this._dragChange)) {
 			this._dragChange.undo();
 		} else {
@@ -227,13 +189,10 @@ export class FilterEditor {
 				}
 			}
 		}
-		if (this._mouseDown || this._mouseOver) {
-			this._updatePath();
-		}
+		this._updatePath();
 	}
 	
-	private _whenCursorReleased = (event: Event): void => {
-		if (this.container.offsetParent == null) return;
+	private _onPointerUp = (event: PointerEvent): void => {
 		if (this._mouseDown && this._doc.lastChangeWas(this._dragChange) && this._dragChange != null) {
 			if (!this._addingPoint && !this._mouseDragging && !this._touchMode) {
 				if (this._selectedIndex < this._filterSettings.controlPointCount && this._selectedIndex != -1) {
@@ -299,18 +258,18 @@ export class FilterEditor {
 				dottedLinePath += "M " + this._editorWidth + " " + pointY + " L " + pointX + " " + pointY + " ";
 			}
 			
-			if (this._selectedIndex == i && this._mouseOver && !this._mouseDown) {
+			if (this._selectedIndex == i && this._pointers.latest.isHovering) {
 				this._highlight.setAttribute("cx", String(pointX));
 				this._highlight.setAttribute("cy", String(pointY));
 				this._highlight.style.display = "";
 			}
-			if ((this._selectedIndex == i || (this._addingPoint && this._mouseDown && i == this._filterSettings.controlPointCount - 1)) && (this._mouseOver || this._mouseDown) && !this._deletingPoint) {
+			if ((this._selectedIndex == i || (this._addingPoint && this._mouseDown && i == this._filterSettings.controlPointCount - 1)) && (this._pointers.latest.isPresent) && !this._deletingPoint) {
 				this._label.textContent = (i + 1) + ": " + Config.filterTypeNames[point.type];// + " " + prettyNumber(point.getHz()) + "Hz";
 			}
 		}
 		this._controlPointPath.setAttribute("d", controlPointPath);
 		this._dottedLinePath.setAttribute("d", dottedLinePath);
-		if (this._addingPoint && !this._mouseDown && this._mouseOver) {
+		if (this._addingPoint && this._pointers.latest.isHovering) {
 			this._label.textContent = "+ " + Config.filterTypeNames[this._addedType];
 		}
 		

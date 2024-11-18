@@ -2,10 +2,10 @@
 
 import {Config} from "../synth/SynthConfig.js";
 import {isMobile} from "./EditorConfig.js";
-import {Pattern, Channel, Song, Synth} from "../synth/synth.js";
-import {SongRecovery, generateUid, errorAlert} from "./SongRecovery.js";
 import {ColorConfig} from "./ColorConfig.js";
 import {Layout} from "./Layout.js";
+import {Pattern, Channel, Song, Synth} from "../synth/synth.js";
+import {SongRecovery, generateUid, errorAlert} from "./SongRecovery.js";
 import {SongPerformance} from "./SongPerformance.js";
 import {Selection} from "./Selection.js";
 import {Preferences} from "./Preferences.js";
@@ -110,7 +110,7 @@ export class SongDocument {
 		// presumably after all handlers are done updating the model, then update the
 		// view before the screen renders. mouseenter and mouseleave do not bubble,
 		// but they are immediately followed by mousemove which does. 
-		for (const eventName of ["input", "change", "click", "keyup", "keydown", "mousedown", "mousemove", "mouseup", "touchstart", "touchmove", "touchend", "touchcancel"]) {
+		for (const eventName of ["input", "change", "click", "keyup", "keydown", "mousedown", "mousemove", "mouseup", "touchstart", "touchmove", "touchend", "touchcancel", "pointerdown", "pointermove", "pointerup", "pointercancel"]) {
 			window.addEventListener(eventName, this._cleanDocument);
 		}
 		

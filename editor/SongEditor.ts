@@ -6,6 +6,7 @@ import {ColorConfig, ChannelColors} from "./ColorConfig.js";
 import "./Layout.js"; // Imported here for the sake of ensuring this code is transpiled early.
 import {Instrument, Channel, Synth} from "../synth/synth.js";
 import {HTML} from "imperative-html/dist/esm/elements-strict.js";
+import {EasyPointers, getElementDimensions} from "./EasyPointers.js";
 import {Preferences} from "./Preferences.js";
 import {SongDocument} from "./SongDocument.js";
 import {Prompt} from "./Prompt.js";
@@ -96,13 +97,63 @@ function setSelectedValue(menu: HTMLSelectElement, value: number): void {
 }
 
 class Slider {
+	public container: HTMLSpanElement;
 	private _change: Change | null = null;
 	private _value: number = 0;
 	private _oldValue: number = 0;
 	
-	constructor(public readonly input: HTMLInputElement, private readonly _doc: SongDocument, private readonly _getChange: (oldValue: number, newValue: number)=>Change) {
-		input.addEventListener("input", this._whenInput);
-		input.addEventListener("change", this._whenChange);
+	constructor(public readonly input: HTMLInputElement, private readonly _doc: SongDocument, private readonly _getChange: (oldValue: number, newValue: number) => Change | null) {
+		input.addEventListener("input", this._onInput);
+		input.addEventListener("change", this._onChange);
+		
+		// Touch screens update the slider value as soon as you touch the slider,
+		// but also allow scrolling by vertically dragging from the slider, which
+		// can result in both the slider changing and the screen scrolling from
+		// the same gesture, which feels bad. Unfortunately, calling
+		// preventDefault() in the pointerdown listener does not prevent changing
+		// the slider value on touchscreens, so we need to completely bypass
+		// touching the slider. This code prevents the initial slider change and
+		// reimplements it if the pointer will not scroll.
+		input.style.pointerEvents = "none";
+		this.container = span(input, {style: "touch-action: pan-y; display: flex;"});
+		new EasyPointers(this.container);
+		this.container.addEventListener("pointerdown", this._onPointerDown);
+		this.container.addEventListener("pointermove", this._onPointerMove);
+		this.container.addEventListener("pointerup", this._onPointerUp);
+	}
+	
+	private _setFromPointer(event: PointerEvent): void {
+		const x = event.pointer!.getPointIn(this.input, "contentBox").x;
+		const dimensions = getElementDimensions(this.input, "contentBox");
+		const thumbWidth: number = 6; // BeepBox slider thumbs are styled with a width of 6 pixels.
+		const ratio = (x - (thumbWidth / 2)) / (dimensions.width - thumbWidth);
+		const step = parseFloat(this.input.step) || 1;
+		let min = parseFloat(this.input.min);
+		let max = parseFloat(this.input.max);
+		if (!isFinite(min)) min = 0;
+		if (!isFinite(max)) max = 100;
+		const value = Math.max(min, Math.min(max, Math.round(((max - min) * ratio) / step) * step + min));
+		this.input.value = String(value);
+	}
+	
+	private _onPointerDown = (event: PointerEvent): void => {
+		if (!event.pointer!.mightScroll) {
+			this._setFromPointer(event);
+			this.input.dispatchEvent(new InputEvent("input", {bubbles: true, cancelable: false, composed: true}));
+		}
+	}
+	
+	private _onPointerMove = (event: PointerEvent): void => {
+		if (!event.pointer!.mightScroll && event.pointer!.isDown) {
+			this._setFromPointer(event);
+			this.input.dispatchEvent(new InputEvent("input", {bubbles: true, cancelable: false, composed: true}));
+		}
+	}
+	
+	private _onPointerUp = (event: PointerEvent): void => {
+		this._setFromPointer(event);
+		this.input.dispatchEvent(new InputEvent("input", {bubbles: true, cancelable: false, composed: true}));
+		this.input.dispatchEvent(new Event("change", {bubbles: true, cancelable: false, composed: true}));
 	}
 	
 	public updateValue(value: number): void {
@@ -110,15 +161,15 @@ class Slider {
 		this.input.value = String(value);
 	}
 	
-	private _whenInput = (): void => {
+	private _onInput = (): void => {
 		const continuingProspectiveChange: boolean = this._doc.lastChangeWas(this._change);
 		if (!continuingProspectiveChange) this._oldValue = this._value;
 		this._change = this._getChange(this._oldValue, parseInt(this.input.value));
-		this._doc.setProspectiveChange(this._change);
+		if (this._change) this._doc.setProspectiveChange(this._change);
 	};
 	
-	private _whenChange = (): void => {
-		this._doc.record(this._change!);
+	private _onChange = (): void => {
+		if (this._change) this._doc.record(this._change);
 		this._change = null;
 	};
 }
@@ -142,7 +193,7 @@ export class SongEditor {
 	private readonly _stopButton: HTMLButtonElement = button({class: "stopButton", style: "display: none;", type: "button", title: "Stop Recording (Space)"}, "Stop Recording");
 	private readonly _prevBarButton: HTMLButtonElement = button({class: "prevBarButton", type: "button", title: "Previous Bar (left bracket)"});
 	private readonly _nextBarButton: HTMLButtonElement = button({class: "nextBarButton", type: "button", title: "Next Bar (right bracket)"});
-	private readonly _volumeSlider: HTMLInputElement = input({title: "main volume", style: "width: 5em; flex-grow: 1; margin: 0;", type: "range", min: "0", max: "75", value: "50", step: "1"});
+	private readonly _volumeSlider: Slider = new Slider(input({title: "main volume", style: "flex-grow: 1; margin: 0;", type: "range", min: "0", max: "75", value: "50", step: "1"}), this.doc, (oldValue: number, newValue: number) => { this._setVolumeSlider(); return null; });
 	private readonly _fileMenu: HTMLSelectElement = select({style: "width: 100%;"},
 		option({selected: true, disabled: true, hidden: false}, "File"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
 		option({value: "new"}, "+ New Blank Song"),
@@ -200,13 +251,13 @@ export class SongEditor {
 	private readonly _tempoSlider: Slider = new Slider(input({style: "margin: 0; width: 4em; flex-grow: 1; vertical-align: middle;", type: "range", min: "0", max: "14", value: "7", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeTempo(this.doc, oldValue, Math.round(120.0 * Math.pow(2.0, (-4.0 + newValue) / 9.0))));
 	private readonly _tempoStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 0.4em; vertical-align: middle;", type: "number", step: "1"});
 	private readonly _chorusSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.chorusRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeChorus(this.doc, oldValue, newValue));
-	private readonly _chorusRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chorus")}, "Chorus:"), this._chorusSlider.input);
+	private readonly _chorusRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chorus")}, "Chorus:"), this._chorusSlider.container);
 	private readonly _reverbSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.reverbRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeReverb(this.doc, oldValue, newValue));
-	private readonly _reverbRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb:"), this._reverbSlider.input);
+	private readonly _reverbRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("reverb")}, "Reverb:"), this._reverbSlider.container);
 	private readonly _echoSustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.echoSustainRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeEchoSustain(this.doc, oldValue, newValue));
-	private readonly _echoSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoSustain")}, "Echo:"), this._echoSustainSlider.input);
+	private readonly _echoSustainRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoSustain")}, "Echo:"), this._echoSustainSlider.container);
 	private readonly _echoDelaySlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.echoDelayRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeEchoDelay(this.doc, oldValue, newValue));
-	private readonly _echoDelayRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoDelay")}, "Echo Delay:"), this._echoDelaySlider.input);
+	private readonly _echoDelayRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("echoDelay")}, "Echo Delay:"), this._echoDelaySlider.container);
 	private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select(), Config.rhythms.map(rhythm=>rhythm.name));
 	private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false);
 	private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true);
@@ -221,9 +272,9 @@ export class SongEditor {
 	private readonly _instrumentPasteButton: HTMLButtonElement = button({type: "button", class: "paste-instrument", title: "Paste Instrument (⇧V)"}, "Paste");
 	private readonly _instrumentCopyPasteRow: HTMLDivElement = div({class: "instrumentCopyPasteRow", style: "display: none;"}, this._instrumentCopyButton, this._instrumentPasteButton);
 	private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: -(Config.volumeRange - 1), max: "0", value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeVolume(this.doc, oldValue, -newValue));
-	private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume:"), this._instrumentVolumeSlider.input);
+	private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume:"), this._instrumentVolumeSlider.container);
 	private readonly _panSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.panMax, value: Config.panCenter, step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangePan(this.doc, oldValue, newValue));
-	private readonly _panSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pan")}, "Panning:"), this._panSlider.input);
+	private readonly _panSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pan")}, "Panning:"), this._panSlider.container);
 	private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select(), Config.chipWaves.map(wave=>wave.name));
 	private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select(), Config.chipNoises.map(wave=>wave.name));
 	private readonly _chipWaveSelectRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("chipWave")}, "Wave:"), div({class: "selectContainer"}, this._chipWaveSelect));
@@ -238,29 +289,29 @@ export class SongEditor {
 	private readonly _noteFilterEditor: FilterEditor = new FilterEditor(this.doc, true);
 	private readonly _noteFilterRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("noteFilter")}, "Note Filter:"), this._noteFilterEditor.container);
 	private readonly _supersawDynamismSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.supersawDynamismMax, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeSupersawDynamism(this.doc, oldValue, newValue));
-	private readonly _supersawDynamismRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("supersawDynamism")}, "Dynamism:"), this._supersawDynamismSlider.input);
+	private readonly _supersawDynamismRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("supersawDynamism")}, "Dynamism:"), this._supersawDynamismSlider.container);
 	private readonly _supersawSpreadSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.supersawSpreadMax, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeSupersawSpread(this.doc, oldValue, newValue));
-	private readonly _supersawSpreadRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("supersawSpread")}, "Spread:"), this._supersawSpreadSlider.input);
+	private readonly _supersawSpreadRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("supersawSpread")}, "Spread:"), this._supersawSpreadSlider.container);
 	private readonly _supersawShapeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.supersawShapeMax, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeSupersawShape(this.doc, oldValue, newValue));
-	private readonly _supersawShapeRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("supersawShape")}, "Saw↔Pulse:"), this._supersawShapeSlider.input);
+	private readonly _supersawShapeRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("supersawShape")}, "Saw↔Pulse:"), this._supersawShapeSlider.container);
 	private readonly _pulseWidthSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.pulseWidthRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangePulseWidth(this.doc, oldValue, newValue));
-	private readonly _pulseWidthRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pulseWidth")}, "Pulse Width:"), this._pulseWidthSlider.input);
+	private readonly _pulseWidthRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pulseWidth")}, "Pulse Width:"), this._pulseWidthSlider.container);
 	private readonly _pitchShiftSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.pitchShiftRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangePitchShift(this.doc, oldValue, newValue));
 	private readonly _pitchShiftTonicMarkers: HTMLDivElement[] = [div({class: "pitchShiftMarker", style: {color: ColorConfig.tonic}}), div({class: "pitchShiftMarker", style: {color: ColorConfig.tonic, left: "50%"}}), div({class: "pitchShiftMarker", style: {color: ColorConfig.tonic, left: "100%"}})];
 	private readonly _pitchShiftFifthMarkers: HTMLDivElement[] = [div({class: "pitchShiftMarker", style: {color: ColorConfig.fifthNote, left: (100*7/24)+"%"}}), div({class: "pitchShiftMarker", style: {color: ColorConfig.fifthNote, left: (100*19/24)+"%"}})];
-	private readonly _pitchShiftMarkerContainer: HTMLDivElement = div({style: "display: flex; position: relative;"}, this._pitchShiftSlider.input, div({class: "pitchShiftMarkerContainer"}, this._pitchShiftTonicMarkers, this._pitchShiftFifthMarkers));
+	private readonly _pitchShiftMarkerContainer: HTMLDivElement = div({style: "display: flex; position: relative;"}, this._pitchShiftSlider.container, div({class: "pitchShiftMarkerContainer"}, this._pitchShiftTonicMarkers, this._pitchShiftFifthMarkers));
 	private readonly _pitchShiftRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("pitchShift")}, "Pitch Shift:"), this._pitchShiftMarkerContainer);
 	private readonly _detuneSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.detuneMax, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeDetune(this.doc, oldValue, newValue));
-	private readonly _detuneRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("detune")}, "Detune:"), this._detuneSlider.input);
+	private readonly _detuneRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("detune")}, "Detune:"), this._detuneSlider.container);
 	private readonly _distortionSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.distortionRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeDistortion(this.doc, oldValue, newValue));
-	private readonly _distortionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("distortion")}, "Distortion:"), this._distortionSlider.input);
+	private readonly _distortionRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("distortion")}, "Distortion:"), this._distortionSlider.container);
 	private readonly _bitcrusherQuantizationSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherQuantizationRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeBitcrusherQuantization(this.doc, oldValue, newValue));
-	private readonly _bitcrusherQuantizationRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherQuantization")}, "Bit Crush:"), this._bitcrusherQuantizationSlider.input);
+	private readonly _bitcrusherQuantizationRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherQuantization")}, "Bit Crush:"), this._bitcrusherQuantizationSlider.container);
 	private readonly _bitcrusherFreqSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.bitcrusherFreqRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeBitcrusherFreq(this.doc, oldValue, newValue));
-	private readonly _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Freq Crush:"), this._bitcrusherFreqSlider.input);
+	private readonly _bitcrusherFreqRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("bitcrusherFreq")}, "Freq Crush:"), this._bitcrusherFreqSlider.container);
 	private readonly _stringSustainSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: "0", max: Config.stringSustainRange - 1, value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeStringSustain(this.doc, oldValue, newValue));
 	private readonly _stringSustainLabel: HTMLSpanElement = span({class: "tip", onclick: ()=>this._openPrompt("stringSustain")}, "Sustain:");
-	private readonly _stringSustainRow: HTMLDivElement = div({class: "selectRow"}, this._stringSustainLabel, this._stringSustainSlider.input);
+	private readonly _stringSustainRow: HTMLDivElement = div({class: "selectRow"}, this._stringSustainLabel, this._stringSustainSlider.container);
 	private readonly _unisonSelect: HTMLSelectElement = buildOptions(select(), Config.unisons.map(unison=>unison.name));
 	private readonly _unisonSelectRow: HTMLElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("unison")}, "Unison:"), div({class: "selectContainer"}, this._unisonSelect));
 	private readonly _chordSelect: HTMLSelectElement = buildOptions(select(), Config.chords.map(chord=>chord.name));
@@ -278,7 +329,7 @@ export class SongEditor {
 	private readonly _drumsetGroup: HTMLElement = div({class: "editor-controls"});
 	
 	private readonly _feedbackAmplitudeSlider: Slider = new Slider(input({type: "range", min: "0", max: Config.operatorAmplitudeMax, value: "0", step: "1", title: "Feedback Amplitude"}), this.doc, (oldValue: number, newValue: number) => new ChangeFeedbackAmplitude(this.doc, oldValue, newValue));
-	private readonly _feedbackRow2: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("feedbackVolume")}, "Fdback Vol:"), this._feedbackAmplitudeSlider.input);
+	private readonly _feedbackRow2: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("feedbackVolume")}, "Fdback Vol:"), this._feedbackAmplitudeSlider.container);
 	private readonly _customizeInstrumentButton: HTMLButtonElement = button({type: "button", class: "customize-instrument"},
 		"Customize Instrument",
 	);
@@ -397,7 +448,7 @@ export class SongEditor {
 			div({class: "selectRow"},
 				span({class: "tip", onclick: ()=>this._openPrompt("tempo")}, "Tempo:"),
 				span({style: "display: flex;"},
-					this._tempoSlider.input,
+					this._tempoSlider.container,
 					this._tempoStepper,
 				),
 			),
@@ -429,7 +480,7 @@ export class SongEditor {
 			),
 			div({class: "playback-volume-controls"},
 				span({class: "volume-speaker"}),
-				this._volumeSlider,
+				this._volumeSlider.container,
 			),
 		),
 		this._menuArea,
@@ -493,7 +544,7 @@ export class SongEditor {
 			const row: HTMLDivElement = div({class: "selectRow"},
 				operatorNumber,
 				div({class: "selectContainer", style: "width: 3em; margin-right: .3em;"}, frequencySelect),
-				amplitudeSlider.input,
+				amplitudeSlider.container,
 			);
 			this._phaseModGroup.appendChild(row);
 			this._operatorRows[i] = row;
@@ -514,7 +565,7 @@ export class SongEditor {
 		for (let i: number = Config.drumCount - 1; i >= 0; i--) {
 			const drumIndex: number = i;
 			const spectrumEditor: SpectrumEditor = new SpectrumEditor(this.doc, drumIndex);
-			spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
+			spectrumEditor.container.addEventListener("pointerdown", this._refocusStage);
 			this._drumsetSpectrumEditors[i] = spectrumEditor;
 			
 			const envelopeSelect: HTMLSelectElement = buildOptions(select({style: "width: 100%;", title: "Filter Envelope"}), Config.envelopes.map(envelope=>envelope.name));
@@ -571,17 +622,17 @@ export class SongEditor {
 		});
 		this._prevBarButton.addEventListener("click", this._whenPrevBarPressed);
 		this._nextBarButton.addEventListener("click", this._whenNextBarPressed);
-		this._volumeSlider.addEventListener("input", this._setVolumeSlider);
+		this._volumeSlider.input.addEventListener("input", this._setVolumeSlider);
 		this._zoomInButton.addEventListener("click", this._zoomIn);
 		this._zoomOutButton.addEventListener("click", this._zoomOut);
 		
-		this._patternArea.addEventListener("mousedown", this._refocusStage);
-		this._trackArea.addEventListener("mousedown", this._refocusStage);
-		this._fadeInOutEditor.container.addEventListener("mousedown", this._refocusStage);
-		this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
-		this._eqFilterEditor.container.addEventListener("mousedown", this._refocusStage);
-		this._noteFilterEditor.container.addEventListener("mousedown", this._refocusStage);
-		this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
+		this._patternArea.addEventListener("pointerdown", this._refocusStage);
+		this._trackArea.addEventListener("pointerdown", this._refocusStage);
+		this._fadeInOutEditor.container.addEventListener("pointerdown", this._refocusStage);
+		this._spectrumEditor.container.addEventListener("pointerdown", this._refocusStage);
+		this._eqFilterEditor.container.addEventListener("pointerdown", this._refocusStage);
+		this._noteFilterEditor.container.addEventListener("pointerdown", this._refocusStage);
+		this._harmonicsEditor.container.addEventListener("pointerdown", this._refocusStage);
 		this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
 		this._addEnvelopeButton.addEventListener("click", this._addNewEnvelope);
 		this._patternArea.addEventListener("contextmenu", this._disableCtrlContextMenu);
@@ -718,7 +769,7 @@ export class SongEditor {
 	}
 	
 	private _onFocusIn = (event: Event): void => {
-		if (this.doc.synth.recording && event.target != this.mainLayer && event.target != this._stopButton && event.target != this._volumeSlider) {
+		if (this.doc.synth.recording && event.target != this.mainLayer && event.target != this._stopButton && event.target != this._volumeSlider.input) {
 			// Don't allow using tab to focus on the song settings while recording,
 			// since interacting with them while recording would mess up the recording.
 			this._refocusStage();
@@ -728,9 +779,8 @@ export class SongEditor {
 	public whenUpdated = (): void => {
 		const prefs: Preferences = this.doc.prefs;
 		this._muteEditor.container.style.display = prefs.enableChannelMuting ? "" : "none";
-		const trackBounds: DOMRect = this._trackVisibleArea.getBoundingClientRect();
-		this.doc.trackVisibleBars = Math.floor((trackBounds.right - trackBounds.left - (prefs.enableChannelMuting ? 32 : 0)) / this.doc.getBarWidth());
-		this.doc.trackVisibleChannels = Math.floor((trackBounds.bottom - trackBounds.top - 30) / ChannelRow.patternHeight);
+		this.doc.trackVisibleBars = Math.floor((this._trackVisibleArea.clientWidth - (prefs.enableChannelMuting ? 32 : 0)) / this.doc.getBarWidth());
+		this.doc.trackVisibleChannels = Math.floor((this._trackVisibleArea.clientHeight - 30) / ChannelRow.patternHeight);
 		this._barScrollBar.render();
 		this._muteEditor.render();
 		this._trackEditor.render();
@@ -1123,7 +1173,7 @@ export class SongEditor {
 		this._instrumentVolumeSlider.updateValue(-instrument.volume);
 		this._addEnvelopeButton.disabled = (instrument.envelopeCount >= Config.maxEnvelopeCount);
 		
-		this._volumeSlider.value = String(prefs.volume);
+		this._volumeSlider.input.value = String(prefs.volume);
 		
 		// If an interface element was selected, but becomes invisible (e.g. an instrument
 		// select menu) just select the editor container so keyboard commands still work.
@@ -1140,6 +1190,7 @@ export class SongEditor {
 		// When adding effects or envelopes to an instrument in fullscreen modes,
 		// auto-scroll the settings areas to ensure the new settings are visible.
 		if (this.doc.addedEffect) {
+			// TODO: This is pretty janky! I'd prefer to not have to rely on getBoundingClientRect().
 			const envButtonRect: DOMRect = this._addEnvelopeButton.getBoundingClientRect();
 			const instSettingsRect: DOMRect = this._instrumentSettingsArea.getBoundingClientRect();
 			const settingsRect: DOMRect = this._settingsArea.getBoundingClientRect();
@@ -1692,7 +1743,7 @@ export class SongEditor {
 	}
 	
 	private _setVolumeSlider = (): void => {
-		this.doc.setVolume(Number(this._volumeSlider.value));
+		this.doc.setVolume(Number(this._volumeSlider.input.value));
 	}
 	
 	private _copyInstrument = (): void => {

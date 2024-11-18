@@ -1,10 +1,11 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
 import {Config} from "../synth/SynthConfig.js";
+import {ColorConfig} from "./ColorConfig.js";
 import {SongDocument} from "./SongDocument.js";
 import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {EasyPointers} from "./EasyPointers.js";
 import {ChangeOctave} from "./changes.js";
-import {ColorConfig} from "./ColorConfig.js";
 
 export class OctaveScrollBar {
 	private readonly _editorWidth: number = 20;
@@ -21,10 +22,9 @@ export class OctaveScrollBar {
 	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: pan-x; position: absolute;`, width: this._editorWidth, height: "100%", viewBox: "0 0 20 481", preserveAspectRatio: "none"});
 	public readonly container: HTMLDivElement = HTML.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 100%; overflow: hidden; position: relative; flex-shrink: 0;"}, this._svg);
 	
-	//private _mouseX: number = 0;
+	private readonly _pointers: EasyPointers = new EasyPointers(this.container, {touchGestureScrolling: "preventConditionally"});
+	
 	private _mouseY: number = 0;
-	private _mouseDown: boolean = false;
-	private _mouseOver: boolean = false;
 	private _dragging: boolean = false;
 	private _dragStart: number;
 	private _barBottom: number;
@@ -55,37 +55,20 @@ export class OctaveScrollBar {
 		this._upHighlight.setAttribute("d", `M ${center} ${tip} L ${center + arrowWidth} ${base} L ${center - arrowWidth} ${base} z`);
 		this._downHighlight.setAttribute("d", `M ${center} ${this._editorHeight - tip} L ${center + arrowWidth} ${this._editorHeight - base} L ${center - arrowWidth} ${this._editorHeight - base} z`);
 		
-		this.container.addEventListener("mousedown", this._whenMousePressed);
-		document.addEventListener("mousemove", this._whenMouseMoved);
-		document.addEventListener("mouseup", this._whenCursorReleased);
-		this.container.addEventListener("mouseover", this._whenMouseOver);
-		this.container.addEventListener("mouseout", this._whenMouseOut);
-		
-		this.container.addEventListener("touchstart", this._whenTouchPressed);
-		this.container.addEventListener("touchmove", this._whenTouchMoved);
-		this.container.addEventListener("touchend", this._whenCursorReleased);
-		this.container.addEventListener("touchcancel", this._whenCursorReleased);
+		this.container.addEventListener("pointerenter", this._onPointerMove);
+		this.container.addEventListener("pointerleave", this._onPointerLeave);
+		this.container.addEventListener("pointerdown", this._onPointerDown);
+		this.container.addEventListener("pointermove", this._onPointerMove);
+		this.container.addEventListener("pointerup", this._onPointerUp);
+		this.container.addEventListener("pointercancel", this._onPointerUp);
 	}
 	
-	private _whenMouseOver = (event: MouseEvent): void => {
-		if (this._mouseOver) return;
-		this._mouseOver = true;
+	private _onPointerLeave = (event: PointerEvent): void => {
 		this._updatePreview();
 	}
 	
-	private _whenMouseOut = (event: MouseEvent): void => {
-		if (!this._mouseOver) return;
-		this._mouseOver = false;
-		this._updatePreview();
-	}
-	
-	private _whenMousePressed = (event: MouseEvent): void => {
-		event.preventDefault();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseY)) this._mouseY = 0;
+	private _onPointerDown = (event: PointerEvent): void => {
+		this._mouseY = (this._pointers.latest.getPointInNormalized(this.container).y) * this._editorHeight;
 		if (this._doc.song.getChannelIsNoise(this._doc.channel)) return;
 		this._updatePreview();
 		
@@ -96,42 +79,8 @@ export class OctaveScrollBar {
 		}
 	}
 	
-	private _whenTouchPressed = (event: TouchEvent): void => {
-		event.preventDefault();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		//this._mouseX = event.touches[0].clientX - boundingRect.left;
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		if (this._doc.song.getChannelIsNoise(this._doc.channel)) return;
-		this._updatePreview();
-		
-		if (this._mouseY >= this._barBottom - this._barHeight && this._mouseY <= this._barBottom) {
-			this._dragging = true;
-			this._change = null;
-			this._dragStart = this._mouseY;
-		}
-	}
-	
-	private _whenMouseMoved = (event: MouseEvent): void => {
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._whenCursorMoved();
-	}
-	
-	private _whenTouchMoved = (event: TouchEvent): void => {
-		if (!this._mouseDown) return;
-		event.preventDefault();
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		//this._mouseX = event.touches[0].clientX - boundingRect.left;
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._whenCursorMoved();
-	}
-	
-	private _whenCursorMoved(): void {
+	private _onPointerMove = (event: PointerEvent): void => {
+		this._mouseY = (this._pointers.latest.getPointInNormalized(this.container).y) * this._editorHeight;
 		if (this._doc.song.getChannelIsNoise(this._doc.channel)) return;
 		if (this._dragging) {
 			const visibleOctaveCount: number = this._doc.getVisibleOctaveCount();
@@ -162,11 +111,11 @@ export class OctaveScrollBar {
 			this._doc.setProspectiveChange(this._change);
 		}
 		
-		if (this._mouseOver) this._updatePreview();
+		this._updatePreview();
 	}
 	
-	private _whenCursorReleased = (event: Event): void => {
-		if (!this._doc.song.getChannelIsNoise(this._doc.channel) && this._mouseDown) {
+	private _onPointerUp = (event: PointerEvent): void => {
+		if (!this._doc.song.getChannelIsNoise(this._doc.channel)) {
 			if (this._dragging) {
 				if (this._change != null) this._doc.record(this._change);
 			} else {
@@ -189,13 +138,12 @@ export class OctaveScrollBar {
 				}
 			}
 		}
-		this._mouseDown = false;
 		this._dragging = false;
 		this._updatePreview();
 	}
 	
 	private _updatePreview(): void {
-		const showHighlight: boolean = this._mouseOver && !this._mouseDown;
+		const showHighlight: boolean = this._pointers.latest.isHovering;
 		let showUpHighlight: boolean = false;
 		let showDownHighlight: boolean = false;
 		let showHandleHighlight: boolean = false;
@@ -210,14 +158,14 @@ export class OctaveScrollBar {
 			}
 		}
 		
-		this._upHighlight.style.visibility = showUpHighlight ? "inherit" : "hidden";
-		this._downHighlight.style.visibility = showDownHighlight ? "inherit" : "hidden";
-		this._handleHighlight.style.visibility = showHandleHighlight ? "inherit" : "hidden";
+		this._upHighlight.style.display = showUpHighlight ? "" : "none";
+		this._downHighlight.style.display = showDownHighlight ? "" : "none";
+		this._handleHighlight.style.display = showHandleHighlight ? "" : "none";
 	}
 	
 	private _documentChanged = (): void => {
 		this._barBottom = this._editorHeight - (this._octaveHeight * this._doc.getBaseVisibleOctave(this._doc.channel));
-		this._svg.style.visibility = (this._doc.song.getChannelIsNoise(this._doc.channel)) ? "hidden" : "visible";
+		this._svg.style.display = (this._doc.song.getChannelIsNoise(this._doc.channel)) ? "none" : "";
 		const visibleOctaveCount: number = this._doc.getVisibleOctaveCount();
 		if (this._renderedBarBottom != this._barBottom || this._renderedVisibleOctaveCount != visibleOctaveCount) {
 			this._renderedBarBottom = this._barBottom;

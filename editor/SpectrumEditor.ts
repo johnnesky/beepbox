@@ -1,12 +1,13 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
 import {Config} from "../synth/SynthConfig.js";
+import {prettyNumber} from "./EditorConfig.js";
+import {ColorConfig} from "./ColorConfig.js";
 import {SpectrumWave, Instrument} from "../synth/synth.js";
 import {SongDocument} from "./SongDocument.js";
 import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
-import {ColorConfig} from "./ColorConfig.js";
+import {EasyPointers, Point2d} from "./EasyPointers.js";
 import {ChangeSpectrum} from "./changes.js";
-import {prettyNumber} from "./EditorConfig.js";
 
 export class SpectrumEditor {
 	private readonly _editorWidth: number = 120;
@@ -16,7 +17,7 @@ export class SpectrumEditor {
 	private readonly _fifths: SVGSVGElement = SVG.svg({"pointer-events": "none"});
 	private readonly _curve: SVGPathElement = SVG.path({fill: "none", stroke: "currentColor", "stroke-width": 2, "pointer-events": "none"});
 	private readonly _arrow: SVGPathElement = SVG.path({fill: "currentColor", "pointer-events": "none"});
-	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; cursor: crosshair;`, width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"},
+	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground};`, width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"},
 		this._fill,
 		this._octaves,
 		this._fifths,
@@ -24,13 +25,12 @@ export class SpectrumEditor {
 		this._arrow,
 	);
 	
-	public readonly container: HTMLElement = HTML.div({class: "spectrum", style: "height: 100%;"}, this._svg);
+	public readonly container: HTMLElement = HTML.div({class: "spectrum", style: "height: 100%; touch-action: none; cursor: crosshair;"}, this._svg);
 	
 	private _mouseX: number = 0;
 	private _mouseY: number = 0;
 	private _freqPrev: number = 0;
 	private _ampPrev: number = 0;
-	private _mouseDown: boolean = false;
 	private _change: ChangeSpectrum | null = null;
 	private _renderedPath: String = "";
 	private _renderedFifths: boolean = true;
@@ -43,14 +43,13 @@ export class SpectrumEditor {
 			this._fifths.appendChild(SVG.rect({fill: ColorConfig.fifthNote, x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
 		}
 		
-		this.container.addEventListener("mousedown", this._whenMousePressed);
-		document.addEventListener("mousemove", this._whenMouseMoved);
-		document.addEventListener("mouseup", this._whenCursorReleased);
-		
-		this.container.addEventListener("touchstart", this._whenTouchPressed);
-		this.container.addEventListener("touchmove", this._whenTouchMoved);
-		this.container.addEventListener("touchend", this._whenCursorReleased);
-		this.container.addEventListener("touchcancel", this._whenCursorReleased);
+		new EasyPointers(this.container, {touchGestureScrolling: "preventConditionally"});
+		//this.container.addEventListener("pointerenter", this._onPointerMove);
+		//this.container.addEventListener("pointerleave", this._onPointerLeave);
+		this.container.addEventListener("pointerdown", this._onPointerDown);
+		this.container.addEventListener("pointermove", this._onPointerMove);
+		this.container.addEventListener("pointerup", this._onPointerUp);
+		this.container.addEventListener("pointercancel", this._onPointerUp);
 	}
 	
 	private _xToFreq(x: number): number {
@@ -61,58 +60,26 @@ export class SpectrumEditor {
 		return Config.spectrumMax * (1 - (y - 1) / (this._editorHeight - 2));
 	}
 	
-	private _whenMousePressed = (event: MouseEvent): void => {
-		event.preventDefault();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		
+	private _updateMousePos(event: PointerEvent): void {
+		const point: Point2d = event.pointer!.getPointInNormalized(this.container);
+		this._mouseX = point.x * this._editorWidth;
+		this._mouseY = point.y * this._editorHeight;
+	}
+	
+	private _onPointerDown = (event: PointerEvent): void => {
+		this._updateMousePos(event);
 		this._freqPrev = this._xToFreq(this._mouseX);
 		this._ampPrev = this._yToAmp(this._mouseY);
-		this._whenCursorMoved();
+		this._whenCursorMoved(event);
 	}
 	
-	private _whenTouchPressed = (event: TouchEvent): void => {
-		event.preventDefault();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		
-		this._freqPrev = this._xToFreq(this._mouseX);
-		this._ampPrev = this._yToAmp(this._mouseY);
-		this._whenCursorMoved();
+	private _onPointerMove = (event: PointerEvent): void => {
+		this._updateMousePos(event);
+		this._whenCursorMoved(event);
 	}
 	
-	private _whenMouseMoved = (event: MouseEvent): void => {
-		if (this.container.offsetParent == null) return;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._whenCursorMoved();
-	}
-	
-	private _whenTouchMoved = (event: TouchEvent): void => {
-		if (this.container.offsetParent == null) return;
-		if (!this._mouseDown) return;
-		event.preventDefault();
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._whenCursorMoved();
-	}
-	
-	private _whenCursorMoved(): void {
-		if (this._mouseDown) {
+	private _whenCursorMoved(event: PointerEvent): void {
+		if (event.pointer!.isDown) {
 			const freq: number = this._xToFreq(this._mouseX);
 			const amp: number = this._yToAmp(this._mouseY);
 			
@@ -140,12 +107,9 @@ export class SpectrumEditor {
 		}
 	}
 	
-	private _whenCursorReleased = (event: Event): void => {
-		if (this._mouseDown) {
-			this._doc.record(this._change!);
-			this._change = null;
-		}
-		this._mouseDown = false;
+	private _onPointerUp = (event: PointerEvent): void => {
+		this._doc.record(this._change!);
+		this._change = null;
 	}
 	
 	public render(): void {

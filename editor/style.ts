@@ -255,6 +255,17 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	mask-position: center;
 }
 
+.beepboxEditor .playback-volume-controls {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.beepboxEditor .playback-volume-controls > :last-child {
+	width: 5em;
+	flex-grow: 1;
+}
+
 .beepboxEditor .drum-button {
 	flex: 1;
 	background-color: transparent;
@@ -1283,10 +1294,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		margin: 2px 0;
 	}
 	.beepboxEditor .playback-volume-controls {
-		display: flex;
-		flex-direction: row;
 		margin: 2px 0;
-		align-items: center;
 	}
 	.beepboxEditor .settings-area {
 		width: var(--settings-area-width);
@@ -1334,9 +1342,6 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		flex-grow: 1;
 	}
 	.beepboxEditor .playback-volume-controls {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
 		flex-grow: 1;
 	}
 }
