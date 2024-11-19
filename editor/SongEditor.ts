@@ -11,14 +11,11 @@ import {SongDocument} from "./SongDocument.js";
 import {Prompt} from "./Prompt.js";
 import {TipPrompt} from "./TipPrompt.js";
 import {PatternEditor} from "./PatternEditor.js";
-import {FadeInOutEditor} from "./FadeInOutEditor.js";
-import {FilterEditor} from "./FilterEditor.js";
 import {MuteEditor} from "./MuteEditor.js";
 import {TrackEditor} from "./TrackEditor.js";
 import {ChannelRow} from "./ChannelRow.js";
 import {LayoutPrompt} from "./LayoutPrompt.js";
 import {SpectrumEditor} from "./SpectrumEditor.js";
-import {HarmonicsEditor} from "./HarmonicsEditor.js";
 import {BarScrollBar} from "./BarScrollBar.js";
 import {OctaveScrollBar} from "./OctaveScrollBar.js";
 import {MidiInputHandler} from "./MidiInput.js";
@@ -34,7 +31,7 @@ import {ImportPrompt} from "./ImportPrompt.js";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt.js";
 import {RecordingSetupPrompt} from "./RecordingSetupPrompt.js";
 import {Change} from "./Change.js";
-import {ChangeTempo, ChangeVolume, ChangePatternSelection, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeAlgorithm, ChangeChipWave, ChangeNoiseWave, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeUnison, ChangeChord, ChangeSong, ChangeAddEnvelope, ChangeAddChannelInstrument, ChangeRemoveChannelInstrument} from "./changes.js";
+import {ChangeTempo, ChangeVolume, ChangePatternSelection, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeToggleEffects, ChangeSong, ChangeAddEnvelope, ChangeAddChannelInstrument, ChangeRemoveChannelInstrument} from "./changes.js";
 
 const {a, button, div, input, select, span, optgroup, option} = HTML;
 
@@ -184,7 +181,6 @@ export class SongEditor {
 	private readonly _rhythmSelect: HTMLSelectElement = buildOptions(select(), Config.rhythms.map(rhythm=>rhythm.name));
 	private readonly _pitchedPresetSelect: HTMLSelectElement = buildPresetOptions(false);
 	private readonly _drumPresetSelect: HTMLSelectElement = buildPresetOptions(true);
-	private readonly _algorithmSelect: HTMLSelectElement = buildOptions(select(), Config.algorithms.map(algorithm=>algorithm.name));
 	private readonly _instrumentButtons: HTMLButtonElement[] = [];
 	private readonly _instrumentAddButton: HTMLButtonElement = button({type: "button", class: "add-instrument last-button"});
 	private readonly _instrumentRemoveButton: HTMLButtonElement = button({type: "button", class: "remove-instrument"});
@@ -195,20 +191,8 @@ export class SongEditor {
 	private readonly _instrumentCopyPasteRow: HTMLDivElement = div({class: "instrumentCopyPasteRow", style: "display: none;"}, this._instrumentCopyButton, this._instrumentPasteButton);
 	private readonly _instrumentVolumeSlider: Slider = new Slider(input({style: "margin: 0;", type: "range", min: -(Config.volumeRange - 1), max: "0", value: "0", step: "1"}), this.doc, (oldValue: number, newValue: number) => new ChangeVolume(this.doc, oldValue, -newValue));
 	private readonly _instrumentVolumeSliderRow: HTMLDivElement = div({class: "selectRow"}, span({class: "tip", onclick: ()=>this._openPrompt("instrumentVolume")}, "Volume:"), this._instrumentVolumeSlider.input);
-	private readonly _chipWaveSelect: HTMLSelectElement = buildOptions(select(), Config.chipWaves.map(wave=>wave.name));
-	private readonly _chipNoiseSelect: HTMLSelectElement = buildOptions(select(), Config.chipNoises.map(wave=>wave.name));
-	private readonly _fadeInOutEditor: FadeInOutEditor = new FadeInOutEditor(this.doc);
-	private readonly _transitionSelect: HTMLSelectElement = buildOptions(select(), Config.transitions.map(transition=>transition.name));
 	private readonly _effectsSelect: HTMLSelectElement = select(option({selected: true, disabled: true, hidden: false})); // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
-	private readonly _eqFilterEditor: FilterEditor = new FilterEditor(this.doc);
-	private readonly _noteFilterEditor: FilterEditor = new FilterEditor(this.doc, true);
-	private readonly _unisonSelect: HTMLSelectElement = buildOptions(select(), Config.unisons.map(unison=>unison.name));
-	private readonly _chordSelect: HTMLSelectElement = buildOptions(select(), Config.chords.map(chord=>chord.name));
-	private readonly _vibratoSelect: HTMLSelectElement = buildOptions(select(), Config.vibratos.map(vibrato=>vibrato.name));
 	private readonly _phaseModGroup: HTMLElement = div({class: "editor-controls"});
-	private readonly _feedbackTypeSelect: HTMLSelectElement = buildOptions(select(), Config.feedbacks.map(feedback=>feedback.name));
-	private readonly _spectrumEditor: SpectrumEditor = new SpectrumEditor(this.doc, null);
-	private readonly _harmonicsEditor: HarmonicsEditor = new HarmonicsEditor(this.doc);
 	private readonly _drumsetGroup: HTMLElement = div({class: "editor-controls"});
 	
 	private readonly _addEnvelopeButton: HTMLButtonElement = button({type: "button", class: "add-envelope"});
@@ -423,18 +407,10 @@ export class SongEditor {
 		this._rhythmSelect.addEventListener("change", this._whenSetRhythm);
 		this._pitchedPresetSelect.addEventListener("change", this._whenSetPitchedPreset);
 		this._drumPresetSelect.addEventListener("change", this._whenSetDrumPreset);
-		this._algorithmSelect.addEventListener("change", this._whenSetAlgorithm);
 		this._instrumentsButtonBar.addEventListener("click", this._whenSelectInstrument);
 		this._instrumentCopyButton.addEventListener("click", this._copyInstrument);
 		this._instrumentPasteButton.addEventListener("click", this._pasteInstrument);
-		this._feedbackTypeSelect.addEventListener("change", this._whenSetFeedbackType);
-		this._chipWaveSelect.addEventListener("change", this._whenSetChipWave);
-		this._chipNoiseSelect.addEventListener("change", this._whenSetNoiseWave);
-		this._transitionSelect.addEventListener("change", this._whenSetTransition);
 		this._effectsSelect.addEventListener("change", this._whenSetEffects);
-		this._unisonSelect.addEventListener("change", this._whenSetUnison);
-		this._chordSelect.addEventListener("change", this._whenSetChord);
-		this._vibratoSelect.addEventListener("change", this._whenSetVibrato);
 		this._playButton.addEventListener("click", this._togglePlay);
 		this._pauseButton.addEventListener("click", this._togglePlay);
 		this._recordButton.addEventListener("click", this._toggleRecord);
@@ -460,11 +436,6 @@ export class SongEditor {
 		
 		this._patternArea.addEventListener("mousedown", this._refocusStage);
 		this._trackArea.addEventListener("mousedown", this._refocusStage);
-		this._fadeInOutEditor.container.addEventListener("mousedown", this._refocusStage);
-		this._spectrumEditor.container.addEventListener("mousedown", this._refocusStage);
-		this._eqFilterEditor.container.addEventListener("mousedown", this._refocusStage);
-		this._noteFilterEditor.container.addEventListener("mousedown", this._refocusStage);
-		this._harmonicsEditor.container.addEventListener("mousedown", this._refocusStage);
 		this._tempoStepper.addEventListener("keydown", this._tempoStepperCaptureNumberKeys, false);
 		this._addEnvelopeButton.addEventListener("click", this._addNewEnvelope);
 		this._patternArea.addEventListener("contextmenu", this._disableCtrlContextMenu);
@@ -790,7 +761,6 @@ export class SongEditor {
 		
 		this._instrumentSettingsGroup.style.color = colors.primaryNote;
 		
-		this._eqFilterEditor.render();
 		this._instrumentVolumeSlider.updateValue(-instrument.volume);
 		this._addEnvelopeButton.disabled = (instrument.envelopeCount >= Config.maxEnvelopeCount);
 		
@@ -1465,14 +1435,6 @@ export class SongEditor {
 		}
 	}
 	
-	private _whenSetFeedbackType = (): void => {
-		this.doc.record(new ChangeFeedbackType(this.doc, this._feedbackTypeSelect.selectedIndex));
-	}
-	
-	private _whenSetAlgorithm = (): void => {
-		this.doc.record(new ChangeAlgorithm(this.doc, this._algorithmSelect.selectedIndex));
-	}
-	
 	private _whenSelectInstrument = (event: MouseEvent): void => {
 		if (event.target == this._instrumentAddButton) {
 			this.doc.record(new ChangeAddChannelInstrument(this.doc));
@@ -1487,17 +1449,6 @@ export class SongEditor {
 		this._refocusStage();
 	}
 	
-	private _whenSetChipWave = (): void => {
-		this.doc.record(new ChangeChipWave(this.doc, this._chipWaveSelect.selectedIndex));
-	}
-	
-	private _whenSetNoiseWave = (): void => {
-		this.doc.record(new ChangeNoiseWave(this.doc, this._chipNoiseSelect.selectedIndex));
-	}
-	private _whenSetTransition = (): void => {
-		this.doc.record(new ChangeTransition(this.doc, this._transitionSelect.selectedIndex));
-	}
-	
 	private _whenSetEffects = (): void => {
 		const instrument: Instrument = this.doc.song.channels[this.doc.channel].instruments[this.doc.getCurrentInstrument()];
 		const oldValue: number = instrument.effects;
@@ -1507,18 +1458,6 @@ export class SongEditor {
 		if (instrument.effects > oldValue) {
 			this.doc.addedEffect = true;
 		}
-	}
-	
-	private _whenSetVibrato = (): void => {
-		this.doc.record(new ChangeVibrato(this.doc, this._vibratoSelect.selectedIndex));
-	}
-	
-	private _whenSetUnison = (): void => {
-		this.doc.record(new ChangeUnison(this.doc, this._unisonSelect.selectedIndex));
-	}
-	
-	private _whenSetChord = (): void => {
-		this.doc.record(new ChangeChord(this.doc, this._chordSelect.selectedIndex));
 	}
 	
 	private _addNewEnvelope = (): void => {
