@@ -36,8 +36,8 @@ export class SongDocument {
 	public readonly recentPatternInstruments: number[][] = [];
 	public readonly viewedInstrument: number[] = [];
 	
-	public trackVisibleBars: number = 16;
-	public trackVisibleChannels: number = 4;
+	public trackVisibleBars: number = 12;
+	public trackVisibleChannels: number = 2;
 	public barScrollPos: number = 0;
 	public channelScrollPos: number = 0;
 	public prompt: string | null = null;
@@ -46,7 +46,7 @@ export class SongDocument {
 	public addedEnvelope: boolean = false;
 	public currentPatternIsDirty: boolean = false;
 	
-	private static readonly _maximumUndoHistory: number = 100;
+	private static readonly _maximumUndoHistory: number = 25;
 	private _recovery: SongRecovery = new SongRecovery();
 	private _recoveryUid: string;
 	private _recentChange: Change | null = null;
