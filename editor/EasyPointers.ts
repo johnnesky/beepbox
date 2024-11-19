@@ -15,11 +15,7 @@ declare global {
 }
 
 export interface EasyPointersOptions {
-	//preventScrollingAndDeferring?: boolean,
-	//deferInitialEvents?: boolean,
-	//dragMinDistance?: number,
-	//deferEventMaxMillis?: number,
-	touchGestureScrolling?: `${TouchGestureScrolling}`,
+	preventTouchGestureScrolling?: boolean,
 	listenForTheseButtons?: Iterable<`${PointerButton}`>,
 	listenForMultipleButtonsDown?: boolean,
 	listenForMultiplePointers?: boolean,
@@ -27,6 +23,9 @@ export interface EasyPointersOptions {
 	preventTextSelection?: boolean,
 	preventContextMenu?: boolean,
 	preventMiddleButtonScrolling?: boolean,
+	moveMinDistance?: number,
+	holdStillMinMillis?: number,
+	deferInitialEvents?: boolean,
 	stopEventsAfterTargetIsRemovedFromLayout?: boolean,
 	prioritizeTargetOverNeighborsOnTouchScreen?: boolean,
 }
@@ -51,16 +50,8 @@ export class EasyPointers<UserData = unknown> {
 	
 	public static readonly usingPrimarilyTouchDevice: boolean = matchMedia("(pointer:coarse)").matches;
 	
-	private _isPreventingConditionally: boolean = false;
-	private _preventTouchGestureScrolling: boolean = false;
-	public get preventTouchGestureScrolling(): boolean { return this._preventTouchGestureScrolling; }
-	public set preventTouchGestureScrolling(value: boolean) {
-		if (!this._isPreventingConditionally) {
-			throw new Error("EasyPointers: Can't set preventTouchGestureScrolling because touchGestureScrolling isn't preventConditionally.");
-		}
-		this._preventTouchGestureScrolling = value;
-	}
-	
+	public deferInitialEvents: boolean;
+	public preventTouchGestureScrolling: boolean;
 	public preventTextSelection: boolean;
 	public preventContextMenu: boolean;
 	public preventMiddleButtonScrolling: boolean;
@@ -70,10 +61,8 @@ export class EasyPointers<UserData = unknown> {
 	private readonly _target: HTMLElement | SVGElement;
 	public get target(): HTMLElement | SVGElement { return this._target; }
 	
-	private readonly _byId: Map<number, InternalPointer<UserData>> = new Map();
+	private readonly _byId: Map<number, _InternalPointer<UserData>> = new Map();
 	public get byId(): ReadonlyMap<number, Pointer<UserData>> { return this._byId; }
-	
-	private readonly _gesturesThatMightScrollById: Map<number, _GestureThatMightScroll> = new Map();
 	
 	constructor(target: HTMLElement | SVGElement, options: EasyPointersOptions = {}) {
 		if (!(target instanceof HTMLElement) && !(target instanceof SVGElement)) {
@@ -96,35 +85,31 @@ export class EasyPointers<UserData = unknown> {
 			}
 		}
 		
-		const touchGestureScrolling: `${TouchGestureScrolling}` = options.touchGestureScrolling ?? TouchGestureScrolling.deferPrecedingEvents;
-		if (!_touchGestureScrollingSet.has(touchGestureScrolling)) {
-			throw new Error("EasyPointers: touchGestureScrolling was set to an unrecognized value: " + touchGestureScrolling + ". Valid values are: " + [..._touchGestureScrollingSet].map(s => `"${s}"`).join(", "));
-		}
-		this._isPreventingConditionally = (touchGestureScrolling == TouchGestureScrolling.preventConditionally);
-		this._preventTouchGestureScrolling = this._isPreventingConditionally;
-		const deferTouchGesturesThatMightScroll: boolean = (touchGestureScrolling == TouchGestureScrolling.deferPrecedingEvents);
-		
 		const listenForTheseButtonIndices: Set<_ButtonIndex> = new Set([...listenForTheseButtons].map(button => _indexFromButton.get(button)!));
 		const listenForTheseButtonsBitmask: number = [...listenForTheseButtons].map(button => _bitmaskFromButton.get(button)!).reduce((acc, bit) => acc | bit, 0);
 		const listenForMultipleButtonsDown: boolean = verifyBooleanOption(options, "listenForMultipleButtonsDown", false);
 		const listenForMultiplePointers: boolean = verifyBooleanOption(options, "listenForMultiplePointers", false);
 		const listenForPossiblyAccidentalPointers: boolean = verifyBooleanOption(options, "listenForPossiblyAccidentalPointers", true);
+		const moveMinDistance: number = options.moveMinDistance ?? 15; // In my experience, 15 is sufficient for scrolling to trigger (and cancel the pointer) before this threshold is crossed.
+		if (typeof moveMinDistance != "number" || moveMinDistance < 0 || !Number.isFinite(moveMinDistance)) throw new Error(`EasyPointers: The moveMinDistance option, if provided, should be a nonnegative number value.`);
+		const holdStillMinMillis: number = options.holdStillMinMillis ?? Infinity;
+		if (typeof holdStillMinMillis != "number" || holdStillMinMillis <= 0 || Number.isNaN(holdStillMinMillis)) throw new Error(`EasyPointers: The holdStillMinMillis option, if provided, should be a positive number value.`);
+		this.deferInitialEvents = verifyBooleanOption(options, "deferInitialEvents", false);
+		this.preventTouchGestureScrolling = verifyBooleanOption(options, "preventTouchGestureScrolling", false);
 		this.preventTextSelection = verifyBooleanOption(options, "preventTextSelection", listenForTheseButtons.has(PointerButton.primary));
 		this.preventContextMenu = verifyBooleanOption(options, "preventContextMenu", listenForTheseButtons.has(PointerButton.secondary));
 		this.preventMiddleButtonScrolling = verifyBooleanOption(options, "preventMiddleButtonScrolling", listenForTheseButtons.has(PointerButton.middle));
 		const stopEventsAfterTargetIsRemovedFromLayout: boolean = verifyBooleanOption(options, "stopEventsAfterTargetIsRemovedFromLayout", true);
 		const prioritizeTargetOverNeighborsOnTouchScreen: boolean = verifyBooleanOption(options, "prioritizeTargetOverNeighborsOnTouchScreen", true);
-		//const deferEventMaxMillis: number = options.deferEventMaxMillis ?? Infinity;
-		//if (typeof deferEventMaxMillis != "number") throw new Error(`EasyPointers: The deferEventMaxMillis option, if provided, should be a number value.`);
 		
-		this._latest = new InternalPointer(this, 0, EasyPointers.usingPrimarilyTouchDevice ? "touch" : "mouse");
+		this._latest = new _InternalPointer(this, 0, EasyPointers.usingPrimarilyTouchDevice ? "touch" : "mouse");
 		this._latest._isInTarget = false;
 		this._latest._isPresent = false;
 		this._first = this._latest;
 		
 		const stop = (event: Event): void => event.stopImmediatePropagation();
 		
-		const syncEventAndPointer = (event: PointerEvent, pointer: InternalPointer<UserData>): void => {
+		const syncEventAndPointer = (event: PointerEvent, pointer: _InternalPointer<UserData>): void => {
 			// Assign references to the event for convenience if those properties don't already exist.
 			if (!("pointers" in event)) event.pointers = this;
 			if (!("pointer" in event)) event.pointer = pointer;
@@ -144,7 +129,8 @@ export class EasyPointers<UserData = unknown> {
 			pointer._hasJustBeenCanceled = (event.type == "pointercancel");
 		}
 		
-		const resetPresses = (pointer: InternalPointer): void => {
+		const resetPresses = (pointer: _InternalPointer): void => {
+			pointer._gesture = null;
 			pointer._pressedButtons = _ButtonBitmask.none;
 			pointer._pressingButtons = _ButtonBitmask.none;
 			pointer._startedWithButton = _ButtonIndex.none;
@@ -171,18 +157,6 @@ export class EasyPointers<UserData = unknown> {
 				}
 				return stop(event);
 			}
-			if (deferTouchGesturesThatMightScroll &&
-				event.pointerType == "touch" &&
-				(this._gesturesThatMightScrollById.get(event.pointerId)?.mightScroll ?? true))
-			{
-				let gesture: _GestureThatMightScroll | undefined = this._gesturesThatMightScrollById.get(event.pointerId);
-				if (gesture == undefined) {
-					gesture = new _GestureThatMightScroll();
-					this._gesturesThatMightScrollById.set(event.pointerId, gesture);
-				}
-				gesture.enterEvent = event;
-				return stop(event);
-			}
 			if (!listenForMultiplePointers) {
 				// If only one pointer is allowed at a time, and a different pointer
 				// is trying to enter, and the new pointer is a different type,
@@ -204,11 +178,11 @@ export class EasyPointers<UserData = unknown> {
 			}
 			
 			// CHECK POINTER ASSUMPTIONS
-			let pointer: InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
+			let pointer: _InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
 			if (pointer && pointer._isPresent) return stop(event);
 			
 			// UPDATE POINTER
-			pointer = new InternalPointer(this, event.pointerId, event.pointerType);
+			pointer = new _InternalPointer(this, event.pointerId, event.pointerType);
 			this._byId.set(event.pointerId, pointer);
 			if (this._byId.size == 1) this._first = pointer;
 			syncEventAndPointer(event, pointer);
@@ -224,11 +198,10 @@ export class EasyPointers<UserData = unknown> {
 			
 			// PREVENT EVENT DEFAULTS: N/A
 			
-			// EVENT STOP CONDITIONS
-			this._gesturesThatMightScrollById.delete(event.pointerId);
+			// EVENT STOP CONDITIONS: N/A
 			
 			// CHECK POINTER ASSUMPTIONS
-			let pointer: InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
+			let pointer: _InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
 			if (!pointer || !pointer._isPresent) return stop(event);
 			if (pointer._isDown) {
 				this.dispatchPointerCancelEvent(event.pointerId);
@@ -272,57 +245,24 @@ export class EasyPointers<UserData = unknown> {
 				// For consistency, stop button release events on other platforms too.
 				return stop(event);
 			}
-			const gesture: _GestureThatMightScroll | undefined = this._gesturesThatMightScrollById.get(event.pointerId);
-			let mightScroll: boolean = false;
-			if (gesture && gesture.downEvent && gesture.mightScroll) {
-				mightScroll = true;
-				// A rough estimate of the zoom level, to convert from viewport distance to touchscreen distance.
-				const zoom: number = window.outerWidth / (visualViewport?.width ?? window.innerWidth);
-				const dx: number = (event.clientX - gesture.downEvent.clientX) * zoom;
-				const dy: number = (event.clientY - gesture.downEvent.clientY) * zoom;
-				const distanceMoved: number = Math.sqrt(dx * dx + dy * dy);
-				// As a heuristic, assume that if the touch moved 15 units, that's probably enough
-				// to determine whether it will start scrolling or not.
-				const threshold: number = 15;
-				if (distanceMoved > threshold) {
-					// If the touch pointer would be canceled in favor of scrolling,
-					// a pointercancel event will be dispatched, but not until immediately
-					// after the pointermove event that crossed the threshold. Wait to see
-					// if the pointercancel event is dispatched.
-					setTimeout(() => {
-						if (gesture == this._gesturesThatMightScrollById.get(event.pointerId) &&
-							gesture.mightScroll)
-						{
-							gesture.mightScroll = false;
-							//if (!this._isPreventingConditionally) this._preventTouchGestureScrolling = true;
-							if (deferTouchGesturesThatMightScroll) {
-								if (gesture.enterEvent) gesture.enterEvent.target!.dispatchEvent(gesture.enterEvent);
-								if (gesture.downEvent) gesture.downEvent.target!.dispatchEvent(gesture.downEvent);
-								if (gesture.moveEvent) gesture.moveEvent.target!.dispatchEvent(gesture.moveEvent);
-							}
-							this._gesturesThatMightScrollById.delete(event.pointerId);
-						}
-					}, 10);
-				}
-				if (deferTouchGesturesThatMightScroll) {
-					gesture.moveEvent = event;
-					return stop(event);
-				}
-			}
 			
 			// CHECK POINTER ASSUMPTIONS
-			let pointer: InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
+			let pointer: _InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
+			const pointerIsDown = (): boolean => (pointer?._isDown ?? false) || (pointer?._gesture?.deferringEvents ?? false);
+			const pointerPressingButtons = (): number => (pointer?._gesture?.deferringEvents ?? false)
+				? (pointer?._gesture?.pressingButtons ?? _ButtonBitmask.none)
+				: (pointer?._pressingButtons ?? _ButtonBitmask.none);
 			let changedButtonIndex: _ButtonIndex = listenForTheseButtonIndices.has(event.button)
 				? event.button
 				: _ButtonIndex.none;
 			if (!listenForMultipleButtonsDown &&
 				pointer &&
-				pointer._isDown &&
+				pointerIsDown() &&
 				changedButtonIndex != pointer._startedWithButton)
 			{
 				changedButtonIndex = _ButtonIndex.none;
 			}
-			let pressingButtons: number = pointer?._pressingButtons ?? _ButtonBitmask.none;
+			let pressingButtons: number = pointerPressingButtons();
 			let addedButton:   _ButtonIndex = _ButtonIndex.none;
 			let removedButton: _ButtonIndex = _ButtonIndex.none;
 			if (changedButtonIndex != _ButtonIndex.none) {
@@ -334,7 +274,7 @@ export class EasyPointers<UserData = unknown> {
 					if ((pressingButtons & changedButtonBitmask) != 0) {
 						this.dispatchPointerCancelEvent(event.pointerId);
 						pointer = this._byId.get(event.pointerId);
-						pressingButtons = pointer?._pressingButtons ?? _ButtonBitmask.none;
+						pressingButtons = pointerPressingButtons();
 					}
 					addedButton = changedButtonIndex;
 					pressingButtons = (pressingButtons | changedButtonBitmask);
@@ -348,18 +288,18 @@ export class EasyPointers<UserData = unknown> {
 			if (pressingAnyMissingButtons) {
 				this.dispatchPointerCancelEvent(event.pointerId);
 				pointer = this._byId.get(event.pointerId);
-				pressingButtons = pointer?._pressingButtons ?? _ButtonBitmask.none;
+				pressingButtons = pointerPressingButtons();
 				addedButton   = _ButtonIndex.none;
 				removedButton = _ButtonIndex.none;
 			}
-			if (addedButton != _ButtonIndex.none && !(pointer?._isDown ?? false)) {
+			if (addedButton != _ButtonIndex.none && !pointerIsDown()) {
 				if (this._dispatchPointerDownEvent(event, addedButton).defaultPrevented) {
 					// Make sure the browser knows the app wanted to prevent the default behavior.
 					event.preventDefault();
 				}
 				return stop(event);
 			}
-			if (removedButton != _ButtonIndex.none && (pointer?._isDown ?? false) && pressingButtons == _ButtonBitmask.none) {
+			if (removedButton != _ButtonIndex.none && pointerIsDown() && pressingButtons == _ButtonBitmask.none) {
 				if (this._dispatchPointerUpEvent(event, removedButton).defaultPrevented) {
 					// Make sure the browser knows the app wanted to prevent the default behavior.
 					event.preventDefault();
@@ -377,12 +317,45 @@ export class EasyPointers<UserData = unknown> {
 				pointer = this._byId.get(event.pointerId);
 				if (!pointer || !pointer._isPresent) return stop(event);
 			}
+			const gesture: _Gesture | null = pointer._gesture;
+			if (pointerIsDown() && gesture && !gesture.hasMovedFromStart) {
+				// A rough estimate of the zoom level, to convert from viewport distance to touchscreen distance.
+				const zoom: number = window.outerWidth / (visualViewport?.width ?? window.innerWidth);
+				const dx: number = (event.clientX - gesture.startClientX) * zoom;
+				const dy: number = (event.clientY - gesture.startClientY) * zoom;
+				const distanceMoved: number = Math.sqrt(dx * dx + dy * dy);
+				// As a heuristic, assume that if the touch moved past a certain threshold,
+				// it's probably enough to determine whether it will start scrolling or not.
+				if (distanceMoved > moveMinDistance) {
+					gesture.hasMovedFromStart = true;
+					// If the touch pointer would be canceled in favor of scrolling,
+					// a pointercancel event will be dispatched, but not until immediately
+					// after the pointermove event that crossed the threshold. Wait to see
+					// if the pointercancel event is dispatched.
+					if (gesture.deferringEvents) {
+						setTimeout(() => {
+							if (pointer &&
+								gesture == pointer._gesture &&
+								pointer._isPresent &&
+								pointer == this._byId.get(event.pointerId) &&
+								gesture.deferringEvents)
+							{
+								gesture.stopDeferring();
+							}
+						}, 10);
+					}
+				}
+			}
+			if (gesture && gesture.deferringEvents) {
+				gesture.deferredEvents.push(event);
+				gesture.pressingButtons = pressingButtons;
+				return stop(event);
+			}
 			
 			// UPDATE POINTER
 			syncEventAndPointer(event, pointer);
 			if (!pointer._isDown) resetPresses(pointer);
 			pointer._isInTarget = target.contains(document.elementFromPoint(event.clientX, event.clientY));
-			pointer._mightScroll = mightScroll;
 			if (addedButton) pointer._pressedButtons = pressingButtons;
 			pointer._pressingButtons = pressingButtons;
 			pointer._justPressedButton = addedButton;
@@ -402,36 +375,6 @@ export class EasyPointers<UserData = unknown> {
 				return stop(event);
 			}
 			if (!listenForTheseButtonIndices.has(event.button)) return stop(event);
-			//if (!this._isPreventingConditionally) this._preventTouchGestureScrolling = false;
-			const mightScroll: boolean = event.pointerType == "touch" &&
-				(this._gesturesThatMightScrollById.get(event.pointerId)?.mightScroll ?? true);
-			if (mightScroll) {
-				let gesture: _GestureThatMightScroll | undefined = this._gesturesThatMightScrollById.get(event.pointerId);
-				if (gesture == undefined) {
-					gesture = new _GestureThatMightScroll();
-					this._gesturesThatMightScrollById.set(event.pointerId, gesture);
-				}
-				gesture.downEvent = event;
-				if (deferTouchGesturesThatMightScroll) {
-					/*
-					if (Number.isFinite(deferEventMaxMillis) && deferEventMaxMillis > 0) {
-						setTimeout(() => {
-							if (gesture == this._gesturesThatMightScrollById.get(event.pointerId) &&
-								gesture.mightScroll)
-							{
-								gesture.mightScroll = false;
-								if (!this._isPreventingConditionally) this._preventTouchGestureScrolling = true;
-								if (gesture.enterEvent) gesture.enterEvent.target!.dispatchEvent(gesture.enterEvent);
-								if (gesture.downEvent) gesture.downEvent.target!.dispatchEvent(gesture.downEvent);
-								if (gesture.moveEvent) gesture.moveEvent.target!.dispatchEvent(gesture.moveEvent);
-								this._gesturesThatMightScrollById.delete(event.pointerId);
-							}
-						}, deferEventMaxMillis);
-					}
-					*/
-					return stop(event);
-				}
-			}
 			
 			// On Mac, contextmenu events immediately follow a pointerdown event, and no pointerup
 			// or pointercancel will follow, but on Windows, a contextmenu event follows a pointerup
@@ -444,7 +387,7 @@ export class EasyPointers<UserData = unknown> {
 			// should be cancelled.
 			
 			// CHECK POINTER ASSUMPTIONS
-			let pointer: InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
+			let pointer: _InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
 			if (pointer && pointer._isDown) {
 				this.dispatchPointerCancelEvent(event.pointerId);
 				pointer = this._byId.get(event.pointerId);
@@ -465,13 +408,44 @@ export class EasyPointers<UserData = unknown> {
 				pointer = this._byId.get(event.pointerId);
 				if (!pointer || !pointer._isPresent) return stop(event);
 			}
+			let gesture: _Gesture | null = pointer._gesture;
+			if (!(gesture?.dispatchingDeferredEvents ?? false)) {
+				// If the gesture is in the process of dispatching deferred events,
+				// preserve it, otherwise replace it with a new gesture.
+				gesture = new _Gesture();
+				pointer._gesture = gesture;
+				gesture.startClientX = event.clientX;
+				gesture.startClientY = event.clientY;
+				if (Number.isFinite(holdStillMinMillis) && holdStillMinMillis > 0) {
+					setTimeout(() => {
+						if (pointer &&
+							gesture &&
+							gesture == pointer._gesture &&
+							pointer._isPresent &&
+							pointer == this._byId.get(event.pointerId) &&
+							!gesture.wasHeldStill &&
+							!gesture.hasMovedFromStart)
+						{
+							gesture.wasHeldStill = true;
+							if (gesture.deferringEvents) {
+								gesture.stopDeferring();
+							}
+						}
+					}, holdStillMinMillis);
+				}
+				gesture.deferringEvents = this.deferInitialEvents || (event.pointerType == "touch" && !this.preventTouchGestureScrolling);
+				if (gesture.deferringEvents) {
+					gesture.deferredEvents.push(event);
+					gesture.pressingButtons = event.buttons & listenForTheseButtonsBitmask;
+					return stop(event);
+				}
+			}
 			
 			// UPDATE POINTER
 			this._target.setPointerCapture(event.pointerId);
 			syncEventAndPointer(event, pointer);
 			pointer._isDown = true;
 			pointer._isInTarget = true;
-			pointer._mightScroll = mightScroll;
 			pointer._pressedButtons     = event.buttons & listenForTheseButtonsBitmask;
 			pointer._pressingButtons    = event.buttons & listenForTheseButtonsBitmask;
 			pointer._startedWithButton  = event.button;
@@ -501,20 +475,6 @@ export class EasyPointers<UserData = unknown> {
 				}
 				return stop(event);
 			}
-			const gesture: _GestureThatMightScroll | undefined = this._gesturesThatMightScrollById.get(event.pointerId);
-			if (gesture != undefined) {
-				gesture.mightScroll = false;
-				if (deferTouchGesturesThatMightScroll) {
-					if (gesture.enterEvent) gesture.enterEvent.target!.dispatchEvent(gesture.enterEvent);
-					if (gesture.downEvent) gesture.downEvent.target!.dispatchEvent(gesture.downEvent);
-					if (gesture.moveEvent) gesture.moveEvent.target!.dispatchEvent(gesture.moveEvent);
-				}
-				this._gesturesThatMightScrollById.delete(event.pointerId);
-			}
-			
-			// CHECK POINTER ASSUMPTIONS
-			let pointer: InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
-			if (!pointer || !pointer._isDown) return stop(event);
 			if (!this.preventContextMenu && event.button == _ButtonIndex.secondary) {
 				// Macs do not dispatch a pointerup event before a contextmenu event.
 				// For consistency, replace pointerup events with cancel events on other
@@ -523,6 +483,14 @@ export class EasyPointers<UserData = unknown> {
 				return stop(event);
 			}
 			
+			// CHECK POINTER ASSUMPTIONS
+			let pointer: _InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
+			if (pointer?._gesture?.deferringEvents ?? false) {
+				pointer!._gesture!.stopDeferring();
+				pointer = this._byId.get(event.pointerId);
+			}
+			if (!pointer || !pointer._isDown) return stop(event);
+			
 			// UPDATE POINTER
 			this._target.releasePointerCapture(event.pointerId);
 			syncEventAndPointer(event, pointer);
@@ -530,7 +498,6 @@ export class EasyPointers<UserData = unknown> {
 			pointer._justPressedButton = _ButtonIndex.none;
 			pointer._justReleasedButton = event.button;
 			pointer._isDown = false;
-			pointer._mightScroll = false;
 			pointer._isInTarget = target.contains(document.elementFromPoint(event.clientX, event.clientY));
 			pointer._verifyValidity();
 		};
@@ -539,10 +506,10 @@ export class EasyPointers<UserData = unknown> {
 			// PREVENT EVENT DEFAULTS: N/A
 			
 			// EVENT STOP CONDITIONS
-			this._gesturesThatMightScrollById.delete(event.pointerId);
 			
 			// CHECK POINTER ASSUMPTIONS
-			let pointer: InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
+			let pointer: _InternalPointer<UserData> | undefined = this._byId.get(event.pointerId);
+			if (pointer) pointer._gesture = null;
 			if (!pointer || !pointer._isDown) return stop(event);
 			
 			// UPDATE POINTER
@@ -552,7 +519,6 @@ export class EasyPointers<UserData = unknown> {
 			pointer._justPressedButton = _ButtonIndex.none;
 			pointer._justReleasedButton = _ButtonIndex.none;
 			pointer._isDown = false;
-			pointer._mightScroll = false;
 			pointer._isInTarget = target.contains(document.elementFromPoint(event.clientX, event.clientY));
 			pointer._verifyValidity();
 		};
@@ -560,7 +526,17 @@ export class EasyPointers<UserData = unknown> {
 		const touchPreventScrolling = (event: TouchEvent): void => {
 			// The event should be cancelable, but in some cases it might not be,
 			// in which case this will log an error to the console...
-			if (this._preventTouchGestureScrolling) event.preventDefault();
+			if (this.preventTouchGestureScrolling) {
+				event.preventDefault();
+			} else {
+				for (const pointer of this._byId.values()) {
+					const gesture: _Gesture | null = pointer._gesture;
+					if (gesture && !gesture.deferringEvents) {
+						event.preventDefault();
+						break;
+					}
+				}
+			}
 		};
 		
 		// For presumably historical reasons, adding a mouse event listener
@@ -568,7 +544,7 @@ export class EasyPointers<UserData = unknown> {
 		// widget for the purposes of deciding which of the elements under
 		// the finger to interact with. The listener doesn't actually have
 		// to do anything.
-		const emptyMousedownForTouchScreen = (event: MouseEvent): void => {};
+		const emptyMousedownForTouchScreen = function(event: MouseEvent): void {};
 		
 		const selectDragListener = (event: Event): void => {
 			if (this.preventTextSelection) event.preventDefault();
@@ -578,21 +554,24 @@ export class EasyPointers<UserData = unknown> {
 			if (this.preventContextMenu) {
 				event.preventDefault();
 			} else {
-				this._gesturesThatMightScrollById.delete(event.pointerId);
-				
-				const pointer: InternalPointer | undefined = this._byId.get(event.pointerId);
-				if (pointer && pointer._isDown) this.dispatchPointerCancelEvent(event.pointerId);
+				const pointer: _InternalPointer | undefined = this._byId.get(event.pointerId);
+				if (pointer && pointer._isDown) {
+					if (pointer._gesture && Number.isFinite(holdStillMinMillis)) {
+						// If the long-press feature is being used, inhibit the context menu which might otherwise take over the long-press.
+						event.preventDefault();
+					} else {
+						this.dispatchPointerCancelEvent(event.pointerId);
+					}
+				}
 				// TODO: Should I just cancel all down pointers if there's a context menu?
 			}
 		}
 		
-		if (this._isPreventingConditionally) {
-			target.addEventListener("touchstart", touchPreventScrolling as EventListener, {capture: true, passive: false});
-			target.addEventListener("touchmove", touchPreventScrolling as EventListener, {capture: true, passive: false});
-		}
 		if (prioritizeTargetOverNeighborsOnTouchScreen) {
 			target.addEventListener("mousedown", emptyMousedownForTouchScreen as EventListener);
 		}
+		target.addEventListener("touchstart", touchPreventScrolling as EventListener, {capture: true, passive: false});
+		target.addEventListener("touchmove", touchPreventScrolling as EventListener, {capture: true, passive: false});
 		target.addEventListener("selectstart", selectDragListener as EventListener, {capture: true});
 		target.addEventListener("selectionchange", selectDragListener as EventListener, {capture: true});
 		target.addEventListener("dragstart", selectDragListener as EventListener, {capture: true});
@@ -608,9 +587,9 @@ export class EasyPointers<UserData = unknown> {
 			for (const pointer of this._byId.values()) {
 				this._dispatchPointerLeaveEvent(pointer.id);
 			}
+			target.removeEventListener("mousedown", emptyMousedownForTouchScreen as EventListener);
 			target.removeEventListener("touchstart", touchPreventScrolling as EventListener, {capture: true});
 			target.removeEventListener("touchmove", touchPreventScrolling as EventListener, {capture: true});
-			target.removeEventListener("mousedown", emptyMousedownForTouchScreen as EventListener);
 			target.removeEventListener("selectstart", selectDragListener as EventListener, {capture: true});
 			target.removeEventListener("selectionchange", selectDragListener as EventListener, {capture: true});
 			target.removeEventListener("dragstart", selectDragListener as EventListener, {capture: true});
@@ -648,7 +627,7 @@ export class EasyPointers<UserData = unknown> {
 	}
 	
 	private _dispatchPointerLeaveEvent(pointerId: number): PointerEvent | null {
-		const pointer: InternalPointer | undefined = this._byId.get(pointerId);
+		const pointer: _InternalPointer | undefined = this._byId.get(pointerId);
 		if (!pointer) return null;
 		return this._dispatchSyntheticEvent("pointerleave", pointer._lastEvent!, {
 			bubbles: false,
@@ -679,7 +658,7 @@ export class EasyPointers<UserData = unknown> {
 	}
 	
 	public dispatchPointerCancelEvent(pointerId: number): PointerEvent | null {
-		const pointer: InternalPointer | undefined = this._byId.get(pointerId);
+		const pointer: _InternalPointer | undefined = this._byId.get(pointerId);
 		if (!pointer) return null;
 		return this._dispatchSyntheticEvent("pointercancel", pointer._lastEvent!, {
 			bubbles: true,
@@ -689,10 +668,10 @@ export class EasyPointers<UserData = unknown> {
 		});
 	}
 	
-	private _latest: InternalPointer<UserData>;
+	private _latest: _InternalPointer<UserData>;
 	public get latest(): Pointer<UserData> { return this._latest; }
 	
-	private _first: InternalPointer<UserData>;
+	private _first: _InternalPointer<UserData>;
 	public get first(): Pointer<UserData> { return this._first; }
 	
 	public [Symbol.iterator](): Iterator<Pointer<UserData>> { return this._byId.values(); }
@@ -763,17 +742,6 @@ export class EasyPointers<UserData = unknown> {
 	public get ctrlOrMetaKeyIsDown(): boolean { return this._ctrlKey || this._metaKey; }
 }
 
-export enum TouchGestureScrolling {
-	deferPrecedingEvents     = "deferPrecedingEvents",
-	listenForPrecedingEvents = "listenForPrecedingEvents",
-	preventConditionally     = "preventConditionally",
-}
-const _touchGestureScrollingSet: Set<`${TouchGestureScrolling}`> = new Set([
-	TouchGestureScrolling.deferPrecedingEvents,
-	TouchGestureScrolling.listenForPrecedingEvents,
-	TouchGestureScrolling.preventConditionally,
-]);
-
 export const enum PointerButton {
 	none      = "none",
 	primary   = "primary",
@@ -802,7 +770,7 @@ const enum _ButtonIndex {
 	forward   =  4,
 	eraser    =  5,
 }
-// https://w3c.github.io/pointerevents/#the-button-property
+// https://w3c.github.io/pointerevents/#the-buttons-property
 const enum _ButtonBitmask {
 	none      =  0,
 	primary   =  1,
@@ -842,13 +810,6 @@ function _buttonSetFromBitmask(buttons: number): Set<PointerButton> {
 	return result;
 }
 
-class _GestureThatMightScroll {
-	public enterEvent: PointerEvent | null = null;
-	public downEvent: PointerEvent | null = null;
-	public moveEvent: PointerEvent | null = null;
-	public mightScroll: boolean = true;
-}
-
 export interface Pointer<UserData = unknown> {
 	readonly id: number;
 	readonly type: string;
@@ -867,7 +828,8 @@ export interface Pointer<UserData = unknown> {
 	get hasJustBecomeDown(): boolean;
 	get hasJustBecomeUp(): boolean;
 	get hasJustBeenCanceled(): boolean;
-	get mightScroll(): boolean;
+	get hasMovedFromStart(): boolean;
+	get wasHeldStill(): boolean;
 	
 	get pageX(): number
 	get pageY(): number
@@ -916,15 +878,37 @@ export interface Pointer<UserData = unknown> {
 	cancel(): void;
 }
 
-class InternalPointer<UserData = unknown> implements Pointer<UserData> {
-	public data?: UserData;
+class _Gesture {
+	public startClientX: number = 0;
+	public startClientY: number = 0;
+	public deferredEvents: PointerEvent[] = [];
+	public deferringEvents: boolean = true;
+	public dispatchingDeferredEvents: boolean = false;
+	public pressingButtons: number = _ButtonBitmask.none;
+	public hasMovedFromStart: boolean = false;
+	public wasHeldStill: boolean = false;
+	
+	public stopDeferring(): void {
+		this.deferringEvents = false;
+		this.dispatchingDeferredEvents = true;
+		for (const event of this.deferredEvents) {
+			event.target!.dispatchEvent(event);
+		}
+		this.dispatchingDeferredEvents = false;
+		this.deferredEvents.length = 0;
+	}
+}
+
+class _InternalPointer<UserData = unknown> implements Pointer<UserData> {
+	public _lastEvent: PointerEvent | null = null;
+	public _gesture: _Gesture | null = null;
 	
 	constructor(
 		private readonly _pointers: EasyPointers,
 		public readonly id: number,
 		public readonly type: string) {}
 	
-	public _lastEvent: PointerEvent | null = null;
+	public data?: UserData;
 	
 	public _isPresent: boolean = true;
 	public get isPresent(): boolean { return this._isPresent; }
@@ -954,8 +938,9 @@ class InternalPointer<UserData = unknown> implements Pointer<UserData> {
 	public get hasJustBecomeUp(): boolean { return this._hasJustBecomeUp; }
 	public _hasJustBeenCanceled: boolean = false;
 	public get hasJustBeenCanceled(): boolean { return this._hasJustBeenCanceled; }
-	public _mightScroll: boolean = false;
-	public get mightScroll(): boolean { return this._mightScroll; };
+	
+	public get hasMovedFromStart(): boolean { return this._gesture?.hasMovedFromStart ?? false; }
+	public get wasHeldStill(): boolean { return this._gesture?.wasHeldStill ?? false; }
 	
 	public _pressedButtons: number = _ButtonBitmask.none;
 	public get pressedButtons(): Set<PointerButton> { return _buttonSetFromBitmask(this._pressedButtons); }
@@ -1061,6 +1046,10 @@ class InternalPointer<UserData = unknown> implements Pointer<UserData> {
 	public _startedWithShiftKey: boolean = false;
 	public get startedWithShiftKey(): boolean { return this._startedWithShiftKey; }
 	
+	public cancel(): void {
+		this._pointers.dispatchPointerCancelEvent(this.id);
+	}
+	
 	public _verifyValidity(): void {
 		if (this._lastEvent == null) throw new Error("EasyPointers: A pointer is missing _lastEvent.");
 		// TODO: I may need to adjust this next constraint if a target should be isolated from any of its descendents?
@@ -1068,10 +1057,6 @@ class InternalPointer<UserData = unknown> implements Pointer<UserData> {
 		if (this._isDown != (this._pressingButtons != _ButtonBitmask.none)) throw new Error("EasyPointers: Whether pointer is down should correspond to whether it is pressing at least one button.");
 		if ((this._pressingButtons & this._pressedButtons) != this._pressingButtons) throw new Error("EasyPointers: A pointer is pressing buttons that were not recorded has having been pressed.");
 		if ((this._startedWithButton != _ButtonIndex.none) != (this._pressedButtons != _ButtonBitmask.none)) throw new Error("EasyPointers: Whether pointer is has a started button should correspond to whether it has pressed any buttons.");
-	}
-	
-	public cancel(): void {
-		this._pointers.dispatchPointerCancelEvent(this.id);
 	}
 }
 

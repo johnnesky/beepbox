@@ -34,7 +34,7 @@ export class FilterEditor {
 		this._label,
 	);
 	
-	private readonly _pointers: EasyPointers = new EasyPointers(this.container, {touchGestureScrolling: "preventConditionally"});
+	private readonly _pointers: EasyPointers = new EasyPointers(this.container, {preventTouchGestureScrolling: true});
 	
 	private _useNoteFilter: boolean = false;
 	private _touchMode: boolean = false;

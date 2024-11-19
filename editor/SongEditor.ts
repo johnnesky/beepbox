@@ -137,14 +137,12 @@ class Slider {
 	}
 	
 	private _onPointerDown = (event: PointerEvent): void => {
-		if (!event.pointer!.mightScroll) {
-			this._setFromPointer(event);
-			this.input.dispatchEvent(new InputEvent("input", {bubbles: true, cancelable: false, composed: true}));
-		}
+		this._setFromPointer(event);
+		this.input.dispatchEvent(new InputEvent("input", {bubbles: true, cancelable: false, composed: true}));
 	}
 	
 	private _onPointerMove = (event: PointerEvent): void => {
-		if (!event.pointer!.mightScroll && event.pointer!.isDown) {
+		if (event.pointer!.isDown) {
 			this._setFromPointer(event);
 			this.input.dispatchEvent(new InputEvent("input", {bubbles: true, cancelable: false, composed: true}));
 		}

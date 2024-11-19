@@ -1,6 +1,5 @@
 // Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {isMobile} from "./EditorConfig.js";
 import {ColorConfig} from "./ColorConfig.js";
 import {SongDocument} from "./SongDocument.js";
 import {ChannelRow} from "./ChannelRow.js";
@@ -43,7 +42,6 @@ export class TrackEditor {
 	private _renderedEditorHeight: number = -1;
 	private _renderedPatternCount: number = 0;
 	private _renderedPlayhead: number = -1;
-	private _touchMode: boolean = isMobile;
 	
 	constructor(private _doc: SongDocument) {
 		window.requestAnimationFrame(this._animatePlayhead);
@@ -101,7 +99,6 @@ export class TrackEditor {
 	}
 	
 	private _onPointerDown = (event: PointerEvent): void => {
-		this._touchMode = event.pointer!.isTouch;
 		this._updateMousePos(event);
 		this._mouseStartBar = this._mouseBar;
 		this._mouseStartChannel = this._mouseChannel;
@@ -148,14 +145,14 @@ export class TrackEditor {
 		let channel: number = this._mouseChannel;
 		let bar: number = this._mouseBar;
 		
-		if (this._touchMode) {
+		if (this._pointers.latest.isTouch) {
 			bar = this._doc.bar;
 			channel = this._doc.channel;
 		}
 		
 		const selected: boolean = (bar == this._doc.bar && channel == this._doc.channel);
 		
-		if (this._pointers.latest.isPresent && !this._pointers.latest.isDown && !selected) {
+		if (this._pointers.latest.isHovering && !selected) {
 			this._boxHighlight.setAttribute("x", "" + (1 + this._barWidth * bar));
 			this._boxHighlight.setAttribute("y", "" + (1 + (ChannelRow.patternHeight * channel)));
 			this._boxHighlight.setAttribute("height", "" + (ChannelRow.patternHeight - 2));
@@ -165,7 +162,7 @@ export class TrackEditor {
 			this._boxHighlight.style.display = "none";
 		}
 		
-		if ((this._pointers.latest.isPresent || this._touchMode) && selected) {
+		if ((this._pointers.latest.isPresent && selected) || this._pointers.latest.isTouch) {
 			const up: boolean = (this._mouseY % ChannelRow.patternHeight) < ChannelRow.patternHeight / 2;
 			const center: number = this._barWidth * (bar + 0.8);
 			const middle: number = ChannelRow.patternHeight * (channel + 0.5);
@@ -173,8 +170,8 @@ export class TrackEditor {
 			const tip: number = ChannelRow.patternHeight * 0.4;
 			const width: number = ChannelRow.patternHeight * 0.175;
 			
-			this._upHighlight.setAttribute("fill", up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.invertedText);
-			this._downHighlight.setAttribute("fill", !up && !this._touchMode ? ColorConfig.hoverPreview : ColorConfig.invertedText);
+			this._upHighlight.setAttribute("fill", up && !this._pointers.latest.isTouch ? ColorConfig.hoverPreview : ColorConfig.invertedText);
+			this._downHighlight.setAttribute("fill", !up && !this._pointers.latest.isTouch ? ColorConfig.hoverPreview : ColorConfig.invertedText);
 			
 			this._upHighlight.setAttribute("d", `M ${center} ${middle - tip} L ${center + width} ${middle - base} L ${center - width} ${middle - base} z`);
 			this._downHighlight.setAttribute("d", `M ${center} ${middle + tip} L ${center + width} ${middle + base} L ${center - width} ${middle + base} z`);
@@ -241,7 +238,7 @@ export class TrackEditor {
 			// HACK: In my testing of mobile Chrome, it seems to open the select menu
 			// after pointerup even if the select element wasn't under the finger until
 			// rendering, unless I defer moving the select menu by a few milliseconds. :(
-			this._select.style.display = this._touchMode ? "" : "none";
+			this._select.style.display = this._pointers.latest.isTouch ? "" : "none";
 			this._select.style.left = (this._barWidth * this._doc.bar) + "px";
 			this._select.style.width = this._barWidth + "px";
 			this._select.style.top = (ChannelRow.patternHeight * this._doc.channel) + "px";

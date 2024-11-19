@@ -22,7 +22,7 @@ export class OctaveScrollBar {
 	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: pan-x; position: absolute;`, width: this._editorWidth, height: "100%", viewBox: "0 0 20 481", preserveAspectRatio: "none"});
 	public readonly container: HTMLDivElement = HTML.div({id: "octaveScrollBarContainer", style: "width: 20px; height: 100%; overflow: hidden; position: relative; flex-shrink: 0;"}, this._svg);
 	
-	private readonly _pointers: EasyPointers = new EasyPointers(this.container, {touchGestureScrolling: "preventConditionally"});
+	private readonly _pointers: EasyPointers = new EasyPointers(this.container, {preventTouchGestureScrolling: true});
 	
 	private _mouseY: number = 0;
 	private _dragging: boolean = false;

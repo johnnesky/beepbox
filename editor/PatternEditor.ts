@@ -54,7 +54,7 @@ export class PatternEditor {
 	);
 	public readonly container: HTMLDivElement = HTML.div({style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;"}, this._svg);
 	
-	private readonly _pointers: EasyPointers = new EasyPointers(this._svg, {touchGestureScrolling: "preventConditionally"});
+	private readonly _pointers: EasyPointers = new EasyPointers(this._svg, {holdStillMinMillis: 800});
 	
 	private readonly _backgroundPitchRows: SVGRectElement[] = [];
 	private readonly _backgroundDrumRow: SVGRectElement = SVG.rect();
@@ -74,7 +74,6 @@ export class PatternEditor {
 	private _mouseYStart: number = 0;
 	private _ctrlHeld: boolean = false;
 	private _shiftHeld: boolean = false;
-	private _touchTime: number = 0;
 	private _draggingStartOfSelection: boolean = false;
 	private _draggingEndOfSelection: boolean = false;
 	private _draggingSelectionContents: boolean = false;
@@ -417,17 +416,6 @@ export class PatternEditor {
 	}
 	
 	private _animatePlayhead = (timestamp: number): void => {
-		
-		if (this._pointers.latest.isTouch && !this._shiftHeld && !this._mouseDragging && this._pointers.latest.isDown && performance.now() > this._touchTime + 800 && this._cursor.valid && this._doc.lastChangeWas(this._dragChange)) {
-			// On a mobile device, the pattern editor supports using a long stationary touch to activate selection.
-			this._dragChange!.undo();
-			this._pointers.preventTouchGestureScrolling = true;
-			this._shiftHeld = true;
-			this._whenCursorPressed();
-			// The full interface is usually only rerendered in response to user input events, not animation events, but in this case go ahead and rerender everything.
-			this._doc.notifier.notifyWatchers();
-		}
-		
 		const playheadBar: number = Math.floor(this._doc.synth.playhead);
 		
 		if (this._doc.synth.playing && ((this._pattern != null && this._doc.song.getPattern(this._doc.channel, Math.floor(this._doc.synth.playhead)) == this._pattern) || Math.floor(this._doc.synth.playhead) == this._doc.bar + this._barOffset)) {
@@ -467,13 +455,11 @@ export class PatternEditor {
 		this._mouseX = point.x;
 		this._mouseY = point.y;
 		this._ctrlHeld = event.ctrlKey || event.metaKey;
-		this._shiftHeld = event.shiftKey;
-		if (event.pointer!.isTouch) this._touchTime = performance.now();
+		this._shiftHeld = event.shiftKey || event.pointer!.wasHeldStill;
 		this._pointers.preventContextMenu = event.pointer!.isTouch;
 		this._mouseXStart = this._mouseX;
 		this._mouseYStart = this._mouseY;
 		this._updateCursorStatus();
-		this._pointers.preventTouchGestureScrolling = (this._cursor.valid && this._cursor.isNearNote) || this._cursorIsInSelection();
 		this._whenCursorPressed();
 	}
 	
@@ -536,10 +522,6 @@ export class PatternEditor {
 	}
 	
 	private _onPointerMove = (event: PointerEvent): void => {
-		if (event.pointer!.mightScroll && !this._pointers.preventTouchGestureScrolling) {
-			return;
-		}
-		
 		const point: Point2d = event.pointer!.getPointIn(this.container);
 		this._mouseX = point.x;
 		this._mouseY = point.y;
@@ -853,6 +835,8 @@ export class PatternEditor {
 		
 		if (!(event.pointer!.isDown && this._cursor.valid && continuousState)) {
 			this._updateCursorStatus();
+			this._pointers.preventTouchGestureScrolling = (this._cursor.valid && this._cursor.isNearNote) || this._cursorIsInSelection();
+			this._pointers.deferInitialEvents = event.pointer!.isTouch;
 			this._updatePreview();
 		}
 	}

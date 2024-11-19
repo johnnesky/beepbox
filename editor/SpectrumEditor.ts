@@ -43,7 +43,7 @@ export class SpectrumEditor {
 			this._fifths.appendChild(SVG.rect({fill: ColorConfig.fifthNote, x: (i+1) * this._editorWidth / (Config.spectrumControlPoints + 2) - 1, y: 0, width: 2, height: this._editorHeight}));
 		}
 		
-		new EasyPointers(this.container, {touchGestureScrolling: "preventConditionally"});
+		new EasyPointers(this.container, {preventTouchGestureScrolling: true});
 		//this.container.addEventListener("pointerenter", this._onPointerMove);
 		//this.container.addEventListener("pointerleave", this._onPointerLeave);
 		this.container.addEventListener("pointerdown", this._onPointerDown);

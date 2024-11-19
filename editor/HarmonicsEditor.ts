@@ -47,7 +47,7 @@ export class HarmonicsEditor {
 			this._lastControlPointContainer.appendChild(rect);
 		}
 		
-		new EasyPointers(this.container, {touchGestureScrolling: "preventConditionally"});
+		new EasyPointers(this.container, {preventTouchGestureScrolling: true});
 		//this.container.addEventListener("pointerenter", this._onPointerMove);
 		//this.container.addEventListener("pointerleave", this._onPointerLeave);
 		this.container.addEventListener("pointerdown", this._onPointerDown);

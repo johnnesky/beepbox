@@ -16,7 +16,7 @@ export class Piano {
 		this._preview,
 	);
 	
-	private readonly _pointers: EasyPointers = new EasyPointers(this.container, {touchGestureScrolling: "preventConditionally"});
+	private readonly _pointers: EasyPointers = new EasyPointers(this.container, {preventTouchGestureScrolling: true});
 	
 	private readonly _editorHeight: number = 481;
 	private readonly _pianoKeys: HTMLDivElement[] = [];
