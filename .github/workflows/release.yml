@@ -1,0 +1,39 @@
+name: Release
+run-name: User ${{ github.actor }} is releasing 🚀
+on:
+  push:
+    branches:
+    - main
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 21.x
+    - name: Check sources
+      uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        npm install
+    - name: Build application
+      run: |
+        npm run build
+    - name: Setup Pages
+      uses: actions/configure-pages@v5
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: website
+    - name: Deploy Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
