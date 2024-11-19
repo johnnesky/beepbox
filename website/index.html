@@ -3,11 +3,11 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>BeepBox</title>
-	<meta name="application-name" content="BeepBox" />
-	<meta name="apple-mobile-web-app-title" content="BeepBox">
-	<meta name="description" content="BeepBox is an online tool for sketching and sharing instrumental music." />
-	<meta name="keywords" content="beepbox, music, composition, tool, synth, synthesizer, daw, tracker, instrument, song, melody, chiptune, free" />
+	<title>YipBox</title>
+	<meta name="application-name" content="YipBox" />
+	<meta name="apple-mobile-web-app-title" content="YipBox">
+	<meta name="description" content="YipBox is an online tool for dootin." />
+	<meta name="keywords" content="yipbox, music, composition, tool, synth, synthesizer, daw, tracker, instrument, song, melody, chiptune, free" />
 	<meta name="mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -70,21 +70,23 @@
 		a {
 			color: var(--link-accent, #98f);
 		}
-		.donation form {
-			display: inline;
+		
+		#codeField {
+			width: 100%;
+			height: 200px;
+			position: relative;
 		}
-		.donation input[type="submit"] {
-			-webkit-appearance: none;
-			appearance: none;
-			background: none;
-			border: none;
-			font-family: inherit;
-			font-size: inherit;
-			color: var(--link-accent, #98f);
-			text-decoration: underline;
-			cursor: pointer;
-			padding: 0;
-			margin: 0;
+		input {
+			width: 100%;
+		}
+		#copyCode {
+			width: 100%;
+		}
+		.buttonContainer {
+			width: 20%;
+			margin: auto;
+			position: relative;
+			padding: 10px;
 		}
 		
 		/* wide screen */
@@ -125,31 +127,28 @@
 <body>
 	<div id="beepboxEditorContainer">
 		<noscript>
-			Sorry, BeepBox requires a JavaScript-enabled browser.
+			Sorry, YipBox requires a JavaScript-enabled browser.
 		</noscript>
 	</div>
 	<div id="text-content">
 		<section>
 			<h1>
-				BeepBox
+				YipBox
 			</h1>
 			<p id="introduction">
-				BeepBox is an online tool for sketching and sharing instrumental music. 
+				YipBox is a limited mod for <a href="https://www.beepbox.co" target="_blank">BeepBox</a>, that lets you compose tunes for <a href="https://twitch.tv/sushifur" target="_blank">Sushi's stream channel points redeems</a>.
 			</p>
 			<p>
-				All song data is contained in the URL at the top of your browser. 
-				When you make changes to the song, the URL is updated to reflect your changes. 
-				When you are satisfied with your song, just copy and paste the URL to save and share your song! 
+				Right now, it is limited to brass instruments and drums.<br/>
+				Be wary that Twitch messages have a character limit of 500. So keep your songs simple!<br/>
+				As you make changes to the song, the code below is updated to reflect your changes.<br/>
+				When you're satisfied with your song, just copy and paste the code when redeeming doots:
 			</p>
-			<div class="donation">
-				BeepBox is a passion project, and will always be free to use. If you find it valuable and have the means, any gratuity via
-				<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
-					<input type="hidden" name="cmd" value="_donations" />
-					<input type="hidden" name="business" value="QZJTX9GRYEV9N" />
-					<input type="hidden" name="currency_code" value="USD" />
-					<input type="submit" name="submit" value="Paypal"/>
-				</form>
-				would be appreciated!
+			<div id="codeField">
+				<input type="text" name="redeemCode" value="####" id="redeemCode">
+				<div class="buttonContainer">
+					<button onclick="copyCode()">Copy code</button>
+				</div>
 			</div>
 		</section>
 	
@@ -160,7 +159,7 @@
 						Instructions
 					</h2>
 					<p>
-						You can add or remove notes by clicking on the gray rows at the top. 
+						You can add or remove notes by clicking on the gray rows at the top.
 						BeepBox automatically plays the notes out loud for you. Try it!
 					</p>
 					<p>
@@ -171,16 +170,16 @@
 						</span>
 					</p>
 					<p>
-						BeepBox can play several rows of patterns simultaneously, and each row has its own set of patterns. 
+						BeepBox can play several rows of patterns simultaneously, and each row has its own set of patterns.
 						Most rows can play melodies or harmonies, but the bottom row is for drums.
 					</p>
 					<p>
-						The purple loop underneath the numbered boxes controls which part of the song is currently repeating. 
-						Move the loop to listen to a different part of the song, or drag the ends to expand the loop to include the whole song. 
+						The purple loop underneath the numbered boxes controls which part of the song is currently repeating.
+						Move the loop to listen to a different part of the song, or drag the ends to expand the loop to include the whole song.
 					</p>
 					<div id="keyboard-instructions">
 						<p>
-							When BeepBox has focus (click on its interface above), you can use these keyboard shortcuts: <br/>
+							When BeepBox has focus (click on its interface above), you can use these keyboard shortcuts:<br/>
 						</p>
 						<ul>
 							<li><b>Spacebar</b>: play or pause the song</li>
@@ -198,7 +197,7 @@
 					</div>
 					<p>
 						In the note pattern editor, you can click and drag horizontally on a note to adjust its duration.
-						You can also click above or below an existing note to add more notes to be played simultaneously, which is called a chord. 
+						You can also click above or below an existing note to add more notes to be played simultaneously, which is called a chord.
 					</p>
 					<div id="mobile-instructions" style="display: none;">
 						<p>
@@ -209,7 +208,7 @@
 						ADVANCED: Drag vertically from an existing note to bend its pitch, or drag vertically from above or below the note to adjust its volume. Drag on the numbered pattern boxes to select multiple patterns to copy and paste parts of your song.
 					</p>
 					<p>
-						BeepBox has many more features. 
+						BeepBox has many more features.
 						Try playing with the buttons and menus on the right side to find out what it can do!
 						You can also click on the label next to each option for a description of what it does.
 					</p>
@@ -225,10 +224,10 @@
 						BeepBox is developed by <a href="https://johnnesky.com/" target="_blank">John Nesky</a>.
 					</p>
 					<p>
-						BeepBox does not claim ownership over songs created with it, so original songs belong to their authors. 
+						BeepBox does not claim ownership over songs created with it, so original songs belong to their authors.
 					</p>
 					<p>
-						Neither John Nesky nor BeepBox assume responsibility for any copyrighted material played on BeepBox. No songs are ever received, recorded, or distributed by BeepBox's servers. All song data is contained in the URL after the hash (#) mark, and your song data will not leave your device unless you copy and share the URL. BeepBox does not collect, track, or share any user data. 
+						Neither John Nesky nor BeepBox assume responsibility for any copyrighted material played on BeepBox. No songs are ever received, recorded, or distributed by BeepBox's servers. All song data is contained in the URL after the hash (#) mark, and your song data will not leave your device unless you copy and share the URL. BeepBox does not collect, track, or share any user data.
 					</p>
 					<p>
 						You can find the <a href="https://github.com/johnnesky/beepbox/releases/" target="_blank">release notes for the latest versions of BeepBox here</a>. Those who yearn for simpler times can still use the <a id="linkTo2_3" href="2_3/" target="_blank">2.3</a> or <a id="linkTo3_0" href="3_0/" target="_blank">3.0.13</a> versions of BeepBox.
@@ -296,6 +295,29 @@
 		}
 		if (/^#[1-8]/.test(location.hash)) {
 			document.getElementById("linkTo3_0").href += location.hash;
+		}
+		
+		(function (history) {
+			var pushState = history.pushState;
+			history.pushState = function(state) {
+				document.getElementById("redeemCode").value = arguments[2];
+				return pushState.apply(history, arguments);
+			}
+			var replaceState = history.replaceState;
+			history.replaceState = function(state) {
+				document.getElementById("redeemCode").value = arguments[2];
+				return replaceState.apply(history, arguments);
+			}
+		})(window.history);
+		
+		function copyCode() {
+			// Get the text field
+			var copyText = document.getElementById("redeemCode");
+			// Select the text field
+			copyText.select();
+			copyText.setSelectionRange(0, 99999); // For mobile devices
+			// Copy the text inside the text field
+			navigator.clipboard.writeText(copyText.value);
 		}
 		
 	</script>

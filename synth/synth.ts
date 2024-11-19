@@ -1781,7 +1781,7 @@ export class Channel {
 }
 
 export class Song {
-	private static readonly _format: string = "BeepBox";
+	private static readonly _format: string = "YipBox";
 	private static readonly _oldestVersion: number = 2;
 	private static readonly _latestVersion: number = 9;
 	
@@ -1839,14 +1839,14 @@ export class Song {
 		this.loopLength = 4;
 		this.tempo = 150;
 		this.beatsPerBar = 8;
-		this.barCount = 16;
-		this.patternsPerChannel = 8;
+		this.barCount = 12;
+		this.patternsPerChannel = 4;
 		this.rhythm = 1;
 		this.layeredInstruments = false;
 		this.patternInstruments = false;
 		
 		if (andResetChannels) {
-			this.pitchChannelCount = 3;
+			this.pitchChannelCount = 1;
 			this.noiseChannelCount = 1;
 			for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
 				const isNoiseChannel: boolean = channelIndex >= this.pitchChannelCount;
