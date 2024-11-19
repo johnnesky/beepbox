@@ -145,10 +145,11 @@
 				When you're satisfied with your song, just copy and paste the code when redeeming doots:
 			</p>
 			<div id="codeField">
-				<input type="text" name="redeemCode" value="####" id="redeemCode">
+				<input type="text" name="redeemCode" value="####" id="redeemCode" readonly>
 				<div class="buttonContainer">
-					<button onclick="copyCode()">Copy code</button>
+					<button id="redeemButton" onclick="copyCode()">Copy code</button>
 				</div>
+				<p id="redeemLength"></p>
 			</div>
 		</section>
 	
@@ -298,26 +299,36 @@
 		}
 		
 		(function (history) {
+			function update(code) {
+				var textbox = document.getElementById("redeemCode");
+				textbox.value = code;
+				var textbox = document.getElementById("redeemLength");
+				textbox.innerText = 'Song size is ' + code.length + ' characters out of 500.';
+				var button = document.getElementById("redeemButton");
+				if (code.length > 500) {
+					button.setAttribute('disabled', 'disabled');
+					textbox.innerText += ' The song is too big!';
+				} else {
+					button.removeAttribute('disabled');
+				}
+			}
 			var pushState = history.pushState;
 			history.pushState = function(state) {
-				document.getElementById("redeemCode").value = arguments[2];
+				update(arguments[2]);
 				return pushState.apply(history, arguments);
 			}
 			var replaceState = history.replaceState;
 			history.replaceState = function(state) {
-				document.getElementById("redeemCode").value = arguments[2];
+				update(arguments[2]);
 				return replaceState.apply(history, arguments);
 			}
 		})(window.history);
 		
 		function copyCode() {
-			// Get the text field
-			var copyText = document.getElementById("redeemCode");
-			// Select the text field
-			copyText.select();
-			copyText.setSelectionRange(0, 99999); // For mobile devices
-			// Copy the text inside the text field
-			navigator.clipboard.writeText(copyText.value);
+			var textbox = document.getElementById("redeemCode");
+			textbox.select();
+			textbox.setSelectionRange(0, 99999);
+			navigator.clipboard.writeText(textbox.value);
 		}
 		
 	</script>
