@@ -163,7 +163,7 @@ let copyLink: HTMLAnchorElement = a({href: "javascript:void(0)", style: "margin:
 let shareLink: HTMLAnchorElement = a({href: "javascript:void(0)", style: "margin: 0 4px;"}, "⤳ Share");
 let fullscreenLink: HTMLAnchorElement = a({target: "_top", style: "margin: 0 4px;"}, "⇱ Fullscreen");
 
-let draggingPlayhead: boolean = false;
+let draggingPlayhead: boolean = true;
 const playButton: HTMLButtonElement = button({style: "width: 100%; height: 100%; max-height: 50px;"});
 const playButtonContainer: HTMLDivElement = div({style: "flex-shrink: 0; display: flex; padding: 2px; width: 80px; height: 100%; box-sizing: border-box; align-items: center;"},
 	playButton,
@@ -583,6 +583,10 @@ hashUpdatedExternally();
 renderLoopIcon();
 renderZoomIcon();
 renderPlayButton();
+
+// Loop doot on page load
+onToggleLoop();
+playButton.dispatchEvent(new Event('click'));
 
 // When compiling synth.ts as a standalone module named "beepbox", expose these classes as members to JavaScript:
 export {Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config, NotePin, Note, Pattern, Instrument, Channel, Synth};
