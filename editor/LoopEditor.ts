@@ -25,18 +25,19 @@ export class LoopEditor {
 	private readonly _loop: SVGPathElement = SVG.path({fill: "none", stroke: ColorConfig.loopAccent, "stroke-width": 4});
 	private readonly _highlight: SVGPathElement = SVG.path({fill: ColorConfig.hoverPreview, "pointer-events": "none"});
 	
-	private readonly _svg: SVGSVGElement = SVG.svg({style: `touch-action: pan-y; position: absolute;`, height: this._editorHeight},
+	private readonly _svg: SVGSVGElement = SVG.svg({style: "position: absolute;", height: this._editorHeight},
 		this._loop,
 		this._highlight,
 	);
 	
-	public readonly container: HTMLElement = HTML.div({class: "loopEditor"}, this._svg);
+	public readonly container: HTMLElement = HTML.div({class: "loopEditor", style: "touch-action: pan-y;"}, this._svg);
 	
 	private readonly _pointers: EasyPointers = new EasyPointers(this.container);
 	
 	private _barWidth: number = 32;
 	private _change: ChangeLoop | null = null;
 	private _cursor: Cursor = {startBar: -1, mode: -1};
+	
 	private _renderedLoopStart: number = -1;
 	private _renderedLoopStop: number = -1;
 	private _renderedBarCount: number = 0;

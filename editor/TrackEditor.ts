@@ -130,7 +130,7 @@ export class TrackEditor {
 	}
 	
 	private _onPointerUp = (event: PointerEvent): void => {
-		if (!this._mouseDragging) {
+		if (!this._mouseDragging && !event.pointer!.isTouch) {
 			if (this._doc.channel == this._mouseChannel && this._doc.bar == this._mouseBar) {
 				const up: boolean = (this._mouseY % ChannelRow.patternHeight) < ChannelRow.patternHeight / 2;
 				const patternCount: number = this._doc.song.patternsPerChannel;
@@ -243,7 +243,7 @@ export class TrackEditor {
 			this._select.style.width = this._barWidth + "px";
 			this._select.style.top = (ChannelRow.patternHeight * this._doc.channel) + "px";
 			this._select.style.height = ChannelRow.patternHeight + "px";
-		}, 10);
+		}, 50);
 		
 		if (this._doc.selection.boxSelectionActive) {
 			// TODO: This causes the selection rectangle to repaint every time the

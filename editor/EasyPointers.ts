@@ -412,6 +412,7 @@ export class EasyPointers<UserData = unknown> {
 			if (!(gesture?.dispatchingDeferredEvents ?? false)) {
 				// If the gesture is in the process of dispatching deferred events,
 				// preserve it, otherwise replace it with a new gesture.
+				this._target.setPointerCapture(event.pointerId);
 				gesture = new _Gesture();
 				pointer._gesture = gesture;
 				gesture.startClientX = event.clientX;
@@ -442,7 +443,6 @@ export class EasyPointers<UserData = unknown> {
 			}
 			
 			// UPDATE POINTER
-			this._target.setPointerCapture(event.pointerId);
 			syncEventAndPointer(event, pointer);
 			pointer._isDown = true;
 			pointer._isInTarget = true;
@@ -892,7 +892,7 @@ class _Gesture {
 		this.deferringEvents = false;
 		this.dispatchingDeferredEvents = true;
 		for (const event of this.deferredEvents) {
-			event.target!.dispatchEvent(event);
+			event.target!.dispatchEvent(new PointerEvent(event.type, event));
 		}
 		this.dispatchingDeferredEvents = false;
 		this.deferredEvents.length = 0;

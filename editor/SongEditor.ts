@@ -403,7 +403,7 @@ export class SongEditor {
 		this._zoomInButton,
 		this._zoomOutButton,
 	);
-	private readonly _trackContainer: HTMLDivElement = div({class: "trackContainer"},
+	private readonly _trackContainer: HTMLDivElement = div({class: "trackContainer noSelection"},
 		this._trackEditor.container,
 		this._loopEditor.container,
 	);
