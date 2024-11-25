@@ -15,11 +15,11 @@ declare global {
 }
 
 export interface EasyPointersOptions {
-	preventTouchGestureScrolling?: boolean,
 	listenForTheseButtons?: Iterable<`${PointerButton}`>,
 	listenForMultipleButtonsDown?: boolean,
 	listenForMultiplePointers?: boolean,
 	listenForPossiblyAccidentalPointers?: boolean,
+	preventTouchGestureScrolling?: boolean,
 	preventTextSelection?: boolean,
 	preventContextMenu?: boolean,
 	preventMiddleButtonScrolling?: boolean,
