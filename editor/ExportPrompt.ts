@@ -1,14 +1,14 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {InstrumentType, /*EnvelopeType,*/ Config, getArpeggioPitchIndex} from "../synth/SynthConfig";
-import {Instrument, Pattern, Note, Song, Synth} from "../synth/synth";
-import {ColorConfig} from "./ColorConfig";
-import {Preset, EditorConfig} from "./EditorConfig";
-import {SongDocument} from "./SongDocument";
-import {Prompt} from "./Prompt";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
-import {ArrayBufferWriter} from "./ArrayBufferWriter";
-import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, volumeMultToMidiVolume, volumeMultToMidiExpression, defaultMidiPitchBend, defaultMidiExpression} from "./Midi";
+import {InstrumentType, /*EnvelopeType,*/ Config, getArpeggioPitchIndex} from "../synth/SynthConfig.js";
+import {Instrument, Pattern, Note, Song, Synth} from "../synth/synth.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {Preset, EditorConfig} from "./EditorConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {Prompt} from "./Prompt.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
+import {ArrayBufferWriter} from "./ArrayBufferWriter.js";
+import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, volumeMultToMidiVolume, volumeMultToMidiExpression, defaultMidiPitchBend, defaultMidiExpression} from "./Midi.js";
 
 const {button, div, h2, input, select, option} = HTML;
 

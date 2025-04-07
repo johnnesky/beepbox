@@ -1,13 +1,14 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Chord, Transition, Config} from "../synth/SynthConfig";
-import {NotePin, Note, makeNotePin, Pattern, Instrument} from "../synth/synth";
-import {ColorConfig} from "./ColorConfig";
-import {SongDocument} from "./SongDocument";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
-import {ChangeSequence, UndoableChange} from "./Change";
-import {ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeSizeBend, ChangePitchBend, ChangePitchAdded} from "./changes";
-import {prettyNumber} from "./EditorConfig";
+import {Chord, Transition, Config} from "../synth/SynthConfig.js";
+import {prettyNumber} from "./EditorConfig.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {NotePin, Note, makeNotePin, Pattern, Instrument} from "../synth/synth.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {EasyPointers, Point2d} from "./EasyPointers.js";
+import {ChangeSequence, UndoableChange} from "./Change.js";
+import {ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeSizeBend, ChangePitchBend, ChangePitchAdded} from "./changes.js";
 
 function makeEmptyReplacementElement<T extends Node>(node: T): T {
 	const clone: T = <T> node.cloneNode(false);
@@ -17,6 +18,7 @@ function makeEmptyReplacementElement<T extends Node>(node: T): T {
 
 class PatternCursor {
 	public valid:        boolean = false;
+	public isNearNote:   boolean = false;
 	public prevNote:     Note | null = null;
 	public curNote:      Note | null = null;
 	public nextNote:     Note | null = null;
@@ -32,14 +34,14 @@ class PatternCursor {
 }
 
 export class PatternEditor {
-	private readonly _svgNoteBackground: SVGPatternElement = SVG.pattern({id: "patternEditorNoteBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse"});
-	private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({id: "patternEditorDrumBackground" + this._barOffset, x: "0", y: "0", patternUnits: "userSpaceOnUse"});
-	private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", "pointer-events": "none", fill: "url(#patternEditorNoteBackground" + this._barOffset + ")"});
+	private readonly _svgNoteBackground: SVGPatternElement = SVG.pattern({x: "0", y: "0", patternUnits: "userSpaceOnUse"});
+	private readonly _svgDrumBackground: SVGPatternElement = SVG.pattern({x: "0", y: "0", patternUnits: "userSpaceOnUse"});
+	private readonly _svgBackground: SVGRectElement = SVG.rect({x: "0", y: "0", "pointer-events": "none"});
 	private _svgNoteContainer: SVGSVGElement = SVG.svg();
 	private readonly _svgPlayhead: SVGRectElement = SVG.rect({x: "0", y: "0", width: "4", fill: ColorConfig.playhead, "pointer-events": "none"});
-	private readonly _selectionRect: SVGRectElement = SVG.rect({fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "pointer-events": "none", visibility: "hidden"});
+	private readonly _selectionRect: SVGRectElement = SVG.rect({fill: ColorConfig.boxSelectionFill, stroke: ColorConfig.hoverPreview, "stroke-width": 2, "stroke-dasharray": "5, 3", "pointer-events": "none", display: "none"});
 	private readonly _svgPreview: SVGPathElement = SVG.path({fill: "none", stroke: ColorConfig.hoverPreview, "stroke-width": "2", "pointer-events": "none"});
-	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; position: absolute;`, width: "100%", height: "100%"},
+	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: pan-y; position: absolute;`, width: "100%", height: "100%"},
 		SVG.defs(
 			this._svgNoteBackground,
 			this._svgDrumBackground,
@@ -50,7 +52,9 @@ export class PatternEditor {
 		this._svgPreview,
 		this._svgPlayhead,
 	);
-	public readonly container: HTMLDivElement = HTML.div({style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1;"}, this._svg);
+	public readonly container: HTMLDivElement = HTML.div({style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;"}, this._svg);
+	
+	private readonly _pointers: EasyPointers = new EasyPointers(this._svg, {holdStillMinMillis: 800});
 	
 	private readonly _backgroundPitchRows: SVGRectElement[] = [];
 	private readonly _backgroundDrumRow: SVGRectElement = SVG.rect();
@@ -62,18 +66,14 @@ export class PatternEditor {
 	private _pitchCount: number;
 	private _mouseX: number = 0;
 	private _mouseY: number = 0;
-	private _mouseDown: boolean = false;
-	private _mouseOver: boolean = false;
 	private _mouseDragging: boolean = false;
 	private _mouseHorizontal: boolean = false;
-	private _usingTouch: boolean = false;
 	private _copiedPinChannels: NotePin[][] = [];
 	private _copiedPins: NotePin[];
 	private _mouseXStart: number = 0;
 	private _mouseYStart: number = 0;
 	private _ctrlHeld: boolean = false;
 	private _shiftHeld: boolean = false;
-	private _touchTime: number = 0;
 	private _draggingStartOfSelection: boolean = false;
 	private _draggingEndOfSelection: boolean = false;
 	private _draggingSelectionContents: boolean = false;
@@ -100,6 +100,10 @@ export class PatternEditor {
 	private _followPlayheadBar: number = -1;
 	
 	constructor(private _doc: SongDocument, private _interactive: boolean, private _barOffset: number) {
+		this._svgNoteBackground.setAttribute("id", "patternEditorNoteBackground" + this._barOffset);
+		this._svgDrumBackground.setAttribute("id", "patternEditorDrumBackground" + this._barOffset);
+		this._svgBackground.setAttribute("fill", "url(#patternEditorNoteBackground" + this._barOffset + ")");
+
 		for (let i: number = 0; i < Config.pitchesPerOctave; i++) {
 			const rectangle: SVGRectElement = SVG.rect();
 			rectangle.setAttribute("x", "1");
@@ -117,16 +121,12 @@ export class PatternEditor {
 			this._updateCursorStatus();
 			this._updatePreview();
 			window.requestAnimationFrame(this._animatePlayhead);
-			this._svg.addEventListener("mousedown", this._whenMousePressed);
-			document.addEventListener("mousemove", this._whenMouseMoved);
-			document.addEventListener("mouseup", this._whenCursorReleased);
-			this._svg.addEventListener("mouseover", this._whenMouseOver);
-			this._svg.addEventListener("mouseout", this._whenMouseOut);
-		
-			this._svg.addEventListener("touchstart", this._whenTouchPressed);
-			this._svg.addEventListener("touchmove", this._whenTouchMoved);
-			this._svg.addEventListener("touchend", this._whenCursorReleased);
-			this._svg.addEventListener("touchcancel", this._whenCursorReleased);
+			this._svg.addEventListener("pointerenter", this._onPointerMove);
+			this._svg.addEventListener("pointerleave", this._onPointerLeave);
+			this._svg.addEventListener("pointerdown", this._onPointerDown);
+			this._svg.addEventListener("pointermove", this._onPointerMove);
+			this._svg.addEventListener("pointerup", this._onPointerUp);
+			this._svg.addEventListener("pointercancel", this._onPointerCancel);
 		} else {
 			this._svgPlayhead.style.display = "none";
 			this._svg.appendChild(SVG.rect({x: 0, y: 0, width: 10000, height: 10000, fill: ColorConfig.editorBackground, style: "opacity: 0.5;"}));
@@ -248,6 +248,18 @@ export class PatternEditor {
 				if (this._cursor.curNote.pitches[i] == this._cursor.pitch) {
 					this._cursor.pitchIndex = i;
 					break;
+				}
+			}
+			
+			if (this._cursor.pitchIndex != -1) {
+				this._cursor.isNearNote = true;
+			} else if (this._pointers.latest.isTouch) {
+				for (let i: number = 0; i < this._cursor.curNote.pitches.length; i++) {
+					const distance: number = this._cursor.curNote.pitches[i] - mousePitch + 0.5;
+					if (-15.5 < distance && distance < 0) {
+						this._cursor.isNearNote = true;
+						break;
+					}
 				}
 			}
 		} else {
@@ -385,7 +397,7 @@ export class PatternEditor {
 	}
 	
 	public movePlayheadToMouse(): boolean {
-		if (this._mouseOver) {
+		if (this._pointers.latest.isPresent) {
 			this._doc.synth.playhead = this._doc.bar + this._barOffset + (this._mouseX / this._editorWidth);
 			return true;
 		}
@@ -404,20 +416,10 @@ export class PatternEditor {
 	}
 	
 	private _animatePlayhead = (timestamp: number): void => {
-		
-		if (this._usingTouch && !this._shiftHeld && !this._mouseDragging && this._mouseDown && performance.now() > this._touchTime + 1000 && this._cursor.valid && this._doc.lastChangeWas(this._dragChange)) {
-			// On a mobile device, the pattern editor supports using a long stationary touch to activate selection.
-			this._dragChange!.undo();
-			this._shiftHeld = true;
-			this._whenCursorPressed();
-			// The full interface is usually only rerendered in response to user input events, not animation events, but in this case go ahead and rerender everything.
-			this._doc.notifier.notifyWatchers();
-		}
-		
 		const playheadBar: number = Math.floor(this._doc.synth.playhead);
 		
 		if (this._doc.synth.playing && ((this._pattern != null && this._doc.song.getPattern(this._doc.channel, Math.floor(this._doc.synth.playhead)) == this._pattern) || Math.floor(this._doc.synth.playhead) == this._doc.bar + this._barOffset)) {
-			this._svgPlayhead.setAttribute("visibility", "visible");
+			this._svgPlayhead.setAttribute("display", "");
 			const modPlayhead: number = this._doc.synth.playhead - playheadBar;
 			if (Math.abs(modPlayhead - this._playheadX) > 0.1) {
 				this._playheadX = modPlayhead;
@@ -426,7 +428,7 @@ export class PatternEditor {
 			}
 			this._svgPlayhead.setAttribute("x", "" + prettyNumber(this._playheadX * this._editorWidth - 2));
 		} else {
-			this._svgPlayhead.setAttribute("visibility", "hidden");
+			this._svgPlayhead.setAttribute("display", "none");
 		}
 		
 		if (this._doc.synth.playing && (this._doc.synth.recording || this._doc.prefs.autoFollow) && this._followPlayheadBar != playheadBar) {
@@ -444,50 +446,25 @@ export class PatternEditor {
 		window.requestAnimationFrame(this._animatePlayhead);
 	}
 	
-	private _whenMouseOver = (event: MouseEvent): void => {
-		if (this._mouseOver) return;
-		this._mouseOver = true;
-		this._usingTouch = false;
+	private _onPointerLeave = (event: PointerEvent): void => {
+		this._updatePreview();
 	}
 	
-	private _whenMouseOut = (event: MouseEvent): void => {
-		if (!this._mouseOver) return;
-		this._mouseOver = false;
-	}
-	
-	private _whenMousePressed = (event: MouseEvent): void => {
-		event.preventDefault();
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._usingTouch = false;
+	private _onPointerDown = (event: PointerEvent): void => {
+		const point: Point2d = event.pointer!.getPointIn(this.container);
+		this._mouseX = point.x;
+		this._mouseY = point.y;
 		this._ctrlHeld = event.ctrlKey || event.metaKey;
-		this._shiftHeld = event.shiftKey;
-		this._whenCursorPressed();
-	}
-	
-	private _whenTouchPressed = (event: TouchEvent): void => {
-		event.preventDefault();
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._usingTouch = true;
-		this._ctrlHeld = event.ctrlKey || event.metaKey;
-		this._shiftHeld = event.shiftKey;
-		this._touchTime = performance.now();
+		this._shiftHeld = event.shiftKey || event.pointer!.wasHeldStill;
+		this._pointers.preventContextMenu = event.pointer!.isTouch;
+		this._mouseXStart = this._mouseX;
+		this._mouseYStart = this._mouseY;
+		this._updateCursorStatus();
 		this._whenCursorPressed();
 	}
 	
 	private _whenCursorPressed(): void {
 		if (this._doc.prefs.enableNotePreview) this._doc.synth.maintainLiveInput();
-		this._mouseDown = true;
-		this._mouseXStart = this._mouseX;
-		this._mouseYStart = this._mouseY;
-		this._updateCursorStatus();
 		this._updatePreview();
 		const sequence: ChangeSequence = new ChangeSequence();
 		this._dragChange = sequence;
@@ -512,57 +489,44 @@ export class PatternEditor {
 			}
 		} else if (this._cursorIsInSelection()) {
 			this._draggingSelectionContents = true;
-		} else if (this._cursor.valid && this._cursor.curNote == null) {
-			sequence.append(new ChangePatternSelection(this._doc, 0, 0));
-			
+		} else if (this._cursor.valid && this._cursor.curNote == null && !this._pointers.latest.isTouch) {
 			// If clicking in empty space, the result will be adding a note,
 			// so we can safely add it immediately. Note that if clicking on
 			// or near an existing note, the result will depend on whether
 			// a drag follows, so we couldn't add the note yet without being
 			// confusing.
 			
-			const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, Config.noteSizeMax, this._doc.song.getChannelIsNoise(this._doc.channel));
-			note.pins = [];
-			for (const oldPin of this._cursor.pins) {
-				note.pins.push(makeNotePin(0, oldPin.time, oldPin.size));
-			}
-			sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
-			const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
-			if (pattern == null) throw new Error();
-			sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
-			
-			if (this._doc.prefs.enableNotePreview && !this._doc.synth.playing) {
-				// Play the new note out loud if enabled.
-				const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
-				this._doc.performance.setTemporaryPitches([this._cursor.pitch], duration);
-			}
+			this._addNewNoteAtPointer(sequence);
 		}
 		this._updateSelection();
 	}
 	
-	private _whenMouseMoved = (event: MouseEvent): void => {
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._usingTouch = false;
-		this._whenCursorMoved();
+	private _addNewNoteAtPointer(sequence: ChangeSequence): void {
+		sequence.append(new ChangePatternSelection(this._doc, 0, 0));
+		
+		const note: Note = new Note(this._cursor.pitch, this._cursor.start, this._cursor.end, Config.noteSizeMax, this._doc.song.getChannelIsNoise(this._doc.channel));
+		note.pins = [];
+		for (const oldPin of this._cursor.pins) {
+			note.pins.push(makeNotePin(0, oldPin.time, oldPin.size));
+		}
+		sequence.append(new ChangeEnsurePatternExists(this._doc, this._doc.channel, this._doc.bar));
+		const pattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
+		if (pattern == null) throw new Error();
+		sequence.append(new ChangeNoteAdded(this._doc, pattern, note, this._cursor.curIndex));
+		
+		if (this._doc.prefs.enableNotePreview && !this._doc.synth.playing) {
+			// Play the new note out loud if enabled.
+			const duration: number = Math.min(Config.partsPerBeat, this._cursor.end - this._cursor.start);
+			this._doc.performance.setTemporaryPitches([this._cursor.pitch], duration);
+		}
 	}
 	
-	private _whenTouchMoved = (event: TouchEvent): void => {
-		if (!this._mouseDown) return;
-		event.preventDefault();
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._whenCursorMoved();
-	}
-	
-	private _whenCursorMoved(): void {
-		if (this._doc.prefs.enableNotePreview && this._mouseOver) this._doc.synth.maintainLiveInput();
+	private _onPointerMove = (event: PointerEvent): void => {
+		const point: Point2d = event.pointer!.getPointIn(this.container);
+		this._mouseX = point.x;
+		this._mouseY = point.y;
+		
+		if (this._doc.prefs.enableNotePreview) this._doc.synth.maintainLiveInput();
 		
 		// HACK: Undoable pattern changes rely on persistent instance
 		// references. Loading song from hash via undo/redo breaks that,
@@ -570,7 +534,7 @@ export class PatternEditor {
 		// invalid. Abort further drag changes until the mouse is released.
 		const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
 		
-		if (!this._mouseDragging && this._mouseDown && this._cursor.valid && continuousState) {
+		if (!this._mouseDragging && event.pointer!.isDown && this._cursor.valid && continuousState) {
 			const dx: number = this._mouseX - this._mouseXStart;
 			const dy: number = this._mouseY - this._mouseYStart;
 			if (Math.sqrt(dx * dx + dy * dy) > 5) {
@@ -579,7 +543,7 @@ export class PatternEditor {
 			}
 		}
 		
-		if (this._mouseDragging && this._mouseDown && this._cursor.valid && continuousState) {
+		if (this._mouseDragging && event.pointer!.isDown && this._cursor.valid && continuousState) {
 			this._dragChange!.undo();
 			const sequence: ChangeSequence = new ChangeSequence();
 			this._dragChange = sequence;
@@ -869,17 +833,19 @@ export class PatternEditor {
 			}
 		}
 		
-		if (!(this._mouseDown && this._cursor.valid && continuousState)) {
+		if (!(event.pointer!.isDown && this._cursor.valid && continuousState)) {
 			this._updateCursorStatus();
+			this._pointers.preventTouchGestureScrolling = (this._cursor.valid && this._cursor.isNearNote) || this._cursorIsInSelection();
+			this._pointers.deferInitialEvents = event.pointer!.isTouch;
 			this._updatePreview();
 		}
 	}
 	
-	private _whenCursorReleased = (event: Event | null): void => {
+	private _onPointerUp = (event: PointerEvent | null): void => {
 		if (!this._cursor.valid) return;
 		
 		const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
-		if (this._mouseDown && continuousState && this._dragChange != null) {
+		if (continuousState && this._dragChange != null) {
 			
 			if (this._draggingSelectionContents) {
 				this._doc.record(this._dragChange);
@@ -887,9 +853,17 @@ export class PatternEditor {
 			} else if (this._draggingStartOfSelection || this._draggingEndOfSelection || this._shiftHeld) {
 				this._setPatternSelection(this._dragChange);
 				this._dragChange = null;
-			} else if (this._mouseDragging || this._cursor.curNote == null || !this._dragChange.isNoop() || this._draggingStartOfSelection || this._draggingEndOfSelection || this._draggingSelectionContents || this._shiftHeld) {
+			} else if (this._mouseDragging || !this._dragChange.isNoop()) {
 				this._doc.record(this._dragChange);
 				this._dragChange = null;
+			} else if (this._cursor.curNote == null) {
+				if (this._pointers.latest.isTouch) {
+					// If in touch mode, we can't add a new note on press because the
+					// touch may turn into a scroll, so add it on release instead.
+					const sequence: ChangeSequence = new ChangeSequence();
+					this._addNewNoteAtPointer(sequence);
+					this._doc.record(sequence);
+				}
 			} else {
 				if (this._pattern == null) throw new Error();
 				
@@ -919,7 +893,22 @@ export class PatternEditor {
 			}
 		}
 		
-		this._mouseDown = false;
+		this._dragChange = null;
+		this._mouseDragging = false;
+		this._draggingStartOfSelection = false;
+		this._draggingEndOfSelection = false;
+		this._draggingSelectionContents = false;
+		this._lastChangeWasPatternSelection = false;
+		this._updateCursorStatus();
+		this._updatePreview();
+	}
+	
+	private _onPointerCancel = (event: PointerEvent | null): void => {
+		const continuousState: boolean = this._doc.lastChangeWas(this._dragChange);
+		if (continuousState && this._dragChange != null) {
+			this._dragChange.undo();
+		}
+		this._dragChange = null;
 		this._mouseDragging = false;
 		this._draggingStartOfSelection = false;
 		this._draggingEndOfSelection = false;
@@ -938,11 +927,11 @@ export class PatternEditor {
 	}
 	
 	private _updatePreview(): void {
-		if (this._usingTouch) {
-			if (!this._mouseDown || !this._cursor.valid  || !this._mouseDragging || !this._dragVisible || this._shiftHeld || this._draggingStartOfSelection || this._draggingEndOfSelection || this._draggingSelectionContents) {
-				this._svgPreview.setAttribute("visibility", "hidden");
+		if (this._pointers.latest.isTouch) {
+			if (!this._pointers.latest.isDown || !this._cursor.valid  || !this._mouseDragging || !this._dragVisible || this._shiftHeld || this._draggingStartOfSelection || this._draggingEndOfSelection || this._draggingSelectionContents) {
+				this._svgPreview.setAttribute("display", "none");
 			} else {
-				this._svgPreview.setAttribute("visibility", "visible");
+				this._svgPreview.setAttribute("display", "");
 				
 				const x: number = this._partWidth * this._dragTime;
 				const y: number = this._pitchToPixelHeight(this._dragPitch - this._octaveOffset);
@@ -970,10 +959,10 @@ export class PatternEditor {
 				this._svgPreview.setAttribute("d", pathString);
 			}
 		} else {
-			if (!this._mouseOver || this._mouseDown || !this._cursor.valid) {
-				this._svgPreview.setAttribute("visibility", "hidden");
+			if (!this._pointers.latest.isPresent || this._pointers.latest.isDown || !this._cursor.valid) {
+				this._svgPreview.setAttribute("display", "none");
 			} else {
-				this._svgPreview.setAttribute("visibility", "visible");
+				this._svgPreview.setAttribute("display", "");
 				
 				if (this._cursorAtStartOfSelection()) {
 					const center: number = this._partWidth * this._doc.selection.patternSelectionStart;
@@ -1001,11 +990,11 @@ export class PatternEditor {
 	
 	private _updateSelection(): void {
 		if (this._doc.selection.patternSelectionActive) {
-			this._selectionRect.setAttribute("visibility", "visible");
+			this._selectionRect.setAttribute("display", "");
 			this._selectionRect.setAttribute("x", String(this._partWidth * this._doc.selection.patternSelectionStart));
 			this._selectionRect.setAttribute("width", String(this._partWidth * (this._doc.selection.patternSelectionEnd - this._doc.selection.patternSelectionStart)));
 		} else {
-			this._selectionRect.setAttribute("visibility", "hidden");
+			this._selectionRect.setAttribute("display", "none");
 		}
 	}
 	
@@ -1013,7 +1002,7 @@ export class PatternEditor {
 		const nextPattern: Pattern | null = this._doc.getCurrentPattern(this._barOffset);
 		if (this._pattern != nextPattern && this._pattern != null) {
 			this._dragChange = null;
-			this._whenCursorReleased(null);
+			this._pointers.latest.cancel();
 		}
 		this._pattern = nextPattern;
 		
@@ -1066,7 +1055,7 @@ export class PatternEditor {
 		}
 		
 		if (this._interactive) {
-			if (!this._mouseDown) this._updateCursorStatus();
+			if (!this._pointers.latest.isDown) this._updateCursorStatus();
 			this._updatePreview();
 			this._updateSelection();
 		}

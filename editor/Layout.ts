@@ -1,7 +1,7 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {HTML} from "imperative-html/dist/esm/elements-strict";
-import {ColorConfig} from "./ColorConfig";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
+import {ColorConfig} from "./ColorConfig.js";
 
 export class Layout {
 	private static readonly _layoutMap: {[K: string]: string} = {
@@ -63,24 +63,6 @@ export class Layout {
 				}
 				.beepboxEditor .trackContainer {
 					overflow: visible;
-				}
-				.beepboxEditor .trackAndMuteContainer {
-					scrollbar-width: auto;
-					scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar {
-					width: 20px;
-					height: 20px;
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-track {
-					background: ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-thumb {
-					background-color: ${ColorConfig.uiWidgetBackground};
-					border: 3px solid ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-corner {
-					background-color: ${ColorConfig.editorBackground};
 				}
 			}
 		`,
@@ -159,24 +141,6 @@ export class Layout {
 				}
 				.beepboxEditor .trackContainer {
 					overflow: visible;
-				}
-				.beepboxEditor .trackAndMuteContainer {
-					scrollbar-width: auto;
-					scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar {
-					width: 20px;
-					height: 20px;
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-track {
-					background: ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-thumb {
-					background-color: ${ColorConfig.uiWidgetBackground};
-					border: 3px solid ${ColorConfig.editorBackground};
-				}
-				.beepboxEditor .trackAndMuteContainer::-webkit-scrollbar-corner {
-					background-color: ${ColorConfig.editorBackground};
 				}
 			}
 		`,

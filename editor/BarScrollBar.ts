@@ -1,8 +1,9 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {SongDocument} from "./SongDocument";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
-import {ColorConfig} from "./ColorConfig";
+import {SongDocument} from "./SongDocument.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {EasyPointers} from "./EasyPointers.js";
 
 export class BarScrollBar {
 	private readonly _editorWidth: number = 512;
@@ -24,10 +25,9 @@ export class BarScrollBar {
 	
 	public readonly container: HTMLElement = HTML.div({class: "barScrollBar", style: "width: 512px; height: 20px; overflow: hidden; position: relative;"}, this._svg);
 	
+	private readonly _pointers: EasyPointers = new EasyPointers(this.container);
+	
 	private _mouseX: number = 0;
-	//private _mouseY: number = 0;
-	private _mouseDown: boolean = false;
-	private _mouseOver: boolean = false;
 	private _dragging: boolean = false;
 	private _dragStart: number;
 	private _notchSpace: number;
@@ -42,36 +42,20 @@ export class BarScrollBar {
 		this._leftHighlight.setAttribute("d", `M ${tip} ${center} L ${base} ${center + arrowHeight} L ${base} ${center - arrowHeight} z`);
 		this._rightHighlight.setAttribute("d", `M ${this._editorWidth - tip} ${center} L ${this._editorWidth - base} ${center + arrowHeight} L ${this._editorWidth - base} ${center - arrowHeight} z`);
 		
-		this.container.addEventListener("mousedown", this._whenMousePressed);
-		document.addEventListener("mousemove", this._whenMouseMoved);
-		document.addEventListener("mouseup", this._whenCursorReleased);
-		this.container.addEventListener("mouseover", this._whenMouseOver);
-		this.container.addEventListener("mouseout", this._whenMouseOut);
-		
-		this.container.addEventListener("touchstart", this._whenTouchPressed);
-		this.container.addEventListener("touchmove", this._whenTouchMoved);
-		this.container.addEventListener("touchend", this._whenCursorReleased);
-		this.container.addEventListener("touchcancel", this._whenCursorReleased);
+		this.container.addEventListener("pointerenter", this._onPointerMove);
+		this.container.addEventListener("pointerleave", this._onPointerLeave);
+		this.container.addEventListener("pointerdown", this._onPointerDown);
+		this.container.addEventListener("pointermove", this._onPointerMove);
+		this.container.addEventListener("pointerup", this._onPointerUp);
+		this.container.addEventListener("pointercancel", this._onPointerUp);
 	}
 	
-	private _whenMouseOver = (event: MouseEvent): void => {
-		if (this._mouseOver) return;
-		this._mouseOver = true;
+	private _onPointerLeave = (event: PointerEvent): void => {
 		this._updatePreview();
 	}
 	
-	private _whenMouseOut = (event: MouseEvent): void => {
-		if (!this._mouseOver) return;
-		this._mouseOver = false;
-		this._updatePreview();
-	}
-	
-	private _whenMousePressed = (event: MouseEvent): void => {
-		event.preventDefault();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		//this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
+	private _onPointerDown = (event: PointerEvent): void => {
+		this._mouseX = (this._pointers.latest.getPointIn(this._svg).x);
 		this._updatePreview();
 		if (this._mouseX >= this._doc.barScrollPos * this._notchSpace && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._notchSpace) {
 			this._dragging = true;
@@ -79,36 +63,8 @@ export class BarScrollBar {
 		}
 	}
 	
-	private _whenTouchPressed = (event: TouchEvent): void => {
-		event.preventDefault();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = event.touches[0].clientX - boundingRect.left;
-		//this._mouseY = event.touches[0].clientY - boundingRect.top;
-		this._updatePreview();
-		if (this._mouseX >= this._doc.barScrollPos * this._notchSpace && this._mouseX <= (this._doc.barScrollPos + this._doc.trackVisibleBars) * this._notchSpace) {
-			this._dragging = true;
-			this._dragStart = this._mouseX;
-		}
-	}
-	
-	private _whenMouseMoved = (event: MouseEvent): void => {
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		//this._mouseY = (event.clientY || event.pageY) - boundingRect.top;
-		this._whenCursorMoved();
-	}
-	
-	private _whenTouchMoved = (event: TouchEvent): void => {
-		if (!this._mouseDown) return;
-		event.preventDefault();
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = event.touches[0].clientX - boundingRect.left;
-		//this._mouseY = event.touches[0].clientY - boundingRect.top;
-		this._whenCursorMoved();
-	}
-	
-	private _whenCursorMoved(): void {
+	private _onPointerMove = (event: PointerEvent): void => {
+		this._mouseX = (this._pointers.latest.getPointIn(this._svg).x);
 		if (this._dragging) {
 			while (this._mouseX - this._dragStart < -this._notchSpace * 0.5) {
 				if (this._doc.barScrollPos > 0) {
@@ -129,11 +85,11 @@ export class BarScrollBar {
 				}
 			}
 		}
-		if (this._mouseOver) this._updatePreview();
+		this._updatePreview();
 	}
 	
-	private _whenCursorReleased = (event: Event): void => {
-		if (!this._dragging && this._mouseDown) {
+	private _onPointerUp = (event: PointerEvent): void => {
+		if (!this._dragging) {
 			if (this._mouseX < (this._doc.barScrollPos + 8) * this._notchSpace) {
 				if (this._doc.barScrollPos > 0) this._doc.barScrollPos--;
 				this._doc.notifier.changed();
@@ -142,13 +98,12 @@ export class BarScrollBar {
 				this._doc.notifier.changed();
 			}
 		}
-		this._mouseDown = false;
 		this._dragging = false;
 		this._updatePreview();
 	}
 	
 	private _updatePreview(): void {
-		const showHighlight: boolean = this._mouseOver && !this._mouseDown;
+		const showHighlight: boolean = this._pointers.latest.isHovering;
 		let showleftHighlight: boolean = false;
 		let showRightHighlight: boolean = false;
 		let showHandleHighlight: boolean = false;
@@ -163,9 +118,9 @@ export class BarScrollBar {
 			}
 		}
 		
-		this._leftHighlight.style.visibility = showleftHighlight ? "visible" : "hidden";
-		this._rightHighlight.style.visibility = showRightHighlight ? "visible" : "hidden";
-		this._handleHighlight.style.visibility = showHandleHighlight ? "visible" : "hidden";
+		this._leftHighlight.style.display = showleftHighlight ? "" : "none";
+		this._rightHighlight.style.display = showRightHighlight ? "" : "none";
+		this._handleHighlight.style.display = showHandleHighlight ? "" : "none";
 	}
 	
 	public render(): void {

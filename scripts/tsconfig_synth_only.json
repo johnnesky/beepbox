@@ -1,11 +1,14 @@
 {
-	"files": [ "synth/synth.ts" ],
+	"files": [ "../synth/index.ts" ],
 	"compilerOptions": {
-		"rootDir": "./",
-		"outDir": "build",
+		"rootDir": "../",
+		"outDir": "../build",
 		"target": "es2016",
-		"moduleResolution": "node",
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
 		"sourceMap": true,
+		"declaration": true,
+		"declarationMap": true,
 		"removeComments": true,
 		"noImplicitAny": true,
 		"noImplicitThis": true,

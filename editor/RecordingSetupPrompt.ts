@@ -1,13 +1,13 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {EditorConfig} from "./EditorConfig";
-import {SongDocument} from "./SongDocument";
-import {Prompt} from "./Prompt";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
-import {ColorConfig} from "./ColorConfig";
-import {KeyboardLayout} from "./KeyboardLayout";
-import {Piano} from "./Piano";
+import {Config} from "../synth/SynthConfig.js";
+import {EditorConfig} from "./EditorConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {Prompt} from "./Prompt.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {KeyboardLayout} from "./KeyboardLayout.js";
+import {Piano} from "./Piano.js";
 
 const {button, label, div, p, a, h2, input, select, option} = HTML;
 

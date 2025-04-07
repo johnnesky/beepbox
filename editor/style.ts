@@ -1,18 +1,33 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {ColorConfig} from "./ColorConfig";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
+import {ColorConfig} from "./ColorConfig.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
 
 
-// Determine if the user's browser/OS adds scrollbars that occupy space.
-// See: https://www.filamentgroup.com/lab/scrollbars/
-const scrollBarTest: HTMLDivElement = document.body.appendChild(HTML.div({style: "width:30px; height:30px; overflow: auto;"}, 
-	HTML.div({style: "width:100%;height:40px"}),
-));
-if ((<any>scrollBarTest).firstChild.clientWidth < 30) {
-	document.documentElement.classList.add("obtrusive-scrollbars");
+function scrollBarTestFunc(): void {
+	// Determine if the user's browser/OS adds scrollbars that occupy space by default.
+	// See: https://www.filamentgroup.com/lab/scrollbars/
+	// Or: https://web.archive.org/web/20240109124348/https://www.filamentgroup.com/lab/scrollbars/
+	const scrollBarTest: HTMLDivElement = document.body.appendChild(HTML.div({style: "width:30px; height:30px; overflow: auto;"},
+		HTML.div({style: "width:100%; height:40px"}),
+	));
+	if ((<any>scrollBarTest).firstChild.clientWidth < 30) {
+		document.documentElement.classList.add("has-classic-scrollbars");
+	}
+	document.body.removeChild(scrollBarTest);
 }
-document.body.removeChild(scrollBarTest);
+if (document.body) {
+	scrollBarTestFunc();
+} else {
+	// Wait until the document body is present to perform the scrollBarTestFunc.
+	const observer: MutationObserver = new MutationObserver(function(): void {
+		if (document.body) {
+			scrollBarTestFunc();
+			observer.disconnect();
+		}
+	});
+	observer.observe(document.documentElement, {childList: true});
+}
 
 
 document.head.appendChild(HTML.style({type: "text/css"}, `
@@ -120,20 +135,33 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 }
 
 
-.obtrusive-scrollbars, .obtrusive-scrollbars * {
+.has-classic-scrollbars, .has-classic-scrollbars *, .prefers-classic-scrollbars {
 	scrollbar-width: thin;
 	scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
 }
-.obtrusive-scrollbars::-webkit-scrollbar, .obtrusive-scrollbars *::-webkit-scrollbar {
-	width: 12px;
+.prefers-big-scrollbars {
+	scrollbar-width: auto;
+	scrollbar-color: ${ColorConfig.uiWidgetBackground} ${ColorConfig.editorBackground};
 }
-.obtrusive-scrollbars::-webkit-scrollbar-track, .obtrusive-scrollbars *::-webkit-scrollbar-track {
+.has-classic-scrollbars::-webkit-scrollbar, .has-classic-scrollbars *::-webkit-scrollbar, .prefers-classic-scrollbars::-webkit-scrollbar {
+	width: 12px;
+	height: 12px;
+}
+.prefers-big-scrollbars::-webkit-scrollbar {
+	width: 20px;
+	height: 20px;
+}
+.has-classic-scrollbars::-webkit-scrollbar-track, .has-classic-scrollbars *::-webkit-scrollbar-track, .prefers-classic-scrollbars::-webkit-scrollbar-track, .prefers-big-scrollbars::-webkit-scrollbar-track {
 	background: ${ColorConfig.editorBackground};
 }
-.obtrusive-scrollbars::-webkit-scrollbar-thumb, .obtrusive-scrollbars *::-webkit-scrollbar-thumb {
+.has-classic-scrollbars::-webkit-scrollbar-thumb, .has-classic-scrollbars *::-webkit-scrollbar-thumb, .prefers-classic-scrollbars::-webkit-scrollbar-thumb, .prefers-big-scrollbars::-webkit-scrollbar-thumb {
 	background-color: ${ColorConfig.uiWidgetBackground};
 	border: 3px solid ${ColorConfig.editorBackground};
 }
+.has-classic-scrollbars::-webkit-scrollbar-corner, .has-classic-scrollbars *::-webkit-scrollbar-corner, .prefers-classic-scrollbars::-webkit-scrollbar-corner, .prefers-big-scrollbars::-webkit-scrollbar-corner {
+	background-color: ${ColorConfig.editorBackground};
+}
+
 
 
 .beepboxEditor {
@@ -225,6 +253,17 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	mask-image: var(--volume-symbol);
 	mask-repeat: no-repeat;
 	mask-position: center;
+}
+
+.beepboxEditor .playback-volume-controls {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.beepboxEditor .playback-volume-controls > :last-child {
+	width: 5em;
+	flex-grow: 1;
 }
 
 .beepboxEditor .drum-button {
@@ -1255,10 +1294,7 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		margin: 2px 0;
 	}
 	.beepboxEditor .playback-volume-controls {
-		display: flex;
-		flex-direction: row;
 		margin: 2px 0;
-		align-items: center;
 	}
 	.beepboxEditor .settings-area {
 		width: var(--settings-area-width);
@@ -1306,9 +1342,6 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 		flex-grow: 1;
 	}
 	.beepboxEditor .playback-volume-controls {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
 		flex-grow: 1;
 	}
 }

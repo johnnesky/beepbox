@@ -1,6 +1,6 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {DictionaryArray, BeepBoxOption, InstrumentType, toNameMap} from "../synth/SynthConfig";
+import {DictionaryArray, BeepBoxOption, InstrumentType, toNameMap} from "../synth/SynthConfig.js";
 
 export interface PresetCategory extends BeepBoxOption {
 	readonly presets: DictionaryArray<Preset>;
@@ -22,7 +22,7 @@ export function prettyNumber(value: number): string {
 }
 
 export class EditorConfig {
-	public static readonly version: string = "4.2";
+	public static readonly version: string = "4.2.1";
 	
 	public static readonly versionDisplayName: string = "BeepBox";
 	public static readonly releaseNotesURL: string = "https://github.com/johnnesky/beepbox/releases/tag/v" + EditorConfig.version;

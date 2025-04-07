@@ -1,10 +1,10 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Dictionary, Config} from "../synth/SynthConfig";
-import {Note, Pattern, Channel} from "../synth/synth";
-import {SongDocument} from "./SongDocument";
-import {ChangeGroup} from "./Change";
-import {ChangeTrackSelection, ChangeChannelBar, ChangeDuplicateSelectedReusedPatterns, ChangeNoteAdded, ChangeNoteTruncate, ChangePatternNumbers, ChangePatternSelection, ChangeInsertBars, ChangeAddChannel, ChangeDeleteBars, ChangeRemoveChannel, ChangeEnsurePatternExists, ChangeNoteLength, ChangePaste, ChangeSetPatternInstruments, ChangeViewInstrument, ChangePatternsPerChannel, ChangePatternRhythm, ChangePatternScale, ChangeTranspose, ChangeChannelOrder, comparePatternNotes, unionOfUsedNotes, generateScaleMap, discardInvalidPatternInstruments, patternsContainSameInstruments} from "./changes";
+import {Dictionary, Config} from "../synth/SynthConfig.js";
+import {Note, Pattern, Channel} from "../synth/synth.js";
+import {SongDocument} from "./SongDocument.js";
+import {ChangeGroup} from "./Change.js";
+import {ChangeTrackSelection, ChangeChannelBar, ChangeDuplicateSelectedReusedPatterns, ChangeNoteAdded, ChangeNoteTruncate, ChangePatternNumbers, ChangePatternSelection, ChangeInsertBars, ChangeAddChannel, ChangeDeleteBars, ChangeRemoveChannel, ChangeEnsurePatternExists, ChangeNoteLength, ChangePaste, ChangeSetPatternInstruments, ChangeViewInstrument, ChangePatternsPerChannel, ChangePatternRhythm, ChangePatternScale, ChangeTranspose, ChangeChannelOrder, comparePatternNotes, unionOfUsedNotes, generateScaleMap, discardInvalidPatternInstruments, patternsContainSameInstruments} from "./changes.js";
 
 interface PatternCopy {
 	instruments: number[];

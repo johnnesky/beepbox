@@ -1,9 +1,9 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Dictionary, DictionaryArray, FilterType, SustainType, EnvelopeType, InstrumentType, EffectType, EnvelopeComputeIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig";
-import {scaleElementsByFactor, inverseRealFourierTransform} from "./FFT";
-import {Deque} from "./Deque";
-import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter, warpInfinityToNyquist} from "./filtering";
+import {Dictionary, DictionaryArray, FilterType, SustainType, EnvelopeType, InstrumentType, EffectType, EnvelopeComputeIndex, Transition, Unison, Chord, Vibrato, Envelope, AutomationTarget, Config, getDrumWave, drawNoiseSpectrum, getArpeggioPitchIndex, performIntegral, getPulseWidthRatio, effectsIncludeTransition, effectsIncludeChord, effectsIncludePitchShift, effectsIncludeDetune, effectsIncludeVibrato, effectsIncludeNoteFilter, effectsIncludeDistortion, effectsIncludeBitcrusher, effectsIncludePanning, effectsIncludeChorus, effectsIncludeEcho, effectsIncludeReverb} from "./SynthConfig.js";
+import {scaleElementsByFactor, fastFourierTransform, forwardRealFourierTransform, inverseRealFourierTransform} from "./FFT.js";
+import {Deque} from "./Deque.js";
+import {FilterCoefficients, FrequencyResponse, DynamicBiquadFilter, warpInfinityToNyquist} from "./filtering.js";
 
 declare global {
 	interface Window {
@@ -7341,6 +7341,7 @@ export class Synth {
 			// The phase initially starts at a zero crossing so apply
 			// the delta before first sample to get a nonzero value.
 			let phase: number = (phases[0] + phaseDelta) % 1.0;
+			// For efficiency, apply the center offsets for all voices at once instead of in the below loop.
 			let supersawSample: number = phase - 0.5 * (1.0 + (voiceCount - 1.0) * dynamism);
 			
 			// This is a PolyBLEP, which smooths out discontinuities at any frequency to reduce aliasing. 
@@ -7726,8 +7727,8 @@ export class Synth {
 		const beatsPerMinute: number = this.song.getBeatsPerMinute();
 		const beatsPerSecond: number = beatsPerMinute / 60.0;
 		const partsPerSecond: number = Config.partsPerBeat * beatsPerSecond;
-		const tickPerSecond: number = Config.ticksPerPart * partsPerSecond;
-		return this.samplesPerSecond / tickPerSecond;
+		const ticksPerSecond: number = Config.ticksPerPart * partsPerSecond;
+		return this.samplesPerSecond / ticksPerSecond;
 	}
 	
 	public static fittingPowerOfTwo(x: number): number {
@@ -7798,4 +7799,20 @@ export class Synth {
 }
 
 // When compiling synth.ts as a standalone module named "beepbox", expose these imported classes as members to JavaScript:
-export {Dictionary, DictionaryArray, FilterType, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config};
+export {
+	Dictionary,
+	DictionaryArray,
+	FilterType,
+	EnvelopeType,
+	InstrumentType,
+	Transition,
+	Chord,
+	Envelope,
+	Config,
+	fastFourierTransform,
+	forwardRealFourierTransform,
+	inverseRealFourierTransform,
+	FilterCoefficients,
+	FrequencyResponse,
+	DynamicBiquadFilter,
+};

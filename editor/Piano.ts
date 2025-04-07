@@ -1,9 +1,10 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {SongDocument} from "./SongDocument";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
-import {ColorConfig} from "./ColorConfig";
+import {Config} from "../synth/SynthConfig.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
+import {EasyPointers} from "./EasyPointers.js";
 
 export class Piano {
 	private readonly _pianoContainer: HTMLDivElement = HTML.div({style: "width: 100%; height: 100%; display: flex; flex-direction: column-reverse; align-items: stretch;"});
@@ -14,16 +15,15 @@ export class Piano {
 		this._drumContainer,
 		this._preview,
 	);
+	
+	private readonly _pointers: EasyPointers = new EasyPointers(this.container, {preventTouchGestureScrolling: true});
+	
 	private readonly _editorHeight: number = 481;
 	private readonly _pianoKeys: HTMLDivElement[] = [];
 	private readonly _pianoLabels: HTMLDivElement[] = [];
 	
 	private _pitchHeight: number;
 	private _pitchCount: number;
-	//private _mouseX: number = 0;
-	private _mouseY: number = 0;
-	private _mouseDown: boolean = false;
-	private _mouseOver: boolean = false;
 	private _cursorPitch: number;
 	private _playedPitch: number = -1;
 	private _renderedScale: number = -1;
@@ -38,16 +38,12 @@ export class Piano {
 			this._drumContainer.appendChild(HTML.div({class: "drum-button", style: `background-size: ${scale}% ${scale}%;`}));
 		}
 		
-		this.container.addEventListener("mousedown", this._whenMousePressed);
-		document.addEventListener("mousemove", this._whenMouseMoved);
-		document.addEventListener("mouseup", this._whenMouseReleased);
-		this.container.addEventListener("mouseover", this._whenMouseOver);
-		this.container.addEventListener("mouseout", this._whenMouseOut);
-		
-		this.container.addEventListener("touchstart", this._whenTouchPressed);
-		this.container.addEventListener("touchmove", this._whenTouchMoved);
-		this.container.addEventListener("touchend", this._whenTouchReleased);
-		this.container.addEventListener("touchcancel", this._whenTouchReleased);
+		this.container.addEventListener("pointerenter", this._onPointerMove);
+		this.container.addEventListener("pointerleave", this._onPointerLeave);
+		this.container.addEventListener("pointerdown", this._onPointerDown);
+		this.container.addEventListener("pointermove", this._onPointerMove);
+		this.container.addEventListener("pointerup", this._onPointerUp);
+		this.container.addEventListener("pointercancel", this._onPointerUp);
 		
 		this._doc.notifier.watch(this._documentChanged);
 		this._documentChanged();
@@ -57,7 +53,9 @@ export class Piano {
 	
 	private _updateCursorPitch(): void {
 		const scale: ReadonlyArray<boolean> = Config.scales[this._doc.song.scale].flags;
-		const mousePitch: number = Math.max(0, Math.min(this._pitchCount-1, this._pitchCount - (this._mouseY / this._pitchHeight)));
+		const mouseY: number = this._pointers.latest.getPointInNormalized(this.container).y || 0;
+		
+		const mousePitch: number = Math.max(0, Math.min(this._pitchCount-1, (1 - mouseY) * this._pitchCount));
 		if (scale[Math.floor(mousePitch) % Config.pitchesPerOctave] || this._doc.song.getChannelIsNoise(this._doc.channel)) {
 			this._cursorPitch = Math.floor(mousePitch);
 		} else {
@@ -95,75 +93,27 @@ export class Piano {
 		this._playedPitch = -1;
 	}
 	
-	private _whenMouseOver = (event: MouseEvent): void => {
-		if (this._mouseOver) return;
-		this._mouseOver = true;
+	private _onPointerLeave = (event: PointerEvent): void => {
 		this._updatePreview();
 	}
 	
-	private _whenMouseOut = (event: MouseEvent): void => {
-		if (!this._mouseOver) return;
-		this._mouseOver = false;
-		this._updatePreview();
-	}
-	
-	private _whenMousePressed = (event: MouseEvent): void => {
-		event.preventDefault();
+	private _onPointerDown = (event: PointerEvent): void => {
 		this._doc.synth.maintainLiveInput();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this.container.getBoundingClientRect();
-		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseY)) this._mouseY = 0;
 		this._updateCursorPitch();
 		this._playLiveInput();
 		this._updatePreview();
 	}
 	
-	private _whenMouseMoved = (event: MouseEvent): void => {
-		if (this._mouseDown || this._mouseOver) this._doc.synth.maintainLiveInput();
-		const boundingRect: ClientRect = this.container.getBoundingClientRect();
-		//this._mouseX = (event.clientX || event.pageX) - boundingRect.left;
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseY)) this._mouseY = 0;
+	private _onPointerMove = (event: PointerEvent): void => {
+		this._doc.synth.maintainLiveInput();
 		this._updateCursorPitch();
-		if (this._mouseDown) this._playLiveInput();
+		if (event.pointer!.isDown) this._playLiveInput();
 		this._updatePreview();
 	}
 	
-	private _whenMouseReleased = (event: MouseEvent): void => {
-		if (this._mouseDown) this._releaseLiveInput();
-		this._mouseDown = false;
-		this._updatePreview();
-	}
-	
-	private _whenTouchPressed = (event: TouchEvent): void => {
-		event.preventDefault();
-		this._doc.synth.maintainLiveInput();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this.container.getBoundingClientRect();
-		//this._mouseX = event.touches[0].clientX - boundingRect.left;
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._updateCursorPitch();
-		this._playLiveInput();
-	}
-	
-	private _whenTouchMoved = (event: TouchEvent): void => {
-		event.preventDefault();
-		this._doc.synth.maintainLiveInput();
-		const boundingRect: ClientRect = this.container.getBoundingClientRect();
-		//this._mouseX = event.touches[0].clientX - boundingRect.left;
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._updateCursorPitch();
-		if (this._mouseDown) this._playLiveInput();
-	}
-	
-	private _whenTouchReleased = (event: TouchEvent): void => {
-		event.preventDefault();
-		this._mouseDown = false;
+	private _onPointerUp = (event: PointerEvent): void => {
 		this._releaseLiveInput();
+		this._updatePreview();
 	}
 	
 	private _onAnimationFrame = (): void => {
@@ -188,11 +138,10 @@ export class Piano {
 	}
 	
 	private _updatePreview(): void {
-		this._preview.style.visibility = (!this._mouseOver || this._mouseDown) ? "hidden" : "visible";
-		
-		if (this._mouseOver && !this._mouseDown) {
-			const boundingRect: ClientRect = this.container.getBoundingClientRect();
-			const pitchHeight: number = this._pitchHeight / (this._editorHeight / (boundingRect.bottom - boundingRect.top));
+		const previewIsVisible = this._pointers.latest.isHovering;
+		this._preview.style.display = previewIsVisible ? "" : "none";
+		if (previewIsVisible) {
+			const pitchHeight: number = this._pitchHeight / (this._editorHeight / this.container.clientHeight);
 			
 			this._preview.style.left = "0px";
 			this._preview.style.top = pitchHeight * (this._pitchCount - this._cursorPitch - 1) + "px";
@@ -217,7 +166,7 @@ export class Piano {
 		this._pitchCount = isDrum ? Config.drumCount : this._doc.getVisiblePitchCount();
 		this._pitchHeight = this._editorHeight / this._pitchCount;
 		this._updateCursorPitch();
-		if (this._mouseDown) this._playLiveInput();
+		if (this._pointers.latest.isDown) this._playLiveInput();
 		
 		if (!this._doc.prefs.showLetters) return;
 		if (this._renderedScale == this._doc.song.scale && this._renderedKey == this._doc.song.key && this._renderedDrums == isDrum && this._renderedPitchCount == this._pitchCount) return;

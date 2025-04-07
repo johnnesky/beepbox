@@ -1,15 +1,15 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {InstrumentType, Config} from "../synth/SynthConfig";
-import {NotePin, Note, makeNotePin, Pattern, Instrument, Channel, Song, Synth} from "../synth/synth";
-import {Preset, EditorConfig} from "./EditorConfig";
-import {SongDocument} from "./SongDocument";
-import {Prompt} from "./Prompt";
-import {HTML} from "imperative-html/dist/esm/elements-strict";
-import {ChangeGroup} from "./Change";
-import {removeDuplicatePatterns, ChangeSong, ChangeReplacePatterns} from "./changes";
-import {AnalogousDrum, analogousDrumMap, MidiChunkType, MidiFileFormat, MidiEventType, MidiControlEventMessage, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, midiVolumeToVolumeMult, midiExpressionToVolumeMult} from "./Midi";
-import {ArrayBufferReader} from "./ArrayBufferReader";
+import {InstrumentType, Config} from "../synth/SynthConfig.js";
+import {NotePin, Note, makeNotePin, Pattern, Instrument, Channel, Song, Synth} from "../synth/synth.js";
+import {Preset, EditorConfig} from "./EditorConfig.js";
+import {SongDocument} from "./SongDocument.js";
+import {Prompt} from "./Prompt.js";
+import {HTML} from "imperative-html/dist/esm/elements-strict.js";
+import {ChangeGroup} from "./Change.js";
+import {removeDuplicatePatterns, ChangeSong, ChangeReplacePatterns} from "./changes.js";
+import {AnalogousDrum, analogousDrumMap, MidiChunkType, MidiFileFormat, MidiEventType, MidiControlEventMessage, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, midiVolumeToVolumeMult, midiExpressionToVolumeMult} from "./Midi.js";
+import {ArrayBufferReader} from "./ArrayBufferReader.js";
 
 const {button, p, div, h2, input} = HTML;
 

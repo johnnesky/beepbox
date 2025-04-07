@@ -7,7 +7,7 @@
 	<meta name="application-name" content="BeepBox" />
 	<meta name="apple-mobile-web-app-title" content="BeepBox">
 	<meta name="description" content="BeepBox is an online tool for sketching and sharing instrumental music." />
-	<meta name="keywords" content="chiptune, instrumental, music, song, melody, composition, tool, free, BeepBox" />
+	<meta name="keywords" content="beepbox, music, composition, tool, synth, synthesizer, daw, tracker, instrument, song, melody, chiptune, free" />
 	<meta name="mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -222,7 +222,7 @@
 						About
 					</h2>
 					<p>
-						BeepBox is developed by <a href="http://www.johnnesky.com" target="_blank">John Nesky</a>.
+						BeepBox is developed by <a href="https://johnnesky.com/" target="_blank">John Nesky</a>.
 					</p>
 					<p>
 						BeepBox does not claim ownership over songs created with it, so original songs belong to their authors. 
@@ -249,6 +249,7 @@
 	<script type="text/javascript" src="beepbox_editor.min.js"></script>
 	-->
 	<script type="text/javascript">
+		let editor;
 		
 		if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|android|ipad|playbook|silk/i.test(navigator.userAgent) ) {
 			document.getElementById("introduction").innerHTML = "BeepBox is an online tool for sketching and sharing instrumental music. Make sure that your volume is turned up, then press the play button!";
@@ -279,6 +280,9 @@
 			// Go ahead and load js beepbox editor interface:
 			var fileref = document.createElement("script");
 			fileref.setAttribute("type", "text/javascript");
+			fileref.addEventListener("load", function(event) {
+				editor = new beepbox.SongEditor(document.getElementById("beepboxEditorContainer"));
+			});
 			fileref.setAttribute("src", "beepbox_editor.min.js");
 			document.head.appendChild(fileref);
 		} else {

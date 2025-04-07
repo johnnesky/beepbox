@@ -1,17 +1,17 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {isMobile} from "./EditorConfig";
-import {Pattern, Channel, Song, Synth} from "../synth/synth";
-import {SongRecovery, generateUid, errorAlert} from "./SongRecovery";
-import {ColorConfig} from "./ColorConfig";
-import {Layout} from "./Layout";
-import {SongPerformance} from "./SongPerformance";
-import {Selection} from "./Selection";
-import {Preferences} from "./Preferences";
-import {Change} from "./Change";
-import {ChangeNotifier} from "./ChangeNotifier";
-import {ChangeSong, setDefaultInstruments, discardInvalidPatternInstruments} from "./changes";
+import {Config} from "../synth/SynthConfig.js";
+import {isMobile} from "./EditorConfig.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {Layout} from "./Layout.js";
+import {Pattern, Channel, Song, Synth} from "../synth/synth.js";
+import {SongRecovery, generateUid, errorAlert} from "./SongRecovery.js";
+import {SongPerformance} from "./SongPerformance.js";
+import {Selection} from "./Selection.js";
+import {Preferences} from "./Preferences.js";
+import {Change} from "./Change.js";
+import {ChangeNotifier} from "./ChangeNotifier.js";
+import {ChangeSong, setDefaultInstruments, discardInvalidPatternInstruments} from "./changes.js";
 
 interface HistoryState {
 	canUndo: boolean;
@@ -110,7 +110,7 @@ export class SongDocument {
 		// presumably after all handlers are done updating the model, then update the
 		// view before the screen renders. mouseenter and mouseleave do not bubble,
 		// but they are immediately followed by mousemove which does. 
-		for (const eventName of ["input", "change", "click", "keyup", "keydown", "mousedown", "mousemove", "mouseup", "touchstart", "touchmove", "touchend", "touchcancel"]) {
+		for (const eventName of ["input", "change", "click", "keyup", "keydown", "mousedown", "mousemove", "mouseup", "touchstart", "touchmove", "touchend", "touchcancel", "pointerdown", "pointermove", "pointerup", "pointercancel"]) {
 			window.addEventListener(eventName, this._cleanDocument);
 		}
 		

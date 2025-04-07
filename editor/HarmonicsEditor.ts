@@ -1,12 +1,13 @@
-// Copyright (c) 2012-2022 John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
 
-import {Config} from "../synth/SynthConfig";
-import {HarmonicsWave, Instrument} from "../synth/synth";
-import {SongDocument} from "./SongDocument";
-import {HTML, SVG} from "imperative-html/dist/esm/elements-strict";
-import {ColorConfig} from "./ColorConfig";
-import {ChangeHarmonics} from "./changes";
-import {prettyNumber} from "./EditorConfig";
+import {Config} from "../synth/SynthConfig.js";
+import {prettyNumber} from "./EditorConfig.js";
+import {ColorConfig} from "./ColorConfig.js";
+import {HarmonicsWave, Instrument} from "../synth/synth.js";
+import {SongDocument} from "./SongDocument.js";
+import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
+import {EasyPointers, Point2d} from "./EasyPointers.js";
+import {ChangeHarmonics} from "./changes.js";
 
 export class HarmonicsEditor {
 	private readonly _editorWidth: number = 120;
@@ -16,20 +17,19 @@ export class HarmonicsEditor {
 	private readonly _curve: SVGPathElement = SVG.path({fill: "none", stroke: "currentColor", "stroke-width": 2, "pointer-events": "none"});
 	private readonly _lastControlPoints: SVGRectElement[] = [];
 	private readonly _lastControlPointContainer: SVGSVGElement = SVG.svg({"pointer-events": "none"});
-	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground}; touch-action: none; cursor: crosshair;`, width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"},
+	private readonly _svg: SVGSVGElement = SVG.svg({style: `background-color: ${ColorConfig.editorBackground};`, width: "100%", height: "100%", viewBox: "0 0 "+this._editorWidth+" "+this._editorHeight, preserveAspectRatio: "none"},
 		this._octaves,
 		this._fifths,
 		this._curve,
 		this._lastControlPointContainer,
 	);
 	
-	public readonly container: HTMLElement = HTML.div({class: "harmonics", style: "height: 100%;"}, this._svg);
+	public readonly container: HTMLElement = HTML.div({class: "harmonics", style: "height: 100%; touch-action: none; cursor: crosshair;"}, this._svg);
 	
 	private _mouseX: number = 0;
 	private _mouseY: number = 0;
 	private _freqPrev: number = 0;
 	private _ampPrev: number = 0;
-	private _mouseDown: boolean = false;
 	private _change: ChangeHarmonics | null = null;
 	private _renderedPath: String = "";
 	private _renderedFifths: boolean = true;
@@ -47,14 +47,13 @@ export class HarmonicsEditor {
 			this._lastControlPointContainer.appendChild(rect);
 		}
 		
-		this.container.addEventListener("mousedown", this._whenMousePressed);
-		document.addEventListener("mousemove", this._whenMouseMoved);
-		document.addEventListener("mouseup", this._whenCursorReleased);
-		
-		this.container.addEventListener("touchstart", this._whenTouchPressed);
-		this.container.addEventListener("touchmove", this._whenTouchMoved);
-		this.container.addEventListener("touchend", this._whenCursorReleased);
-		this.container.addEventListener("touchcancel", this._whenCursorReleased);
+		new EasyPointers(this.container, {preventTouchGestureScrolling: true});
+		//this.container.addEventListener("pointerenter", this._onPointerMove);
+		//this.container.addEventListener("pointerleave", this._onPointerLeave);
+		this.container.addEventListener("pointerdown", this._onPointerDown);
+		this.container.addEventListener("pointermove", this._onPointerMove);
+		this.container.addEventListener("pointerup", this._onPointerUp);
+		this.container.addEventListener("pointercancel", this._onPointerUp);
 	}
 	
 	private _xToFreq(x: number): number {
@@ -65,58 +64,26 @@ export class HarmonicsEditor {
 		return Config.harmonicsMax * (1 - y / this._editorHeight);
 	}
 	
-	private _whenMousePressed = (event: MouseEvent): void => {
-		event.preventDefault();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		
+	private _updateMousePos(event: PointerEvent): void {
+		const point: Point2d = event.pointer!.getPointInNormalized(this.container);
+		this._mouseX = point.x * this._editorWidth;
+		this._mouseY = point.y * this._editorHeight;
+	}
+	
+	private _onPointerDown = (event: PointerEvent): void => {
+		this._updateMousePos(event);
 		this._freqPrev = this._xToFreq(this._mouseX);
 		this._ampPrev = this._yToAmp(this._mouseY);
-		this._whenCursorMoved();
+		this._whenCursorMoved(event);
 	}
 	
-	private _whenTouchPressed = (event: TouchEvent): void => {
-		event.preventDefault();
-		this._mouseDown = true;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		
-		this._freqPrev = this._xToFreq(this._mouseX);
-		this._ampPrev = this._yToAmp(this._mouseY);
-		this._whenCursorMoved();
+	private _onPointerMove = (event: PointerEvent): void => {
+		this._updateMousePos(event);
+		this._whenCursorMoved(event);
 	}
 	
-	private _whenMouseMoved = (event: MouseEvent): void => {
-		if (this.container.offsetParent == null) return;
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = ((event.clientX || event.pageX) - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = ((event.clientY || event.pageY) - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._whenCursorMoved();
-	}
-	
-	private _whenTouchMoved = (event: TouchEvent): void => {
-		if (this.container.offsetParent == null) return;
-		if (!this._mouseDown) return;
-		event.preventDefault();
-		const boundingRect: ClientRect = this._svg.getBoundingClientRect();
-		this._mouseX = (event.touches[0].clientX - boundingRect.left) * this._editorWidth / (boundingRect.right - boundingRect.left);
-		this._mouseY = (event.touches[0].clientY - boundingRect.top) * this._editorHeight / (boundingRect.bottom - boundingRect.top);
-		if (isNaN(this._mouseX)) this._mouseX = 0;
-		if (isNaN(this._mouseY)) this._mouseY = 0;
-		this._whenCursorMoved();
-	}
-	
-	private _whenCursorMoved(): void {
-		if (this._mouseDown) {
+	private _whenCursorMoved(event: PointerEvent): void {
+		if (event.pointer!.isDown) {
 			const freq: number = this._xToFreq(this._mouseX);
 			const amp: number = this._yToAmp(this._mouseY);
 			
@@ -144,12 +111,9 @@ export class HarmonicsEditor {
 		}
 	}
 	
-	private _whenCursorReleased = (event: Event): void => {
-		if (this._mouseDown) {
-			this._doc.record(this._change!);
-			this._change = null;
-		}
-		this._mouseDown = false;
+	private _onPointerUp = (event: PointerEvent): void => {
+		this._doc.record(this._change!);
+		this._change = null;
 	}
 	
 	public render(): void {

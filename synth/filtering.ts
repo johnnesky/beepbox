@@ -1,3 +1,5 @@
+// Copyright (c) John Nesky and contributing authors, distributed under the MIT license, see accompanying the LICENSE.md file.
+
 /*
 This file contains code to compute digital audio filter coefficients based on
 the desired type, cutoff frequency, and other parameters. You can use these
