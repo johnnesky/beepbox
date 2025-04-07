@@ -4,7 +4,7 @@ import {InstrumentType, EffectType, Config, getPulseWidthRatio, effectsIncludeTr
 import {Preset, PresetCategory, EditorConfig, isMobile, prettyNumber} from "./EditorConfig.js";
 import {ColorConfig, ChannelColors} from "./ColorConfig.js";
 import "./Layout.js"; // Imported here for the sake of ensuring this code is transpiled early.
-import {ThemePrompt} from "./ThemePrompt.ts";
+import {ThemePrompt} from "./ThemePrompt.js";
 import {Instrument, Channel, Synth} from "../synth/synth.js";
 import {HTML} from "imperative-html/dist/esm/elements-strict.js";
 import {EasyPointers, getElementDimensions} from "./EasyPointers.js";
