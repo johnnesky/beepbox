@@ -435,7 +435,7 @@ export class PatternEditor {
 			// When autofollow is enabled, select the current bar (but don't record it in undo history).
 			new ChangeChannelBar(this._doc, this._doc.channel, playheadBar);
 			// The full interface is usually only rerendered in response to user input events, not animation events, but in this case go ahead and rerender everything.
-			this._doc.notifier.notifyWatchers();
+			this._doc.renderNow();
 		}
 		this._followPlayheadBar = playheadBar;
 		
@@ -460,10 +460,6 @@ export class PatternEditor {
 		this._mouseXStart = this._mouseX;
 		this._mouseYStart = this._mouseY;
 		this._updateCursorStatus();
-		this._whenCursorPressed();
-	}
-	
-	private _whenCursorPressed(): void {
 		if (this._doc.prefs.enableNotePreview) this._doc.synth.maintainLiveInput();
 		this._updatePreview();
 		const sequence: ChangeSequence = new ChangeSequence();

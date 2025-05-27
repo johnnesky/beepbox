@@ -28,7 +28,7 @@ export class SongDocument {
 	public song: Song;
 	public synth: Synth;
 	public performance: SongPerformance;
-	public readonly notifier: ChangeNotifier = new ChangeNotifier();
+	public readonly notifier: ChangeNotifier = new ChangeNotifier(() => this._validateDocState());
 	public readonly selection: Selection = new Selection(this);
 	public readonly prefs: Preferences = new Preferences();
 	public channel: number = 0;
@@ -57,8 +57,6 @@ export class SongDocument {
 	private _waitingToUpdateState: boolean = false;
 	
 	constructor() {
-		this.notifier.watch(this._validateDocState);
-		
 		ColorConfig.setTheme(this.prefs.colorTheme);
 		Layout.setLayout(this.prefs.layout);
 		
@@ -111,7 +109,7 @@ export class SongDocument {
 		// view before the screen renders. mouseenter and mouseleave do not bubble,
 		// but they are immediately followed by mousemove which does. 
 		for (const eventName of ["input", "change", "click", "keyup", "keydown", "mousedown", "mousemove", "mouseup", "touchstart", "touchmove", "touchend", "touchcancel", "pointerdown", "pointermove", "pointerup", "pointercancel"]) {
-			window.addEventListener(eventName, this._cleanDocument);
+			window.addEventListener(eventName, this.renderNow);
 		}
 		
 		this._validateDocState();
@@ -226,7 +224,7 @@ export class SongDocument {
 				this._pushState(state, this.song.toBase64String());
 			}
 			this.forgetLastChange();
-			this.notifier.notifyWatchers();
+			this.renderNow();
 			return;
 		}
 		
@@ -254,14 +252,15 @@ export class SongDocument {
 		//this.barScrollPos = Math.min(this.bar, Math.max(this.bar - (this.trackVisibleBars - 1), this.barScrollPos));
 		
 		this.forgetLastChange();
+		this.renderNow();
+	}
+	
+	public renderNow = (): void => {
 		this.notifier.notifyWatchers();
 	}
 	
-	private _cleanDocument = (): void => {
-		this.notifier.notifyWatchers();
-	}
-	
-	private _validateDocState = (): void => {
+	// Make sure the doc state is self-consistent.
+	private _validateDocState(): void {
 		const channelCount: number = this.song.getChannelCount();
 		for (let i: number = this.recentPatternInstruments.length; i < channelCount; i++) {
 			this.recentPatternInstruments[i] = [0];

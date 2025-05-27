@@ -120,7 +120,7 @@ export class SongPerformance {
 			const dirty = this._updateRecordedNotes();
 			if (dirty) {
 				// The full interface is usually only rerendered in response to user input events, not animation events, but in this case go ahead and rerender everything.
-				this._doc.notifier.notifyWatchers();
+				this._doc.renderNow();
 			}
 		}
 	}
