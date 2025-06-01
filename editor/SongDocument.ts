@@ -104,12 +104,15 @@ export class SongDocument {
 		this.selection.fromJSON(state.selection);
 		this.selection.scrollToSelectedPattern();
 		
-		// For all input events, catch them when they are about to finish bubbling,
-		// presumably after all handlers are done updating the model, then update the
-		// view before the screen renders. mouseenter and mouseleave do not bubble,
-		// but they are immediately followed by mousemove which does. 
+		// For all input events, intercept them in the capture phase, before other event handlers
+		// make changes to the model, and enqueue a task to render the view after the changes are
+		// done but before the browser renders. Listening in the capture phase allows this code to
+		// be respond to events even if stopImmediatePropagation is called. mouseenter and
+		// mouseleave are ignored because they are immediately followed by mousemove. Animation
+		// frames and midi events also sometimes update the model, but are not automatically
+		// detected here so they have to manually call "renderNow" instead.
 		for (const eventName of ["input", "change", "click", "keyup", "keydown", "mousedown", "mousemove", "mouseup", "touchstart", "touchmove", "touchend", "touchcancel", "pointerdown", "pointermove", "pointerup", "pointercancel"]) {
-			window.addEventListener(eventName, this.renderNow);
+			window.addEventListener(eventName, this.notifier.enqueueTaskToNotifyWatchers, {capture: true});
 		}
 		
 		this._validateDocState();
@@ -255,7 +258,7 @@ export class SongDocument {
 		this.renderNow();
 	}
 	
-	public renderNow = (): void => {
+	public renderNow(): void {
 		this.notifier.notifyWatchers();
 	}
 	

@@ -30,12 +30,31 @@ export class ChangeNotifier {
 	
 	public changed(): void {
 		if (this._notifyingWatchers) {
-			throw new Error("Attempted to mark song document as dirty while in the middle of notifying change watchers.");
+			console.error("Attempted to mark song document as dirty while in the middle of notifying change watchers.");
 		}
 		this._dirty = true;
 	}
 	
-	public notifyWatchers(): void {
+	public enqueueTaskToNotifyWatchers = (): void => {
+		// I intended to enqueue a microtask in the capture phase of a user
+		// input event to render immediately after the handling of the event
+		// finishes. However, I found that Chrome apparently executes microtasks
+		// between the capture and bubble phases for "click" events (but not
+		// other user input events?), which means that changes that occur during
+		// the bubbling phase do not get rendered. So now I'm using
+		// requestAnimationFrame instead, which waits a little longer before
+		// executing but it will still happen before the browser updates the
+		// screen.
+		//if (self.queueMicrotask) {
+		//	self.queueMicrotask(this.notifyWatchers);
+		//} else {
+		//	// Fallback for old browsers.
+		//	Promise.resolve().then(this.notifyWatchers);
+		//}
+		window.requestAnimationFrame(this.notifyWatchers);
+	}
+	
+	public notifyWatchers = (): void => {
 		if (!this._dirty) return;
 		if (this._notifyingWatchers) {
 			throw new Error("Attempted to start notifying song document change watchers while in the middle of doing so.");
@@ -48,7 +67,7 @@ export class ChangeNotifier {
 		}
 		this._notifyingWatchers = false;
 		if (this._dirty) {
-			throw new Error("A song document change watcher marked the document as dirty again.");
+			console.error("A song document change watcher marked the document as dirty again.");
 		}
 	}
 }
