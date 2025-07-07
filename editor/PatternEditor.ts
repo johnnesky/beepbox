@@ -1091,7 +1091,7 @@ export class PatternEditor {
 				const pattern2: Pattern | null = this._doc.song.getPattern(channel, this._doc.bar + this._barOffset);
 				if (pattern2 == null) continue;
 				
-				const octaveOffset: number = this._doc.getBaseVisibleOctave(channel) * Config.pitchesPerOctave;
+				const octaveOffset: number = this._doc.getBaseVisibleOctave(this._doc.channel) * Config.pitchesPerOctave;
 				for (const note of pattern2.notes) {
 					for (const pitch of note.pitches) {
 						const notePath: SVGPathElement = SVG.path();
