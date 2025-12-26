@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "NodeNext",
     "target": "ESNext",
-    // "isolatedModules": true,
+    "isolatedModules": true,
     "noEmit": true,
     "skipLibCheck": true, // temp
     "strict": true,

@@ -588,4 +588,4 @@ renderZoomIcon();
 renderPlayButton();
 
 // When compiling synth.ts as a standalone module named "beepbox", expose these classes as members to JavaScript:
-export {Dictionary, DictionaryArray, EnvelopeType, InstrumentType, Transition, Chord, Envelope, Config, NotePin, Note, Pattern, Instrument, Channel, Synth};
+export {type Dictionary, type DictionaryArray, EnvelopeType, InstrumentType, type Transition, type Chord, type Envelope, Config, type NotePin, Note, Pattern, Instrument, Channel, Synth};
