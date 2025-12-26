@@ -6,9 +6,12 @@ import {AnalogousDrum, analogousDrumMap, MidiEventType} from "./Midi.js";
 
 declare global {
 	interface Navigator {
-		requestMIDIAccess?(): Promise<any>;
+		// Defined in latest TypeScript typings
+		// requestMIDIAccess?(): Promise<any>;
 	}
 }
+
+// Maybe these can be moved to standard lib typings as well, will have to look into it further.
 
 interface MIDIInput extends EventTarget {
 	id: string;
