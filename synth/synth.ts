@@ -3240,7 +3240,7 @@ export class Song {
 			} break;
 			default: {
 				throw new Error("Unrecognized song tag code " + String.fromCharCode(command) + " at index " + (charIndex - 1));
-			} break;
+			}
 		}
 	}
 	
