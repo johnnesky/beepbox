@@ -19,10 +19,6 @@ interface MIDIInput extends EventTarget {
 	state: "disconnected" | "connected";
 }
 
-interface MIDIConnectionEvent {
-	port: MIDIInput;
-}
-
 interface MIDIMessageEvent {
 	data: [type: number, key: number, velocity: number];
 	target: MIDIInput;
@@ -64,6 +60,7 @@ export class MidiInputHandler {
 	}
 	
 	private _handleStateChange = (event: MIDIConnectionEvent) => {
+		if (!event.port) return;
 		if (event.port.type !== "input") return;
 		
 		switch (event.port.state) {
