@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "target": "ESNext",
+    // "isolatedModules": true,
+    "noEmit": true,
+    "skipLibCheck": true, // temp
+    // "strict": true,
+    // "noImplicitOverride": true,
+    // "noPropertyAccessFromIndexSignature": true,
+    // "noUncheckedIndexedAccess": true,
+    // "allowUnreachableCode": false,
+    // "noUnusedLocals": true,
+    // "allowUnusedLabels": false,
+    // "noUnusedParameters": true
+  }
+}
