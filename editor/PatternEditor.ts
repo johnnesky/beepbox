@@ -178,7 +178,7 @@ export class PatternEditor {
 			/ minDivision) * minDivision;
 		
 		if (this._pattern != null) {
-			const cursorPartForMatching: Number = Math.max(0, Math.min(partsPerPattern - 1, this._cursor.exactPart));
+			const cursorPartForMatching: number = Math.max(0, Math.min(partsPerPattern - 1, this._cursor.exactPart));
 			for (const note of this._pattern.notes) {
 				if (note.end <= cursorPartForMatching) {
 					this._cursor.prevNote = note;
