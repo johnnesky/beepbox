@@ -352,7 +352,7 @@ class ChangePins extends UndoableChange {
 		this._didSomething();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		this._note.pins = this._newPins;
 		this._note.pitches = this._newPitches;
 		this._note.start = this._newStart;
@@ -361,7 +361,7 @@ class ChangePins extends UndoableChange {
 		if (this._doc != null) this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		this._note.pins = this._oldPins;
 		this._note.pitches = this._oldPitches;
 		this._note.start = this._oldStart;
@@ -1304,7 +1304,7 @@ class ChangeInstrumentSlider extends Change {
 		this._instrument = this._doc.song.channels[this._doc.channel].instruments[this._doc.getCurrentInstrument()];
 	}
 	
-	public commit(): void {
+	public override commit(): void {
 		if (!this.isNoop()) {
 			this._instrument.preset = this._instrument.type;
 			this._doc.notifier.changed();
@@ -1470,7 +1470,7 @@ export class ChangeFilterAddPoint extends UndoableChange {
 		this.redo();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		this._filterSettings.controlPoints.splice(this._index, 0, this._point);
 		this._filterSettings.controlPointCount++;
 		this._filterSettings.controlPoints.length = this._filterSettings.controlPointCount;
@@ -1482,7 +1482,7 @@ export class ChangeFilterAddPoint extends UndoableChange {
 		this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		this._filterSettings.controlPoints.splice(this._index, 1);
 		this._filterSettings.controlPointCount--;
 		this._filterSettings.controlPoints.length = this._filterSettings.controlPointCount;
@@ -1520,14 +1520,14 @@ export class ChangeFilterMovePoint extends UndoableChange {
 		this.redo();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		this._point.freq = this._newFreq;
 		this._point.gain = this._newGain;
 		this._instrument.preset = this._instrumentNextPreset;
 		this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		this._point.freq = this._oldFreq;
 		this._point.gain = this._oldGain;
 		this._instrument.preset = this._instrumentPrevPreset;
@@ -1558,14 +1558,14 @@ export class ChangeFadeInOut extends UndoableChange {
 		this.redo();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		this._instrument.fadeIn = this._newFadeIn;
 		this._instrument.fadeOut = this._newFadeOut;
 		this._instrument.preset = this._instrumentNextPreset;
 		this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		this._instrument.fadeIn = this._oldFadeIn;
 		this._instrument.fadeOut = this._oldFadeOut;
 		this._instrument.preset = this._instrumentPrevPreset;
@@ -1761,12 +1761,12 @@ export class ChangePitchAdded extends UndoableChange {
 		this.redo();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		this._note.pitches.splice(this._index, 0, this._pitch);
 		this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		this._note.pitches.splice(this._index, 1);
 		this._doc.notifier.changed();
 	}
@@ -1946,7 +1946,7 @@ export class ChangeEnsurePatternExists extends UndoableChange {
 		this._doForwards();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		const song: Song = this._doc.song;
 		for (let j: number = song.patternsPerChannel; j < this._newPatternCount; j++) {
 			for (let i: number = 0; i < song.getChannelCount(); i++) {
@@ -1962,7 +1962,7 @@ export class ChangeEnsurePatternExists extends UndoableChange {
 		this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		const song: Song = this._doc.song;
 		const pattern: Pattern = song.channels[this._channelIndex].patterns[this._patternIndex - 1];
 		if (this._patternOldNotes != null) pattern.notes = this._patternOldNotes;
@@ -2597,12 +2597,12 @@ export class ChangeNoteAdded extends UndoableChange {
 		this.redo();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		this._pattern.notes.splice(this._index, 0, this._note);
 		this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		this._pattern.notes.splice(this._index, 1);
 		this._doc.notifier.changed();
 	}
@@ -2831,13 +2831,13 @@ class ChangeTransposeNote extends UndoableChange {
 		this._didSomething();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		this._note.pins = this._newPins;
 		this._note.pitches = this._newPitches;
 		this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		this._note.pins = this._oldPins;
 		this._note.pitches = this._oldPitches;
 		this._doc.notifier.changed();
@@ -2893,14 +2893,14 @@ export class ChangePatternSelection extends UndoableChange {
 		this._didSomething();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		this._doc.selection.patternSelectionStart = this._newStart;
 		this._doc.selection.patternSelectionEnd = this._newEnd;
 		this._doc.selection.patternSelectionActive = this._newActive;
 		this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		this._doc.selection.patternSelectionStart = this._oldStart;
 		this._doc.selection.patternSelectionEnd = this._oldEnd;
 		this._doc.selection.patternSelectionActive = this._oldActive;
@@ -3131,12 +3131,12 @@ export class ChangeSizeBend extends UndoableChange {
 		this._didSomething();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		this._note.pins = this._newPins;
 		this._doc.notifier.changed();
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		this._note.pins = this._oldPins;
 		this._doc.notifier.changed();
 	}

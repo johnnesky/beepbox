@@ -6,7 +6,7 @@
     "noEmit": true,
     "skipLibCheck": true, // temp
     // "strict": true,
-    // "noImplicitOverride": true,
+    "noImplicitOverride": true,
     // "noPropertyAccessFromIndexSignature": true,
     // "noUncheckedIndexedAccess": true,
     // "allowUnreachableCode": false,

@@ -88,13 +88,13 @@ export class ChangeSequence extends UndoableChange {
 		this._didSomething();
 	}
 	
-	protected _doForwards(): void {
+	protected override _doForwards(): void {
 		for (let i: number = 0; i < this._changes.length; i++) {
 			this._changes[i].redo();
 		}
 	}
 	
-	protected _doBackwards(): void {
+	protected override _doBackwards(): void {
 		for (let i: number = this._changes.length-1; i >= 0 ; i--) {
 			this._changes[i].undo();
 		}
