@@ -9,10 +9,10 @@
     "strictPropertyInitialization": false, // temp
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
-    // "noUncheckedIndexedAccess": true,
+    // "noUncheckedIndexedAccess": true, // needs oversight to enable
     "allowUnreachableCode": false,
     "noUnusedLocals": true,
     "allowUnusedLabels": false,
-    // "noUnusedParameters": true
+    // "noUnusedParameters": true // needs oversight to enable
   }
 }
