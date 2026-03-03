@@ -10,17 +10,17 @@ import {ColorConfig} from "./ColorConfig.js";
 const {button, div, span, h2, input, br, select, option} = HTML;
 
 export class BeatsPerBarPrompt implements Prompt {
-	private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1"});
-	private readonly _conversionStrategySelect: HTMLSelectElement = select({style: "width: 100%;"},
+	private readonly _beatsStepper: HTMLInputElement = input({style: "width: 3em; margin-left: 1em;", type: "number", step: "1", ariaLabel: "Beats per bar value"});
+	private readonly _conversionStrategySelect: HTMLSelectElement = select({style: "width: 100%;", ariaLabel: "Conversion strategy"},
 		option({value: "splice"}, "Splice beats at end of bars."),
 		option({value: "stretch"}, "Stretch notes to fit in bars."),
 		option({value: "overflow"}, "Overflow notes across bars."),
 	);
-	private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
-	private readonly _okayButton: HTMLButtonElement = button({class: "okayButton", style: "width:45%;"}, "Okay");
+	private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton", ariaLabel: "Cancel changes"});
+	private readonly _okayButton: HTMLButtonElement = button({class: "okayButton", style: "width:45%;", ariaLabel: "Confirm and save changes"}, "Okay");
 	
-	public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 250px;"},
-		h2("Beats Per Bar"),
+	public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 250px;", role: "dialog", ariaModal: "true", ariaLabelledBy: "beatsPerBarTitle"},
+		h2({id: "beatsPerBarTitle"}, "Beats Per Bar"),
 		div({style: "display: flex; flex-direction: row; align-items: center; height: 2em; justify-content: flex-end;"},
 			div({style: "text-align: right;"},
 				"Beats per bar:",

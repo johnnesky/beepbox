@@ -8,14 +8,14 @@ import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
 const {button, label, div, form, h2, input} = HTML;
 
 export class LayoutPrompt implements Prompt {
-	private readonly _fileInput: HTMLInputElement = input({type: "file", accept: ".json,application/json,.mid,.midi,audio/midi,audio/x-midi"});
-	private readonly _okayButton: HTMLButtonElement = button({class: "okayButton", style: "width:45%;"}, "Okay");
-	private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton"});
-	private readonly _form: HTMLFormElement = form({style: "display: flex; gap: 10px;"},
+	private readonly _fileInput: HTMLInputElement = input({type: "file", accept: ".json,application/json,.mid,.midi,audio/midi,audio/x-midi", ariaLabel: "Select layout file"});
+	private readonly _okayButton: HTMLButtonElement = button({class: "okayButton", style: "width:45%;", ariaLabel: "Confirm layout selection"}, "Okay");
+	private readonly _cancelButton: HTMLButtonElement = button({class: "cancelButton", ariaLabel: "Cancel layout selection"});
+	private readonly _form: HTMLFormElement = form({style: "display: flex; gap: 10px;", ariaLabel: "Layout options"},
 			label({class: "layout-option"},
-				input({type: "radio", name: "layout", value: "small"}),
+				input({type: "radio", name: "layout", value: "small", ariaLabel: "Small layout"}),
 				SVG(`\
-					<svg viewBox="-4 -1 28 22">
+					<svg viewBox="-4 -1 28 22" aria-hidden="true">
 						<rect x="0" y="0" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1"/>
 						<rect x="2" y="2" width="11" height="10" fill="currentColor"/>
 						<rect x="14" y="2" width="4" height="16" fill="currentColor"/>
@@ -25,9 +25,9 @@ export class LayoutPrompt implements Prompt {
 				div("Small"),
 			),
 			label({class: "layout-option"},
-				input({type: "radio", name: "layout", value: "long"}),
+				input({type: "radio", name: "layout", value: "long", ariaLabel: "Long layout"}),
 				SVG(`\
-					<svg viewBox="-1 -1 28 22">
+					<svg viewBox="-1 -1 28 22" aria-hidden="true">
 						<rect x="0" y="0" width="26" height="20" fill="none" stroke="currentColor" stroke-width="1"/>
 						<rect x="2" y="2" width="12" height="10" fill="currentColor"/>
 						<rect x="15" y="2" width="4" height="10" fill="currentColor"/>
@@ -38,9 +38,9 @@ export class LayoutPrompt implements Prompt {
 				div("Long"),
 			),
 			label({class: "layout-option"},
-				input({type: "radio", name: "layout", value: "tall"}),
+				input({type: "radio", name: "layout", value: "tall", ariaLabel: "Tall layout"}),
 				SVG(`\
-					<svg viewBox="-1 -1 28 22">
+					<svg viewBox="-1 -1 28 22" aria-hidden="true">
 						<rect x="0" y="0" width="26" height="20" fill="none" stroke="currentColor" stroke-width="1"/>
 						<rect x="11" y="2" width="8" height="16" fill="currentColor"/>
 						<rect x="20" y="2" width="4" height="16" fill="currentColor"/>
@@ -49,10 +49,10 @@ export class LayoutPrompt implements Prompt {
 				`),
 				div("Tall"),
 			),
-		);
+	);
 	
-	public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 300px;"},
-		h2("Layout"),
+	public readonly container: HTMLDivElement = div({class: "prompt noSelection", style: "width: 300px;", role: "dialog", ariaModal: "true", ariaLabelledBy: "layoutTitle"},
+		h2({id: "layoutTitle"}, "Layout"),
 		this._form,
 		div({style: "display: flex; flex-direction: row-reverse; justify-content: space-between;"},
 			this._okayButton,
