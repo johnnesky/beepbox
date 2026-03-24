@@ -511,7 +511,12 @@ export class SongEditor {
 	private readonly _operatorFrequencySelects: HTMLSelectElement[] = []
 	private readonly _drumsetSpectrumEditors: SpectrumEditor[] = [];
 	private readonly _drumsetEnvelopeSelects: HTMLSelectElement[] = [];
-	
+	private _dragCounter: number = 0;
+	private readonly _dropOverlay: HTMLDivElement = div(
+		{style: "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; box-sizing: border-box; border: 4px dashed rgba(255,255,255,0.4); pointer-events: none;"},
+		div({style: "color: white; font-size: 1.5em; text-align: center; text-shadow: 0 0 10px black; user-select: none;"}, "Drop song file to load"),
+	);
+
 	constructor(beepboxEditorContainer: HTMLElement) {
 		this.doc.notifier.watch(this.whenUpdated);
 		
@@ -662,6 +667,11 @@ export class SongEditor {
 		this._updateLayoutOption();
 		
 		beepboxEditorContainer.appendChild(this.mainLayer);
+		document.body.appendChild(this._dropOverlay);
+		window.addEventListener("dragenter", this._onDragEnter);
+		window.addEventListener("dragover",  this._onDragOver);
+		window.addEventListener("dragleave", this._onDragLeave);
+		window.addEventListener("drop",      this._onDrop);
 		this.whenUpdated();
 		this.mainLayer.focus();
 		
@@ -697,7 +707,43 @@ export class SongEditor {
 		this._updateLayoutOption();
 		this.whenUpdated();
 	}
-	
+
+	private _onDragEnter = (event: DragEvent): void => {
+		event.preventDefault();
+		this._dragCounter++;
+		if (this._dragCounter === 1 && event.dataTransfer != null && event.dataTransfer.types.includes("Files")) {
+			this._dropOverlay.style.display = "flex";
+			this._dropOverlay.style.pointerEvents = "auto";
+		}
+	}
+
+	private _onDragOver = (event: DragEvent): void => {
+		event.preventDefault();
+		if (event.dataTransfer != null) {
+			event.dataTransfer.dropEffect = "copy";
+		}
+	}
+
+	private _onDragLeave = (_event: DragEvent): void => {
+		this._dragCounter--;
+		if (this._dragCounter <= 0) {
+			this._dragCounter = 0;
+			this._dropOverlay.style.display = "none";
+			this._dropOverlay.style.pointerEvents = "none";
+		}
+	}
+
+	private _onDrop = (event: DragEvent): void => {
+		event.preventDefault();
+		this._dragCounter = 0;
+		this._dropOverlay.style.display = "none";
+		this._dropOverlay.style.pointerEvents = "none";
+		if (event.dataTransfer == null) return;
+		const file: File | undefined = event.dataTransfer.files[0];
+		if (file == null) return;
+		ImportPrompt.loadFileIntoDoc(this.doc, file);
+	}
+
 	private _updateLayoutOption(): void {
 		const layoutOption: HTMLOptionElement = <HTMLOptionElement> this._optionsMenu.querySelector("[value=layout]");
 		if (window.screen.availWidth < 710 || window.screen.availHeight < 710) {
