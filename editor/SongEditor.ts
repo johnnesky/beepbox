@@ -1963,10 +1963,7 @@ export class SongEditor {
 				break;
 			case "shortenUrl":
 				const songUrl: string = new URL("#" + this.doc.song.toBase64String(), location.href).href;
-				if (songUrl.length <= 5000) {
-					// is.gd supports URLs up to 5000 characters.
-					window.open("https://is.gd/create.php?url=" + encodeURIComponent(songUrl));
-				} else if (songUrl.length <= 15000) {
+				if (songUrl.length <= 15000) {
 					// tinyurl supports URLs up to 15000 characters. However, this API is deprecated,
 					// and their other API's free tier only allows 100 shortened links per month. :(
 					window.open("https://tinyurl.com/api-create.php?url=" + encodeURIComponent(songUrl));
