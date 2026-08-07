@@ -34,7 +34,7 @@ export class BarScrollBar {
 	private _renderedNotchCount: number = -1;
 	private _renderedScrollBarPos: number = -1;
 	
-	constructor(private _doc: SongDocument) {
+	constructor(private _doc: SongDocument, private _trackAndMuteContainer: HTMLDivElement) {
 		const center: number = this._editorHeight * 0.5;
 		const base: number = 20;
 		const tip: number = 9;
@@ -84,6 +84,24 @@ export class BarScrollBar {
 					break;
 				}
 			}
+			
+			// HACK: Most DOM stuff is rendered asynchronously, but there's a race condition
+			// that can cause stale data from the DOM to overwrite fresh data on the SongDocument
+			// unless we immediately update the DOM data here. The barScrollPos is written to
+			// SongDocument above, and we would ordinarily wait until SongEditor.whenUpdated is
+			// called asynchronously to update the DOM to match, but it's possible for scroll events
+			// to get dispatched between this code and SongEditor.whenUpdated, in which case
+			// the barScrollPos might get overwritten based on the current value of
+			// _trackAndMuteContainer.scrollLeft which hasn't been updated yet. Most events that
+			// can overwrite the SongDocument with data from the DOM are user-initiated events,
+			// such as keyboard or mouse events, by which point the user has probably already seen
+			// the latest data, but scroll events can be caused by either user actions or
+			// procedural changes, and it's not clear how to tell the difference between the two,
+			// otherwise we'd only copy data from the DOM to SongDocument on user events.
+			// Anyway, I think the simplest fix is to just update the DOM immediately when making
+			// changes that would both cause the DOM to become out of sync temporarily and trigger
+			// procedural scroll events that read data from the DOM.
+			this._trackAndMuteContainer.scrollLeft = this._doc.barScrollPos * this._doc.getBarWidth();
 		}
 		this._updatePreview();
 	}

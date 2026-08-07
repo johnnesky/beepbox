@@ -416,7 +416,7 @@ export class SongEditor {
 		this._trackContainer,
 		this._trackVisibleArea,
 	);
-	private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this.doc);
+	private readonly _barScrollBar: BarScrollBar = new BarScrollBar(this.doc, this._trackAndMuteContainer);
 	private readonly _trackArea: HTMLDivElement = div({class: "track-area"},
 		this._trackAndMuteContainer,
 		this._barScrollBar.container,
