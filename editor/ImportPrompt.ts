@@ -73,6 +73,20 @@ export class ImportPrompt implements Prompt {
 		}
 	}
 	
+	public static loadFileIntoDoc(doc: SongDocument, file: File): void {
+		const extension: string = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+		if (extension == "json") {
+			const reader: FileReader = new FileReader();
+			reader.addEventListener("load", (): void => {
+				doc.goBackToStart();
+				doc.record(new ChangeSong(doc, <string>reader.result), true, true);
+			});
+			reader.readAsText(file);
+		} else {
+			console.error("Drag-and-drop only supports .json files. Use File → Import for other formats.");
+		}
+	}
+
 	private _parseMidiFile(buffer: ArrayBuffer): void {
 		
 		// First, split the file into separate buffer readers for each chunk. There should be one header chunk and one or more track chunks.
