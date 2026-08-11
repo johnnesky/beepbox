@@ -147,7 +147,9 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	}
 `));
 
-ColorConfig.setTheme("dark classic");
+const colorTheme: string | null = getLocalStorage("colorTheme");
+
+ColorConfig.setTheme(colorTheme === null ? "dark classic" : colorTheme);
 
 let prevHash: string | null = null;
 let id: string = ((Math.random() * 0xffffffff) >>> 0).toString(16);
