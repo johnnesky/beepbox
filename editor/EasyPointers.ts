@@ -1485,13 +1485,13 @@ export function getElementDimensions(element: HTMLElement, elementBox: `${Elemen
 	switch (elementBox) {
 		case ElementBox.borderBox: {
 			return {width: element.offsetWidth, height: element.offsetHeight};
-		} break;
+		}
 		case ElementBox.insideBorder: {
 			return {
 				width: element.offsetWidth - parseFloat(styles.borderLeft) - parseFloat(styles.borderRight),
 				height: element.offsetHeight - parseFloat(styles.borderTop) - parseFloat(styles.borderBottom),
 			};
-		} break;
+		}
 		case ElementBox.paddingBox: {
 			if (styles.display == "inline") {
 				// For inline elements, the reported scrollWidth and scrollHeight are always zero even if there's a border.
@@ -1502,7 +1502,7 @@ export function getElementDimensions(element: HTMLElement, elementBox: `${Elemen
 			} else {
 				return {width: element.scrollWidth, height: element.scrollHeight};
 			}
-		} break;
+		}
 		case ElementBox.contentBox: {
 			if (styles.display == "inline") {
 				return {
@@ -1515,7 +1515,7 @@ export function getElementDimensions(element: HTMLElement, elementBox: `${Elemen
 					height: element.scrollHeight - parseFloat(styles.paddingTop) - parseFloat(styles.paddingBottom),
 				};
 			}
-		} break;
+		}
 		case ElementBox.imagePixels: {
 			if (element instanceof HTMLImageElement) {
 				return {width: element.naturalWidth, height: element.naturalHeight};
@@ -1524,10 +1524,10 @@ export function getElementDimensions(element: HTMLElement, elementBox: `${Elemen
 			} else {
 				throw new Error("EasyPointers: Unsupported element type for image box: " + element.tagName);
 			}
-		} break;
+		}
 		case ElementBox.svgTransform: {
 			throw new Error("EasyPointers: svgTransform unsupported for HTML elements.");
-		}// break; // unreachable code because of the throw.
+		}
 		default: throw new Error("EasyPointers: Unrecognized element box: " + elementBox);
 	}
 }

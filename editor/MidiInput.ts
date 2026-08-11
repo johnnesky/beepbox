@@ -6,18 +6,17 @@ import {AnalogousDrum, analogousDrumMap, MidiEventType} from "./Midi.js";
 
 declare global {
 	interface Navigator {
-		requestMIDIAccess?(): Promise<any>;
+		// Defined in latest TypeScript typings
+		// requestMIDIAccess?(): Promise<any>;
 	}
 }
+
+// Maybe these can be moved to standard lib typings as well, will have to look into it further.
 
 interface MIDIInput extends EventTarget {
 	id: string;
 	type: "input" | "output";
 	state: "disconnected" | "connected";
-}
-
-interface MIDIConnectionEvent {
-	port: MIDIInput;
 }
 
 interface MIDIMessageEvent {
@@ -61,6 +60,7 @@ export class MidiInputHandler {
 	}
 	
 	private _handleStateChange = (event: MIDIConnectionEvent) => {
+		if (!event.port) return;
 		if (event.port.type !== "input") return;
 		
 		switch (event.port.state) {
