@@ -37,6 +37,8 @@ export class Selection {
 	private _changeReorder: ChangeGroup | null = null;
 	private _changeTrack: ChangeGroup | null = null;
 	private _changeInstrument: ChangeGroup | null = null;
+	private _digitsBar: number = -1;
+	private _digitsChannel: number = -1;
 	
 	constructor(private _doc: SongDocument) {}
 	
@@ -118,6 +120,12 @@ export class Selection {
 	}
 	
 	public nextDigit(digit: string, forInstrument: boolean): void {
+		if (this.boxSelectionBar !== this._digitsBar || this.boxSelectionChannel !== this._digitsChannel) {
+			this.digits = "";
+			this.instrumentDigits = "";
+			this._digitsBar = this.boxSelectionBar;
+			this._digitsChannel = this.boxSelectionChannel;
+		}
 		const channel: Channel = this._doc.song.channels[this._doc.channel];
 		
 		if (forInstrument) {
