@@ -9,6 +9,7 @@ import {HTML, SVG} from "imperative-html/dist/esm/elements-strict.js";
 import {EasyPointers, Point2d} from "./EasyPointers.js";
 import {ChangeSequence, UndoableChange} from "./Change.js";
 import {ChangeChannelBar, ChangeDragSelectedNotes, ChangeEnsurePatternExists, ChangeNoteTruncate, ChangeNoteAdded, ChangePatternSelection, ChangePinTime, ChangeSizeBend, ChangePitchBend, ChangePitchAdded} from "./changes.js";
+import {Piano} from "./Piano.js";
 
 function makeEmptyReplacementElement<T extends Node>(node: T): T {
 	const clone: T = <T> node.cloneNode(false);
@@ -53,7 +54,9 @@ export class PatternEditor {
 		this._svgPreview,
 		this._svgPlayhead,
 	);
-	public readonly container: HTMLDivElement = HTML.div({style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;"}, this._svg);
+	private readonly _pitchBadge: HTMLDivElement = HTML.div({class: "pitch-badge", style: `display: none; position: absolute; left: 2px; transform: translateY(-50%); pointer-events: none; border-radius: 4px; font-size: 11px; font-family: sans-serif; font-weight: bold; color: ${ColorConfig.primaryText};`});
+	
+	public readonly container: HTMLDivElement = HTML.div({style: "height: 100%; overflow:hidden; position: relative; flex-grow: 1; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;"}, this._svg, this._pitchBadge);
 	
 	private readonly _pointers: EasyPointers = new EasyPointers(this._svg, {holdStillMinMillis: 800});
 	
@@ -99,6 +102,10 @@ export class PatternEditor {
 	private _renderedPitchChannelCount: number = -1;
 	private _renderedNoiseChannelCount: number = -1;
 	private _followPlayheadBar: number = -1;
+	private _renderedBadgeText: string = "";
+	private _renderedBadgeTop: number = -1;
+	private _renderedBadgeLeft: number = -1;
+	private _renderedBadgeColor: string = "";
 	
 	constructor(private _doc: SongDocument, private _interactive: boolean, private _barOffset: number) {
 		this._svgNoteBackground.setAttribute("id", "patternEditorNoteBackground" + this._barOffset);
@@ -989,6 +996,56 @@ export class PatternEditor {
 					this._drawNote(this._svgPreview, this._cursor.pitch, this._cursor.start, this._cursor.pins, this._pitchHeight / 2 + 1, true, this._octaveOffset);
 				}
 			}
+		}
+		
+		this._updatePitchBadge();
+	}
+	
+	private _updatePitchBadge(): void {
+		let text: string = "";
+		let displayRow: number = 0;
+		let color: string = ColorConfig.primaryText;
+		
+		if (this._interactive && this._pointers.latest.isPresent && this._pitchHeight > 0 && !this._doc.song.getChannelIsNoise(this._doc.channel) && (this._pointers.latest.isDown || this._cursor.valid)) {
+			// While the pointer is held down the cursor status isn't recomputed every frame, so follow the mouse position directly.
+			const pitch: number = this._pointers.latest.isDown ? this._snapToPitch(this._findMousePitch(this._mouseY), 0, this._getMaxPitch()) : this._cursor.pitch;
+			const basePitch: number = Config.keys[this._doc.song.key].basePitch;
+			const absolutePitch: number = basePitch + pitch;
+			const row: number = pitch - this._octaveOffset;
+			displayRow = Math.max(0, Math.min(this._pitchCount - 1, row));
+			const pitchNameIndex: number = absolutePitch % Config.pitchesPerOctave;
+			const normalizedRow: number = ((row % Config.pitchesPerOctave) + Config.pitchesPerOctave) % Config.pitchesPerOctave;
+			const octave: number = Math.floor(absolutePitch / Config.pitchesPerOctave) - 1;
+			text = Piano.getPitchName(pitchNameIndex, normalizedRow) + octave;
+			// The cursor's note is matched by time column only, so also check that this pitch is actually one of its pitches.
+			const overNote: boolean = this._cursor.curNote != null && this._cursor.curNote.pitches.indexOf(pitch) != -1;
+			color = overNote ? ColorConfig.invertedText : ColorConfig.primaryText;
+		}
+		
+		let top: number = -1;
+		let left: number = -1;
+		if (text != "") {
+			// Vertically center the badge in the note preview frame, aligned to its right edge.
+			top = this._pitchToPixelHeight(displayRow);
+			const previewRight: number = this._partWidth * this._cursor.end;
+			const badgeWidth: number = this._pitchBadge.offsetWidth > 0 ? this._pitchBadge.offsetWidth : 30;
+			left = Math.max(0, previewRight - badgeWidth - 2);
+		}
+		
+		if (text == this._renderedBadgeText && top == this._renderedBadgeTop && left == this._renderedBadgeLeft && color == this._renderedBadgeColor) return;
+		this._renderedBadgeText = text;
+		this._renderedBadgeTop = top;
+		this._renderedBadgeLeft = left;
+		this._renderedBadgeColor = color;
+		
+		if (text == "") {
+			this._pitchBadge.style.display = "none";
+		} else {
+			this._pitchBadge.textContent = text;
+			this._pitchBadge.style.top = top + "px";
+			this._pitchBadge.style.left = left + "px";
+			this._pitchBadge.style.color = color;
+			this._pitchBadge.style.display = "block";
 		}
 	}
 	
