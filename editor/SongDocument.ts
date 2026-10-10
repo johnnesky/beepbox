@@ -13,6 +13,7 @@ import {Preferences} from "./Preferences.js";
 import {Change} from "./Change.js";
 import {ChangeNotifier} from "./ChangeNotifier.js";
 import {ChangeSong, setDefaultInstruments, discardInvalidPatternInstruments} from "./changes.js";
+import {forgetCurrentFile} from "./FileSystemAccess.js";
 
 interface HistoryState {
 	canUndo: boolean;
@@ -214,7 +215,9 @@ export class SongDocument {
 		}
 		
 		if (window.history.state == null && window.location.hash != "") {
-			// The user changed the hash directly.
+			// The user changed the hash directly, so the song no longer corresponds to any
+			// file that might have been opened with the File System Access API.
+			forgetCurrentFile();
 			this._sequenceNumber++;
 			this._resetSongRecoveryUid();
 			const state: HistoryState = {canUndo: true, sequenceNumber: this._sequenceNumber, bar: this.bar, channel: this.channel, instrument: this.viewedInstrument[this.channel], recoveryUid: this._recoveryUid, prompt: null, selection: this.selection.toJSON()};

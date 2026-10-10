@@ -10,6 +10,7 @@ import {HTML} from "imperative-html/dist/esm/elements-strict.js";
 import {SongRenderer} from "./SongRenderer.js";
 import {ArrayBufferWriter} from "./ArrayBufferWriter.js";
 import {MidiChunkType, MidiFileFormat, MidiControlEventMessage, MidiEventType, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, volumeMultToMidiVolume, volumeMultToMidiExpression, defaultMidiPitchBend, defaultMidiExpression} from "./Midi.js";
+import {getSuggestedFileName} from "./FileSystemAccess.js";
 
 const {button, div, h2, input, progress, select, option} = HTML;
 
@@ -41,7 +42,7 @@ function save(blob: Blob, name: string): void {
 }
 
 export class ExportPrompt implements Prompt {
-	private readonly _fileName: HTMLInputElement = input({type: "text", style: "width: 10em;", value: "BeepBox-Song", maxlength: 250, "autofocus": "autofocus"});
+	private readonly _fileName: HTMLInputElement = input({type: "text", style: "width: 10em;", value: getSuggestedFileName(), maxlength: 250, "autofocus": "autofocus"});
 	private readonly _enableIntro: HTMLInputElement = input({type: "checkbox"});
 	private readonly _loopDropDown: HTMLInputElement = input({style:"width: 2em;", type: "number", min: "1", max: "4", step: "1"});
 	private readonly _enableOutro: HTMLInputElement = input({type: "checkbox"});

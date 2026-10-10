@@ -614,6 +614,29 @@ document.head.appendChild(HTML.style({type: "text/css"}, `
 	display: flex;
 }
 
+.beepboxEditor .status-toast {
+	position: absolute;
+	bottom: 1.5em;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 110;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.4s ease-out;
+	padding: 4px 14px;
+	border-radius: 10px;
+	background: ${ColorConfig.uiWidgetBackground};
+	color: ${ColorConfig.primaryText};
+	border: 2px solid ${ColorConfig.primaryText};
+	box-shadow: 2px 2px 8px 2px rgba(0, 0, 0, 0.4);
+	white-space: nowrap;
+}
+
+.beepboxEditor .status-toast.visible {
+	opacity: 1;
+	transition: opacity 0.15s ease-in;
+}
+
 .beepboxEditor .prompt {
 	margin: auto;
 	text-align: center;

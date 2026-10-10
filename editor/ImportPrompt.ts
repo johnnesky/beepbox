@@ -10,6 +10,7 @@ import {ChangeGroup} from "./Change.js";
 import {removeDuplicatePatterns, ChangeSong, ChangeReplacePatterns} from "./changes.js";
 import {AnalogousDrum, analogousDrumMap, MidiChunkType, MidiFileFormat, MidiEventType, MidiControlEventMessage, MidiMetaEventMessage, MidiRegisteredParameterNumberMSB, MidiRegisteredParameterNumberLSB, midiVolumeToVolumeMult, midiExpressionToVolumeMult} from "./Midi.js";
 import {ArrayBufferReader} from "./ArrayBufferReader.js";
+import {forgetCurrentFile} from "./FileSystemAccess.js";
 
 const {button, p, div, h2, input} = HTML;
 
@@ -52,6 +53,8 @@ export class ImportPrompt implements Prompt {
 		
 		const extension: string = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
 		if (extension == "json") {
+			// The song is about to be replaced, so stop writing to any previously opened file.
+			forgetCurrentFile();
 			const reader: FileReader = new FileReader();
 			reader.addEventListener("load", (event: Event): void => {
 				this._doc.prompt = null;
@@ -60,6 +63,7 @@ export class ImportPrompt implements Prompt {
 			});
 			reader.readAsText(file);
 		} else if (extension == "midi" || extension == "mid") {
+			forgetCurrentFile();
 			const reader: FileReader = new FileReader();
 			reader.addEventListener("load", (event: Event): void => {
 				this._doc.prompt = null;

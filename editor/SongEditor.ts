@@ -34,7 +34,9 @@ import {ChannelSettingsPrompt} from "./ChannelSettingsPrompt.js";
 import {ExportPrompt} from "./ExportPrompt.js";
 import {ImportPrompt} from "./ImportPrompt.js";
 import {SongRecoveryPrompt} from "./SongRecoveryPrompt.js";
+import {errorAlert} from "./SongRecovery.js";
 import {RecordingSetupPrompt} from "./RecordingSetupPrompt.js";
+import {isFileSystemAccessSupported, promptToOpenFile, saveStringToFile, forgetCurrentFile, getCurrentFileName} from "./FileSystemAccess.js";
 import {Change} from "./Change.js";
 import {ChangeTempo, ChangeChorus, ChangeEchoDelay, ChangeEchoSustain, ChangeReverb, ChangeVolume, ChangePan, ChangePatternSelection, ChangeSupersawDynamism, ChangeSupersawSpread, ChangeSupersawShape, ChangePulseWidth, ChangeFeedbackAmplitude, ChangeOperatorAmplitude, ChangeOperatorFrequency, ChangeDrumsetEnvelope, ChangePasteInstrument, ChangePreset, pickRandomPresetValue, ChangeRandomGeneratedInstrument, ChangeScale, ChangeDetectKey, ChangeKey, ChangeRhythm, ChangeFeedbackType, ChangeAlgorithm, ChangeCustomizeInstrument, ChangeChipWave, ChangeNoiseWave, ChangeTransition, ChangeToggleEffects, ChangeVibrato, ChangeUnison, ChangeChord, ChangeSong, ChangePitchShift, ChangeDetune, ChangeDistortion, ChangeStringSustain, ChangeBitcrusherFreq, ChangeBitcrusherQuantization, ChangeAddEnvelope, ChangeAddChannelInstrument, ChangeRemoveChannelInstrument} from "./changes.js";
 
@@ -198,8 +200,11 @@ export class SongEditor {
 	private readonly _fileMenu: HTMLSelectElement = select({style: "width: 100%;"},
 		option({selected: true, disabled: true, hidden: hideSelectMenuTitlesInOptions}, "File"),
 		option({value: "new"}, "+ New Blank Song"),
-		option({value: "import"}, "↑ Import Song... (" + ctrlSymbol + "O)"),
-		option({value: "export"}, "↓ Export Song... (" + ctrlSymbol + "S)"),
+		option({value: "open"}, "Open Song... (" + ctrlSymbol + "O)"),
+		option({value: "save"}, "Save Song (" + ctrlSymbol + "S)"),
+		option({value: "saveAs"}, "Save Song As... (" + ctrlSymbol + "⇧S)"),
+		option({value: "import"}, "↑ Import Song... (" + ctrlSymbol + "I)"),
+		option({value: "export"}, "↓ Export Song... (" + ctrlSymbol + "E)"),
 		option({value: "copyUrl"}, "⎘ Copy Song URL"),
 		option({value: "shareUrl"}, "⤳ Share Song URL"),
 		option({value: "shortenUrl"}, "… Shorten Song URL"),
@@ -392,6 +397,8 @@ export class SongEditor {
 		this._customInstrumentSettingsGroup,
 	);
 	private readonly _promptContainer: HTMLDivElement = div({class: "promptContainer", style: "display: none;"});
+	private readonly _statusToast: HTMLDivElement = div({class: "status-toast"});
+	private _statusToastTimeout: number | null = null;
 	private readonly _zoomInButton: HTMLButtonElement = button({class: "zoomInButton", type: "button", title: "Zoom In"});
 	private readonly _zoomOutButton: HTMLButtonElement = button({class: "zoomOutButton", type: "button", title: "Zoom Out"});
 	private readonly _patternEditorRow: HTMLDivElement = div({style: "flex: 1; height: 100%; display: flex; overflow: hidden; justify-content: center;"},
@@ -494,6 +501,7 @@ export class SongEditor {
 		this._trackArea,
 		this._settingsArea,
 		this._promptContainer,
+		this._statusToast,
 	);
 	
 	private _wasPlaying: boolean = false;
@@ -1480,7 +1488,8 @@ export class SongEditor {
 			case 83: // s
 				if (canPlayNotes) break;
 				if (event.ctrlKey || event.metaKey) {
-					this._openPrompt("export");
+					// Ctrl+Shift+S always asks for a new file, Ctrl+S writes to the open file.
+					this._saveSong(event.shiftKey);
 					event.preventDefault();
 				} else {
 					if (this.doc.prefs.enableChannelMuting) {
@@ -1492,7 +1501,14 @@ export class SongEditor {
 			case 79: // o
 				if (canPlayNotes) break;
 				if (event.ctrlKey || event.metaKey) {
-					this._openPrompt("import");
+					this._openSong();
+					event.preventDefault();
+				}
+				break;
+			case 69: // e
+				if (canPlayNotes) break;
+				if (event.ctrlKey || event.metaKey) {
+					this._openPrompt("export");
 					event.preventDefault();
 				}
 				break;
@@ -1509,7 +1525,10 @@ export class SongEditor {
 				break;
 			case 73: // i
 				if (canPlayNotes) break;
-				if (needControlForShortcuts == (event.ctrlKey || event.metaKey) && event.shiftKey) {
+				if ((event.ctrlKey || event.metaKey) && !event.shiftKey) {
+					this._openPrompt("import");
+					event.preventDefault();
+				} else if (needControlForShortcuts == (event.ctrlKey || event.metaKey) && event.shiftKey) {
 					// Copy the current instrument as a preset to the clipboard.
 					const instrument: Instrument = this.doc.song.channels[this.doc.channel].instruments[this.doc.getCurrentInstrument()];
 					const instrumentObject: any = instrument.toJsonObject();
@@ -1942,12 +1961,75 @@ export class SongEditor {
 		this._refocusStage();
 	}
 	
+	private _songToJsonString(): string {
+		return JSON.stringify(this.doc.song.toJsonObject(true, 1, true), null, "\t");
+	}
+	
+	private _showStatusToast(message: string): void {
+		this._statusToast.textContent = message;
+		this._statusToast.classList.add("visible");
+		if (this._statusToastTimeout != null) window.clearTimeout(this._statusToastTimeout);
+		this._statusToastTimeout = window.setTimeout(() => {
+			this._statusToast.classList.remove("visible");
+			this._statusToastTimeout = null;
+		}, 2500);
+	}
+	
+	private _openSong = async (): Promise<void> => {
+		if (!isFileSystemAccessSupported()) {
+			// Without the File System Access API, fall back to the traditional import prompt.
+			this._openPrompt("import");
+			return;
+		}
+		
+		try {
+			const opened = await promptToOpenFile();
+			if (opened == null) return;
+			this.doc.prompt = null;
+			this.doc.goBackToStart();
+			this.doc.record(new ChangeSong(this.doc, await opened.file.text()), true, true);
+			const openedName: string | null = getCurrentFileName();
+			this._showStatusToast(openedName != null ? "Opened " + openedName : "Opened song");
+		} catch (error) {
+			forgetCurrentFile();
+			errorAlert(error);
+		}
+	}
+	
+	private _saveSong = async (forceNewPicker: boolean): Promise<void> => {
+		if (!isFileSystemAccessSupported()) {
+			// Without the File System Access API, fall back to the traditional export prompt.
+			this._openPrompt("export");
+			return;
+		}
+		
+		try {
+			const saved: boolean = await saveStringToFile(this._songToJsonString(), forceNewPicker);
+			if (saved) {
+				const savedName: string | null = getCurrentFileName();
+				this._showStatusToast(savedName != null ? "Saved " + savedName : "Saved song");
+			}
+		} catch (error) {
+			errorAlert(error);
+		}
+	}
+	
 	private _fileMenuHandler = (event:Event): void => {
 		switch (this._fileMenu.value) {
 			case "new":
+				forgetCurrentFile();
 				this.doc.goBackToStart();
 				for (const channel of this.doc.song.channels) channel.muted = false;
 				this.doc.record(new ChangeSong(this.doc, ""), false, true);
+				break;
+			case "open":
+				this._openSong();
+				break;
+			case "save":
+				this._saveSong(false);
+				break;
+			case "saveAs":
+				this._saveSong(true);
 				break;
 			case "export":
 				this._openPrompt("export");
